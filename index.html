@@ -285,9 +285,9 @@
     .pbar-item{padding:2px 7px;border-radius:6px;font-size:9px;font-weight:700}
     .pb-masuk{background:rgba(34,197,94,.15);color:var(--success)}
     .pb-pulang{background:rgba(96,165,250,.15);color:var(--info)}
-    .pb-luar      {background:rgba(245,158,11,.1); color:var(--warning)}
-    .pb-luar-masuk {background:rgba(251,146,60,.18); color:#fb923c}
-    .pb-luar-pulang{background:rgba(251,191,36,.18); color:#fbbf24}
+    .pb-luar       {background:rgba(245,158,11,.1);color:var(--warning)}
+    .pb-luar-masuk  {background:rgba(251,146,60,.2);color:#fb923c}
+    .pb-luar-pulang {background:rgba(251,191,36,.2);color:#f59e0b}
     .pb-izin {background:rgba(245,158,11,.15);color:var(--warning)}
     .pb-sakit{background:rgba(239,68,68,.15);color:var(--danger)}
     .pb-tugas{background:rgba(167,139,250,.15);color:#a78bfa}
@@ -1147,25 +1147,34 @@ async function loadRekap(){
       ringkasan=computed.ringkasan;
     }
 
-    $('rsMasuk').textContent =ringkasan.masuk  ??ringkasan.Masuk  ??0;
-    $('rsPulang').textContent=ringkasan.pulang ??ringkasan.Pulang ??0;
-    $('rsLuar').textContent  =(ringkasan.luar  ??ringkasan.di_luar??0);
-    $('rsIzin').textContent  =ringkasan.izin   ??ringkasan.Izin   ??0;
-    $('rsSakit').textContent =ringkasan.sakit  ??ringkasan.Sakit  ??0;
-    $('rsTugas').textContent =ringkasan.tugas  ??ringkasan.Tugas  ??0;
+    $('rsMasuk').textContent =ringkasan.masuk  ??0;
+    $('rsPulang').textContent=ringkasan.pulang  ??0;
+    $('rsLuar').textContent  =ringkasan.luar    ??0;
+    $('rsIzin').textContent  =ringkasan.izin    ??0;
+    $('rsSakit').textContent =ringkasan.sakit   ??0;
+    $('rsTugas').textContent =ringkasan.tugas   ??0;
 
-    // Terapkan urutan dari user_list
+    // Urutan: jika n8n sudah sort (ada field urutan), pakai itu.
+    // Jika fallback computeRekap, gunakan sortByUserList.
     const order = await orderPromise;
-    pegawai = sortByUserList(pegawai, order);
-
-    // Tambahkan jabatan dari user_list jika rekap tidak punya
-    if (order.length > 0) {
-      pegawai = pegawai.map(p => {
-        const match = order.find(u => u.id === String(p.id||'') ||
-          u.nama.toLowerCase().trim() === (p.nama||'').toLowerCase().trim() ||
-          (u.nip && u.nip === p.nip));
-        return match ? {...p, jabatan: p.jabatan || match.jabatan, urutan: match.urutan} : p;
+    if (rekapOK) {
+      // n8n sudah sort — cukup urutkan by field urutan yang dikirim n8n
+      pegawai = [...pegawai].sort((a,b)=>{
+        const ua = a.urutan ?? 9999, ub = b.urutan ?? 9999;
+        if (ua !== ub) return ua - ub;
+        return (a.nama||'').localeCompare(b.nama||'','id');
       });
+    } else {
+      pegawai = sortByUserList(pegawai, order);
+      // Enrich jabatan dari user_list untuk fallback
+      if (order.length > 0) {
+        pegawai = pegawai.map(p => {
+          const match = order.find(u => u.id === String(p.id||'') ||
+            u.nama.toLowerCase().trim() === (p.nama||'').toLowerCase().trim() ||
+            (u.nip && u.nip === p.nip));
+          return match ? {...p, jabatan: p.jabatan || match.jabatan, urutan: match.urutan} : p;
+        });
+      }
     }
 
     lastRekapPegawai = pegawai; // simpan untuk download
@@ -1204,22 +1213,22 @@ function sortByUserList(pegawai, order) {
   });
 }
 
-/* Hitung rekap dari raw rows — fallback jika webhook rekap tidak tersedia */
+/* Hitung rekap dari raw rows (fallback jika n8n tidak tersedia) */
 function computeRekap(rows){
-  const JAM_MASUK  = 8 * 60;       // 08:00 = 480 mnt
-  const JAM_PULANG = 14 * 60 + 30; // 14:30 = 870 mnt
+  const JAM_MASUK_BATAS  = 8*60;      // 08:00 = 480 mnt
+  const JAM_PULANG_BATAS = 14*60+30;  // 14:30 = 870 mnt
 
-  function parseJamMenit(jamStr) {
-    const s = String(jamStr||'').replace(/\s.*$/,'').split(':');
-    if (s.length < 2) return null;
-    const h = parseInt(s[0]), m = parseInt(s[1]);
-    return (isNaN(h)||isNaN(m)) ? null : h*60+m;
+  function toMenit(jamStr){
+    const s=String(jamStr||'').replace(/\s.*/,'').split(':');
+    if(s.length<2)return null;
+    const h=parseInt(s[0]),m=parseInt(s[1]);
+    return(isNaN(h)||isNaN(m))?null:h*60+m;
   }
-  function fmtMenit(tot) {
-    if (!tot||tot<=0) return '0 mnt';
-    const h=Math.floor(tot/60), m=tot%60;
-    if(h===0) return m+' mnt';
-    if(m===0) return h+' jam';
+  function fmtMenit(tot){
+    if(!tot||tot<=0)return '0 mnt';
+    const h=Math.floor(tot/60),m=tot%60;
+    if(h===0)return m+' mnt';
+    if(m===0)return h+' jam';
     return h+' jam '+m+' mnt';
   }
 
@@ -1231,41 +1240,35 @@ function computeRekap(rows){
     const nip   = getField(r,'NIP','nip')   || '—';
     const jenis = (getField(r,'Jenis Absen','jenis','Jenis')||'').toUpperCase().trim();
     const jamStr= getField(r,'Jam','jam')   || '';
-
-    if(!map[id]) map[id]={
-      id,nama,nip,jabatan:'',
+    if(!map[id]) map[id]={id,nama,nip,jabatan:'',urutan:9999,
       masuk:0,pulang:0,
-      di_luar_masuk:0, menit_terlambat:0,
-      di_luar_pulang:0, menit_lebih_awal:0,
+      di_luar_masuk:0,menit_terlambat:0,
+      di_luar_pulang:0,menit_lebih_awal:0,
       izin:0,sakit:0,tugas:0
     };
-    const curNama = getField(r,'Nama','nama')||'';
-    if(curNama.length > map[id].nama.length) map[id].nama = curNama;
-    if(nip && map[id].nip==='—') map[id].nip = nip;
-
-    const jam = parseJamMenit(jamStr);
-
+    const curNama=getField(r,'Nama','nama')||'';
+    if(curNama.length>map[id].nama.length) map[id].nama=curNama;
+    if(nip&&map[id].nip==='—') map[id].nip=nip;
+    const jam=toMenit(jamStr);
     if     (jenis==='MASUK')             { map[id].masuk++; }
     else if(jenis==='PULANG')            { map[id].pulang++; }
     else if(jenis==='DI LUAR JAM MASUK') {
       map[id].di_luar_masuk++;
-      // Akumulasi keterlambatan = jam_absen - 08:00
-      if(jam!==null && jam>JAM_MASUK) map[id].menit_terlambat += (jam - JAM_MASUK);
+      if(jam!==null&&jam>JAM_MASUK_BATAS) map[id].menit_terlambat+=(jam-JAM_MASUK_BATAS);
     }
     else if(jenis==='DI LUAR JAM PULANG'){
       map[id].di_luar_pulang++;
-      // Akumulasi lebih awal = 14:30 - jam_absen
-      if(jam!==null && jam<JAM_PULANG) map[id].menit_lebih_awal += (JAM_PULANG - jam);
+      if(jam!==null&&jam<JAM_PULANG_BATAS) map[id].menit_lebih_awal+=(JAM_PULANG_BATAS-jam);
     }
-    else if(jenis.includes('LUAR'))      { map[id].di_luar_masuk++; } // fallback
+    else if(jenis.includes('LUAR'))      { map[id].di_luar_masuk++; }
     else if(jenis==='IZIN')              { map[id].izin++; }
     else if(jenis==='SAKIT')             { map[id].sakit++; }
     else if(jenis==='TUGAS')             { map[id].tugas++; }
   });
 
-  const pegawai = Object.values(map).map(p=>({
+  const pegawai=Object.values(map).map(p=>({
     ...p,
-    luar: p.di_luar_masuk + p.di_luar_pulang,
+    luar: p.di_luar_masuk+p.di_luar_pulang,
     akumulasi_terlambat : fmtMenit(p.menit_terlambat),
     akumulasi_lebih_awal: fmtMenit(p.menit_lebih_awal)
   }));
@@ -1289,28 +1292,25 @@ function renderRekap(pg){
     return;
   }
   el.innerHTML=pg.map((p,idx)=>{
-    const nama    = p.nama    || '—';
-    const nip     = p.nip     || '—';
-    const jabatan = p.jabatan || '';
-    const init    = nama[0]?.toUpperCase() || '?';
-
-    const masuk       = p.masuk          || 0;
-    const pulang      = p.pulang         || 0;
-    const luarMasuk   = p.di_luar_masuk  || 0;
-    const luarPulang  = p.di_luar_pulang || 0;
-    const izin        = p.izin           || 0;
-    const sakit       = p.sakit          || 0;
-    const tugas       = p.tugas          || 0;
+    const nama        = p.nama    ||'—';
+    const nip         = p.nip     ||'—';
+    const jabatan     = p.jabatan ||'';
+    const luarMasuk   = p.di_luar_masuk  ||0;
+    const luarPulang  = p.di_luar_pulang ||0;
+    const masuk       = p.masuk   ||0;
+    const pulang      = p.pulang  ||0;
+    const izin        = p.izin    ||0;
+    const sakit       = p.sakit   ||0;
+    const tugas       = p.tugas   ||0;
     const total       = masuk+pulang+luarMasuk+luarPulang+izin+sakit+tugas;
 
-    // Akumulasi dari n8n atau dari computeRekap fallback
-    const akkT = p.akumulasi_terlambat   || '';
-    const akkL = p.akumulasi_lebih_awal  || '';
+    // Akumulasi dari n8n (sudah string "X jam Y mnt") atau hitung fallback
+    const akkT = luarMasuk  > 0 ? (p.akumulasi_terlambat   || '') : '';
+    const akkL = luarPulang > 0 ? (p.akumulasi_lebih_awal  || '') : '';
 
     const jabatanStr = jabatan
       ? `<div class="pegawai-jabatan" style="font-size:9px;color:var(--gold);margin-top:1px">${jabatan}</div>`
       : '';
-
     return`<div class="pegawai-card">
       <div class="pegawai-top">
         <div class="pegawai-avatar" style="font-size:11px">${idx+1}</div>
@@ -1321,8 +1321,8 @@ function renderRekap(pg){
         </div>
       </div>
       <div class="pegawai-bar">
-        ${masuk     >0?`<span class="pbar-item pb-masuk">✅ Masuk: ${masuk}</span>`:''}
-        ${pulang    >0?`<span class="pbar-item pb-pulang">🔵 Pulang: ${pulang}</span>`:''}
+        ${masuk    >0?`<span class="pbar-item pb-masuk">✅ Masuk: ${masuk}</span>`:''}
+        ${pulang   >0?`<span class="pbar-item pb-pulang">🔵 Pulang: ${pulang}</span>`:''}
         ${luarMasuk >0?`<span class="pbar-item pb-luar-masuk">⚠️ Luar Masuk: ${luarMasuk}×${akkT?' ('+akkT+')':''}</span>`:''}
         ${luarPulang>0?`<span class="pbar-item pb-luar-pulang">⚠️ Luar Pulang: ${luarPulang}×${akkL?' ('+akkL+')':''}</span>`:''}
         ${izin  >0?`<span class="pbar-item pb-izin">🙏 Izin: ${izin}</span>`:''}
@@ -1333,83 +1333,35 @@ function renderRekap(pg){
   }).join('');
 }
 
-function resetRekapStats(){['rsMasuk','rsPulang','rsLuar','rsIzin','rsSakit','rsTugas'].forEach(id=>$(id).textContent='—');}
-
-function renderRekap(pg){
-  const el=$('pegawaiList');
-  if(!pg?.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">Belum ada data pegawai</div><div class="empty-sub">Coba pilih rentang tanggal lain</div></div>`;return;}
-  el.innerHTML=pg.map((p,idx)=>{
-    const init=(p.nama||'?')[0].toUpperCase();
-    const total=p.masuk+p.pulang+p.luar+p.izin+p.sakit+p.tugas;
-    const jabatanStr = p.jabatan ? `<div class="pegawai-jabatan" style="font-size:9px;color:var(--gold);margin-top:1px">${p.jabatan}</div>` : '';
-    return`<div class="pegawai-card">
-      <div class="pegawai-top">
-        <div class="pegawai-avatar" style="font-size:11px">${idx+1}</div>
-        <div style="flex:1;min-width:0">
-          <div class="pegawai-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.nama||'—'}</div>
-          ${jabatanStr}
-          <div class="pegawai-jabatan">NIP: ${p.nip||'—'} · ${total} catatan</div>
-        </div>
-      </div>
-      <div class="pegawai-bar">
-        ${p.masuk >0?`<span class="pbar-item pb-masuk">✅ Masuk: ${p.masuk}</span>`:''}
-        ${p.pulang>0?`<span class="pbar-item pb-pulang">🔵 Pulang: ${p.pulang}</span>`:''}
-        ${p.luar  >0?`<span class="pbar-item pb-luar">⚠️ Di Luar: ${p.luar}</span>`:''}
-        ${p.izin  >0?`<span class="pbar-item pb-izin">🙏 Izin: ${p.izin}</span>`:''}
-        ${p.sakit >0?`<span class="pbar-item pb-sakit">🤒 Sakit: ${p.sakit}</span>`:''}
-        ${p.tugas >0?`<span class="pbar-item pb-tugas">💼 Tugas: ${p.tugas}</span>`:''}
-      </div>
-    </div>`;
-  }).join('');
-}
-
 /* ════ DOWNLOAD REKAP (Excel) ════ */
 function downloadRekap() {
   const dari   = $('rekapDari').value;
   const sampai = $('rekapSampai').value;
-  if (!lastRekapPegawai.length) {
-    alert('Belum ada data rekap. Muat data terlebih dahulu.');
-    return;
-  }
-  if (typeof XLSX === 'undefined') {
-    alert('Library Excel belum siap. Coba lagi dalam beberapa detik.');
-    return;
-  }
+  if (!lastRekapPegawai.length) { alert('Belum ada data. Muat rekap terlebih dahulu.'); return; }
+  if (typeof XLSX === 'undefined') { alert('Library Excel belum siap, coba lagi.'); return; }
 
   const periode  = dari===sampai ? dari : `${dari} s.d. ${sampai}`;
   const tglCetak = nowWITA().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
 
-  // ── Ringkasan dari UI ──
-  const rsm = n => Number($(n).textContent)||0;
-  const ring = {
-    masuk : rsm('rsMasuk'), pulang: rsm('rsPulang'), luar: rsm('rsLuar'),
-    izin  : rsm('rsIzin'),  sakit : rsm('rsSakit'),  tugas: rsm('rsTugas')
-  };
-
-  // ── Kop surat ──
-  const kop = [
+  // ── Kop ──
+  const wsData = [
     ['REKAPITULASI ABSENSI PEGAWAI'],
     ['Badan Perencanaan Pembangunan, Riset dan Inovasi Daerah'],
     ['Kabupaten Sumba Barat'],
     [`Periode: ${periode}`],
     [`Dicetak: ${tglCetak}`],
-    []
+    [],
+    // Header
+    ['No','Nama','NIP','Jabatan',
+     'Masuk','Pulang',
+     'Luar Masuk (×)','Akumulasi Terlambat',
+     'Luar Pulang (×)','Akumulasi Lebih Awal',
+     'Izin','Sakit','Tugas','Total']
   ];
 
-  // ── Ringkasan ──
-  const ringSummary = [
-    ['Masuk','Pulang','Luar Masuk','Akum. Terlambat','Luar Pulang','Akum. Lebih Awal','Izin','Sakit','Tugas'],
-    [ring.masuk, ring.pulang, '', '', '', '', ring.izin, ring.sakit, ring.tugas]
-  ];
+  let tM=0,tP=0,tLM=0,tLP=0,tI=0,tS=0,tT=0;
 
-  // ── Header tabel ──
-  const header = ['No','Nama','NIP','Jabatan','Masuk','Pulang',
-    'Luar Masuk (×)','Akumulasi Terlambat','Luar Pulang (×)','Akumulasi Lebih Awal',
-    'Izin','Sakit','Tugas','Total'];
-
-  // ── Baris data ──
-  let totMasuk=0,totPulang=0,totLM=0,totLP=0,totIzin=0,totSakit=0,totTugas=0;
-  const rows = lastRekapPegawai.map((p, i) => {
+  lastRekapPegawai.forEach((p,i)=>{
     const masuk      = p.masuk          ||0;
     const pulang     = p.pulang         ||0;
     const luarMasuk  = p.di_luar_masuk  ||0;
@@ -1418,42 +1370,34 @@ function downloadRekap() {
     const sakit      = p.sakit          ||0;
     const tugas      = p.tugas          ||0;
     const total      = masuk+pulang+luarMasuk+luarPulang+izin+sakit+tugas;
-    totMasuk+=masuk; totPulang+=pulang; totLM+=luarMasuk; totLP+=luarPulang;
-    totIzin+=izin; totSakit+=sakit; totTugas+=tugas;
-    return [
+    tM+=masuk;tP+=pulang;tLM+=luarMasuk;tLP+=luarPulang;tI+=izin;tS+=sakit;tT+=tugas;
+    wsData.push([
       i+1,
       p.nama    ||'—',
       p.nip     ||'—',
       p.jabatan ||'—',
       masuk, pulang,
       luarMasuk,
-      luarMasuk>0  ? (p.akumulasi_terlambat  ||'0 mnt') : '',
+      luarMasuk  >0 ? (p.akumulasi_terlambat  ||'0 mnt') : '',
       luarPulang,
-      luarPulang>0 ? (p.akumulasi_lebih_awal ||'0 mnt') : '',
+      luarPulang >0 ? (p.akumulasi_lebih_awal ||'0 mnt') : '',
       izin, sakit, tugas, total
-    ];
+    ]);
   });
 
-  // ── Baris total ──
-  const totRow = ['','TOTAL','','',
-    totMasuk, totPulang, totLM, '', totLP, '',
-    totIzin, totSakit, totTugas,
-    totMasuk+totPulang+totLM+totLP+totIzin+totSakit+totTugas
-  ];
+  // Baris total
+  wsData.push(['','TOTAL','','',tM,tP,tLM,'',tLP,'',tI,tS,tT,tM+tP+tLM+tLP+tI+tS+tT]);
 
-  // ── Gabungkan semua ──
-  const wsData = [...kop, header, ...rows, totRow];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-  // ── Lebar kolom ──
-  ws['!cols'] = [
+  // Lebar kolom
+  ws['!cols']=[
     {wch:4},{wch:38},{wch:22},{wch:32},
-    {wch:7},{wch:7},{wch:13},{wch:20},{wch:13},{wch:20},
+    {wch:7},{wch:7},{wch:14},{wch:20},{wch:14},{wch:20},
     {wch:7},{wch:7},{wch:7},{wch:7}
   ];
-
-  // ── Merge sel kop ──
-  ws['!merges'] = [0,1,2,3,4].map(r=>({s:{r,c:0},e:{r,c:13}}));
+  // Merge sel kop (baris 0–4, semua 14 kolom)
+  ws['!merges']=[0,1,2,3,4].map(r=>({s:{r,c:0},e:{r,c:13}}));
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Rekap Absensi');
