@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Absensi BAPPERIDA</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
@@ -286,8 +285,12 @@
     .pb-masuk{background:rgba(34,197,94,.15);color:var(--success)}
     .pb-pulang{background:rgba(96,165,250,.15);color:var(--info)}
     .pb-luar       {background:rgba(245,158,11,.1);color:var(--warning)}
-    .pb-luar-masuk  {background:rgba(251,146,60,.2);color:#fb923c}
-    .pb-luar-pulang {background:rgba(251,191,36,.2);color:#f59e0b}
+    .pb-lambat     {background:rgba(251,146,60,.2);color:#fb923c}
+    .pb-cepat      {background:rgba(251,191,36,.2);color:#f59e0b}
+    .disiplin-row  {margin-top:7px;padding-top:6px;border-top:1px solid rgba(255,255,255,.07)}
+    .disiplin-label{display:flex;justify-content:space-between;align-items:center;font-size:9px;color:var(--muted);margin-bottom:3px}
+    .disiplin-track{background:rgba(255,255,255,.07);border-radius:99px;height:7px;overflow:hidden}
+    .disiplin-fill {height:100%;border-radius:99px;transition:width .5s ease}
     .pb-izin {background:rgba(245,158,11,.15);color:var(--warning)}
     .pb-sakit{background:rgba(239,68,68,.15);color:var(--danger)}
     .pb-tugas{background:rgba(167,139,250,.15);color:#a78bfa}
@@ -499,7 +502,7 @@
     <div class="rekap-header">
       <div class="rekap-title">📊 Rekap Pegawai</div>
       <div class="rekap-toolbar">
-        <button class="btn-download" id="btnDownloadRekap" onclick="downloadRekap()" title="Download/Cetak Rekap">⬇️ Unduh</button>
+        <button class="btn-download" id="btnDownloadRekap" onclick="kirimRekap()" title="Kirim Rekap ke Telegram">📤 Kirim</button>
         <button class="btn-refresh"  id="btnRekapRefresh"  onclick="loadRekap()"><span id="rekapRefIcon">🔄</span> Muat</button>
       </div>
     </div>
@@ -529,10 +532,35 @@
     <div class="rekap-stats6">
       <div class="stat-card2"><div class="stat-num2 sn-masuk"  id="rsMasuk" >—</div><div class="stat-lbl2">✅ Masuk</div></div>
       <div class="stat-card2"><div class="stat-num2 sn-pulang" id="rsPulang">—</div><div class="stat-lbl2">🔵 Pulang</div></div>
-      <div class="stat-card2"><div class="stat-num2 sn-luar"   id="rsLuar"  >—</div><div class="stat-lbl2">⚠️ Di Luar Jam</div></div>
+      <div class="stat-card2"><div class="stat-num2 sn-luar"   id="rsLuar"  >—</div><div class="stat-lbl2">⏱️ Luar Jam</div></div>
       <div class="stat-card2"><div class="stat-num2 sn-izin"   id="rsIzin"  >—</div><div class="stat-lbl2">🙏 Izin</div></div>
       <div class="stat-card2"><div class="stat-num2 sn-sakit"  id="rsSakit" >—</div><div class="stat-lbl2">🤒 Sakit</div></div>
       <div class="stat-card2"><div class="stat-num2 sn-tugas"  id="rsTugas" >—</div><div class="stat-lbl2">💼 Tugas</div></div>
+    </div>
+    <!-- Statistik kedisiplinan keseluruhan -->
+    <div id="disiplinPanel" style="display:none;background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.25);border-radius:14px;padding:12px 14px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:8px;letter-spacing:.03em">📈 INDEKS KEDISIPLINAN KESELURUHAN</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:11px;color:var(--muted)">Skor Rata-rata</span>
+        <span id="disiplinSkor" style="font-size:18px;font-weight:900;color:var(--gold)">—</span>
+      </div>
+      <div style="background:rgba(255,255,255,.07);border-radius:99px;height:10px;overflow:hidden;margin-bottom:10px">
+        <div id="disiplinBar" style="height:100%;border-radius:99px;width:0%;transition:width .6s ease;background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e)"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:9px;text-align:center">
+        <div style="background:rgba(34,197,94,.1);border-radius:8px;padding:5px 2px">
+          <div id="disiplinTepat" style="font-size:13px;font-weight:800;color:#22c55e">—</div>
+          <div style="color:var(--muted)">Tepat Waktu</div>
+        </div>
+        <div style="background:rgba(251,146,60,.1);border-radius:8px;padding:5px 2px">
+          <div id="disiplinLambat" style="font-size:13px;font-weight:800;color:#fb923c">—</div>
+          <div style="color:var(--muted)">Pernah Lambat</div>
+        </div>
+        <div style="background:rgba(251,191,36,.1);border-radius:8px;padding:5px 2px">
+          <div id="disiplinCepat" style="font-size:13px;font-weight:800;color:#fbbf24">—</div>
+          <div style="color:var(--muted)">Pulang Cepat</div>
+        </div>
+      </div>
     </div>
 
     <div class="pegawai-list" id="pegawaiList">
@@ -585,7 +613,7 @@
 /* ════ KONFIGURASI ════ */
 const SERVER_1  = 'https://unheeled-timmy-supernumerously.ngrok-free.dev';
 const SERVER_2  = 'https://unannunciable-nongerundive-elsa.ngrok-free.dev';
-const isTest    = true;
+const isTest    = false;
 const ADMIN_IDS = [1383864355];
 
 const P = {
@@ -597,6 +625,7 @@ const P = {
   lokasiList : isTest ? '/webhook-test/lokasi-list'    : '/webhook/lokasi-list',
   lokasiAdd  : isTest ? '/webhook-test/lokasi-add'     : '/webhook/lokasi-add',
   lokasiDel  : isTest ? '/webhook-test/lokasi-delete'  : '/webhook/lokasi-delete',
+  kirimRekap : isTest ? '/webhook-test/kirim-rekap'     : '/webhook/kirim-rekap',
 };
 
 const HDR = {'Content-Type':'application/json','ngrok-skip-browser-warning':'true','Accept':'application/json'};
@@ -1149,32 +1178,23 @@ async function loadRekap(){
 
     $('rsMasuk').textContent =ringkasan.masuk  ??0;
     $('rsPulang').textContent=ringkasan.pulang  ??0;
-    $('rsLuar').textContent  =ringkasan.luar    ??0;
+    $('rsLuar').textContent  =(ringkasan.luar ?? ringkasan.di_luar ?? 0);
     $('rsIzin').textContent  =ringkasan.izin    ??0;
     $('rsSakit').textContent =ringkasan.sakit   ??0;
     $('rsTugas').textContent =ringkasan.tugas   ??0;
 
-    // Urutan: jika n8n sudah sort (ada field urutan), pakai itu.
-    // Jika fallback computeRekap, gunakan sortByUserList.
+    // Terapkan urutan dari user_list
     const order = await orderPromise;
-    if (rekapOK) {
-      // n8n sudah sort — cukup urutkan by field urutan yang dikirim n8n
-      pegawai = [...pegawai].sort((a,b)=>{
-        const ua = a.urutan ?? 9999, ub = b.urutan ?? 9999;
-        if (ua !== ub) return ua - ub;
-        return (a.nama||'').localeCompare(b.nama||'','id');
+    pegawai = sortByUserList(pegawai, order);
+
+    // Tambahkan jabatan dari user_list jika rekap tidak punya
+    if (order.length > 0) {
+      pegawai = pegawai.map(p => {
+        const match = order.find(u => u.id === String(p.id||'') ||
+          u.nama.toLowerCase().trim() === (p.nama||'').toLowerCase().trim() ||
+          (u.nip && u.nip === p.nip));
+        return match ? {...p, jabatan: p.jabatan || match.jabatan, urutan: match.urutan} : p;
       });
-    } else {
-      pegawai = sortByUserList(pegawai, order);
-      // Enrich jabatan dari user_list untuk fallback
-      if (order.length > 0) {
-        pegawai = pegawai.map(p => {
-          const match = order.find(u => u.id === String(p.id||'') ||
-            u.nama.toLowerCase().trim() === (p.nama||'').toLowerCase().trim() ||
-            (u.nip && u.nip === p.nip));
-          return match ? {...p, jabatan: p.jabatan || match.jabatan, urutan: match.urutan} : p;
-        });
-      }
     }
 
     lastRekapPegawai = pegawai; // simpan untuk download
@@ -1213,25 +1233,8 @@ function sortByUserList(pegawai, order) {
   });
 }
 
-/* Hitung rekap dari raw rows (fallback jika n8n tidak tersedia) */
+/* Hitung rekap dari raw rows */
 function computeRekap(rows){
-  const JAM_MASUK_BATAS  = 8*60;      // 08:00 = 480 mnt
-  const JAM_PULANG_BATAS = 14*60+30;  // 14:30 = 870 mnt
-
-  function toMenit(jamStr){
-    const s=String(jamStr||'').replace(/\s.*/,'').split(':');
-    if(s.length<2)return null;
-    const h=parseInt(s[0]),m=parseInt(s[1]);
-    return(isNaN(h)||isNaN(m))?null:h*60+m;
-  }
-  function fmtMenit(tot){
-    if(!tot||tot<=0)return '0 mnt';
-    const h=Math.floor(tot/60),m=tot%60;
-    if(h===0)return m+' mnt';
-    if(m===0)return h+' jam';
-    return h+' jam '+m+' mnt';
-  }
-
   const map={};
   rows.forEach(r=>{
     const id    = String(getField(r,'ID','id')||'').trim();
@@ -1239,47 +1242,22 @@ function computeRekap(rows){
     const nama  = getField(r,'Nama','nama') || '—';
     const nip   = getField(r,'NIP','nip')   || '—';
     const jenis = (getField(r,'Jenis Absen','jenis','Jenis')||'').toUpperCase().trim();
-    const jamStr= getField(r,'Jam','jam')   || '';
-    if(!map[id]) map[id]={id,nama,nip,jabatan:'',urutan:9999,
-      masuk:0,pulang:0,
-      di_luar_masuk:0,menit_terlambat:0,
-      di_luar_pulang:0,menit_lebih_awal:0,
-      izin:0,sakit:0,tugas:0
-    };
-    const curNama=getField(r,'Nama','nama')||'';
-    if(curNama.length>map[id].nama.length) map[id].nama=curNama;
-    if(nip&&map[id].nip==='—') map[id].nip=nip;
-    const jam=toMenit(jamStr);
-    if     (jenis==='MASUK')             { map[id].masuk++; }
-    else if(jenis==='PULANG')            { map[id].pulang++; }
-    else if(jenis==='DI LUAR JAM MASUK') {
-      map[id].di_luar_masuk++;
-      if(jam!==null&&jam>JAM_MASUK_BATAS) map[id].menit_terlambat+=(jam-JAM_MASUK_BATAS);
-    }
-    else if(jenis==='DI LUAR JAM PULANG'){
-      map[id].di_luar_pulang++;
-      if(jam!==null&&jam<JAM_PULANG_BATAS) map[id].menit_lebih_awal+=(JAM_PULANG_BATAS-jam);
-    }
-    else if(jenis.includes('LUAR'))      { map[id].di_luar_masuk++; }
-    else if(jenis==='IZIN')              { map[id].izin++; }
-    else if(jenis==='SAKIT')             { map[id].sakit++; }
-    else if(jenis==='TUGAS')             { map[id].tugas++; }
+    if(!map[id]) map[id]={id,nama,nip,jabatan:'',masuk:0,pulang:0,luar:0,izin:0,sakit:0,tugas:0};
+    const curNama = getField(r,'Nama','nama')||'';
+    if(curNama.length > map[id].nama.length) map[id].nama = curNama;
+    if(nip && map[id].nip==='—') map[id].nip = nip;
+    if     (jenis==='MASUK')        map[id].masuk++;
+    else if(jenis==='PULANG')       map[id].pulang++;
+    else if(jenis.includes('LUAR')) map[id].luar++;
+    else if(jenis==='IZIN')         map[id].izin++;
+    else if(jenis==='SAKIT')        map[id].sakit++;
+    else if(jenis==='TUGAS')        map[id].tugas++;
   });
-
-  const pegawai=Object.values(map).map(p=>({
-    ...p,
-    luar: p.di_luar_masuk+p.di_luar_pulang,
-    akumulasi_terlambat : fmtMenit(p.menit_terlambat),
-    akumulasi_lebih_awal: fmtMenit(p.menit_lebih_awal)
-  }));
+  const pegawai=Object.values(map);
   const sum=k=>pegawai.reduce((s,p)=>s+(p[k]||0),0);
   return{
     pegawai,
-    ringkasan:{
-      masuk:sum('masuk'),pulang:sum('pulang'),
-      luar:sum('di_luar_masuk')+sum('di_luar_pulang'),
-      izin:sum('izin'),sakit:sum('sakit'),tugas:sum('tugas')
-    }
+    ringkasan:{masuk:sum('masuk'),pulang:sum('pulang'),luar:sum('luar'),izin:sum('izin'),sakit:sum('sakit'),tugas:sum('tugas')}
   };
 }
 
@@ -1289,119 +1267,172 @@ function renderRekap(pg){
   const el=$('pegawaiList');
   if(!pg?.length){
     el.innerHTML=`<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">Belum ada data pegawai</div><div class="empty-sub">Coba pilih rentang tanggal lain</div></div>`;
+    // Sembunyikan panel disiplin
+    const dp=$('disiplinPanel'); if(dp) dp.style.display='none';
     return;
   }
-  el.innerHTML=pg.map((p,idx)=>{
-    const nama        = p.nama    ||'—';
-    const nip         = p.nip     ||'—';
-    const jabatan     = p.jabatan ||'';
-    const luarMasuk   = p.di_luar_masuk  ||0;
-    const luarPulang  = p.di_luar_pulang ||0;
-    const masuk       = p.masuk   ||0;
-    const pulang      = p.pulang  ||0;
-    const izin        = p.izin    ||0;
-    const sakit       = p.sakit   ||0;
-    const tugas       = p.tugas   ||0;
-    const total       = masuk+pulang+luarMasuk+luarPulang+izin+sakit+tugas;
 
-    // Akumulasi dari n8n (sudah string "X jam Y mnt") atau hitung fallback
-    const akkT = luarMasuk  > 0 ? (p.akumulasi_terlambat   || '') : '';
-    const akkL = luarPulang > 0 ? (p.akumulasi_lebih_awal  || '') : '';
+  // ── Hitung statistik kedisiplinan keseluruhan ──
+  const JAM_PER_HARI = 7.5;
+  let totalSkor=0, tepat=0, pernahLambat=0, pernahCepat=0;
+
+  const enriched = pg.map(p=>{
+    const luarMasuk  = p.di_luar_masuk  || 0;
+    const luarPulang = p.di_luar_pulang || 0;
+    const masuk      = p.masuk          || 0;
+    const pulang     = p.pulang         || 0;
+    const total      = masuk + pulang + luarMasuk + luarPulang + (p.izin||0) + (p.sakit||0) + (p.tugas||0);
+
+    // Hari hadir = hari yg ada catatan masuk (tepat/lambat)
+    const hariHadir  = masuk + luarMasuk;
+    const menitLuar  = (p.menit_terlambat||0) + (p.menit_lebih_awal||0);
+    const jamHadirMurni  = hariHadir * JAM_PER_HARI;
+    const jamPotongan    = menitLuar / 60;
+    const jamEfektif     = Math.max(0, jamHadirMurni - jamPotongan);
+
+    // Skor disiplin: rasio jam efektif vs jam murni, 100 jika tidak ada potongan
+    let skor = hariHadir > 0
+      ? Math.min(100, Math.round((jamEfektif / jamHadirMurni) * 100))
+      : (total > 0 ? 50 : 100);
+    if (luarMasuk===0 && luarPulang===0 && hariHadir>0) skor = 100;
+
+    totalSkor += skor;
+    if (luarMasuk === 0 && luarPulang === 0) tepat++;
+    if (luarMasuk  > 0) pernahLambat++;
+    if (luarPulang > 0) pernahCepat++;
+
+    return {...p, total, skor, jamEfektif: jamEfektif.toFixed(1), menitLuar};
+  });
+
+  // ── Tampilkan panel kedisiplinan keseluruhan ──
+  const skorRata = pg.length > 0 ? Math.round(totalSkor / pg.length) : 0;
+  const dp = $('disiplinPanel');
+  if (dp) {
+    dp.style.display = 'block';
+    $('disiplinSkor').textContent  = skorRata + '%';
+    $('disiplinTepat').textContent = tepat;
+    $('disiplinLambat').textContent= pernahLambat;
+    $('disiplinCepat').textContent = pernahCepat;
+    const bar = $('disiplinBar');
+    if (bar) bar.style.width = skorRata + '%';
+  }
+
+  // ── Warna progress bar per skor ──
+  function barColor(s){
+    if(s>=90) return '#22c55e';
+    if(s>=75) return '#84cc16';
+    if(s>=60) return '#f59e0b';
+    return '#ef4444';
+  }
+
+  el.innerHTML = enriched.map((p,idx)=>{
+    const nama    = p.nama    || '—';
+    const nip     = p.nip     || '—';
+    const jabatan = p.jabatan || '';
+    const luarMasuk  = p.di_luar_masuk  || 0;
+    const luarPulang = p.di_luar_pulang || 0;
+    const akkT = luarMasuk  > 0 ? (p.akumulasi_terlambat  || '') : '';
+    const akkL = luarPulang > 0 ? (p.akumulasi_lebih_awal || '') : '';
 
     const jabatanStr = jabatan
       ? `<div class="pegawai-jabatan" style="font-size:9px;color:var(--gold);margin-top:1px">${jabatan}</div>`
       : '';
-    return`<div class="pegawai-card">
+
+    return `<div class="pegawai-card">
       <div class="pegawai-top">
         <div class="pegawai-avatar" style="font-size:11px">${idx+1}</div>
         <div style="flex:1;min-width:0">
           <div class="pegawai-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nama}</div>
           ${jabatanStr}
-          <div class="pegawai-jabatan">NIP: ${nip} · ${total} catatan</div>
+          <div class="pegawai-jabatan">NIP: ${nip} · ${p.total} catatan</div>
         </div>
       </div>
       <div class="pegawai-bar">
-        ${masuk    >0?`<span class="pbar-item pb-masuk">✅ Masuk: ${masuk}</span>`:''}
-        ${pulang   >0?`<span class="pbar-item pb-pulang">🔵 Pulang: ${pulang}</span>`:''}
-        ${luarMasuk >0?`<span class="pbar-item pb-luar-masuk">⚠️ Luar Masuk: ${luarMasuk}×${akkT?' ('+akkT+')':''}</span>`:''}
-        ${luarPulang>0?`<span class="pbar-item pb-luar-pulang">⚠️ Luar Pulang: ${luarPulang}×${akkL?' ('+akkL+')':''}</span>`:''}
-        ${izin  >0?`<span class="pbar-item pb-izin">🙏 Izin: ${izin}</span>`:''}
-        ${sakit >0?`<span class="pbar-item pb-sakit">🤒 Sakit: ${sakit}</span>`:''}
-        ${tugas >0?`<span class="pbar-item pb-tugas">💼 Tugas: ${tugas}</span>`:''}
+        ${p.masuk   >0?`<span class="pbar-item pb-masuk">✅ Masuk: ${p.masuk}</span>`:''}
+        ${p.pulang  >0?`<span class="pbar-item pb-pulang">🔵 Pulang: ${p.pulang}</span>`:''}
+        ${luarMasuk >0?`<span class="pbar-item pb-lambat">🕐 Lambat: ${luarMasuk}×${akkT?' ('+akkT+')':''}</span>`:''}
+        ${luarPulang>0?`<span class="pbar-item pb-cepat">🏃 Pulang Cepat: ${luarPulang}×${akkL?' ('+akkL+')':''}</span>`:''}
+        ${p.izin >0?`<span class="pbar-item pb-izin">🙏 Izin: ${p.izin}</span>`:''}
+        ${p.sakit>0?`<span class="pbar-item pb-sakit">🤒 Sakit: ${p.sakit}</span>`:''}
+        ${p.tugas>0?`<span class="pbar-item pb-tugas">💼 Tugas: ${p.tugas}</span>`:''}
+      </div>
+      <div class="disiplin-row">
+        <div class="disiplin-label">
+          <span>⚖️ Kedisiplinan · ${p.jamEfektif} jam efektif</span>
+          <span style="font-weight:800;color:${barColor(p.skor)}">${p.skor}%</span>
+        </div>
+        <div class="disiplin-track">
+          <div class="disiplin-fill" style="width:${p.skor}%;background:${barColor(p.skor)}"></div>
+        </div>
       </div>
     </div>`;
   }).join('');
 }
 
-/* ════ DOWNLOAD REKAP (Excel) ════ */
-function downloadRekap() {
+/* ════ KIRIM REKAP KE TELEGRAM ════ */
+async function kirimRekap() {
   const dari   = $('rekapDari').value;
   const sampai = $('rekapSampai').value;
   if (!lastRekapPegawai.length) { alert('Belum ada data. Muat rekap terlebih dahulu.'); return; }
-  if (typeof XLSX === 'undefined') { alert('Library Excel belum siap, coba lagi.'); return; }
 
-  const periode  = dari===sampai ? dari : `${dari} s.d. ${sampai}`;
-  const tglCetak = nowWITA().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
+  const btn = $('btnDownloadRekap');
+  btn.disabled = true;
+  btn.textContent = '⏳ Mengirim...';
 
-  // ── Kop ──
-  const wsData = [
-    ['REKAPITULASI ABSENSI PEGAWAI'],
-    ['Badan Perencanaan Pembangunan, Riset dan Inovasi Daerah'],
-    ['Kabupaten Sumba Barat'],
-    [`Periode: ${periode}`],
-    [`Dicetak: ${tglCetak}`],
-    [],
-    // Header
-    ['No','Nama','NIP','Jabatan',
-     'Masuk','Pulang',
-     'Luar Masuk (×)','Akumulasi Terlambat',
-     'Luar Pulang (×)','Akumulasi Lebih Awal',
-     'Izin','Sakit','Tugas','Total']
-  ];
+  const JAM_PER_HARI    = 7.5;
+  const JAM_KERJA_WAJIB = 150;
 
-  let tM=0,tP=0,tLM=0,tLP=0,tI=0,tS=0,tT=0;
+  const dataKirim = lastRekapPegawai.map((p, i) => {
+    const luarMasuk  = p.di_luar_masuk  || 0;
+    const luarPulang = p.di_luar_pulang || 0;
+    const masuk      = p.masuk          || 0;
+    const pulang     = p.pulang         || 0;
+    const hariHadir  = masuk + luarMasuk;
+    const menitLuar  = (p.menit_terlambat||0) + (p.menit_lebih_awal||0);
+    const jamHadirMurni = hariHadir * JAM_PER_HARI;
+    const jamPotongan   = menitLuar / 60;
+    const jamHadir      = Math.max(0, jamHadirMurni - jamPotongan).toFixed(1);
+    const jamTdkHadir   = Math.max(0, JAM_KERJA_WAJIB - parseFloat(jamHadir)).toFixed(1);
 
-  lastRekapPegawai.forEach((p,i)=>{
-    const masuk      = p.masuk          ||0;
-    const pulang     = p.pulang         ||0;
-    const luarMasuk  = p.di_luar_masuk  ||0;
-    const luarPulang = p.di_luar_pulang ||0;
-    const izin       = p.izin           ||0;
-    const sakit      = p.sakit          ||0;
-    const tugas      = p.tugas          ||0;
-    const total      = masuk+pulang+luarMasuk+luarPulang+izin+sakit+tugas;
-    tM+=masuk;tP+=pulang;tLM+=luarMasuk;tLP+=luarPulang;tI+=izin;tS+=sakit;tT+=tugas;
-    wsData.push([
-      i+1,
-      p.nama    ||'—',
-      p.nip     ||'—',
-      p.jabatan ||'—',
+    return {
+      no       : i + 1,
+      nama     : p.nama     || '—',
+      nip      : p.nip      || '—',
+      jabatan  : p.jabatan  || '—',
       masuk, pulang,
-      luarMasuk,
-      luarMasuk  >0 ? (p.akumulasi_terlambat  ||'0 mnt') : '',
-      luarPulang,
-      luarPulang >0 ? (p.akumulasi_lebih_awal ||'0 mnt') : '',
-      izin, sakit, tugas, total
-    ]);
+      lambat      : luarMasuk,
+      akkLambat   : p.akumulasi_terlambat   || '0 mnt',
+      pulangCepat : luarPulang,
+      akkCepat    : p.akumulasi_lebih_awal  || '0 mnt',
+      izin  : p.izin  || 0,
+      sakit : p.sakit || 0,
+      tugas : p.tugas || 0,
+      jamHadir,
+      jamTdkHadir,
+      jamKerjaWajib: JAM_KERJA_WAJIB
+    };
   });
 
-  // Baris total
-  wsData.push(['','TOTAL','','',tM,tP,tLM,'',tLP,'',tI,tS,tT,tM+tP+tLM+tLP+tI+tS+tT]);
-
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-  // Lebar kolom
-  ws['!cols']=[
-    {wch:4},{wch:38},{wch:22},{wch:32},
-    {wch:7},{wch:7},{wch:14},{wch:20},{wch:14},{wch:20},
-    {wch:7},{wch:7},{wch:7},{wch:7}
-  ];
-  // Merge sel kop (baris 0–4, semua 14 kolom)
-  ws['!merges']=[0,1,2,3,4].map(r=>({s:{r,c:0},e:{r,c:13}}));
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Rekap Absensi');
-  XLSX.writeFile(wb, `Rekap_Absensi_${dari}_sd_${sampai}.xlsx`);
+  try {
+    const res = await apiFetch(P.kirimRekap, {
+      method: 'POST',
+      body: JSON.stringify({
+        dari, sampai,
+        chat_id : MY_ID,
+        pegawai : dataKirim
+      })
+    });
+    if (res.ok) {
+      btn.textContent = '✅ Terkirim!';
+      setTimeout(() => { btn.disabled=false; btn.textContent='📤 Kirim'; }, 2500);
+    } else {
+      throw new Error('Gagal');
+    }
+  } catch(e) {
+    alert('Gagal mengirim rekap. Pastikan webhook aktif.');
+    btn.disabled = false;
+    btn.textContent = '📤 Kirim';
+  }
 }
 
 /* ════ ADMIN ════ */
