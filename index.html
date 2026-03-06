@@ -847,8 +847,68 @@ function showGPS(lat,lon,acc,lokasi){
 }
 
 /* ════ HANDLE ABSEN ════ */
+// Anti-bypass: jika fake GPS terdeteksi, session ini diblokir permanen
+// Menggunakan sessionStorage agar tidak bisa di-bypass dengan reload halaman
+let _fakeGpsDetected    = sessionStorage.getItem('fakeGpsBlocked') === '1';
+let _fakeGpsBlockedUntil = parseInt(sessionStorage.getItem('fakeGpsBlockedUntil') || '0');
+
+function _setFakeGpsBlocked(permanent) {
+  _fakeGpsDetected = true;
+  _fakeGpsBlockedUntil = permanent ? (Date.now() + 300000) : (Date.now() + 60000); // 5 menit / 1 menit
+  sessionStorage.setItem('fakeGpsBlocked', '1');
+  sessionStorage.setItem('fakeGpsBlockedUntil', String(_fakeGpsBlockedUntil));
+  sessionStorage.setItem('fakeGpsBlockedTs', String(Date.now()));
+}
+
+function _checkFakeGps(accuracy, altitude, altitudeAccuracy, heading, speed) {
+  // Cek 1: Akurasi tidak valid
+  if (isNaN(accuracy) || accuracy <= 0) { _setFakeGpsBlocked(true); return 'Akurasi GPS tidak valid (0m). Nonaktifkan Fake GPS.'; }
+  if (accuracy < 5) { _setFakeGpsBlocked(true); return `Akurasi ${accuracy.toFixed(1)}m terlalu sempurna. Nonaktifkan Fake GPS.`; }
+  if (accuracy > 500) return null; // Bukan fake GPS, hanya sinyal lemah
+
+  // Cek 2: Akurasi bulat sempurna (ciri khas semua Fake GPS app)
+  // GPS asli selalu desimal panjang: 33.361000061035156
+  // Fake GPS selalu bulat: 10, 20, 50, 100
+  const accStr = String(accuracy);
+  const hasDecimal = accStr.includes('.');
+  const decPart = hasDecimal ? accStr.split('.')[1].replace(/0+$/, '') : '';
+  if (!hasDecimal || decPart.length === 0) {
+    if (accuracy <= 100) { _setFakeGpsBlocked(true); return `Akurasi GPS ${accuracy}m mencurigakan (nilai bulat). Nonaktifkan Fake GPS.`; }
+  }
+
+  // Cek 3: Fingerprint lengkap — GPS asli Android punya altitude, heading, speed
+  const nullCount = [altitude, altitudeAccuracy, heading, speed]
+    .filter(v => v === null || v === undefined).length;
+  if (nullCount === 4 && accuracy <= 50) {
+    _setFakeGpsBlocked(false);
+    return 'Profil GPS mencurigakan (tidak ada altitude/heading). Nonaktifkan Fake GPS.';
+  }
+
+  return null; // Lolos
+}
+
 async function handleAbsen() {
   if ($('btnAbsen').disabled) return;
+
+  // Re-baca dari sessionStorage setiap kali (reload-proof)
+  _fakeGpsDetected     = sessionStorage.getItem('fakeGpsBlocked') === '1';
+  _fakeGpsBlockedUntil = parseInt(sessionStorage.getItem('fakeGpsBlockedUntil') || '0');
+
+  // Blok permanen jika fake GPS pernah terdeteksi di sesi ini
+  if (_fakeGpsDetected && _fakeGpsBlockedUntil > Date.now()) {
+    const sisa = Math.ceil((_fakeGpsBlockedUntil - Date.now()) / 1000);
+    showResult('resultCard','rIcon','rTitle','rMsg','fail','🚫','Sesi Diblokir',
+      `Fake GPS terdeteksi. Nonaktifkan Fake GPS, tutup & buka ulang aplikasi. (${sisa}d)`);
+    $('btnAbsen').disabled = true;
+    return;
+  }
+  // Jika blokir sudah kadaluarsa, reset
+  if (_fakeGpsDetected && _fakeGpsBlockedUntil <= Date.now()) {
+    sessionStorage.removeItem('fakeGpsBlocked');
+    sessionStorage.removeItem('fakeGpsBlockedUntil');
+    _fakeGpsDetected = false;
+  }
+
   if (isDesktop()) {
     showResult('resultCard','rIcon','rTitle','rMsg','fail','🖥️','Perangkat Tidak Didukung','Absensi hanya dapat dilakukan dari smartphone.\nGunakan Telegram di HP Anda.');
     return;
@@ -865,10 +925,34 @@ async function handleAbsen() {
   }
   setBtnL('btnAbsen',true,'Mengambil GPS...');
   navigator.geolocation.getCurrentPosition(
-    async ({coords:{latitude,longitude,accuracy}}) => {
-      if (accuracy<=0){showResult('resultCard','rIcon','rTitle','rMsg','fail','🚫','Fake GPS Terdeteksi','Akurasi 0m tidak valid. Nonaktifkan Fake GPS.');setBtnL('btnAbsen',false,'🔄 Coba Lagi');return;}
-      if (accuracy<5) {showResult('resultCard','rIcon','rTitle','rMsg','fail','🚫','Fake GPS Terdeteksi',`Akurasi ${accuracy.toFixed(1)}m mencurigakan.`);setBtnL('btnAbsen',false,'🔄 Coba Lagi');return;}
-      if (accuracy>500){showResult('resultCard','rIcon','rTitle','rMsg','warning','⚠️','Sinyal GPS Lemah',`Akurasi ${Math.round(accuracy)}m terlalu lemah.`);setBtnL('btnAbsen',false,'🔄 Coba Lagi');return;}
+    async ({coords:{latitude,longitude,accuracy,altitude,altitudeAccuracy,heading,speed}}) => {
+
+      // ── Validasi Fake GPS (multi-layer) ──
+      if (accuracy > 500) {
+        showResult('resultCard','rIcon','rTitle','rMsg','warning','⚠️','Sinyal GPS Lemah',`Akurasi ${Math.round(accuracy)}m terlalu lemah. Pindah ke area terbuka.`);
+        setBtnL('btnAbsen',false,'🔄 Coba Lagi'); return;
+      }
+      const fakeMsg = _checkFakeGps(accuracy, altitude, altitudeAccuracy, heading, speed);
+      if (fakeMsg) {
+        // _setFakeGpsBlocked sudah dipanggil di dalam _checkFakeGps
+        showResult('resultCard','rIcon','rTitle','rMsg','fail','🚫','Fake GPS Terdeteksi',
+          fakeMsg + '\n\nSesi ini diblokir. Tutup aplikasi dan buka ulang setelah menonaktifkan Fake GPS.');
+        $('btnAbsen').disabled = true;
+        return;
+      }
+
+      // ── GPS Valid — lanjut kirim ──
+      const gpsFingerprint = {
+        accuracy_is_integer : Number.isInteger(accuracy),
+        accuracy_decimals   : (String(accuracy).split('.')[1]||'').replace(/0+$/,'').length,
+        has_altitude        : altitude !== null && altitude !== undefined,
+        has_altitude_acc    : altitudeAccuracy !== null && altitudeAccuracy !== undefined,
+        has_heading         : heading !== null && heading !== undefined,
+        has_speed           : speed  !== null && speed  !== undefined,
+        lat_decimals        : (String(latitude).split('.')[1]||'').length,
+        lon_decimals        : (String(longitude).split('.')[1]||'').length
+      };
+
       const n=nowWITA();
       const tanggal=n.toLocaleDateString('id-ID',{timeZone:TZ,weekday:'long',day:'numeric',month:'long',year:'numeric'});
       const tanggalISO=fmtD(n);
@@ -880,7 +964,8 @@ async function handleAbsen() {
               nama_lengkap:userProfile?.nama||'',jabatan:userProfile?.jabatan||'',nip:userProfile?.nip||''},
         latitude,longitude,horizontal_accuracy:accuracy,
         tanggal,tanggal_iso:tanggalISO,jam,
-        timestamp:Math.floor(Date.now()/1000),init_data:initData,source:'telegram_miniapp',device:navigator.userAgent
+        timestamp:Math.floor(Date.now()/1000),init_data:initData,source:'telegram_miniapp',
+        device:navigator.userAgent,gps_fingerprint:gpsFingerprint
       };
       try {
         const res=await apiFetch(P.absen,{method:'POST',body:JSON.stringify(payload)});
@@ -894,7 +979,6 @@ async function handleAbsen() {
           setBtnL('btnAbsen',false,'✅ Absen Tercatat');
           $('btnAbsen').disabled=true;
           logLoaded=false;
-          // Refresh today history
           setTimeout(loadTodayHistory, 2000);
           if(tg)setTimeout(()=>tg.close(),3500);
         } else {
