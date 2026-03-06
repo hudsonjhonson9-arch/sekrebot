@@ -462,7 +462,7 @@
 ════════════════════════════════════════════════ */
 const SERVER_1 = 'https://unheeled-timmy-supernumerously.ngrok-free.dev';   // ← Server utama
 const SERVER_2 = 'https://unannunciable-nongerundive-elsa.ngrok-free.dev';  // ← Server backup
-const isTest   = false; // true = webhook-test (butuh Execute manual)
+const isTest   = true; // true = webhook-test (butuh Execute manual)
 
 const P = {
   absen : isTest ? '/webhook-test/absen'      : '/webhook/absen',
@@ -960,43 +960,42 @@ function renderRekap(pegawai) {
     return;
   }
 
-  // Helper ambil field dengan banyak kemungkinan nama
-  const f = (o, ...keys) => { for(const k of keys){ if(o[k]!=null && o[k]!=='') return o[k]; } return null; };
+  const f = (o, ...keys) => { for(const k of keys){ if(o[k]!=null && o[k]!=='' && o[k]!=='—') return o[k]; } return null; };
 
   el.innerHTML = pegawai.map((p, i) => {
-    // ── Nama & NIP — toleran terhadap berbagai kapitalisasi ──
-    const nama    = f(p,'nama','Nama','NAMA','name','Name') || f(p,'username','first_name') || '—';
-    const nip     = f(p,'nip','NIP','Nip') || '—';
-    const jabatan = f(p,'jabatan','Jabatan','JABATAN','position') || '—';
+    const nama    = f(p,'nama','Nama','NAMA') || '—';
+    const nip     = f(p,'nip','NIP') || '—';
+    const jabatan = f(p,'jabatan','Jabatan','JABATAN') || '—';
     const init    = nama !== '—' ? nama[0].toUpperCase() : '?';
 
-    const masuk      = f(p,'masuk','Masuk','hadir','Hadir')                            || 0;
-    const pulang     = f(p,'pulang','Pulang')                                          || 0;
-    const luarMasuk  = f(p,'di_luar_masuk','diLuarMasuk','luar_masuk','Di Luar Masuk') || 0;
-    const luarPulang = f(p,'di_luar_pulang','diLuarPulang','luar_pulang','Di Luar Pulang') || 0;
-    const izin       = f(p,'izin','Izin')                                              || 0;
-    const sakit      = f(p,'sakit','Sakit')                                            || 0;
-    const tugas      = f(p,'tugas','Tugas')                                            || 0;
+    const masuk      = p.masuk          || 0;
+    const pulang     = p.pulang         || 0;
+    const luarMasuk  = p.di_luar_masuk  || 0;
+    const luarPulang = p.di_luar_pulang || 0;
+    const izin       = p.izin           || 0;
+    const sakit      = p.sakit          || 0;
+    const tugas      = p.tugas          || 0;
 
-    // Badge "Di Luar" hanya tampil jika > 0
-    const luarMasukBadge  = luarMasuk  > 0 ? `<span class="pbar-item pb-luar-masuk">⚠️ Luar Masuk: ${luarMasuk}</span>`   : '';
-    const luarPulangBadge = luarPulang > 0 ? `<span class="pbar-item pb-luar-pulang">⚠️ Luar Pulang: ${luarPulang}</span>` : '';
+    // Akumulasi waktu dari n8n
+    const akkTerlambat = p.akumulasi_terlambat  || null;
+    const akkLebihAwal = p.akumulasi_lebih_awal || null;
 
     return `<div class="pegawai-card">
       <div class="pegawai-top">
         <div class="pegawai-rank">${i+1}</div>
         <div class="pegawai-avatar">${init}</div>
-        <div>
-          <div class="pegawai-name">${nama}</div>
-          <div class="pegawai-jabatan">${jabatan} · NIP: ${nip}</div>
+        <div style="flex:1;min-width:0">
+          <div class="pegawai-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nama}</div>
+          <div class="pegawai-jabatan" style="color:var(--gold);font-size:9px;margin-top:1px">${jabatan}</div>
+          <div class="pegawai-jabatan">NIP: ${nip}</div>
         </div>
       </div>
       <div class="pegawai-bar">
-        <span class="pbar-item pb-masuk" >✅ Masuk: ${masuk}</span>
-        <span class="pbar-item pb-pulang">🔵 Pulang: ${pulang}</span>
-        ${luarMasukBadge}
-        ${luarPulangBadge}
-        ${izin  > 0 ? `<span class="pbar-item pb-izin" >🙏 Izin: ${izin}</span>`   : ''}
+        ${masuk  > 0 ? `<span class="pbar-item pb-masuk">✅ Masuk: ${masuk}</span>` : ''}
+        ${pulang > 0 ? `<span class="pbar-item pb-pulang">🔵 Pulang: ${pulang}</span>` : ''}
+        ${luarMasuk  > 0 ? `<span class="pbar-item pb-luar-masuk">⚠️ Luar Masuk: ${luarMasuk}×${akkTerlambat ? ` (${akkTerlambat})` : ''}</span>` : ''}
+        ${luarPulang > 0 ? `<span class="pbar-item pb-luar-pulang">⚠️ Luar Pulang: ${luarPulang}×${akkLebihAwal ? ` (${akkLebihAwal})` : ''}</span>` : ''}
+        ${izin  > 0 ? `<span class="pbar-item pb-izin">🙏 Izin: ${izin}</span>` : ''}
         ${sakit > 0 ? `<span class="pbar-item pb-sakit">🤒 Sakit: ${sakit}</span>` : ''}
         ${tugas > 0 ? `<span class="pbar-item pb-tugas">💼 Tugas: ${tugas}</span>` : ''}
       </div>
@@ -1024,7 +1023,7 @@ function unduhRekap() {
   ];
 
   // ── Header kolom ──
-  const headerRow = ['No','Nama','NIP','Jabatan','Masuk','Pulang','Luar Masuk','Luar Pulang','Izin','Sakit','Tugas','Total'];
+  const headerRow = ['No','Nama','NIP','Jabatan','Masuk','Pulang','Luar Masuk (×)','Akumulasi Terlambat','Luar Pulang (×)','Akumulasi Lebih Awal','Izin','Sakit','Tugas','Total'];
 
   // ── Data baris pegawai ──
   const dataRows = lastRekapData.map((p, i) => {
@@ -1040,19 +1039,16 @@ function unduhRekap() {
     const sakit       = Number(f('sakit','Sakit'))            || 0;
     const tugas       = Number(f('tugas','Tugas'))            || 0;
     const total       = masuk + pulang + luarMasuk + luarPulang + izin + sakit + tugas;
-    return [i+1, nama, nip, jabatan, masuk, pulang, luarMasuk, luarPulang, izin, sakit, tugas, total];
+    return [i+1, nama, nip, jabatan, masuk, pulang, luarMasuk, p.akumulasi_terlambat||'0 mnt', luarPulang, p.akumulasi_lebih_awal||'0 mnt', izin, sakit, tugas, total];
   });
 
   // ── Baris total ──
   const totRow = ['','TOTAL','','',
-    dataRows.reduce((s,r)=>s+r[4],0),
-    dataRows.reduce((s,r)=>s+r[5],0),
-    dataRows.reduce((s,r)=>s+r[6],0),
-    dataRows.reduce((s,r)=>s+r[7],0),
-    dataRows.reduce((s,r)=>s+r[8],0),
-    dataRows.reduce((s,r)=>s+r[9],0),
-    dataRows.reduce((s,r)=>s+r[10],0),
-    dataRows.reduce((s,r)=>s+r[11],0),
+    dataRows.reduce((s,r)=>s+r[4],0), dataRows.reduce((s,r)=>s+r[5],0),
+    dataRows.reduce((s,r)=>s+r[6],0), '',
+    dataRows.reduce((s,r)=>s+r[8],0), '',
+    dataRows.reduce((s,r)=>s+r[10],0), dataRows.reduce((s,r)=>s+r[11],0),
+    dataRows.reduce((s,r)=>s+r[12],0), dataRows.reduce((s,r)=>s+r[13],0),
   ];
 
   // ── Gabungkan semua baris ──
@@ -1062,7 +1058,7 @@ function unduhRekap() {
   // ── Styling lebar kolom ──
   ws['!cols'] = [
     {wch:4},{wch:36},{wch:22},{wch:30},
-    {wch:7},{wch:7},{wch:12},{wch:13},
+    {wch:7},{wch:7},{wch:14},{wch:20},{wch:14},{wch:20},
     {wch:7},{wch:7},{wch:7},{wch:7}
   ];
 
