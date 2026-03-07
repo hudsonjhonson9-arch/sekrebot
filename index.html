@@ -1220,8 +1220,20 @@ async function handleAbsen() {
   setBtnL('btnAbsen',true,'Mengambil GPS...');
   const _gpsT0 = Date.now(); // catat waktu mulai sebelum acquire
   navigator.geolocation.getCurrentPosition(
-    async ({coords:{latitude,longitude,accuracy}}) => {
-      const _gpsElapsed = Date.now() - _gpsT0; // ms untuk mendapat fix
+    async (position) => {
+      const {latitude,longitude,accuracy} = position.coords;
+      const _coords = position.coords;
+      const _gpsElapsed = Date.now() - _gpsT0;
+      // GPS Fingerprint — data tambahan untuk deteksi fake GPS di server
+      const gps_fingerprint = {
+        has_altitude    : _coords.altitude     !== null && _coords.altitude     !== undefined,
+        has_altitude_acc: _coords.altitudeAccuracy !== null && _coords.altitudeAccuracy !== undefined,
+        has_heading     : _coords.heading      !== null && _coords.heading      !== undefined,
+        has_speed       : _coords.speed        !== null && _coords.speed        !== undefined,
+        altitude        : _coords.altitude     ?? null,
+        altitude_acc    : _coords.altitudeAccuracy ?? null,
+        elapsed_ms      : _gpsElapsed
+      };
 
       /* ══════════════════════════════════════════════════════
          MULTI-LAYER FAKE GPS DETECTION
@@ -1347,6 +1359,7 @@ async function handleAbsen() {
         user:{id:MY_ID,first_name:tgUser.first_name||'',last_name:tgUser.last_name||'',username:tgUser.username||'',
               nama_lengkap:userProfile?.nama||'',jabatan:userProfile?.jabatan||'',nip:userProfile?.nip||''},
         latitude,longitude,horizontal_accuracy:accuracy,
+        gps_fingerprint,
         tanggal,tanggal_iso:tanggalISO,jam,
         timestamp:Math.floor(Date.now()/1000),init_data:initData,source: isTgX ? 'telegram_x_fallback' : 'telegram_miniapp',device:navigator.userAgent,
         _gps_elapsed_ms:_gpsElapsed,_detection_score:_score,_detection_flags:_flags,..._suspiciousPayload
