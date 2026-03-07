@@ -329,6 +329,29 @@
     .lokasi-mgmt-coord{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)}
     .btn-del{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:7px;padding:4px 8px;color:var(--danger);font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0}
 
+    /* Checkbox hari */
+    .hari-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+    .hari-check-label{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;font-weight:700;cursor:pointer;transition:all .15s;user-select:none}
+    .hari-check-label input{display:none}
+    .hari-check-label.checked{border-color:var(--admin);background:var(--admin-dim);color:var(--admin)}
+
+    /* Jadwal Lokasi */
+    .jadwal-hari-grid{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+    .jadwal-hari-row{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:11px;padding:10px 12px}
+    .jadwal-hari-label{font-size:10px;font-weight:700;color:var(--admin);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+    .jadwal-hari-label span{font-size:14px}
+    .jadwal-lokasi-pills{display:flex;flex-wrap:wrap;gap:5px}
+    .jadwal-lokasi-pill{display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;border:1px solid rgba(201,168,76,.35);background:var(--gold-dim);font-size:10px;font-weight:600;color:var(--gold)}
+    .jadwal-lokasi-pill.default-pill{border-color:rgba(96,165,250,.35);background:rgba(96,165,250,.1);color:var(--info)}
+    .jadwal-lokasi-pill .pill-del{background:none;border:none;color:var(--danger);font-size:11px;cursor:pointer;padding:0;line-height:1;opacity:.7}
+    .jadwal-lokasi-pill .pill-del:hover{opacity:1}
+    .jadwal-add-row{display:flex;gap:6px;margin-top:8px}
+    .jadwal-add-row select{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--white);font-family:inherit;font-size:11px;outline:none}
+    .jadwal-add-row select option{background:#112240}
+    .btn-jadwal-add{padding:7px 12px;border-radius:8px;border:1px solid rgba(167,139,250,.4);background:var(--admin-dim);color:var(--admin);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+    .jadwal-empty{font-size:10px;color:var(--muted);font-style:italic}
+    .radius-note{font-size:10px;color:var(--gold);background:var(--gold-dim);border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin-bottom:10px;text-align:center;font-weight:600}
+
     /* Empty state */
     .empty-state{text-align:center;padding:24px 16px;color:var(--muted)}
     .empty-icon{font-size:30px;margin-bottom:7px}
@@ -560,7 +583,17 @@
         <div class="map-coord-item"><div class="map-coord-label">Longitude</div><div class="map-coord-val" id="pinLon">—</div></div>
       </div>
       <div class="form-group"><label class="form-label">🏢 Nama Lokasi</label><input type="text" class="form-input" id="namaLokasi" placeholder="Contoh: Kantor BAPPERIDA"/></div>
-      <div class="form-group"><label class="form-label">📏 Radius Toleransi (meter)</label><input type="number" class="form-input" id="radiusLokasi" value="200" min="50" max="2000"/></div>
+      <div class="form-group"><label class="form-label">📏 Radius Toleransi (meter)</label><input type="number" class="form-input" id="radiusLokasi" value="100" min="50" max="2000"/></div>
+      <div class="form-group">
+        <label class="form-label">📅 Hari Aktif Lokasi Ini</label>
+        <div class="hari-grid" id="hariCheckGrid">
+          <label class="hari-check-label checked" onclick="toggleHariCheck(this)"><input type="checkbox" value="senin" checked/>Senin</label>
+          <label class="hari-check-label checked" onclick="toggleHariCheck(this)"><input type="checkbox" value="selasa" checked/>Selasa</label>
+          <label class="hari-check-label checked" onclick="toggleHariCheck(this)"><input type="checkbox" value="rabu" checked/>Rabu</label>
+          <label class="hari-check-label checked" onclick="toggleHariCheck(this)"><input type="checkbox" value="kamis" checked/>Kamis</label>
+          <label class="hari-check-label checked" onclick="toggleHariCheck(this)"><input type="checkbox" value="jumat" checked/>Jumat</label>
+        </div>
+      </div>
       <div class="result-card" id="adminResult"><div class="r-icon" id="adminRIcon">✅</div><div class="r-title" id="adminRTitle">—</div><div class="r-msg" id="adminRMsg">—</div></div>
       <button class="btn-admin" id="btnTambahLokasi" onclick="handleTambahLokasi()">
         <div class="btn-inner"><span>📌</span><span id="btnAdminText">Simpan Lokasi ke Database</span></div>
@@ -575,6 +608,24 @@
         <div class="shimmer" style="height:40px;border-radius:10px"></div>
         <div class="shimmer" style="height:40px;border-radius:10px;margin-top:6px"></div>
       </div>
+    </div>
+    <!-- ══ JADWAL LOKASI PER HARI ══ -->
+    <div class="card">
+      <div class="card-title">
+        <span>📅 Jadwal Lokasi per Hari</span>
+        <button class="btn-sm-admin" onclick="renderJadwalAdmin()">🔄</button>
+      </div>
+      <div class="radius-note">📏 Radius toleransi absen: <strong>100 meter</strong> dari titik lokasi</div>
+      <div id="jadwalLokasiContainer">
+        <div class="shimmer" style="height:60px;border-radius:10px"></div>
+        <div class="shimmer" style="height:60px;border-radius:10px;margin-top:6px"></div>
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn-admin" onclick="simpanJadwal()" id="btnSimpanJadwal">
+          <div class="btn-inner"><span>💾</span><span id="btnJadwalText">Simpan Jadwal</span></div>
+        </button>
+      </div>
+      <div class="result-card" id="jadwalResult"><div class="r-icon" id="jadwalRIcon">✅</div><div class="r-title" id="jadwalRTitle">—</div><div class="r-msg" id="jadwalRMsg">—</div></div>
     </div>
     <div class="footer">Perubahan langsung tersimpan ke n8n datatables</div>
   </div>
@@ -676,8 +727,10 @@ function updateClock() {
   else              {jenis='🟡 Belum Waktunya Pulang'; batas='Pulang ≥ 14:30'}
   $('jenisAbsen').textContent = jenis;
   $('batasAbsen').textContent = batas;
-  const lh = LOK_DEF[H_ID[h]]||LOK_DEF.default;
-  $('lokasiList').innerHTML = lh.map(l=>`<div class="lokasi-item"><div class="lokasi-dot"></div><div class="lokasi-name">${l}</div></div>`).join('');
+  const lh = LOK_DEF[H_ID[h]] || [];
+  $('lokasiList').innerHTML = lh.length
+    ? lh.map(l=>`<div class="lokasi-item"><div class="lokasi-dot"></div><div class="lokasi-name">${l}</div></div>`).join('')
+    : `<div class="lokasi-item"><div class="lokasi-dot" style="background:var(--danger)"></div><div class="lokasi-name" style="color:var(--muted)">Tidak ada lokasi aktif hari ini</div></div>`;
 }
 updateClock(); setInterval(updateClock,1000);
 
@@ -1569,6 +1622,11 @@ async function downloadRekap() {
 }
 
 /* ════ ADMIN ════ */
+function toggleHariCheck(label){
+  const cb=label.querySelector('input');
+  cb.checked=!cb.checked;
+  label.classList.toggle('checked',cb.checked);
+}
 let adminMap=null,adminMarker=null,selectedPin=null,adminMapInited=false;
 function initAdminMap(){
   if(adminMapInited||!IS_ADMIN)return;
@@ -1587,41 +1645,201 @@ function initAdminMap(){
   },150);
 }
 async function handleTambahLokasi(){
-  const nama=$('namaLokasi').value.trim(),radius=parseInt($('radiusLokasi').value)||200;
+  const nama=$('namaLokasi').value.trim(),radius=parseInt($('radiusLokasi').value)||100;
   if(!selectedPin){showResult('adminResult','adminRIcon','adminRTitle','adminRMsg','warning','⚠️','Pilih Lokasi','Tap pada peta untuk menentukan titik lokasi.');return;}
   if(!nama){showResult('adminResult','adminRIcon','adminRTitle','adminRMsg','warning','⚠️','Nama Kosong','Masukkan nama lokasi terlebih dahulu.');return;}
+  // Ambil hari yang dicentang
+  const hariChecked = Array.from(document.querySelectorAll('#hariCheckGrid input:checked')).map(el=>el.value);
+  if(!hariChecked.length){showResult('adminResult','adminRIcon','adminRTitle','adminRMsg','warning','⚠️','Pilih Hari','Pilih minimal satu hari aktif.');return;}
+  const hariStr = hariChecked.join(',');
   setBtnL('btnTambahLokasi',true,'Menyimpan...');
   try{
-    await apiFetch(P.lokasiAdd,{method:'POST',body:JSON.stringify({nama_lokasi:nama,latitude:selectedPin.lat,longitude:selectedPin.lng,radius,ditambahkan_oleh:MY_ID,timestamp:Math.floor(Date.now()/1000)})});
-    showResult('adminResult','adminRIcon','adminRTitle','adminRMsg','success','📌','Lokasi Tersimpan!',`${nama}\nLat: ${selectedPin.lat.toFixed(6)}, Lng: ${selectedPin.lng.toFixed(6)}`);
+    await apiFetch(P.lokasiAdd,{method:'POST',body:JSON.stringify({nama_lokasi:nama,latitude:selectedPin.lat,longitude:selectedPin.lng,radius,hari:hariStr,ditambahkan_oleh:MY_ID,timestamp:Math.floor(Date.now()/1000)})});
+    showResult('adminResult','adminRIcon','adminRTitle','adminRMsg','success','📌','Lokasi Tersimpan!',`${nama}\nHari aktif: ${hariStr}\nLat: ${selectedPin.lat.toFixed(6)}, Lng: ${selectedPin.lng.toFixed(6)}`);
     setBtnL('btnTambahLokasi',false,'Simpan Lokasi ke Database');
     $('namaLokasi').value='';selectedPin=null;
     if(adminMarker){adminMap.removeLayer(adminMarker);adminMarker=null;}
     $('mapCoords').classList.remove('show');
+    // Reset checkbox ke semua checked
+    document.querySelectorAll('#hariCheckGrid .hari-check-label').forEach(l=>{l.classList.add('checked');l.querySelector('input').checked=true;});
     loadLokasiAdmin();
   }catch{showResult('adminResult','adminRIcon','adminRTitle','adminRMsg','fail','🔌','Gagal Menyimpan','Server tidak merespons.');setBtnL('btnTambahLokasi',false,'Simpan Lokasi ke Database');}
 }
 async function loadLokasiAdmin(){
   const el=$('lokasiMgmtList');
   el.innerHTML=`<div class="shimmer" style="height:38px;border-radius:10px"></div><div class="shimmer" style="height:38px;border-radius:10px;margin-top:6px"></div>`;
+  let list=[];
   try{
     const res=await apiFetch(P.lokasiList,{method:'GET'});if(!res.ok)throw 0;
-    const json=await res.json();const list=Array.isArray(json)?json:(json.data||[]);
-    if(!list.length){el.innerHTML=`<div class="empty-state" style="padding:16px"><div class="empty-icon">📭</div><div class="empty-text">Belum ada lokasi tersimpan</div></div>`;return;}
-    if(adminMap){list.forEach(l=>{const lat=parseFloat(l.latitude||l.lat||0),lng=parseFloat(l.longitude||l.lng||0);if(!lat||!lng)return;L.circle([lat,lng],{radius:l.radius||200,color:'#c9a84c',fillColor:'rgba(201,168,76,.1)',fillOpacity:1,weight:1}).addTo(adminMap).bindTooltip(l.nama_lokasi||l.nama||'Lokasi');});}
-    el.innerHTML=list.map(l=>{
-      const lat=parseFloat(l.latitude||l.lat||0).toFixed(5);
-      const lng=parseFloat(l.longitude||l.lng||0).toFixed(5);
-      const id=l.id||l.ID||'';
-      return`<div class="lokasi-mgmt-item"><div><div class="lokasi-mgmt-name">📍 ${l.nama_lokasi||l.nama||'—'}</div><div class="lokasi-mgmt-coord">${lat}, ${lng} · r:${l.radius||200}m</div></div><button class="btn-del" onclick="hapusLokasi('${id}','${(l.nama_lokasi||l.nama||'').replace(/'/g,'&apos;')}')">🗑</button></div>`;
-    }).join('');
+    const json=await res.json();list=Array.isArray(json)?json:(json.data||[]);
+    if(!list.length){el.innerHTML=`<div class="empty-state" style="padding:16px"><div class="empty-icon">📭</div><div class="empty-text">Belum ada lokasi tersimpan</div></div>`;
+    }else{
+      if(adminMap){list.forEach(l=>{const lat=parseFloat(l.latitude||l.lat||0),lng=parseFloat(l.longitude||l.lng||0);if(!lat||!lng)return;L.circle([lat,lng],{radius:l.radius||100,color:'#c9a84c',fillColor:'rgba(201,168,76,.1)',fillOpacity:1,weight:1}).addTo(adminMap).bindTooltip(l.nama_lokasi||l.nama||'Lokasi');});}
+      // ── Rebuild LOK_DEF dari datatable pakai kolom hari ──
+      const newLOK={};
+      list.forEach(l=>{
+        const nama=l.nama_lokasi||l.nama||'';
+        const hariRaw=(l.hari||'senin,selasa,rabu,kamis,jumat').toLowerCase();
+        hariRaw.split(',').map(h=>h.trim()).filter(Boolean).forEach(h=>{
+          if(!newLOK[h])newLOK[h]=[];
+          if(!newLOK[h].includes(nama))newLOK[h].push(nama);
+        });
+      });
+      // Hapus semua key lama lalu assign baru
+      Object.keys(LOK_DEF).forEach(k=>delete LOK_DEF[k]);
+      Object.assign(LOK_DEF,newLOK);
+      updateClock();
+      el.innerHTML=list.map(l=>{
+        const lat=parseFloat(l.latitude||l.lat||0).toFixed(5);
+        const lng=parseFloat(l.longitude||l.lng||0).toFixed(5);
+        const id=l.id||l.ID||'';
+        const hariRaw=(l.hari||'senin,selasa,rabu,kamis,jumat');
+        const hariPills=hariRaw.split(',').map(h=>`<span style="padding:1px 6px;border-radius:10px;background:var(--admin-dim);color:var(--admin);font-size:9px;font-weight:700">${h.trim()}</span>`).join(' ');
+        return`<div class="lokasi-mgmt-item"><div style="flex:1;min-width:0"><div class="lokasi-mgmt-name">📍 ${l.nama_lokasi||l.nama||'—'}</div><div class="lokasi-mgmt-coord">${lat}, ${lng} · r:${l.radius||100}m</div><div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">${hariPills}</div></div><button class="btn-del" onclick="hapusLokasi('${id}','${(l.nama_lokasi||l.nama||'').replace(/'/g,'&apos;')}')">🗑</button></div>`;
+      }).join('');
+    }
   }catch{el.innerHTML=`<div class="empty-state" style="padding:16px"><div class="empty-icon">🔌</div><div class="empty-text">Gagal memuat</div></div>`;}
+  // Update daftar lokasi tersedia untuk jadwal
+  availableLokasi=list.map(l=>l.nama_lokasi||l.nama||'').filter(Boolean);
+  renderJadwalAdmin();
 }
 async function hapusLokasi(id,nama){
   if(!confirm(`Hapus lokasi "${nama}"?`))return;
   try{await apiFetch(`${P.lokasiDel}?id=${id}`,{method:'DELETE'});loadLokasiAdmin();}
   catch{alert('Gagal menghapus. Coba lagi.');}
 }
+
+/* ════ JADWAL LOKASI ADMIN ════ */
+// Hari kerja yang bisa diatur (Senin–Jumat)
+const HARI_KERJA = [
+  {id:'senin',   label:'Senin',   emoji:'1️⃣'},
+  {id:'selasa',  label:'Selasa',  emoji:'2️⃣'},
+  {id:'rabu',    label:'Rabu',    emoji:'3️⃣'},
+  {id:'kamis',   label:'Kamis',   emoji:'4️⃣'},
+  {id:'jumat',   label:'Jumat',   emoji:'5️⃣'},
+];
+
+// State jadwal — di-init dari LOK_DEF
+let jadwalState = {};
+(function initJadwal(){
+  HARI_KERJA.forEach(h => {
+    jadwalState[h.id] = [...(LOK_DEF[h.id] || LOK_DEF.default || [])];
+  });
+})();
+
+// Daftar lokasi tersedia (diisi saat loadLokasiAdmin)
+let availableLokasi = [];
+
+// Render seluruh jadwal ke container
+function renderJadwalAdmin(){
+  const container = $('jadwalLokasiContainer');
+  if (!container) return;
+
+  // Refresh daftar lokasi dari adminMap circles jika ada
+  refreshAvailableLokasi();
+
+  container.innerHTML = HARI_KERJA.map(h => {
+    const loks = jadwalState[h.id] || [];
+    const isDefault = JSON.stringify(loks) === JSON.stringify(LOK_DEF.default || []);
+    const pillsHTML = loks.length
+      ? loks.map((l,i) => `
+          <span class="jadwal-lokasi-pill${isDefault&&loks.length===(LOK_DEF.default||[]).length?' default-pill':''}">
+            📍 ${l}
+            <button class="pill-del" title="Hapus" onclick="hapusPillJadwal('${h.id}',${i})">✕</button>
+          </span>`).join('')
+      : `<span class="jadwal-empty">— Tidak ada lokasi (pegawai tidak bisa absen)</span>`;
+
+    // Select opsi lokasi
+    const optsHTML = availableLokasi.length
+      ? availableLokasi.map(l => `<option value="${l}">${l}</option>`).join('')
+      : `<option value="">— Muat lokasi dulu —</option>`;
+
+    return `
+      <div class="jadwal-hari-row">
+        <div class="jadwal-hari-label"><span>${h.emoji}</span>${h.label}</div>
+        <div class="jadwal-lokasi-pills" id="pills_${h.id}">${pillsHTML}</div>
+        <div class="jadwal-add-row">
+          <select id="sel_${h.id}">${optsHTML}</select>
+          <button class="btn-jadwal-add" onclick="tambahPillJadwal('${h.id}')">＋ Tambah</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function refreshAvailableLokasi(){
+  // Ambil dari list yang sudah di-load di lokasiMgmtList
+  const items = document.querySelectorAll('.lokasi-mgmt-name');
+  if (items.length) {
+    availableLokasi = Array.from(items).map(el => el.textContent.replace('📍 ','').trim()).filter(Boolean);
+  }
+  // Fallback ke nilai LOK_DEF jika belum ada
+  if (!availableLokasi.length) {
+    const all = Object.values(LOK_DEF).flat();
+    availableLokasi = [...new Set(all)];
+  }
+}
+
+function tambahPillJadwal(hariId){
+  const sel = $(`sel_${hariId}`);
+  if (!sel || !sel.value) return;
+  const nama = sel.value.trim();
+  if (!nama) return;
+  if (!jadwalState[hariId]) jadwalState[hariId] = [];
+  if (jadwalState[hariId].includes(nama)) {
+    showResult('jadwalResult','jadwalRIcon','jadwalRTitle','jadwalRMsg','warning','⚠️','Sudah Ada',`${nama} sudah ada di jadwal ${hariId}.`);
+    return;
+  }
+  jadwalState[hariId].push(nama);
+  renderJadwalAdmin();
+}
+
+function hapusPillJadwal(hariId, idx){
+  if (!jadwalState[hariId]) return;
+  jadwalState[hariId].splice(idx, 1);
+  renderJadwalAdmin();
+}
+
+function simpanJadwal(){
+  // Terapkan ke LOK_DEF global (yang dipakai updateClock & lokasiList)
+  HARI_KERJA.forEach(h => {
+    if (jadwalState[h.id] && jadwalState[h.id].length > 0) {
+      LOK_DEF[h.id] = [...jadwalState[h.id]];
+    } else {
+      delete LOK_DEF[h.id]; // hapus key → fallback ke default
+    }
+  });
+
+  // Simpan ke localStorage agar persisten
+  try {
+    localStorage.setItem('jadwal_lokasi_bapperida', JSON.stringify(LOK_DEF));
+  } catch(_) {}
+
+  updateClock(); // refresh tampilan lokasi hari ini
+  showResult('jadwalResult','jadwalRIcon','jadwalRTitle','jadwalRMsg','success','✅','Jadwal Tersimpan!',
+    'Jadwal lokasi berhasil diperbarui.\nTampilan "Lokasi Absen Hari Ini" sudah diperbarui.');
+
+  const btn = $('btnSimpanJadwal');
+  if (btn) {
+    btn.disabled = true;
+    $('btnJadwalText').textContent = '✅ Tersimpan';
+    setTimeout(() => { btn.disabled = false; $('btnJadwalText').textContent = 'Simpan Jadwal'; }, 2500);
+  }
+}
+
+// Load jadwal dari localStorage jika ada
+(function loadJadwalFromStorage(){
+  try {
+    const saved = localStorage.getItem('jadwal_lokasi_bapperida');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      Object.assign(LOK_DEF, parsed);
+      // Sync ke jadwalState
+      HARI_KERJA.forEach(h => {
+        jadwalState[h.id] = [...(LOK_DEF[h.id] || LOK_DEF.default || [])];
+      });
+    }
+  } catch(_) {}
+})();
 
 /* ════ AUTO INIT ════ */
 loadTodayHistory();
