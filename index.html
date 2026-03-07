@@ -582,40 +582,25 @@
 </div><!-- .app -->
 
 <script>
-/* ════ KONFIGURASI SERVER ════ */
-const SERVER_1 = 'https://unheeled-timmy-supernumerously.ngrok-free.dev'; // Test Server
-const SERVER_2 = 'https://unannunciable-nongerundive-elsa.ngrok-free.dev'; // Production Server
-
-const ADMIN_IDS = [1383864355];
+/* ════ KONFIGURASI ════ */
+const SERVER_1  = 'https://unheeled-timmy-supernumerously.ngrok-free.dev';
+const SERVER_2  = 'https://unannunciable-nongerundive-elsa.ngrok-free.dev';
+const isTest    = true;
+const ADMIN_IDS    = [1383864355];
+// Chat ID tujuan pengiriman rekap via Telegram (ganti dengan Group ID jika perlu)
 const REKAP_CHAT_ID = ADMIN_IDS[0];
 
-/**
- * FUNGSI UNTUK MENDAPATKAN URL SECARA DINAMIS
- * @param {string} key - Nama endpoint (misal: 'absen', 'log')
- * @param {string} mode - 'production' atau 'manual' (dari n8n executionMode)
- */
-function getEndpoint(key, mode = 'production') {
-    // Tentukan apakah ini mode test atau bukan
-    const isTest = (mode === 'manual' || mode === 'test');
-    
-    // Pilih base URL berdasarkan mode
-    const BASE_URL = isTest ? SERVER_1 : SERVER_2;
-    
-    // Mapping Path
-    const paths = {
-        absen:      isTest ? '/webhook-test/absen'       : '/webhook/absen',
-        ket:        isTest ? '/webhook-test/keterangan'  : '/webhook/keterangan',
-        log:        isTest ? '/webhook-test/log-absen'   : '/webhook/log-absen',
-        rekap:      isTest ? '/webhook-test/rekap-absen' : '/webhook/rekap-absen',
-        userList:   isTest ? '/webhook-test/user-list'   : '/webhook/user-list',
-        lokasiList: isTest ? '/webhook-test/lokasi-list' : '/webhook/lokasi-list',
-        lokasiAdd:  isTest ? '/webhook-test/lokasi-add'  : '/webhook/lokasi-add',
-        lokasiDel:  isTest ? '/webhook-test/lokasi-delete': '/webhook/lokasi-delete',
-        kirimRekap: isTest ? '/webhook-test/kirim-rekap' : '/webhook/kirim-rekap',
-    };
-
-    return BASE_URL + (paths[key] || '/webhook/absen');
-}
+const P = {
+  absen      : isTest ? '/webhook-test/absen'          : '/webhook/absen',
+  ket        : isTest ? '/webhook-test/keterangan'     : '/webhook/keterangan',
+  log        : isTest ? '/webhook-test/log-absen'      : '/webhook/log-absen',
+  rekap      : isTest ? '/webhook-test/rekap-absen'    : '/webhook/rekap-absen',
+  userList   : isTest ? '/webhook-test/user-list'      : '/webhook/user-list',
+  lokasiList : isTest ? '/webhook-test/lokasi-list'    : '/webhook/lokasi-list',
+  lokasiAdd  : isTest ? '/webhook-test/lokasi-add'     : '/webhook/lokasi-add',
+  lokasiDel  : isTest ? '/webhook-test/lokasi-delete'  : '/webhook/lokasi-delete',
+  kirimRekap : isTest ? '/webhook-test/kirim-rekap'    : '/webhook/kirim-rekap',
+};
 
 const HDR = {'Content-Type':'application/json','ngrok-skip-browser-warning':'true','Accept':'application/json'};
 async function apiFetch(path, opts={}) {
