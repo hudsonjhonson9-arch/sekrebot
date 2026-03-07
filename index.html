@@ -293,6 +293,8 @@
     .profil-nip{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:1px}
     .profil-badge{padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700}
     .aktif-badge{background:rgba(34,197,94,.15);color:var(--success)}
+    .nonaktif-badge{background:rgba(239,68,68,.15);color:var(--danger)}
+    .ket-status-badge{background:rgba(245,158,11,.15);color:var(--warning)}
     .tg-badge{background:rgba(96,165,250,.12);color:var(--info)}
     .profil-section-title{font-size:11px;font-weight:800;color:var(--white);margin-bottom:8px;letter-spacing:.03em}
 
@@ -583,7 +585,7 @@
         <div class="profil-jabatan" id="profilJabatan">—</div>
         <div class="profil-nip" id="profilNip">NIP —</div>
         <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap">
-          <span class="profil-badge aktif-badge">✅ AKTIF</span>
+          <span class="profil-badge aktif-badge" id="profilStatusBadge">⚙️ MEMUAT</span>
           <span class="profil-badge tg-badge" id="profilTgBadge">🔗 —</span>
         </div>
       </div>
@@ -959,7 +961,7 @@ async function loadUserProfile() {
     const json = await res.json();
     const d    = Array.isArray(json)?(json[0]||{}):(json.data||json);
     if (d&&(d.nama||d.Nama)) {
-      userProfile={nama:d.nama||d.Nama||'',jabatan:d.jabatan||d.Jabatan||'',nip:d.nip||d.NIP||'',username:d.username||d.Username||tgUser.username||''};
+      userProfile={nama:d.nama||d.Nama||'',jabatan:d.jabatan||d.Jabatan||'',nip:d.nip||d.NIP||'',username:d.username||d.Username||tgUser.username||'',status:d.status||d.Status||'AKTIF'};
       applyProfile();
     } else setUserFallback();
   } catch { setUserFallback(); }
@@ -971,7 +973,11 @@ function applyProfile(){
   setT('userName',n);setT('ketNama',n);
   setT('userJabatan',p.jabatan||'—');setT('ketJabatan',p.jabatan||'—');
   setT('userMeta',`NIP: ${p.nip||'—'}`);setT('ketMeta',`NIP: ${p.nip||'—'}`);
-  const b=$('userBadge');if(b){b.textContent='AKTIF';b.className='sbadge s-aktif';}
+  // ── Badge status (baca dari data, bukan hardcode) ──
+  const st   = (p.status||'AKTIF').toUpperCase();
+  const stEmoji = st==='AKTIF'?'✅':st==='SAKIT'?'🤒':st==='IZIN'?'🙏':st==='TUGAS'?'💼':st==='NONAKTIF'?'🚫':'⚙️';
+  const stCls   = st==='AKTIF'?'s-aktif':st==='NONAKTIF'?'s-nonaktif':'s-ket';
+  const b=$('userBadge');if(b){b.textContent=`${stEmoji} ${st}`;b.className=`sbadge ${stCls}`;}
   // ── Isi kartu profil besar ──
   const al=$('profilAvatarLg');if(al)al.textContent=i;
   setT('profilNama', n);
@@ -979,6 +985,9 @@ function applyProfile(){
   setT('profilNip', `NIP: ${p.nip||'—'}`);
   const tb=$('profilTgBadge');
   if(tb) tb.textContent=`🔗 @${tgUser.username||'Telegram'}`;
+  // ── Badge profil besar (dinamis) ──
+  const pb=$('profilStatusBadge');
+  if(pb){pb.textContent=`${stEmoji} ${st}`;pb.className=`profil-badge ${stCls==='s-aktif'?'aktif-badge':stCls==='s-nonaktif'?'nonaktif-badge':'ket-status-badge'}`;}
   renderReminders(p);
 }
 function setUserFallback(){
@@ -988,7 +997,7 @@ function setUserFallback(){
   setT('userJabatan','—');setT('ketJabatan','—');
   setT('userMeta',`@${tgUser.username||'—'} · ID: ${MY_ID||'—'}`);
   setT('ketMeta',`@${tgUser.username||'—'} · ID: ${MY_ID||'—'}`);
-  const b=$('userBadge');if(b){b.textContent='AKTIF';b.className='sbadge s-aktif';}
+  const b=$('userBadge');if(b){b.textContent='⚙️ —';b.className='sbadge';}
   const al=$('profilAvatarLg');if(al)al.textContent=i;
   setT('profilNama',n);
   setT('profilJabatan','—');
