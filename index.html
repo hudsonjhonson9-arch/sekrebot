@@ -267,6 +267,19 @@
     .sn-sakit {color:var(--danger)}
     .sn-tugas {color:#a78bfa}
 
+    /* Rekap stat cards baru */
+    .rs-card{background:var(--card-bg);border:1px solid var(--border);border-radius:11px;padding:9px 6px 7px;text-align:center;backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;gap:2px}
+    .rs-num{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;line-height:1}
+    .rs-ico{font-size:12px;line-height:1}
+    .rs-lbl{font-size:8px;color:var(--muted);font-weight:600;letter-spacing:.03em}
+    .rs-masuk  {border-color:rgba(34,197,94,.3) ;background:rgba(34,197,94,.06) } .rs-masuk  .rs-num{color:var(--success)}
+    .rs-pulang {border-color:rgba(96,165,250,.3);background:rgba(96,165,250,.06)} .rs-pulang .rs-num{color:var(--info)}
+    .rs-lap    {border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.06)} .rs-lap    .rs-num{color:#f59e0b}
+    .rs-luar   {border-color:rgba(245,158,11,.2);background:rgba(245,158,11,.04)} .rs-luar   .rs-num{color:var(--warning)}
+    .rs-izin   {border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.06)} .rs-izin   .rs-num{color:#fbbf24}
+    .rs-sakit  {border-color:rgba(239,68,68,.3) ;background:rgba(239,68,68,.06) } .rs-sakit  .rs-num{color:var(--danger)}
+    .rs-tugas  {border-color:rgba(139,92,246,.3);background:rgba(139,92,246,.06)} .rs-tugas  .rs-num{color:#8b5cf6}
+
     .pegawai-list{display:flex;flex-direction:column;gap:7px}
     .pegawai-card{background:var(--card-bg);border:1px solid var(--border);border-radius:13px;padding:11px 13px;backdrop-filter:blur(10px);animation:slideUp .25s ease}
     .pegawai-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
@@ -528,10 +541,13 @@
       <div class="log-title">Riwayat Saya</div>
       <button class="btn-refresh" id="btnRefresh" onclick="loadLog()"><span id="rIcon2">🔄</span> Refresh</button>
     </div>
-    <div class="stats-grid">
-      <div class="stat-card s-masuk"><div class="stat-num" id="stMasuk">—</div><div class="stat-lbl">Masuk</div></div>
-      <div class="stat-card s-izin" ><div class="stat-num" id="stIzin" >—</div><div class="stat-lbl">Izin</div></div>
-      <div class="stat-card s-sakit"><div class="stat-num" id="stSakit">—</div><div class="stat-lbl">Sakit</div></div>
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);gap:6px">
+      <div class="stat-card s-masuk">     <div class="stat-num" id="stMasuk"     >—</div><div class="stat-lbl">✅ Masuk</div></div>
+      <div class="stat-card s-pulang">    <div class="stat-num" id="stPulang"    >—</div><div class="stat-lbl">🔵 Pulang</div></div>
+      <div class="stat-card" style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.3)"><div class="stat-num" id="stPulangLuar" style="color:#f59e0b">—</div><div class="stat-lbl">🏃 Lap.</div></div>
+      <div class="stat-card s-izin">      <div class="stat-num" id="stIzin"     >—</div><div class="stat-lbl">🙏 Izin</div></div>
+      <div class="stat-card s-sakit">     <div class="stat-num" id="stSakit"    >—</div><div class="stat-lbl">🤒 Sakit</div></div>
+      <div class="stat-card" style="background:rgba(139,92,246,.08);border-color:rgba(139,92,246,.3)"><div class="stat-num" id="stTugas" style="color:#8b5cf6">—</div><div class="stat-lbl">💼 Tugas</div></div>
     </div>
     <div class="filter-bar">
       <button class="filter-chip active" onclick="filterLog('SEMUA',this)">Semua</button>
@@ -577,13 +593,53 @@
         <button class="date-preset"        id="dp-custom" onclick="setPreset('custom',this)" style="display:none">Kustom</button>
       </div>
     </div>
-    <div class="rekap-stats6">
-      <div class="stat-card2"><div class="stat-num2 sn-masuk"  id="rsMasuk" >—</div><div class="stat-lbl2">✅ Masuk</div></div>
-      <div class="stat-card2"><div class="stat-num2 sn-pulang" id="rsPulang">—</div><div class="stat-lbl2">🔵 Pulang</div></div>
-      <div class="stat-card2"><div class="stat-num2 sn-luar"   id="rsLuar"  >—</div><div class="stat-lbl2">⚠️ Di Luar Jam</div></div>
-      <div class="stat-card2"><div class="stat-num2 sn-izin"   id="rsIzin"  >—</div><div class="stat-lbl2">🙏 Izin</div></div>
-      <div class="stat-card2"><div class="stat-num2 sn-sakit"  id="rsSakit" >—</div><div class="stat-lbl2">🤒 Sakit</div></div>
-      <div class="stat-card2"><div class="stat-num2 sn-tugas"  id="rsTugas" >—</div><div class="stat-lbl2">💼 Tugas</div></div>
+    <!-- Stat Rekap: baris atas kehadiran, baris bawah keterangan -->
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+      <!-- Label seksi -->
+      <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;padding:0 2px">📋 Kehadiran</div>
+      <!-- Baris 1: Masuk · Pulang · Lap. · Luar Jam — 4 kolom -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">
+        <div class="rs-card rs-masuk">
+          <div class="rs-num" id="rsMasuk">—</div>
+          <div class="rs-ico">✅</div>
+          <div class="rs-lbl">Masuk</div>
+        </div>
+        <div class="rs-card rs-pulang">
+          <div class="rs-num" id="rsPulang">—</div>
+          <div class="rs-ico">🔵</div>
+          <div class="rs-lbl">Pulang</div>
+        </div>
+        <div class="rs-card rs-lap">
+          <div class="rs-num" id="rsPulangLuar">—</div>
+          <div class="rs-ico">🏃</div>
+          <div class="rs-lbl">Lapangan</div>
+        </div>
+        <div class="rs-card rs-luar">
+          <div class="rs-num" id="rsLuar">—</div>
+          <div class="rs-ico">⚠️</div>
+          <div class="rs-lbl">Luar Jam</div>
+        </div>
+      </div>
+      <!-- Label seksi -->
+      <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;padding:0 2px">📝 Keterangan</div>
+      <!-- Baris 2: Izin · Sakit · Tugas — 3 kolom -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
+        <div class="rs-card rs-izin">
+          <div class="rs-num" id="rsIzin">—</div>
+          <div class="rs-ico">🙏</div>
+          <div class="rs-lbl">Izin</div>
+        </div>
+        <div class="rs-card rs-sakit">
+          <div class="rs-num" id="rsSakit">—</div>
+          <div class="rs-ico">🤒</div>
+          <div class="rs-lbl">Sakit</div>
+        </div>
+        <div class="rs-card rs-tugas">
+          <div class="rs-num" id="rsTugas">—</div>
+          <div class="rs-ico">💼</div>
+          <div class="rs-lbl">Tugas</div>
+        </div>
+      </div>
     </div>
     <div id="rekapToast" style="display:none;border-radius:11px;padding:10px 13px;margin-bottom:10px;font-size:11px;font-weight:700;animation:slideUp .3s ease"></div>
     <div class="pegawai-list" id="pegawaiList">
@@ -667,7 +723,7 @@
 const SERVER_1  = 'https://unheeled-timmy-supernumerously.ngrok-free.dev';
 const SERVER_2  = 'https://unannunciable-nongerundive-elsa.ngrok-free.dev';
 const isTest    = false;
-const ADMIN_IDS = [1383864355];
+const ADMIN_IDS    = [1383864355];
 // Chat ID tujuan pengiriman rekap via Telegram (ganti dengan Group ID jika perlu)
 const REKAP_CHAT_ID = ADMIN_IDS[0];
 
@@ -680,6 +736,7 @@ const P = {
   lokasiList : isTest ? '/webhook-test/lokasi-list'    : '/webhook/lokasi-list',
   lokasiAdd  : isTest ? '/webhook-test/lokasi-add'     : '/webhook/lokasi-add',
   lokasiDel  : isTest ? '/webhook-test/lokasi-delete'  : '/webhook/lokasi-delete',
+  lokasiUpdate: isTest ? '/webhook-test/lokasi-update' : '/webhook/lokasi-update',
   kirimRekap : isTest ? '/webhook-test/kirim-rekap'    : '/webhook/kirim-rekap',
 };
 
@@ -1277,16 +1334,21 @@ function renderLog(logs){
 }
 function updateLogStats(l){
   const c=k=>l.filter(r=>{const j=(getField(r,'Jenis Absen','jenis','Jenis')||'').toUpperCase().trim();return j===k;}).length;
-  $('stMasuk').textContent=c('MASUK');
-  $('stIzin').textContent =c('IZIN');
-  $('stSakit').textContent=c('SAKIT');
+  const masukTotal  = c('MASUK') + c('DI LUAR JAM MASUK');
+  const pulangTotal = c('PULANG') + c('DI LUAR JAM PULANG');
+  $('stMasuk').textContent     = masukTotal  || '0';
+  $('stPulang').textContent    = pulangTotal || '0';
+  $('stPulangLuar').textContent= c('PULANG LUAR') || '0';
+  $('stIzin').textContent      = c('IZIN')   || '0';
+  $('stSakit').textContent     = c('SAKIT')  || '0';
+  $('stTugas').textContent     = c('TUGAS')  || '0';
 }
 function filterLog(f,el){
   document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');
   renderLog(f==='SEMUA'?allLogs:allLogs.filter(r=>{
     const j=(getField(r,'Jenis Absen','jenis','Jenis')||'').toUpperCase().trim();
-    if(f==='MASUK')       return j==='MASUK';
-    if(f==='PULANG')      return j==='PULANG';
+    if(f==='MASUK')       return j==='MASUK' || j==='DI LUAR JAM MASUK';
+    if(f==='PULANG')      return j==='PULANG' || j==='DI LUAR JAM PULANG';
     if(f==='IZIN')        return j==='IZIN';
     if(f==='SAKIT')       return j==='SAKIT';
     if(f==='TUGAS')       return j==='TUGAS';
@@ -1378,12 +1440,13 @@ async function loadRekap(){
       ringkasan = computed.ringkasan;
     }
 
-    $('rsMasuk').textContent =ringkasan.masuk  ??0;
-    $('rsPulang').textContent=ringkasan.pulang  ??0;
-    $('rsLuar').textContent  =ringkasan.luar    ??0;
-    $('rsIzin').textContent  =ringkasan.izin    ??0;
-    $('rsSakit').textContent =ringkasan.sakit   ??0;
-    $('rsTugas').textContent =ringkasan.tugas   ??0;
+    $('rsMasuk').textContent      = ringkasan.masuk       ?? 0;
+    $('rsPulang').textContent     = ringkasan.pulang      ?? 0;
+    $('rsPulangLuar').textContent = ringkasan.pulang_luar ?? 0;
+    $('rsLuar').textContent       = ringkasan.luar        ?? 0;
+    $('rsIzin').textContent       = ringkasan.izin        ?? 0;
+    $('rsSakit').textContent      = ringkasan.sakit       ?? 0;
+    $('rsTugas').textContent      = ringkasan.tugas       ?? 0;
 
     const order = await orderPromise;
     if (rekapOK) {
@@ -1545,14 +1608,18 @@ function computeRekap(rows, allRowsParam = null) {
   return{
     pegawai,
     ringkasan:{
-      masuk:sum('masuk'),pulang:sum('pulang')+sum('pulang_luar'),
-      luar:sum('di_luar_masuk')+sum('di_luar_pulang'),
-      izin:sum('izin'),sakit:sum('sakit'),tugas:sum('tugas')
+      masuk      : sum('masuk'),
+      pulang     : sum('pulang'),
+      pulang_luar: sum('pulang_luar'),
+      luar       : sum('di_luar_masuk') + sum('di_luar_pulang'),
+      izin       : sum('izin'),
+      sakit      : sum('sakit'),
+      tugas      : sum('tugas')
     }
   };
 }
 
-function resetRekapStats(){['rsMasuk','rsPulang','rsLuar','rsIzin','rsSakit','rsTugas'].forEach(id=>$(id).textContent='—');}
+function resetRekapStats(){['rsMasuk','rsPulang','rsPulangLuar','rsLuar','rsIzin','rsSakit','rsTugas'].forEach(id=>{const el=$(id);if(el)el.textContent='—';});}
 
 /* ════ RENDER REKAP — dengan discipline, HH:MM badge, all-time accumulation ════ */
 function renderRekap(pg){
@@ -1833,6 +1900,7 @@ async function loadLokasiAdmin(){
       // Hapus semua key lama lalu assign baru
       Object.keys(LOK_DEF).forEach(k=>delete LOK_DEF[k]);
       Object.assign(LOK_DEF,newLOK);
+      syncJadwalState(); // ← sync jadwalState dari LOK_DEF terbaru
       updateClock();
       el.innerHTML=list.map(l=>{
         const lat=parseFloat(l.latitude||l.lat||0).toFixed(5);
@@ -1866,13 +1934,14 @@ const HARI_KERJA = [
   {id:'minggu',  label:'Minggu',  emoji:'7️⃣'},
 ];
 
-// State jadwal — di-init dari LOK_DEF
+// State jadwal — di-init ulang setiap kali loadLokasiAdmin selesai
 let jadwalState = {};
-(function initJadwal(){
+function syncJadwalState(){
   HARI_KERJA.forEach(h => {
-    jadwalState[h.id] = [...(LOK_DEF[h.id] || LOK_DEF.default || [])];
+    jadwalState[h.id] = [...(LOK_DEF[h.id] || [])];
   });
-})();
+}
+syncJadwalState(); // init awal (mungkin kosong, akan di-sync ulang setelah load)
 
 // Daftar lokasi tersedia (diisi saat loadLokasiAdmin)
 let availableLokasi = [];
@@ -1946,30 +2015,73 @@ function hapusPillJadwal(hariId, idx){
   renderJadwalAdmin();
 }
 
-function simpanJadwal(){
-  // Terapkan ke LOK_DEF global (yang dipakai updateClock & lokasiList)
+async function simpanJadwal(){
+  const btn = $('btnSimpanJadwal');
+  if(btn) { btn.disabled=true; $('btnJadwalText').textContent='💾 Menyimpan...'; }
+
+  // Bangun map: nama_lokasi → hari aktif (dari jadwalState)
+  const namaToHari = {};
   HARI_KERJA.forEach(h => {
-    if (jadwalState[h.id] && jadwalState[h.id].length > 0) {
-      LOK_DEF[h.id] = [...jadwalState[h.id]];
-    } else {
-      delete LOK_DEF[h.id]; // hapus key → fallback ke default
-    }
+    (jadwalState[h.id]||[]).forEach(nama => {
+      if(!namaToHari[nama]) namaToHari[nama] = [];
+      if(!namaToHari[nama].includes(h.id)) namaToHari[nama].push(h.id);
+    });
   });
 
-  // Simpan ke localStorage agar persisten
-  try {
-    localStorage.setItem('jadwal_lokasi_bapperida', JSON.stringify(LOK_DEF));
-  } catch(_) {}
+  // Ambil semua lokasi dari lokasiMgmtList (sudah ada id-nya)
+  const lokasiEls = document.querySelectorAll('.lokasi-mgmt-item');
+  if(!lokasiEls.length){
+    showResult('jadwalResult','jadwalRIcon','jadwalRTitle','jadwalRMsg','warning','⚠️','Tidak Ada Lokasi',
+      'Muat daftar lokasi terlebih dahulu.');
+    if(btn){btn.disabled=false;$('btnJadwalText').textContent='Simpan Jadwal';}
+    return;
+  }
 
-  updateClock(); // refresh tampilan lokasi hari ini
-  showResult('jadwalResult','jadwalRIcon','jadwalRTitle','jadwalRMsg','success','✅','Jadwal Tersimpan!',
-    'Jadwal lokasi berhasil diperbarui.\nTampilan "Lokasi Absen Hari Ini" sudah diperbarui.');
+  // Kumpulkan id & nama dari setiap item list
+  const lokasiList = [];
+  lokasiEls.forEach(el => {
+    const delBtn = el.querySelector('.btn-del');
+    if(!delBtn) return;
+    const onclickStr = delBtn.getAttribute('onclick')||'';
+    const m = onclickStr.match(/hapusLokasi\('([^']+)'/);
+    const id = m ? m[1] : null;
+    const namaEl = el.querySelector('.lokasi-mgmt-name');
+    const nama = namaEl ? namaEl.textContent.replace('📍 ','').trim() : '';
+    if(id && nama) lokasiList.push({id, nama});
+  });
 
-  const btn = $('btnSimpanJadwal');
-  if (btn) {
-    btn.disabled = true;
-    $('btnJadwalText').textContent = '✅ Tersimpan';
-    setTimeout(() => { btn.disabled = false; $('btnJadwalText').textContent = 'Simpan Jadwal'; }, 2500);
+  // Kirim update per lokasi
+  let berhasil=0, gagal=0;
+  for(const lok of lokasiList){
+    const hariAktif = (namaToHari[lok.nama]||[]).join(',') || '';
+    try{
+      await apiFetch(P.lokasiUpdate, {
+        method:'POST',
+        body: JSON.stringify({id: lok.id, nama_lokasi: lok.nama, hari: hariAktif})
+      });
+      berhasil++;
+    }catch(_){ gagal++; }
+  }
+
+  // Terapkan ke LOK_DEF lokal & localStorage
+  HARI_KERJA.forEach(h => {
+    if(jadwalState[h.id]&&jadwalState[h.id].length>0) LOK_DEF[h.id]=[...jadwalState[h.id]];
+    else delete LOK_DEF[h.id];
+  });
+  try{ localStorage.setItem('jadwal_lokasi_bapperida', JSON.stringify(LOK_DEF)); }catch(_){}
+
+  updateClock();
+
+  if(gagal===0){
+    showResult('jadwalResult','jadwalRIcon','jadwalRTitle','jadwalRMsg','success','✅','Jadwal Tersimpan!',
+      `${berhasil} lokasi berhasil diperbarui.\nTampilan "Lokasi Absen Hari Ini" sudah diperbarui.`);
+  } else {
+    showResult('jadwalResult','jadwalRIcon','jadwalRTitle','jadwalRMsg','warning','⚠️','Sebagian Gagal',
+      `${berhasil} berhasil, ${gagal} gagal. Pastikan webhook lokasi-update aktif di n8n.`);
+  }
+
+  if(btn){
+    setTimeout(()=>{ btn.disabled=false; $('btnJadwalText').textContent='Simpan Jadwal'; }, 2500);
   }
 }
 
