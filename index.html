@@ -1232,12 +1232,31 @@ async function handleAbsen() {
       let   _score  = 0;
 
       // ── Layer 1: User-Agent pattern ──────────────────────
-      // Real Telegram tidak punya AppleWebKit/Chrome sebelum "Telegram-Android"
-      // Fake GPS app override WebView → UA berubah jadi full Chrome UA
-      const _hasChromeBefore = /AppleWebKit\/\d+.*Chrome\/\d+.*Telegram-Android/i.test(_ua);
-      if (_hasChromeBefore) {
-        _score += 45;
-        _flags.push('UA_WEBVIEW_OVERRIDE');
+      // PENTING: Telegram Android asli memang punya format:
+      // "Mozilla/5.0 ... AppleWebKit/537.36 ... Chrome/X ... Telegram-Android/X.X"
+      // Ini BUKAN tanda fake GPS. Semua HP Samsung, Xiaomi, dll punya UA ini.
+      //
+      // Yang benar-benar mencurigakan:
+      // 1. UA mengandung Xposed/Frida/Cydia (patching framework)
+      // 2. Tidak ada "Telegram-Android" sama sekali
+      const _hasChromeBefore = false; // tidak dipakai lagi — false positive Samsung/Xiaomi
+      const _isTelegramUA  = /Telegram-Android\//i.test(_ua);
+      const _hasXposed     = /xposed|cydia|substrate|frida|objection/i.test(_ua);
+
+      if (!_isTelegramUA) {
+        _score += 20;
+        _flags.push('UA_NOT_TELEGRAM');
+      }
+      if (_hasXposed) {
+        // Ada patching framework → potensi mock location via Xposed module
+        _score += 50;
+        _flags.push('UA_PATCHING_FRAMEWORK');
+      }
+      // Versi Telegram sangat lama (< 9.0) lebih rentan di-hook
+      const _tgVerMatch = _ua.match(/Telegram-Android\/(\d+)\./);
+      if (_tgVerMatch && parseInt(_tgVerMatch[1]) < 9) {
+        _score += 10;
+        _flags.push('TG_VERSION_OLD');
       }
 
       // ── Layer 2: Accuracy pattern ─────────────────────────
@@ -1300,9 +1319,9 @@ async function handleAbsen() {
       const _isSuspicious= _score >= 30 && _score < 50;
 
       if (_isFake) {
-        const _reason = _hasChromeBefore
-          ? 'Terdeteksi aplikasi Mock Location / Fake GPS.\nNonaktifkan di Pengaturan → Opsi Developer → Mock Location.'
-          : `Pola GPS mencurigakan (skor: ${_score}).\nPastikan Mock Location dinonaktifkan.`;
+        const _reason = _hasXposed
+          ? 'Terdeteksi patching framework (Xposed/Frida).\nNonaktifkan Mock Location di Pengaturan → Opsi Developer.'
+          : `Pola GPS mencurigakan (skor: ${_score}).\nPastikan Mock Location dinonaktifkan di Pengaturan Developer.`;
         showResult('resultCard','rIcon','rTitle','rMsg','fail','🚫','Fake GPS Terdeteksi', _reason);
         setBtnL('btnAbsen',false,'🔄 Coba Lagi');
         // Tetap kirim log ke server untuk pencatatan
@@ -1340,7 +1359,7 @@ async function handleAbsen() {
         const ok=d?.validasi?.is_valid!==false;
         if(lokNm)$('gpsLokasi').textContent=lokNm;
         if(ok){
-          showResult('resultCard','rIcon','rTitle','rMsg','success','✅','Absen Berhasil!',`${ket}\n📅 ${tanggal}\n🕐 ${jam}`);
+          showResult('resultCard','rIcon','rTitle','rMsg','success','✅','Absen Berhasil!',`${ket}\n📅 ${tanggal}\n🕐 ${jam}\n📍 ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${Math.round(accuracy)}m)`);
           setBtnL('btnAbsen',false,'✅ Absen Tercatat');
           $('btnAbsen').disabled=true;
           logLoaded=false;
