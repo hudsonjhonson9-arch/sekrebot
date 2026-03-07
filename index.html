@@ -223,6 +223,8 @@
     .l-izin   .log-icon-wrap{background:rgba(245,158,11,.12)}
     .l-sakit  .log-icon-wrap{background:rgba(239,68,68,.12)}
     .l-tugas  .log-icon-wrap{background:rgba(167,139,250,.12)}
+    .l-pending .log-icon-wrap{background:rgba(251,191,36,.12)}
+    .l-alpa   .log-icon-wrap{background:rgba(239,68,68,.15)}
     .l-luar   .log-icon-wrap{background:rgba(245,158,11,.08)}
     .log-info{flex:1;min-width:0}
     .log-jenis{font-size:11px;font-weight:700}
@@ -231,6 +233,8 @@
     .l-izin   .log-jenis{color:var(--warning)}
     .l-sakit  .log-jenis{color:var(--danger)}
     .l-tugas  .log-jenis{color:#a78bfa}
+    .l-pending .log-jenis{color:#fbbf24;font-style:italic}
+    .l-alpa   .log-jenis{color:var(--danger);font-weight:800}
     .l-luar   .log-jenis{color:var(--warning)}
     .log-tanggal{font-size:10px;color:var(--muted);margin-top:1px}
     .log-ket{font-size:9px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -565,7 +569,7 @@
     </div>
     <div class="result-card" id="ketResult"><div class="r-icon" id="ketRIcon">✅</div><div class="r-title" id="ketRTitle">—</div><div class="r-msg" id="ketRMsg">—</div></div>
     <button class="btn-primary" id="btnKet" onclick="handleKet()"><div class="btn-inner"><span>📤</span><span id="btnKetText">Kirim Keterangan</span></div></button>
-    <div class="footer">Pengajuan akan diproses oleh admin</div>
+    <div class="footer">Pengajuan akan menunggu persetujuan admin · Status muncul di riwayat</div>
   </div>
 
   <!-- ══ TAB RIWAYAT ══ -->
@@ -780,6 +784,40 @@
       <div class="result-card" id="jadwalResult"><div class="r-icon" id="jadwalRIcon">✅</div><div class="r-title" id="jadwalRTitle">—</div><div class="r-msg" id="jadwalRMsg">—</div></div>
     </div>
     <div class="footer">Perubahan langsung tersimpan ke n8n datatables</div>
+
+    <!-- ══ PENGATURAN JAM ABSEN ══ -->
+    <div class="card" style="margin-top:10px">
+      <div class="card-title">⏰ Pengaturan Jam Absen</div>
+      <div class="radius-note">Atur batas waktu absen masuk & pulang. Berlaku langsung setelah disimpan.</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div>
+          <div class="date-range-label" style="margin-bottom:6px">🟢 Batas Masuk (≤ jam ini)</div>
+          <input type="time" id="inputJamMasuk" class="date-range-input"
+            style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700"/>
+          <div style="font-size:9px;color:var(--muted);margin-top:3px">Sebelum jam ini = tepat waktu</div>
+        </div>
+        <div>
+          <div class="date-range-label" style="margin-bottom:6px">🔵 Batas Pulang (≥ jam ini)</div>
+          <input type="time" id="inputJamPulang" class="date-range-input"
+            style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700"/>
+          <div style="font-size:9px;color:var(--muted);margin-top:3px">Setelah jam ini = bisa pulang</div>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div id="jamPreview" style="background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.2);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:10px;line-height:1.7">
+        <div>🟢 Masuk tepat waktu : ≤ <b id="prevMasuk">08:00</b></div>
+        <div>⚠️ Terlambat masuk   : 08:01 — <b id="prevTengah">11:59</b></div>
+        <div>🟡 Belum waktunya    : <b id="prevTengah2">12:00</b> — <b id="prevPulang1">14:29</b></div>
+        <div>🔵 Waktu pulang      : ≥ <b id="prevPulang">14:30</b></div>
+      </div>
+
+      <div class="result-card" id="jamResult"><div class="r-icon" id="jamRIcon">✅</div><div class="r-title" id="jamRTitle">—</div><div class="r-msg" id="jamRMsg">—</div></div>
+      <button class="btn-admin" id="btnSimpanJam" onclick="simpanJamAbsen()">
+        <div class="btn-inner"><span>💾</span><span id="btnJamText">Simpan Pengaturan Jam</span></div>
+      </button>
+    </div>
   </div>
 
 </div><!-- .app -->
@@ -804,6 +842,7 @@ const P = {
   lokasiDel  : isTest ? '/webhook-test/lokasi-delete'  : '/webhook/lokasi-delete',
   lokasiUpdate: isTest ? '/webhook-test/lokasi-update' : '/webhook/lokasi-update',
   dokumenList : isTest ? '/webhook-test/dokumen-list'  : '/webhook/dokumen-list',
+  jamAbsen    : isTest ? '/webhook-test/jam-absen'     : '/webhook/jam-absen',
   kirimRekap : isTest ? '/webhook-test/kirim-rekap'    : '/webhook/kirim-rekap',
 };
 
@@ -866,24 +905,40 @@ function switchTab(tab) {
   if (tab==='profil'  && !logLoaded)    loadLog();
   if (tab==='profil'  && !dokumenLoaded) loadDokumen();
   if (tab==='rekap'   && !rekapLoaded) loadRekap();
-  if (tab==='admin'   && IS_ADMIN)     initAdminMap();
+  if (tab==='admin'   && IS_ADMIN)     { initAdminMap(); initJamAdminUI(); }
 }
 
-/* ════ CLOCK ════ */
+/* ════ JAM ABSEN GLOBAL (bisa diubah admin) ════ */
+// Default: masuk ≤ 08:00, pulang ≥ 14:30
+let JAM_MASUK_MENIT  = 8*60;    // 480
+let JAM_PULANG_MENIT = 14*60+30; // 870
+function toMenitStr(str){ const [h,m]=(str||'').split(':').map(Number); return(isNaN(h)||isNaN(m))?null:h*60+m; }
+function menitToStr(m){ return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`; }
+
+// Load dari localStorage jika admin pernah simpan
+(function loadJamFromStorage(){
+  try{
+    const s=localStorage.getItem('jam_absen_bapperida');
+    if(s){ const j=JSON.parse(s);
+      if(j.masuk)  JAM_MASUK_MENIT  = toMenitStr(j.masuk)  ?? JAM_MASUK_MENIT;
+      if(j.pulang) JAM_PULANG_MENIT = toMenitStr(j.pulang) ?? JAM_PULANG_MENIT;
+    }
+  }catch(_){}
+})();
 function updateClock() {
   const n=nowWITA(), h=n.getDay(), tot=n.getHours()*60+n.getMinutes();
   $('clockTime').innerHTML = `${p2(n.getHours())}<span>:</span>${p2(n.getMinutes())}<span>:</span>${p2(n.getSeconds())}`;
   $('clockDate').textContent = n.toLocaleDateString('id-ID',{timeZone:TZ,weekday:'long',day:'numeric',month:'long',year:'numeric'});
   $('hariIni').textContent = H_DISP[h];
+  const jmStr=menitToStr(JAM_MASUK_MENIT), jpStr=menitToStr(JAM_PULANG_MENIT);
   let jenis='',batas='';
-  if      (tot<=480){jenis='🟢 Waktu Absen Masuk';     batas='Masuk ≤ 08:00'}
-  else if (tot>=870){jenis='🔵 Waktu Absen Pulang';    batas='Pulang ≥ 14:30'}
-  else if (tot<720) {jenis='🔴 Di luar jam masuk';     batas='Terlambat'}
-  else              {jenis='🟡 Belum Waktunya Pulang'; batas='Pulang ≥ 14:30'}
+  if      (tot<=JAM_MASUK_MENIT) {jenis='🟢 Waktu Absen Masuk';     batas=`Masuk ≤ ${jmStr}`}
+  else if (tot>=JAM_PULANG_MENIT){jenis='🔵 Waktu Absen Pulang';    batas=`Pulang ≥ ${jpStr}`}
+  else if (tot<720)               {jenis='🔴 Di luar jam masuk';     batas='Terlambat'}
+  else                            {jenis='🟡 Belum Waktunya Pulang'; batas=`Pulang ≥ ${jpStr}`}
   $('jenisAbsen').textContent = jenis;
   $('batasAbsen').textContent = batas;
-  // Tampilkan tombol Pulang Luar hanya saat jam pulang (≥ 14:30 = 870 menit)
-  const isJamPulang = tot >= 870;
+  const isJamPulang = tot >= JAM_PULANG_MENIT;
   const btnPL = $('btnPulangLuar'), formPL = $('pulangLuarForm');
   if(btnPL) btnPL.classList.toggle('show', isJamPulang && !btnPL.disabled);
   if(formPL) formPL.classList.toggle('show', isJamPulang && !$('btnPulangLuar')?.disabled);
@@ -1451,8 +1506,8 @@ async function handleKet(){
   try{
     const res=await apiFetch(P.ket,{method:'POST',body:JSON.stringify(payload)});
     let d={};try{d=await res.json()}catch(_){}
-    showResult('ketResult','ketRIcon','ketRTitle','ketRMsg','success','✅',`${selectedJenis} Diajukan!`,d?.message||`${selectedJenis} berhasil diajukan`);
-    setBtnL('btnKet',false,'✅ Terkirim');
+    showResult('ketResult','ketRIcon','ketRTitle','ketRMsg','warning','⏳',`${selectedJenis} Menunggu Konfirmasi`,`Pengajuan ${selectedJenis} Anda telah dikirim ke admin. Tunggu konfirmasi sebelum berlaku.`);
+    setBtnL('btnKet',false,'⏳ Menunggu Konfirmasi');
     $('btnKet').disabled=true;
     logLoaded=false;
   }catch{
@@ -1498,6 +1553,10 @@ function getLC(j){
   if(x==='IZIN')                       return{cls:'l-izin',  icon:'🙏', lbl:'IZIN'};
   if(x==='SAKIT')                      return{cls:'l-sakit', icon:'🤒', lbl:'SAKIT'};
   if(x==='TUGAS')                      return{cls:'l-tugas', icon:'💼', lbl:'TUGAS'};
+  if(x==='IZIN PENDING')               return{cls:'l-pending',icon:'⏳',lbl:'IZIN (Menunggu)'};
+  if(x==='SAKIT PENDING')              return{cls:'l-pending',icon:'⏳',lbl:'SAKIT (Menunggu)'};
+  if(x==='TUGAS PENDING')              return{cls:'l-pending',icon:'⏳',lbl:'TUGAS (Menunggu)'};
+  if(x==='TANPA BERITA')               return{cls:'l-alpa',  icon:'❌',lbl:'TANPA BERITA'};
   return{cls:'l-pulang',icon:'📋',lbl:j||'—'};
 }
 function renderLog(logs){
@@ -1509,7 +1568,9 @@ function renderLog(logs){
     const tgl   = getField(r,'Tanggal','tanggal') || '—';
     const jam   = getField(r,'Jam','jam') || '—';
     const lokasi= getField(r,'Lokasi','lokasi') || '—';
-    return`<div class="log-item ${cls}"><div class="log-icon-wrap">${icon}</div><div class="log-info"><div class="log-jenis">${lbl}</div><div class="log-tanggal">📅 ${tgl}</div><div class="log-ket">📍 ${lokasi}</div></div><div class="log-jam">${jam}</div></div>`;
+    const ket   = getField(r,'Ket','ket') || '';
+    const ketDisplay = ket && ket!=='-' ? `<div class="log-ket">📝 ${ket.length>40?ket.slice(0,40)+'…':ket}</div>` : `<div class="log-ket">📍 ${lokasi}</div>`;
+    return`<div class="log-item ${cls}"><div class="log-icon-wrap">${icon}</div><div class="log-info"><div class="log-jenis">${lbl}</div><div class="log-tanggal">📅 ${tgl}</div>${ketDisplay}</div><div class="log-jam">${jam}</div></div>`;
   }).join('');
 }
 function updateLogStats(l){
@@ -1678,8 +1739,8 @@ function sortByUserList(pegawai, order) {
 
 /* ════ COMPUTE REKAP (fallback) — v2 dengan all-time accumulation ════ */
 function computeRekap(rows, allRowsParam = null) {
-  const JAM_MASUK_BATAS  = 8*60;
-  const JAM_PULANG_BATAS = 14*60+30;
+  const JAM_MASUK_BATAS  = JAM_MASUK_MENIT;
+  const JAM_PULANG_BATAS = JAM_PULANG_MENIT;
 
   function toMenit(jamStr){
     const s=String(jamStr||'').replace(/\s.*/,'').split(':');
@@ -2354,6 +2415,89 @@ async function simpanJadwal(){
   } catch(_) {}
 })();
 
+/* ════ PENGATURAN JAM ABSEN (ADMIN) ════ */
+function updateJamPreview(){
+  const jmStr = menitToStr(JAM_MASUK_MENIT);
+  const jpStr = menitToStr(JAM_PULANG_MENIT);
+  // Hitung menit tengah (12:00 tetap hardcode sebagai batas tdk bisa masuk)
+  const tengah1 = menitToStr(JAM_MASUK_MENIT + 1);
+  const tengah2 = menitToStr(JAM_PULANG_MENIT - 1);
+  setT('prevMasuk',   jmStr);
+  setT('prevTengah',  tengah2.replace(/(\d+):(\d+)/, (_,h,m)=>`${String(parseInt(h)).padStart(2,'0')}:${m}`));
+  setT('prevTengah2', '12:00');
+  setT('prevPulang1', menitToStr(JAM_PULANG_MENIT - 1));
+  setT('prevPulang',  jpStr);
+}
+
+function initJamAdminUI(){
+  const inM=$('inputJamMasuk'), inP=$('inputJamPulang');
+  if(!inM||!inP) return;
+  inM.value = menitToStr(JAM_MASUK_MENIT);
+  inP.value = menitToStr(JAM_PULANG_MENIT);
+  updateJamPreview();
+  inM.addEventListener('input', ()=>{
+    const m=toMenitStr(inM.value);
+    if(m!==null){ JAM_MASUK_MENIT=m; updateJamPreview(); updateClock(); }
+  });
+  inP.addEventListener('input', ()=>{
+    const m=toMenitStr(inP.value);
+    if(m!==null){ JAM_PULANG_MENIT=m; updateJamPreview(); updateClock(); }
+  });
+}
+
+async function loadJamAbsen(){
+  // Fetch dari n8n jika ada, fallback ke localStorage
+  try{
+    const res=await apiFetch(P.jamAbsen,{method:'GET'});
+    if(!res.ok)throw 0;
+    const d=await res.json();
+    const jam=d.data||d||{};
+    if(jam.masuk)  { const m=toMenitStr(jam.masuk);  if(m!==null) JAM_MASUK_MENIT=m; }
+    if(jam.pulang) { const m=toMenitStr(jam.pulang); if(m!==null) JAM_PULANG_MENIT=m; }
+    try{ localStorage.setItem('jam_absen_bapperida', JSON.stringify({masuk:menitToStr(JAM_MASUK_MENIT),pulang:menitToStr(JAM_PULANG_MENIT)})); }catch(_){}
+    updateClock();
+    initJamAdminUI();
+  }catch{
+    initJamAdminUI(); // gunakan nilai dari localStorage
+  }
+}
+
+async function simpanJamAbsen(){
+  const inM=$('inputJamMasuk'), inP=$('inputJamPulang');
+  if(!inM||!inP) return;
+  const mMasuk  = toMenitStr(inM.value);
+  const mPulang = toMenitStr(inP.value);
+  if(mMasuk===null||mPulang===null){
+    showResult('jamResult','jamRIcon','jamRTitle','jamRMsg','warning','⚠️','Input Tidak Valid','Pastikan format jam benar (HH:MM).');
+    return;
+  }
+  if(mMasuk >= mPulang){
+    showResult('jamResult','jamRIcon','jamRTitle','jamRMsg','warning','⚠️','Jam Tidak Logis','Jam masuk harus lebih kecil dari jam pulang.');
+    return;
+  }
+  const btn=$('btnSimpanJam');
+  if(btn){btn.disabled=true;$('btnJamText').textContent='💾 Menyimpan...';}
+  try{
+    await apiFetch(P.jamAbsen,{method:'POST',body:JSON.stringify({masuk:inM.value,pulang:inP.value,diubah_oleh:MY_ID,timestamp:Math.floor(Date.now()/1000)})});
+    JAM_MASUK_MENIT  = mMasuk;
+    JAM_PULANG_MENIT = mPulang;
+    try{ localStorage.setItem('jam_absen_bapperida', JSON.stringify({masuk:inM.value,pulang:inP.value})); }catch(_){}
+    updateClock();
+    updateJamPreview();
+    showResult('jamResult','jamRIcon','jamRTitle','jamRMsg','success','✅','Jam Tersimpan!',
+      `Masuk ≤ ${inM.value} · Pulang ≥ ${inP.value}\nBerlaku langsung untuk semua pengguna.`);
+  }catch{
+    showResult('jamResult','jamRIcon','jamRTitle','jamRMsg','warning','⚠️','Gagal Menyimpan',
+      'Simpan lokal berhasil, tapi gagal ke server. Pastikan webhook jam-absen aktif di n8n.');
+    JAM_MASUK_MENIT  = mMasuk;
+    JAM_PULANG_MENIT = mPulang;
+    try{ localStorage.setItem('jam_absen_bapperida', JSON.stringify({masuk:inM.value,pulang:inP.value})); }catch(_){}
+    updateClock(); updateJamPreview();
+  }finally{
+    if(btn){ setTimeout(()=>{ btn.disabled=false; $('btnJamText').textContent='Simpan Pengaturan Jam'; },2500); }
+  }
+}
+
 /* ════ AUTO INIT ════ */
 // Load lokasi dari server saat startup agar tab Absen langsung menampilkan lokasi
 async function loadLokasiPublik(){
@@ -2378,6 +2522,7 @@ async function loadLokasiPublik(){
   }catch(_){}
 }
 loadLokasiPublik();
+loadJamAbsen(); // load jam absen dari server/localStorage
 loadTodayHistory();
 </script>
 </body>
