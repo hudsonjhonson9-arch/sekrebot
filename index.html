@@ -98,6 +98,7 @@
     .today-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)}
     .today-row:last-child{border-bottom:none;padding-bottom:0}
     .today-badge{padding:2px 7px;border-radius:6px;font-size:9px;font-weight:700;flex-shrink:0;min-width:70px;text-align:center}
+    .tb-pulang-luar{background:rgba(245,158,11,.15);color:#f59e0b}
     .tb-masuk   {background:rgba(34,197,94,.15);color:var(--success)}
     .tb-pulang  {background:rgba(96,165,250,.15);color:var(--info)}
     .tb-luar    {background:rgba(245,158,11,.15);color:var(--warning)}
@@ -214,6 +215,9 @@
     .log-list{display:flex;flex-direction:column;gap:7px}
     .log-item{background:var(--card-bg);border:1px solid var(--border);border-radius:13px;padding:10px 12px;backdrop-filter:blur(10px);animation:slideUp .25s ease;display:flex;align-items:center;gap:10px}
     .log-icon-wrap{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+    .l-pulang-luar .log-icon-wrap{background:rgba(245,158,11,.15)}
+    .l-pulang-luar .log-jenis{color:#f59e0b}
+    .pb-pulang-luar{background:rgba(245,158,11,.15);color:#f59e0b}
     .l-masuk  .log-icon-wrap{background:rgba(34,197,94,.12)}
     .l-pulang .log-icon-wrap{background:rgba(96,165,250,.12)}
     .l-izin   .log-icon-wrap{background:rgba(245,158,11,.12)}
@@ -329,6 +333,16 @@
     .lokasi-mgmt-coord{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)}
     .btn-del{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:7px;padding:4px 8px;color:var(--danger);font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0}
 
+    /* Pulang Luar */
+    .btn-pulang-luar{width:100%;padding:14px;border:none;border-radius:13px;background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;transition:transform .15s,box-shadow .15s;box-shadow:0 4px 18px rgba(245,158,11,.3);margin-bottom:8px;display:none}
+    .btn-pulang-luar.show{display:block}
+    .btn-pulang-luar:active{transform:scale(.97)}
+    .btn-pulang-luar:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    .pulang-luar-form{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.25);border-radius:13px;padding:12px 14px;margin-bottom:10px;display:none}
+    .pulang-luar-form.show{display:block}
+    .pulang-luar-form .form-label{color:var(--warning)}
+    .pulang-luar-note{font-size:10px;color:var(--warning);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:6px 10px;margin-bottom:10px;font-weight:600;text-align:center}
+
     /* Checkbox hari */
     .hari-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
     .hari-check-label{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;font-weight:700;cursor:pointer;transition:all .15s;user-select:none}
@@ -443,6 +457,19 @@
     <button class="btn-primary" id="btnAbsen" onclick="handleAbsen()">
       <div class="btn-inner"><span>📍</span><span id="btnText">Kirim Lokasi &amp; Absen</span></div>
     </button>
+
+    <!-- ══ PULANG LUAR (muncul hanya saat jam pulang ≥ 14:30) ══ -->
+    <div class="pulang-luar-form" id="pulangLuarForm">
+      <div class="pulang-luar-note">⚠️ Fitur ini hanya untuk pegawai yang sedang di lapangan dan tidak sempat kembali ke kantor</div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">📝 Keterangan Lokasi Lapangan</label>
+        <textarea class="form-textarea" id="ketPulangLuar" placeholder="Contoh: Sedang di Desa Umbu Ratu Nggay untuk pendampingan kegiatan..." style="min-height:70px"></textarea>
+      </div>
+    </div>
+    <button class="btn-pulang-luar" id="btnPulangLuar" onclick="handlePulangLuar()">
+      <div class="btn-inner"><span>🏃</span><span id="btnPulangLuarText">Pulang dari Lapangan</span></div>
+    </button>
+
     <div class="footer">v4.2 · Sistem Absensi Digital BAPPERIDA SB</div>
   </div>
 
@@ -513,6 +540,7 @@
       <button class="filter-chip" onclick="filterLog('IZIN',  this)">Izin</button>
       <button class="filter-chip" onclick="filterLog('SAKIT', this)">Sakit</button>
       <button class="filter-chip" onclick="filterLog('TUGAS', this)">Tugas</button>
+      <button class="filter-chip" onclick="filterLog('PULANG LUAR', this)">🏃 Pulang Luar</button>
     </div>
     <div class="log-list" id="logList">
       <div class="sh-row"><div class="shimmer sh-circ"></div><div class="sh-lines"><div class="shimmer sh-line" style="width:60%"></div><div class="shimmer sh-line" style="width:40%"></div></div></div>
@@ -592,6 +620,8 @@
           <label class="hari-check-label checked" onclick="toggleHariCheck(this)"><input type="checkbox" value="rabu" checked/>Rabu</label>
           <label class="hari-check-label checked" onclick="toggleHariCheck(this)"><input type="checkbox" value="kamis" checked/>Kamis</label>
           <label class="hari-check-label checked" onclick="toggleHariCheck(this)"><input type="checkbox" value="jumat" checked/>Jumat</label>
+          <label class="hari-check-label" onclick="toggleHariCheck(this)"><input type="checkbox" value="sabtu"/>Sabtu</label>
+          <label class="hari-check-label" onclick="toggleHariCheck(this)"><input type="checkbox" value="minggu"/>Minggu</label>
         </div>
       </div>
       <div class="result-card" id="adminResult"><div class="r-icon" id="adminRIcon">✅</div><div class="r-title" id="adminRTitle">—</div><div class="r-msg" id="adminRMsg">—</div></div>
@@ -637,7 +667,7 @@
 const SERVER_1  = 'https://unheeled-timmy-supernumerously.ngrok-free.dev';
 const SERVER_2  = 'https://unannunciable-nongerundive-elsa.ngrok-free.dev';
 const isTest    = false;
-const ADMIN_IDS    = [1383864355];
+const ADMIN_IDS = [1383864355];
 // Chat ID tujuan pengiriman rekap via Telegram (ganti dengan Group ID jika perlu)
 const REKAP_CHAT_ID = ADMIN_IDS[0];
 
@@ -727,6 +757,11 @@ function updateClock() {
   else              {jenis='🟡 Belum Waktunya Pulang'; batas='Pulang ≥ 14:30'}
   $('jenisAbsen').textContent = jenis;
   $('batasAbsen').textContent = batas;
+  // Tampilkan tombol Pulang Luar hanya saat jam pulang (≥ 14:30 = 870 menit)
+  const isJamPulang = tot >= 870;
+  const btnPL = $('btnPulangLuar'), formPL = $('pulangLuarForm');
+  if(btnPL) btnPL.classList.toggle('show', isJamPulang && !btnPL.disabled);
+  if(formPL) formPL.classList.toggle('show', isJamPulang && !$('btnPulangLuar')?.disabled);
   const lh = LOK_DEF[H_ID[h]] || [];
   $('lokasiList').innerHTML = lh.length
     ? lh.map(l=>`<div class="lokasi-item"><div class="lokasi-dot"></div><div class="lokasi-name">${l}</div></div>`).join('')
@@ -814,6 +849,7 @@ function getTodayBadge(jenis) {
   const j=(jenis||'').toUpperCase().trim();
   if (j==='MASUK')                       return {cls:'tb-masuk', icon:'🟢',lbl:'MASUK'};
   if (j==='PULANG')                      return {cls:'tb-pulang',icon:'🔵',lbl:'PULANG'};
+  if (j==='PULANG LUAR')                 return {cls:'tb-pulang-luar',icon:'🏃',lbl:'PULANG LAPANGAN'};
   if (j.includes('LUAR')&&j.includes('MASUK'))  return {cls:'tb-luar',icon:'⚠️',lbl:'LUAR JAM MASUK'};
   if (j.includes('LUAR')&&j.includes('PULANG')) return {cls:'tb-luar',icon:'⚠️',lbl:'LUAR JAM PULANG'};
   if (j.includes('LUAR'))                return {cls:'tb-luar',  icon:'⚠️', lbl:'DI LUAR JAM'};
@@ -870,7 +906,9 @@ async function handleAbsen() {
   }
   setBtnL('btnAbsen',true,'Memeriksa...');
   const initData=tg?.initData||'';
-  if (!initData) {
+  // ── Fallback Telegram X: izinkan jika MY_ID valid dari user_list ──
+  const isTgX = !initData && MY_ID && userProfile;
+  if (!initData && !isTgX) {
     showResult('resultCard','rIcon','rTitle','rMsg','warning','⚠️','Buka via Telegram','Aplikasi harus dibuka melalui Telegram, bukan browser biasa.');
     setBtnL('btnAbsen',false,'📍 Kirim Lokasi & Absen'); return;
   }
@@ -985,7 +1023,7 @@ async function handleAbsen() {
               nama_lengkap:userProfile?.nama||'',jabatan:userProfile?.jabatan||'',nip:userProfile?.nip||''},
         latitude,longitude,horizontal_accuracy:accuracy,
         tanggal,tanggal_iso:tanggalISO,jam,
-        timestamp:Math.floor(Date.now()/1000),init_data:initData,source:'telegram_miniapp',device:navigator.userAgent,
+        timestamp:Math.floor(Date.now()/1000),init_data:initData,source: isTgX ? 'telegram_x_fallback' : 'telegram_miniapp',device:navigator.userAgent,
         _gps_elapsed_ms:_gpsElapsed,_detection_score:_score,_detection_flags:_flags,..._suspiciousPayload
       };
       try {
@@ -1017,6 +1055,102 @@ async function handleAbsen() {
       setBtnL('btnAbsen',false,'🔄 Coba Lagi');
     },
     {enableHighAccuracy:true,timeout:15000,maximumAge:0}
+  );
+}
+
+/* ════ HANDLE PULANG LUAR (LAPANGAN) ════ */
+async function handlePulangLuar() {
+  if ($('btnPulangLuar').disabled) return;
+  const ket = ($('ketPulangLuar').value || '').trim();
+  if (!ket) {
+    showResult('resultCard','rIcon','rTitle','rMsg','warning','⚠️','Keterangan Wajib Diisi',
+      'Tuliskan lokasi/kegiatan lapangan Anda sebelum absen pulang.');
+    return;
+  }
+  if (isDesktop()) {
+    showResult('resultCard','rIcon','rTitle','rMsg','fail','🖥️','Perangkat Tidak Didukung',
+      'Absensi hanya dapat dilakukan dari smartphone.');
+    return;
+  }
+  const initData = tg?.initData || '';
+  const isTgX = !initData && MY_ID && userProfile;
+  if (!initData && !isTgX) {
+    showResult('resultCard','rIcon','rTitle','rMsg','warning','⚠️','Buka via Telegram',
+      'Aplikasi harus dibuka melalui Telegram.');
+    return;
+  }
+  if (!navigator.geolocation) {
+    showResult('resultCard','rIcon','rTitle','rMsg','fail','❌','GPS Tidak Tersedia','Buka di Telegram versi terbaru.');
+    return;
+  }
+  // Disable tombol & tampilkan loading
+  $('btnPulangLuar').disabled = true;
+  const tSpan = $('btnPulangLuarText');
+  if (tSpan) tSpan.innerHTML = '<span class="spinner"></span> Mengambil GPS...';
+
+  navigator.geolocation.getCurrentPosition(
+    async ({coords:{latitude,longitude,accuracy}}) => {
+      if (accuracy > 500) {
+        showResult('resultCard','rIcon','rTitle','rMsg','warning','⚠️','Sinyal GPS Lemah',
+          `Akurasi ${Math.round(accuracy)}m terlalu lemah. Pindah ke area terbuka.`);
+        $('btnPulangLuar').disabled = false;
+        if (tSpan) tSpan.textContent = '🏃 Pulang dari Lapangan';
+        return;
+      }
+      const n = nowWITA();
+      const tanggal = n.toLocaleDateString('id-ID',{timeZone:TZ,weekday:'long',day:'numeric',month:'long',year:'numeric'});
+      const tanggalISO = fmtD(n);
+      const jam = `${p2(n.getHours())}:${p2(n.getMinutes())}:${p2(n.getSeconds())} WITA`;
+      showGPS(latitude, longitude, accuracy, 'Lapangan');
+      if (tSpan) tSpan.innerHTML = '<span class="spinner"></span> Mengirim...';
+      const payload = {
+        user: {
+          id: MY_ID, first_name: tgUser.first_name||'', last_name: tgUser.last_name||'',
+          username: tgUser.username||'', nama_lengkap: userProfile?.nama||'',
+          jabatan: userProfile?.jabatan||'', nip: userProfile?.nip||''
+        },
+        latitude, longitude, horizontal_accuracy: accuracy,
+        tanggal, tanggal_iso: tanggalISO, jam,
+        jenis_absen: 'PULANG LUAR',
+        keterangan: ket,
+        skip_radius_check: true,
+        timestamp: Math.floor(Date.now()/1000),
+        init_data: initData, source: isTgX ? 'telegram_x_fallback' : 'telegram_miniapp', device: navigator.userAgent
+      };
+      try {
+        const res = await apiFetch(P.absen, {method:'POST', body:JSON.stringify(payload)});
+        let d = {}; try { d = await res.json(); } catch(_) {}
+        const ok = d?.validasi?.is_valid !== false;
+        if (ok) {
+          showResult('resultCard','rIcon','rTitle','rMsg','success','✅','Pulang Lapangan Tercatat!',
+            `${ket}\n📅 ${tanggal}\n🕐 ${jam}\n📍 GPS: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+          $('btnPulangLuar').disabled = true;
+          $('btnAbsen').disabled = true;
+          $('pulangLuarForm').classList.remove('show');
+          $('btnPulangLuar').classList.remove('show');
+          logLoaded = false;
+          setTimeout(loadTodayHistory, 2000);
+          if (tg) setTimeout(() => tg.close(), 3500);
+        } else {
+          const errMsg = d?.validasi?.keterangan || d?.message || 'Absen ditolak server.';
+          showResult('resultCard','rIcon','rTitle','rMsg','fail','❌','Gagal',errMsg);
+          $('btnPulangLuar').disabled = false;
+          if (tSpan) tSpan.textContent = '🏃 Pulang dari Lapangan';
+        }
+      } catch {
+        showResult('resultCard','rIcon','rTitle','rMsg','fail','🔌','Server Offline',
+          'Pastikan n8n & ngrok berjalan.');
+        $('btnPulangLuar').disabled = false;
+        if (tSpan) tSpan.textContent = '🏃 Pulang dari Lapangan';
+      }
+    },
+    (err) => {
+      const msg = {1:'Izin GPS ditolak.',2:'GPS tidak tersedia.',3:'Timeout GPS. Coba di area terbuka.'};
+      showResult('resultCard','rIcon','rTitle','rMsg','fail','📵','GPS Gagal', msg[err.code]||err.message);
+      $('btnPulangLuar').disabled = false;
+      if (tSpan) tSpan.textContent = '🏃 Pulang dari Lapangan';
+    },
+    {enableHighAccuracy:true, timeout:15000, maximumAge:0}
   );
 }
 
@@ -1120,6 +1254,7 @@ function getLC(j){
   const x=(j||'').toUpperCase().trim();
   if(x==='MASUK')                      return{cls:'l-masuk', icon:'🟢',lbl:'MASUK'};
   if(x==='PULANG')                     return{cls:'l-pulang',icon:'🔵',lbl:'PULANG'};
+  if(x==='PULANG LUAR')                return{cls:'l-pulang-luar',icon:'🏃',lbl:'PULANG LAPANGAN'};
   if(x.includes('LUAR')&&x.includes('MASUK'))  return{cls:'l-luar',icon:'⚠️',lbl:'LUAR JAM MASUK'};
   if(x.includes('LUAR')&&x.includes('PULANG')) return{cls:'l-luar',icon:'⚠️',lbl:'LUAR JAM PULANG'};
   if(x.includes('LUAR'))               return{cls:'l-luar',  icon:'⚠️', lbl:'DI LUAR JAM'};
@@ -1150,11 +1285,12 @@ function filterLog(f,el){
   document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');
   renderLog(f==='SEMUA'?allLogs:allLogs.filter(r=>{
     const j=(getField(r,'Jenis Absen','jenis','Jenis')||'').toUpperCase().trim();
-    if(f==='MASUK')  return j==='MASUK';
-    if(f==='PULANG') return j==='PULANG';
-    if(f==='IZIN')   return j==='IZIN';
-    if(f==='SAKIT')  return j==='SAKIT';
-    if(f==='TUGAS')  return j==='TUGAS';
+    if(f==='MASUK')       return j==='MASUK';
+    if(f==='PULANG')      return j==='PULANG';
+    if(f==='IZIN')        return j==='IZIN';
+    if(f==='SAKIT')       return j==='SAKIT';
+    if(f==='TUGAS')       return j==='TUGAS';
+    if(f==='PULANG LUAR') return j==='PULANG LUAR';
     return j.includes(f);
   }));
 }
@@ -1320,7 +1456,7 @@ function computeRekap(rows, allRowsParam = null) {
     const jenis = (getField(r,'Jenis Absen','jenis','Jenis')||'').toUpperCase().trim();
     const jamStr= getField(r,'Jam','jam') || '';
     if(!map[id]) map[id]={id,nama,nip,jabatan:'',urutan:9999,
-      masuk:0,pulang:0,di_luar_masuk:0,di_luar_pulang:0,
+      masuk:0,pulang:0,pulang_luar:0,di_luar_masuk:0,di_luar_pulang:0,
       izin:0,sakit:0,tugas:0,
       menit_terlambat:0,menit_lebih_awal:0,
       // all-time (filled separately)
@@ -1333,6 +1469,7 @@ function computeRekap(rows, allRowsParam = null) {
     const jam=toMenit(jamStr);
     if     (jenis==='MASUK')             { map[id].masuk++; }
     else if(jenis==='PULANG')            { map[id].pulang++; }
+    else if(jenis==='PULANG LUAR')       { map[id].pulang_luar++; }
     else if(jenis==='DI LUAR JAM MASUK') {
       map[id].di_luar_masuk++;
       if(jam!==null&&jam>JAM_MASUK_BATAS) map[id].menit_terlambat+=(jam-JAM_MASUK_BATAS);
@@ -1384,6 +1521,7 @@ function computeRekap(rows, allRowsParam = null) {
       ...p,
       lambat      : p.di_luar_masuk,
       pulangCepat : p.di_luar_pulang,
+      pulang_luar : p.pulang_luar || 0,
       luar        : p.di_luar_masuk + p.di_luar_pulang,
       // Period HH:MM
       akkLambatHHMM  : toHHMM(p.menit_terlambat),
@@ -1407,7 +1545,7 @@ function computeRekap(rows, allRowsParam = null) {
   return{
     pegawai,
     ringkasan:{
-      masuk:sum('masuk'),pulang:sum('pulang'),
+      masuk:sum('masuk'),pulang:sum('pulang')+sum('pulang_luar'),
       luar:sum('di_luar_masuk')+sum('di_luar_pulang'),
       izin:sum('izin'),sakit:sum('sakit'),tugas:sum('tugas')
     }
@@ -1430,12 +1568,13 @@ function renderRekap(pg){
     // Support both n8n (lambat/pulangCepat) and fallback (di_luar_masuk/di_luar_pulang)
     const masuk        = p.masuk      || 0;
     const pulang       = p.pulang     || 0;
+    const pulangLuar   = p.pulang_luar|| 0;
     const luarMasuk    = p.lambat     ?? p.di_luar_masuk  ?? 0;
     const luarPulang   = p.pulangCepat?? p.di_luar_pulang ?? 0;
     const izin         = p.izin       || 0;
     const sakit        = p.sakit      || 0;
     const tugas        = p.tugas      || 0;
-    const total        = masuk+pulang+luarMasuk+luarPulang+izin+sakit+tugas;
+    const total        = masuk+pulang+pulangLuar+luarMasuk+luarPulang+izin+sakit+tugas;
 
     // HH:MM badges
     const akkLambatHHMM = p.akkLambatHHMM || '00:00';
@@ -1511,8 +1650,9 @@ function renderRekap(pg){
         ${disiplinBlock}
       </div>
       <div class="pegawai-bar">
-        ${masuk    >0?`<span class="pbar-item pb-masuk">✅ Masuk: ${masuk}</span>`:''}
-        ${pulang   >0?`<span class="pbar-item pb-pulang">🔵 Pulang: ${pulang}</span>`:''}
+        ${masuk      >0?`<span class="pbar-item pb-masuk">✅ Masuk: ${masuk}</span>`:''}
+        ${pulang     >0?`<span class="pbar-item pb-pulang">🔵 Pulang: ${pulang}</span>`:''}
+        ${pulangLuar >0?`<span class="pbar-item pb-pulang-luar">🏃 Pulang Lapangan: ${pulangLuar}</span>`:''}
         ${periodeAkk}
         ${izin   >0?`<span class="pbar-item pb-izin">🙏 Izin: ${izin}</span>`:''}
         ${sakit  >0?`<span class="pbar-item pb-sakit">🤒 Sakit: ${sakit}</span>`:''}
@@ -1660,8 +1800,13 @@ async function handleTambahLokasi(){
     $('namaLokasi').value='';selectedPin=null;
     if(adminMarker){adminMap.removeLayer(adminMarker);adminMarker=null;}
     $('mapCoords').classList.remove('show');
-    // Reset checkbox ke semua checked
-    document.querySelectorAll('#hariCheckGrid .hari-check-label').forEach(l=>{l.classList.add('checked');l.querySelector('input').checked=true;});
+    // Reset checkbox: Senin–Jumat checked, Sabtu–Minggu unchecked
+    document.querySelectorAll('#hariCheckGrid .hari-check-label').forEach(l=>{
+      const val=l.querySelector('input').value;
+      const def=['senin','selasa','rabu','kamis','jumat'].includes(val);
+      l.classList.toggle('checked',def);
+      l.querySelector('input').checked=def;
+    });
     loadLokasiAdmin();
   }catch{showResult('adminResult','adminRIcon','adminRTitle','adminRMsg','fail','🔌','Gagal Menyimpan','Server tidak merespons.');setBtnL('btnTambahLokasi',false,'Simpan Lokasi ke Database');}
 }
@@ -1717,6 +1862,8 @@ const HARI_KERJA = [
   {id:'rabu',    label:'Rabu',    emoji:'3️⃣'},
   {id:'kamis',   label:'Kamis',   emoji:'4️⃣'},
   {id:'jumat',   label:'Jumat',   emoji:'5️⃣'},
+  {id:'sabtu',   label:'Sabtu',   emoji:'6️⃣'},
+  {id:'minggu',  label:'Minggu',  emoji:'7️⃣'},
 ];
 
 // State jadwal — di-init dari LOK_DEF
@@ -1842,6 +1989,29 @@ function simpanJadwal(){
 })();
 
 /* ════ AUTO INIT ════ */
+// Load lokasi dari server saat startup agar tab Absen langsung menampilkan lokasi
+async function loadLokasiPublik(){
+  try{
+    const res=await apiFetch(P.lokasiList,{method:'GET'});
+    if(!res.ok)throw 0;
+    const json=await res.json();
+    const list=Array.isArray(json)?json:(json.data||[]);
+    if(!list.length)return;
+    const newLOK={};
+    list.forEach(l=>{
+      const nama=l.nama_lokasi||l.nama||'';
+      const hariRaw=(l.hari||'senin,selasa,rabu,kamis,jumat').toLowerCase();
+      hariRaw.split(',').map(h=>h.trim()).filter(Boolean).forEach(h=>{
+        if(!newLOK[h])newLOK[h]=[];
+        if(!newLOK[h].includes(nama))newLOK[h].push(nama);
+      });
+    });
+    Object.keys(LOK_DEF).forEach(k=>delete LOK_DEF[k]);
+    Object.assign(LOK_DEF,newLOK);
+    updateClock(); // refresh lokasiList di tab Absen
+  }catch(_){}
+}
+loadLokasiPublik();
 loadTodayHistory();
 </script>
 </body>
