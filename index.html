@@ -504,7 +504,7 @@
     <div class="rekap-header">
       <div class="rekap-title">📊 Rekap Pegawai</div>
       <div class="rekap-toolbar">
-        <button class="btn-download" id="btnDownloadRekap" onclick="downloadRekap()" title="Download/Cetak Rekap">⬇️ Unduh</button>
+        <button class="btn-download" id="btnDownloadRekap" onclick="downloadRekap()" title="Kirim Rekap ke Telegram">📤 Kirim</button>
         <button class="btn-refresh"  id="btnRekapRefresh"  onclick="loadRekap()"><span id="rekapRefIcon">🔄</span> Muat</button>
       </div>
     </div>
@@ -534,6 +534,7 @@
       <div class="stat-card2"><div class="stat-num2 sn-sakit"  id="rsSakit" >—</div><div class="stat-lbl2">🤒 Sakit</div></div>
       <div class="stat-card2"><div class="stat-num2 sn-tugas"  id="rsTugas" >—</div><div class="stat-lbl2">💼 Tugas</div></div>
     </div>
+    <div id="rekapToast" style="display:none;border-radius:11px;padding:10px 13px;margin-bottom:10px;font-size:11px;font-weight:700;animation:slideUp .3s ease"></div>
     <div class="pegawai-list" id="pegawaiList">
       <div class="sh-row"><div class="shimmer sh-circ"></div><div class="sh-lines"><div class="shimmer sh-line" style="width:65%"></div><div class="shimmer sh-line" style="width:40%"></div></div></div>
       <div class="sh-row"><div class="shimmer sh-circ"></div><div class="sh-lines"><div class="shimmer sh-line" style="width:75%"></div><div class="shimmer sh-line" style="width:50%"></div></div></div>
@@ -585,7 +586,9 @@
 const SERVER_1  = 'https://unheeled-timmy-supernumerously.ngrok-free.dev';
 const SERVER_2  = 'https://unannunciable-nongerundive-elsa.ngrok-free.dev';
 const isTest    = false;
-const ADMIN_IDS = [1383864355];
+const ADMIN_IDS    = [1383864355];
+// Chat ID tujuan pengiriman rekap via Telegram (ganti dengan Group ID jika perlu)
+const REKAP_CHAT_ID = ADMIN_IDS[0];
 
 const P = {
   absen      : isTest ? '/webhook-test/absen'          : '/webhook/absen',
@@ -596,6 +599,7 @@ const P = {
   lokasiList : isTest ? '/webhook-test/lokasi-list'    : '/webhook/lokasi-list',
   lokasiAdd  : isTest ? '/webhook-test/lokasi-add'     : '/webhook/lokasi-add',
   lokasiDel  : isTest ? '/webhook-test/lokasi-delete'  : '/webhook/lokasi-delete',
+  kirimRekap : isTest ? '/webhook-test/kirim-rekap'    : '/webhook/kirim-rekap',
 };
 
 const HDR = {'Content-Type':'application/json','ngrok-skip-browser-warning':'true','Accept':'application/json'};
@@ -1468,82 +1472,100 @@ function renderRekap(pg){
 }
 
 /* ════ DOWNLOAD REKAP (Excel) ════ */
-function downloadRekap() {
+/* ════ KIRIM REKAP KE TELEGRAM via n8n webhook ════ */
+function showRekapToast(type, msg) {
+  const el = $('rekapToast');
+  if (!el) return;
+  const cfg = {
+    success : {bg:'rgba(34,197,94,.12)', border:'rgba(34,197,94,.3)',  color:'var(--success)'},
+    fail    : {bg:'rgba(239,68,68,.12)', border:'rgba(239,68,68,.3)',  color:'var(--danger)'},
+    loading : {bg:'rgba(201,168,76,.1)', border:'rgba(201,168,76,.3)', color:'var(--gold)'}
+  };
+  const c = cfg[type] || cfg.loading;
+  el.style.cssText = `display:block;background:${c.bg};border:1px solid ${c.border};color:${c.color}`;
+  el.innerHTML = msg;
+  if (type !== 'loading') setTimeout(() => { el.style.display='none'; }, 5000);
+}
+
+async function downloadRekap() {
   const dari   = $('rekapDari').value;
   const sampai = $('rekapSampai').value;
-  if (!lastRekapPegawai.length) { alert('Belum ada data. Muat rekap terlebih dahulu.'); return; }
-  if (typeof XLSX === 'undefined') { alert('Library Excel belum siap, coba lagi.'); return; }
+  if (!lastRekapPegawai.length) {
+    showRekapToast('fail','⚠️ Belum ada data. Muat rekap terlebih dahulu.');
+    return;
+  }
 
-  const periode  = dari===sampai ? dari : `${dari} s.d. ${sampai}`;
-  const tglCetak = nowWITA().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
+  const btn = $('btnDownloadRekap');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin-sm"></span> Mengirim...';
+  showRekapToast('loading','<span class="spin-sm"></span> &nbsp;Mengirim rekap ke Telegram...');
 
-  const wsData = [
-    ['REKAPITULASI ABSENSI PEGAWAI'],
-    ['Badan Perencanaan Pembangunan, Riset dan Inovasi Daerah'],
-    ['Kabupaten Sumba Barat'],
-    [`Periode: ${periode}`],
-    [`Dicetak: ${tglCetak}`],
-    [],
-    [
-      'No','Nama','NIP','Jabatan',
-      'Masuk','Pulang',
-      'Lambat (×)','Akk. Lambat (HH:MM)',
-      'Cepat (×)','Akk. Cepat (HH:MM)',
-      'Total Akk. Periode',
-      'All-Time Lambat','All-Time Cepat','All-Time Total',
-      'Disiplin (%)','Ket. Disiplin',
-      'Izin','Sakit','Tugas','Total'
-    ]
-  ];
-
-  let tM=0,tP=0,tLM=0,tLP=0,tI=0,tS=0,tT=0;
-
-  lastRekapPegawai.forEach((p,i)=>{
-    const masuk       = p.masuk      || 0;
-    const pulang      = p.pulang     || 0;
-    const luarMasuk   = p.lambat     ?? p.di_luar_masuk  ?? 0;
-    const luarPulang  = p.pulangCepat?? p.di_luar_pulang ?? 0;
-    const izin        = p.izin       || 0;
-    const sakit       = p.sakit      || 0;
-    const tugas       = p.tugas      || 0;
-    const total       = masuk+pulang+luarMasuk+luarPulang+izin+sakit+tugas;
-    tM+=masuk;tP+=pulang;tLM+=luarMasuk;tLP+=luarPulang;tI+=izin;tS+=sakit;tT+=tugas;
-    wsData.push([
-      i+1,
-      p.nama    ||'—',
-      p.nip     ||'—',
-      p.jabatan ||'—',
+  // Bangun dataExcel sesuai format Code 2 (bulanan)
+  const JAM_KERJA_WAJIB = 150;
+  const pegawaiPayload = lastRekapPegawai.map((p, i) => {
+    const masuk      = p.masuk       || 0;
+    const pulang     = p.pulang      || 0;
+    const luarMasuk  = p.lambat      ?? p.di_luar_masuk  ?? 0;
+    const luarPulang = p.pulangCepat ?? p.di_luar_pulang ?? 0;
+    const izin       = p.izin        || 0;
+    const sakit      = p.sakit       || 0;
+    const tugas      = p.tugas       || 0;
+    const jh         = parseFloat(p.jamHadir    || 0);
+    const jth        = parseFloat(p.jamTdkHadir || Math.max(0, JAM_KERJA_WAJIB - jh).toFixed(1));
+    // Field sesuai Format Pesan (Code 1) — dipakai untuk pesan Telegram
+    return {
+      ...p,
       masuk, pulang,
-      luarMasuk,
-      luarMasuk  >0 ? (p.akkLambatHHMM  ||'00:00') : '',
-      luarPulang,
-      luarPulang >0 ? (p.akkCepatHHMM   ||'00:00') : '',
-      (luarMasuk+luarPulang) > 0 ? (p.totalAkkHHMM||'00:00') : '',
-      p.totalLambatAllHHMM && p.totalLambatAllHHMM!=='00:00' ? p.totalLambatAllHHMM : '',
-      p.totalCepatAllHHMM  && p.totalCepatAllHHMM !=='00:00' ? p.totalCepatAllHHMM  : '',
-      p.totalAkkAllHHMM    && p.totalAkkAllHHMM   !=='00:00' ? p.totalAkkAllHHMM    : '',
-      p.disiplinPct  !== null ? p.disiplinPct + '%' : '—',
-      p.disiplinLabel || '—',
-      izin, sakit, tugas, total
-    ]);
+      lambat      : luarMasuk,
+      pulangCepat : luarPulang,
+      // ── Format Excel sesuai Code 2 ──
+      dataExcelRow: {
+        'No'              : i + 1,
+        'Nama'            : p.nama     || '—',
+        'NIP'             : p.nip      || '—',
+        'Jabatan'         : p.jabatan  || '—',
+        'Jam Kerja Wajib' : p.jamKerjaWajib || JAM_KERJA_WAJIB,
+        'Jam Hadir'       : jh.toFixed(1),
+        'Jam Tidak Hadir' : jth.toFixed(1),
+        'Sakit'           : sakit,
+        'Izin'            : izin,
+        'Dinas Luar (DL)' : tugas,
+        'Alpa'            : 0,
+        'Keterangan'      : [
+          masuk      > 0 ? `M:${masuk}`      : '',
+          pulang     > 0 ? `P:${pulang}`     : '',
+          luarMasuk  > 0 ? `L:${luarMasuk}`  : '',
+          luarPulang > 0 ? `C:${luarPulang}` : '',
+          izin       > 0 ? `I:${izin}`       : '',
+          sakit      > 0 ? `S:${sakit}`      : '',
+          tugas      > 0 ? `DL:${tugas}`     : ''
+        ].filter(Boolean).join(' ') || 'Tidak Hadir'
+      }
+    };
   });
 
-  wsData.push(['','TOTAL','','',tM,tP,tLM,'',tLP,'','','','','','','',tI,tS,tT,tM+tP+tLM+tLP+tI+tS+tT]);
+  const payload = {
+    dari,
+    sampai,
+    chat_id : String(REKAP_CHAT_ID || MY_ID || ''),
+    pegawai : pegawaiPayload
+  };
 
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols']=[
-    {wch:4},{wch:36},{wch:22},{wch:30},
-    {wch:7},{wch:7},
-    {wch:12},{wch:18},{wch:12},{wch:18},{wch:18},
-    {wch:16},{wch:16},{wch:16},
-    {wch:13},{wch:16},
-    {wch:7},{wch:7},{wch:7},{wch:7}
-  ];
-  ws['!merges']=[0,1,2,3,4].map(r=>({s:{r,c:0},e:{r,c:19}}));
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Rekap Absensi');
-  XLSX.writeFile(wb, `Rekap_Absensi_${dari}_sd_${sampai}.xlsx`);
+  try {
+    const res = await apiFetch(P.kirimRekap, {method:'POST', body:JSON.stringify(payload)});
+    let d = {}; try { d = await res.json(); } catch(_) {}
+    if (res.ok) {
+      showRekapToast('success','✅ Rekap berhasil dikirim ke Telegram! Cek bot Anda.');
+    } else {
+      throw new Error('Server ' + res.status);
+    }
+  } catch(e) {
+    console.warn('kirimRekap error:', e);
+    showRekapToast('fail','🔌 Gagal mengirim. Pastikan n8n & bot Telegram aktif.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '📤 Kirim';
+  }
 }
 
 /* ════ ADMIN ════ */
