@@ -6,6 +6,8 @@
   <title>Absensi BAPPERIDA</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
@@ -91,6 +93,96 @@
     .gps-val{font-family:'JetBrains Mono',monospace;font-size:10px}
     .acc-bar{height:3px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:5px}
     .acc-fill{height:100%;border-radius:2px;transition:width .5s,background .5s}
+
+    /* WiFi / Network indicator */
+    .wifi-bar{display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:10px;margin-bottom:10px;font-size:10px;font-weight:700;border:1px solid;transition:all .4s}
+    .wifi-bar.checking{background:rgba(201,168,76,.08);border-color:rgba(201,168,76,.2);color:var(--muted)}
+    .wifi-bar.kantor{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--success)}
+    .wifi-bar.luar{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--danger)}
+    .wifi-bar.warn{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:var(--warning)}
+    .wifi-bar.unknown{background:rgba(96,165,250,.08);border-color:rgba(96,165,250,.2);color:var(--info)}
+    .wifi-icon{font-size:14px;flex-shrink:0}
+    .wifi-info{flex:1;line-height:1.4}
+    .wifi-status{font-weight:700}
+    .wifi-detail{font-size:9px;opacity:.75;font-weight:500;margin-top:1px}
+
+    /* ══ KAMERA / FACE SCAN MODAL ══ */
+    .cam-overlay{position:fixed;inset:0;z-index:9999;background:rgba(5,12,30,.97);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:0;overflow:hidden}
+    .cam-overlay.hidden{display:none}
+    .cam-header{width:100%;padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
+    .cam-title{font-size:13px;font-weight:800;color:var(--white)}
+    .cam-close{width:30px;height:30px;border-radius:8px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:var(--danger);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .cam-body{flex:1;width:100%;display:flex;flex-direction:column;align-items:center;padding:12px 14px;gap:10px;overflow-y:auto}
+
+    /* Video container */
+    .cam-video-wrap{position:relative;width:100%;max-width:320px;aspect-ratio:3/4;border-radius:16px;overflow:hidden;border:2px solid var(--border);background:#000;flex-shrink:0}
+    .cam-video-wrap.face-ok{border-color:var(--success);box-shadow:0 0 16px rgba(34,197,94,.3)}
+    .cam-video-wrap.face-warn{border-color:var(--warning);box-shadow:0 0 16px rgba(245,158,11,.25)}
+    .cam-video-wrap.face-bad{border-color:var(--danger);box-shadow:0 0 16px rgba(239,68,68,.25)}
+    #camVideo{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+    #camCanvas{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);pointer-events:none}
+
+    /* Face guide oval */
+    .face-guide{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center}
+    .face-oval{width:55%;aspect-ratio:3/4;border:2px dashed rgba(201,168,76,.5);border-radius:50%;transition:border-color .3s}
+    .cam-video-wrap.face-ok .face-oval{border-color:rgba(34,197,94,.8);border-style:solid}
+
+    /* Status badge */
+    .cam-status{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;width:100%;max-width:320px;flex-shrink:0}
+    .cam-status.idle{background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2)}
+    .cam-status.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3)}
+    .cam-status.warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3)}
+    .cam-status.bad{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3)}
+    .cam-status-icon{font-size:18px;flex-shrink:0}
+    .cam-status-text{flex:1}
+    .cam-status-title{font-size:11px;font-weight:700}
+    .cam-status-sub{font-size:9px;opacity:.75;margin-top:1px}
+
+    /* Liveness challenge */
+    .liveness-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:10px 14px;width:100%;max-width:320px;flex-shrink:0}
+    .liveness-title{font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+    .liveness-steps{display:flex;gap:6px}
+    .liveness-step{flex:1;padding:6px 4px;border-radius:8px;text-align:center;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);transition:all .3s}
+    .liveness-step.active{border-color:var(--gold);background:var(--gold-dim)}
+    .liveness-step.done{border-color:var(--success);background:rgba(34,197,94,.1)}
+    .liveness-step.fail{border-color:var(--danger);background:rgba(239,68,68,.1)}
+    .ls-icon{font-size:18px;margin-bottom:2px}
+    .ls-label{font-size:8px;font-weight:700;color:var(--muted)}
+    .liveness-step.active .ls-label{color:var(--gold)}
+    .liveness-step.done .ls-label{color:var(--success)}
+
+    /* Baju / seragam check */
+    .baju-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:10px 14px;width:100%;max-width:320px;flex-shrink:0}
+    .baju-title{font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+    .baju-row{display:flex;align-items:center;gap:8px}
+    .baju-swatch{width:28px;height:28px;border-radius:7px;border:2px solid rgba(255,255,255,.15);flex-shrink:0;transition:all .3s}
+    .baju-info{flex:1}
+    .baju-color{font-size:11px;font-weight:700}
+    .baju-verdict{font-size:9px;margin-top:1px}
+    .baju-verdict.ok{color:var(--success)}
+    .baju-verdict.warn{color:var(--warning)}
+
+    /* Hari seragam info */
+    .seragam-info{font-size:9px;padding:5px 10px;border-radius:7px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.15);color:var(--gold);width:100%;max-width:320px;text-align:center;flex-shrink:0}
+
+    /* Capture button */
+    .btn-capture{width:100%;max-width:320px;padding:13px;border-radius:13px;background:linear-gradient(135deg,var(--gold),#9b6e1a);border:none;color:var(--navy);font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0;transition:opacity .2s}
+    .btn-capture:disabled{opacity:.5;cursor:not-allowed}
+    .btn-capture-skip{width:100%;max-width:320px;padding:9px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0;margin-top:-4px}
+
+    /* Result preview */
+    .cam-preview{width:100%;max-width:320px;border-radius:12px;overflow:hidden;border:1px solid var(--border);flex-shrink:0;display:none}
+    .cam-preview.show{display:block}
+    .cam-preview img{width:100%;display:block}
+    .cam-preview-info{padding:8px 10px;background:rgba(17,34,64,.9);font-size:9px;color:var(--muted)}
+    .cam-preview-badge{display:inline-flex;gap:4px;align-items:center;padding:2px 7px;border-radius:5px;font-size:9px;font-weight:700;margin-right:4px}
+    .cpb-ok{background:rgba(34,197,94,.15);color:var(--success)}
+    .cpb-warn{background:rgba(245,158,11,.15);color:var(--warning)}
+
+    /* Loading model */
+    .model-loading{text-align:center;padding:20px;color:var(--muted);font-size:11px}
+    .model-loading .spin{font-size:24px;display:block;margin-bottom:8px;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
 
     /* Today history card */
     .today-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px;backdrop-filter:blur(12px)}
@@ -498,6 +590,7 @@
       <div class="gps-row"><span class="gps-key">LOKASI</span>   <span class="gps-val" id="gpsLokasi" style="color:var(--gold)">—</span></div>
       <div class="gps-row"><span class="gps-key">TANGGAL</span>  <span class="gps-val" id="gpsTanggal">—</span></div>
       <div class="gps-row"><span class="gps-key">JAM</span>      <span class="gps-val" id="gpsJam">—</span></div>
+      <div class="gps-row"><span class="gps-key">JARINGAN</span> <span class="gps-val" id="gpsNet" style="color:var(--info)">—</span></div>
       <div class="acc-bar"><div class="acc-fill" id="accFill" style="width:0%"></div></div>
     </div>
     <div class="result-card" id="resultCard">
@@ -506,6 +599,14 @@
       <div class="r-msg"   id="rMsg">—</div>
     </div>
     <div class="divider"><span>KONFIRMASI KEHADIRAN</span></div>
+    <!-- WiFi / Network Indicator -->
+    <div class="wifi-bar checking" id="wifiBar">
+      <span class="wifi-icon" id="wifiIcon">🔄</span>
+      <div class="wifi-info">
+        <div class="wifi-status" id="wifiStatus">Memeriksa jaringan...</div>
+        <div class="wifi-detail" id="wifiDetail">Mengambil informasi koneksi</div>
+      </div>
+    </div>
     <button class="btn-primary" id="btnAbsen" onclick="handleAbsen()">
       <div class="btn-inner"><span>📍</span><span id="btnText">Kirim Lokasi &amp; Absen</span></div>
     </button>
@@ -522,7 +623,94 @@
       <div class="btn-inner"><span>🏃</span><span id="btnPulangLuarText">Pulang dari Lapangan</span></div>
     </button>
 
-    <div class="footer">v4.2 · Sistem Absensi Digital BAPPERIDA SB</div>
+    <div class="footer">v4.3 · Sistem Absensi Digital BAPPERIDA SB</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       KAMERA / FACE SCAN OVERLAY
+       Muncul saat pegawai menekan tombol Absen
+  ══════════════════════════════════════════════════ -->
+  <div class="cam-overlay hidden" id="camOverlay">
+    <div class="cam-header">
+      <div>
+        <div class="cam-title">📷 Verifikasi Wajah & Seragam</div>
+      </div>
+      <button class="cam-close" id="camCloseBtn" onclick="closeCamOverlay()">✕</button>
+    </div>
+    <div class="cam-body" id="camBody">
+
+      <!-- Loading model -->
+      <div class="model-loading" id="modelLoading">
+        <span class="spin">⚙️</span>
+        Memuat model deteksi wajah...<br>
+        <span style="font-size:9px;margin-top:4px;display:block">(pertama kali ~5 detik)</span>
+      </div>
+
+      <!-- Video stream + canvas overlay -->
+      <div class="cam-video-wrap" id="camVideoWrap" style="display:none">
+        <video id="camVideo" autoplay playsinline muted></video>
+        <canvas id="camCanvas"></canvas>
+        <div class="face-guide"><div class="face-oval" id="faceOval"></div></div>
+      </div>
+
+      <!-- Info seragam hari ini -->
+      <div class="seragam-info" id="seragamInfo" style="display:none">📋 —</div>
+
+      <!-- Status deteksi wajah -->
+      <div class="cam-status idle" id="camStatus" style="display:none">
+        <div class="cam-status-icon" id="camStatusIcon">🔍</div>
+        <div class="cam-status-text">
+          <div class="cam-status-title" id="camStatusTitle">Mendeteksi wajah...</div>
+          <div class="cam-status-sub"  id="camStatusSub">Hadapkan wajah ke kamera</div>
+        </div>
+      </div>
+
+      <!-- Liveness check steps -->
+      <div class="liveness-card" id="livenessCard" style="display:none">
+        <div class="liveness-title">🔐 Liveness Check — Anti Foto</div>
+        <div class="liveness-steps">
+          <div class="liveness-step" id="ls0">
+            <div class="ls-icon">😐</div>
+            <div class="ls-label">Wajah Terdeteksi</div>
+          </div>
+          <div class="liveness-step" id="ls1">
+            <div class="ls-icon">😉</div>
+            <div class="ls-label">Kedipkan Mata</div>
+          </div>
+          <div class="liveness-step" id="ls2">
+            <div class="ls-icon">↔️</div>
+            <div class="ls-label">Geleng Kepala</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cek baju / seragam -->
+      <div class="baju-card" id="bajuCard" style="display:none">
+        <div class="baju-title">👔 Deteksi Seragam</div>
+        <div class="baju-row">
+          <div class="baju-swatch" id="bajuSwatch"></div>
+          <div class="baju-info">
+            <div class="baju-color" id="bajuColor">Mendeteksi...</div>
+            <div class="baju-verdict" id="bajuVerdict"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preview hasil foto -->
+      <div class="cam-preview" id="camPreview">
+        <img id="camPreviewImg" src="" alt="Foto Absen">
+        <div class="cam-preview-info" id="camPreviewInfo"></div>
+      </div>
+
+      <!-- Tombol ambil foto -->
+      <button class="btn-capture" id="btnCapture" onclick="doCapture()" disabled>
+        📸 Ambil Foto & Lanjutkan Absen
+      </button>
+      <button class="btn-capture-skip" id="btnCaptureSkip" onclick="skipVerifikasi()">
+        ⏩ Lewati Verifikasi (tetap foto tersimpan)
+      </button>
+
+    </div>
   </div>
 
   <!-- ══ TAB KETERANGAN ══ -->
@@ -827,11 +1015,24 @@
 <script>
 /* ════ KONFIGURASI ════ */
 const SERVER_1  = 'https://unheeled-timmy-supernumerously.ngrok-free.dev';
-const SERVER_2  = 'https://unannunciable-nongerundive-elsa.ngrok-free.dev';
+const SERVER_2  = 'https://unannunciable-nongerundive-elsa.ngrok-free.app';
 const isTest    = false;
 const ADMIN_IDS    = [1383864355];
 // Chat ID tujuan pengiriman rekap via Telegram (ganti dengan Group ID jika perlu)
 const REKAP_CHAT_ID = ADMIN_IDS[0];
+
+/* ════ KONFIGURASI JARINGAN WIFI KANTOR ════
+   WAJIB DIISI: Daftar IP publik jaringan WiFi kantor.
+   Cara cek IP publik kantor: buka https://api.ipify.org dari jaringan WiFi kantor.
+   Bisa isi lebih dari satu IP jika ada beberapa koneksi internet kantor.
+   Jika WIFI_CHECK_ENABLED = false, cek jaringan dinonaktifkan (semua jaringan boleh).
+*/
+const WIFI_CHECK_ENABLED = true;           // set false untuk nonaktifkan cek jaringan
+const KANTOR_IPS = [
+  '36.84.229.16',                       // ← GANTI dengan IP publik WiFi kantor
+  // '103.YYY.YYY.YYY',                    // ← tambahkan jika ada IP cadangan
+];
+const WIFI_MODE = 'warn';  // 'block' = tolak jika bukan WiFi kantor | 'warn' = boleh tapi ditandai
 
 const P = {
   absen      : isTest ? '/webhook-test/absen'          : '/webhook/absen',
@@ -904,6 +1105,7 @@ function switchTab(tab) {
   document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', T[i]===tab));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   const el = $('panel-'+tab); if(el) el.classList.add('active');
+  if (tab==='absen'  && !networkInfo.checked) cekJaringan(); // auto cek jaringan saat buka tab absen
   if (tab==='profil'  && !logLoaded)    loadLog();
   if (tab==='profil'  && !dokumenLoaded) loadDokumen();
   if (tab==='rekap'   && !rekapLoaded) loadRekap();
@@ -1198,6 +1400,530 @@ function showGPS(lat,lon,acc,lokasi){
   $('gpsCard').classList.add('show');
 }
 
+/* ════ DETEKSI JARINGAN / WIFI ════
+   Mengambil IP publik dari api.ipify.org lalu bandingkan dengan KANTOR_IPS.
+   Hasilnya disimpan di networkInfo untuk disertakan di payload absen.
+   ════════════════════════════════ */
+let networkInfo = {
+  ip_public   : null,
+  is_kantor   : null,    // true | false | null (belum dicek)
+  network_type: null,    // 'wifi' | 'cellular' | 'ethernet' | 'unknown'
+  checked     : false,
+  error       : null
+};
+
+async function cekJaringan() {
+  const bar    = $('wifiBar');
+  const icon   = $('wifiIcon');
+  const status = $('wifiStatus');
+  const detail = $('wifiDetail');
+
+  // Deteksi tipe koneksi (Network Information API — hanya Android Chrome/Telegram)
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const netType = conn?.type || conn?.effectiveType || 'unknown';
+  networkInfo.network_type = netType;
+
+  if (!WIFI_CHECK_ENABLED) {
+    networkInfo.checked  = true;
+    networkInfo.is_kantor = null; // tidak dicek
+    bar.className   = 'wifi-bar unknown';
+    icon.textContent = '📶';
+    status.textContent = 'Cek Jaringan Dinonaktifkan';
+    detail.textContent = 'Semua jaringan diizinkan';
+    return networkInfo;
+  }
+
+  // Tampilkan loading
+  bar.className   = 'wifi-bar checking';
+  icon.textContent = '🔄';
+  status.textContent = 'Memeriksa jaringan...';
+  detail.textContent = 'Mengambil IP publik...';
+
+  try {
+    // Ambil IP publik dengan timeout 5 detik
+    const ctrl = new AbortController();
+    const tid  = setTimeout(() => ctrl.abort(), 5000);
+    const res  = await fetch('https://api.ipify.org?format=json', { signal: ctrl.signal });
+    clearTimeout(tid);
+    const data = await res.json();
+    const ip   = data.ip || '';
+
+    networkInfo.ip_public = ip;
+    networkInfo.is_kantor = KANTOR_IPS.includes(ip);
+    networkInfo.checked   = true;
+
+    const connLabel = netType.includes('wifi') ? '📶 WiFi'
+                    : netType.includes('cellular') || ['2g','3g','4g','5g'].includes(netType) ? '📱 Data Seluler'
+                    : '🔌 Jaringan';
+
+    if (networkInfo.is_kantor) {
+      bar.className   = 'wifi-bar kantor';
+      icon.textContent = '✅';
+      status.textContent = 'Jaringan Kantor Terdeteksi';
+      detail.textContent = `${connLabel} · IP: ${ip}`;
+    } else {
+      if (WIFI_MODE === 'block') {
+        bar.className   = 'wifi-bar luar';
+        icon.textContent = '🚫';
+        status.textContent = 'Bukan Jaringan Kantor';
+        detail.textContent = `IP Anda: ${ip} · Sambungkan ke WiFi kantor`;
+      } else {
+        bar.className   = 'wifi-bar warn';
+        icon.textContent = '⚠️';
+        status.textContent = 'Jaringan di Luar Kantor';
+        detail.textContent = `${connLabel} · IP: ${ip} · Absen tetap diproses`;
+      }
+    }
+    if ($('gpsNet')) $('gpsNet').textContent = `${ip} ${networkInfo.is_kantor ? '(Kantor ✓)' : '(Luar Kantor)'}`;
+
+  } catch(e) {
+    networkInfo.checked = true;
+    networkInfo.error   = e.message;
+    bar.className   = 'wifi-bar unknown';
+    icon.textContent = '❓';
+    status.textContent = 'Jaringan Tidak Terdeteksi';
+    detail.textContent = 'Tidak dapat memeriksa IP — lanjutkan absen';
+  }
+  return networkInfo;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   SISTEM VERIFIKASI WAJAH & SERAGAM — BAPPERIDA Sumba Barat v1.0
+   ════════════════════════════════════════════════════════════════
+   Alur:
+   1. handleAbsen() → buka modal kamera → openCamOverlay()
+   2. Muat model BlazeFace (cached setelah pertama kali)
+   3. Loop deteksi: wajah → liveness (kedip + geleng) → warna baju
+   4. doCapture() → ambil foto → encode base64
+   5. Lanjutkan GPS + kirim payload dengan foto
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Jadwal Seragam Harian ── */
+const JADWAL_SERAGAM = {
+  0: { nama: 'Minggu',  warna: null,           label: 'Libur',                       emoji: '🏠' },
+  1: { nama: 'Senin',   warna: 'coklat_khaki', label: 'Coklat / Khaki (Seragam ASN)',emoji: '🟤' },
+  2: { nama: 'Selasa',  warna: 'coklat_khaki', label: 'Coklat / Khaki (Seragam ASN)',emoji: '🟤' },
+  3: { nama: 'Rabu',    warna: 'putih',        label: 'Kemeja Putih',                emoji: '⬜' },
+  4: { nama: 'Kamis',   warna: 'tenun_sumba',  label: 'Kain Tenun Sumba (Warna Cerah/Motif)',emoji: '🎨' },
+  5: { nama: 'Jumat',   warna: 'bebas',        label: 'Baju Bebas',                  emoji: '👕' },
+  6: { nama: 'Sabtu',   warna: null,           label: 'Libur',                       emoji: '🏠' },
+};
+
+/* ── Rentang warna HSL per seragam ──
+   Format: { hMin,hMax, sMin,sMax, lMin,lMax }
+   coklat_khaki : H=20-45, S=20-65, L=25-65
+   putih        : S<15, L>75
+   tenun_sumba  : Warna cerah/jenuh (S>35) — Merah, Oranye, Kuning, Biru Tua, Hijau Tua, dll
+                  (Tidak ada satu warna pasti — cek saturasi tinggi + bukan putih/hitam/abu)
+*/
+function cekWarnaSeragam(r, g, b, hariIdx) {
+  // Konversi RGB → HSL
+  const r1=r/255, g1=g/255, b1=b/255;
+  const max=Math.max(r1,g1,b1), min=Math.min(r1,g1,b1);
+  const l=(max+min)/2;
+  let h=0, s=0;
+  if(max!==min){
+    const d=max-min;
+    s=l>0.5?d/(2-max-min):d/(max+min);
+    switch(max){
+      case r1: h=((g1-b1)/d+(g1<b1?6:0))/6; break;
+      case g1: h=((b1-r1)/d+2)/6; break;
+      case b1: h=((r1-g1)/d+4)/6; break;
+    }
+  }
+  const H=Math.round(h*360), S=Math.round(s*100), L=Math.round(l*100);
+  const seragam = JADWAL_SERAGAM[hariIdx];
+
+  let verdict='ok', alasan='', nama_warna='';
+
+  if (!seragam || !seragam.warna) {
+    return { verdict:'skip', nama_warna:'—', alasan:'Hari libur', H,S,L };
+  }
+
+  switch(seragam.warna) {
+    case 'coklat_khaki':
+      // Coklat: H=15-45, S=20-70, L=25-65
+      // Khaki: H=45-65, S=15-55, L=40-75
+      nama_warna = (H>=15&&H<=65&&S>=15&&L>=20&&L<=75) ? 'Coklat/Khaki' : getNamaWarna(H,S,L);
+      verdict    = (H>=15&&H<=65&&S>=15&&S<=75&&L>=20&&L<=75) ? 'ok' : 'warn';
+      alasan     = verdict==='ok' ? '✅ Sesuai seragam dinas' : `⚠️ Seharusnya Coklat/Khaki (terdeteksi: ${nama_warna})`;
+      break;
+    case 'putih':
+      // Putih: S<20, L>70 — atau sangat terang
+      nama_warna = (S<20&&L>70) ? 'Putih/Terang' : getNamaWarna(H,S,L);
+      verdict    = (S<20&&L>68) ? 'ok' : 'warn';
+      alasan     = verdict==='ok' ? '✅ Sesuai kemeja putih' : `⚠️ Seharusnya Putih (terdeteksi: ${nama_warna})`;
+      break;
+    case 'tenun_sumba':
+      // Tenun Sumba: warna cerah/jenuh — S>30 (ada warna dominan), bukan putih/hitam/abu
+      const isBerwarna = S>28 && L>15 && L<90;
+      nama_warna = getNamaWarna(H,S,L);
+      verdict    = isBerwarna ? 'ok' : 'warn';
+      alasan     = verdict==='ok' ? '✅ Warna cerah — cocok Tenun Sumba' : `⚠️ Seharusnya Tenun Sumba berwarna (terdeteksi: ${nama_warna})`;
+      break;
+    case 'bebas':
+      nama_warna = getNamaWarna(H,S,L);
+      verdict    = 'ok';
+      alasan     = '✅ Hari Jumat — Baju Bebas';
+      break;
+  }
+  return { verdict, nama_warna, alasan, H, S, L };
+}
+
+function getNamaWarna(H,S,L) {
+  if(S<12)  return L>80?'Putih':L<25?'Hitam':'Abu-abu';
+  if(L<18)  return 'Hitam';
+  if(H<15||H>=345) return 'Merah';
+  if(H<45)  return S>50?'Oranye':'Coklat';
+  if(H<65)  return S>40?'Kuning':'Kuning Pucat';
+  if(H<150) return S>35?'Hijau':'Hijau Muda';
+  if(H<195) return 'Cyan/Tosca';
+  if(H<255) return 'Biru';
+  if(H<285) return 'Ungu';
+  if(H<345) return 'Merah Muda/Pink';
+  return 'Tidak Dikenal';
+}
+
+/* ── State Kamera ── */
+let _camStream    = null;
+let _blazeModel   = null;
+let _modelLoading = false;
+let _detectLoop   = null;
+let _faceHistory  = [];   // riwayat posisi hidung untuk deteksi geleng
+let _eyeHistory   = [];   // riwayat eye aspect ratio untuk deteksi kedip
+let _livenessState = { faceOk:false, kedip:false, geleng:false };
+let _captureData  = null; // { dataUrl, faceOk, bajuVerdikt, livenessOk }
+let _absenCallbackAfterCam = null; // fungsi yang dipanggil setelah kamera selesai
+let _skipVerifikasi = false;
+
+/* ── Muat model BlazeFace (sekali saja) ── */
+async function loadBlazeFace() {
+  if (_blazeModel) return _blazeModel;
+  if (_modelLoading) {
+    // Tunggu sampai selesai
+    while(_modelLoading) await new Promise(r=>setTimeout(r,200));
+    return _blazeModel;
+  }
+  _modelLoading = true;
+  try {
+    _blazeModel = await blazeface.load({ maxFaces:1, scoreThreshold:0.75 });
+  } catch(e) {
+    console.error('BlazeFace load error:', e);
+    _blazeModel = null;
+  }
+  _modelLoading = false;
+  return _blazeModel;
+}
+
+/* ── Buka overlay kamera ── */
+async function openCamOverlay(onDone) {
+  _absenCallbackAfterCam = onDone;
+  _captureData    = null;
+  _skipVerifikasi = false;
+  _livenessState  = { faceOk:false, kedip:false, geleng:false };
+  _faceHistory    = [];
+  _eyeHistory     = [];
+
+  $('camOverlay').classList.remove('hidden');
+  $('modelLoading').style.display  = 'block';
+  $('camVideoWrap').style.display  = 'none';
+  $('seragamInfo').style.display   = 'none';
+  $('camStatus').style.display     = 'none';
+  $('livenessCard').style.display  = 'none';
+  $('bajuCard').style.display      = 'none';
+  $('camPreview').classList.remove('show');
+  $('btnCapture').disabled         = true;
+  setCamStatus('idle','🔍','Memuat model AI...','Harap tunggu sebentar');
+
+  // Tampilkan info seragam hari ini
+  const hariIdx = nowWITA().getDay();
+  const s = JADWAL_SERAGAM[hariIdx];
+  $('seragamInfo').textContent = `${s.emoji} Seragam hari ini: ${s.label}`;
+  $('seragamInfo').style.display = 'block';
+
+  // Minta izin kamera & mulai stream
+  try {
+    _camStream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:'user', width:{ideal:640}, height:{ideal:480} }, audio:false
+    });
+    const vid = $('camVideo');
+    vid.srcObject = _camStream;
+    await new Promise(r => { vid.onloadedmetadata=r; });
+    await vid.play();
+  } catch(e) {
+    $('modelLoading').textContent = '❌ Izin kamera ditolak. Berikan izin kamera dan coba lagi.';
+    return;
+  }
+
+  // Muat BlazeFace model
+  const model = await loadBlazeFace();
+  $('modelLoading').style.display  = 'none';
+  $('camVideoWrap').style.display  = 'block';
+  $('camStatus').style.display     = 'flex';
+  $('livenessCard').style.display  = 'block';
+  $('bajuCard').style.display      = 'block';
+
+  if (!model) {
+    setCamStatus('warn','⚠️','Model AI gagal dimuat','Foto tetap bisa diambil — verifikasi manual');
+    $('btnCapture').disabled = false;
+    $('btnCaptureSkip').style.display = 'block';
+    startSimpleCapture();
+    return;
+  }
+
+  // Sesuaikan ukuran canvas dengan video
+  const vid = $('camVideo');
+  const cnv = $('camCanvas');
+  cnv.width  = vid.videoWidth  || 320;
+  cnv.height = vid.videoHeight || 240;
+
+  // Mulai loop deteksi
+  setLivenessStep(0,'active'); setLivenessStep(1,''); setLivenessStep(2,'');
+  startDetectLoop(model);
+}
+
+function closeCamOverlay() {
+  stopDetectLoop();
+  stopCamStream();
+  $('camOverlay').classList.add('hidden');
+  // Batalkan absen jika belum capture
+  if (!_captureData && _absenCallbackAfterCam) {
+    // user menutup modal — batalkan absen, kembalikan tombol
+    if (typeof _absenCallbackAfterCam === 'object' && _absenCallbackAfterCam.onCancel) {
+      _absenCallbackAfterCam.onCancel();
+    }
+  }
+}
+
+function stopCamStream() {
+  if (_camStream) { _camStream.getTracks().forEach(t=>t.stop()); _camStream=null; }
+}
+
+function stopDetectLoop() {
+  if (_detectLoop) { cancelAnimationFrame(_detectLoop); _detectLoop=null; }
+}
+
+/* ── Loop deteksi wajah (rAF) ── */
+function startDetectLoop(model) {
+  const vid = $('camVideo');
+  const cnv = $('camCanvas');
+  const ctx = cnv.getContext('2d');
+  const wrap= $('camVideoWrap');
+
+  let lastDetect = 0;
+  const INTERVAL = 120; // ms antar deteksi (≈8 fps untuk hemat baterai)
+
+  async function loop(ts) {
+    _detectLoop = requestAnimationFrame(loop);
+    if (ts - lastDetect < INTERVAL) return;
+    lastDetect = ts;
+
+    // Sinkronisasi ukuran canvas
+    if (cnv.width !== vid.videoWidth && vid.videoWidth>0) {
+      cnv.width=vid.videoWidth; cnv.height=vid.videoHeight;
+    }
+    ctx.clearRect(0,0,cnv.width,cnv.height);
+
+    let predictions = [];
+    try { predictions = await model.estimateFaces(vid, false); } catch(_) { return; }
+
+    const hariIdx = nowWITA().getDay();
+
+    if (!predictions.length) {
+      wrap.className='cam-video-wrap face-bad';
+      setCamStatus('bad','😶','Wajah Tidak Terdeteksi','Hadapkan wajah ke kamera dalam oval');
+      setLivenessStep(0,''); setLivenessStep(1,''); setLivenessStep(2,'');
+      _faceHistory=[]; _eyeHistory=[];
+      _livenessState.faceOk=false;
+      return;
+    }
+
+    const face = predictions[0];
+    const prob = face.probability ? face.probability[0] : 1;
+    const [x,y,x2,y2] = [face.topLeft[0],face.topLeft[1],face.bottomRight[0],face.bottomRight[1]];
+    const w=x2-x, h=y2-y;
+
+    // Gambar kotak wajah di canvas
+    ctx.strokeStyle = _livenessState.kedip&&_livenessState.geleng ? '#22c55e' : '#c9a84c';
+    ctx.lineWidth   = 2;
+    ctx.strokeRect(x,y,w,h);
+
+    // ── Deteksi Kedip via eye landmarks ──
+    const landmarks = face.landmarks; // [[rightEye],[leftEye],[nose],[mouth],[rightEar],[leftEar]]
+    if (landmarks && landmarks.length >= 4) {
+      const re = landmarks[0]; // right eye
+      const le = landmarks[1]; // left eye
+      const no = landmarks[2]; // nose
+      // Perkiraan "eye openness" dari jarak eye-to-nose vertikal relatif terhadap tinggi wajah
+      const eyeToNoseR = Math.abs(no[1]-re[1]);
+      const eyeToNoseL = Math.abs(no[1]-le[1]);
+      const eyeRatio   = (eyeToNoseR+eyeToNoseL)/(2*h);
+      _eyeHistory.push(eyeRatio);
+      if(_eyeHistory.length>20) _eyeHistory.shift();
+
+      if (!_livenessState.kedip && _eyeHistory.length>=10) {
+        const mn=Math.min(..._eyeHistory.slice(-10));
+        const mx=Math.max(..._eyeHistory.slice(-10));
+        // Kedip: variasi besar dalam rasio eye-nose (mn jauh lebih kecil dari mx)
+        if(mx-mn>0.08) {
+          _livenessState.kedip=true;
+          setLivenessStep(1,'done');
+        }
+      }
+
+      // ── Deteksi Geleng via posisi hidung horizontal ──
+      const noseX = no[0];
+      const faceCenter = x + w/2;
+      const relPos = (noseX - faceCenter) / w; // -0.5 kiri ... +0.5 kanan
+      _faceHistory.push(relPos);
+      if(_faceHistory.length>30) _faceHistory.shift();
+
+      if (!_livenessState.geleng && _faceHistory.length>=20) {
+        const minP=Math.min(..._faceHistory);
+        const maxP=Math.max(..._faceHistory);
+        // Geleng: hidung bergerak dari kiri ke kanan melewati tengah (threshold ±0.12)
+        if(minP<-0.12 && maxP>0.12) {
+          _livenessState.geleng=true;
+          setLivenessStep(2,'done');
+        }
+      }
+    }
+
+    _livenessState.faceOk = true;
+    setLivenessStep(0,'done');
+    wrap.className = _livenessState.kedip&&_livenessState.geleng ? 'cam-video-wrap face-ok' : 'cam-video-wrap face-warn';
+
+    // ── Update status & instruksi ──
+    if (!_livenessState.kedip) {
+      setLivenessStep(1,'active');
+      setCamStatus('warn','😉','Kedipkan Mata','Kedipkan mata Anda beberapa kali');
+    } else if (!_livenessState.geleng) {
+      setLivenessStep(2,'active');
+      setCamStatus('warn','↔️','Gelengkan Kepala','Gerakkan kepala ke kiri lalu ke kanan');
+    } else {
+      setCamStatus('ok','✅','Verifikasi Berhasil!','Wajah terdeteksi · Liveness OK · Siap foto');
+    }
+
+    // ── Deteksi warna baju (bagian bawah wajah) ──
+    detectBajuColor(vid, face, hariIdx);
+
+    // Aktifkan tombol capture jika wajah terdeteksi (meski liveness belum lengkap)
+    if (_livenessState.faceOk && !$('btnCapture').dataset.enabled) {
+      $('btnCapture').disabled = false;
+      $('btnCapture').dataset.enabled = '1';
+    }
+  }
+  _detectLoop = requestAnimationFrame(loop);
+}
+
+/* ── Deteksi warna baju di area bawah wajah ── */
+function detectBajuColor(vid, face, hariIdx) {
+  const [x,y,x2,y2]=[face.topLeft[0],face.topLeft[1],face.bottomRight[0],face.bottomRight[1]];
+  const w=x2-x, fh=y2-y;
+
+  // Area sampling: strip bawah wajah melebar ke badan
+  const sampX = Math.max(0, x - w*0.3);
+  const sampY = y + fh*1.0; // tepat di bawah wajah (dada/baju)
+  const sampW = w*1.6;
+  const sampH = fh*0.5;
+
+  // Gambar region ke canvas sementara untuk sampling warna
+  const tmp = document.createElement('canvas');
+  tmp.width=Math.round(sampW); tmp.height=Math.round(sampH);
+  const tc = tmp.getContext('2d');
+  try {
+    tc.drawImage(vid, sampX, sampY, sampW, sampH, 0, 0, tmp.width, tmp.height);
+    const imgData = tc.getImageData(0,0,tmp.width,tmp.height).data;
+    // Hitung rata-rata RGB dari pixel (sampel setiap 4 pixel untuk performa)
+    let rT=0,gT=0,bT=0,n=0;
+    for(let i=0;i<imgData.length;i+=16){
+      rT+=imgData[i]; gT+=imgData[i+1]; bT+=imgData[i+2]; n++;
+    }
+    if(n>0){
+      const rA=Math.round(rT/n), gA=Math.round(gT/n), bA=Math.round(bT/n);
+      const result = cekWarnaSeragam(rA, gA, bA, hariIdx);
+
+      // Update UI baju
+      $('bajuSwatch').style.background = `rgb(${rA},${gA},${bA})`;
+      $('bajuColor').textContent = result.nama_warna || '—';
+      const vEl = $('bajuVerdict');
+      vEl.textContent = result.alasan;
+      vEl.className   = `baju-verdict ${result.verdict==='ok'?'ok':'warn'}`;
+    }
+  } catch(_) {}
+}
+
+/* ── Ambil foto (capture) ── */
+async function doCapture() {
+  $('btnCapture').disabled = true;
+  const vid = $('camVideo');
+  const cnv = document.createElement('canvas');
+  cnv.width  = vid.videoWidth  || 640;
+  cnv.height = vid.videoHeight || 480;
+  const ctx = cnv.getContext('2d');
+  // Mirror seperti preview (selfie)
+  ctx.translate(cnv.width,0); ctx.scale(-1,1);
+  ctx.drawImage(vid,0,0,cnv.width,cnv.height);
+
+  const dataUrl = cnv.toDataURL('image/jpeg', 0.82);
+  const hariIdx = nowWITA().getDay();
+  const bajuVerdikt = $('bajuVerdict').textContent || '—';
+  const bajuColor   = $('bajuColor').textContent   || '—';
+  const livenessOk  = _livenessState.kedip && _livenessState.geleng;
+  const faceOk      = _livenessState.faceOk;
+
+  _captureData = { dataUrl, faceOk, livenessOk, bajuVerdikt, bajuColor,
+                   hariIdx, seragam: JADWAL_SERAGAM[hariIdx]?.label||'—' };
+
+  // Tampilkan preview
+  $('camPreviewImg').src = dataUrl;
+  const badges = [
+    faceOk    ? '<span class="cam-preview-badge cpb-ok">✅ Wajah</span>' : '<span class="cam-preview-badge cpb-warn">⚠️ No Wajah</span>',
+    livenessOk? '<span class="cam-preview-badge cpb-ok">✅ Liveness</span>' : '<span class="cam-preview-badge cpb-warn">⚠️ Liveness</span>',
+  ].join('');
+  $('camPreviewInfo').innerHTML = `${badges}<span style="color:var(--muted)">${bajuColor} · ${bajuVerdikt.replace(/[✅⚠️]/g,'').trim()}</span>`;
+  $('camPreview').classList.add('show');
+
+  stopDetectLoop();
+  stopCamStream();
+  $('camVideoWrap').style.display='none';
+  $('livenessCard').style.display='none';
+  $('bajuCard').style.display='none';
+
+  setCamStatus('ok','📸','Foto Berhasil Diambil','Melanjutkan proses absen...');
+
+  // Tutup overlay dan lanjutkan absen setelah 1 detik
+  setTimeout(() => {
+    $('camOverlay').classList.add('hidden');
+    if (_absenCallbackAfterCam) _absenCallbackAfterCam(_captureData);
+  }, 1000);
+}
+
+async function skipVerifikasi() {
+  // Ambil foto tanpa liveness check
+  _livenessState = { faceOk:false, kedip:false, geleng:false };
+  await doCapture();
+}
+
+function startSimpleCapture() {
+  // Fallback jika model gagal muat — langsung aktifkan tombol capture
+  $('btnCapture').disabled=false;
+  setCamStatus('warn','📷','Kamera Siap','Model AI tidak tersedia — foto manual');
+}
+
+/* ── Helper UI ── */
+function setCamStatus(type, icon, title, sub) {
+  const el=$('camStatus'); if(!el)return;
+  el.className=`cam-status ${type}`;
+  $('camStatusIcon').textContent=icon;
+  $('camStatusTitle').textContent=title;
+  $('camStatusSub').textContent=sub;
+}
+function setLivenessStep(idx, state) {
+  const el=$('ls'+idx); if(!el)return;
+  el.className='liveness-step'+(state?' '+state:'');
+}
+
 /* ════ HANDLE ABSEN ════ */
 async function handleAbsen() {
   if ($('btnAbsen').disabled) return;
@@ -1213,6 +1939,31 @@ async function handleAbsen() {
     showResult('resultCard','rIcon','rTitle','rMsg','warning','⚠️','Buka via Telegram','Aplikasi harus dibuka melalui Telegram, bukan browser biasa.');
     setBtnL('btnAbsen',false,'📍 Kirim Lokasi & Absen'); return;
   }
+
+  // ── Cek jaringan WiFi ──
+  setBtnL('btnAbsen',true,'Memeriksa jaringan...');
+  await cekJaringan();
+
+  // Blokir jika mode 'block' dan bukan jaringan kantor
+  if (WIFI_CHECK_ENABLED && WIFI_MODE === 'block' && networkInfo.checked && networkInfo.is_kantor === false) {
+    showResult('resultCard','rIcon','rTitle','rMsg','fail','🚫','Jaringan Tidak Diizinkan',
+      `Absensi hanya bisa dilakukan dari jaringan WiFi kantor.\nIP Anda saat ini: ${networkInfo.ip_public || 'tidak diketahui'}\n\nSambungkan HP ke WiFi BAPPERIDA dan coba lagi.`);
+    setBtnL('btnAbsen',false,'🔄 Coba Lagi'); return;
+  }
+
+  // ── Buka kamera untuk verifikasi wajah & seragam ──
+  setBtnL('btnAbsen',true,'Membuka kamera...');
+  openCamOverlay(async (camResult) => {
+    // Dipanggil setelah foto diambil (atau dilewati)
+    await _doAbsenWithGPS(initData, isTgX, camResult);
+  });
+
+  // Kembalikan tombol ke normal (modal kamera yang handle sekarang)
+  setBtnL('btnAbsen',false,'📍 Kirim Lokasi & Absen');
+}
+
+/* ── Proses GPS + Kirim payload absen (dipanggil setelah kamera) ── */
+async function _doAbsenWithGPS(initData, isTgX, camResult) {
   if (!navigator.geolocation) {
     showResult('resultCard','rIcon','rTitle','rMsg','fail','❌','GPS Tidak Tersedia','Buka di Telegram versi terbaru.');
     setBtnL('btnAbsen',false,'Coba Lagi'); return;
@@ -1244,59 +1995,21 @@ async function handleAbsen() {
       let   _score  = 0;
 
       // ── Layer 1: User-Agent pattern ──────────────────────
-      // PENTING: Telegram Android asli memang punya format:
-      // "Mozilla/5.0 ... AppleWebKit/537.36 ... Chrome/X ... Telegram-Android/X.X"
-      // Ini BUKAN tanda fake GPS. Semua HP Samsung, Xiaomi, dll punya UA ini.
-      //
-      // Yang benar-benar mencurigakan:
-      // 1. UA mengandung Xposed/Frida/Cydia (patching framework)
-      // 2. Tidak ada "Telegram-Android" sama sekali
-      const _hasChromeBefore = false; // tidak dipakai lagi — false positive Samsung/Xiaomi
       const _isTelegramUA  = /Telegram-Android\//i.test(_ua);
       const _hasXposed     = /xposed|cydia|substrate|frida|objection/i.test(_ua);
 
-      if (!_isTelegramUA) {
-        _score += 20;
-        _flags.push('UA_NOT_TELEGRAM');
-      }
-      if (_hasXposed) {
-        // Ada patching framework → potensi mock location via Xposed module
-        _score += 50;
-        _flags.push('UA_PATCHING_FRAMEWORK');
-      }
-      // Versi Telegram sangat lama (< 9.0) lebih rentan di-hook
+      if (!_isTelegramUA) { _score += 20; _flags.push('UA_NOT_TELEGRAM'); }
+      if (_hasXposed)     { _score += 50; _flags.push('UA_PATCHING_FRAMEWORK'); }
       const _tgVerMatch = _ua.match(/Telegram-Android\/(\d+)\./);
-      if (_tgVerMatch && parseInt(_tgVerMatch[1]) < 9) {
-        _score += 10;
-        _flags.push('TG_VERSION_OLD');
-      }
+      if (_tgVerMatch && parseInt(_tgVerMatch[1]) < 9) { _score += 10; _flags.push('TG_VERSION_OLD'); }
 
       // ── Layer 2: Accuracy pattern ─────────────────────────
-      // CATATAN: Beberapa GPS hardware asli (chip Qualcomm, MediaTek) memang
-      // kadang melaporkan akurasi bulat seperti 16m, 20m, 32m, 48m, dll.
-      // Terutama di dalam ruangan atau saat sinyal lemah.
-      // Jadi akurasi bulat SAJA tidak cukup untuk dijadikan indikator fake GPS.
-      // Layer ini hanya memberi skor kecil dan HANYA sebagai faktor pendukung,
-      // bukan penentu utama. Penolakan hanya jika skor TOTAL >= 50.
-      const _isIntAcc    = Number.isInteger(accuracy);
-      // Hanya nilai yang sangat spesifik dan tidak wajar dari GPS asli
-      const _suspiciousAccList = [1, 2, 3, 5]; // nilai yang benar-benar tidak mungkin dari GPS asli
-      if (_isIntAcc && _suspiciousAccList.includes(accuracy)) {
-        _score += 15; // skor kecil, tidak langsung menolak
-        _flags.push('ACCURACY_SUSPICIOUS_LOW');
-      }
-      // Akurasi sangat sempurna (< 3m) juga tidak wajar dari GPS biasa
-      // Sudah ditangani di Layer 4 di bawah
+      const _isIntAcc = Number.isInteger(accuracy);
+      const _suspiciousAccList = [1, 2, 3, 5];
+      if (_isIntAcc && _suspiciousAccList.includes(accuracy)) { _score += 15; _flags.push('ACCURACY_SUSPICIOUS_LOW'); }
 
       // ── Layer 3: Acquisition speed ────────────────────────
-      // Mock provider: respons SANGAT instan (<100ms) bahkan saat cold start
-      // GPS asli via WiFi/network bisa cepat (200-600ms) karena cache
-      // GPS asli via satelit: biasanya >800ms saat cold start
-      // Hanya tandai jika benar-benar instan (<100ms) DAN akurasi mencurigakan
-      if (_gpsElapsed < 100) {
-        _score += 10; // skor kecil — bukan penentu sendiri
-        _flags.push('VERY_INSTANT_FIX_' + _gpsElapsed + 'ms');
-      }
+      if (_gpsElapsed < 100) { _score += 10; _flags.push('VERY_INSTANT_FIX_' + _gpsElapsed + 'ms'); }
 
       // ── Layer 4: Akurasi out-of-range ─────────────────────
       if (accuracy <= 0) {
@@ -1304,11 +2017,7 @@ async function handleAbsen() {
           'Akurasi 0m tidak valid. Nonaktifkan Mock Location di pengaturan developer.');
         setBtnL('btnAbsen',false,'🔄 Coba Lagi'); return;
       }
-      // Akurasi tepat 1m (bukan floating point) sangat tidak natural dari GPS asli
-      if (accuracy === 1) {
-        _score += 20;
-        _flags.push('ACCURACY_EXACTLY_1M');
-      }
+      if (accuracy === 1) { _score += 20; _flags.push('ACCURACY_EXACTLY_1M'); }
       if (accuracy > 500) {
         showResult('resultCard','rIcon','rTitle','rMsg','warning','⚠️','Sinyal GPS Lemah',
           `Akurasi ${Math.round(accuracy)}m terlalu lemah. Pindah ke area terbuka.`);
@@ -1316,19 +2025,14 @@ async function handleAbsen() {
       }
 
       // ── Layer 5: Koordinat presisi mencurigakan ───────────
-      // Mock providers sering mengembalikan koordinat dengan presisi berlebih tapi digit terakhir 0
       const _latStr  = String(latitude);
       const _lonStr  = String(longitude);
       const _latDec  = (_latStr.split('.')[1]||'').length;
-      const _lonDec  = (_lonStr.split('.')[1]||'').length;
-      if (_latDec >= 7 && (_latStr.endsWith('00') || _lonStr.endsWith('00'))) {
-        _score += 10;
-        _flags.push('COORD_TRAILING_ZEROS');
-      }
+      if (_latDec >= 7 && (_latStr.endsWith('00') || _lonStr.endsWith('00'))) { _score += 10; _flags.push('COORD_TRAILING_ZEROS'); }
 
       // ── Evaluasi skor ─────────────────────────────────────
-      const _isFake      = _score >= 50;
-      const _isSuspicious= _score >= 30 && _score < 50;
+      const _isFake       = _score >= 50;
+      const _isSuspicious = _score >= 30 && _score < 50;
 
       if (_isFake) {
         const _reason = _hasXposed
@@ -1336,7 +2040,6 @@ async function handleAbsen() {
           : `Pola GPS mencurigakan (skor: ${_score}).\nPastikan Mock Location dinonaktifkan di Pengaturan Developer.`;
         showResult('resultCard','rIcon','rTitle','rMsg','fail','🚫','Fake GPS Terdeteksi', _reason);
         setBtnL('btnAbsen',false,'🔄 Coba Lagi');
-        // Tetap kirim log ke server untuk pencatatan
         try { apiFetch(P.absen, {method:'POST', body:JSON.stringify({
           ...{user:{id:MY_ID,username:tgUser.username||''},
               latitude,longitude,horizontal_accuracy:accuracy,
@@ -1355,6 +2058,18 @@ async function handleAbsen() {
       const jam=`${p2(n.getHours())}:${p2(n.getMinutes())}:${p2(n.getSeconds())} WITA`;
       showGPS(latitude,longitude,accuracy,null);
       setBtnL('btnAbsen',true,'Mengirim Data...');
+
+      // ── Siapkan data foto untuk payload ──
+      const fotoInfo = camResult ? {
+        foto_base64   : camResult.dataUrl || null,
+        face_detected : camResult.faceOk  || false,
+        liveness_ok   : camResult.livenessOk || false,
+        baju_warna    : camResult.bajuColor  || '—',
+        baju_verdict  : camResult.bajuVerdikt|| '—',
+        seragam_hari  : camResult.seragam    || '—',
+        foto_dilewati : !camResult.faceOk && !camResult.livenessOk
+      } : { foto_dilewati: true };
+
       const payload={
         user:{id:MY_ID,first_name:tgUser.first_name||'',last_name:tgUser.last_name||'',username:tgUser.username||'',
               nama_lengkap:userProfile?.nama||'',jabatan:userProfile?.jabatan||'',nip:userProfile?.nip||''},
@@ -1362,6 +2077,13 @@ async function handleAbsen() {
         gps_fingerprint,
         tanggal,tanggal_iso:tanggalISO,jam,
         timestamp:Math.floor(Date.now()/1000),init_data:initData,source: isTgX ? 'telegram_x_fallback' : 'telegram_miniapp',device:navigator.userAgent,
+        network_info: {
+          ip_public   : networkInfo.ip_public,
+          is_kantor   : networkInfo.is_kantor,
+          network_type: networkInfo.network_type,
+          wifi_check_enabled: WIFI_CHECK_ENABLED
+        },
+        foto_verifikasi: fotoInfo,
         _gps_elapsed_ms:_gpsElapsed,_detection_score:_score,_detection_flags:_flags,..._suspiciousPayload
       };
       try {
@@ -1371,8 +2093,16 @@ async function handleAbsen() {
         const lokNm=d?.validasi?.nama_lokasi||d?.lokasi||null;
         const ok=d?.validasi?.is_valid!==false;
         if(lokNm)$('gpsLokasi').textContent=lokNm;
+
+        // Info foto di pesan sukses
+        const fotoKet = camResult?.faceOk
+          ? `\n📸 Wajah: ✅ Terdeteksi${camResult.livenessOk?' · Liveness ✅':' · Liveness ⚠️'}`
+          : '\n📸 Foto: ⚠️ Wajah tidak terdeteksi (tersimpan untuk admin)';
+        const bajuKet = camResult?.bajuVerdikt ? `\n👔 ${camResult.bajuVerdikt}` : '';
+
         if(ok){
-          showResult('resultCard','rIcon','rTitle','rMsg','success','✅','Absen Berhasil!',`${ket}\n📅 ${tanggal}\n🕐 ${jam}\n📍 ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${Math.round(accuracy)}m)`);
+          showResult('resultCard','rIcon','rTitle','rMsg','success','✅','Absen Berhasil!',
+            `${ket}\n📅 ${tanggal}\n🕐 ${jam}\n📍 ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${Math.round(accuracy)}m)${fotoKet}${bajuKet}`);
           setBtnL('btnAbsen',false,'✅ Absen Tercatat');
           $('btnAbsen').disabled=true;
           logLoaded=false;
@@ -2570,6 +3300,7 @@ async function loadLokasiPublik(){
 loadLokasiPublik();
 loadJamAbsen(); // load jam absen dari server/localStorage
 loadTodayHistory();
+cekJaringan();  // cek jaringan WiFi kantor saat halaman dimuat
 </script>
 </body>
 </html>
