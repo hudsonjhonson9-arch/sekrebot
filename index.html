@@ -159,19 +159,7 @@
     .jenis-pill{padding:8px 4px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s}
     .jenis-pill.active{border-color:var(--gold);background:var(--gold-dim);color:var(--gold)}
 
-    /* File upload (legacy, masih dipakai) */
-    .file-upload{border:1px dashed var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer;transition:border-color .2s;position:relative}
-    .file-upload:hover{border-color:var(--gold)}
-    .file-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-    .file-icon{font-size:22px;margin-bottom:5px}
-    .file-label{font-size:11px;color:var(--muted)}
-    .file-label strong{color:var(--gold)}
-    .file-preview{margin-top:8px;display:none}
-    .file-preview.show{display:block}
-    .file-preview img{width:100%;border-radius:8px;max-height:160px;object-fit:cover}
-    .file-name{font-size:10px;color:var(--success);margin-top:4px;display:flex;align-items:center;gap:4px}
-
-    /* Bukti upload — tombol Kamera + Galeri */
+    /* File upload */
     .bukti-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
     .bukti-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:13px 8px;border-radius:10px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;width:100%}
     .bukti-btn:active{border-color:var(--gold);color:var(--gold);background:var(--gold-dim)}
@@ -189,7 +177,7 @@
     .btn-download:disabled{opacity:.5;cursor:not-allowed}
     .rekap-toolbar{display:flex;gap:6px;align-items:center}
 
-    /* Print / cetak */
+    /* Print */
     @media print{
       body{background:#fff !important;color:#111 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       .app{max-width:100% !important;box-shadow:none}
@@ -260,7 +248,7 @@
     .date-range-input:focus{border-color:var(--gold)}
     .date-preset-bar{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none}
     .date-preset-bar::-webkit-scrollbar{display:none}
-    .date-preset{flex-shrink:0;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:inherit;font-size:9px;font-weight:600;cursor:pointer;transition:all .15s}
+    .date-preset{flex-shrink:0;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:inherit;font-size:9px;font-weight:600;cursor:pointer;transition:all .15px}
     .date-preset.active{background:var(--gold-dim);border-color:var(--gold);color:var(--gold)}
 
     /* Rekap summary 6-grid */
@@ -277,13 +265,13 @@
 
     .pegawai-list{display:flex;flex-direction:column;gap:7px}
     .pegawai-card{background:var(--card-bg);border:1px solid var(--border);border-radius:13px;padding:11px 13px;backdrop-filter:blur(10px);animation:slideUp .25s ease}
-    .pegawai-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+    .pegawai-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
     .pegawai-avatar{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--gold),#9b6e1a);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--navy);flex-shrink:0}
     .pegawai-name{font-size:12px;font-weight:700}
     .pegawai-jabatan{font-size:10px;color:var(--muted)}
     .pegawai-bar{display:flex;gap:4px;flex-wrap:wrap}
     .pbar-item{padding:2px 7px;border-radius:6px;font-size:9px;font-weight:700}
-    .pb-masuk{background:rgba(34,197,94,.15);color:var(--success)}
+    .pb-masuk {background:rgba(34,197,94,.15);color:var(--success)}
     .pb-pulang{background:rgba(96,165,250,.15);color:var(--info)}
     .pb-luar       {background:rgba(245,158,11,.1);color:var(--warning)}
     .pb-luar-masuk  {background:rgba(251,146,60,.2);color:#fb923c}
@@ -291,6 +279,35 @@
     .pb-izin {background:rgba(245,158,11,.15);color:var(--warning)}
     .pb-sakit{background:rgba(239,68,68,.15);color:var(--danger)}
     .pb-tugas{background:rgba(167,139,250,.15);color:#a78bfa}
+
+    /* ── Discipline badges ── */
+    .pb-disiplin-4{background:rgba(34,197,94,.18);color:var(--success);border:1px solid rgba(34,197,94,.35)}
+    .pb-disiplin-3{background:rgba(96,165,250,.18);color:var(--info);border:1px solid rgba(96,165,250,.35)}
+    .pb-disiplin-2{background:rgba(245,158,11,.18);color:var(--warning);border:1px solid rgba(245,158,11,.35)}
+    .pb-disiplin-1{background:rgba(239,68,68,.18);color:var(--danger);border:1px solid rgba(239,68,68,.35)}
+
+    /* ── Total akumulasi badge ── */
+    .pb-total-akk{background:rgba(255,255,255,.07);color:var(--white);border:1px solid rgba(255,255,255,.14);font-family:'JetBrains Mono',monospace}
+
+    /* ── Header kanan: disiplin badge ── */
+    .pegawai-disiplin-wrap{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+    .disiplin-pct-txt{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;line-height:1}
+    .disiplin-sub{font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-top:1px}
+
+    /* ── Discipline progress bar ── */
+    .disiplin-bar-wrap{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06)}
+    .disiplin-bar-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+    .disiplin-bar-label{font-size:9px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+    .disiplin-bar-bg{height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+    .disiplin-bar-fill{height:100%;border-radius:3px;transition:width .6s ease}
+
+    /* ── All-time accumulation row ── */
+    .akk-all-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06)}
+    .akk-all-label{font-size:9px;color:var(--muted);font-weight:600;width:100%;margin-bottom:2px;text-transform:uppercase;letter-spacing:.06em}
+    .akk-badge{padding:2px 8px;border-radius:6px;font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace}
+    .akk-lambat{background:rgba(251,146,60,.15);color:#fb923c}
+    .akk-cepat {background:rgba(96,165,250,.15);color:var(--info)}
+    .akk-total {background:rgba(167,139,250,.15);color:#a78bfa}
 
     /* ADMIN */
     .admin-header-card{background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(167,139,250,.1));border:1px solid rgba(167,139,250,.3);border-radius:14px;padding:13px;margin-bottom:12px;position:relative;overflow:hidden}
@@ -343,14 +360,12 @@
 
   <!-- ══ TAB ABSEN ══ -->
   <div class="panel active" id="panel-absen">
-    <!-- Clock -->
     <div class="clock-card">
       <div class="clock-label">Waktu Indonesia Tengah (WITA)</div>
       <div class="clock-time" id="clockTime">--<span>:</span>--<span>:</span>--</div>
       <div class="clock-date" id="clockDate">Memuat...</div>
       <div class="clock-badge"><div class="dot"></div><span id="jenisAbsen">Menghitung...</span></div>
     </div>
-    <!-- Info -->
     <div class="info-grid">
       <div class="info-card">
         <div class="info-icon">📅</div>
@@ -363,7 +378,6 @@
         <div class="info-value" id="batasAbsen">—</div>
       </div>
     </div>
-    <!-- User -->
     <div class="user-card">
       <div class="avatar" id="userAvatar">?</div>
       <div style="flex:1;min-width:0">
@@ -373,13 +387,10 @@
       </div>
       <div class="sbadge s-loading" id="userBadge">MEMUAT</div>
     </div>
-    <!-- Lokasi hari ini -->
     <div class="card">
       <div class="card-title">📍 Lokasi Absen Hari Ini</div>
       <div id="lokasiList"><div class="lokasi-item"><div class="lokasi-dot"></div><div class="shimmer" style="width:110px;height:12px"></div></div></div>
     </div>
-
-    <!-- ★ RIWAYAT ABSEN HARI INI dari Google Sheet ★ -->
     <div class="today-card" id="todayCard">
       <div class="card-title">
         <span>📋 Absen Anda Hari Ini</span>
@@ -390,8 +401,6 @@
         <div class="shimmer" style="height:32px;border-radius:8px"></div>
       </div>
     </div>
-
-    <!-- GPS -->
     <div class="gps-card" id="gpsCard">
       <div class="card-title">🛰️ Data GPS</div>
       <div class="gps-row"><span class="gps-key">LATITUDE</span> <span class="gps-val" id="gpsLat">—</span></div>
@@ -402,7 +411,6 @@
       <div class="gps-row"><span class="gps-key">JAM</span>      <span class="gps-val" id="gpsJam">—</span></div>
       <div class="acc-bar"><div class="acc-fill" id="accFill" style="width:0%"></div></div>
     </div>
-    <!-- Result -->
     <div class="result-card" id="resultCard">
       <div class="r-icon" id="rIcon">✅</div>
       <div class="r-title" id="rTitle">—</div>
@@ -412,7 +420,7 @@
     <button class="btn-primary" id="btnAbsen" onclick="handleAbsen()">
       <div class="btn-inner"><span>📍</span><span id="btnText">Kirim Lokasi &amp; Absen</span></div>
     </button>
-    <div class="footer">v4.1 · Sistem Absensi Digital BAPPERIDA SB</div>
+    <div class="footer">v4.2 · Sistem Absensi Digital BAPPERIDA SB</div>
   </div>
 
   <!-- ══ TAB KETERANGAN ══ -->
@@ -440,10 +448,8 @@
       <div class="form-group"><label class="form-label">📝 Keterangan</label><textarea class="form-textarea" id="ketText" placeholder="Tuliskan keterangan lengkap..."></textarea></div>
       <div class="form-group">
         <label class="form-label">📸 Bukti (Foto/Dokumen)</label>
-        <!-- Hidden inputs -->
         <input type="file" id="inputGaleri"  accept="image/*,.pdf"    style="display:none" onchange="handleBukti(event,'galeri')"/>
         <input type="file" id="inputKamera"  accept="image/*"         capture="environment" style="display:none" onchange="handleBukti(event,'kamera')"/>
-        <!-- Tombol pilih -->
         <div class="bukti-btn-row">
           <button type="button" class="bukti-btn" id="btnKamera" onclick="$('inputKamera').click()">
             <span class="bukti-btn-icon">📷</span>
@@ -454,7 +460,6 @@
             <span id="lblGaleri">Pilih File</span>
           </button>
         </div>
-        <!-- Preview -->
         <div class="file-preview-outer" id="buktiPreview">
           <img id="buktiImg" src="" alt="preview"/>
           <button type="button" class="file-clear" onclick="clearBukti()" title="Hapus">✕</button>
@@ -503,14 +508,11 @@
         <button class="btn-refresh"  id="btnRekapRefresh"  onclick="loadRekap()"><span id="rekapRefIcon">🔄</span> Muat</button>
       </div>
     </div>
-    <!-- Info yang muncul saat print -->
     <div class="print-info" id="printInfo">
       <strong>REKAP ABSENSI — BAPPERIDA SUMBA BARAT</strong><br>
       Periode: <span id="printPeriode">—</span><br>
       Dicetak: <span id="printTanggal">—</span>
     </div>
-
-    <!-- Date range -->
     <div class="date-range-card">
       <div class="date-range-row">
         <div><div class="date-range-label">Dari Tanggal</div><input type="date" class="date-range-input" id="rekapDari"   onchange="onDateRangeChange()"/></div>
@@ -524,8 +526,6 @@
         <button class="date-preset"        id="dp-custom" onclick="setPreset('custom',this)" style="display:none">Kustom</button>
       </div>
     </div>
-
-    <!-- Summary 6 kotak -->
     <div class="rekap-stats6">
       <div class="stat-card2"><div class="stat-num2 sn-masuk"  id="rsMasuk" >—</div><div class="stat-lbl2">✅ Masuk</div></div>
       <div class="stat-card2"><div class="stat-num2 sn-pulang" id="rsPulang">—</div><div class="stat-lbl2">🔵 Pulang</div></div>
@@ -534,7 +534,6 @@
       <div class="stat-card2"><div class="stat-num2 sn-sakit"  id="rsSakit" >—</div><div class="stat-lbl2">🤒 Sakit</div></div>
       <div class="stat-card2"><div class="stat-num2 sn-tugas"  id="rsTugas" >—</div><div class="stat-lbl2">💼 Tugas</div></div>
     </div>
-
     <div class="pegawai-list" id="pegawaiList">
       <div class="sh-row"><div class="shimmer sh-circ"></div><div class="sh-lines"><div class="shimmer sh-line" style="width:65%"></div><div class="shimmer sh-line" style="width:40%"></div></div></div>
       <div class="sh-row"><div class="shimmer sh-circ"></div><div class="sh-lines"><div class="shimmer sh-line" style="width:75%"></div><div class="shimmer sh-line" style="width:50%"></div></div></div>
@@ -585,7 +584,7 @@
 /* ════ KONFIGURASI ════ */
 const SERVER_1  = 'https://unheeled-timmy-supernumerously.ngrok-free.dev';
 const SERVER_2  = 'https://unannunciable-nongerundive-elsa.ngrok-free.dev';
-const isTest    = true;
+const isTest    = false;
 const ADMIN_IDS = [1383864355];
 
 const P = {
@@ -631,9 +630,11 @@ const H_ID   = ['minggu','senin','selasa','rabu','kamis','jumat','sabtu'];
 const H_DISP = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 const LOK_DEF= { senin:['Kantor Bupati','Kantor BAPPERIDA'], rabu:['Kantor BPBD','Kantor BAPPERIDA'], default:['Kantor BAPPERIDA'] };
 
-const p2 = n => String(n).padStart(2,'0');
+const p2    = n => String(n).padStart(2,'0');
 const nowWITA = () => new Date(new Date().toLocaleString('en-US',{timeZone:TZ}));
 const fmtD    = d => `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+// Helper: total menit → "HH:MM"
+const toHHMM  = m => { if(!m||m<=0)return'00:00'; const h=Math.floor(m/60),mn=m%60; return `${p2(h)}:${p2(mn)}`; };
 const $       = id => document.getElementById(id);
 
 /* ════ ADMIN TAB SETUP ════ */
@@ -712,18 +713,14 @@ function setUserFallback(){
 function setT(id,v){const e=$(id);if(e)e.textContent=v;}
 loadUserProfile();
 
-/* ════ RIWAYAT HARI INI (dari log absen Google Sheet) ════ */
-// Helper: normalisasi array dari berbagai format response n8n
+/* ════ RIWAYAT HARI INI ════ */
 function parseRows(json) {
   if (Array.isArray(json)) return json;
   if (Array.isArray(json?.data)) return json.data;
   if (Array.isArray(json?.[0]?.data)) return json[0].data;
-  if (Array.isArray(json?.[0])) return json[0]; // kadang n8n wrap array dalam array
+  if (Array.isArray(json?.[0])) return json[0];
   return [];
 }
-
-// Helper: ambil field dengan case-insensitive fallback sesuai format Google Sheet real
-// Format real: { ID, Nama, NIP, Tanggal, Jam, "Jenis Absen", Lokasi }
 function getField(r, ...keys) {
   for (const k of keys) {
     if (r[k] !== undefined && r[k] !== null && r[k] !== '') return r[k];
@@ -736,52 +733,42 @@ async function loadTodayHistory() {
   el.innerHTML = `<div class="shimmer" style="height:32px;border-radius:8px;margin-bottom:5px"></div>
                   <div class="shimmer" style="height:32px;border-radius:8px"></div>`;
   try {
-    const todayStr = fmtD(nowWITA()); // YYYY-MM-DD
-    // Kirim user_id + tanggal agar n8n bisa filter di server, fallback filter di client
+    const todayStr = fmtD(nowWITA());
     const res = await apiFetch(`${P.log}?user_id=${MY_ID||''}&tanggal=${todayStr}`, {method:'GET'});
     if (!res.ok) throw 0;
     const json = await res.json();
     let rows = parseRows(json);
-    // Filter: hanya record milik user ini pada hari ini (double-check di client)
     rows = rows.filter(r => {
       const uid  = Number(getField(r, 'ID', 'id'));
       const tgl  = getField(r, 'Tanggal', 'tanggal');
-      const byMe = MY_ID ? (uid === MY_ID) : true; // jika tidak ada ID, tampilkan semua
+      const byMe = MY_ID ? (uid === MY_ID) : true;
       return byMe && tgl === todayStr;
     });
-    // Urutkan berdasarkan jam ascending
     rows.sort((a,b) => {
       const ja = getField(a,'Jam','jam'), jb = getField(b,'Jam','jam');
       return ja.localeCompare(jb);
     });
     renderTodayHistory(rows);
   } catch(e) {
-    console.warn('loadTodayHistory error:', e);
     el.innerHTML = `<div class="today-empty">🔌 Gagal memuat. Pastikan n8n aktif.</div>`;
   }
 }
-
 function getTodayBadge(jenis) {
   const j=(jenis||'').toUpperCase().trim();
-  if (j==='MASUK')             return {cls:'tb-masuk', icon:'🟢',lbl:'MASUK'};
-  if (j==='PULANG')            return {cls:'tb-pulang',icon:'🔵',lbl:'PULANG'};
+  if (j==='MASUK')                       return {cls:'tb-masuk', icon:'🟢',lbl:'MASUK'};
+  if (j==='PULANG')                      return {cls:'tb-pulang',icon:'🔵',lbl:'PULANG'};
   if (j.includes('LUAR')&&j.includes('MASUK'))  return {cls:'tb-luar',icon:'⚠️',lbl:'LUAR JAM MASUK'};
   if (j.includes('LUAR')&&j.includes('PULANG')) return {cls:'tb-luar',icon:'⚠️',lbl:'LUAR JAM PULANG'};
-  if (j.includes('LUAR'))      return {cls:'tb-luar',  icon:'⚠️', lbl:'DI LUAR JAM'};
-  if (j==='IZIN')              return {cls:'tb-izin',  icon:'🙏', lbl:'IZIN'};
-  if (j==='SAKIT')             return {cls:'tb-sakit', icon:'🤒', lbl:'SAKIT'};
-  if (j==='TUGAS')             return {cls:'tb-tugas', icon:'💼', lbl:'TUGAS'};
+  if (j.includes('LUAR'))                return {cls:'tb-luar',  icon:'⚠️', lbl:'DI LUAR JAM'};
+  if (j==='IZIN')                        return {cls:'tb-izin',  icon:'🙏', lbl:'IZIN'};
+  if (j==='SAKIT')                       return {cls:'tb-sakit', icon:'🤒', lbl:'SAKIT'};
+  if (j==='TUGAS')                       return {cls:'tb-tugas', icon:'💼', lbl:'TUGAS'};
   return {cls:'tb-luar',icon:'📋',lbl:jenis||'—'};
 }
-
 function renderTodayHistory(rows) {
   const el = $('todayList');
-  if (!rows.length) {
-    el.innerHTML = `<div class="today-empty">📭 Belum ada absen hari ini</div>`;
-    return;
-  }
+  if (!rows.length) { el.innerHTML = `<div class="today-empty">📭 Belum ada absen hari ini</div>`; return; }
   el.innerHTML = rows.map(r=>{
-    // Gunakan field name sesuai Google Sheet: "Jenis Absen", Jam, Lokasi
     const jenis  = getField(r, 'Jenis Absen', 'jenis', 'Jenis') || '';
     const jam    = getField(r, 'Jam', 'jam') || '—';
     const lokasi = getField(r, 'Lokasi', 'lokasi') || '—';
@@ -835,11 +822,101 @@ async function handleAbsen() {
     setBtnL('btnAbsen',false,'Coba Lagi'); return;
   }
   setBtnL('btnAbsen',true,'Mengambil GPS...');
+  const _gpsT0 = Date.now(); // catat waktu mulai sebelum acquire
   navigator.geolocation.getCurrentPosition(
     async ({coords:{latitude,longitude,accuracy}}) => {
-      if (accuracy<=0){showResult('resultCard','rIcon','rTitle','rMsg','fail','🚫','Fake GPS Terdeteksi','Akurasi 0m tidak valid. Nonaktifkan Fake GPS.');setBtnL('btnAbsen',false,'🔄 Coba Lagi');return;}
-      if (accuracy<5) {showResult('resultCard','rIcon','rTitle','rMsg','fail','🚫','Fake GPS Terdeteksi',`Akurasi ${accuracy.toFixed(1)}m mencurigakan.`);setBtnL('btnAbsen',false,'🔄 Coba Lagi');return;}
-      if (accuracy>500){showResult('resultCard','rIcon','rTitle','rMsg','warning','⚠️','Sinyal GPS Lemah',`Akurasi ${Math.round(accuracy)}m terlalu lemah.`);setBtnL('btnAbsen',false,'🔄 Coba Lagi');return;}
+      const _gpsElapsed = Date.now() - _gpsT0; // ms untuk mendapat fix
+
+      /* ══════════════════════════════════════════════════════
+         MULTI-LAYER FAKE GPS DETECTION
+         Skor 0–100: ≥50 → tolak, 30–49 → suspicious/warning
+         ══════════════════════════════════════════════════════ */
+      const _ua     = navigator.userAgent;
+      const _flags  = [];
+      let   _score  = 0;
+
+      // ── Layer 1: User-Agent pattern ──────────────────────
+      // Real Telegram tidak punya AppleWebKit/Chrome sebelum "Telegram-Android"
+      // Fake GPS app override WebView → UA berubah jadi full Chrome UA
+      const _hasChromeBefore = /AppleWebKit\/\d+.*Chrome\/\d+.*Telegram-Android/i.test(_ua);
+      if (_hasChromeBefore) {
+        _score += 45;
+        _flags.push('UA_WEBVIEW_OVERRIDE');
+      }
+
+      // ── Layer 2: Accuracy pattern ─────────────────────────
+      // Real GPS: floating-point seperti 33.361000061035156
+      // Fake GPS: integer bulat (20, 50, 100) dari mock provider
+      const _isIntAcc    = Number.isInteger(accuracy);
+      const _isHalfInt   = !_isIntAcc && (accuracy * 2) % 1 === 0; // e.g. 20.5
+      const _mockDefaults= [1,2,3,5,10,15,20,25,30,50,100,150,200];
+      const _isMockVal   = _mockDefaults.includes(Math.round(accuracy));
+      if (_isIntAcc && _isMockVal) {
+        _score += 35;
+        _flags.push('ACCURACY_ROUND_INTEGER');
+      } else if (_isHalfInt && _isMockVal) {
+        _score += 20;
+        _flags.push('ACCURACY_HALF_INTEGER');
+      }
+
+      // ── Layer 3: Acquisition speed ────────────────────────
+      // Mock provider: respons instan (<400ms)
+      // Real GPS cold-start: biasanya >1000ms; cached: 500–1500ms
+      if (_gpsElapsed < 400) {
+        _score += 15;
+        _flags.push('INSTANT_FIX_' + _gpsElapsed + 'ms');
+      }
+
+      // ── Layer 4: Akurasi out-of-range ─────────────────────
+      if (accuracy <= 0) {
+        showResult('resultCard','rIcon','rTitle','rMsg','fail','🚫','Fake GPS Terdeteksi',
+          'Akurasi 0m tidak valid. Nonaktifkan Mock Location di pengaturan developer.');
+        setBtnL('btnAbsen',false,'🔄 Coba Lagi'); return;
+      }
+      if (accuracy < 5) {
+        _score += 25;
+        _flags.push('ACCURACY_TOO_PERFECT');
+      }
+      if (accuracy > 500) {
+        showResult('resultCard','rIcon','rTitle','rMsg','warning','⚠️','Sinyal GPS Lemah',
+          `Akurasi ${Math.round(accuracy)}m terlalu lemah. Pindah ke area terbuka.`);
+        setBtnL('btnAbsen',false,'🔄 Coba Lagi'); return;
+      }
+
+      // ── Layer 5: Koordinat presisi mencurigakan ───────────
+      // Mock providers sering mengembalikan koordinat dengan presisi berlebih tapi digit terakhir 0
+      const _latStr  = String(latitude);
+      const _lonStr  = String(longitude);
+      const _latDec  = (_latStr.split('.')[1]||'').length;
+      const _lonDec  = (_lonStr.split('.')[1]||'').length;
+      if (_latDec >= 7 && (_latStr.endsWith('00') || _lonStr.endsWith('00'))) {
+        _score += 10;
+        _flags.push('COORD_TRAILING_ZEROS');
+      }
+
+      // ── Evaluasi skor ─────────────────────────────────────
+      const _isFake      = _score >= 50;
+      const _isSuspicious= _score >= 30 && _score < 50;
+
+      if (_isFake) {
+        const _reason = _hasChromeBefore
+          ? 'Terdeteksi aplikasi Mock Location / Fake GPS.\nNonaktifkan di Pengaturan → Opsi Developer → Mock Location.'
+          : `Pola GPS mencurigakan (skor: ${_score}).\nPastikan Mock Location dinonaktifkan.`;
+        showResult('resultCard','rIcon','rTitle','rMsg','fail','🚫','Fake GPS Terdeteksi', _reason);
+        setBtnL('btnAbsen',false,'🔄 Coba Lagi');
+        // Tetap kirim log ke server untuk pencatatan
+        try { apiFetch(P.absen, {method:'POST', body:JSON.stringify({
+          ...{user:{id:MY_ID,username:tgUser.username||''},
+              latitude,longitude,horizontal_accuracy:accuracy,
+              tanggal_iso:fmtD(nowWITA()),jam:'—'},
+          _fake_detected:true, _score, _flags, source:'telegram_miniapp', device:_ua
+        })}); } catch(_){}
+        return;
+      }
+
+      // Jika suspicious (30–49): lanjutkan tapi tandai di payload
+      const _suspiciousPayload = _isSuspicious ? {_suspicious:true,_score,_flags} : {};
+      /* ══ AKHIR DETEKSI ══ */
       const n=nowWITA();
       const tanggal=n.toLocaleDateString('id-ID',{timeZone:TZ,weekday:'long',day:'numeric',month:'long',year:'numeric'});
       const tanggalISO=fmtD(n);
@@ -851,7 +928,8 @@ async function handleAbsen() {
               nama_lengkap:userProfile?.nama||'',jabatan:userProfile?.jabatan||'',nip:userProfile?.nip||''},
         latitude,longitude,horizontal_accuracy:accuracy,
         tanggal,tanggal_iso:tanggalISO,jam,
-        timestamp:Math.floor(Date.now()/1000),init_data:initData,source:'telegram_miniapp',device:navigator.userAgent
+        timestamp:Math.floor(Date.now()/1000),init_data:initData,source:'telegram_miniapp',device:navigator.userAgent,
+        _gps_elapsed_ms:_gpsElapsed,_detection_score:_score,_detection_flags:_flags,..._suspiciousPayload
       };
       try {
         const res=await apiFetch(P.absen,{method:'POST',body:JSON.stringify(payload)});
@@ -865,7 +943,6 @@ async function handleAbsen() {
           setBtnL('btnAbsen',false,'✅ Absen Tercatat');
           $('btnAbsen').disabled=true;
           logLoaded=false;
-          // Refresh today history
           setTimeout(loadTodayHistory, 2000);
           if(tg)setTimeout(()=>tg.close(),3500);
         } else {
@@ -888,7 +965,6 @@ async function handleAbsen() {
 
 /* ════ KETERANGAN ════ */
 let selectedJenis='IZIN', fileBase64=null, fileMime=null, fileOrigName=null;
-
 function selectJenis(j,el){
   selectedJenis=j;
   document.querySelectorAll('.jenis-pill').forEach(p=>p.classList.remove('active'));
@@ -904,26 +980,17 @@ function updateDur(){
 $('tglMulai').addEventListener('change',updateDur);
 $('tglSelesai').addEventListener('change',updateDur);
 
-// Handler gabungan untuk kamera & galeri
 function handleBukti(e, src) {
   const f = e.target.files[0];
   if (!f) return;
-  fileOrigName = f.name;
-  fileMime     = f.type;
+  fileOrigName = f.name; fileMime = f.type;
   const reader = new FileReader();
   reader.onload = ev => {
     fileBase64 = ev.target.result.split(',')[1];
-    const preview = $('buktiPreview');
-    const img     = $('buktiImg');
+    const preview = $('buktiPreview'), img = $('buktiImg');
     preview.classList.add('show');
-    if (f.type.startsWith('image/')) {
-      img.src = ev.target.result;
-      img.style.display = 'block';
-    } else {
-      img.style.display = 'none'; // PDF tidak bisa preview
-    }
+    if (f.type.startsWith('image/')) { img.src = ev.target.result; img.style.display = 'block'; } else { img.style.display = 'none'; }
     $('buktiNamaText').textContent = f.name;
-    // Tandai tombol yang dipakai
     const btn = src === 'kamera' ? $('btnKamera') : $('btnGaleri');
     const lbl = src === 'kamera' ? $('lblKamera') : $('lblGaleri');
     document.querySelectorAll('.bukti-btn').forEach(b => b.classList.remove('has-file'));
@@ -931,24 +998,16 @@ function handleBukti(e, src) {
     lbl.textContent = f.name.length > 14 ? f.name.substring(0,12)+'…' : f.name;
   };
   reader.readAsDataURL(f);
-  // Reset input agar bisa pilih file sama lagi
   e.target.value = '';
 }
-
 function clearBukti() {
   fileBase64 = null; fileMime = null; fileOrigName = null;
-  $('buktiPreview').classList.remove('show');
-  $('buktiImg').src = '';
+  $('buktiPreview').classList.remove('show'); $('buktiImg').src = '';
   $('buktiNamaText').textContent = '—';
-  document.querySelectorAll('.bukti-btn').forEach(b => {
-    b.classList.remove('has-file');
-  });
-  $('lblKamera').textContent = 'Ambil Foto';
-  $('lblGaleri').textContent = 'Pilih File';
-  $('inputKamera').value = '';
-  $('inputGaleri').value = '';
+  document.querySelectorAll('.bukti-btn').forEach(b => b.classList.remove('has-file'));
+  $('lblKamera').textContent = 'Ambil Foto'; $('lblGaleri').textContent = 'Pilih File';
+  $('inputKamera').value = ''; $('inputGaleri').value = '';
 }
-
 async function handleKet(){
   const tm=$('tglMulai').value, ts=$('tglSelesai').value, k=$('ketText').value.trim();
   if(!tm||!ts){showResult('ketResult','ketRIcon','ketRTitle','ketRMsg','warning','⚠️','Lengkapi Form','Tanggal wajib diisi.');return;}
@@ -987,27 +1046,19 @@ async function loadLog(){
     if(!res.ok)throw 0;
     const json=await res.json();
     let rows = parseRows(json);
-    // Filter hanya milik user ini berdasarkan field ID (Number)
-    if (MY_ID) {
-      rows = rows.filter(r => Number(getField(r,'ID','id')) === MY_ID);
-    }
-    // Urutkan terbaru dulu: Tanggal desc, lalu Jam desc
+    if (MY_ID) { rows = rows.filter(r => Number(getField(r,'ID','id')) === MY_ID); }
     rows.sort((a,b)=>{
       const ta=getField(a,'Tanggal','tanggal'), tb=getField(b,'Tanggal','tanggal');
       if(ta!==tb) return tb.localeCompare(ta);
       return getField(b,'Jam','jam').localeCompare(getField(a,'Jam','jam'));
     });
-    allLogs=rows;
-    logLoaded=true;
-    renderLog(allLogs);
-    updateLogStats(allLogs);
+    allLogs=rows;logLoaded=true;
+    renderLog(allLogs);updateLogStats(allLogs);
   }catch(e){
-    console.warn('loadLog error:',e);
     $('logList').innerHTML=`<div class="empty-state"><div class="empty-icon">🔌</div><div class="empty-text">Gagal memuat data</div><div class="empty-sub">Pastikan n8n aktif lalu refresh</div></div>`;
   }
   finally{btn.disabled=false;const s=$('rIcon2');if(s)s.outerHTML='<span id="rIcon2">🔄</span>';}
 }
-
 function getLC(j){
   const x=(j||'').toUpperCase().trim();
   if(x==='MASUK')                      return{cls:'l-masuk', icon:'🟢',lbl:'MASUK'};
@@ -1020,12 +1071,10 @@ function getLC(j){
   if(x==='TUGAS')                      return{cls:'l-tugas', icon:'💼', lbl:'TUGAS'};
   return{cls:'l-pulang',icon:'📋',lbl:j||'—'};
 }
-
 function renderLog(logs){
   const el=$('logList');
   if(!logs?.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Belum ada data</div><div class="empty-sub">Data muncul setelah Anda absen</div></div>`;return;}
   el.innerHTML=logs.map(r=>{
-    // Gunakan field name persis sesuai Google Sheet: "Jenis Absen", Tanggal, Jam, Lokasi
     const jenis = getField(r,'Jenis Absen','jenis','Jenis');
     const {cls,icon,lbl}=getLC(jenis);
     const tgl   = getField(r,'Tanggal','tanggal') || '—';
@@ -1034,14 +1083,12 @@ function renderLog(logs){
     return`<div class="log-item ${cls}"><div class="log-icon-wrap">${icon}</div><div class="log-info"><div class="log-jenis">${lbl}</div><div class="log-tanggal">📅 ${tgl}</div><div class="log-ket">📍 ${lokasi}</div></div><div class="log-jam">${jam}</div></div>`;
   }).join('');
 }
-
 function updateLogStats(l){
   const c=k=>l.filter(r=>{const j=(getField(r,'Jenis Absen','jenis','Jenis')||'').toUpperCase().trim();return j===k;}).length;
   $('stMasuk').textContent=c('MASUK');
   $('stIzin').textContent =c('IZIN');
   $('stSakit').textContent=c('SAKIT');
 }
-
 function filterLog(f,el){
   document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');
   renderLog(f==='SEMUA'?allLogs:allLogs.filter(r=>{
@@ -1055,10 +1102,10 @@ function filterLog(f,el){
   }));
 }
 
-/* ════ REKAP ── computed dari log absen, urutan dari user_list ════ */
+/* ════ REKAP ════ */
 let rekapLoaded = false;
-let userListOrder = []; // cache urutan dari Google Sheets user_list
-let lastRekapPegawai = []; // untuk download
+let userListOrder = [];
+let lastRekapPegawai = [];
 
 function setPreset(preset,el){
   const n=nowWITA();let dari,sampai;
@@ -1081,28 +1128,22 @@ function onDateRangeChange(){
 }
 (function(){const t=fmtD(nowWITA());$('rekapDari').value=$('rekapSampai').value=t;})();
 
-/* Ambil urutan resmi dari user_list (cache setelah pertama kali) */
 async function fetchUserListOrder() {
   if (userListOrder.length > 0) return userListOrder;
   try {
-    // Ambil semua user tanpa filter user_id
     const res = await apiFetch(`${P.userList}`, {method:'GET'});
     if (!res.ok) return [];
     const json = await res.json();
     const rows = parseRows(json);
-    // Simpan array {id, nama, jabatan, nip} sesuai urutan di sheet
     userListOrder = rows.map((r,idx) => ({
       id     : String(getField(r,'id','ID')||'').trim(),
       nama   : getField(r,'nama','Nama','username','Username') || '',
       jabatan: getField(r,'jabatan','Jabatan') || '',
       nip    : getField(r,'nip','NIP') || '',
-      urutan : idx   // simpan index asli dari sheet
+      urutan : idx
     }));
     return userListOrder;
-  } catch(e) {
-    console.warn('fetchUserListOrder error:', e);
-    return [];
-  }
+  } catch(e) { return []; }
 }
 
 async function loadRekap(){
@@ -1115,36 +1156,33 @@ async function loadRekap(){
   $('pegawaiList').innerHTML=shimmerRows(4);
   resetRekapStats();
   try{
-    // Ambil urutan user_list di background
     const orderPromise = fetchUserListOrder();
-
     let pegawai=[], ringkasan={};
     let rekapOK=false;
 
-    // Coba webhook /rekap-absen dulu
     try{
       const res=await apiFetch(`${P.rekap}?dari=${dari}&sampai=${sampai}`,{method:'GET'});
       if(res.ok){
         const json=await res.json();
         const d=Array.isArray(json)?json[0]:json;
-        if(d?.pegawai?.length){
-          ringkasan=d.ringkasan||{};pegawai=d.pegawai;rekapOK=true;
-        }
+        if(d?.pegawai?.length){ ringkasan=d.ringkasan||{};pegawai=d.pegawai;rekapOK=true; }
       }
     }catch(_){}
 
     if(!rekapOK){
-      const res2=await apiFetch(`${P.log}?dari=${dari}&sampai=${sampai}`,{method:'GET'});
-      if(!res2.ok) throw new Error('log fetch failed');
-      const raw=await res2.json();
-      let rows=parseRows(raw);
-      rows=rows.filter(r=>{
-        const t=getField(r,'Tanggal','tanggal');
-        return t && t>=dari && t<=sampai;
+      // Fallback: fetch all logs (no date filter) + period logs
+      let allRowsRaw = [], periodRowsRaw = [];
+      try {
+        const resAll = await apiFetch(`${P.log}`, {method:'GET'});
+        if (resAll.ok) allRowsRaw = parseRows(await resAll.json());
+      } catch(_) {}
+      periodRowsRaw = allRowsRaw.filter(r => {
+        const t = getField(r,'Tanggal','tanggal');
+        return t && t >= dari && t <= sampai;
       });
-      const computed=computeRekap(rows);
-      pegawai=computed.pegawai;
-      ringkasan=computed.ringkasan;
+      const computed = computeRekap(periodRowsRaw, allRowsRaw);
+      pegawai   = computed.pegawai;
+      ringkasan = computed.ringkasan;
     }
 
     $('rsMasuk').textContent =ringkasan.masuk  ??0;
@@ -1154,11 +1192,8 @@ async function loadRekap(){
     $('rsSakit').textContent =ringkasan.sakit   ??0;
     $('rsTugas').textContent =ringkasan.tugas   ??0;
 
-    // Urutan: jika n8n sudah sort (ada field urutan), pakai itu.
-    // Jika fallback computeRekap, gunakan sortByUserList.
     const order = await orderPromise;
     if (rekapOK) {
-      // n8n sudah sort — cukup urutkan by field urutan yang dikirim n8n
       pegawai = [...pegawai].sort((a,b)=>{
         const ua = a.urutan ?? 9999, ub = b.urutan ?? 9999;
         if (ua !== ub) return ua - ub;
@@ -1166,7 +1201,6 @@ async function loadRekap(){
       });
     } else {
       pegawai = sortByUserList(pegawai, order);
-      // Enrich jabatan dari user_list untuk fallback
       if (order.length > 0) {
         pegawai = pegawai.map(p => {
           const match = order.find(u => u.id === String(p.id||'') ||
@@ -1177,7 +1211,7 @@ async function loadRekap(){
       }
     }
 
-    lastRekapPegawai = pegawai; // simpan untuk download
+    lastRekapPegawai = pegawai;
     rekapLoaded=true;
     renderRekap(pegawai);
   }catch(e){
@@ -1190,20 +1224,13 @@ async function loadRekap(){
   }
 }
 
-/* Urutkan pegawai sesuai urutan di user_list sheet */
 function sortByUserList(pegawai, order) {
-  if (!order.length) {
-    // Fallback: urut A–Z
-    return [...pegawai].sort((a,b) => (a.nama||'').localeCompare(b.nama||'','id'));
-  }
-  // Buat map id→urutan dan nama→urutan dari user_list
-  const idMap   = {};
-  const namaMap = {};
-  const nipMap  = {};
+  if (!order.length) return [...pegawai].sort((a,b) => (a.nama||'').localeCompare(b.nama||'','id'));
+  const idMap={},namaMap={},nipMap={};
   order.forEach(u => {
-    if (u.id)   idMap[u.id]                        = u.urutan;
-    if (u.nama) namaMap[u.nama.toLowerCase().trim()]= u.urutan;
-    if (u.nip)  nipMap[u.nip]                      = u.urutan;
+    if(u.id)   idMap[u.id]                        = u.urutan;
+    if(u.nama) namaMap[u.nama.toLowerCase().trim()]= u.urutan;
+    if(u.nip)  nipMap[u.nip]                      = u.urutan;
   });
   return [...pegawai].sort((a,b) => {
     const posA = idMap[String(a.id||'')] ?? namaMap[(a.nama||'').toLowerCase().trim()] ?? nipMap[a.nip||''] ?? 9999;
@@ -1213,10 +1240,10 @@ function sortByUserList(pegawai, order) {
   });
 }
 
-/* Hitung rekap dari raw rows (fallback jika n8n tidak tersedia) */
-function computeRekap(rows){
-  const JAM_MASUK_BATAS  = 8*60;      // 08:00 = 480 mnt
-  const JAM_PULANG_BATAS = 14*60+30;  // 14:30 = 870 mnt
+/* ════ COMPUTE REKAP (fallback) — v2 dengan all-time accumulation ════ */
+function computeRekap(rows, allRowsParam = null) {
+  const JAM_MASUK_BATAS  = 8*60;
+  const JAM_PULANG_BATAS = 14*60+30;
 
   function toMenit(jamStr){
     const s=String(jamStr||'').replace(/\s.*/,'').split(':');
@@ -1224,27 +1251,24 @@ function computeRekap(rows){
     const h=parseInt(s[0]),m=parseInt(s[1]);
     return(isNaN(h)||isNaN(m))?null:h*60+m;
   }
-  function fmtMenit(tot){
-    if(!tot||tot<=0)return '0 mnt';
-    const h=Math.floor(tot/60),m=tot%60;
-    if(h===0)return m+' mnt';
-    if(m===0)return h+' jam';
-    return h+' jam '+m+' mnt';
-  }
 
   const map={};
+
+  // Process periode (filtered rows)
   rows.forEach(r=>{
-    const id    = String(getField(r,'ID','id')||'').trim();
+    const id = String(getField(r,'ID','id')||'').trim();
     if(!id) return;
     const nama  = getField(r,'Nama','nama') || '—';
     const nip   = getField(r,'NIP','nip')   || '—';
     const jenis = (getField(r,'Jenis Absen','jenis','Jenis')||'').toUpperCase().trim();
-    const jamStr= getField(r,'Jam','jam')   || '';
+    const jamStr= getField(r,'Jam','jam') || '';
     if(!map[id]) map[id]={id,nama,nip,jabatan:'',urutan:9999,
-      masuk:0,pulang:0,
-      di_luar_masuk:0,menit_terlambat:0,
-      di_luar_pulang:0,menit_lebih_awal:0,
-      izin:0,sakit:0,tugas:0
+      masuk:0,pulang:0,di_luar_masuk:0,di_luar_pulang:0,
+      izin:0,sakit:0,tugas:0,
+      menit_terlambat:0,menit_lebih_awal:0,
+      // all-time (filled separately)
+      all_menit_terlambat:0,all_menit_lebih_awal:0,
+      all_di_luar_masuk:0,all_di_luar_pulang:0,all_masuk:0
     };
     const curNama=getField(r,'Nama','nama')||'';
     if(curNama.length>map[id].nama.length) map[id].nama=curNama;
@@ -1266,12 +1290,62 @@ function computeRekap(rows){
     else if(jenis==='TUGAS')             { map[id].tugas++; }
   });
 
-  const pegawai=Object.values(map).map(p=>({
-    ...p,
-    luar: p.di_luar_masuk+p.di_luar_pulang,
-    akumulasi_terlambat : fmtMenit(p.menit_terlambat),
-    akumulasi_lebih_awal: fmtMenit(p.menit_lebih_awal)
-  }));
+  // Process ALL-TIME rows (if provided)
+  const allRows = allRowsParam || rows; // fallback to same rows if no allRows
+  allRows.forEach(r=>{
+    const id = String(getField(r,'ID','id')||'').trim();
+    if(!id || !map[id]) return; // only process existing employees
+    const jenis = (getField(r,'Jenis Absen','jenis','Jenis')||'').toUpperCase().trim();
+    const jamStr = getField(r,'Jam','jam') || '';
+    const jam = toMenit(jamStr);
+    if(jenis==='MASUK') { map[id].all_masuk++; }
+    else if(jenis==='DI LUAR JAM MASUK') {
+      map[id].all_di_luar_masuk++;
+      if(jam!==null&&jam>JAM_MASUK_BATAS) map[id].all_menit_terlambat+=(jam-JAM_MASUK_BATAS);
+    }
+    else if(jenis==='DI LUAR JAM PULANG') {
+      map[id].all_di_luar_pulang++;
+      if(jam!==null&&jam<JAM_PULANG_BATAS) map[id].all_menit_lebih_awal+=(JAM_PULANG_BATAS-jam);
+    }
+  });
+
+  const pegawai=Object.values(map).map(p=>{
+    // Discipline calculation
+    const totalEntries = p.masuk + p.di_luar_masuk;
+    const disiplinPct  = totalEntries > 0 ? Math.round((p.masuk/totalEntries)*100) : null;
+    let disiplinLabel='',disiplinLevel=0;
+    if(disiplinPct!==null){
+      if(disiplinPct>=95){disiplinLabel='Sangat Disiplin';disiplinLevel=4;}
+      else if(disiplinPct>=80){disiplinLabel='Disiplin';disiplinLevel=3;}
+      else if(disiplinPct>=60){disiplinLabel='Cukup';disiplinLevel=2;}
+      else{disiplinLabel='Kurang';disiplinLevel=1;}
+    }
+    // All-time discipline
+    const totalAll = p.all_masuk + p.all_di_luar_masuk;
+    const disiplinAllPct = totalAll > 0 ? Math.round((p.all_masuk/totalAll)*100) : null;
+    return {
+      ...p,
+      lambat      : p.di_luar_masuk,
+      pulangCepat : p.di_luar_pulang,
+      luar        : p.di_luar_masuk + p.di_luar_pulang,
+      // Period HH:MM
+      akkLambatHHMM  : toHHMM(p.menit_terlambat),
+      akkCepatHHMM   : toHHMM(p.menit_lebih_awal),
+      totalAkkHHMM   : toHHMM(p.menit_terlambat + p.menit_lebih_awal),
+      totalAkkMenit  : p.menit_terlambat + p.menit_lebih_awal,
+      // Discipline period
+      disiplinPct, disiplinLabel, disiplinLevel,
+      // All-time HH:MM
+      totalLambatAllHHMM : toHHMM(p.all_menit_terlambat),
+      totalCepatAllHHMM  : toHHMM(p.all_menit_lebih_awal),
+      totalAkkAllHHMM    : toHHMM(p.all_menit_terlambat + p.all_menit_lebih_awal),
+      totalAkkAllMenit   : p.all_menit_terlambat + p.all_menit_lebih_awal,
+      disiplinAllPct,
+      // Legacy
+      akumulasi_terlambat  : p.menit_terlambat  > 0 ? toHHMM(p.menit_terlambat)  + ' terlambat'  : '',
+      akumulasi_lebih_awal : p.menit_lebih_awal > 0 ? toHHMM(p.menit_lebih_awal) + ' lebih awal' : ''
+    };
+  });
   const sum=k=>pegawai.reduce((s,p)=>s+(p[k]||0),0);
   return{
     pegawai,
@@ -1285,6 +1359,7 @@ function computeRekap(rows){
 
 function resetRekapStats(){['rsMasuk','rsPulang','rsLuar','rsIzin','rsSakit','rsTugas'].forEach(id=>$(id).textContent='—');}
 
+/* ════ RENDER REKAP — dengan discipline, HH:MM badge, all-time accumulation ════ */
 function renderRekap(pg){
   const el=$('pegawaiList');
   if(!pg?.length){
@@ -1292,43 +1367,102 @@ function renderRekap(pg){
     return;
   }
   el.innerHTML=pg.map((p,idx)=>{
-    const nama        = p.nama    ||'—';
-    const nip         = p.nip     ||'—';
-    const jabatan     = p.jabatan ||'';
-    const luarMasuk   = p.di_luar_masuk  ||0;
-    const luarPulang  = p.di_luar_pulang ||0;
-    const masuk       = p.masuk   ||0;
-    const pulang      = p.pulang  ||0;
-    const izin        = p.izin    ||0;
-    const sakit       = p.sakit   ||0;
-    const tugas       = p.tugas   ||0;
-    const total       = masuk+pulang+luarMasuk+luarPulang+izin+sakit+tugas;
+    const nama         = p.nama       || '—';
+    const nip          = p.nip        || '—';
+    const jabatan      = p.jabatan    || '';
+    // Support both n8n (lambat/pulangCepat) and fallback (di_luar_masuk/di_luar_pulang)
+    const masuk        = p.masuk      || 0;
+    const pulang       = p.pulang     || 0;
+    const luarMasuk    = p.lambat     ?? p.di_luar_masuk  ?? 0;
+    const luarPulang   = p.pulangCepat?? p.di_luar_pulang ?? 0;
+    const izin         = p.izin       || 0;
+    const sakit        = p.sakit      || 0;
+    const tugas        = p.tugas      || 0;
+    const total        = masuk+pulang+luarMasuk+luarPulang+izin+sakit+tugas;
 
-    // Akumulasi dari n8n (sudah string "X jam Y mnt") atau hitung fallback
-    const akkT = luarMasuk  > 0 ? (p.akumulasi_terlambat   || '') : '';
-    const akkL = luarPulang > 0 ? (p.akumulasi_lebih_awal  || '') : '';
+    // HH:MM badges
+    const akkLambatHHMM = p.akkLambatHHMM || '00:00';
+    const akkCepatHHMM  = p.akkCepatHHMM  || '00:00';
+    const totalAkkHHMM  = p.totalAkkHHMM  || '00:00';
+
+    // All-time accumulation
+    const allLambatHHMM = p.totalLambatAllHHMM || '00:00';
+    const allCepatHHMM  = p.totalCepatAllHHMM  || '00:00';
+    const allTotalHHMM  = p.totalAkkAllHHMM     || '00:00';
+    const allTotalMenit = p.totalAkkAllMenit    || 0;
+
+    // Discipline
+    const dPct   = p.disiplinPct   ?? null;
+    const dLabel = p.disiplinLabel || '';
+    const dLevel = p.disiplinLevel || 0;
+    const dAllPct= p.disiplinAllPct?? null;
+
+    // Discipline color + CSS class
+    const dCls  = dLevel===4?'pb-disiplin-4':dLevel===3?'pb-disiplin-3':dLevel===2?'pb-disiplin-2':'pb-disiplin-1';
+    const dIcon = dLevel===4?'🌟':dLevel===3?'👍':dLevel===2?'⚠️':'🔴';
+    const dColor= dLevel===4?'var(--success)':dLevel===3?'var(--info)':dLevel===2?'var(--warning)':'var(--danger)';
+    const barColor = dColor;
 
     const jabatanStr = jabatan
-      ? `<div class="pegawai-jabatan" style="font-size:9px;color:var(--gold);margin-top:1px">${jabatan}</div>`
+      ? `<div style="font-size:9px;color:var(--gold);margin-top:1px;font-weight:600">${jabatan}</div>`
       : '';
+
+    // Discipline block (right side of header)
+    const disiplinBlock = dPct !== null ? `
+      <div class="pegawai-disiplin-wrap">
+        <div class="disiplin-pct-txt" style="color:${dColor}">${dPct}%</div>
+        <div class="disiplin-sub pbar-item ${dCls}" style="font-family:'Plus Jakarta Sans',sans-serif">${dIcon} ${dLabel}</div>
+      </div>` : '';
+
+    // Discipline progress bar
+    const disiplinBar = dPct !== null ? `
+      <div class="disiplin-bar-wrap">
+        <div class="disiplin-bar-row">
+          <span class="disiplin-bar-label">🎯 Tingkat Kedisiplinan (Periode)</span>
+          <span style="font-size:9px;color:${dColor};font-weight:700">${dPct}% — ${dLabel}</span>
+        </div>
+        <div class="disiplin-bar-bg">
+          <div class="disiplin-bar-fill" style="width:${dPct}%;background:${barColor}"></div>
+        </div>
+        ${dAllPct!==null?`<div style="font-size:9px;color:var(--muted);margin-top:4px">Keseluruhan: <span style="color:${dColor};font-weight:700">${dAllPct}%</span></div>`:''}
+      </div>` : '';
+
+    // Period accumulation badges
+    const periodeAkk = (luarMasuk > 0 || luarPulang > 0) ? `
+      ${luarMasuk  > 0 ? `<span class="pbar-item pb-luar-masuk">⏰ Lambat: ${luarMasuk}× <b>${akkLambatHHMM}</b></span>` : ''}
+      ${luarPulang > 0 ? `<span class="pbar-item pb-luar-pulang">🏃 Cepat: ${luarPulang}× <b>${akkCepatHHMM}</b></span>` : ''}
+      ${(luarMasuk+luarPulang)>0 ? `<span class="pbar-item pb-total-akk">Σ Periode: ${totalAkkHHMM}</span>` : ''}
+    ` : '';
+
+    // All-time accumulation block
+    const allTimeBlock = allTotalMenit > 0 ? `
+      <div class="akk-all-row">
+        <span class="akk-all-label">📈 Akumulasi Keseluruhan (All-Time)</span>
+        ${allLambatHHMM!=='00:00' ? `<span class="akk-badge akk-lambat">⏰ Lambat: ${allLambatHHMM}</span>` : ''}
+        ${allCepatHHMM !=='00:00' ? `<span class="akk-badge akk-cepat">🏃 Cepat: ${allCepatHHMM}</span>`  : ''}
+        <span class="akk-badge akk-total">Σ Total: ${allTotalHHMM}</span>
+      </div>` : '';
+
     return`<div class="pegawai-card">
       <div class="pegawai-top">
-        <div class="pegawai-avatar" style="font-size:11px">${idx+1}</div>
+        <div class="pegawai-avatar">${idx+1}</div>
         <div style="flex:1;min-width:0">
           <div class="pegawai-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nama}</div>
           ${jabatanStr}
           <div class="pegawai-jabatan">NIP: ${nip} · ${total} catatan</div>
         </div>
+        ${disiplinBlock}
       </div>
       <div class="pegawai-bar">
         ${masuk    >0?`<span class="pbar-item pb-masuk">✅ Masuk: ${masuk}</span>`:''}
         ${pulang   >0?`<span class="pbar-item pb-pulang">🔵 Pulang: ${pulang}</span>`:''}
-        ${luarMasuk >0?`<span class="pbar-item pb-luar-masuk">⚠️ Luar Masuk: ${luarMasuk}×${akkT?' ('+akkT+')':''}</span>`:''}
-        ${luarPulang>0?`<span class="pbar-item pb-luar-pulang">⚠️ Luar Pulang: ${luarPulang}×${akkL?' ('+akkL+')':''}</span>`:''}
-        ${izin  >0?`<span class="pbar-item pb-izin">🙏 Izin: ${izin}</span>`:''}
-        ${sakit >0?`<span class="pbar-item pb-sakit">🤒 Sakit: ${sakit}</span>`:''}
-        ${tugas >0?`<span class="pbar-item pb-tugas">💼 Tugas: ${tugas}</span>`:''}
+        ${periodeAkk}
+        ${izin   >0?`<span class="pbar-item pb-izin">🙏 Izin: ${izin}</span>`:''}
+        ${sakit  >0?`<span class="pbar-item pb-sakit">🤒 Sakit: ${sakit}</span>`:''}
+        ${tugas  >0?`<span class="pbar-item pb-tugas">💼 Tugas: ${tugas}</span>`:''}
       </div>
+      ${disiplinBar}
+      ${allTimeBlock}
     </div>`;
   }).join('');
 }
@@ -1343,7 +1477,6 @@ function downloadRekap() {
   const periode  = dari===sampai ? dari : `${dari} s.d. ${sampai}`;
   const tglCetak = nowWITA().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
 
-  // ── Kop ──
   const wsData = [
     ['REKAPITULASI ABSENSI PEGAWAI'],
     ['Badan Perencanaan Pembangunan, Riset dan Inovasi Daerah'],
@@ -1351,25 +1484,29 @@ function downloadRekap() {
     [`Periode: ${periode}`],
     [`Dicetak: ${tglCetak}`],
     [],
-    // Header
-    ['No','Nama','NIP','Jabatan',
-     'Masuk','Pulang',
-     'Luar Masuk (×)','Akumulasi Terlambat',
-     'Luar Pulang (×)','Akumulasi Lebih Awal',
-     'Izin','Sakit','Tugas','Total']
+    [
+      'No','Nama','NIP','Jabatan',
+      'Masuk','Pulang',
+      'Lambat (×)','Akk. Lambat (HH:MM)',
+      'Cepat (×)','Akk. Cepat (HH:MM)',
+      'Total Akk. Periode',
+      'All-Time Lambat','All-Time Cepat','All-Time Total',
+      'Disiplin (%)','Ket. Disiplin',
+      'Izin','Sakit','Tugas','Total'
+    ]
   ];
 
   let tM=0,tP=0,tLM=0,tLP=0,tI=0,tS=0,tT=0;
 
   lastRekapPegawai.forEach((p,i)=>{
-    const masuk      = p.masuk          ||0;
-    const pulang     = p.pulang         ||0;
-    const luarMasuk  = p.di_luar_masuk  ||0;
-    const luarPulang = p.di_luar_pulang ||0;
-    const izin       = p.izin           ||0;
-    const sakit      = p.sakit          ||0;
-    const tugas      = p.tugas          ||0;
-    const total      = masuk+pulang+luarMasuk+luarPulang+izin+sakit+tugas;
+    const masuk       = p.masuk      || 0;
+    const pulang      = p.pulang     || 0;
+    const luarMasuk   = p.lambat     ?? p.di_luar_masuk  ?? 0;
+    const luarPulang  = p.pulangCepat?? p.di_luar_pulang ?? 0;
+    const izin        = p.izin       || 0;
+    const sakit       = p.sakit      || 0;
+    const tugas       = p.tugas      || 0;
+    const total       = masuk+pulang+luarMasuk+luarPulang+izin+sakit+tugas;
     tM+=masuk;tP+=pulang;tLM+=luarMasuk;tLP+=luarPulang;tI+=izin;tS+=sakit;tT+=tugas;
     wsData.push([
       i+1,
@@ -1378,26 +1515,31 @@ function downloadRekap() {
       p.jabatan ||'—',
       masuk, pulang,
       luarMasuk,
-      luarMasuk  >0 ? (p.akumulasi_terlambat  ||'0 mnt') : '',
+      luarMasuk  >0 ? (p.akkLambatHHMM  ||'00:00') : '',
       luarPulang,
-      luarPulang >0 ? (p.akumulasi_lebih_awal ||'0 mnt') : '',
+      luarPulang >0 ? (p.akkCepatHHMM   ||'00:00') : '',
+      (luarMasuk+luarPulang) > 0 ? (p.totalAkkHHMM||'00:00') : '',
+      p.totalLambatAllHHMM && p.totalLambatAllHHMM!=='00:00' ? p.totalLambatAllHHMM : '',
+      p.totalCepatAllHHMM  && p.totalCepatAllHHMM !=='00:00' ? p.totalCepatAllHHMM  : '',
+      p.totalAkkAllHHMM    && p.totalAkkAllHHMM   !=='00:00' ? p.totalAkkAllHHMM    : '',
+      p.disiplinPct  !== null ? p.disiplinPct + '%' : '—',
+      p.disiplinLabel || '—',
       izin, sakit, tugas, total
     ]);
   });
 
-  // Baris total
-  wsData.push(['','TOTAL','','',tM,tP,tLM,'',tLP,'',tI,tS,tT,tM+tP+tLM+tLP+tI+tS+tT]);
+  wsData.push(['','TOTAL','','',tM,tP,tLM,'',tLP,'','','','','','','',tI,tS,tT,tM+tP+tLM+tLP+tI+tS+tT]);
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-  // Lebar kolom
   ws['!cols']=[
-    {wch:4},{wch:38},{wch:22},{wch:32},
-    {wch:7},{wch:7},{wch:14},{wch:20},{wch:14},{wch:20},
+    {wch:4},{wch:36},{wch:22},{wch:30},
+    {wch:7},{wch:7},
+    {wch:12},{wch:18},{wch:12},{wch:18},{wch:18},
+    {wch:16},{wch:16},{wch:16},
+    {wch:13},{wch:16},
     {wch:7},{wch:7},{wch:7},{wch:7}
   ];
-  // Merge sel kop (baris 0–4, semua 14 kolom)
-  ws['!merges']=[0,1,2,3,4].map(r=>({s:{r,c:0},e:{r,c:13}}));
+  ws['!merges']=[0,1,2,3,4].map(r=>({s:{r,c:0},e:{r,c:19}}));
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Rekap Absensi');
@@ -1406,7 +1548,6 @@ function downloadRekap() {
 
 /* ════ ADMIN ════ */
 let adminMap=null,adminMarker=null,selectedPin=null,adminMapInited=false;
-
 function initAdminMap(){
   if(adminMapInited||!IS_ADMIN)return;
   adminMapInited=true;
@@ -1423,7 +1564,6 @@ function initAdminMap(){
     loadLokasiAdmin();
   },150);
 }
-
 async function handleTambahLokasi(){
   const nama=$('namaLokasi').value.trim(),radius=parseInt($('radiusLokasi').value)||200;
   if(!selectedPin){showResult('adminResult','adminRIcon','adminRTitle','adminRMsg','warning','⚠️','Pilih Lokasi','Tap pada peta untuk menentukan titik lokasi.');return;}
@@ -1439,7 +1579,6 @@ async function handleTambahLokasi(){
     loadLokasiAdmin();
   }catch{showResult('adminResult','adminRIcon','adminRTitle','adminRMsg','fail','🔌','Gagal Menyimpan','Server tidak merespons.');setBtnL('btnTambahLokasi',false,'Simpan Lokasi ke Database');}
 }
-
 async function loadLokasiAdmin(){
   const el=$('lokasiMgmtList');
   el.innerHTML=`<div class="shimmer" style="height:38px;border-radius:10px"></div><div class="shimmer" style="height:38px;border-radius:10px;margin-top:6px"></div>`;
@@ -1456,7 +1595,6 @@ async function loadLokasiAdmin(){
     }).join('');
   }catch{el.innerHTML=`<div class="empty-state" style="padding:16px"><div class="empty-icon">🔌</div><div class="empty-text">Gagal memuat</div></div>`;}
 }
-
 async function hapusLokasi(id,nama){
   if(!confirm(`Hapus lokasi "${nama}"?`))return;
   try{await apiFetch(`${P.lokasiDel}?id=${id}`,{method:'DELETE'});loadLokasiAdmin();}
@@ -1464,7 +1602,6 @@ async function hapusLokasi(id,nama){
 }
 
 /* ════ AUTO INIT ════ */
-// Load riwayat hari ini saat buka
 loadTodayHistory();
 </script>
 </body>
