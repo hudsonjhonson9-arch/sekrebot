@@ -1241,26 +1241,30 @@ async function handleAbsen() {
       }
 
       // ── Layer 2: Accuracy pattern ─────────────────────────
-      // Real GPS: floating-point seperti 33.361000061035156
-      // Fake GPS: integer bulat (20, 50, 100) dari mock provider
+      // CATATAN: Beberapa GPS hardware asli (chip Qualcomm, MediaTek) memang
+      // kadang melaporkan akurasi bulat seperti 16m, 20m, 32m, 48m, dll.
+      // Terutama di dalam ruangan atau saat sinyal lemah.
+      // Jadi akurasi bulat SAJA tidak cukup untuk dijadikan indikator fake GPS.
+      // Layer ini hanya memberi skor kecil dan HANYA sebagai faktor pendukung,
+      // bukan penentu utama. Penolakan hanya jika skor TOTAL >= 50.
       const _isIntAcc    = Number.isInteger(accuracy);
-      const _isHalfInt   = !_isIntAcc && (accuracy * 2) % 1 === 0; // e.g. 20.5
-      const _mockDefaults= [1,2,3,5,10,15,20,25,30,50,100,150,200];
-      const _isMockVal   = _mockDefaults.includes(Math.round(accuracy));
-      if (_isIntAcc && _isMockVal) {
-        _score += 35;
-        _flags.push('ACCURACY_ROUND_INTEGER');
-      } else if (_isHalfInt && _isMockVal) {
-        _score += 20;
-        _flags.push('ACCURACY_HALF_INTEGER');
+      // Hanya nilai yang sangat spesifik dan tidak wajar dari GPS asli
+      const _suspiciousAccList = [1, 2, 3, 5]; // nilai yang benar-benar tidak mungkin dari GPS asli
+      if (_isIntAcc && _suspiciousAccList.includes(accuracy)) {
+        _score += 15; // skor kecil, tidak langsung menolak
+        _flags.push('ACCURACY_SUSPICIOUS_LOW');
       }
+      // Akurasi sangat sempurna (< 3m) juga tidak wajar dari GPS biasa
+      // Sudah ditangani di Layer 4 di bawah
 
       // ── Layer 3: Acquisition speed ────────────────────────
-      // Mock provider: respons instan (<400ms)
-      // Real GPS cold-start: biasanya >1000ms; cached: 500–1500ms
-      if (_gpsElapsed < 400) {
-        _score += 15;
-        _flags.push('INSTANT_FIX_' + _gpsElapsed + 'ms');
+      // Mock provider: respons SANGAT instan (<100ms) bahkan saat cold start
+      // GPS asli via WiFi/network bisa cepat (200-600ms) karena cache
+      // GPS asli via satelit: biasanya >800ms saat cold start
+      // Hanya tandai jika benar-benar instan (<100ms) DAN akurasi mencurigakan
+      if (_gpsElapsed < 100) {
+        _score += 10; // skor kecil — bukan penentu sendiri
+        _flags.push('VERY_INSTANT_FIX_' + _gpsElapsed + 'ms');
       }
 
       // ── Layer 4: Akurasi out-of-range ─────────────────────
@@ -1269,9 +1273,10 @@ async function handleAbsen() {
           'Akurasi 0m tidak valid. Nonaktifkan Mock Location di pengaturan developer.');
         setBtnL('btnAbsen',false,'🔄 Coba Lagi'); return;
       }
-      if (accuracy < 5) {
-        _score += 25;
-        _flags.push('ACCURACY_TOO_PERFECT');
+      // Akurasi tepat 1m (bukan floating point) sangat tidak natural dari GPS asli
+      if (accuracy === 1) {
+        _score += 20;
+        _flags.push('ACCURACY_EXACTLY_1M');
       }
       if (accuracy > 500) {
         showResult('resultCard','rIcon','rTitle','rMsg','warning','⚠️','Sinyal GPS Lemah',
