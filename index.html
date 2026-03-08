@@ -1163,7 +1163,7 @@ const REKAP_CHAT_ID = ADMIN_IDS[0];
 */
 const WIFI_CHECK_ENABLED = true;           // set false untuk nonaktifkan cek jaringan
 const KANTOR_IPS = [
-  '36.84.229.16',                       // ← GANTI dengan IP publik WiFi kantor
+  '103.XXX.XXX.XXX',                       // ← GANTI dengan IP publik WiFi kantor
   // '103.YYY.YYY.YYY',                    // ← tambahkan jika ada IP cadangan
 ];
 const WIFI_MODE = 'warn';  // 'block' = tolak jika bukan WiFi kantor | 'warn' = boleh tapi ditandai
@@ -3201,15 +3201,6 @@ async function downloadRekap() {
   // Jam kerja wajib harian dalam menit (pulang - masuk)
   const JAM_KERJA_WAJIB_MENIT = mStandarPulang - mStandarMasuk; // misal 390 menit = 6.5 jam
   const JAM_KERJA_WAJIB_TOTAL = (JAM_KERJA_WAJIB_MENIT / 60) * HARI_KERJA_PERIODE;
-
-  const pegawaiPayload = lastRekapPegawai.map((p, i) => {
-    const masuk      = p.masuk       || 0;
-    const pulang     = p.pulang      || 0;
-    const luarMasuk  = p.lambat      ?? p.di_luar_masuk  ?? 0;
-    const luarPulang = p.pulangCepat ?? p.di_luar_pulang ?? 0;
-    const izin       = p.izin        || 0;
-    const sakit      = p.sakit       || 0;
-    const tugas      = p.tugas       || 0;
 
   // Format HARIAN jika 1 hari, BULANAN jika range
   const isHarian = dari === sampai;
