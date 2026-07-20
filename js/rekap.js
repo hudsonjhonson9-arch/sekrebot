@@ -648,7 +648,7 @@ function renderRekap(pg) {
   const isSA = typeof _isSuperAdmin === 'function' && _isSuperAdmin();
   const isAdmin = isSA || (window.userProfile?.role?.toLowerCase().includes('admin')) || !!window.IS_ADMIN;
 
-  el.innerHTML = filteredPg.map((p, idx) => {
+  const _rendered = filteredPg.map((p, idx) => {
     const nama = p.nama || '—';
     const nip = p.nip || '—';
     const jabatan = p.jabatan || '';
@@ -957,115 +957,46 @@ function renderRekap(pg) {
       </div>`;
     }
 
-    /* ─────────────────────────────────────────
-       TAMPILAN RANGE — KARTU PREMIUM (V2)
-       ───────────────────────────────────────── */
-    // ── Akumulasi Waktu (All-Time) ──
-    const mT = p.menit_terlambat ?? p.all_menit_terlambat ?? 0;
-    const mC = p.menit_lebih_awal ?? p.all_menit_lebih_awal ?? 0;
-    const mAllTotal = mT + mC;
+    /* ── RANGE / BULANAN — TABEL ── */
+    const _mT = p.menit_terlambat_periode ?? 0;
+    const _mC = p.menit_lebih_awal_periode ?? 0;
+    return `<tr>
+      <td>${idx + 1}</td>
+      <td class="td-name"><div class="td-nama">${nama}</div>${jabatan ? `<div style="font-size:8px;color:var(--muted);margin-top:1px">${jabatan}</div>` : ''}</td>
+      <td>${hariKerjaPeriode}</td>
+      <td class="td-success">${masuk}</td>
+      <td class="${_mT > 0 ? 'td-warning' : ''}">${_mT > 0 ? _mT : '—'}</td>
+      <td>${pulang}</td>
+      <td class="${_mC > 0 ? 'td-warning' : ''}">${_mC > 0 ? _mC : '—'}</td>
+      <td class="${(p.alpa || 0) > 0 ? 'td-danger' : ''}">${p.alpa || '—'}</td>
+      <td>${izin || '—'}</td>
+      <td>${sakit || '—'}</td>
+      <td>${tugas || '—'}</td>
+      <td class="td-akk">${toHHMM(_mT + _mC)}</td>
+    </tr>`;
+  });
 
-    const akkTotalWaktuFmt = (function () {
-      const h = Math.floor(mAllTotal / 60), m = mAllTotal % 60;
-      return h > 0 ? `${h}j ${m}m` : `${m}m`;
-    })();
-
-    // ── Kedisiplinan masuk ──
-    const dPct = p.disiplinPct ?? 0;
-    let dLabel = p.disiplinLabel;
-    let dLevel = p.disiplinLevel;
-
-    if (dLevel === undefined || dLevel === null) {
-      if (dPct >= 95) { dLabel = 'Sangat Disiplin'; dLevel = 4; }
-      else if (dPct >= 80) { dLabel = 'Disiplin'; dLevel = 3; }
-      else if (dPct >= 60) { dLabel = 'Cukup'; dLevel = 2; }
-      else { dLabel = 'Kurang'; dLevel = 1; }
-    }
-
-    const dAllPct = p.disiplinAllPct ?? null;
-    const dIcon = dLevel === 4 ? '🌟' : dLevel === 3 ? '👍' : dLevel === 2 ? '⚠️' : '🔴';
-    const dColor = dLevel === 4 ? 'var(--success)' : dLevel === 3 ? 'var(--info)' : dLevel === 2 ? 'var(--warning)' : 'var(--danger)';
-
-    // ── Kehadiran vs hari kerja ──
-    let hadirPct = p.kehadiranPct;
-    if (hadirPct === undefined || hadirPct === null) {
-      const totalKehadiranSah = (masuk || 0) + (lambatCount || 0) + (sakit || 0) + (tugas || 0) + (p.tubel || 0) + (p.cuti || 0);
-      hadirPct = hariKerjaPeriode > 0 ? Math.min(100, Math.round(totalKehadiranSah / hariKerjaPeriode * 100)) : 0;
-    }
-    const hadirColor = hadirPct >= 90 ? 'var(--success)' : hadirPct >= 75 ? 'var(--info)' : hadirPct >= 60 ? 'var(--warning)' : 'var(--danger)';
-
-    const totalEntries = masuk + pulang + pulangLuar + lambatCount + cepatCount + izin + sakit + tugas + (p.tubel || 0) + (p.cuti || 0);
-
-    // ── All-Time Footer ──
-    const allTimeFooter = mAllTotal > 0 || p.all_alpa > 0 ? `
-          <div class="rekap-footer-all">
-            <span class="all-time-title">📈 Ringkasan Seluruh Waktu</span>
-            <div class="all-time-badges">
-              ${mT > 0 ? `<span class="badge-all">⏰ Lambat: ${toHHMM(mT)}</span>` : ''}
-              ${mC > 0 ? `<span class="badge-all">🏃 Cepat: ${toHHMM(mC)}</span>` : ''}
-              ${p.all_alpa > 0 ? `<span class="badge-all" style="color:var(--danger)">❌ TB: ${p.all_alpa}×</span>` : ''}
-              ${dAllPct !== null ? `<span class="badge-all">🎯 Disiplin: ${dAllPct}%</span>` : ''}
-              ${p.all_izin > 0 ? `<span class="badge-all">🙏 Izin: ${p.all_izin}</span>` : ''}
-              ${p.all_sakit > 0 ? `<span class="badge-all">🤒 Sakit: ${p.all_sakit}</span>` : ''}
-              ${p.all_tugas > 0 ? `<span class="badge-all">💼 Tugas: ${p.all_tugas}</span>` : ''}
-              ${p.all_tubel > 0 ? `<span class="badge-all">🎓 Tubel: ${p.all_tubel}</span>` : ''}
-              ${p.all_cuti > 0 ? `<span class="badge-all">🏖️ Cuti: ${p.all_cuti}</span>` : ''}
-            </div>
-          </div>
-        ` : '';
-
-    return `
-        <div class="rekap-card-v2">
-          <!-- TOP: Profile & Badge -->
-          <div class="pegawai-top" style="margin-bottom:12px">
-            <div class="pegawai-avatar" style="background:linear-gradient(135deg, var(--gold), #9b6e1a); box-shadow:0 2px 8px rgba(201,168,76,0.3)">${idx + 1}</div>
-            <div style="flex:1;min-width:0">
-              <div class="pegawai-name">${nama}</div>
-              ${jabatanStr}
-              <div class="pegawai-jabatan">${isMagang ? 'ID' : 'NIP'}: ${nip} ${!isMagang ? `· ${p.pangkat || '—'} ` : ''}· ${totalEntries} catatan · ⏳ ${parseFloat(p.jamHadir || 0).toFixed(1)} Jam</div>
-            </div>
-          </div>
-
-          <!-- HERO: Kehadiran & Disiplin -->
-          <div class="rekap-hero-section">
-            <div class="hero-metric-box">
-              <div class="hero-val" style="color:${hadirColor}">${hadirPct}%</div>
-              <div class="hero-lbl">Kehadiran</div>
-            </div>
-            <div class="hero-metric-box">
-              <div class="hero-val" style="color:${dColor}">${dPct}%</div>
-              <div class="hero-lbl">${dIcon} ${dLabel}</div>
-            </div>
-          </div>
-
-          <!-- HIGHLIGHT: Akumulasi Waktu -->
-          <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <div class="rekap-akk-highlight" style="flex:1; padding:10px; background:linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.05)); border:1px solid rgba(59,130,246,0.3); border-radius:12px; text-align:center;">
-              <div class="akk-h-time" style="color:#60a5fa; font-size:16px; font-weight:800;">${toHHMM((p.menit_terlambat_periode || 0) + (p.menit_lebih_awal_periode || 0))}</div>
-              <div class="akk-h-lbl" style="font-size:9px; color:rgba(255,255,255,0.7);">Akumulasi Waktu<br><strong style="color:var(--text)">Rentang Tanggal Ini</strong></div>
-            </div>
-            <div class="rekap-akk-highlight" style="flex:1; padding:10px; background:linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05)); border:1px solid rgba(245,158,11,0.3); border-radius:12px; text-align:center;">
-              <div class="akk-h-time" style="color:var(--warning); font-size:16px; font-weight:800;">${toHHMM(mT + mC)}</div>
-              <div class="akk-h-lbl" style="font-size:9px; color:rgba(255,255,255,0.7);">Akumulasi Waktu<br><strong style="color:var(--text)">Seluruh Waktu (All-Time)</strong></div>
-            </div>
-          </div>
-
-          <!-- GRID: Statistik Periode -->
-          <div class="rekap-stats-grid">
-            <div class="stat-box-small" title="Total Absen Masuk"><span class="stat-box-val" style="color:var(--success)">${masuk}</span><span class="stat-box-lbl">Masuk</span></div>
-            <div class="stat-box-small" title="Total Absen Pulang"><span class="stat-box-val" style="color:var(--info)">${pulang}</span><span class="stat-box-lbl">Pulang</span></div>
-            <div class="stat-box-small" title="Berapa kali terlambat"><span class="stat-box-val" style="color:var(--warning)">${lambatCount}</span><span class="stat-box-lbl">Lambat</span></div>
-            <div class="stat-box-small" title="Berapa kali pulang lebih awal"><span class="stat-box-val" style="color:#f59e0b">${cepatCount}</span><span class="stat-box-lbl">Cepat</span></div>
-            <div class="stat-box-small" title="Total Keterangan"><span class="stat-box-val" style="color:var(--warning)">${izin}</span><span class="stat-box-lbl">Keterangan</span></div>
-            <div class="stat-box-small" title="Total Sakit"><span class="stat-box-val" style="color:var(--danger)">${sakit}</span><span class="stat-box-lbl">Sakit</span></div>
-            <div class="stat-box-small" title="Total Tugas Luar"><span class="stat-box-val" style="color:#a78bfa">${tugas}</span><span class="stat-box-lbl">Tugas</span></div>
-            <div class="stat-box-small" title="Total Tanpa Berita / Alpa"><span class="stat-box-val" style="color:${(p.alpa || 0) > 0 ? 'var(--danger)' : 'rgba(255,255,255,0.4)'}">${p.alpa || 0}</span><span class="stat-box-lbl">TB/Alpa</span></div>
-          </div>
-
-          <!-- FOOTER: All Time -->
-          ${allTimeFooter}
-        </div>`;
-  }).join('');
+  if (isHarian) {
+    el.innerHTML = _rendered.join('');
+  } else {
+    el.innerHTML = `<table class="rekap-tabel">
+      <thead><tr>
+        <th>#</th>
+        <th>Nama</th>
+        <th>Hari Efektif</th>
+        <th>Masuk<br>Tepat Waktu</th>
+        <th>Terlambat<br>(menit)</th>
+        <th>Pulang<br>Tepat Waktu</th>
+        <th>Pulang Cepat<br>(menit)</th>
+        <th>TB</th>
+        <th>Izin</th>
+        <th>Sakit</th>
+        <th>Tugas</th>
+        <th>Akumulasi<br>Keseluruhan</th>
+      </tr></thead>
+      <tbody>${_rendered.join('')}</tbody>
+    </table>`;
+  }
 }
 
 /* ════ DOWNLOAD REKAP (Excel) ════ */
