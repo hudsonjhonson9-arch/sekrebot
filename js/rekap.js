@@ -1093,36 +1093,19 @@ async function downloadRekap() {
         if (mTerlambat > 0) data['Terlambat (Menit)'] = mTerlambat;
         if (mCepat > 0) data['Pulang Cepat (Menit)'] = mCepat;
       } else {
-        const mT_p = p.menit_terlambat_periode || 0;
-        const mC_p = p.menit_lebih_awal_periode || 0;
-        const mAlpa_p = (p.alpa || 0) * 450;
-        const totalM_p = mT_p + mC_p + mAlpa_p;
-
-        const mT_all = p.menit_terlambat || 0;
-        const mC_all = p.menit_lebih_awal || 0;
-        const mAlpa_all = (p.all_alpa || 0) * 450;
-        const totalM_all = mT_all + mC_all + mAlpa_all;
+        const _mT = p.menit_terlambat_periode || 0;
+        const _mC = p.menit_lebih_awal_periode || 0;
 
         data['HK Efektif'] = HK_EFEKTIF;
-        data['Hadir (Tepat)'] = p.masuk || 0;
-        
-        data['Terlambat (x) - Rentang'] = p.di_luar_masuk_periode || 0;
-        data['Terlambat (m) - Rentang'] = mT_p;
-        data['Terlambat (x) - Total'] = p.lambat_count || 0;
-        data['Terlambat (m) - Total'] = mT_all;
-        
-        data['Cepat (x) - Rentang'] = p.di_luar_pulang_periode || 0;
-        data['Cepat (m) - Rentang'] = mC_p;
-        data['Cepat (x) - Total'] = p.pulang_cepat_count || 0;
-        data['Cepat (m) - Total'] = mC_all;
-        
-        data['Izin/Sakit/Tugas - Rentang'] = (p.izin || 0) + (p.sakit || 0) + (p.tugas || 0);
-        data['Alpa/TB - Rentang'] = p.alpa || 0;
-        data['Alpa/TB - Total'] = p.all_alpa || 0;
-        
-        data['Akumulasi Rentang (Jam:Menit)'] = toHHMM(totalM_p);
-        data['Akumulasi Keseluruhan (Jam:Menit)'] = toHHMM(totalM_all);
-        data['Total Jam Hadir Rentang'] = parseFloat(p.jamHadir || 0).toFixed(1);
+        data['Masuk Tepat Waktu'] = p.masuk || 0;
+        data['Terlambat (menit)'] = _mT || '—';
+        data['Pulang Tepat Waktu'] = p.pulang || 0;
+        data['Pulang Cepat (menit)'] = _mC || '—';
+        data['TB'] = p.alpa || '—';
+        data['Izin'] = p.izin || '—';
+        data['Sakit'] = p.sakit || '—';
+        data['Tugas'] = p.tugas || '—';
+        data['Akumulasi Keseluruhan'] = toHHMM(_mT + _mC);
       }
       return data;
     });
