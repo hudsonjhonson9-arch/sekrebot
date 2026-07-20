@@ -1525,6 +1525,7 @@
         <div style="display:flex;gap:6px;margin-bottom:10px;">
           <button class="sa-group-btn active" id="sa-group-aset" onclick="switchSAGroup('aset')">📦 Kelola Aset</button>
           <button class="sa-group-btn" id="sa-group-trans" onclick="switchSAGroup('trans')">📋 Transaksi</button>
+          <button class="sa-group-btn" id="sa-group-ref" onclick="switchSAGroup('ref')">📐 Referensi</button>
         </div>
 
         <!-- Sub-Tab Internal SIMAPO Admin -->
@@ -1535,13 +1536,15 @@
             <button class="sa-tab" id="sa-tab-kat"    onclick="switchSATab('kat')"    data-group="aset">🏷️ Kategori</button>
             <button class="sa-tab" id="sa-tab-mutasi" onclick="switchSATab('mutasi')" data-group="aset">🔄 Mutasi</button>
             <button class="sa-tab" id="sa-tab-opname" onclick="switchSATab('opname')" data-group="aset">📊 Opname</button>
-            <button class="sa-tab" id="sa-tab-sbu"    onclick="switchSATab('sbu')"    data-group="aset">📋 Standar Harga</button>
+            <button class="sa-tab" id="sa-tab-standar-harga"    onclick="switchSATab('standar-harga')"    data-group="aset">📋 Standar Harga</button>
             <!-- Transaksi -->
             <button class="sa-tab active" id="sa-tab-pinjam"  onclick="switchSATab('pinjam')" data-group="trans">📋 Pinjaman</button>
             <button class="sa-tab"        id="sa-tab-tiket"  onclick="switchSATab('tiket')"  data-group="trans">🚨 Tiket</button>
             <button class="sa-tab"        id="sa-tab-penerimaan" onclick="switchSATab('penerimaan')" data-group="trans">📥 Penerimaan</button>
             <button class="sa-tab"        id="sa-tab-pemeliharaan" onclick="switchSATab('pemeliharaan')" data-group="trans">🔧 Pemeliharaan</button>
             <button class="sa-tab"        id="sa-tab-bku"    onclick="switchSATab('bku')"    data-group="trans">💰 BKU</button>
+            <!-- Referensi -->
+            <button class="sa-tab"        id="sa-tab-pks"    onclick="switchSATab('pks')"    data-group="ref">📐 PKS</button>
           </div>
         </div>
         <style>
@@ -1675,23 +1678,23 @@
           </div>
         </div>
 
-        <!-- [TAB] STANDAR HARGA (SBU) -->
-        <div id="sa-sect-sbu" class="sa-sect" style="display:none">
+        <!-- [TAB] STANDAR HARGA -->
+        <div id="sa-sect-standar-harga" class="sa-sect" style="display:none">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>📋 Standar Harga (SBU 2027)</span>
+              <span>📋 Standar Harga</span>
               <div style="display:flex;gap:6px;">
-                <button class="btn-sm-admin" onclick="importSBUExcel()" style="background:rgba(34,197,94,0.2);">📤 Import SBU</button>
-                <button class="btn-sm-admin" onclick="loadSBU()" style="background:var(--primary)">🔄</button>
+                <button class="btn-sm-admin" onclick="importStandarHargaExcel()" style="background:rgba(34,197,94,0.2);">📤 Import Excel</button>
+                <button class="btn-sm-admin" onclick="loadStandarHarga()" style="background:var(--primary)">🔄</button>
               </div>
             </div>
-            <input type="file" id="sbuExcelFile" style="display:none" accept=".xlsx,.xls" onchange="parseSBUFile(this)">
+            <input type="file" id="shExcelFile" style="display:none" accept=".xlsx,.xls" onchange="parseStandarHargaFile(this)">
             <div style="margin:10px 0;">
-              <input type="text" class="form-input" id="sbuSearch" placeholder="🔍 Cari barang atau harga..." oninput="filterSBU(this.value)">
+              <input type="text" class="form-input" id="shSearch" placeholder="🔍 Cari barang atau harga..." oninput="filterStandarHarga(this.value)">
             </div>
             <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">Barang pakai habis akan otomatis terisi harganya saat input Penerimaan Barang.</div>
-            <div id="adminSBUList">
-              <div style="text-align:center;padding:30px;color:var(--muted);font-size:12px">📋 Klik "Import SBU" untuk memuat standar harga.</div>
+            <div id="adminStandarHargaList">
+              <div style="text-align:center;padding:30px;color:var(--muted);font-size:12px">📋 Klik "Import Excel" untuk memuat standar harga.</div>
             </div>
           </div>
         </div>
@@ -1730,8 +1733,8 @@
               <div style="display:grid;grid-template-columns:3fr 1fr 1.5fr 1fr 80px;gap:6px;align-items:end;margin-bottom:8px;">
                 <div class="form-group" style="margin:0;">
                   <label class="form-label">Nama Barang</label>
-                  <input class="form-input" id="ptdNama" list="sbuItemList" placeholder="Ketik nama barang..." oninput="onSBUItemInput(this.value)">
-                  <datalist id="sbuItemList"></datalist>
+                  <input class="form-input" id="ptdNama" list="shItemList" placeholder="Ketik nama barang..." oninput="onStandarHargaItemInput(this.value)">
+                  <datalist id="shItemList"></datalist>
                 </div>
                 <div class="form-group" style="margin:0;">
                   <label class="form-label">Jumlah</label>
@@ -1793,6 +1796,38 @@
               <div class="btn-inner"><span>💾</span> Simpan Pemeliharaan</div>
             </button>
             <div style="margin-top:14px;"><div id="adminPemeliharaanList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div></div>
+          </div>
+        </div>
+
+        <!-- [TAB] PKS — Program, Kegiatan, Subkegiatan -->
+        <div id="sa-sect-pks" class="sa-sect" style="display:none">
+          <div class="card glass-card">
+            <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+              <span>📐 Master Program / Kegiatan / Subkegiatan</span>
+              <div style="display:flex;gap:6px;">
+                <button class="btn-sm-admin" onclick="loadAdminPKS()" style="background:var(--primary)">🔄</button>
+              </div>
+            </div>
+            <div id="pksLevelBar" style="display:flex;gap:8px;margin:14px 0;">
+              <button class="pks-level-btn active" data-level="program" onclick="switchPKSLevel('program',this)">📁 Program</button>
+              <button class="pks-level-btn" data-level="kegiatan" onclick="switchPKSLevel('kegiatan',this)">📂 Kegiatan</button>
+              <button class="pks-level-btn" data-level="subkegiatan" onclick="switchPKSLevel('subkegiatan',this)">📄 Subkegiatan</button>
+            </div>
+            <style>
+              .pks-level-btn{padding:6px 14px;font-size:12px;font-weight:700;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;transition:all .2s;font-family:inherit;}
+              .pks-level-btn.active{background:rgba(201,168,76,0.15);color:var(--gold);border-color:rgba(201,168,76,0.4);}
+              .pks-level-btn:hover{color:var(--white);background:rgba(255,255,255,0.08);}
+            </style>
+            <button class="btn-primary" onclick="showPKSForm()" style="width:100%;margin-bottom:12px;background:rgba(255,255,255,0.04);border:1px dashed var(--gold);color:var(--gold);">
+              <div class="btn-inner"><span>➕</span> Tambah Baru</div>
+            </button>
+            <div id="pksParentSelectWrap" style="display:none;margin-bottom:10px;">
+              <select class="form-input" id="pksParentSelect">
+                <option value="">-- Pilih Parent --</option>
+              </select>
+            </div>
+            <input type="text" id="pksSearch" class="form-input" placeholder="🔍 Cari kode atau nama..." oninput="filterPKS(this.value)" style="margin-bottom:10px;">
+            <div id="adminPKSList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
           </div>
         </div>
 
@@ -2989,7 +3024,7 @@
 
   <!-- ════ APP SCRIPTS (urutan load penting) ════ -->
   <!-- 1. Config & constants — harus pertama -->
-  <script src="js/config.js?v=20260706a"></script>
+  <script src="js/config.js?v=20260720a"></script>
   <script src="js/constants.js?v=20260706a"></script>
 
   <!-- 2. State global & Telegram init -->

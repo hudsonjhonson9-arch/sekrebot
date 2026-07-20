@@ -255,14 +255,17 @@ const P = {
   simapoPenerimaanSave: isTest ? '/webhook-test/simapo-penerimaan' : '/webhook/simapo-penerimaan',
   simapoPemeliharaanList: isTest ? '/webhook-test/simapo-pemeliharaan' : '/webhook/simapo-pemeliharaan',
   simapoPemeliharaanSave: isTest ? '/webhook-test/simapo-pemeliharaan-post' : '/webhook/simapo-pemeliharaan-post',
-  simapoBKUList: isTest ? '/webhook-test/simapo-bku' : '/webhook/simapo-bku',
+  simapoBKUList: isTest ? '/webhook-test/simapo-bku-list' : '/webhook/simapo-bku-list',
   simapoBKUSave: isTest ? '/webhook-test/simapo-bku' : '/webhook/simapo-bku',
-  simapoSBUList: isTest ? '/webhook-test/simapo-sbu-list' : '/webhook/simapo-sbu-list',
-  simapoSBUSave: isTest ? '/webhook-test/simapo-sbu-save' : '/webhook/simapo-sbu-save',
+  simapoStandarHargaList: isTest ? '/webhook-test/simapo-standar-harga-list' : '/webhook/simapo-standar-harga-list',
+  simapoStandarHargaSave: isTest ? '/webhook-test/simapo-standar-harga-save' : '/webhook/simapo-standar-harga-save',
   lemburSave: isTest ? '/webhook-test/lembur-save' : '/webhook/lembur-save',
   lemburArchiveList: isTest ? '/webhook-test/lembur-archive-list' : '/webhook/lembur-archive-list',
   lemburArchiveDelete: isTest ? '/webhook-test/lembur-archive-delete' : '/webhook/lembur-archive-delete',
   gpsTrack: isTest ? '/webhook-test/gps-track' : '/webhook/gps-track',
+  pksList: isTest ? '/webhook-test/simapo-pks-list' : '/webhook/simapo-pks-list',
+  pksSave: isTest ? '/webhook-test/simapo-pks-save' : '/webhook/simapo-pks-save',
+  pksDelete: isTest ? '/webhook-test/simapo-pks-delete' : '/webhook/simapo-pks-delete',
 };
 
 function getScopedInstansiId() {

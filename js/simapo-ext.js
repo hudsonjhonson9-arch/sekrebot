@@ -56,10 +56,11 @@ window.switchSATab = function(name, force = false) {
   else if (name === 'mutasi') { window.loadMutasiRiwayat(force); window.populateMutasiBarangSelect(); }
   else if (name === 'opname') window.loadOpnameForm(force);
   else if (name === 'kat') window.loadSimapoKategori(true, force);
-  else if (name === 'sbu') window.loadSBU();
-  else if (name === 'penerimaan') { window.loadAdminPenerimaan(force); window.populateSBUDatalist(); }
+  else if (name === 'standar-harga') window.loadStandarHarga();
+  else if (name === 'penerimaan') { window.loadAdminPenerimaan(force); window.populateStandarHargaDatalist(); }
   else if (name === 'pemeliharaan') { window.loadAdminPemeliharaan(force); window.populatePemeliharaanBarang(); }
   else if (name === 'bku') window.loadAdminBKU(force);
+  else if (name === 'pks') window.loadAdminPKS(force);
 };
 
 /* ─── HELPER: SHOW SHIMMER ── */
@@ -394,7 +395,7 @@ window.saveSimapoMaster = async function() {
     hargasatuan: parseFloat(document.getElementById('smfHarga')?.value) || 0,
     spesifikasi: document.getElementById('smfSpesifikasi')?.value.trim(),
   };
-  if (!payload.nama || !payload.kodebarang) { showToast('Nama & Kode wajib!', 'error'); return; }
+  if (!payload.nama) { showToast('Nama wajib diisi!', 'error'); return; }
   showToast('Menyimpan...', 'info');
   try {
     const res = await apiFetch(P.simapoAdminMasterSave, { method:'POST', body: JSON.stringify(payload) });
@@ -695,24 +696,24 @@ window.switchSAGroup = function(group) {
   }
 };
 
-/* ─── SBU DATA (persisted) ────────────────────────────────── */
-window._sbuData = [];
+/* ─── STANDAR HARGA (persisted) ────────────────────────────── */
+window._shData = [];
 
-window._sbuSaveToStorage = function() {
-  try { localStorage.setItem('simapo_sbu', JSON.stringify(window._sbuData)); } catch {}
+window._shSaveToStorage = function() {
+  try { localStorage.setItem('simapo_standar_harga', JSON.stringify(window._shData)); } catch {}
 };
 
-window._sbuLoadFromStorage = function() {
+window._shLoadFromStorage = function() {
   try {
-    const raw = localStorage.getItem('simapo_sbu');
-    if (raw) { window._sbuData = JSON.parse(raw); return true; }
+    const raw = localStorage.getItem('simapo_standar_harga');
+    if (raw) { window._shData = JSON.parse(raw); return true; }
   } catch {}
   return false;
 };
 
-window.parseSBUFile = async function(input) {
+window.parseStandarHargaFile = async function(input) {
   if (!input.files || !input.files[0]) return;
-  showToast('Membaca SBU...', 'info');
+  showToast('Membaca standar harga...', 'info');
   try {
     const buf = await input.files[0].arrayBuffer();
     const wb = XLSX.read(buf, {type:'array'});
@@ -754,60 +755,57 @@ window.parseSBUFile = async function(input) {
       const key = i.nama + '|' + i.harga;
       if (!seen[key]) { seen[key]=true; unique.push(i); }
     }
-    window._sbuData = unique;
-    _sbuSaveToStorage();
+    window._shData = unique;
+    _shSaveToStorage();
 
-    // Try save to API
     try {
-      await apiFetch(P.simapoSBUSave, { method:'POST', body: JSON.stringify({ rows: unique }) });
+      await apiFetch(P.simapoStandarHargaSave, { method:'POST', body: JSON.stringify({ rows: unique }) });
     } catch {}
 
-    loadSBU();
-    populateSBUDatalist();
-    showToast(`SBU siap: ${unique.length} item`, 'success');
+    loadStandarHarga();
+    populateStandarHargaDatalist();
+    showToast(`Standar harga: ${unique.length} item`, 'success');
   } catch(e) {
-    console.error('[SBU] Parse error:', e);
-    showToast('Gagal parse SBU', 'error');
+    console.error('[StandarHarga] Parse error:', e);
+    showToast('Gagal parse', 'error');
   }
   input.value = '';
 };
 
-window.populateSBUDatalist = function() {
-  const dl = document.getElementById('sbuItemList');
+window.populateStandarHargaDatalist = function() {
+  const dl = document.getElementById('shItemList');
   if (!dl) return;
-  dl.innerHTML = window._sbuData.map(i => `<option value="${i.nama} — Rp ${i.harga.toLocaleString('id-ID')}">`).join('');
+  dl.innerHTML = window._shData.map(i => `<option value="${i.nama} — Rp ${i.harga.toLocaleString('id-ID')}">`).join('');
 };
 
-window.importSBUExcel = function() {
-  document.getElementById('sbuExcelFile')?.click();
+window.importStandarHargaExcel = function() {
+  document.getElementById('shExcelFile')?.click();
 };
 
-window.loadSBU = async function(forceApi = false) {
-  const el = document.getElementById('adminSBUList');
+window.loadStandarHarga = async function(forceApi = false) {
+  const el = document.getElementById('adminStandarHargaList');
   if (!el) return;
 
-  // Try API first
-  if (forceApi || !window._sbuData.length) {
+  if (forceApi || !window._shData.length) {
     try {
-      const res = await apiFetch(P.simapoSBUList);
+      const res = await apiFetch(P.simapoStandarHargaList);
       const data = parseApiResponse(await res.json());
       if (data && data.length) {
-        window._sbuData = data.map(d => ({ nama: d.nama_barang || d.nama, satuan: d.satuan, harga: parseFloat(d.harga_satuan || d.harga), sheet: d.sheet_name || '' }));
-        _sbuSaveToStorage();
-        populateSBUDatalist();
+        window._shData = data.map(d => ({ nama: d.nama_barang || d.nama, satuan: d.satuan, harga: parseFloat(d.harga_satuan || d.harga), sheet: d.sheet_name || '' }));
+        _shSaveToStorage();
+        populateStandarHargaDatalist();
       }
     } catch {}
   }
 
-  // Fallback to localStorage
-  if (!window._sbuData.length) {
-    _sbuLoadFromStorage();
-    if (window._sbuData.length) populateSBUDatalist();
+  if (!window._shData.length) {
+    _shLoadFromStorage();
+    if (window._shData.length) populateStandarHargaDatalist();
   }
 
-  const data = window._sbuData;
+  const data = window._shData;
   if (!data || !data.length) {
-    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px">📋 Klik "Import SBU" untuk memuat standar harga.</div>`;
+    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px">📋 Klik "Import Excel" untuk memuat standar harga.</div>`;
     return;
   }
   el.innerHTML = data.map(i => `
@@ -821,11 +819,11 @@ window.loadSBU = async function(forceApi = false) {
   `).join('');
 };
 
-window.filterSBU = function(val) {
+window.filterStandarHarga = function(val) {
   const q = val.toLowerCase();
-  const el = document.getElementById('adminSBUList');
+  const el = document.getElementById('adminStandarHargaList');
   if (!el) return;
-  const data = window._sbuData.filter(i => i.nama.toLowerCase().includes(q) || String(i.harga).includes(q));
+  const data = window._shData.filter(i => i.nama.toLowerCase().includes(q) || String(i.harga).includes(q));
   if (!data.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Tidak ditemukan.</div>'; return; }
   el.innerHTML = data.map(i => `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);margin-bottom:4px;">
@@ -841,8 +839,8 @@ window.filterSBU = function(val) {
 /* ─── PENERIMAAN: ITEMS ──────────────────────────────────── */
 window._penerimaanItems = [];
 
-window.onSBUItemInput = function(val) {
-  const match = window._sbuData.find(i => val.includes(i.nama));
+window.onStandarHargaItemInput = function(val) {
+  const match = window._shData.find(i => val.includes(i.nama));
   if (!match) return;
   document.getElementById('ptdSatuan').value = match.satuan;
   document.getElementById('ptdHarga').value = match.harga;
@@ -1129,52 +1127,71 @@ window.importBKUExcel = async function(input) {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
-    // Cari header row
     let startRow = 0;
     for (let i = 0; i < Math.min(10, rows.length); i++) {
       const row = rows[i];
       if (!row || !row.length) continue;
       const joined = row.map(c => String(c||'').toLowerCase()).join(' ');
-      if (joined.includes('tanggal') || joined.includes('tgl') || joined.includes('uraian') || joined.includes('penerimaan')) {
+      if (joined.includes('tanggal') || joined.includes('uraian') || joined.includes('penerimaan')) {
         startRow = i;
         break;
       }
     }
 
-    const monthYear = { bulan: null, tahun: null };
     const items = [];
+    let parent = { no_urut: null, tgl: null };
 
     for (let i = startRow + 1; i < rows.length; i++) {
       const r = rows[i];
       if (!r || !r.length) continue;
-      const tglRaw = r[0];
-      if (!tglRaw) continue;
 
-      let tglStr = '';
-      if (typeof tglRaw === 'number') {
-        const d = XLSX.SSF.parse_date_code(tglRaw);
-        if (d) tglStr = d.y + '-' + String(d.m).padStart(2,'0') + '-' + String(d.d).padStart(2,'0');
-      } else {
-        tglStr = String(tglRaw).trim();
+      const col = c => String(r[c]||'').trim();
+
+      // --- opening balance → skip ---
+      if (col(2).toLowerCase().includes('saldo bulan')) continue;
+
+      // --- header row (has No) → update parent ---
+      if (r[0] != null && r[0] !== '') {
+        let tglStr = '';
+        if (typeof r[0] === 'number') {
+          // r[0] = No, r[1] = Tanggal
+          const rawTgl = r[1];
+          if (typeof rawTgl === 'number') {
+            const d = XLSX.SSF.parse_date_code(rawTgl);
+            if (d) tglStr = d.y + '-' + String(d.m).padStart(2,'0') + '-' + String(d.d).padStart(2,'0');
+          } else {
+            tglStr = String(rawTgl||'').trim();
+          }
+        } else {
+          // r[0] contains tanggal as string
+          tglStr = String(r[0]).trim();
+        }
+        if (!tglStr || tglStr.length < 8) continue;
+
+        parent = {
+          no_urut: parseInt(r[0]) || items.length + 1,
+          tgl: tglStr,
+        };
+        continue;
       }
-      if (!tglStr || tglStr.length < 8) continue;
 
-      const d = new Date(tglStr + 'T00:00:00');
+      // --- detail row ---
+      const uraian = col(2);
+      if (!uraian || uraian === '0') continue;
+
+      const d = parent.tgl ? new Date(parent.tgl + 'T00:00:00') : new Date();
       if (isNaN(d.getTime())) continue;
-
-      const uraian = String(r[1] || '').trim();
-      if (!uraian) continue;
 
       items.push({
         bulan: d.getMonth() + 1,
         tahun: d.getFullYear(),
-        no_urut: parseInt(r[4]) || items.length + 1,
-        tgl: tglStr,
+        no_urut: parent.no_urut || items.length + 1,
+        tgl: parent.tgl,
         uraian,
-        kode_rekening: String(r[2] || '').trim() || null,
-        penerimaan: parseFloat(String(r[3]||'').replace(/[^0-9.,]/g,'').replace(',','.')) || 0,
-        pengeluaran: parseFloat(String(r[4]||'').replace(/[^0-9.,]/g,'').replace(',','.')) || 0,
-        saldo: parseFloat(String(r[5]||'').replace(/[^0-9.,]/g,'').replace(',','.')) || 0,
+        kode_rekening: col(3) || null,
+        penerimaan: parseFloat(col(4).replace(/[^0-9.,]/g,'').replace(',','.')) || 0,
+        pengeluaran: parseFloat(col(5).replace(/[^0-9.,]/g,'').replace(',','.')) || 0,
+        saldo: parseFloat(col(6).replace(/[^0-9.,]/g,'').replace(',','.')) || 0,
       });
     }
 
@@ -1223,4 +1240,168 @@ window.viewQRCode = async function(unitasetId) {
     }
   }
   showToast('Unit tidak ditemukan di cache', 'error');
+};
+
+/* ─── ADMIN: PKS (Program, Kegiatan, Subkegiatan) ── */
+window._pksLevel = 'program';
+window._pksData = [];
+
+window.loadAdminPKS = async function(force = false) {
+  const el = document.getElementById('adminPKSList');
+  if (!el) return;
+  if (force || window._pksData.length === 0) window.showAdminSimapoShimmer('adminPKSList');
+
+  try {
+    const res = await apiFetch(P.pksList + '&type=' + window._pksLevel);
+    const json = await res.json();
+    window._pksData = parseApiResponse(json);
+  } catch { window._pksData = []; }
+  window.renderAdminPKS(window._pksData);
+};
+
+window.switchPKSLevel = function(level, btn) {
+  window._pksLevel = level;
+  document.querySelectorAll('.pks-level-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const parentWrap = document.getElementById('pksParentSelectWrap');
+  if (level === 'program') {
+    parentWrap.style.display = 'none';
+  } else {
+    parentWrap.style.display = 'block';
+    window.populatePKSParentSelect();
+  }
+  window.loadAdminPKS(true);
+};
+
+window.populatePKSParentSelect = async function() {
+  const sel = document.getElementById('pksParentSelect');
+  if (!sel) return;
+  const parentEndpoint = window._pksLevel === 'kegiatan' ? 'program' : 'kegiatan';
+  try {
+    const res = await apiFetch(P.pksList + '&type=' + parentEndpoint);
+    const json = await res.json();
+    const data = parseApiResponse(json);
+    sel.innerHTML = '<option value="">-- Semua --</option>' + (data || []).map(d =>
+      '<option value="' + d.id + '">[' + d.kode + '] ' + d.nama + '</option>'
+    ).join('');
+  } catch {}
+  sel.onchange = () => window.loadAdminPKS(true);
+};
+
+window.renderAdminPKS = function(data) {
+  const el = document.getElementById('adminPKSList');
+  if (!el) return;
+  if (!data || data.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px">📐 Belum ada data.</div>';
+    return;
+  }
+  el.innerHTML = data.map(item => {
+    const parentInfo = item.program_kode ? '[' + item.program_kode + '] ' : item.kegiatan_kode ? '[' + item.kegiatan_kode + '] ' : '';
+    return '<div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);margin-bottom:8px;">' +
+      '<div style="width:36px;height:36px;border-radius:8px;background:rgba(201,168,76,0.12);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">📐</div>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">[' + item.kode + '] ' + item.nama + '</div>' +
+        (parentInfo ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + parentInfo + '</div>' : '') +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">' +
+        '<button onclick="window.showPKSForm(\'' + item.id + '\')" style="padding:6px 10px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;">✏️</button>' +
+        '<button onclick="window.deletePKS(\'' + item.id + '\')" style="padding:6px 10px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;">🗑</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+};
+
+window.filterPKS = function(val) {
+  const q = val.toLowerCase();
+  const filtered = window._pksData.filter(d =>
+    (d.kode && d.kode.toLowerCase().includes(q)) || (d.nama && d.nama.toLowerCase().includes(q))
+  );
+  window.renderAdminPKS(filtered);
+};
+
+window.showPKSForm = async function(id = null) {
+  const item = id ? window._pksData.find(d => d.id === id) : null;
+  const level = window._pksLevel;
+  const labels = { program: 'Program', kegiatan: 'Kegiatan', subkegiatan: 'Subkegiatan' };
+  const kode = item ? item.kode : '';
+  const nama = item ? item.nama : '';
+
+  let parentOpts = '';
+  if (level !== 'program') {
+    try {
+      const res = await apiFetch(P.pksList + '&type=' + (level === 'kegiatan' ? 'program' : 'kegiatan'));
+      const json = await res.json();
+      const parents = parseApiResponse(json);
+      parentOpts = parents.map(p =>
+        '<option value="' + p.id + '"' + (item && (item.program_id === p.id || item.kegiatan_id === p.id) ? ' selected' : '') + '>[' + p.kode + '] ' + p.nama + '</option>'
+      ).join('');
+    } catch {}
+  }
+
+  const { value: formValues } = await Swal.fire({
+    title: (id ? '✏️ Edit ' : '➕ Tambah ') + labels[level],
+    html:
+      (level !== 'program' ? '<div style="margin-bottom:10px"><select id="pksFormParent" class="form-input" style="width:100%"><option value="">-- Pilih Parent --</option>' + parentOpts + '</select></div>' : '') +
+      '<input id="pksFormKode" class="form-input" placeholder="Kode (contoh: 1.01.01)" value="' + kode + '" style="margin-bottom:10px;width:100%">' +
+      '<input id="pksFormNama" class="form-input" placeholder="Nama ' + labels[level] + '" value="' + nama.replace(/"/g, '&quot;') + '" style="width:100%">',
+    focusConfirm: false,
+    preConfirm: () => {
+      const parentId = level !== 'program' ? document.getElementById('pksFormParent').value : null;
+      const k = document.getElementById('pksFormKode').value.trim();
+      const n = document.getElementById('pksFormNama').value.trim();
+      if (!k || !n) { Swal.showValidationMessage('Kode dan Nama harus diisi'); return; }
+      if (level !== 'program' && !parentId) { Swal.showValidationMessage('Parent harus dipilih'); return; }
+      const body = { kode: k, nama: n };
+      if (level === 'kegiatan') body.program_id = parentId;
+      else if (level === 'subkegiatan') body.kegiatan_id = parentId;
+      return body;
+    }
+  });
+  if (!formValues) return;
+
+  try {
+    const res = await apiFetch(P.pksSave, {
+      method: 'POST',
+      body: JSON.stringify({ type: level, ...formValues })
+    });
+    if (res.ok) {
+      showToast(labels[level] + ' disimpan', 'success');
+      window.loadAdminPKS(true);
+    } else {
+      showToast('Gagal menyimpan', 'error');
+    }
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+};
+
+window.deletePKS = async function(id) {
+  const item = window._pksData.find(d => d.id === id);
+  const label = item ? '[' + item.kode + '] ' + item.nama : id;
+  const { isConfirmed } = await Swal.fire({
+    title: 'Hapus?',
+    text: label,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: 'var(--danger)',
+    confirmButtonText: 'Ya, hapus!',
+    cancelButtonText: 'Batal'
+  });
+  if (!isConfirmed) return;
+
+  try {
+    const res = await apiFetch(P.pksDelete, {
+      method: 'DELETE',
+      body: JSON.stringify({ type: window._pksLevel, id })
+    });
+    if (res.ok) {
+      showToast('Dihapus', 'success');
+      window.loadAdminPKS(true);
+    } else {
+      showToast('Gagal menghapus', 'error');
+    }
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
 };
