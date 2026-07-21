@@ -1145,83 +1145,132 @@ window.importBKUExcel = async function(input) {
   try {
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, { type: 'array' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
-    let startRow = 0;
-    for (let i = 0; i < Math.min(10, rows.length); i++) {
-      const row = rows[i];
-      if (!row || !row.length) continue;
-      const joined = row.map(c => String(c||'').toLowerCase()).join(' ');
-      if (joined.includes('tanggal') || joined.includes('uraian') || joined.includes('penerimaan')) {
-        startRow = i;
-        break;
-      }
+    function normalizeDate(str) {
+      if (!str || str.length < 8) return str;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+      const m = str.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})$/);
+      if (m) return m[3] + '-' + m[2] + '-' + m[1];
+      return str;
     }
 
-    const items = [];
-    let parent = { no_urut: null, tgl: null };
+    function parseDate(v) {
+      if (typeof v === 'number') {
+        const d = XLSX.SSF.parse_date_code(v);
+        if (d) return d.y + '-' + String(d.m).padStart(2,'0') + '-' + String(d.d).padStart(2,'0');
+      }
+      return normalizeDate(String(v || '').trim());
+    }
 
-    for (let i = startRow + 1; i < rows.length; i++) {
-      const r = rows[i];
-      if (!r || !r.length) continue;
+    function parseNumeric(s) {
+      if (s == null || s === '') return 0;
+      const v = parseFloat(String(s).replace(/[^0-9.,-]/g, '').replace(',', '.'));
+      return isNaN(v) ? 0 : v;
+    }
 
-      const col = c => String(r[c]||'').trim();
-
-      // --- opening balance → skip ---
-      if (col(2).toLowerCase().includes('saldo bulan')) continue;
-
-      // --- header row (has No) → update parent ---
-      if (r[0] != null && r[0] !== '') {
-        let tglStr = '';
-        if (typeof r[0] === 'number') {
-          // r[0] = No, r[1] = Tanggal
-          const rawTgl = r[1];
-          if (typeof rawTgl === 'number') {
-            const d = XLSX.SSF.parse_date_code(rawTgl);
-            if (d) tglStr = d.y + '-' + String(d.m).padStart(2,'0') + '-' + String(d.d).padStart(2,'0');
-          } else {
-            tglStr = String(rawTgl||'').trim();
-          }
-        } else {
-          // r[0] contains tanggal as string
-          tglStr = String(r[0]).trim();
+    function parseSheet(ws) {
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      let startRow = 2;
+      for (let i = 0; i < Math.min(10, rows.length); i++) {
+        const row = rows[i];
+        if (!row || !row.length) continue;
+        const joined = row.map(c => String(c||'').toLowerCase()).join(' ');
+        if (joined.includes('tanggal') || joined.includes('uraian') || joined.includes('penerimaan')) {
+          startRow = i;
+          break;
         }
-        if (!tglStr || tglStr.length < 8) continue;
-
-        parent = {
-          no_urut: parseInt(r[0]) || items.length + 1,
-          tgl: tglStr,
-        };
-        continue;
       }
 
-      // --- detail row ---
-      const uraian = col(2);
-      if (!uraian || uraian === '0') continue;
+      const hr = rows[startRow];
+      const isFormatA = hr && String(hr[2]||'').toLowerCase().includes('uraian');
+      const col = {
+        uraian: isFormatA ? 2 : 4, kodeRek: 3,
+        penerimaan: isFormatA ? 4 : 5, pengeluaran: isFormatA ? 5 : 6, saldo: isFormatA ? 6 : 7,
+      };
 
-      const d = parent.tgl ? new Date(parent.tgl + 'T00:00:00') : new Date();
-      if (isNaN(d.getTime())) continue;
+      let dataStart = startRow + 1;
+      if (dataStart < rows.length) {
+        const r = rows[dataStart];
+        if (r && r[0] === 1 && r[1] === 2) dataStart++;
+      }
 
-      items.push({
-        bulan: d.getMonth() + 1,
-        tahun: d.getFullYear(),
-        no_urut: parent.no_urut || items.length + 1,
-        tgl: parent.tgl,
-        uraian,
-        kode_rekening: col(3) || null,
-        penerimaan: parseFloat(col(4).replace(/[^0-9.,]/g,'').replace(',','.')) || 0,
-        pengeluaran: parseFloat(col(5).replace(/[^0-9.,]/g,'').replace(',','.')) || 0,
-        saldo: parseFloat(col(6).replace(/[^0-9.,]/g,'').replace(',','.')) || 0,
-      });
+      const items = [];
+      let parent = { no_urut: null, tgl: null };
+
+      for (let i = dataStart; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r || !r.length) continue;
+
+        const uraian = String(r[col.uraian] || '').trim();
+        const uraianLower = uraian.toLowerCase();
+        const kodeLabel = String(r[col.kodeRek] || '').trim().toLowerCase();
+
+        if (
+          uraian.includes('Saldo Bulan') || uraian.includes('saldo bulan') ||
+          uraianLower.includes('jumlah sampai') || uraianLower.includes('jumlah semua') ||
+          uraianLower === 'jumlah' || uraian === '' ||
+          uraianLower.startsWith('pada hari ini') ||
+          uraianLower.includes('waikabubak') ||
+          uraianLower.includes('pengguna anggaran') ||
+          uraianLower.includes('bendahara pengeluaran') ||
+          uraianLower.startsWith('nip') ||
+          uraianLower.startsWith('_____________________') ||
+          uraianLower.includes('tunai') || uraianLower.includes('saldo bank') ||
+          uraianLower.includes('dan kas di bendahara') ||
+          kodeLabel === 'tunai' || kodeLabel === 'saldo bank'
+        ) continue;
+
+        if (r[0] != null && r[0] !== '') {
+          let tglStr = (typeof r[0] === 'number') ? parseDate(r[1]) : String(r[0]).trim();
+          if (!tglStr || tglStr.length < 8) continue;
+          parent = { no_urut: parseInt(r[0]) || items.length + 1, tgl: tglStr };
+
+          if (uraian) {
+            const d = new Date(tglStr + 'T00:00:00');
+            if (!isNaN(d.getTime())) {
+              items.push({
+                bulan: d.getMonth() + 1, tahun: d.getFullYear(),
+                no_urut: parent.no_urut, tgl: tglStr, uraian,
+                kode_rekening: String(r[col.kodeRek] || '').trim() || null,
+                penerimaan: parseNumeric(r[col.penerimaan]),
+                pengeluaran: parseNumeric(r[col.pengeluaran]),
+                saldo: parseNumeric(r[col.saldo]),
+              });
+            }
+          }
+          continue;
+        }
+
+        if (!uraian) continue;
+        const d = parent.tgl ? new Date(parent.tgl + 'T00:00:00') : new Date();
+        if (isNaN(d.getTime())) continue;
+        items.push({
+          bulan: d.getMonth() + 1, tahun: d.getFullYear(),
+          no_urut: parent.no_urut || items.length + 1, tgl: parent.tgl, uraian,
+          kode_rekening: String(r[col.kodeRek] || '').trim() || null,
+          penerimaan: parseNumeric(r[col.penerimaan]),
+          pengeluaran: parseNumeric(r[col.pengeluaran]),
+          saldo: parseNumeric(r[col.saldo]),
+        });
+      }
+      return items;
     }
 
-    if (!items.length) { showToast('Tidak ada data yang bisa diimport', 'error'); return; }
+    const allItems = [];
+    wb.SheetNames.forEach(name => {
+      const items = parseSheet(wb.Sheets[name]);
+      if (items.length) {
+        allItems.push(...items);
+        console.log(`[BKU] Sheet ${name}: ${items.length} baris`);
+      }
+    });
 
-    showToast(`Import ${items.length} baris...`, 'info');
-    const res = await apiFetch(P.simapoBKUSave, { method:'POST', body: JSON.stringify({ bulk: true, rows: items }) });
+    if (!allItems.length) { showToast('Tidak ada data yang bisa diimport', 'error'); return; }
+
+    showToast(`Import ${allItems.length} baris...`, 'info');
+    const res = await apiFetch(P.simapoBKUSave, { method:'POST', body: JSON.stringify({ bulk: true, rows: allItems }) });
     if (res.ok) {
-      showToast(`Berhasil import ${items.length} baris`, 'success');
+      showToast(`Berhasil import ${allItems.length} baris`, 'success');
       window._simapoCache.clear('admin_bku');
       window.loadAdminBKU(true);
     } else {
