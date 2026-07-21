@@ -1236,6 +1236,137 @@ window.importBKUExcel = async function(input) {
   input.value = '';
 };
 
+window.exportBKU = async function() {
+  showToast('Menyiapkan data...', 'info');
+  let data = window._simapoCache?.get('admin_bku');
+  if (!data || data.length === 0) {
+    try {
+      const res = await apiFetch(P.simapoBKUList);
+      data = parseApiResponse(await res.json());
+    } catch {}
+  }
+  if (!data || data.length === 0) {
+    showToast('Belum ada data BKU', 'error');
+    return;
+  }
+
+  if (typeof XLSX === 'undefined') {
+    showToast('Library XLSX belum dimuat', 'error');
+    return;
+  }
+
+  const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const instName = 'BAPPERIDA Kabupaten Sumba Barat';
+
+  const byMonth = {};
+  data.forEach(item => {
+    const key = (item.tahun || '2026') + '-' + String(item.bulan || 1).padStart(2, '0');
+    if (!byMonth[key]) byMonth[key] = [];
+    byMonth[key].push(item);
+  });
+
+  const wb = XLSX.utils.book_new();
+
+  Object.keys(byMonth).sort().forEach(key => {
+    const items = byMonth[key];
+    const [tahun, bulan] = key.split('-');
+    const sheetName = monthNames[parseInt(bulan)].substring(0, 3).toUpperCase();
+
+    const trans = items.filter(i => i.no_urut != null);
+    if (!trans.length) return;
+    trans.sort((a, b) => String(a.tgl || '').localeCompare(String(b.tgl || '')) || (a.no_urut || 0) - (b.no_urut || 0));
+
+    const groups = [];
+    const groupMap = {};
+    trans.forEach(item => {
+      const gk = (item.tgl || '') + '_' + (item.no_urut || 0);
+      if (!groupMap[gk]) { groupMap[gk] = { items: [] }; groups.push(groupMap[gk]); }
+      groupMap[gk].items.push(item);
+    });
+
+    const rows = [];
+    const pushRow = arr => { while (arr.length < 8) arr.push(''); rows.push(arr.slice(0, 8)); };
+
+    pushRow(['', '', '', '', 'BUKU KAS UMUM']);
+    pushRow(['', '', '', '', 'BENDAHARA PENGELUARAN']);
+    pushRow([]);
+    pushRow(['SKPD', '', '', '', ': ' + instName]);
+    pushRow([]);
+    pushRow(['No', 'Tanggal', 'No Bukti', 'Kode Rekening', 'Uraian', 'Penerimaan', 'Pengeluaran', 'SALDO']);
+    pushRow([1, 2, 3, 4, 5, 6, 7, 8]);
+
+    const first = trans[0];
+    const saldoAwal = first ? ((first.saldo || 0) - (first.penerimaan || 0) + (first.pengeluaran || 0)) : 0;
+    pushRow(['', '', '', '', 'Saldo Bulan Lalu', saldoAwal, '', saldoAwal]);
+
+    groups.forEach(g => {
+      g.items.forEach((item, idx) => {
+        const r = [];
+        if (idx === 0) {
+          r.push(item.no_urut || '');
+          r.push(item.tgl || '');
+          r.push(g.items.length > 1 ? 1 : '');
+        } else {
+          r.push('', '', idx + 1);
+        }
+        r.push(item.kode_rekening || '');
+        r.push(item.uraian || '');
+        r.push(item.penerimaan || '');
+        r.push(item.pengeluaran || '');
+        r.push(item.saldo || '');
+        pushRow(r);
+      });
+    });
+
+    const totalP = trans.reduce((s, i) => s + (i.penerimaan || 0), 0);
+    const totalG = trans.reduce((s, i) => s + (i.pengeluaran || 0), 0);
+    const lastS = trans[trans.length - 1]?.saldo || 0;
+    pushRow([]);
+    pushRow(['', '', '', '', 'Jumlah sampai bulan lalu', totalP, totalG, lastS]);
+    pushRow(['', '', '', '', 'Jumlah Semua', totalP, totalG, lastS]);
+    pushRow([]);
+    pushRow(['Pada hari ini ... telah melaksanakan opname kas pada Perangkat Daerah', '', '', '', '', '', '', '']);
+    pushRow([instName + ' dan kas di bendahara pengeluaran Rp. ' + lastS.toLocaleString('id-ID') + ',', '', '', '', '', '', '', '']);
+    pushRow([]);
+    const tunai = lastS > 0 ? Math.round(lastS / 2) : 0;
+    pushRow(['', '', '', 'Tunai', 'a', tunai, '', '']);
+    pushRow(['', '', '', 'Saldo bank', 'b', lastS - tunai, '', '']);
+    pushRow(['', '', '', 'Jumlah', '', lastS, '', '']);
+    pushRow([]);
+    pushRow(['', '', '', '', '', 'Waikabubak, ... ' + tahun, '', '']);
+    pushRow(['', 'Pengguna Anggaran,', '', '', '', 'Bendahara Pengeluaran', '', '']);
+    pushRow([]);
+    pushRow([]);
+    pushRow([]);
+    pushRow([]);
+    pushRow(['', '_____________________', '', '', '', '_____________________', '', '']);
+    pushRow(['', 'NIP. ..........................', '', '', '', 'NIP. ..........................', '', '']);
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [
+      { wch: 5 },   // No
+      { wch: 15 },  // Tanggal
+      { wch: 8 },   // No Bukti
+      { wch: 28 },  // Kode Rekening
+      { wch: 60 },  // Uraian
+      { wch: 18 },  // Penerimaan
+      { wch: 18 },  // Pengeluaran
+      { wch: 18 },  // SALDO
+    ];
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } },
+      { s: { r: 3, c: 0 }, e: { r: 3, c: 7 } },
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, sheetName.padEnd(3));
+  });
+
+  const filename = 'BKU_' + new Date().getFullYear() + '.xlsx';
+  XLSX.writeFile(wb, filename);
+  showToast('BKU berhasil diunduh', 'success');
+};
+
 window.viewQRCode = async function(unitasetId) {
   // Cari dari cache
   for (const key in window._unitCache) {
