@@ -107,6 +107,7 @@ window.loadAdminSimapoPinjam = async function(force = false) {
         { id:'P002', userid:'7654321', nama_peminjam:'Demo User 2', nama_barang:'Kamera DSLR', tujuanpeminjaman:'Dokumentasi', tanggalmulai:'2026-05-18', tanggalselesai:'2026-05-20', status:'MENUNGGU' },
       ];
     }
+    window.renderSADipinjam(window._allPinjamData);
   } catch (e) {
     console.error('[SIMAPO] Critical Load Error:', e);
   }
@@ -160,6 +161,26 @@ window.renderAdminSimapoPinjam = function(data) {
         ` : '')}
       </div>`;
   }).join('');
+};
+
+/* ─── RENDER: BARANG SEDANG DIPINJAM ── */
+window.renderSADipinjam = function(data) {
+  const el = document.getElementById('adminSimapoDipinjamList');
+  if (!el) return;
+  const aktif = (data || window._allPinjamData || []).filter(d => (d.status||'').toUpperCase() === 'DIPINJAM');
+  if (!aktif.length) {
+    el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted);font-size:11px">✅ Tidak ada barang sedang dipinjam.</div>`;
+    return;
+  }
+  el.innerHTML = aktif.map(item => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);gap:8px;">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:12px;color:var(--white)">${item.nama_barang || 'Tanpa Nama'} <span style="font-size:10px;color:#60a5fa;font-weight:700;">(×${item.jumlah || 1})</span></div>
+        <div style="font-size:10px;color:var(--muted)">👤 ${item.nama_peminjam || '—'} · ${item.tujuanpeminjaman || item.tujuan || '—'}</div>
+      </div>
+      <div style="font-size:9px;color:var(--muted);text-align:right;white-space:nowrap">${item.tanggalmulai || '—'}</div>
+    </div>
+  `).join('');
 };
 
 /* ─── ADMIN: QR KEMBALI ── */
