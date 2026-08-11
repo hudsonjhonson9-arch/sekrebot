@@ -137,6 +137,7 @@
       MASUK:        'MASUK',
       PULANG:       'PULANG',
       PULANG_LUAR:  'PULANG LUAR',
+      KONTROL:      'KONTROL',
       IZIN:         'IZIN',
       SAKIT:        'SAKIT',
       TUGAS:        'TUGAS',

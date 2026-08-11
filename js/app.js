@@ -19,7 +19,8 @@
         await Promise.allSettled([
           loadUserProfile(),
           loadTodayHistory(),
-          fetchJamPeriode()
+          fetchJamPeriode(),
+          typeof loadKontrolConfig === 'function' ? loadKontrolConfig() : Promise.resolve()
         ]);
 
         updateClock();

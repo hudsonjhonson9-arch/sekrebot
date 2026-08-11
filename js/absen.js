@@ -470,8 +470,11 @@ async function _doAbsenWithGPS(initData, isTgX, camResult) {
           wifi_check_enabled: typeof WIFI_CHECK_ENABLED !== 'undefined' ? WIFI_CHECK_ENABLED : true
         },
         foto_verifikasi: fotoInfo,
-        _gps_elapsed_ms: _gpsElapsed, _detection_score: _score, _detection_flags: _flags, ..._suspiciousPayload
+        _gps_elapsed_ms: _gpsElapsed, _detection_score: _score, _detection_flags: _flags, ..._suspiciousPayload,
+        jenis_absen: window._kontrolMode ? 'KONTROL' : undefined,
+        keterangan: window._kontrolMode ? (window._kontrolKet || 'Cek kehadiran') : undefined,
       };
+      window._kontrolMode = false;
 
       // ── GENERATE HMAC SIGNATURE (ANTI-SPOOFING) ──
       if (typeof generateSignature === 'function') {

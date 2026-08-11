@@ -193,6 +193,7 @@ const P = {
   lokasiUpdate: isTest ? '/webhook-test/lokasi-update' : '/webhook/lokasi-update',
   dokumenList: isTest ? '/webhook-test/dokumen-list' : '/webhook/dokumen-list',
   jamAbsen: isTest ? '/webhook-test/jam-absen' : '/webhook/jam-absen',
+  kontrolAbsen: isTest ? '/webhook-test/kontrol-absen' : '/webhook/kontrol-absen',
   kirimRekap: isTest ? '/webhook-test/kirim-rekap' : '/webhook/kirim-rekap',
   ketList: isTest ? '/webhook-test/ket-list' : '/webhook/ket-list',
   ketEdit: isTest ? '/webhook-test/ket-edit' : '/webhook/ket-edit',

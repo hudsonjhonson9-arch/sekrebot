@@ -1,0 +1,86 @@
+{
+  "name": "kontrol-absen",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "webhook-get-0001",
+      "name": "Webhook GET",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 280],
+      "webhookId": "kontrol-absen-get-0001",
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "kontrol-absen",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const query = $input.first().json.query || {};\nconst instId = String(query.instansi_id || query.instansi || 'bapperida').replace(/'/g, \"''\");\n\nconst DEFAULT = { enabled: false, toleransi: 30, times: [{ jam: '10:00', aktif: true }] };\n\nconst { rows } = await $pg.query(\"SELECT key, value FROM pengaturan WHERE key = 'kontrol_absen' AND instansi_id = $1\", [instId]);\nlet config = DEFAULT;\nif (rows.length) {\n  try { config = { ...DEFAULT, ...JSON.parse(rows[0].value) }; } catch (_) {}\n  if (!Array.isArray(config.times)) config.times = [];\n}\n\nreturn [{ json: { ok: true, config } }];"
+      },
+      "id": "get-config",
+      "name": "Get Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 280]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, config: $json.config }) }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "respond-get",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 280]
+    },
+    {
+      "parameters": {},
+      "id": "webhook-post-0001",
+      "name": "Webhook POST",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 600],
+      "webhookId": "kontrol-absen-post-0001",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kontrol-absen",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst auth = String(body.headers?.authorization || '').replace(/^Bearer\\s+/i, '').trim();\nconst parts = auth.split('_');\nconst userId = parseInt(parts[1]);\n\nif (!userId) {\n  return [{ json: { ok: false, error: 'Unauthorized' } }];\n}\n\nconst { rows } = await $pg.query('SELECT id, is_admin FROM user_list WHERE id = $1', [userId]);\nif (!rows.length || !rows[0].is_admin) {\n  return [{ json: { ok: false, error: 'Admin access required' } }];\n}\n\nconst times = Array.isArray(body.times) ? body.times.map(t => ({\n  jam: String(t.jam || '').slice(0, 5),\n  aktif: t.aktif !== false\n})) : [];\nconst value = JSON.stringify({\n  enabled: !!body.enabled,\n  toleransi: parseInt(body.toleransi, 10) || 30,\n  times\n});\nconst instId = String(body.instansi_id || 'bapperida').replace(/'/g, \"''\");\n\nawait $pg.query(\n  \"INSERT INTO pengaturan (id, key, value, instansi_id) \" +\n  \"VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pengaturan), 'kontrol_absen', $1, $2) \" +\n  \"ON CONFLICT (key, instansi_id) DO UPDATE SET value = EXCLUDED.value\",\n  [value, instId]\n);\n\nreturn [{ json: { ok: true, saved: value } }];"
+      },
+      "id": "validate-save",
+      "name": "Validate & Save",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 600]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true }) }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "respond-post",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 600]
+    }
+  ],
+  "connections": {
+    "Webhook GET": { "main": [[{ "node": "Get Config", "type": "main", "index": 0 }]] },
+    "Get Config": { "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]] },
+    "Webhook POST": { "main": [[{ "node": "Validate & Save", "type": "main", "index": 0 }]] },
+    "Validate & Save": { "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
