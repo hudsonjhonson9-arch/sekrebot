@@ -20,7 +20,8 @@
           loadUserProfile(),
           loadTodayHistory(),
           fetchJamPeriode(),
-          typeof loadKontrolConfig === 'function' ? loadKontrolConfig() : Promise.resolve()
+          typeof loadKontrolConfig === 'function' ? loadKontrolConfig() : Promise.resolve(),
+          typeof loadKkAdmin === 'function' ? loadKkAdmin() : Promise.resolve()
         ]);
 
         updateClock();

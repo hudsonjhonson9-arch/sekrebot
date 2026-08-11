@@ -2690,6 +2690,46 @@
           <button class="btn-admin" onclick="saveFaceSettings()" style="margin-top:12px">💾 Simpan Settings</button>
         </div>
 
+        <!-- 🛡️ KONTROL KEHADIRAN / JAM JAGA (Admin) ══ -->
+        <div class="card" style="margin-top:12px">
+          <div style="font-size:11px;font-weight:800;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+            🛡️ KONTROL KEHADIRAN / JAM JAGA</div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
+              <div>
+                <div style="font-size:11px;font-weight:700;color:var(--white)">Aktifkan JAM JAGA</div>
+                <div style="font-size:9px;color:var(--muted)">Pegawai bisa menandai kontrol kehadiran</div>
+              </div>
+              <div id="kkSwitch" onclick="toggleKkEnabled()" style="width:52px;height:28px;border-radius:14px;background:#6b7280;position:relative;cursor:pointer;flex-shrink:0">
+                <div id="kkKnob" style="position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .3s"></div>
+              </div>
+            </div>
+            <div style="background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
+              <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:6px">⏱️ Toleransi (menit)</div>
+              <div style="font-size:9px;color:var(--muted);margin-bottom:8px">Jeda waktu sebelum/menuju jam jaga yang dianggap valid</div>
+              <input id="kkToleransi" type="number" min="0" max="180" value="15" style="width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--white);font-size:11px;box-sizing:border-box">
+            </div>
+            <div style="background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
+              <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:6px">🏢 Instansi ID</div>
+              <input id="kkInstansi" type="text" placeholder="bapperida" style="width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--white);font-size:11px;box-sizing:border-box">
+            </div>
+            <div style="background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
+              <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:6px">🕐 Jam Jaga</div>
+              <div style="font-size:9px;color:var(--muted);margin-bottom:8px">Jam yang wajib dicek kehadirannya</div>
+              <div id="kkTimes"></div>
+              <button class="btn-admin" onclick="addKkJam()" style="margin-top:8px;width:100%">➕ Tambah Jam</button>
+            </div>
+          </div>
+          <div id="kkResult" style="display:none; margin-top:12px">
+            <div class="r-icon" id="kkRIcon">✅</div>
+            <div style="flex:1">
+              <div class="r-title" id="kkRTitle">—</div>
+              <div class="r-msg" id="kkRMsg">—</div>
+            </div>
+          </div>
+          <button class="btn-admin" onclick="saveKkAdmin()" style="margin-top:12px">💾 Simpan Kontrol Kehadiran</button>
+        </div>
+
         <!-- 🏛️ SUPERADMIN: DETAIL INSTANSI & HEADER EDITOR ══ -->
         <div class="card superadmin-section" style="margin-top:12px; display:none;" id="superadminHeaderCard">
           <div style="font-size:11px;font-weight:800;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border); display:flex; align-items:center; gap:6px;">
@@ -3073,6 +3113,7 @@
   <script src="js/admin-mgmt.js"></script>
   <script src="js/weather.js"></script>
   <script src="js/admin-face.js?v=20260706c"></script>
+<script src="js/admin-kontrol.js?v=20260811a"></script>
   <!-- simapo-admin.js dihapus (dikonsolidasi ke simapo-ext.js) -->
   
   

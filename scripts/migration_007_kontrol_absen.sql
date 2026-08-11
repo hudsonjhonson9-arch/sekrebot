@@ -2,6 +2,10 @@
 -- Run this in PostgreSQL directly (psql, pgAdmin, or n8n SQL node)
 -- Database: n8n_storage @ 10.11.8.62
 
+-- WAJIB: unique index (key, instansi_id) supaya ON CONFLICT bekerja.
+-- (Juga dipakai webhook face-settings & kontrol-absen saat UPSERT.)
+CREATE UNIQUE INDEX IF NOT EXISTS pengaturan_key_instansi_idx ON pengaturan (key, instansi_id);
+
 -- Seed default (disabled) config. Value is JSON:
 --   { "enabled": bool, "toleransi": menit, "times": [ { "jam": "HH:MM", "aktif": bool } ] }
 INSERT INTO pengaturan (id, key, value, instansi_id)
