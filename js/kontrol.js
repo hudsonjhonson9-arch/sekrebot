@@ -5,12 +5,15 @@
      * lalu tampilkan/sebunyikan seksi JAM JAGA di halaman absen.
      */
     async function loadKontrolConfig() {
-      const inst = localStorage.getItem('MY_INSTANSI') || window.userProfile?.instansi_id || 'bapperida';
       try {
-        const { ok, data } = await apiGet(P.kontrolAbsen, { instansi_id: inst });
-        const cfg = ok && data?.config ? data.config : null;
-        window._kontrolConfig = cfg;
-        renderKontrol(cfg);
+        // apiFetch otomatis menambahkan instansi_id dari getScopedInstansiId()
+        const res = await apiGet(P.kontrolAbsen);
+        const d = res.data || {};
+        // Terima dua bentuk: {ok,config:{...}} (n8n) atau {enabled:true,...} (config polos)
+        const c = d.config || (d.enabled !== undefined ? d : null);
+        console.log('[Kontrol] config:', c);
+        window._kontrolConfig = c;
+        renderKontrol(c);
       } catch (e) {
         console.warn('[Kontrol] Gagal memuat konfigurasi:', e.message);
       }
