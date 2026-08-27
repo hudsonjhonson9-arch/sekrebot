@@ -109,60 +109,10 @@
         }
       } catch (e) { console.warn('[Meja] Gagal baca cache:', e); }
 
-      // Fetch fresh data from server
-      try {
-        const res = await apiGet(P.faceGetAll);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const list = parseApiResponse(res.data);
-        if (!list || !list.length) return;
-
-        window._mejaUserMap = {};
-        const freshDescriptors = list.filter(f => {
-          const rawDesc = f.face_histogram || f.descriptor;
-          if (!rawDesc) return false;
-          let desc;
-          try { desc = typeof rawDesc === 'string' ? JSON.parse(rawDesc) : rawDesc; } catch (e) { return false; }
-          const dLen = Array.isArray(desc) ? desc.length : 0;
-          return dLen === 128 || dLen === 512 || dLen === 1024;
-        }).map(f => {
-          const rawDesc = f.face_histogram || f.descriptor;
-          let desc;
-          try { desc = typeof rawDesc === 'string' ? JSON.parse(rawDesc) : rawDesc; } catch (e) { desc = []; }
-          const tid = String(f.telegram_id || f.id || '');
-          const nip = String(f.nip || f.NIP || tid);
-          const dLen = desc.length;
-
-          window._mejaUserMap[nip] = {
-            nama: f.nama || f.Nama || tid,
-            nip: nip,
-            pangkat: f.pangkat || '',
-            telegram_id: f.telegram_id || f.id || '',
-            engine: f.face_model || (dLen >= 512 ? 'human' : 'faceapi'),
-            dim: dLen
-          };
-          return { id: nip, descriptor: desc, engine: f.face_model || (dLen >= 512 ? 'human' : 'faceapi') };
-        });
-
-        if (freshDescriptors.length > 0) {
-          _allFaceDescriptors = freshDescriptors;
-          // Save to cache for next time
-          await idb.set('master_data', { 
-            key: 'all_face_descriptors', 
-            data: freshDescriptors, 
-            userMap: window._mejaUserMap,
-            timestamp: Date.now() 
-          });
-          console.log(`[Meja] Database wajah diperbarui: ${freshDescriptors.length} item.`);
-          _setMejaStatus('active', '🔍', `Siap Scan (${_allFaceDescriptors.length} Pegawai)`, 'Menjalankan Kamera...');
-        }
-      } catch (e) {
-        console.error('[Meja] Gagal update fresh data:', e);
-        if (!_allFaceDescriptors.length) {
-          _setMejaStatus('idle', '❌', 'Gagal memuat data wajah', e.message || 'Coba lagi');
-          stopMejaAbsen();
-        }
-      }
-      };
+      // Fetch fresh data from server (disabled — CORS blocking face-get-all endpoint)
+      // fallback ke IDB cache jika ada, jika tidak → tampilkan status gagal
+      // (GPS validity check di meja-handler.js akan menangani absen meski data wajah cache)
+      ;
 
       loadData();
     }
