@@ -1,0 +1,184 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simapo-opname-save",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        384,
+        128
+      ],
+      "id": "fbffdd14-1644-41ac-9fc4-54ddeba2ac40",
+      "name": "WH Simpan Opname",
+      "webhookId": "simapo-opname-save",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"SIMAPO\".stock_opname (id, nomoropname, tanggal, status, createdat, updatedat, instansi_id, createdbyid) VALUES (gen_random_uuid(), 'OPN-' + TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'), NOW(), 'SELESAI', NOW(), NOW(), '{{ ($json.body.instansi_id || $json.query.instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}', '{{ ($json.headers[\"x-nip\"] || $json.body.nip || \"ADMIN\").toString().replace(/'/g, \"''\") }}') RETURNING id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        624,
+        128
+      ],
+      "id": "8cbccdc4-0dd3-4cdf-8e3d-22c32601e9d1",
+      "name": "Insert Opname Head",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $node[\"WH Simpan Opname\"].json.body || $node[\"WH Simpan Opname\"].json;\nconst items = b.items || [];\nconst opnameid = $input.item.json.id;\nreturn items.map(i => ({ json: { \n  opnameid,\n  instansi_id: b.instansi_id || $input.item.json.query?.instansi_id || 'bapperida',\n  barangid: i.id, \n  stokfisik: parseInt(i.stok_fisik) || 0, \n  stoksistem: parseInt(i.stok_sistem) || 0,\n  selisih: (parseInt(i.stok_fisik) || 0) - (parseInt(i.stok_sistem) || 0)\n} }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        128
+      ],
+      "id": "eaeb83d2-c4a0-4ccc-8031-1049f8e53927",
+      "name": "Prepare Details"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"SIMAPO\".detail_opname (id, opnameid, barangid, stoksistem, stokfisik, selisih, instansi_id) VALUES (gen_random_uuid(), '{{ ($json.opnameid).toString().replace(/'/g, \"''\") }}', '{{ ($json.barangid).toString().replace(/'/g, \"''\") }}', {{ ($json.stoksistem).toString().replace(/'/g, \"''\") }}, {{ ($json.stokfisik).toString().replace(/'/g, \"''\") }}, {{ ($json.selisih).toString().replace(/'/g, \"''\") }}, '{{ ($json.instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}'); UPDATE \"SIMAPO\".barang SET stok_saat_ini = {{ ($json.stokfisik).toString().replace(/'/g, \"''\") }}, updatedat = NOW() WHERE id = '{{ ($json.barangid).toString().replace(/'/g, \"''\") }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1104,
+        128
+      ],
+      "id": "812d26bf-a5cd-46dd-855e-cf7752e9f7e4",
+      "name": "PG Insert Detail & Update",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { success: true, message: 'Stok opname berhasil disimpan' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        128
+      ],
+      "id": "86546a86-7194-43c0-a6f1-41b3057a0564",
+      "name": "Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1584,
+        128
+      ],
+      "id": "9ff093a4-be6b-44c8-a27d-85c7911ef6fb",
+      "name": "Res Simpan Opname"
+    }
+  ],
+  "connections": {
+    "WH Simpan Opname": {
+      "main": [
+        [
+          {
+            "node": "Insert Opname Head",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Opname Head": {
+      "main": [
+        [
+          {
+            "node": "Prepare Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Details": {
+      "main": [
+        [
+          {
+            "node": "PG Insert Detail & Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Insert Detail & Update": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Response": {
+      "main": [
+        [
+          {
+            "node": "Res Simpan Opname",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4b55943efb5f219d407bc408d9277d6d643804fc75070b4ed56250fe03c8ea67"
+  }
+}

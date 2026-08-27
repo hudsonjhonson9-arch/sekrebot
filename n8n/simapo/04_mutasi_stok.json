@@ -1,0 +1,245 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simapo-mutasi-save",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        -176
+      ],
+      "id": "bc32c16b-8ef0-41b4-a8a9-df35105b060d",
+      "name": "WH Catat Mutasi",
+      "webhookId": "simapo-mutasi-save",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json.body || $input.item.json;\nconst nip = b.nip || $input.item.json.headers?.['x-nip'] || 'ADMIN';\nconst jumlah = parseInt(b.jumlah) || 0;\nconst masId = b.barangmasukid || null;\nconst kelId = b.barangkeluarid || null;\nconst delta = masId ? jumlah : -jumlah;\nconst barangid = masId || kelId;\n\nreturn [{ json: {\n  barangmasukid: masId,\n  barangkeluarid: kelId,\n  barangid: barangid,\n  createdbyid: nip,\n  jumlah: jumlah,\n  delta: delta,\n  keterangan: b.keterangan || '',\n  tanggal: new Date().toISOString(),\n  instansi_id: b.instansi_id || $input.item.json.query?.instansi_id || 'bapperida'\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        -176
+      ],
+      "id": "761661ae-6ee4-44ff-aa5d-c9f33c684f2a",
+      "name": "Calc Mutasi"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"SIMAPO\".mutasi_barang (id, barangmasukid, barangkeluarid, createdbyid, jumlah, keterangan, tanggal, instansi_id) VALUES (gen_random_uuid(), {{ ($json.barangmasukid ? \"'\" + $json.barangmasukid + \"'\" : 'NULL').toString().replace(/'/g, \"''\") }}, {{ ($json.barangkeluarid ? \"'\" + $json.barangkeluarid + \"'\" : 'NULL').toString().replace(/'/g, \"''\") }}, '{{ ($json.createdbyid).toString().replace(/'/g, \"''\") }}', {{ ($json.jumlah).toString().replace(/'/g, \"''\") }}, '{{ ($json.keterangan).toString().replace(/'/g, \"''\") }}', '{{ ($json.tanggal).toString().replace(/'/g, \"''\") }}', '{{ ($json.instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}'); UPDATE \"SIMAPO\".barang SET stok_saat_ini = GREATEST(0, stok_saat_ini + ({{ ($json.delta).toString().replace(/'/g, \"''\") }})), updatedat = NOW() WHERE id = '{{ ($json.barangid).toString().replace(/'/g, \"''\") }}' RETURNING id, stok_saat_ini;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        176,
+        -176
+      ],
+      "id": "7b3498e3-b535-4657-b03a-f745a72f48da",
+      "name": "PG Save Mutasi",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        416,
+        -176
+      ],
+      "id": "c0d7a4b0-6a84-4c9b-8bbb-b339225faf21",
+      "name": "Res Catat Mutasi"
+    },
+    {
+      "parameters": {
+        "path": "simapo-mutasi-list",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        128
+      ],
+      "id": "a96f4693-1db8-47a4-b573-e07f7103abe9",
+      "name": "WH Mutasi List",
+      "webhookId": "simapo-mutasi-list",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\nSELECT m.id, b.nama AS nama_barang, b.kodebarang, m.jumlah, m.keterangan, m.createdbyid, COALESCE(u.\"username\", m.createdbyid) AS nama_petugas, TO_CHAR(m.tanggal,'YYYY-MM-DD HH24:MI') AS createdat, CASE WHEN m.barangmasukid IS NOT NULL THEN 'MASUK' ELSE 'KELUAR' END as jenis FROM \"SIMAPO\".mutasi_barang m LEFT JOIN \"SIMAPO\".barang b ON b.id = COALESCE(m.barangmasukid, m.barangkeluarid) LEFT JOIN public.user_list u ON u.\"NIP\" = m.createdbyid WHERE m.instansi_id = '{{ ($json.query.instansi_id || 'bapperida').toString().replace(/'/g, \"''\") }}' ORDER BY m.tanggal DESC LIMIT 50\n) t;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        128
+      ],
+      "id": "b14ce0ea-7aab-49ca-afd1-a3beb100c1b9",
+      "name": "PG Mutasi List",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: $input.all()[0].json.items || [] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        128
+      ],
+      "id": "dfd21201-776c-4a0a-8980-f8e8533b4f71",
+      "name": "Agg Mutasi"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        416,
+        128
+      ],
+      "id": "e2e50f9c-f53b-4cbd-8adc-8e529f7c69b3",
+      "name": "Res Mutasi List"
+    }
+  ],
+  "connections": {
+    "WH Catat Mutasi": {
+      "main": [
+        [
+          {
+            "node": "Calc Mutasi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calc Mutasi": {
+      "main": [
+        [
+          {
+            "node": "PG Save Mutasi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Save Mutasi": {
+      "main": [
+        [
+          {
+            "node": "Res Catat Mutasi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Mutasi List": {
+      "main": [
+        [
+          {
+            "node": "PG Mutasi List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Mutasi List": {
+      "main": [
+        [
+          {
+            "node": "Agg Mutasi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Mutasi": {
+      "main": [
+        [
+          {
+            "node": "Res Mutasi List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4b55943efb5f219d407bc408d9277d6d643804fc75070b4ed56250fe03c8ea67"
+  }
+}

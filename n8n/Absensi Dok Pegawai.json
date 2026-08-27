@@ -1,0 +1,619 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ok:true, data:$input.all().map(i=>i.json)}) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -368,
+        256
+      ],
+      "id": "d00a861e-a8e0-4809-8cb4-63251c87f321",
+      "name": "Respond Dokumen Get"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT file as file_base64, 'application/pdf' as mime_type FROM \"dokumen_pegawai\" WHERE nama_dokumen = '{{ ($json.query.id).toString().replace(/'/g, \"''\") }}' AND nip = '{{ ($json.query.nip).toString().replace(/'/g, \"''\") }}' LIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -592,
+        256
+      ],
+      "id": "b8db69b4-c2c1-41bd-9275-8c82a95f53b1",
+      "name": "Get File Content",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const method=$input.first().json.headers?.['x-forwarded-method']||$input.first().json.method||'';\nif(method==='OPTIONS'){$execution.respond({statusCode:200,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,OPTIONS','Access-Control-Allow-Headers':'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'},body:''});return[];}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -816,
+        256
+      ],
+      "id": "d0b5a47d-5596-4cf9-94ab-3748ed9a3406",
+      "name": "CORS Dokumen Get"
+    },
+    {
+      "parameters": {
+        "path": "dokumen-get",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "authentication": "none"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1040,
+        256
+      ],
+      "id": "acf891d7-949a-4636-8637-fef34d5016cf",
+      "name": "Webhook Dokumen Get",
+      "webhookId": "dokumen-get-0001",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "user_list",
+          "mode": "list",
+          "cachedResultName": "user_list"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "NIP",
+              "value": "={{ $json.query.nip}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -592,
+        32
+      ],
+      "id": "5fc8fe6e-6940-4fd6-b213-eb113987fb3f",
+      "name": "Select rows from a table",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ok:true,message:'Dokumen berhasil dihapus'}) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -384,
+        -192
+      ],
+      "id": "c6f8b261-764c-466e-bd12-07ca54d5b867",
+      "name": "Respond Dokumen Delete"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM \"dokumen_pegawai\" WHERE \"user_id\"::text = '{{ ($input.first().json.body.user_id || $input.first().json.user_id).toString().replace(/'/g, \"''\") }}' AND \"nama_dokumen\" = '{{ ($input.first().json.body.id || $input.first().json.id).toString().replace(/'/g, \"''\") }}' RETURNING *",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -592,
+        -192
+      ],
+      "id": "2ab9aa54-1a68-4c8e-a94e-16aeb3de025e",
+      "name": "Delete Dokumen",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dokumen-delete",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "authentication": "none"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1040,
+        -192
+      ],
+      "id": "bcdedcd9-263d-4094-a198-11e9db2a2e78",
+      "name": "Webhook Dokumen Delete",
+      "webhookId": "dokumen-delete-0001",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const method=$input.first().json.headers?.['x-forwarded-method']||$input.first().json.method||'';\nif(method==='OPTIONS'){$execution.respond({statusCode:200,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'},body:''});return[];}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -816,
+        -192
+      ],
+      "id": "e9598001-aa90-487b-8a8a-2b103c1189bb",
+      "name": "CORS Dokumen Delete"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ok:false,message:$json.message||'Input tidak valid'}) }}",
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -1040,
+        -640
+      ],
+      "id": "acb099c9-8637-4d61-be0e-7bc273fba7a9",
+      "name": "Respond Dokumen Add Fail"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ok:true,message:'Dokumen berhasil disimpan',data:$json}) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -144,
+        -416
+      ],
+      "id": "f4caa43a-74b9-45de-a62b-81437f29d14f",
+      "name": "Respond Dokumen Add"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"public\".\"dokumen_pegawai\" (\n    \"nip\", \n    \"nama_dokumen\", \n    \"jenis\", \n    \"tanggal\", \n    \"instansi_id\", \n    \"link\", \n    \"file\", \n    \"tambah_oleh\"\n) VALUES (\n    '{{ ($json.nip).toString().replace(/'/g, \"''\") }}', \n    '{{ ($json.nama_dokumen).toString().replace(/'/g, \"''\") }}', \n    '{{ ($json.jenis).toString().replace(/'/g, \"''\") }}', \n    '{{ ($json.tanggal).toString().replace(/'/g, \"''\") }}', \n    'bapperida', \n    '{{ ($json.link).toString().replace(/'/g, \"''\") }}', \n    NULLIF('{{ ($json.file_base64).toString().replace(/'/g, \"''\") }}', ''), \n    '{{ ($json.tambah_oleh).toString().replace(/'/g, \"''\") }}'\n) RETURNING *;",
+        "options": {
+          "queryBatching": "independently"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -368,
+        -416
+      ],
+      "id": "b97461b7-0cdc-45cd-9792-39becd3957b4",
+      "name": "Insert Dokumen",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json || {};\nconst userId = String(body.user_id || '').trim();\nconst nama = String(body.nama_dokumen || body.nama || '').trim();\nconst jenis = (body.jenis || body.kategori || 'DOKUMEN').toUpperCase();\n\n// Mengatur nilai default jika link tidak diinput\nlet link = body.link || body.webViewLink || '';\nif (!link) {\n    link = '-'; \n}\n\nconst mode = body.mode || 'link';\nconst file_base64 = body.file_base64 || null;\nconst file_name = body.file_name || null;\nconst mime_type = body.mime_type || 'application/octet-stream';\nconst tanggal = new Date().toISOString().slice(0, 10);\nconst tambah_oleh = String(body.tambah_oleh || body.added_by || userId);\n\n// Validasi\nif (!userId) return [{json:{error:true,message:'user_id wajib diisi'}}];\nif (!nama)   return [{json:{error:true,message:'nama_dokumen wajib diisi'}}];\nif (mode === 'upload' && !file_base64) return [{json:{error:true,message:'file_base64 wajib diisi untuk mode upload'}}];\n\nreturn [{\n    json: {\n        user_id: Number(userId) || userId,\n        nama_dokumen: nama,\n        jenis: jenis,\n        link: link,\n        file_base64: file_base64,\n        file_name: file_name,\n        mime_type: mime_type,\n        tanggal: tanggal,\n        tambah_oleh: tambah_oleh,\n        mode: mode,\n        error: false\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -592,
+        -416
+      ],
+      "id": "ed399da9-0305-4e87-a392-22652436513e",
+      "name": "Parse Dokumen Add"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dokumen-add",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "authentication": "none"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1040,
+        -416
+      ],
+      "id": "a69262e1-d5c6-488e-a43f-729456a95e47",
+      "name": "Webhook Dokumen Add",
+      "webhookId": "dokumen-add-0001",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const method=$input.first().json.headers?.['x-forwarded-method']||$input.first().json.method||'';\nif(method==='OPTIONS'){$execution.respond({statusCode:200,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'},body:''});return[];}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -816,
+        -416
+      ],
+      "id": "994bf1e9-094c-4587-baba-dc919c7dd7f4",
+      "name": "CORS Dokumen Add"
+    },
+    {
+      "parameters": {
+        "path": "dokumen-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "authentication": "none"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1040,
+        32
+      ],
+      "id": "58d8f36a-2c41-41fa-b33a-44959e3a4224",
+      "name": "Dokumen List Webhook",
+      "webhookId": "dokumen-list-0001",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const method=$input.first().json.headers?.['x-forwarded-method']||$input.first().json.method||'';\nif(method==='OPTIONS'){$execution.respond({statusCode:200,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'},body:''});return[];}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -816,
+        32
+      ],
+      "id": "fcabbe6a-07ff-4093-8d82-c176a10bf5af",
+      "name": "CORS Dokumen List"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT nip, nama_dokumen, jenis, tanggal, instansi_id, link, tambah_oleh FROM \"dokumen_pegawai\" WHERE nip = '{{ ($json.NIP).toString().replace(/'/g, \"''\") }}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -368,
+        32
+      ],
+      "id": "e1dc980f-ce25-4c79-9790-8ef0864b22a6",
+      "name": "Get Dokumen by user_id",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\n\nif (rows.length === 0 || Object.keys(rows[0]).length === 0) {\n  return [{ json: { ok: true, data: [], count: 0 } }];\n}\n\nconst docs = rows.map(r => ({\n  // Menggunakan nama_dokumen sebagai ID sementara karena kolom ID fisik belum ada\n  id:           r.nama_dokumen || '', \n  nip:          r.nip || '',\n  nama_dokumen: r.nama_dokumen || '—',\n  jenis:        (r.jenis || 'DOKUMEN').toUpperCase(),\n  link:         (r.link === '-' ? '' : r.link) || '',\n  tanggal:      r.tanggal || '',\n  tambah_oleh:  r.tambah_oleh || ''\n}));\n\nreturn [{ json: { ok: true, data: docs, count: docs.length } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        32
+      ],
+      "id": "41716aac-9d73-4e62-b6c8-ae4070a3f1c0",
+      "name": "Format Dokumen"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        80,
+        32
+      ],
+      "id": "6d591672-cb01-4b30-b9e5-96ed3625427c",
+      "name": "Respond Dokumen List"
+    }
+  ],
+  "connections": {
+    "Get File Content": {
+      "main": [
+        [
+          {
+            "node": "Respond Dokumen Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS Dokumen Get": {
+      "main": [
+        [
+          {
+            "node": "Get File Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Dokumen Get": {
+      "main": [
+        [
+          {
+            "node": "CORS Dokumen Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table": {
+      "main": [
+        [
+          {
+            "node": "Get Dokumen by user_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Dokumen": {
+      "main": [
+        [
+          {
+            "node": "Respond Dokumen Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Dokumen Delete": {
+      "main": [
+        [
+          {
+            "node": "CORS Dokumen Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS Dokumen Delete": {
+      "main": [
+        [
+          {
+            "node": "Delete Dokumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Dokumen": {
+      "main": [
+        [
+          {
+            "node": "Respond Dokumen Add",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Dokumen Add": {
+      "main": [
+        [
+          {
+            "node": "Insert Dokumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Dokumen Add": {
+      "main": [
+        [
+          {
+            "node": "CORS Dokumen Add",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS Dokumen Add": {
+      "main": [
+        [
+          {
+            "node": "Parse Dokumen Add",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dokumen List Webhook": {
+      "main": [
+        [
+          {
+            "node": "CORS Dokumen List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS Dokumen List": {
+      "main": [
+        [
+          {
+            "node": "Select rows from a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Dokumen by user_id": {
+      "main": [
+        [
+          {
+            "node": "Format Dokumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Dokumen": {
+      "main": [
+        [
+          {
+            "node": "Respond Dokumen List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4b55943efb5f219d407bc408d9277d6d643804fc75070b4ed56250fe03c8ea67"
+  }
+}

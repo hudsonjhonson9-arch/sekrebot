@@ -1,0 +1,251 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "path": "instansi-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "authentication": "none"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1e956403-cc5d-4f11-8e50-2d852aab910d",
+      "name": "Webhook GET Instansi List",
+      "webhookId": "instansi-list-0001",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const method = $input.first().json.headers?.['x-forwarded-method'] || $input.first().json.method || '';\nif (method === 'OPTIONS') {\n  $execution.respond({\n    statusCode: 200,\n    headers: {\n      'Access-Control-Allow-Origin': '*',\n      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',\n      'Access-Control-Allow-Headers': 'Content-Type, ngrok-skip-browser-warning, Accept, Authorization, X-App-Token'\n    },\n    body: ''\n  });\n  return [];\n}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        0
+      ],
+      "id": "cfc27389-70bd-4ff2-bca0-2cf8eaad102d",
+      "name": "CORS GET Instansi List"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "ALTER TABLE instansi_list ADD COLUMN IF NOT EXISTS header TEXT;\nSELECT * FROM instansi_list ORDER BY nama_instansi ASC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        0
+      ],
+      "id": "60f279d6-52c6-4d2d-be20-2df5e08b1a3e",
+      "name": "Execute GET Query",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($input.all().map(i => i.json)) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        600,
+        0
+      ],
+      "id": "d0ea71a0-ba09-411a-8cfa-2cb8ea78daef",
+      "name": "Respond GET"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "instansi-update",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "authentication": "none"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        200
+      ],
+      "id": "8a892dfd-2309-4ce4-8fa2-2dfc9aa2980d",
+      "name": "Webhook POST Instansi Update",
+      "webhookId": "instansi-update-0001",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const method = $input.first().json.headers?.['x-forwarded-method'] || $input.first().json.method || '';\nif (method === 'OPTIONS') {\n  $execution.respond({\n    statusCode: 200,\n    headers: {\n      'Access-Control-Allow-Origin': '*',\n      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',\n      'Access-Control-Allow-Headers': 'Content-Type, ngrok-skip-browser-warning, Accept, Authorization, X-App-Token'\n    },\n    body: ''\n  });\n  return [];\n}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        200
+      ],
+      "id": "70f2f3da-a2bb-4c28-be5b-21d9da7d1ad0",
+      "name": "CORS POST Instansi Update"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "ALTER TABLE instansi_list ADD COLUMN IF NOT EXISTS header TEXT;\nUPDATE instansi_list \nSET header = '{{ ($json.body.header).toString().replace(/'/g, \"''\") }}', \n    nama_instansi = '{{ ($json.body.nama_instansi).toString().replace(/'/g, \"''\") }}', \n    logo_url = '{{ ($json.body.logo_url).toString().replace(/'/g, \"''\") }}', \n    alamat = '{{ ($json.body.alamat).toString().replace(/'/g, \"''\") }}'\nWHERE id = '{{ ($json.body.id).toString().replace(/'/g, \"''\") }}'\nRETURNING *;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        200
+      ],
+      "id": "f0a2ba1c-f230-4e2b-be2b-2dcfbb1d7f02",
+      "name": "Execute POST Query",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\":true,\"message\":\"Header instansi berhasil diperbarui\"}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        600,
+        200
+      ],
+      "id": "cc02af3b-a2eb-4fe1-be6b-2da6ea78d0f1",
+      "name": "Respond POST"
+    }
+  ],
+  "connections": {
+    "Webhook GET Instansi List": {
+      "main": [
+        [
+          {
+            "node": "CORS GET Instansi List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS GET Instansi List": {
+      "main": [
+        [
+          {
+            "node": "Execute GET Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute GET Query": {
+      "main": [
+        [
+          {
+            "node": "Respond GET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook POST Instansi Update": {
+      "main": [
+        [
+          {
+            "node": "CORS POST Instansi Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS POST Instansi Update": {
+      "main": [
+        [
+          {
+            "node": "Execute POST Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute POST Query": {
+      "main": [
+        [
+          {
+            "node": "Respond POST",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "4b55943efb5f219d407bc408d9277d6d643804fc75070b4ed56250fe03c8ea67"
+  }
+}

@@ -1,0 +1,892 @@
+﻿{
+    "nodes":  [
+                  {
+                      "parameters":  {
+                                         "path":  "simapo-penerimaan-get",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+                                                         "allowedOrigins":  "*"
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1728,
+                                       -1856
+                                   ],
+                      "id":  "65f0dc83-e6a8-4049-90df-26c02dd09a84",
+                      "name":  "WH Penerimaan GET",
+                      "webhookId":  "simapo-penerimaan-get"
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "executeQuery",
+                                         "query":  "\nSELECT json_build_object(\n  \u0027kodefikasi\u0027, (SELECT COALESCE(json_agg(k.* ORDER BY k.path), \u0027[]\u0027::json) FROM \"SIMAPO\".kodefikasi_barang k),\n  \u0027rekening\u0027, (SELECT COALESCE(json_agg(r.* ORDER BY r.kode), \u0027[]\u0027::json) FROM \"SIMAPO\".rekening_belanja r),\n  \u0027barang\u0027, (SELECT COALESCE(json_agg(b.* ORDER BY b.nama), \u0027[]\u0027::json) FROM \"SIMAPO\".barang b WHERE b.instansi_id = \u0027{{ ($json.query.instansi_id || $json.params?.instansi_id || \u0027bapperida\u0027).toString().replace(/\u0027/g, \"\u0027\u0027\") }}\u0027),\n  \u0027periode\u0027, (SELECT json_build_object(\u0027bulan\u0027, EXTRACT(MONTH FROM NOW())::int, \u0027tahun\u0027, EXTRACT(YEAR FROM NOW())::int))\n) as data\n",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.postgres",
+                      "typeVersion":  2.6,
+                      "position":  [
+                                       -1504,
+                                       -1856
+                                   ],
+                      "id":  "a28ad27c-2d54-49e4-8138-2a9118907744",
+                      "name":  "PG Master",
+                      "alwaysOutputData":  true,
+                      "credentials":  {
+                                          "postgres":  {
+                                                           "id":  "vYOiyrTftLtD3zzd",
+                                                           "name":  "Postgres account"
+                                                       }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "text",
+                                         "responseBody":  "={{ JSON.stringify($json) }}",
+                                         "options":  {
+                                                         "responseHeaders":  {
+                                                                                 "entries":  [
+                                                                                                 {
+                                                                                                     "name":  "Content-Type",
+                                                                                                     "value":  "application/json"
+                                                                                                 }
+                                                                                             ]
+                                                                             }
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       -1280,
+                                       -1856
+                                   ],
+                      "id":  "46f2bf36-ac43-4521-9a30-3f5a4389ce76",
+                      "name":  "Res Master"
+                  },
+                  {
+                      "parameters":  {
+                                         "httpMethod":  "POST",
+                                         "path":  "simapo-penerimaan",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+                                                         "allowedOrigins":  "*"
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1728,
+                                       -1632
+                                   ],
+                      "id":  "612ba7d2-012e-4285-bdbd-5c5a40faa4d0",
+                      "name":  "WH Penerimaan POST",
+                      "webhookId":  "simapo-penerimaan"
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const body = $json.body || $json;\nconst items = body.items || [];\nif (!body.no_nota || !body.tgl_nota || !body.penyedia || !items.length) {\n  throw new Error(\u0027no_nota, tgl_nota, penyedia, dan items wajib diisi\u0027);\n}\nconst instansi_id = body.instansi_id || \u0027bapperida\u0027;\nconst total = body.total_nilai || items.reduce((s,i) =\u003e s + (parseFloat(i.volume)||0)*(parseFloat(i.harga_satuan)||0), 0);\nconst detailRows = items.map(i =\u003e `(\u0027${i.barang_id}\u0027, ${i.volume || 1}, ${i.harga_satuan || 0}, ${(i.volume||1)*(i.harga_satuan||0)})`).join(\u0027,\\n\u0027);\nreturn [{\n  no_nota: body.no_nota.replace(/\u0027/g, \"\u0027\u0027\"),\n  tgl_nota: body.tgl_nota,\n  penyedia: body.penyedia.replace(/\u0027/g, \"\u0027\u0027\"),\n  total_nilai: total,\n  no_sp2d: (body.no_sp2d||\u0027\u0027).replace(/\u0027/g, \"\u0027\u0027\"),\n  kontrak: (body.kontrak||\u0027\u0027).replace(/\u0027/g, \"\u0027\u0027\"),\n  sub_kegiatan: (body.sub_kegiatan||\u0027\u0027).replace(/\u0027/g, \"\u0027\u0027\"),\n  status_spj: body.status_spj || \u0027belum_dikumpulkan\u0027,\n  instansi_id: instansi_id,\n  detail_rows: detailRows,\n  items: items,\n  created_by: body.created_by || \u0027system\u0027\n}];"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1504,
+                                       -1632
+                                   ],
+                      "id":  "ca70a944-3810-4e10-9104-693138cf066f",
+                      "name":  "Parse Penerimaan",
+                      "alwaysOutputData":  true
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "executeQuery",
+                                         "query":  "WITH nota AS (\n  INSERT INTO \"SIMAPO\".penerimaan_barang (instansi_id, no_nota, tgl_nota, penyedia, total_nilai, no_sp2d, kontrak, sub_kegiatan, status_spj, created_by)\n  VALUES (\n    \u0027{{ $json.instansi_id }}\u0027,\n    \u0027{{ $json.no_nota }}\u0027,\n    \u0027{{ $json.tgl_nota }}\u0027,\n    \u0027{{ $json.penyedia }}\u0027,\n    {{ $json.total_nilai }},\n    \u0027{{ $json.no_sp2d }}\u0027,\n    \u0027{{ $json.kontrak }}\u0027,\n    \u0027{{ $json.sub_kegiatan }}\u0027,\n    \u0027{{ $json.status_spj }}\u0027,\n    \u0027{{ $json.created_by }}\u0027\n  )\n  RETURNING id\n)\nSELECT nota.id FROM nota",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.postgres",
+                      "typeVersion":  2.6,
+                      "position":  [
+                                       -1280,
+                                       -1632
+                                   ],
+                      "id":  "955064bc-f79c-4868-995d-c59597cbb23a",
+                      "name":  "PG Simpan Nota",
+                      "alwaysOutputData":  true,
+                      "credentials":  {
+                                          "postgres":  {
+                                                           "id":  "vYOiyrTftLtD3zzd",
+                                                           "name":  "Postgres account"
+                                                       }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "\nconst nota_id = $json[0]?.id || $json?.id || $json?.rows?.[0]?.id;\nif (!nota_id) throw new Error(\u0027Gagal menyimpan nota\u0027);\nconst prev = $input.first().json;\nconst detailRows = prev.detail_rows;\n\nreturn [{\n  nota_id: nota_id,\n  detail_rows: detailRows,\n  prev: prev\n}];\n"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1056,
+                                       -1632
+                                   ],
+                      "id":  "765c959e-9a36-4c12-89f1-bea4b84721c8",
+                      "name":  "Parse Detail",
+                      "alwaysOutputData":  true
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "executeQuery",
+                                         "query":  "\nINSERT INTO \"SIMAPO\".detail_penerimaan (penerimaan_id, barang_id, volume, harga_satuan, total_harga)\nVALUES\n{{ $json.detail_rows }};\n\n-- Update stok barang\nWITH items AS (\n  SELECT d.barang_id, SUM(d.volume) as vol\n  FROM \"SIMAPO\".detail_penerimaan d\n  WHERE d.penerimaan_id = \u0027{{ $json.nota_id }}\u0027\n  GROUP BY d.barang_id\n)\nUPDATE \"SIMAPO\".barang b\nSET stok_saat_ini = COALESCE(b.stok_saat_ini, 0) + i.vol\nFROM items i\nWHERE b.id = i.barang_id;\n",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.postgres",
+                      "typeVersion":  2.6,
+                      "position":  [
+                                       -832,
+                                       -1632
+                                   ],
+                      "id":  "bec4a898-6930-4829-b489-5b77d942181b",
+                      "name":  "PG Simpan Detail",
+                      "alwaysOutputData":  true,
+                      "credentials":  {
+                                          "postgres":  {
+                                                           "id":  "vYOiyrTftLtD3zzd",
+                                                           "name":  "Postgres account"
+                                                       }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "text",
+                                         "responseBody":  "={{ JSON.stringify($json) }}",
+                                         "options":  {
+                                                         "responseHeaders":  {
+                                                                                 "entries":  [
+                                                                                                 {
+                                                                                                     "name":  "Content-Type",
+                                                                                                     "value":  "application/json"
+                                                                                                 }
+                                                                                             ]
+                                                                             }
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       -608,
+                                       -1632
+                                   ],
+                      "id":  "e852ece3-2acf-4af5-90eb-1e7b2a72e152",
+                      "name":  "Res Simpan"
+                  },
+                  {
+                      "parameters":  {
+                                         "httpMethod":  "PATCH",
+                                         "path":  "simapo-penerimaan-status",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+                                                         "allowedOrigins":  "*"
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1728,
+                                       -1408
+                                   ],
+                      "id":  "a5a29fd8-9be6-4f53-9674-b937138721d6",
+                      "name":  "WH Status",
+                      "webhookId":  "simapo-penerimaan-status"
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "executeQuery",
+                                         "query":  "\nUPDATE \"SIMAPO\".penerimaan_barang\nSET status_spj = \u0027{{ $json.body.status_spj }}\u0027, updated_at = CURRENT_TIMESTAMP\nWHERE id = \u0027{{ $json.body.id }}\u0027\nRETURNING id, status_spj, updated_at\n",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.postgres",
+                      "typeVersion":  2.6,
+                      "position":  [
+                                       -1504,
+                                       -1408
+                                   ],
+                      "id":  "c3400fe4-7bf5-4c31-bf78-c2a5c7b7a86e",
+                      "name":  "PG Update Status",
+                      "alwaysOutputData":  true,
+                      "credentials":  {
+                                          "postgres":  {
+                                                           "id":  "vYOiyrTftLtD3zzd",
+                                                           "name":  "Postgres account"
+                                                       }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "text",
+                                         "responseBody":  "={{ JSON.stringify($json) }}",
+                                         "options":  {
+                                                         "responseHeaders":  {
+                                                                                 "entries":  [
+                                                                                                 {
+                                                                                                     "name":  "Content-Type",
+                                                                                                     "value":  "application/json"
+                                                                                                 }
+                                                                                             ]
+                                                                             }
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       -1280,
+                                       -1408
+                                   ],
+                      "id":  "7799fc28-d4ff-430e-8613-6c3802f46ae2",
+                      "name":  "Res Status"
+                  },
+                  {
+                      "parameters":  {
+                                         "path":  "simapo-pemeliharaan",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+                                                         "allowedOrigins":  "*"
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1728,
+                                       -1184
+                                   ],
+                      "id":  "447520c0-ed4a-4a70-9f13-5b0660cb5d2d",
+                      "name":  "WH Pemeliharaan GET",
+                      "webhookId":  "simapo-pemeliharaan"
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "executeQuery",
+                                         "query":  "\nSELECT COALESCE(json_agg(p.* ORDER BY p.tgl_pemeliharaan DESC), \u0027[]\u0027::json) as items\nFROM \"SIMAPO\".pemeliharaan p\nWHERE p.barang_id = \u0027{ ($json.query.barang_id || \u0027\u0027).toString() }\u0027\n  AND p.instansi_id = \u0027WHERE b.instansi_id = \u0027{{ ($json.query.instansi_id || $json.params?.instansi_id || \u0027bapperida\u0027).toString().replace(/\u0027/g, \"\u0027\u0027\") }}\u0027\u0027\n",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.postgres",
+                      "typeVersion":  2.6,
+                      "position":  [
+                                       -1504,
+                                       -1184
+                                   ],
+                      "id":  "03a7433d-00f9-4013-9e59-10df3feb2966",
+                      "name":  "PG Riwayat",
+                      "alwaysOutputData":  true,
+                      "credentials":  {
+                                          "postgres":  {
+                                                           "id":  "vYOiyrTftLtD3zzd",
+                                                           "name":  "Postgres account"
+                                                       }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "text",
+                                         "responseBody":  "={{ JSON.stringify($json) }}",
+                                         "options":  {
+                                                         "responseHeaders":  {
+                                                                                 "entries":  [
+                                                                                                 {
+                                                                                                     "name":  "Content-Type",
+                                                                                                     "value":  "application/json"
+                                                                                                 }
+                                                                                             ]
+                                                                             }
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       -1280,
+                                       -1184
+                                   ],
+                      "id":  "8897bd66-09d5-4c61-b0d8-ea692a4a2d84",
+                      "name":  "Res Riwayat"
+                  },
+                  {
+                      "parameters":  {
+                                         "httpMethod":  "POST",
+                                         "path":  "simapo-pemeliharaan-post",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+                                                         "allowedOrigins":  "*"
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1728,
+                                       -960
+                                   ],
+                      "id":  "2c6f9c8e-942a-47f9-a0b0-020148f63810",
+                      "name":  "WH Pemeliharaan POST",
+                      "webhookId":  "simapo-pemeliharaan-post"
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "executeQuery",
+                                         "query":  "\nINSERT INTO \"SIMAPO\".pemeliharaan (instansi_id, barang_id, tgl_pemeliharaan, jenis_pemeliharaan, biaya, nama_penyedia, bentuk_kontrak, keterangan)\nVALUES (\n  \u0027{{ $json.body.instansi_id || \u0027bapperida\u0027 }}\u0027,\n  \u0027{{ $json.body.barang_id }}\u0027,\n  \u0027{{ $json.body.tgl_pemeliharaan }}\u0027,\n  \u0027{{ $json.body.jenis_pemeliharaan }}\u0027,\n  {{ $json.body.biaya || 0 }},\n  \u0027{{ ($json.body.nama_penyedia || \u0027\u0027).replace(/\u0027/g, \"\u0027\u0027\") }}\u0027,\n  \u0027{{ ($json.body.bentuk_kontrak || \u0027\u0027).replace(/\u0027/g, \"\u0027\u0027\") }}\u0027,\n  \u0027{{ ($json.body.keterangan || \u0027\u0027).replace(/\u0027/g, \"\u0027\u0027\") }}\u0027\n)\nRETURNING id\n",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.postgres",
+                      "typeVersion":  2.6,
+                      "position":  [
+                                       -1504,
+                                       -960
+                                   ],
+                      "id":  "a560f8cd-22fe-47e9-bc9a-783ab66c220e",
+                      "name":  "PG Simpan Pemeliharaan",
+                      "alwaysOutputData":  true,
+                      "credentials":  {
+                                          "postgres":  {
+                                                           "id":  "vYOiyrTftLtD3zzd",
+                                                           "name":  "Postgres account"
+                                                       }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "text",
+                                         "responseBody":  "={{ JSON.stringify($json) }}",
+                                         "options":  {
+                                                         "responseHeaders":  {
+                                                                                 "entries":  [
+                                                                                                 {
+                                                                                                     "name":  "Content-Type",
+                                                                                                     "value":  "application/json"
+                                                                                                 }
+                                                                                             ]
+                                                                             }
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       -1280,
+                                       -960
+                                   ],
+                      "id":  "bed627b8-8a91-43fa-b54b-6044357792ec",
+                      "name":  "Res Pemeliharaan"
+                  },
+                  {
+                      "parameters":  {
+                                         "httpMethod":  [
+                                                            "GET",
+                                                            "POST"
+                                                        ],
+                                         "path":  "simapo-bku",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+                                                         "allowedOrigins":  "*"
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1728,
+                                       -688
+                                   ],
+                      "id":  "9075f7fb-369a-4132-b1a3-d63972d4b164",
+                      "name":  "WH BKU",
+                      "webhookId":  "simapo-bku"
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "string":  [
+                                                                                                  {
+                                                                                                      "value1":  "={{ @{nodes=System.Object[]; connections=; pinData=; meta=}.body.rows }}",
+                                                                                                      "operation":  "isNotEmpty",
+                                                                                                      "value2":  ""
+                                                                                                  }
+                                                                                              ]
+                                                                               },
+                                                                               {
+                                                                                   "string":  [
+                                                                                                  {
+                                                                                                      "value1":  "={{ @{nodes=System.Object[]; connections=; pinData=; meta=}.body.uraian }}",
+                                                                                                      "operation":  "isNotEmpty",
+                                                                                                      "value2":  ""
+                                                                                                  }
+                                                                                              ]
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "or"
+                                                        },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1504,
+                                       -688
+                                   ],
+                      "id":  "d035ba7f-7269-4bfd-a343-7bef9f952f11",
+                      "name":  "IF Method"
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "let raw = $json.body;\nif (!raw || (typeof raw === \u0027object\u0027 \u0026\u0026 !Array.isArray(raw) \u0026\u0026 !Object.keys(raw).length)) {\n  if ($json.rawBody) { try { raw = JSON.parse($json.rawBody); } catch {} }\n  if (!raw || (typeof raw === \u0027object\u0027 \u0026\u0026 !Array.isArray(raw) \u0026\u0026 !Object.keys(raw).length)) {\n    raw = $json;\n  }\n}\nconst src = (raw \u0026\u0026 raw.rows) ? raw : ((raw \u0026\u0026 raw.body) || raw);\nlet rows = src.rows || [];\nif (!rows.length \u0026\u0026 src.uraian) { rows = [src]; }\nif (!rows.length) throw new Error(\u0027Data BKU kosong\u0027);\nconst instansi_id = src.instansi_id || \u0027bapperida\u0027;\nconst bulan = src.bulan || new Date().getMonth() + 1;\nconst tahun = src.tahun || new Date().getFullYear();\nreturn rows.map(r =\u003e ({\n  instansi_id: instansi_id,\n  bulan: bulan,\n  tahun: tahun,\n  no_urut: r.no_urut || null,\n  tgl: r.tgl || null,\n  uraian: (r.uraian || \u0027\u0027).replace(/\u0027/g, \"\u0027\u0027\"),\n  kode_rekening: (r.kode_rekening || \u0027\u0027).replace(/\u0027/g, \"\u0027\u0027\"),\n  penerimaan: parseFloat(r.penerimaan) || 0,\n  pengeluaran: parseFloat(r.pengeluaran) || 0,\n  saldo: parseFloat(r.saldo) || 0\n}));"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1280,
+                                       -736
+                                   ],
+                      "id":  "8b8ae8d5-e95e-4a78-a5fa-a75284a71314",
+                      "name":  "Parse BKU",
+                      "alwaysOutputData":  true
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "executeQuery",
+                                         "query":  "WITH inserted AS (\n  INSERT INTO \"SIMAPO\".bku (instansi_id, bulan, tahun, no_urut, tgl, uraian, kode_rekening, penerimaan, pengeluaran, saldo)\n  VALUES\n  {% for row in $json %}\n    (\u0027{{ row.instansi_id }}\u0027, {{ row.bulan }}, {{ row.tahun }}, {{ row.no_urut }}, \u0027{{ row.tgl }}\u0027, \u0027{{ row.uraian }}\u0027, \u0027{{ row.kode_rekening }}\u0027, {{ row.penerimaan }}, {{ row.pengeluaran }}, {{ row.saldo }}){{ \u0027,\u0027 if not loop.last }}\n  {% endfor %}\n  RETURNING id\n)\nSELECT json_agg(id) as ids FROM inserted",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.postgres",
+                      "typeVersion":  2.6,
+                      "position":  [
+                                       -1056,
+                                       -736
+                                   ],
+                      "id":  "fce33fd2-de2d-47a2-abad-ec80cd916b17",
+                      "name":  "PG Insert BKU",
+                      "alwaysOutputData":  true,
+                      "credentials":  {
+                                          "postgres":  {
+                                                           "id":  "vYOiyrTftLtD3zzd",
+                                                           "name":  "Postgres account"
+                                                       }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "text",
+                                         "responseBody":  "={{ JSON.stringify($json) }}",
+                                         "options":  {
+                                                         "responseHeaders":  {
+                                                                                 "entries":  [
+                                                                                                 {
+                                                                                                     "name":  "Content-Type",
+                                                                                                     "value":  "application/json"
+                                                                                                 }
+                                                                                             ]
+                                                                             }
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       -832,
+                                       -736
+                                   ],
+                      "id":  "ddf0005c-213a-4e5b-affb-01d7ff92d816",
+                      "name":  "Res BKU"
+                  },
+                  {
+                      "parameters":  {
+                                         "path":  "simapo-bku-list",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+                                                         "allowedOrigins":  "*"
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1504,
+                                       -448
+                                   ],
+                      "id":  "4ffeef17-abdc-4f4e-a38e-6f59d0b5444d",
+                      "name":  "WH BKU List",
+                      "webhookId":  "simapo-bku-list"
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "executeQuery",
+                                         "query":  "SELECT COALESCE(json_agg(row_to_json(t)), \u0027[]\u0027::json) as data\nFROM (\n  SELECT no_urut, tgl, uraian, kode_rekening, penerimaan, pengeluaran, saldo\n  FROM \"SIMAPO\".bku\n  WHERE instansi_id = \u0027{{ ($json.query.instansi_id || $json.params?.instansi_id || \u0027bapperida\u0027).toString().replace(/\u0027/g, \"\u0027\u0027\") }}\u0027\n  ORDER BY tgl DESC, no_urut ASC\n  LIMIT 200\n) t",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.postgres",
+                      "typeVersion":  2.6,
+                      "position":  [
+                                       -1280,
+                                       -496
+                                   ],
+                      "id":  "a6439574-9d18-4de6-8d43-a98501ec4409",
+                      "name":  "PG BKU List",
+                      "alwaysOutputData":  true,
+                      "credentials":  {
+                                          "postgres":  {
+                                                           "id":  "vYOiyrTftLtD3zzd",
+                                                           "name":  "Postgres account"
+                                                       }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "text",
+                                         "responseBody":  "={{ JSON.stringify($json) }}",
+                                         "options":  {
+                                                         "responseHeaders":  {
+                                                                                 "entries":  [
+                                                                                                 {
+                                                                                                     "name":  "Content-Type",
+                                                                                                     "value":  "application/json"
+                                                                                                 }
+                                                                                             ]
+                                                                             }
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       -1056,
+                                       -496
+                                   ],
+                      "id":  "55edda36-1448-4a5f-b332-2dc559e422f0",
+                      "name":  "Res BKU List"
+                  },
+                  {
+                      "parameters":  {
+                                         "path":  "simapo-rekonsiliasi",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+                                                         "allowedOrigins":  "*"
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1728,
+                                       -224
+                                   ],
+                      "id":  "42c8411d-df19-4423-83a6-794921c14b03",
+                      "name":  "WH Rekonsiliasi",
+                      "webhookId":  "simapo-rekonsiliasi"
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "executeQuery",
+                                         "query":  "\n-- Nota tanpa BKU\nSELECT \u0027nota_tanpa_bku\u0027 as status, p.id as penerimaan_id, NULL as bku_id, p.no_nota, p.tgl_nota, p.total_nilai, NULL as pengeluaran\nFROM \"SIMAPO\".penerimaan_barang p\nWHERE p.instansi_id = \u0027WHERE b.instansi_id = \u0027{{ ($json.query.instansi_id || $json.params?.instansi_id || \u0027bapperida\u0027).toString().replace(/\u0027/g, \"\u0027\u0027\") }}\u0027\u0027\n  AND NOT EXISTS (SELECT 1 FROM \"SIMAPO\".bku b WHERE b.tgl = p.tgl_nota AND b.pengeluaran = p.total_nilai)\nUNION ALL\n-- BKU tanpa nota\nSELECT \u0027bku_tanpa_nota\u0027 as status, NULL, b.id, NULL, b.tgl, NULL, b.pengeluaran\nFROM \"SIMAPO\".bku b\nWHERE b.instansi_id = \u0027WHERE b.instansi_id = \u0027{{ ($json.query.instansi_id || $json.params?.instansi_id || \u0027bapperida\u0027).toString().replace(/\u0027/g, \"\u0027\u0027\") }}\u0027\u0027\n  AND b.pengeluaran \u003e 0\n  AND NOT EXISTS (SELECT 1 FROM \"SIMAPO\".penerimaan_barang p WHERE p.tgl_nota = b.tgl AND p.total_nilai = b.pengeluaran)\nUNION ALL\n-- Cocok\nSELECT \u0027cocok\u0027 as status, p.id, b.id, p.no_nota, p.tgl_nota, p.total_nilai, b.pengeluaran\nFROM \"SIMAPO\".penerimaan_barang p\nJOIN \"SIMAPO\".bku b ON b.tgl = p.tgl_nota AND b.pengeluaran = p.total_nilai\nWHERE p.instansi_id = \u0027WHERE b.instansi_id = \u0027{{ ($json.query.instansi_id || $json.params?.instansi_id || \u0027bapperida\u0027).toString().replace(/\u0027/g, \"\u0027\u0027\") }}\u0027\u0027\nORDER BY tgl_nota DESC NULLS LAST\nLIMIT 200\n",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.postgres",
+                      "typeVersion":  2.6,
+                      "position":  [
+                                       -1504,
+                                       -224
+                                   ],
+                      "id":  "52b64bf1-5bdd-477f-8a8a-27bf9c08b1b3",
+                      "name":  "PG Rekonsiliasi",
+                      "alwaysOutputData":  true,
+                      "credentials":  {
+                                          "postgres":  {
+                                                           "id":  "vYOiyrTftLtD3zzd",
+                                                           "name":  "Postgres account"
+                                                       }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "text",
+                                         "responseBody":  "={{ JSON.stringify($json) }}",
+                                         "options":  {
+                                                         "responseHeaders":  {
+                                                                                 "entries":  [
+                                                                                                 {
+                                                                                                     "name":  "Content-Type",
+                                                                                                     "value":  "application/json"
+                                                                                                 }
+                                                                                             ]
+                                                                             }
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       -1280,
+                                       -224
+                                   ],
+                      "id":  "ac003ffc-dee8-42fa-9b1a-b068396a71b6",
+                      "name":  "Res Rekonsiliasi"
+                  }
+              ],
+    "connections":  {
+                        "WH Penerimaan GET":  {
+                                                  "main":  [
+                                                               [
+                                                                   {
+                                                                       "node":  "PG Master",
+                                                                       "type":  "main",
+                                                                       "index":  0
+                                                                   }
+                                                               ]
+                                                           ]
+                                              },
+                        "PG Master":  {
+                                          "main":  [
+                                                       [
+                                                           {
+                                                               "node":  "Res Master",
+                                                               "type":  "main",
+                                                               "index":  0
+                                                           }
+                                                       ]
+                                                   ]
+                                      },
+                        "WH Penerimaan POST":  {
+                                                   "main":  [
+                                                                [
+                                                                    {
+                                                                        "node":  "Parse Penerimaan",
+                                                                        "type":  "main",
+                                                                        "index":  0
+                                                                    }
+                                                                ]
+                                                            ]
+                                               },
+                        "Parse Penerimaan":  {
+                                                 "main":  [
+                                                              [
+                                                                  {
+                                                                      "node":  "PG Simpan Nota",
+                                                                      "type":  "main",
+                                                                      "index":  0
+                                                                  }
+                                                              ]
+                                                          ]
+                                             },
+                        "PG Simpan Nota":  {
+                                               "main":  [
+                                                            [
+                                                                {
+                                                                    "node":  "Parse Detail",
+                                                                    "type":  "main",
+                                                                    "index":  0
+                                                                }
+                                                            ]
+                                                        ]
+                                           },
+                        "Parse Detail":  {
+                                             "main":  [
+                                                          [
+                                                              {
+                                                                  "node":  "PG Simpan Detail",
+                                                                  "type":  "main",
+                                                                  "index":  0
+                                                              }
+                                                          ]
+                                                      ]
+                                         },
+                        "PG Simpan Detail":  {
+                                                 "main":  [
+                                                              [
+                                                                  {
+                                                                      "node":  "Res Simpan",
+                                                                      "type":  "main",
+                                                                      "index":  0
+                                                                  }
+                                                              ]
+                                                          ]
+                                             },
+                        "WH Status":  {
+                                          "main":  [
+                                                       [
+                                                           {
+                                                               "node":  "PG Update Status",
+                                                               "type":  "main",
+                                                               "index":  0
+                                                           }
+                                                       ]
+                                                   ]
+                                      },
+                        "PG Update Status":  {
+                                                 "main":  [
+                                                              [
+                                                                  {
+                                                                      "node":  "Res Status",
+                                                                      "type":  "main",
+                                                                      "index":  0
+                                                                  }
+                                                              ]
+                                                          ]
+                                             },
+                        "WH Pemeliharaan GET":  {
+                                                    "main":  [
+                                                                 [
+                                                                     {
+                                                                         "node":  "PG Riwayat",
+                                                                         "type":  "main",
+                                                                         "index":  0
+                                                                     }
+                                                                 ]
+                                                             ]
+                                                },
+                        "PG Riwayat":  {
+                                           "main":  [
+                                                        [
+                                                            {
+                                                                "node":  "Res Riwayat",
+                                                                "type":  "main",
+                                                                "index":  0
+                                                            }
+                                                        ]
+                                                    ]
+                                       },
+                        "WH Pemeliharaan POST":  {
+                                                     "main":  [
+                                                                  [
+                                                                      {
+                                                                          "node":  "PG Simpan Pemeliharaan",
+                                                                          "type":  "main",
+                                                                          "index":  0
+                                                                      }
+                                                                  ]
+                                                              ]
+                                                 },
+                        "PG Simpan Pemeliharaan":  {
+                                                       "main":  [
+                                                                    [
+                                                                        {
+                                                                            "node":  "Res Pemeliharaan",
+                                                                            "type":  "main",
+                                                                            "index":  0
+                                                                        }
+                                                                    ]
+                                                                ]
+                                                   },
+                        "WH BKU":  {
+                                       "main":  [
+                                                    [
+                                                        {
+                                                            "node":  "IF Method",
+                                                            "type":  "main",
+                                                            "index":  0
+                                                        }
+                                                    ]
+                                                ]
+                                   },
+                        "IF Method":  {
+                                          "main":  [
+                                                       [
+                                                           {
+                                                               "node":  "Parse BKU",
+                                                               "type":  "main",
+                                                               "index":  0
+                                                           }
+                                                       ],
+                                                       [
+                                                           {
+                                                               "node":  "PG BKU List",
+                                                               "type":  "main",
+                                                               "index":  0
+                                                           }
+                                                       ]
+                                                   ]
+                                      },
+                        "Parse BKU":  {
+                                          "main":  [
+                                                       [
+                                                           {
+                                                               "node":  "PG Insert BKU",
+                                                               "type":  "main",
+                                                               "index":  0
+                                                           }
+                                                       ]
+                                                   ]
+                                      },
+                        "PG Insert BKU":  {
+                                              "main":  [
+                                                           [
+                                                               {
+                                                                   "node":  "Res BKU",
+                                                                   "type":  "main",
+                                                                   "index":  0
+                                                               }
+                                                           ]
+                                                       ]
+                                          },
+                        "WH BKU List":  {
+                                            "main":  [
+                                                         [
+                                                             {
+                                                                 "node":  "PG BKU List",
+                                                                 "type":  "main",
+                                                                 "index":  0
+                                                             }
+                                                         ]
+                                                     ]
+                                        },
+                        "PG BKU List":  {
+                                            "main":  [
+                                                         [
+                                                             {
+                                                                 "node":  "Res BKU List",
+                                                                 "type":  "main",
+                                                                 "index":  0
+                                                             }
+                                                         ]
+                                                     ]
+                                        },
+                        "WH Rekonsiliasi":  {
+                                                "main":  [
+                                                             [
+                                                                 {
+                                                                     "node":  "PG Rekonsiliasi",
+                                                                     "type":  "main",
+                                                                     "index":  0
+                                                                 }
+                                                             ]
+                                                         ]
+                                            },
+                        "PG Rekonsiliasi":  {
+                                                "main":  [
+                                                             [
+                                                                 {
+                                                                     "node":  "Res Rekonsiliasi",
+                                                                     "type":  "main",
+                                                                     "index":  0
+                                                                 }
+                                                             ]
+                                                         ]
+                                            }
+                    },
+    "pinData":  {
+
+                },
+    "meta":  {
+                 "instanceId":  "4b55943efb5f219d407bc408d9277d6d643804fc75070b4ed56250fe03c8ea67"
+             }
+}

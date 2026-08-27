@@ -1,0 +1,12 @@
+{
+  "appId": "com.bapperida.absensi",
+  "appName": "Absensi Digital",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": true,
+      "stats": false
+    }
+  }
+}

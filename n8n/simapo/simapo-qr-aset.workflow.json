@@ -1,0 +1,427 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "path": "simapo-unit-by-qr",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "47fe5311-19cf-4da1-927b-6528810483ae",
+      "name": "WH Unit By QR",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        -656
+      ],
+      "webhookId": "simapo-unit-by-qr"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\n  SELECT ua.id, b.nama AS nama_barang, b.kodebarang, ua.nomorinventaris, ua.kondisi, ua.statuspinjam, b.foto AS foto_barang,\n    (\n      SELECT json_build_object(\n        'id', p.id,\n        'nama', COALESCE(u.\"username\", p.userid),\n        'userid', p.userid\n      )\n      FROM \"SIMAPO\".peminjaman p\n      LEFT JOIN public.user_list u ON u.\"NIP\" = p.userid\n      WHERE p.unitasetid = ua.id AND p.status = 'DIPINJAM'\n      ORDER BY p.createdat DESC LIMIT 1\n    ) AS peminjaman_aktif\n  FROM \"SIMAPO\".unit_aset ua\n  JOIN \"SIMAPO\".barang b ON b.id = ua.barangid\n  WHERE (ua.qrcode = '{{ ($json.query.q).toString().replace(/'/g, \"''\") }}' OR ua.barangid = REPLACE('{{ ($json.query.q).toString().replace(/'/g, \"''\") }}', 'SIMAPO-', ''))\n  ORDER BY ua.nomorinventaris ASC\n) t;",
+        "options": {}
+      },
+      "id": "71f9154d-5c4e-4d17-b15e-6d05689e210e",
+      "name": "PG Unit By QR",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -176,
+        -656
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: $input.all()[0].json.items || [] } }];"
+      },
+      "id": "192a3c35-e98d-45ac-9b6d-09fc6435bc27",
+      "name": "Agg Unit By QR",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        -656
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "438c1be4-b95a-45d5-8164-62bf15591946",
+      "name": "Res Unit By QR",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        304,
+        -656
+      ]
+    },
+    {
+      "parameters": {
+        "path": "simapo-unit-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "7cdf1eba-e88c-4fc0-a65d-c64b6e7f3394",
+      "name": "WH Unit List",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        -352
+      ],
+      "webhookId": "simapo-unit-list"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\n  SELECT ua.id, ua.nomorinventaris, ua.kondisi, ua.statuspinjam,\n    (\n      SELECT COALESCE(u.\"username\", p.userid)\n      FROM \"SIMAPO\".peminjaman p\n      LEFT JOIN public.user_list u ON u.\"NIP\" = p.userid\n      WHERE p.unitasetid = ua.id AND p.status = 'DIPINJAM'\n      ORDER BY p.createdat DESC LIMIT 1\n    ) AS nama_peminjam_saat_ini\n  FROM \"SIMAPO\".unit_aset ua\n  WHERE ua.barangid = '{{ ($json.query.barangid).toString().replace(/'/g, \"''\") }}'\n  ORDER BY ua.nomorinventaris ASC\n) t;",
+        "options": {}
+      },
+      "id": "95ff07da-1750-4b19-9127-ef402d4836f5",
+      "name": "PG Unit List",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -176,
+        -352
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: $input.all()[0].json.items || [] } }];"
+      },
+      "id": "9288b1f0-3e23-481f-a05b-1b7b414ef03a",
+      "name": "Agg Unit List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        -352
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "4401ed09-4796-4c87-9411-af51fdf9df93",
+      "name": "Res Unit List",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        304,
+        -352
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simapo-qr-update",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "edc2c029-120e-4230-adf7-6e12e67faa1d",
+      "name": "WH QR Update",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        -48
+      ],
+      "webhookId": "simapo-qr-update"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"SIMAPO\".unit_aset SET qrcode = '{{ ($json.body.qrcode).toString().replace(/'/g, \"''\") }}', updatedat = CURRENT_TIMESTAMP WHERE id = '{{ ($json.body.id).toString().replace(/'/g, \"''\") }}' RETURNING id, qrcode;",
+        "options": {}
+      },
+      "id": "ee9ddd24-7e80-4a8e-8179-fa542cf98fd7",
+      "name": "PG QR Update",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -176,
+        -48
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "e33353da-b6a0-4d44-84a3-58b7744eeeb5",
+      "name": "Res QR Update",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        64,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simapo-qr-pinjam",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "e24caa14-30e5-4811-997e-7dda4e108f39",
+      "name": "WH QR Pinjam",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        256
+      ],
+      "webhookId": "simapo-qr-pinjam"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json.body || $input.item.json;\nconst q = $input.item.json.query || {};\nconst nip = b.nip || $input.item.json.headers?.['x-nip'] || '';\nif (!nip) throw new Error('NIP tidak ditemukan');\nif (!b.unitasetid) throw new Error('ID aset tidak ditemukan');\nif (!b.tujuanpeminjaman) throw new Error('Tujuan peminjaman kosong');\nreturn [{ json: {\n  userid: nip,\n  nama: b.nama || 'Pegawai',\n  unitasetid: b.unitasetid,\n  tujuanpeminjaman: b.tujuanpeminjaman,\n  tanggalmulai: b.tanggalmulai,\n  tanggalselesai: b.tanggalselesai,\n  nomorpeminjaman: 'PMJ-' + Date.now(),\n  instansi_id: b.instansi_id || q.instansi_id || 'bapperida'\n} }];"
+      },
+      "id": "338e5fed-b0cc-4929-8d37-71d6e3ea1fd6",
+      "name": "Validate QR Pinjam",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"SIMAPO\".peminjaman (id, nomorpeminjaman, userid, unitasetid, tujuanpeminjaman, tanggalmulai, tanggalselesai, status, createdat, updatedat, instansi_id) VALUES (gen_random_uuid(), '{{ ($json.nomorpeminjaman).toString().replace(/'/g, \"''\") }}', '{{ ($json.userid).toString().replace(/'/g, \"''\") }}', '{{ ($json.unitasetid).toString().replace(/'/g, \"''\") }}', '{{ ($json.tujuanpeminjaman).toString().replace(/'/g, \"''\") }}', '{{ ($json.tanggalmulai).toString().replace(/'/g, \"''\") }}', '{{ ($json.tanggalselesai).toString().replace(/'/g, \"''\") }}', 'MENUNGGU', NOW(), NOW(), '{{ ($json.instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}') RETURNING id, status;",
+        "options": {}
+      },
+      "id": "fbc2b554-2777-4daa-9d36-9ab2f4810133",
+      "name": "PG QR Pinjam",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        64,
+        256
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "e836be38-408a-49f3-8979-0921ae7507c4",
+      "name": "Res QR Pinjam",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        304,
+        256
+      ]
+    }
+  ],
+  "connections": {
+    "WH Unit By QR": {
+      "main": [
+        [
+          {
+            "node": "PG Unit By QR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Unit By QR": {
+      "main": [
+        [
+          {
+            "node": "Agg Unit By QR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Unit By QR": {
+      "main": [
+        [
+          {
+            "node": "Res Unit By QR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Unit List": {
+      "main": [
+        [
+          {
+            "node": "PG Unit List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Unit List": {
+      "main": [
+        [
+          {
+            "node": "Agg Unit List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Unit List": {
+      "main": [
+        [
+          {
+            "node": "Res Unit List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH QR Update": {
+      "main": [
+        [
+          {
+            "node": "PG QR Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG QR Update": {
+      "main": [
+        [
+          {
+            "node": "Res QR Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH QR Pinjam": {
+      "main": [
+        [
+          {
+            "node": "Validate QR Pinjam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate QR Pinjam": {
+      "main": [
+        [
+          {
+            "node": "PG QR Pinjam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG QR Pinjam": {
+      "main": [
+        [
+          {
+            "node": "Res QR Pinjam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4b55943efb5f219d407bc408d9277d6d643804fc75070b4ed56250fe03c8ea67"
+  }
+}

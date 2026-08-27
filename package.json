@@ -1,0 +1,14 @@
+{
+  "devDependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4"
+  },
+  "dependencies": {
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/share": "^8.0.1",
+    "@capgo/capacitor-updater": "^8.46.1",
+    "pg": "^8.22.0",
+    "xlsx": "^0.18.5"
+  }
+}

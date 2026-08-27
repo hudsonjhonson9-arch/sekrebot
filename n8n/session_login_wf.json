@@ -1,0 +1,84 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "path": "session-login",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 0],
+      "id": "196c268d-b1c5-4b0b-9d09-5e996ea7b7ed",
+      "name": "Webhook Session Login",
+      "webhookId": "session-login-0001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const q = $input.first().json.query || {};\nconst body = $input.first().json.body || {};\nconst nip = (q.nip || body.nip || '').replace(/'/g,\"''\");\nconst userId = (q.user_id || body.user_id || '').replace(/'/g,\"''\");\nconst role = (q.role || body.role || 'USER').replace(/'/g,\"''\");\nconst instansiId = (q.instansi_id || body.instansi_id || '').replace(/'/g,\"''\");\nconst action = (q.action || body.action || 'login').replace(/'/g,\"''\");\nconst sessionToken = (q.session_token || body.session_token || '').replace(/'/g,\"''\");\nif (action === 'login' && !nip) {\n  return [{ json: { ok: false, message: 'NIP required' } }];\n}\nreturn [{ json: { action, nip, user_id: userId, role, instansi_id: instansiId, session_token: sessionToken } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [208, 0],
+      "id": "fc69054c-414a-464f-8486-f0e6bf2d3ace",
+      "name": "Parse"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nif (d.action === 'login') {\n  return [{ json: { sql: `SELECT create_session('${d.nip}','${d.user_id}','${d.role}','${d.instansi_id}') AS session_token;` } }];\n} else {\n  return [{ json: { sql: `UPDATE auth_sessions SET is_active=false WHERE session_token='${d.session_token}';` } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 0],
+      "id": "2c67512c-1514-4cc6-8f53-a43fd5938dfc",
+      "name": "Build SQL"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.sql }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [608, 0],
+      "id": "8b48efba-80b5-4183-a2f1-9b5361d7ba3a",
+      "name": "Run SQL",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nif (d.session_token) {\n  return [{ json: { ok: true, session_token: d.session_token } }];\n}\nreturn [{ json: { ok: false, message: 'Session creation failed' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 0],
+      "id": "4158dee9-e376-42ac-a676-a69558def442",
+      "name": "Format Response"
+    }
+  ],
+  "connections": {
+    "Webhook Session Login": {
+      "main": [[{ "node": "Parse", "type": "main", "index": 0 }]]
+    },
+    "Parse": {
+      "main": [[{ "node": "Build SQL", "type": "main", "index": 0 }]]
+    },
+    "Build SQL": {
+      "main": [[{ "node": "Run SQL", "type": "main", "index": 0 }]]
+    },
+    "Run SQL": {
+      "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4b55943efb5f219d407bc408d9277d6d643804fc75070b4ed56250fe03c8ea67"
+  }
+}

@@ -1,0 +1,314 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "path": "simapo-kategori-list",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        80,
+        672
+      ],
+      "id": "0e056777-823d-4215-9499-b0a4fea309dc",
+      "name": "WH Kat List",
+      "webhookId": "simapo-kategori-list",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\nSELECT k.id, k.nama, k.deskripsi, COUNT(b.id) AS jumlah_aset FROM \"SIMAPO\".kategori_barang k LEFT JOIN \"SIMAPO\".barang b ON b.kategoriid = k.id AND b.isactive = true AND b.instansi_id = '{{ ($json.query.instansi_id || 'bapperida').toString().replace(/'/g, \"''\") }}' WHERE k.instansi_id = '{{ ($json.query.instansi_id || 'bapperida').toString().replace(/'/g, \"''\") }}' GROUP BY k.id, k.nama, k.deskripsi ORDER BY k.nama ASC\n) t;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        320,
+        672
+      ],
+      "id": "cf82bcb3-3d73-4756-b838-08edba778309",
+      "name": "PG Kat List",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: $input.all()[0].json.items || [] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        672
+      ],
+      "id": "54d311bb-47c3-4ca0-8647-827220942b3c",
+      "name": "Agg Kat"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        672
+      ],
+      "id": "b8fe2494-ca0f-4e2a-a601-81b1e97efe43",
+      "name": "Res Kat List"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simapo-kategori-save",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        80,
+        976
+      ],
+      "id": "4c400894-ac93-4eb4-9bdb-f37b403aee45",
+      "name": "WH Kat Save",
+      "webhookId": "simapo-kategori-save",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "ALTER TABLE \"SIMAPO\".kategori_barang ADD COLUMN IF NOT EXISTS instansi_id VARCHAR(100) DEFAULT 'bapperida';\nINSERT INTO \"SIMAPO\".kategori_barang (id, nama, deskripsi, createdat, instansi_id) VALUES (gen_random_uuid(), '{{ (($input.item.json.body || $input.item.json).nama).toString().replace(/'/g, \"''\") }}', '{{ (($input.item.json.body || $input.item.json).deskripsi || \"\").toString().replace(/'/g, \"''\") }}', NOW(), '{{ (($input.item.json.query || $input.item.json).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}') RETURNING id, nama;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        320,
+        976
+      ],
+      "id": "c421a7b3-ffcf-4db9-920b-9242197e6b38",
+      "name": "PG Kat Save",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        976
+      ],
+      "id": "61990aaa-d943-4973-be85-a7b1d859c571",
+      "name": "Res Kat Save"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simapo-kategori-delete",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        80,
+        1280
+      ],
+      "id": "ab6112aa-5d9c-42b6-8670-86277b59f249",
+      "name": "WH Kat Delete",
+      "webhookId": "simapo-kategori-delete",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM \"SIMAPO\".kategori_barang WHERE id = '{{ (($input.item.json.body || $input.item.json).id).toString().replace(/'/g, \"''\") }}' RETURNING id, nama;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        320,
+        1280
+      ],
+      "id": "5247f1ed-e012-444c-a4b0-2d4479c1a719",
+      "name": "PG Kat Delete",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        1280
+      ],
+      "id": "faef8938-83f9-4f12-84dc-2797e20f720a",
+      "name": "Res Kat Delete"
+    }
+  ],
+  "connections": {
+    "WH Kat List": {
+      "main": [
+        [
+          {
+            "node": "PG Kat List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Kat List": {
+      "main": [
+        [
+          {
+            "node": "Agg Kat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Kat": {
+      "main": [
+        [
+          {
+            "node": "Res Kat List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Kat Save": {
+      "main": [
+        [
+          {
+            "node": "PG Kat Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Kat Save": {
+      "main": [
+        [
+          {
+            "node": "Res Kat Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Kat Delete": {
+      "main": [
+        [
+          {
+            "node": "PG Kat Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Kat Delete": {
+      "main": [
+        [
+          {
+            "node": "Res Kat Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4b55943efb5f219d407bc408d9277d6d643804fc75070b4ed56250fe03c8ea67"
+  }
+}

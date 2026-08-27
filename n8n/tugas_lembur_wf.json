@@ -1,0 +1,546 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "penugasan-save",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        },
+        "authentication": "none"
+      },
+      "name": "Webhook: penugasanSave",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        72
+      ],
+      "webhookId": "penugasan-save-id",
+      "id": "9df46e0f-1f1a-4a1c-9500-3642143b8437",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "penugasan-list",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        },
+        "authentication": "none"
+      },
+      "name": "Webhook: penugasanList",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        336
+      ],
+      "webhookId": "penugasan-list-id",
+      "id": "9faaf4b0-4f82-4e7b-b011-e83cf3bec8ac",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "lembur-get",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        },
+        "authentication": "none"
+      },
+      "name": "Webhook: lemburGet",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        528
+      ],
+      "webhookId": "lembur-get-id",
+      "id": "318aaca8-5f9f-4b2a-ac7e-e4a68c77e58a",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, data: $input.all().map(i => i.json) } }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1824,
+        264
+      ],
+      "id": "832cb430-44ba-4e10-9e0c-3964fefa13be"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " {{ (() => {\n  const q = $json.query || {};\n  const instansi = (q.instansi_id || 'bapperida').replace(/'/g, \"''\");\n  const limit = parseInt(q.limit) || 100;\n  \n  if (q.created_by_nip) {\n    return `SELECT * FROM penugasan WHERE created_by_nip = '${q.created_by_nip.replace(/'/g, \"''\")}' AND instansi_id = '${instansi}' ORDER BY tanggal DESC LIMIT ${limit};`;\n  }\n  if (q.nip === 'all' || !q.nip) {\n    return `SELECT * FROM penugasan WHERE instansi_id = '${instansi}' ORDER BY tanggal DESC LIMIT ${limit};`;\n  }\n  return `SELECT * FROM penugasan WHERE nip = '${q.nip.replace(/'/g, \"''\")}' AND instansi_id = '${instansi}' ORDER BY tanggal DESC LIMIT ${limit};`;\n})() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1600,
+        336
+      ],
+      "id": "29965dff-37ad-4382-a1dd-f2586112d738",
+      "name": "Postgres: Select Penugasan",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " {{ (() => {\n  const b = $json.body || {};\n  const q = $json.query || {};\n  const instansi = (b.instansi_id || q.instansi_id || 'bapperida').replace(/'/g, \"''\");\n  \n  if (b.id) {\n    return `UPDATE penugasan SET status = '${(b.status || '').replace(/'/g, \"''\")}', bukti = '${(b.bukti || '').replace(/'/g, \"''\")}', lat_pengerjaan = ${b.actual_lat || 0}, lon_pengerjaan = ${b.actual_lon || 0}, instansi_id = '${instansi}' WHERE id = '${b.id.replace(/'/g, \"''\")}' RETURNING *;`;\n  } else {\n    return `INSERT INTO penugasan (user_id, nama, nip, tanggal, lat, lon, keterangan, created_by, created_by_nip, radius, instansi_id) VALUES ('${(b.user_id || '').replace(/'/g, \"''\")}', '${(b.nama || '').replace(/'/g, \"''\")}', '${(b.nip || '').replace(/'/g, \"''\")}', '${(b.tanggal || '').replace(/'/g, \"''\")}', ${b.lat || 0}, ${b.lon || 0}, '${(b.keterangan || '').replace(/'/g, \"''\")}', '${(b.created_by || '').replace(/'/g, \"''\")}', '${(b.created_by_nip || '').replace(/'/g, \"''\")}', ${b.radius || 100}, '${instansi}') RETURNING *;`;\n  }\n})() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1600,
+        0
+      ],
+      "id": "971cc81f-21b5-4727-ad76-cbff0ee5afb5",
+      "name": "Postgres: Save/Update",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  l.\"NIP\" as nip, \n  l.\"Nama\" as nama, \n  l.\"Tanggal\" as tanggal, \n  MIN(CASE WHEN UPPER(l.\"Jenis Absen\") LIKE '%MASUK%' THEN l.\"Jam\" END) as jam_masuk, \n  MAX(CASE WHEN UPPER(l.\"Jenis Absen\") LIKE '%PULANG%' THEN l.\"Jam\" END) as jam_pulang, \n  MAX(l.\"Ket\") as status_absen,\n  MAX(CAST(p.id AS TEXT)) as is_tugas,\n  MAX(p.keterangan) as tugas_detail,\n  MAX(CASE WHEN UPPER(l.\"Jenis Absen\") IN ('SAKIT','TUGAS','IZIN','CUTI','TUBEL') THEN UPPER(l.\"Jenis Absen\") END) as keterangan_status\nFROM \"Log_Absen\" l\nLEFT JOIN penugasan p ON l.\"NIP\" = p.nip AND l.\"Tanggal\"::text = p.tanggal::text\nWHERE l.\"NIP\" IN ({{ (($json.query.nips || $json.query.nip || \"\").toString().split(',').map(x => \"'\" + x.trim() + \"'\").join(',')).toString().replace(/'/g, \"''\") }})\nAND l.\"Tanggal\" BETWEEN '{{ ($json.query.dari).toString().replace(/'/g, \"''\") }}' AND '{{ ($json.query.sampai).toString().replace(/'/g, \"''\") }}'\nGROUP BY l.\"NIP\", l.\"Nama\", l.\"Tanggal\"\nORDER BY l.\"Tanggal\" ASC, l.\"Nama\" ASC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1600,
+        528
+      ],
+      "id": "4568cf60-5e9e-4b5e-b2d6-697b5e3fa8f4",
+      "name": "Postgres: Fetch Lembur",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.bukti_base64 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d296d103-ccfc-46d0-bbda-6dedb8339337",
+      "name": "Check Ada Bukti",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -192,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set_bb64",
+              "name": "body.bukti_base64",
+              "value": "={{ $('Webhook: penugasanSave').first().json.body.bukti_base64.replace(/^data:image\\/\\w+;base64,/, '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "91390b63-fce4-47fe-8be4-201023474ae4",
+      "name": "Set Bukti Base64",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        704,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "body.bukti_base64",
+        "options": {}
+      },
+      "id": "cdc60a43-9e4e-4b41-ad33-b73011c9db38",
+      "name": "Convert to File",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        928,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Webhook: penugasanSave').first().json.body.nip }}_{{ $('Webhook: penugasanSave').first().json.body.id }}_{{ $('Webhook: penugasanSave').first().json.body.bukti_nama || 'bukti.jpg' }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1bc8fIt6tW5Bj9mLW6OD-lG-jkcaM9cGq",
+          "mode": "list",
+          "cachedResultName": "Bukti Keterangan Absensi"
+        },
+        "options": {}
+      },
+      "id": "88adce87-f73f-46c7-9927-c6af68936dce",
+      "name": "Upload GDrive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1152,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "53IL2urNBWm95sLS",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const driveLink = $input.first().json.webViewLink || $input.first().json.webContentLink || '';\nconst originalBody = $('Webhook: penugasanSave').first().json.body || {};\nreturn [{\n  json: {\n    body: {\n      ...originalBody,\n      bukti: driveLink\n    }\n  }\n}];"
+      },
+      "id": "7ddb23b8-ded2-4444-8208-8a817e6f1c27",
+      "name": "Prepare Save Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1376,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const originalBody = $('Webhook: penugasanSave').first().json.body || {};\nreturn [{\n  json: {\n    body: {\n      ...originalBody,\n      bukti: originalBody.bukti_base64\n    }\n  }\n}];"
+      },
+      "id": "c3240293-e134-4dd7-8fa4-a667270c69f3",
+      "name": "Prepare Direct Save",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " {{ (() => {\n  const b = $json.body || {};\n  const q = $json.query || {};\n  const instansi = (b.instansi_id || q.instansi_id || 'bapperida').replace(/'/g, \"''\");\n  \n  if (b.id) {\n    return \\`UPDATE penugasan SET status = '\\${(b.status || '').replace(/'/g, \"''\")}', bukti = '\\${(b.bukti || '').replace(/'/g, \"''\")}', lat_pengerjaan = \\${b.actual_lat || 0}, lon_pengerjaan = \\${b.actual_lon || 0}, instansi_id = '\\${instansi}' WHERE id = '\\${b.id.replace(/'/g, \"''\")}' RETURNING *;\\`;\n  } else {\n    return \\`INSERT INTO penugasan (user_id, nama, nip, tanggal, lat, lon, keterangan, created_by, created_by_nip, radius, instansi_id) VALUES ('\\${(b.user_id || '').replace(/'/g, \"''\")}', '\\${(b.nama || '').replace(/'/g, \"''\")}', '\\${(b.nip || '').replace(/'/g, \"''\")}', '\\${(b.tanggal || '').replace(/'/g, \"''\")}', \\${b.lat || 0}, \\${b.lon || 0}, '\\${(b.keterangan || '').replace(/'/g, \"''\")}', '\\${(b.created_by || '').replace(/'/g, \"''\")}', '\\${(b.created_by_nip || '').replace(/'/g, \"''\")}', \\${b.radius || 100}, '\\${instansi}') RETURNING *;\\`;\n  }\n})() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        256,
+        144
+      ],
+      "id": "3341f40d-f5e0-4141-bfb0-2c77b81bc622",
+      "name": "Postgres: Try Direct Save",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4af2ca05-3568-4063-964f-bb584fa68918",
+      "name": "Check Direct Save Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        144
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: penugasanSave": {
+      "main": [
+        [
+          {
+            "node": "Check Ada Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: penugasanList": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Select Penugasan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: lemburGet": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Fetch Lembur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: Select Penugasan": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: Save/Update": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: Fetch Lembur": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Ada Bukti": {
+      "main": [
+        [
+          {
+            "node": "Set Bukti Base64",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Direct Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Bukti Base64": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Upload GDrive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload GDrive": {
+      "main": [
+        [
+          {
+            "node": "Prepare Save Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Save Payload": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Save/Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Direct Save": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Try Direct Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: Try Direct Save": {
+      "main": [
+        [
+          {
+            "node": "Check Direct Save Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Direct Save Success": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Bukti Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4b55943efb5f219d407bc408d9277d6d643804fc75070b4ed56250fe03c8ea67"
+  }
+}

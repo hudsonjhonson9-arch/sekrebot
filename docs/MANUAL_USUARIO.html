@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HADIR — Buku Panduan Pengguna</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0a1628;
+      --navy-light: #112240;
+      --gold: #c9a84c;
+      --gold-dim: rgba(201, 168, 76, .15);
+      --white: #f0f4ff;
+      --muted: #7a90b8;
+      --border: rgba(201, 168, 76, .2);
+      --card-bg: rgba(17, 34, 64, .85);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #060d1a;
+      color: var(--white);
+      min-height: 100vh;
+    }
+
+    /* ---------- HEADER & TOOLBAR ---------- */
+    .page-header {
+      background: linear-gradient(135deg, #0d1b2a 0%, #0a1628 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      flex-wrap: wrap;
+    }
+    .page-header h1 { font-size: 20px; font-weight: 800; color: var(--gold); }
+    .page-header p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .btn-export {
+      padding: 10px 18px; border-radius: 12px; border: 1px solid var(--border);
+      background: var(--gold-dim); color: var(--gold);
+      font-family: inherit; font-size: 13px; font-weight: 800; cursor: pointer;
+      transition: all .2s; white-space: nowrap;
+    }
+    .btn-export:hover { background: var(--gold); color: var(--navy); }
+
+    /* ---------- NAV / TABS ---------- */
+    .screen-nav {
+      display: flex; gap: 8px; padding: 14px 32px;
+      background: #0a1628; border-bottom: 1px solid rgba(255,255,255,.05);
+      position: sticky; top: 68px; z-index: 99;
+      overflow-x: auto;
+    }
+    .screen-nav button {
+      padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700;
+      color: var(--muted); text-decoration: none; white-space: nowrap;
+      border: 1px solid transparent; background: transparent;
+      cursor: pointer; font-family: inherit; transition: all .2s;
+    }
+    .screen-nav button:hover { color: var(--gold); background: var(--gold-dim); border-color: var(--border); }
+    .screen-nav button.active { color: var(--gold); background: var(--gold-dim); border-color: var(--border); }
+
+    /* ---------- COVER ---------- */
+    .cover {
+      min-height: calc(100vh - 140px);
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; padding: 48px 24px;
+      background:
+        radial-gradient(circle at 50% 30%, rgba(201,168,76,.12), transparent 55%),
+        radial-gradient(circle at 80% 80%, rgba(96,165,250,.08), transparent 50%),
+        linear-gradient(160deg, #0d1b2a 0%, #060d1a 100%);
+    }
+    .cover-inner { max-width: 560px; }
+    .cover-logo { font-size: 96px; line-height: 1; margin-bottom: 12px; }
+    .cover-logo img { width: 128px; height: 128px; object-fit: contain; }
+    .cover-eyebrow {
+      font-size: 12px; font-weight: 800; letter-spacing: .22em;
+      color: var(--gold); text-transform: uppercase; margin-bottom: 14px;
+    }
+    .cover-title {
+      font-size: 64px; font-weight: 800; color: var(--white);
+      letter-spacing: .12em; line-height: 1; margin-bottom: 8px;
+    }
+    .cover-sub { font-size: 15px; color: var(--muted); margin-bottom: 28px; }
+    .cover-rule {
+      width: 90px; height: 3px; border-radius: 2px;
+      background: var(--gold); margin: 0 auto 28px;
+    }
+    .cover-doc {
+      font-size: 18px; font-weight: 800; color: var(--gold);
+      letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .cover-meta { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
+    .cover-cta {
+      padding: 14px 34px; border-radius: 999px; border: none;
+      background: var(--gold); color: var(--navy);
+      font-family: inherit; font-size: 15px; font-weight: 800; cursor: pointer;
+      transition: transform .2s, box-shadow .2s;
+      box-shadow: 0 10px 30px rgba(201,168,76,.3);
+    }
+    .cover-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(201,168,76,.4); }
+
+    /* ---------- SCREENS ---------- */
+    .screens { padding: 32px; max-width: 1200px; margin: 0 auto; }
+
+    .screen-section { margin-bottom: 60px; display: none; }
+    .screen-section.visible { display: block; }
+
+    .screen-section > h2 {
+      font-size: 14px; font-weight: 700; color: var(--gold);
+      text-transform: uppercase; letter-spacing: .1em;
+      margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+    }
+    .screen-section > h2::before {
+      content: ''; width: 4px; height: 16px; background: var(--gold);
+      border-radius: 2px;
+    }
+    .screen-intro { font-size: 13px; color: var(--muted); margin-bottom: 20px; max-width: 720px; }
+
+    .phone-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 32px; align-items: start;
+    }
+    .phone-frame {
+      width: 100%; max-width: 380px; margin: 0 auto;
+      background: var(--navy);
+      border: 2px solid rgba(201,168,76,.3);
+      border-radius: 32px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5), 0 0 40px rgba(201,168,76,.08);
+    }
+    .phone-notch {
+      height: 28px; background: #000; display: flex;
+      align-items: center; justify-content: center;
+    }
+    .phone-notch::after {
+      content: ''; width: 80px; height: 20px; background: #1a1a1a;
+      border-radius: 12px;
+    }
+    .phone-screen.shot { min-height: 0; max-height: none; overflow: visible; padding: 8px; background: #fff; }
+    .phone-screen.shot img { width: 100%; display: block; border-radius: 12px; }
+    .phone-label {
+      text-align: center; font-size: 12px; font-weight: 700;
+      color: var(--muted); margin-top: 12px; text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    /* ---------- STEPS (TAHAPAN) ---------- */
+    .steps {
+      margin-top: 16px; background: var(--card-bg);
+      border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px;
+      counter-reset: step; list-style: none; max-width: 720px;
+    }
+    .steps-title {
+      font-size: 12px; font-weight: 800; color: var(--gold);
+      text-transform: uppercase; letter-spacing: .1em; margin-bottom: 12px;
+    }
+    .steps li {
+      position: relative; padding-left: 34px; margin-bottom: 10px;
+      font-size: 13px; line-height: 1.6; color: var(--white);
+      counter-increment: step;
+    }
+    .steps li:last-child { margin-bottom: 0; }
+    .steps li::before {
+      content: counter(step);
+      position: absolute; left: 0; top: 1px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--gold-dim); border: 1px solid var(--border);
+      color: var(--gold); font-size: 12px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .steps strong { color: var(--gold); }
+
+    /* ---------- PREV / NEXT ---------- */
+    .pager {
+      display: flex; justify-content: space-between; gap: 12px;
+      margin-top: 24px; max-width: 720px;
+    }
+    .pager button {
+      padding: 12px 20px; border-radius: 12px; cursor: pointer;
+      background: var(--card-bg); border: 1px solid var(--border);
+      color: var(--white); font-family: inherit; font-size: 13px; font-weight: 700;
+      transition: all .2s;
+    }
+    .pager button:hover { background: var(--gold-dim); color: var(--gold); }
+    .pager button[disabled] { opacity: .35; cursor: default; }
+    .pager button[disabled]:hover { background: var(--card-bg); color: var(--white); }
+
+    /* ---------- PRINT (Export PDF) ---------- */
+    @media print {
+      @page { size: 210mm 330mm; margin: 12mm; }
+      body { background: #fff; color: #111; }
+      .page-header, .btn-export, .screen-nav, .pager, .cover-cta { display: none !important; }
+
+      .cover {
+        min-height: 306mm;
+        display: flex; align-items: center; justify-content: center;
+        text-align: center;
+        padding: 36px 28px;
+        background: #fff;
+      }
+      .cover-title { color: #0a1628; font-size: 56px; }
+      .cover-eyebrow, .cover-doc { color: #b8912e; }
+      .cover-sub, .cover-meta { color: #555; }
+      .cover-logo img { width: 110px; height: 110px; }
+
+      .screens { padding: 0; max-width: 100%; }
+      .screen-section, .screen-section#cover { display: block !important; }
+      .screen-section { break-before: page; margin-bottom: 0; }
+      .screen-section > h2 { color: #b8912e; font-size: 15px; margin-bottom: 8px; }
+      .screen-intro { margin-bottom: 12px; }
+
+      .phone-row { grid-template-columns: 1fr; gap: 0; }
+      .phone-frame { max-width: 330px; border-radius: 16px; border-color: #ccc; box-shadow: none; }
+      .phone-notch { display: none; }
+      .phone-screen.shot { padding: 0; }
+      .phone-label { color: #555; font-size: 11px; margin-top: 5px; }
+
+      .steps { background: #fff; border-color: #ddd; color: #222; padding: 10px 14px; margin-top: 10px; }
+      .steps li { color: #222; font-size: 12px; line-height: 1.5; padding-left: 26px; margin-bottom: 4px; }
+      .steps-title { color: #b8912e; font-size: 12px; margin-bottom: 5px; }
+      .steps li::before { background: #f5f0e2; border-color: #ddd; color: #b8912e; width: 18px; height: 18px; font-size: 11px; }
+      .screen-intro { color: #555; font-size: 12px; }
+      .steps li:last-child { margin-bottom: 0; }
+      .phone-row { display: block; }
+      .phone-row > div { max-width: 380px; margin: 0 auto; }
+      #admin .phone-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; max-width: 700px; }
+      #admin .phone-row > div { max-width: none; margin: 0; }
+      #admin .phone-frame { max-width: 340px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-header">
+    <div>
+      <h1>HADIR — Buku Panduan Pengguna</h1>
+      <p>Sistem Absensi Digital BAPPERIDA Kabupaten Sumba Barat · Tangkapan layar aplikasi sungguhan</p>
+    </div>
+    <button class="btn-export" onclick="window.print()">⬇️ Export ke PDF</button>
+  </div>
+
+  <nav class="screen-nav" id="tabNav"></nav>
+
+  <div class="screens">
+
+    <!-- COVER -->
+    <section class="screen-section" id="cover">
+      <div class="cover">
+        <div class="cover-inner">
+          <div class="cover-logo"><img src="manual/shots/logo.png" alt="Logo Kabupaten Sumba Barat"></div>
+          <div class="cover-eyebrow">Sumba Barat</div>
+          <div class="cover-title">HADIR</div>
+          <div class="cover-sub">Sistem Absensi Digital BAPPERIDA Kabupaten Sumba Barat</div>
+          <div class="cover-rule"></div>
+          <div class="cover-doc">Buku Panduan Pengguna</div>
+          <div class="cover-meta">Aplikasi mobile-first · Edisi 2026</div>
+          <button class="cover-cta" data-goto="login">Mulai Membaca</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOGIN -->
+    <section class="screen-section" id="login">
+      <h2>Masuk Aplikasi (Login)</h2>
+      <p class="screen-intro">Halaman pertama saat aplikasi dibuka. Gunakan NIP atau ID pegawai untuk masuk.</p>
+      <div class="phone-row">
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen shot">
+              <img src="manual/shots/00-login.png" alt="Layar Login HADIR">
+            </div>
+          </div>
+          <div class="phone-label">Layar Login</div>
+        </div>
+      </div>
+      <ol class="steps">
+        <li class="steps-title">Tahapan Penggunaan</li>
+        <li>Buka aplikasi HADIR dari Telegram (Mini App) atau browser.</li>
+        <li>Pastikan tab <strong>Masuk</strong> yang terpilih.</li>
+        <li>Isi kolom <strong>NIP / NISN / NIM / ID</strong> dengan NIP Anda.</li>
+        <li>Tekan tombol <strong>Masuk Sekarang 🚀</strong>.</li>
+        <li>Pengguna baru: pilih tab <strong>Daftar</strong> untuk membuat akun terlebih dahulu.</li>
+      </ol>
+      <div class="pager"><button data-prev disabled>← Sebelumnya</button><button data-next>Berikutnya →</button></div>
+    </section>
+
+    <!-- ABSEN -->
+    <section class="screen-section" id="absen">
+      <h2>Tab Absen (Halaman Utama)</h2>
+      <p class="screen-intro">Layar utama untuk mencatat kehadiran masuk dan pulang berbasis lokasi GPS.</p>
+      <div class="phone-row">
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen shot">
+              <img src="manual/shots/01-absen.png" alt="Tab Absen HADIR">
+            </div>
+          </div>
+          <div class="phone-label">Tab Absen</div>
+        </div>
+      </div>
+      <ol class="steps">
+        <li class="steps-title">Tahapan Penggunaan</li>
+        <li>Buka tab <strong>Absen</strong> (ikon utama di bawah).</li>
+        <li>Aktifkan GPS/lokasi pada perangkat dan pastikan berada dalam area kantor.</li>
+        <li>Periksa status lokasi terdeteksi pada kartu <strong>Lokasi Terdeteksi</strong>.</li>
+        <li>Tekan tombol <strong>📍 Kirim Lokasi &amp; Absen</strong>.</li>
+        <li>Cek catatan pada <strong>Log Absen Hari Ini</strong>; tombol <strong>🔄</strong> untuk memuat ulang.</li>
+        <li>Jika bekerja di lapangan, isi <strong>Keterangan Lokasi Lapangan</strong> lalu tekan <strong>🏃 Pulang dari Lapangan</strong>.</li>
+      </ol>
+      <div class="pager"><button data-prev>← Sebelumnya</button><button data-next>Berikutnya →</button></div>
+    </section>
+
+    <!-- KETERANGAN -->
+    <section class="screen-section" id="keterangan">
+      <h2>Tab Keterangan</h2>
+      <p class="screen-intro">Mengajukan izin, sakit, atau tugas yang akan diperiksa admin.</p>
+      <div class="phone-row">
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen shot">
+              <img src="manual/shots/02-keterangan.png" alt="Tab Keterangan HADIR">
+            </div>
+          </div>
+          <div class="phone-label">Tab Keterangan</div>
+        </div>
+      </div>
+      <ol class="steps">
+        <li class="steps-title">Tahapan Penggunaan</li>
+        <li>Buka tab <strong>Keterangan</strong>.</li>
+        <li>Pilih jenis keterangan: <strong>🙏 Izin</strong>, <strong>🤒 Sakit</strong>, <strong>💼 Tugas</strong>, <strong>🎓 Tubel</strong>, atau <strong>🏖️ Cuti</strong>.</li>
+        <li>Tentukan <strong>rentang tanggal</strong> mulai–selesai.</li>
+        <li>Tulis keterangan/alasan pada kolom yang disediakan.</li>
+        <li>Lampirkan bukti (foto/dokumen) bila diperlukan.</li>
+        <li>Tekan <strong>📤 Kirim Keterangan</strong>, lalu pantau statusnya di <strong>Riwayat Pengajuan Saya</strong>.</li>
+      </ol>
+      <div class="pager"><button data-prev>← Sebelumnya</button><button data-next>Berikutnya →</button></div>
+    </section>
+
+    <!-- REKAP -->
+    <section class="screen-section" id="rekap">
+      <h2>Tab Rekap</h2>
+      <p class="screen-intro">Melihat rekap kehadiran pegawai per rentang tanggal dan mengekspor laporan.</p>
+      <div class="phone-row">
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen shot">
+              <img src="manual/shots/03-rekap.png" alt="Tab Rekap HADIR">
+            </div>
+          </div>
+          <div class="phone-label">Tab Rekap</div>
+        </div>
+      </div>
+      <ol class="steps">
+        <li class="steps-title">Tahapan Penggunaan</li>
+        <li>Buka tab <strong>Rekap</strong>.</li>
+        <li>Pilih <strong>rentang tanggal</strong> atau tombol cepat: Hari Ini, Minggu Ini, Bulan Ini, dst.</li>
+        <li>Pilih <strong>instansi</strong> dan filter <strong>bidang/unit kerja</strong> (khusus admin).</li>
+        <li>Tekan <strong>Muat</strong> untuk menampilkan data kehadiran.</li>
+        <li>Unduh laporan dengan <strong>📊 Excel Rekap</strong> atau <strong>📄 PDF Rekap</strong>.</li>
+      </ol>
+      <div class="pager"><button data-prev>← Sebelumnya</button><button data-next>Berikutnya →</button></div>
+    </section>
+
+    <!-- PROFIL -->
+    <section class="screen-section" id="profil">
+      <h2>Tab Profil</h2>
+      <p class="screen-intro">Data diri, verifikasi wajah, tanda tangan digital, dan riwayat absen pribadi.</p>
+      <div class="phone-row">
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen shot">
+              <img src="manual/shots/04-profil.png" alt="Tab Profil HADIR">
+            </div>
+          </div>
+          <div class="phone-label">Tab Profil</div>
+        </div>
+      </div>
+      <ol class="steps">
+        <li class="steps-title">Tahapan Penggunaan</li>
+        <li>Buka tab <strong>Profil</strong>.</li>
+        <li>Perbarui <strong>Face Recognition</strong> (data wajah) dengan tombol <strong>🔄 Perbarui</strong>.</li>
+        <li>Kelola <strong>✍️ Tanda Tangan Digital</strong> untuk rekap PDF.</li>
+        <li>Unggah <strong>📁 Dokumen Kepegawaian</strong> bila diperlukan.</li>
+        <li>Tinjau <strong>Riwayat Absen</strong> dan <strong>Akumulasi Waktu</strong> (hadir, terlambat, disiplin).</li>
+        <li>Tekan <strong>🚪 Keluar dari Akun ini</strong> untuk logout.</li>
+      </ol>
+      <div class="pager"><button data-prev>← Sebelumnya</button><button data-next>Berikutnya →</button></div>
+    </section>
+
+    <!-- TUGAS -->
+    <section class="screen-section" id="tugas">
+      <h2>Tab Perjalanan Dinas</h2>
+      <p class="screen-intro">Membuat dan memantau penugasan/perjalanan dinas pegawai.</p>
+      <div class="phone-row">
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen shot">
+              <img src="manual/shots/05-tugas.png" alt="Tab Perjalanan Dinas HADIR">
+            </div>
+          </div>
+          <div class="phone-label">Perjalanan Dinas</div>
+        </div>
+      </div>
+      <ol class="steps">
+        <li class="steps-title">Tahapan Penggunaan</li>
+        <li>Buka <strong>LAINNYA</strong> lalu pilih <strong>Perjalanan Dinas</strong>.</li>
+        <li>Tekan <strong>BUAT PENUGASAN BARU</strong>.</li>
+        <li>Pilih pegawai dan tentukan titik koordinat tugas (opsional).</li>
+        <li>Isi <strong>pemberi tugas</strong>, <strong>nomor surat</strong>, <strong>keterangan</strong>, <strong>tanggal</strong>, dan <strong>radius</strong>.</li>
+        <li>Tekan <strong>💾 Simpan Penugasan</strong>.</li>
+        <li>Pantau status pada <strong>Monitoring Progres</strong>; konfirmasi dengan bukti bila tugas selesai.</li>
+      </ol>
+      <div class="pager"><button data-prev>← Sebelumnya</button><button data-next>Berikutnya →</button></div>
+    </section>
+
+    <!-- LEMBUR -->
+    <section class="screen-section" id="lembur">
+      <h2>Tab Rekap Lembur</h2>
+      <p class="screen-intro">Menarik data absen harian untuk menghitung rekap lembur pegawai.</p>
+      <div class="phone-row">
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen shot">
+              <img src="manual/shots/06-lembur.png" alt="Tab Rekap Lembur HADIR">
+            </div>
+          </div>
+          <div class="phone-label">Rekap Lembur</div>
+        </div>
+      </div>
+      <ol class="steps">
+        <li class="steps-title">Tahapan Penggunaan</li>
+        <li>Buka <strong>LAINNYA</strong> lalu pilih <strong>Rekap Lembur</strong>.</li>
+        <li>Pilih <strong>rentang tanggal lembur</strong>.</li>
+        <li>Ceklis <strong>Sertakan Hari Sabtu</strong> bila hari Sabtu termasuk kerja.</li>
+        <li>Pilih pegawai dan isi <strong>Dalam Rangka</strong> (perihal lembur).</li>
+        <li>Tekan <strong>📊 Tarik Data Lembur</strong>; rekap tersimpan pada <strong>Arsip Rekap Lembur</strong>.</li>
+      </ol>
+      <div class="pager"><button data-prev>← Sebelumnya</button><button data-next>Berikutnya →</button></div>
+    </section>
+
+    <!-- SIMAPO -->
+    <section class="screen-section" id="simapo">
+      <h2>Tab Aset (SIMAPO)</h2>
+      <p class="screen-intro">Katalog aset daerah untuk melihat, meminjam, dan melaporkan barang.</p>
+      <div class="phone-row">
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen shot">
+              <img src="manual/shots/07-simapo.png" alt="Tab Aset SIMAPO HADIR">
+            </div>
+          </div>
+          <div class="phone-label">Katalog Aset</div>
+        </div>
+      </div>
+      <ol class="steps">
+        <li class="steps-title">Tahapan Penggunaan</li>
+        <li>Buka <strong>LAINNYA</strong> lalu pilih <strong>Aset</strong>.</li>
+        <li>Gunakan kolom <strong>Cari nama barang atau kode</strong> untuk mencari aset.</li>
+        <li>Pilih tab <strong>Katalog</strong> untuk daftar barang, atau <strong>Pinjam</strong> untuk meminjam.</li>
+        <li>Gunakan tab <strong>Lapor</strong> untuk melaporkan kerusakan barang.</li>
+      </ol>
+      <div class="pager"><button data-prev>← Sebelumnya</button><button data-next>Berikutnya →</button></div>
+    </section>
+
+    <!-- ADMIN -->
+    <section class="screen-section" id="admin">
+      <h2>Panel Admin</h2>
+      <p class="screen-intro">
+        Khusus pengguna dengan peran admin/superadmin. Akses melalui
+        <strong>LAINNYA → Panel Admin</strong>. Terdiri dari empat bagian:
+        Operasional, Kepegawaian, Konfigurasi, dan Inventaris.
+      </p>
+      <div class="phone-row">
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen shot">
+              <img src="manual/shots/08-admin-ops.png" alt="Panel Admin Operasional">
+            </div>
+          </div>
+          <div class="phone-label">Operasional</div>
+        </div>
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen shot">
+              <img src="manual/shots/09-admin-pegawai.png" alt="Panel Admin Kepegawaian">
+            </div>
+          </div>
+          <div class="phone-label">Kepegawaian</div>
+        </div>
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen shot">
+              <img src="manual/shots/10-admin-config-lokasi.png" alt="Panel Admin Konfigurasi Lokasi">
+            </div>
+          </div>
+          <div class="phone-label">Konfigurasi — Lokasi</div>
+        </div>
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen shot">
+              <img src="manual/shots/11-admin-config-jam.png" alt="Panel Admin Konfigurasi Jam">
+            </div>
+          </div>
+          <div class="phone-label">Konfigurasi — Jam &amp; Libur</div>
+        </div>
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen shot">
+              <img src="manual/shots/12-admin-inventaris.png" alt="Panel Admin Inventaris">
+            </div>
+          </div>
+          <div class="phone-label">Inventaris</div>
+        </div>
+      </div>
+
+      <ol class="steps">
+        <li class="steps-title">Tahapan Penggunaan (Operasional)</li>
+        <li>Buka <strong>🏢 Operasional</strong> untuk melihat konfirmasi keterangan pegawai yang pending.</li>
+        <li>Gunakan <strong>Input Keterangan Pegawai</strong> untuk mencatat kehadiran manual.</li>
+        <li>Aktifkan <strong>🖥️ Meja Absen</strong> untuk scan wajah kehadiran di tempat.</li>
+      </ol>
+      <ol class="steps">
+        <li class="steps-title">Tahapan Penggunaan (Kepegawaian)</li>
+        <li>Buka <strong>👥 Kepegawaian</strong> → <strong>Manajemen Pegawai Terpadu</strong>.</li>
+        <li>Tekan <strong>➕ Tambah</strong> untuk menambah pegawai; pilih instansi di filter.</li>
+        <li>Kelola <strong>Manajemen Admin &amp; Akses</strong> — beri atau cabut peran (Super Admin/Admin/Kepala/Kabid).</li>
+      </ol>
+      <ol class="steps">
+        <li class="steps-title">Tahapan Penggunaan (Konfigurasi)</li>
+        <li>Buka <strong>⚙️ Konfigurasi</strong> → daftarkan titik lokasi presensi di peta.</li>
+        <li>Atur radius, hari aktif, IP range, dan instansi akses tiap titik, lalu <strong>💾 Simpan Perubahan</strong>.</li>
+        <li>Atur <strong>jam masuk/pulang</strong> instansi dan tambah <strong>hari libur</strong>.</li>
+        <li>Kelola <strong>periode jam khusus</strong> dan <strong>Face Settings</strong> (liveness, threshold).</li>
+      </ol>
+      <ol class="steps">
+        <li class="steps-title">Tahapan Penggunaan (Inventaris)</li>
+        <li>Buka <strong>📦 Inventaris</strong> → kelola aset, kategori, mutasi, dan opname.</li>
+        <li>Pantau <strong>permintaan peminjaman</strong> (Pending → Disetujui → Dipinjam → Kembali).</li>
+        <li>Gunakan <strong>📷 Scan QR Kembali</strong> untuk proses pengembalian barang.</li>
+      </ol>
+      <div class="pager"><button data-prev>← Sebelumnya</button><button data-next disabled>Berikutnya →</button></div>
+    </section>
+
+  </div>
+
+  <script>
+    const ORDER = ['cover', 'login', 'absen', 'keterangan', 'rekap', 'profil', 'tugas', 'lembur', 'simapo', 'admin'];
+    const LABELS = {
+      cover: '🏠 Beranda',
+      login: 'Login', absen: 'Absen', keterangan: 'Keterangan', rekap: 'Rekap',
+      profil: 'Profil', tugas: 'Perjalanan Dinas', lembur: 'Lembur', simapo: 'Aset (SIMAPO)', admin: 'Panel Admin'
+    };
+    const nav = document.getElementById('tabNav');
+    const sections = document.querySelectorAll('.screen-section');
+
+    ORDER.forEach(id => {
+      const b = document.createElement('button');
+      b.textContent = LABELS[id];
+      b.dataset.tab = id;
+      b.onclick = () => showTab(id);
+      nav.appendChild(b);
+    });
+
+    function showTab(id, push = true) {
+      if (!ORDER.includes(id)) return;
+      sections.forEach(s => s.classList.toggle('visible', s.id === id));
+      nav.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (push) history.replaceState(null, '', '#' + id);
+      document.querySelectorAll('[data-prev]').forEach(p => {
+        p.disabled = ORDER.indexOf(id) <= 0;
+        p.onclick = () => showTab(ORDER[ORDER.indexOf(id) - 1]);
+      });
+      document.querySelectorAll('[data-next]').forEach(n => {
+        n.disabled = ORDER.indexOf(id) >= ORDER.length - 1;
+        n.onclick = () => showTab(ORDER[ORDER.indexOf(id) + 1]);
+      });
+    }
+
+    document.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => showTab(b.dataset.goto));
+
+    const start = location.hash.replace('#', '');
+    showTab(ORDER.includes(start) ? start : 'cover');
+  </script>
+
+</body>
+</html>

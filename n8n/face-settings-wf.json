@@ -1,0 +1,190 @@
+{
+  "name": "face-settings",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "webhook-get-0001",
+      "name": "Webhook GET",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 280],
+      "webhookId": "face-settings-get-0001",
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "face-settings",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-get",
+              "leftValue": "={{ $json.headers.authorization }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "exists" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-auth-get",
+      "name": "Has Auth?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 280]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'Missing authorization' }) }}",
+        "options": { "responseCode": 401 }
+      },
+      "id": "reject-get",
+      "name": "Reject No Auth",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const auth = $input.first().json.headers.authorization || '';\nconst token = auth.replace(/^Bearer\\s+/i, '').trim();\n\n// Format: tg_<user_id>_<ts> or usr_<user_id>_<ts>\nconst parts = token.split('_');\nif (parts.length < 2) {\n  return [{ json: { ok: false, error: 'Invalid token format' } }];\n}\nconst userId = parseInt(parts[1]);\nif (isNaN(userId)) {\n  return [{ json: { ok: false, error: 'Invalid user ID in token' } }];\n}\n\n// Verify user exists\nconst { rows } = await $pg.query('SELECT id, is_admin FROM user_list WHERE id = $1', [userId]);\nif (!rows.length) {\n  return [{ json: { ok: false, error: 'User not found' } }];\n}\n\nreturn [{ json: { ok: true, user_id: userId, is_admin: rows[0].is_admin } }];"
+      },
+      "id": "auth-check-get",
+      "name": "Validate Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-admin",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-admin-get",
+      "name": "Is Admin?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'Admin access required' }) }}",
+        "options": { "responseCode": 403 }
+      },
+      "id": "reject-not-admin",
+      "name": "Reject Not Admin",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = await $pg.query(\"SELECT key, value FROM pengaturan WHERE instansi_id = 'bapperida' AND key IN ('face_liveness_enabled', 'face_threshold', 'face_meja_threshold', 'face_liveness_score', 'face_mandatory_nips')\");\n\nconst settings = {};\nfor (const r of rows) {\n  if (r.key === 'face_liveness_enabled') settings.liveness_enabled = r.value === 'true';\n  else if (r.key === 'face_threshold') settings.face_threshold = parseFloat(r.value) || 0.55;\n  else if (r.key === 'face_meja_threshold') settings.meja_threshold = parseFloat(r.value) || 0.55;\n  else if (r.key === 'face_liveness_score') settings.liveness_score = parseFloat(r.value) || 0.40;\n  else if (r.key === 'face_mandatory_nips') {\n    try { settings.mandatory_nips = JSON.parse(r.value); } catch { settings.mandatory_nips = []; }\n  }\n}\n\nreturn [{ json: { ok: true, settings } }];"
+      },
+      "id": "get-settings",
+      "name": "Get Settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 100]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, settings: $json.settings }) }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "respond-get",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1340, 100]
+    },
+    {
+      "parameters": {},
+      "id": "webhook-post-0001",
+      "name": "Webhook POST",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 600],
+      "webhookId": "face-settings-post-0001",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "face-settings",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst auth = (body.headers?.authorization || '').replace(/^Bearer\\s+/i, '').trim();\nconst parts = auth.split('_');\nconst userId = parseInt(parts[1]);\n\nif (!userId) {\n  return [{ json: { ok: false, error: 'Unauthorized' } }];\n}\n\nconst { rows } = await $pg.query('SELECT id, is_admin FROM user_list WHERE id = $1', [userId]);\nif (!rows.length || !rows[0].is_admin) {\n  return [{ json: { ok: false, error: 'Admin access required' } }];\n}\n\nreturn [{ json: { ok: true, user_id: userId, settings: body.settings || body } }];"
+      },
+      "id": "auth-check-post",
+      "name": "Validate Token & Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "const s = $input.first().json.settings || {};\nconst updates = [];\nconst params = [];\nlet idx = 1;\n\nconst fields = [\n  ['face_liveness_enabled', s.liveness_enabled],\n  ['face_threshold', s.face_threshold],\n  ['face_meja_threshold', s.meja_threshold],\n  ['face_liveness_score', s.liveness_score],\n  ['face_mandatory_nips', Array.isArray(s.mandatory_nips) ? JSON.stringify(s.mandatory_nips) : s.mandatory_nips]\n];\n\nfor (const [key, val] of fields) {\n  if (val !== undefined && val !== null) {\n    updates.push(`('${key}', '${String(val)}', 'bapperida')`);\n    idx++;\n  }\n}\n\nif (!updates.length) {\n  return [{ json: { ok: false, error: 'No settings to update' } }];\n}\n\nconst sql = `INSERT INTO pengaturan (key, value, instansi_id) VALUES ${updates.join(', ')}\n  ON CONFLICT (key, instansi_id) DO UPDATE SET value = EXCLUDED.value`;\n\nawait $pg.query(sql);\nreturn [{ json: { ok: true, updated: fields.map(f => f[0]) } }];"
+      },
+      "id": "upsert-settings",
+      "name": "Upsert Settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 600]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, updated: $json.updated }) }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "respond-post",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 600]
+    }
+  ],
+  "connections": {
+    "Webhook GET": { "main": [[{ "node": "Has Auth?", "type": "main", "index": 0 }]] },
+    "Has Auth?": {
+      "main": [
+        [{ "node": "Validate Token", "type": "main", "index": 0 }],
+        [{ "node": "Reject No Auth", "type": "main", "index": 0 }]
+      ]
+    },
+    "Validate Token": {
+      "main": [
+        [{ "node": "Is Admin?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Is Admin?": {
+      "main": [
+        [{ "node": "Get Settings", "type": "main", "index": 0 }],
+        [{ "node": "Reject Not Admin", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Settings": { "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]] },
+    "Webhook POST": { "main": [[{ "node": "Validate Token & Body", "type": "main", "index": 0 }]] },
+    "Validate Token & Body": { "main": [[{ "node": "Upsert Settings", "type": "main", "index": 0 }]] },
+    "Upsert Settings": { "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

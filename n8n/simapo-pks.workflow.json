@@ -1,0 +1,756 @@
+{
+  "name": "SIMAPO PKS — Program, Kegiatan, Subkegiatan",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "simapo-pks-list",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "httpMethod": "GET",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "pks-001",
+      "name": "WH PKS List",
+      "webhookId": "simapo-pks-list",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "simapo-pks-save",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "httpMethod": "POST",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "id": "pks-002",
+      "name": "WH PKS Save",
+      "webhookId": "simapo-pks-save",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "simapo-pks-delete",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "httpMethod": "DELETE",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        600
+      ],
+      "id": "pks-003",
+      "name": "WH PKS Delete",
+      "webhookId": "simapo-pks-delete",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "fieldName": "type",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [
+        200,
+        0
+      ],
+      "id": "pks-004",
+      "name": "SW PKS List"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "fieldName": "type",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "id": "pks-005",
+      "name": "SW PKS Save"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "fieldName": "type",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [
+        200,
+        600
+      ],
+      "id": "pks-006",
+      "name": "SW PKS Delete"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT id, kode, nama FROM \"SIMAPO\".program ORDER BY kode) t",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        -100
+      ],
+      "id": "pks-007",
+      "name": "PG Program List",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT k.id, k.kode, k.nama, k.program_id, p.kode as program_kode FROM \"SIMAPO\".kegiatan k JOIN \"SIMAPO\".program p ON p.id = k.program_id WHERE ($json.query.program_id IS NULL OR k.program_id = $json.query.program_id::uuid) ORDER BY k.kode) t",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        0
+      ],
+      "id": "pks-008",
+      "name": "PG Kegiatan List",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT s.id, s.kode, s.nama, s.kegiatan_id, k.kode as kegiatan_kode FROM \"SIMAPO\".subkegiatan s JOIN \"SIMAPO\".kegiatan k ON k.id = s.kegiatan_id WHERE ($json.query.kegiatan_id IS NULL OR s.kegiatan_id = $json.query.kegiatan_id::uuid) ORDER BY s.kode) t",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        100
+      ],
+      "id": "pks-009",
+      "name": "PG Subkegiatan List",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"SIMAPO\".program (kode, nama) VALUES ($json.body.kode, $json.body.nama) ON CONFLICT (kode) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        200
+      ],
+      "id": "pks-010",
+      "name": "PG Program Save",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"SIMAPO\".kegiatan (program_id, kode, nama) VALUES ($json.body.program_id::uuid, $json.body.kode, $json.body.nama) ON CONFLICT (kode) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        300
+      ],
+      "id": "pks-011",
+      "name": "PG Kegiatan Save",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"SIMAPO\".subkegiatan (kegiatan_id, kode, nama) VALUES ($json.body.kegiatan_id::uuid, $json.body.kode, $json.body.nama) ON CONFLICT (kode) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        400
+      ],
+      "id": "pks-012",
+      "name": "PG Subkegiatan Save",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM \"SIMAPO\".program WHERE id = $json.body.id::uuid RETURNING id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        500
+      ],
+      "id": "pks-013",
+      "name": "PG Program Delete",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM \"SIMAPO\".kegiatan WHERE id = $json.body.id::uuid RETURNING id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        600
+      ],
+      "id": "pks-014",
+      "name": "PG Kegiatan Delete",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM \"SIMAPO\".subkegiatan WHERE id = $json.body.id::uuid RETURNING id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        700
+      ],
+      "id": "pks-015",
+      "name": "PG Subkegiatan Delete",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        -100
+      ],
+      "id": "pks-016",
+      "name": "Res Program List"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        0
+      ],
+      "id": "pks-017",
+      "name": "Res Kegiatan List"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        100
+      ],
+      "id": "pks-018",
+      "name": "Res Subkegiatan List"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        200
+      ],
+      "id": "pks-019",
+      "name": "Res Program Save"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        300
+      ],
+      "id": "pks-020",
+      "name": "Res Kegiatan Save"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        400
+      ],
+      "id": "pks-021",
+      "name": "Res Subkegiatan Save"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        500
+      ],
+      "id": "pks-022",
+      "name": "Res Program Delete"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        600
+      ],
+      "id": "pks-023",
+      "name": "Res Kegiatan Delete"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        700
+      ],
+      "id": "pks-024",
+      "name": "Res Subkegiatan Delete"
+    }
+  ],
+  "connections": {
+    "WH PKS List": {
+      "main": [
+        [
+          {
+            "node": "SW PKS List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH PKS Save": {
+      "main": [
+        [
+          {
+            "node": "SW PKS Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH PKS Delete": {
+      "main": [
+        [
+          {
+            "node": "SW PKS Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SW PKS List": {
+      "main": [
+        [
+          {
+            "node": "PG Program List",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PG Kegiatan List",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PG Subkegiatan List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Program List": {
+      "main": [
+        [
+          {
+            "node": "Res Program List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Kegiatan List": {
+      "main": [
+        [
+          {
+            "node": "Res Kegiatan List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Subkegiatan List": {
+      "main": [
+        [
+          {
+            "node": "Res Subkegiatan List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SW PKS Save": {
+      "main": [
+        [
+          {
+            "node": "PG Program Save",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PG Kegiatan Save",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PG Subkegiatan Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Program Save": {
+      "main": [
+        [
+          {
+            "node": "Res Program Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Kegiatan Save": {
+      "main": [
+        [
+          {
+            "node": "Res Kegiatan Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Subkegiatan Save": {
+      "main": [
+        [
+          {
+            "node": "Res Subkegiatan Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SW PKS Delete": {
+      "main": [
+        [
+          {
+            "node": "PG Program Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PG Kegiatan Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PG Subkegiatan Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Program Delete": {
+      "main": [
+        [
+          {
+            "node": "Res Program Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Kegiatan Delete": {
+      "main": [
+        [
+          {
+            "node": "Res Kegiatan Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Subkegiatan Delete": {
+      "main": [
+        [
+          {
+            "node": "Res Subkegiatan Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "versionId": "pks-1784545881168",
+  "active": false,
+  "settings": {},
+  "tags": []
+}

@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+www/
+android-apk/
+*.zip
+*.rar
+*.tar.gz
+
+# IDE and OS files
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Capacitor native assets (if generated dynamically)
+android/app/build/
+android/app/src/main/assets/public/
