@@ -109,10 +109,40 @@
         }
       } catch (e) { console.warn('[Meja] Gagal baca cache:', e); }
 
-      // Fetch fresh data from server (disabled — CORS blocking face-get-all endpoint)
-      // fallback ke IDB cache jika ada, jika tidak → tampilkan status gagal
-      // (GPS validity check di meja-handler.js akan menangani absen meski data wajah cache)
-      ;
+      // Fetch descriptors dari userList (include face_histogram)
+      // ponytail: face-get-all CORS blocked, pakai userList?format=full sebagai fallback
+      try {
+        const ur = await apiGet(P.userList + '?format=full');
+        if (ur.ok) {
+          const ud = (ur.rows?.length ?? 0) ? ur.rows : parseApiResponse(ur.data);
+          const users = Array.isArray(ud) ? ud : (ud?.data || []);
+          const descs = [];
+          const userMap = {};
+          for (const u of users) {
+            const uid = String(u.ID || u.id || u.telegram_id || '');
+            const nama = u.Nama || u.nama || u.username || uid;
+            const histRaw = u.face_histogram || u.descriptor || u.face_descriptor;
+            if (!histRaw || histRaw === '' || histRaw === '[]') continue;
+            let arr;
+            try { arr = typeof histRaw === 'string' ? JSON.parse(histRaw) : histRaw; } catch { continue; }
+            if (!Array.isArray(arr) || arr.length < 128) continue;
+            descs.push({ id: uid, descriptor: arr });
+            userMap[uid] = { nama, nip: u.nip || u.NIP || '' };
+          }
+          if (descs.length > 0) {
+            _allFaceDescriptors = descs;
+            window._mejaUserMap = userMap;
+            _setMejaStatus('active', '🔍', `Siap Scan (${descs.length} Pegawai)`, 'Menjalankan Kamera...');
+            // Cache ke IDB supaya startup berikutnya lebih cepat
+            await idb.set('master_data', { key: 'all_face_descriptors', data: descs, userMap, updated: Date.now() });
+            console.log(`[Meja] Loaded ${descs.length} face descriptors from userList`);
+          } else {
+            console.warn('[Meja] Tidak ada face descriptor ditemukan di userList');
+            _setMejaStatus('active', '⚠️', 'Database Wajah Kosong', 'Daftarkan wajah pegawai terlebih dahulu');
+          }
+        }
+      } catch (e) { console.warn('[Meja] Gagal fetch face descriptors:', e); }
+      };
 
       loadData();
     }

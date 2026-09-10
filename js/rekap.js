@@ -646,7 +646,10 @@ function renderRekap(pg) {
   const isMagang = document.getElementById('rekapRoleFilter')?.value === 'magang';
 
   const isSA = typeof _isSuperAdmin === 'function' && _isSuperAdmin();
-  const isAdmin = isSA || (window.userProfile?.role?.toLowerCase().includes('admin')) || !!window.IS_ADMIN;
+  const isAdminRaw = isSA || (window.userProfile?.role?.toLowerCase().includes('admin')) || !!window.IS_ADMIN;
+  // ponytail: hanya admin bapperida yang boleh tambah/edit log di rekap
+  const myInstansi = (window.userProfile?.instansi_id || localStorage.getItem('MY_INSTANSI') || '').toLowerCase().trim();
+  const isAdmin = isAdminRaw && myInstansi === 'bapperida';
 
   el.innerHTML = filteredPg.map((p, idx) => {
     const nama = p.nama || '—';

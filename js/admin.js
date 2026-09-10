@@ -1619,8 +1619,11 @@
       if (!panelAdmin) return;
 
       // Update visibility of manual log button in Rekap tab
+      // ponytail: hanya admin bapperida yang boleh tambah log
+      const myInstansi = (window.userProfile?.instansi_id || localStorage.getItem('MY_INSTANSI') || '').toLowerCase().trim();
+      const canAddLog = IS_ADMIN && myInstansi === 'bapperida';
       const btnLog = $('btnTambahLog');
-      if (btnLog) btnLog.style.display = IS_ADMIN ? 'inline-block' : 'none';
+      if (btnLog) btnLog.style.display = canAddLog ? 'inline-block' : 'none';
 
       if (!IS_ADMIN) {
         panelAdmin.style.display = 'none';
