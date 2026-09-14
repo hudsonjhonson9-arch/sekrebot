@@ -2,8 +2,29 @@
     /* ════ PROFESSIONAL PDF REKAP ════ */
     // Base64 image cache to speed up PDF re-rendering instantly
     window._pdfImageCache = window._pdfImageCache || {};
+
+    /**
+     * Ambil gambar (logo / tanda tangan) dan pastikan hasilnya base64,
+     * karena jsPDF.addImage() butuh data base64 siap-pakai, bukan URL.
+     * Mendukung 3 sumber:
+     *   1. Base64 lama (data:image/...)  -> dipakai langsung.
+     *   2. URL biasa (mis. GitHub raw)   -> dikonversi via canvas.
+     *   3. Link Google Drive             -> dinormalisasi dulu, lalu
+     *      dikonversi via canvas; kalau gagal (biasanya karena Google
+     *      Drive tidak mengirim header CORS sehingga canvas "tainted"),
+     *      fallback ke proxy backend (lihat _fetchImageViaProxy) yang
+     *      mengunduh gambarnya di server lalu mengembalikan base64.
+     */
     window.preloadPdfImage = function(url) {
-      if (!url || window._pdfImageCache[url]) return Promise.resolve(window._pdfImageCache[url]);
+      if (!url) return Promise.resolve(url);
+      if (url.startsWith('data:')) return Promise.resolve(url); // sudah base64
+
+      const normalized = (typeof normalizeSignatureUrl === 'function')
+        ? normalizeSignatureUrl(url)
+        : url;
+
+      if (window._pdfImageCache[normalized]) return Promise.resolve(window._pdfImageCache[normalized]);
+
       return new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = 'Anonymous';
@@ -15,19 +36,55 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0);
             const dataURL = canvas.toDataURL('image/png');
-            window._pdfImageCache[url] = dataURL;
+            window._pdfImageCache[normalized] = dataURL;
             resolve(dataURL);
           } catch (e) {
-            console.warn("Gagal convert image to base64:", e);
-            resolve(url);
+            // Biasanya SecurityError karena canvas ter-taint (CORS),
+            // umum terjadi untuk link Google Drive. Coba lewat proxy backend.
+            console.warn("Gagal convert image ke base64 langsung (kemungkinan CORS):", e);
+            _fetchImageViaProxy(normalized).then(resolve);
           }
         };
         img.onerror = function() {
-          resolve(url);
+          _fetchImageViaProxy(normalized).then(resolve);
         };
-        img.src = url;
+        img.src = normalized;
       });
     };
+
+    /**
+     * Fallback: minta backend (n8n) yang mengunduh gambar dari Google Drive
+     * lalu mengembalikan base64 — ini menghindari batasan CORS di browser
+     * karena permintaan Drive dilakukan di server, bukan dari browser.
+     *
+     * PENTING: endpoint P.driveImageProxy harus disiapkan di backend.
+     * Kontrak sederhana yang diharapkan:
+     *   GET {P.driveImageProxy}?id=<driveFileId>
+     *   -> { ok: true, data: { base64: "iVBORw0K..." } }   // boleh dengan/atau tanpa prefix data:
+     * Kalau endpoint ini belum ada, fungsi ini akan diam-diam gagal
+     * (resolve null) dan gambar tsb dilewati saat render PDF, tanpa
+     * membuat proses PDF gagal total.
+     */
+    async function _fetchImageViaProxy(url) {
+      try {
+        if (!P.driveImageProxy) return null; // proxy belum dikonfigurasi
+        const fileId = (typeof extractDriveFileId === 'function') ? extractDriveFileId(url) : null;
+        const params = fileId ? { id: fileId } : { url };
+        const res = await apiGet(P.driveImageProxy, params);
+        if (res.ok) {
+          const d = res.data || {};
+          const b64 = d.base64 || d.data?.base64 || d.image || null;
+          if (b64) {
+            const dataUrl = b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`;
+            window._pdfImageCache[url] = dataUrl;
+            return dataUrl;
+          }
+        }
+      } catch (e) {
+        console.warn('Gagal ambil gambar via proxy backend:', e);
+      }
+      return null;
+    }
 
     async function generateRekapPDF(options = null) {
       // 1. Validasi Awal
@@ -97,14 +154,35 @@
           const sigData = sigListOk ? (parseApiResponse(sigRaw) || []) : [];
           if (Array.isArray(sigData)) {
             sigData.forEach(s => {
-              if (s.signature && s.signature.length > 100) {
-                if (s.nip) sigMap[String(s.nip)] = s.signature;
-                if (s.telegram_id) sigMap[String(s.telegram_id)] = s.signature;
+              const raw = (s.signature || '').trim();
+              // Terima base64 lama (data:image/...) MAUPUN link Google Drive/URL biasa.
+              // Catatan: link Drive jauh lebih pendek dari base64, jadi cek panjang
+              // saja (length > 100) tidak cukup dan akan salah menolak link valid.
+              const isValid = raw.startsWith('data:image') || /^https?:\/\//i.test(raw);
+              if (isValid) {
+                const val = (typeof normalizeSignatureUrl === 'function') ? normalizeSignatureUrl(raw) : raw;
+                if (s.nip) sigMap[String(s.nip)] = val;
+                if (s.telegram_id) sigMap[String(s.telegram_id)] = val;
               }
             });
           }
         } catch (e) {
           console.warn("Gagal load paraf, lanjut tanpa paraf.");
+        }
+
+        // Resolve semua tanda tangan (bisa berupa link Google Drive) menjadi
+        // base64 SEBELUM tabel digambar. Ini wajib karena:
+        //   1. jsPDF.addImage() butuh base64/data gambar siap pakai, bukan URL.
+        //   2. didDrawCell() di bawah bersifat SINKRON, jadi tidak bisa await
+        //      di dalamnya — semua gambar harus sudah siap sebelum autoTable jalan.
+        // Entry yang gagal diresolve (mis. link invalid/gagal diunduh) akan
+        // dibuang dari sigMap, sehingga paraf pegawai tsb otomatis dilewati
+        // saat render (tidak membuat proses PDF gagal total).
+        {
+          const resolvedPairs = await Promise.all(
+            Object.entries(sigMap).map(async ([key, val]) => [key, await window.preloadPdfImage(val)])
+          );
+          sigMap = Object.fromEntries(resolvedPairs.filter(([, v]) => !!v));
         }
 
         const filteredPegawai = lastRekapPegawai.filter(p => p.nama && p.nama.trim() !== "");
@@ -1033,6 +1111,3 @@
         btn.innerHTML = originalText;
       }
     };
-
-
-
