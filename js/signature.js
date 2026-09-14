@@ -2,6 +2,53 @@
     /* ════════════════════════════════════════════════════
        TANDA TANGAN DIGITAL
     ════════════════════════════════════════════════════════ */
+
+    /* ── Dukungan link Google Drive (selain base64 lama) ──
+       Beberapa tanda tangan sekarang disimpan sebagai link
+       Google Drive (bukan base64 langsung). Helper di bawah
+       mengenali & menormalkan link tsb supaya bisa dipakai
+       langsung sebagai src <img>, maupun diproses lebih lanjut
+       (misal dikonversi ke base64 untuk PDF di rekap-pdf.js).
+    */
+    function extractDriveFileId(url) {
+      if (!url || typeof url !== 'string') return null;
+      const patterns = [
+        /\/d\/([a-zA-Z0-9_-]{15,})/,     // .../file/d/<id>/view
+        /[?&]id=([a-zA-Z0-9_-]{15,})/    // ...?id=<id> atau &id=<id>
+      ];
+      for (const re of patterns) {
+        const m = url.match(re);
+        if (m) return m[1];
+      }
+      return null;
+    }
+
+    function isDriveLink(url) {
+      return typeof url === 'string' && url.includes('drive.google.com');
+    }
+
+    /**
+     * Normalisasi signature value:
+     * - Base64 lama (data:image/...) dibiarkan apa adanya.
+     * - Link Google Drive (format apapun: /file/d/../view, ?id=..., dst)
+     *   diseragamkan ke format https://drive.google.com/uc?export=view&id=<id>
+     *   supaya konsisten dipakai sebagai src <img> maupun diproses PDF.
+     */
+    function normalizeSignatureUrl(url) {
+      if (!url || typeof url !== 'string') return url;
+      const val = url.trim();
+      if (val.startsWith('data:')) return val;
+      if (isDriveLink(val)) {
+        const id = extractDriveFileId(val);
+        if (id) return `https://drive.google.com/uc?export=view&id=${id}`;
+      }
+      return val;
+    }
+
+    window.extractDriveFileId = extractDriveFileId;
+    window.isDriveLink = isDriveLink;
+    window.normalizeSignatureUrl = normalizeSignatureUrl;
+
     let _sigMode = 'draw';   // 'draw' | 'photo'
     let _sigDrawing = false;
     let _sigHasContent = false;
@@ -332,6 +379,8 @@
       const btn = $('btnProfilSig');
       if (!status) return;
 
+      dataUrl = normalizeSignatureUrl(dataUrl);
+
       if (dataUrl) {
         if (img) { img.src = dataUrl; img.style.display = 'block'; }
         if (empty) empty.style.display = 'none';
@@ -365,7 +414,7 @@
         const res = await apiGet(P.signatureGet, { nip: myNip });
         if (res.ok) {
           const d = res?.data ?? {};
-          const sig = d.signature || d.data?.signature || null;
+          const sig = normalizeSignatureUrl(d.signature || d.data?.signature || null);
           if (sig) {
             _sigCache[myNip] = sig;
             try { localStorage.setItem(cacheKey, sig); } catch (_) { }
@@ -421,7 +470,7 @@
           <div style="font-size:9px;color:var(--muted);margin-top:1px">${hasSig ? `Didaftarkan: ${tgl || '—'}` : 'Belum ada tanda tangan'}</div>
         </div>
         ${hasSig
-              ? `<div style="width:60px;height:34px;border-radius:6px;overflow:hidden;border:1px solid var(--border);background:#fff"><img src="${sigData.signature || ''}" style="width:100%;height:100%;object-fit:contain"></div>`
+              ? `<div style="width:60px;height:34px;border-radius:6px;overflow:hidden;border:1px solid var(--border);background:#fff"><img src="${normalizeSignatureUrl(sigData.signature) || ''}" style="width:100%;height:100%;object-fit:contain"></div>`
               : `<span style="font-size:9px;color:var(--muted);background:rgba(255,255,255,.05);padding:3px 8px;border-radius:6px">—</span>`
             }
       </div>`;
@@ -451,4 +500,3 @@
        ke dalam switchTab() dan loadJamAbsen() di atas untuk
        menghindari infinite recursion akibat function hoisting.
     ════════════════════════════════════════════════════════ */
-
