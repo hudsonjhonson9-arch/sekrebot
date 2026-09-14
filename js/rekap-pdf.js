@@ -25,6 +25,15 @@
 
       if (window._pdfImageCache[normalized]) return Promise.resolve(window._pdfImageCache[normalized]);
 
+      // Google Drive tidak mengirim header CORS (Access-Control-Allow-Origin),
+      // jadi canvas.toDataURL() akan gagal ("tainted canvas") kalau gambar
+      // diambil langsung dari drive.google.com. Untuk link Drive, ambil
+      // lewat proxy gambar publik (wsrv.nl) yang MENGIRIM header CORS,
+      // supaya bisa dikonversi ke base64 di browser tanpa perlu backend sendiri.
+      const loadUrl = (typeof isDriveLink === 'function' && isDriveLink(normalized))
+        ? `https://wsrv.nl/?url=${encodeURIComponent(normalized)}&output=png&n=-1`
+        : normalized;
+
       return new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = 'Anonymous';
@@ -39,16 +48,14 @@
             window._pdfImageCache[normalized] = dataURL;
             resolve(dataURL);
           } catch (e) {
-            // Biasanya SecurityError karena canvas ter-taint (CORS),
-            // umum terjadi untuk link Google Drive. Coba lewat proxy backend.
-            console.warn("Gagal convert image ke base64 langsung (kemungkinan CORS):", e);
+            console.warn("Gagal convert image ke base64 lewat proxy wsrv.nl, coba proxy backend:", e);
             _fetchImageViaProxy(normalized).then(resolve);
           }
         };
         img.onerror = function() {
           _fetchImageViaProxy(normalized).then(resolve);
         };
-        img.src = normalized;
+        img.src = loadUrl;
       });
     };
 
@@ -56,6 +63,7 @@
      * Fallback: minta backend (n8n) yang mengunduh gambar dari Google Drive
      * lalu mengembalikan base64 — ini menghindari batasan CORS di browser
      * karena permintaan Drive dilakukan di server, bukan dari browser.
+
      *
      * PENTING: endpoint P.driveImageProxy harus disiapkan di backend.
      * Kontrak sederhana yang diharapkan:
