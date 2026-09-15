@@ -6154,7 +6154,7 @@ body {
 
 html.light-theme {
   /* Warm Eye-Comfort Palette — ponytail: warm tones reduce eye strain */
-  --navy: #f8f6f1;       /* Warm parchment background */
+  --navy: #ece8dd;       /* Warm parchment background — deeper cream */
   --white: #2c2417;      /* Warm dark text (high contrast on cream) */
   --muted: #574a3b;      /* Warm secondary text — darkened for 4.5:1 contrast */
   --card-bg: #fffdf9;    /* Warm white cards — no pure #fff glare */
@@ -6214,7 +6214,7 @@ html.light-theme .bottom-nav {
 }
 @media (min-width: 768px) {
   html.light-theme .bottom-nav {
-    background: #f0ede5 !important;
+    background: #e5e1d6 !important;
     border-right: 1px solid rgba(138, 105, 20, 0.18);
   }
 }
@@ -6572,13 +6572,13 @@ html.light-theme .acc-bar {
   background: rgba(138, 105, 20, 0.06);
 }
 html.light-theme #appSplash {
-  background: #f8f6f1 !important;
+  background: #ece8dd !important;
 }
 html.light-theme #appSplash .splash-title {
   color: #2c2417 !important;
 }
 html.light-theme #appSplash .splash-bar {
-  background: rgba(138, 105, 20, 0.08) !important;
+  background: rgba(138, 105, 20, 0.12) !important;
 }
 html.light-theme #appSplash .splash-progress {
   background: linear-gradient(90deg, #8a6914, #c9a84c) !important;
@@ -6600,7 +6600,7 @@ html.light-theme .flatpickr-day {
 html.light-theme .flatpickr-day:hover,
 html.light-theme .flatpickr-day.prevMonthDay:hover,
 html.light-theme .flatpickr-day.nextMonthDay:hover {
-  background: #f8f6f1 !important;
+  background: #ece8dd !important;
   color: #2c2417 !important;
 }
 html.light-theme .flatpickr-day.prevMonthDay,
