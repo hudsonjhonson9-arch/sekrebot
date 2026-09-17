@@ -1,0 +1,29 @@
+ALTER TABLE IF EXISTS "SIMAPO".sbu RENAME TO standar_harga;
+
+CREATE TABLE IF NOT EXISTS "SIMAPO".program (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  kode VARCHAR(20) NOT NULL UNIQUE,
+  nama TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS "SIMAPO".kegiatan (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  program_id UUID NOT NULL REFERENCES "SIMAPO".program(id) ON DELETE CASCADE,
+  kode VARCHAR(30) NOT NULL,
+  nama TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(kode)
+);
+
+CREATE TABLE IF NOT EXISTS "SIMAPO".subkegiatan (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  kegiatan_id UUID NOT NULL REFERENCES "SIMAPO".kegiatan(id) ON DELETE CASCADE,
+  kode VARCHAR(40) NOT NULL,
+  nama TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(kode)
+);
