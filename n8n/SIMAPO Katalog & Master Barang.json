@@ -1,0 +1,934 @@
+{
+  "updatedAt": "2026-09-28T07:20:11.565Z",
+  "createdAt": "2026-05-12T12:32:39.501Z",
+  "id": "xn3a6tl1cw1Orc8I",
+  "name": "SIMAPO Katalog & Master Barang",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "path": "simapo-katalog",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        -176
+      ],
+      "id": "82378f72-2df1-4251-9b97-ebfd2f387250",
+      "name": "WH Katalog",
+      "webhookId": "simapo-katalog"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\nSELECT b.id, b.kodebarang, b.nama, b.jenisbarang, b.satuan, b.spesifikasi, b.foto, CASE WHEN LOWER(REPLACE(b.jenisbarang,' ','_')) IN ('aset_tetap','asettetap') THEN (SELECT COUNT(*)::int FROM \"SIMAPO\".unit_aset ua WHERE ua.barangid = b.id) ELSE b.stok_saat_ini END AS stok_saat_ini, b.minimumstok, b.hargasatuan, b.kategoriid, b.isactive FROM \"SIMAPO\".barang b WHERE b.isactive = true AND b.instansi_id = '{{ ($json.query.instansi_id || 'bapperida').toString().replace(/'/g, \"''\") }}' ORDER BY b.nama ASC\n) t;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -288,
+        -176
+      ],
+      "id": "027305a4-4ab5-4a9d-84ca-77a3d970f759",
+      "name": "PG Katalog",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: $input.all()[0].json.items || [] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        -176
+      ],
+      "id": "d9ed8ffb-718f-4524-bf2a-13401b443bdd",
+      "name": "Agg Katalog"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        192,
+        -176
+      ],
+      "id": "3d3c2704-8af1-492e-b33f-bc787d4536f9",
+      "name": "Res Katalog"
+    },
+    {
+      "parameters": {
+        "path": "simapo-admin-master-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        128
+      ],
+      "id": "272f7477-d89f-49f6-9b3d-6eccf930873f",
+      "name": "WH Master List",
+      "webhookId": "simapo-admin-master-list"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\nSELECT b.id, b.kodebarang, b.nama, b.jenisbarang, b.satuan, b.spesifikasi, b.foto, b.stok_saat_ini, b.minimumstok, b.hargasatuan, b.kategoriid, k.nama AS nama_kategori, b.isactive, TO_CHAR(b.createdat,'YYYY-MM-DD') AS createdat FROM \"SIMAPO\".barang b LEFT JOIN \"SIMAPO\".kategori_barang k ON k.id = b.kategoriid WHERE b.instansi_id = '{{ ($json.query.instansi_id || 'bapperida').toString().replace(/'/g, \"''\") }}' ORDER BY b.isactive DESC, b.nama ASC\n) t;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -288,
+        128
+      ],
+      "id": "af20681c-3478-4c88-8635-0b724166723a",
+      "name": "PG Master List",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: $input.all()[0].json.items || [] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        128
+      ],
+      "id": "c1587dd7-0af5-451a-8fce-0842f6946f0c",
+      "name": "Agg Master"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        192,
+        128
+      ],
+      "id": "eb0fb7ff-42e8-4b2a-9497-394f62b20307",
+      "name": "Res Master List"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simapo-admin-master-save",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        432
+      ],
+      "id": "74dcbd95-0e76-4c6c-86c0-a2858a831d44",
+      "name": "WH Master Save",
+      "webhookId": "simapo-admin-master-save"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json.body || $input.item.json;\nconst q = $input.item.json.query || {};\nif (!b.nama) throw new Error('Nama barang wajib diisi');\nconst jenis = b.jenisbarang || 'Aset Tetap';\nconst jenisPrefix = jenis === 'Aset Tetap' ? 'AT' : 'HP';\nconst katPrefix = (b.kategoriid || 'KTG').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0,5);\nif (!b.kodebarang) {\n  const rand = String(Date.now()).slice(-4);\n  b.kodebarang = jenisPrefix + '-' + katPrefix + '-' + rand;\n}\nreturn [{ json: {\n  id: b.id || null,\n  nama: b.nama,\n  kodebarang: b.kodebarang,\n  jenisbarang: jenis,\n  satuan: b.satuan || 'Unit',\n  spesifikasi: b.spesifikasi || '',\n  foto: b.foto || '',\n  stok_saat_ini: parseInt(b.stok_saat_ini) || 0,\n  hargasatuan: parseFloat(b.hargasatuan) || 0,\n  kategoriid: b.kategoriid || null,\n  minimumstok: parseInt(b.minimumstok) || 0,\n  instansi_id: b.instansi_id || q.instansi_id || 'bapperida'\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        432
+      ],
+      "id": "c545beaa-b18c-46d4-ace7-7f8d8093cd6b",
+      "name": "Validate Barang"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH new_barang AS (\n  INSERT INTO \"SIMAPO\".barang (id, kodebarang, nama, jenisbarang, satuan, spesifikasi, foto, stok_saat_ini, minimumstok, hargasatuan, kategoriid, isactive, createdat, updatedat, instansi_id)\n  VALUES ({{ $json.id ? \"'\" + $json.id.toString().replace(/'/g, \"''\") + \"'\" : 'gen_random_uuid()::text' }}, '{{ ($json.kodebarang).toString().replace(/'/g, \"''\") }}', '{{ ($json.nama).toString().replace(/'/g, \"''\") }}', '{{ ($json.jenisbarang || \"Aset Tetap\").toString().trim().toLowerCase().replace(/[_ ]+/g,\" \") === \"aset tetap\" ? \"Aset Tetap\" : (($json.jenisbarang || \"\").toString().trim().toLowerCase().replace(/[_ ]+/g,\" \") === \"habis pakai\" ? \"Habis Pakai\" : \"Aset Tetap\") }}', '{{ ($json.satuan).toString().replace(/'/g, \"''\") }}', '{{ ($json.spesifikasi).toString().replace(/'/g, \"''\") }}', '{{ ($json.foto).toString().replace(/'/g, \"''\") }}', {{ Math.max(0, Number($json.stok_saat_ini) || 0) }}, {{ Math.max(0, Number($json.minimumstok) || 0) }}, {{ Math.max(0, Number($json.hargasatuan) || 0) }}, {{ $json.kategoriid ? \"'\" + $json.kategoriid.toString().replace(/'/g, \"''\") + \"'\" : 'NULL' }}, true, NOW(), NOW(), '{{ ($json.instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}')\n  ON CONFLICT (id) DO UPDATE SET nama=EXCLUDED.nama, kodebarang=EXCLUDED.kodebarang, jenisbarang=EXCLUDED.jenisbarang, satuan=EXCLUDED.satuan, spesifikasi=EXCLUDED.spesifikasi, foto=EXCLUDED.foto, stok_saat_ini=EXCLUDED.stok_saat_ini, minimumstok=EXCLUDED.minimumstok, hargasatuan=EXCLUDED.hargasatuan, kategoriid=EXCLUDED.kategoriid, updatedat=NOW(), instansi_id=EXCLUDED.instansi_id\n  RETURNING id, nama, kodebarang, jenisbarang, stok_saat_ini\n),\nins_ua AS (\n  INSERT INTO \"SIMAPO\".unit_aset (id, barangid, nomorinventaris, kondisi, statuspinjam, tahunperolehan, updatedat)\n  SELECT gen_random_uuid(), nb.id, nb.kodebarang || '-' || LPAD(g::text, 3, '0'), 'Baik', false, EXTRACT(YEAR FROM NOW())::int, NOW()\n  FROM new_barang nb\n  CROSS JOIN LATERAL generate_series(1, GREATEST(COALESCE(nb.stok_saat_ini, 0), 1)) AS g\n  WHERE LOWER(REPLACE(nb.jenisbarang,' ','_')) IN ('aset_tetap','asettetap')\n    AND NOT EXISTS (SELECT 1 FROM \"SIMAPO\".unit_aset ua WHERE ua.barangid = nb.id)\n)\nSELECT id, nama FROM new_barang;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -48,
+        432
+      ],
+      "id": "f3cb2814-913f-4785-b257-5bb20f8bf841",
+      "name": "PG UPSERT Barang",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        192,
+        432
+      ],
+      "id": "84e60f77-e6b0-4710-a955-fd2a8bb74bca",
+      "name": "Res Master Save"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simapo-admin-master-delete",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        736
+      ],
+      "id": "b2422d6f-2ca5-43dc-847e-9775868abbb0",
+      "name": "WH Master Delete",
+      "webhookId": "simapo-admin-master-delete"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"SIMAPO\".barang SET isactive = false, updatedat = NOW() WHERE id = '{{ (($input.item.json.body || $input.item.json).id).toString().replace(/'/g, \"''\") }}' RETURNING id, nama;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -288,
+        736
+      ],
+      "id": "98080b4f-1173-429c-a4f4-168b0d4acfd6",
+      "name": "PG Soft Delete",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -48,
+        736
+      ],
+      "id": "8fb5c70f-cfb9-46a1-a0b1-c296f133d0cf",
+      "name": "Res Master Delete"
+    }
+  ],
+  "connections": {
+    "Agg Unit List": {
+      "main": [
+        [
+          {
+            "node": "Res Unit List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Katalog": {
+      "main": [
+        [
+          {
+            "node": "PG Katalog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Katalog": {
+      "main": [
+        [
+          {
+            "node": "Agg Katalog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Katalog": {
+      "main": [
+        [
+          {
+            "node": "Res Katalog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Master List": {
+      "main": [
+        [
+          {
+            "node": "PG Master List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Master List": {
+      "main": [
+        [
+          {
+            "node": "Agg Master",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Master": {
+      "main": [
+        [
+          {
+            "node": "Res Master List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Master Save": {
+      "main": [
+        [
+          {
+            "node": "Validate Barang",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Barang": {
+      "main": [
+        [
+          {
+            "node": "PG UPSERT Barang",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG UPSERT Barang": {
+      "main": [
+        [
+          {
+            "node": "Res Master Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Master Delete": {
+      "main": [
+        [
+          {
+            "node": "PG Soft Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Soft Delete": {
+      "main": [
+        [
+          {
+            "node": "Res Master Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "823549f8-9a34-4722-97ed-9db6603f22f0",
+  "activeVersionId": "823549f8-9a34-4722-97ed-9db6603f22f0",
+  "versionCounter": 181,
+  "triggerCount": 4,
+  "shared": [
+    {
+      "updatedAt": "2026-05-12T12:32:39.509Z",
+      "createdAt": "2026-05-12T12:32:39.509Z",
+      "role": "workflow:owner",
+      "workflowId": "xn3a6tl1cw1Orc8I",
+      "projectId": "ZE0tgWH81scm4zQD",
+      "project": {
+        "updatedAt": "2026-03-12T15:42:44.257Z",
+        "createdAt": "2026-03-12T15:19:34.808Z",
+        "id": "ZE0tgWH81scm4zQD",
+        "name": "Achmad Aqil Susanto <ahmadagilsusanto@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-09-28T07:20:11.569Z",
+    "createdAt": "2026-09-28T07:20:11.569Z",
+    "versionId": "823549f8-9a34-4722-97ed-9db6603f22f0",
+    "workflowId": "xn3a6tl1cw1Orc8I",
+    "nodes": [
+      {
+        "parameters": {
+          "path": "simapo-katalog",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -528,
+          -176
+        ],
+        "id": "82378f72-2df1-4251-9b97-ebfd2f387250",
+        "name": "WH Katalog",
+        "webhookId": "simapo-katalog"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\nSELECT b.id, b.kodebarang, b.nama, b.jenisbarang, b.satuan, b.spesifikasi, b.foto, CASE WHEN LOWER(REPLACE(b.jenisbarang,' ','_')) IN ('aset_tetap','asettetap') THEN (SELECT COUNT(*)::int FROM \"SIMAPO\".unit_aset ua WHERE ua.barangid = b.id) ELSE b.stok_saat_ini END AS stok_saat_ini, b.minimumstok, b.hargasatuan, b.kategoriid, b.isactive FROM \"SIMAPO\".barang b WHERE b.isactive = true AND b.instansi_id = '{{ ($json.query.instansi_id || 'bapperida').toString().replace(/'/g, \"''\") }}' ORDER BY b.nama ASC\n) t;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -288,
+          -176
+        ],
+        "id": "027305a4-4ab5-4a9d-84ca-77a3d970f759",
+        "name": "PG Katalog",
+        "alwaysOutputData": true,
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "return [{ json: { data: $input.all()[0].json.items || [] } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -48,
+          -176
+        ],
+        "id": "d9ed8ffb-718f-4524-bf2a-13401b443bdd",
+        "name": "Agg Katalog"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          192,
+          -176
+        ],
+        "id": "3d3c2704-8af1-492e-b33f-bc787d4536f9",
+        "name": "Res Katalog"
+      },
+      {
+        "parameters": {
+          "path": "simapo-admin-master-list",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -528,
+          128
+        ],
+        "id": "272f7477-d89f-49f6-9b3d-6eccf930873f",
+        "name": "WH Master List",
+        "webhookId": "simapo-admin-master-list"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\nSELECT b.id, b.kodebarang, b.nama, b.jenisbarang, b.satuan, b.spesifikasi, b.foto, b.stok_saat_ini, b.minimumstok, b.hargasatuan, b.kategoriid, k.nama AS nama_kategori, b.isactive, TO_CHAR(b.createdat,'YYYY-MM-DD') AS createdat FROM \"SIMAPO\".barang b LEFT JOIN \"SIMAPO\".kategori_barang k ON k.id = b.kategoriid WHERE b.instansi_id = '{{ ($json.query.instansi_id || 'bapperida').toString().replace(/'/g, \"''\") }}' ORDER BY b.isactive DESC, b.nama ASC\n) t;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -288,
+          128
+        ],
+        "id": "af20681c-3478-4c88-8635-0b724166723a",
+        "name": "PG Master List",
+        "alwaysOutputData": true,
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "return [{ json: { data: $input.all()[0].json.items || [] } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -48,
+          128
+        ],
+        "id": "c1587dd7-0af5-451a-8fce-0842f6946f0c",
+        "name": "Agg Master"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          192,
+          128
+        ],
+        "id": "eb0fb7ff-42e8-4b2a-9497-394f62b20307",
+        "name": "Res Master List"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "simapo-admin-master-save",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -528,
+          432
+        ],
+        "id": "74dcbd95-0e76-4c6c-86c0-a2858a831d44",
+        "name": "WH Master Save",
+        "webhookId": "simapo-admin-master-save"
+      },
+      {
+        "parameters": {
+          "jsCode": "const b = $input.item.json.body || $input.item.json;\nconst q = $input.item.json.query || {};\nif (!b.nama) throw new Error('Nama barang wajib diisi');\nconst jenis = b.jenisbarang || 'Aset Tetap';\nconst jenisPrefix = jenis === 'Aset Tetap' ? 'AT' : 'HP';\nconst katPrefix = (b.kategoriid || 'KTG').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0,5);\nif (!b.kodebarang) {\n  const rand = String(Date.now()).slice(-4);\n  b.kodebarang = jenisPrefix + '-' + katPrefix + '-' + rand;\n}\nreturn [{ json: {\n  id: b.id || null,\n  nama: b.nama,\n  kodebarang: b.kodebarang,\n  jenisbarang: jenis,\n  satuan: b.satuan || 'Unit',\n  spesifikasi: b.spesifikasi || '',\n  foto: b.foto || '',\n  stok_saat_ini: parseInt(b.stok_saat_ini) || 0,\n  hargasatuan: parseFloat(b.hargasatuan) || 0,\n  kategoriid: b.kategoriid || null,\n  minimumstok: parseInt(b.minimumstok) || 0,\n  instansi_id: b.instansi_id || q.instansi_id || 'bapperida'\n} }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -288,
+          432
+        ],
+        "id": "c545beaa-b18c-46d4-ace7-7f8d8093cd6b",
+        "name": "Validate Barang"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "WITH new_barang AS (\n  INSERT INTO \"SIMAPO\".barang (id, kodebarang, nama, jenisbarang, satuan, spesifikasi, foto, stok_saat_ini, minimumstok, hargasatuan, kategoriid, isactive, createdat, updatedat, instansi_id)\n  VALUES ({{ $json.id ? \"'\" + $json.id.toString().replace(/'/g, \"''\") + \"'\" : 'gen_random_uuid()::text' }}, '{{ ($json.kodebarang).toString().replace(/'/g, \"''\") }}', '{{ ($json.nama).toString().replace(/'/g, \"''\") }}', '{{ ($json.jenisbarang || \"Aset Tetap\").toString().trim().toLowerCase().replace(/[_ ]+/g,\" \") === \"aset tetap\" ? \"Aset Tetap\" : (($json.jenisbarang || \"\").toString().trim().toLowerCase().replace(/[_ ]+/g,\" \") === \"habis pakai\" ? \"Habis Pakai\" : \"Aset Tetap\") }}', '{{ ($json.satuan).toString().replace(/'/g, \"''\") }}', '{{ ($json.spesifikasi).toString().replace(/'/g, \"''\") }}', '{{ ($json.foto).toString().replace(/'/g, \"''\") }}', {{ Math.max(0, Number($json.stok_saat_ini) || 0) }}, {{ Math.max(0, Number($json.minimumstok) || 0) }}, {{ Math.max(0, Number($json.hargasatuan) || 0) }}, {{ $json.kategoriid ? \"'\" + $json.kategoriid.toString().replace(/'/g, \"''\") + \"'\" : 'NULL' }}, true, NOW(), NOW(), '{{ ($json.instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}')\n  ON CONFLICT (id) DO UPDATE SET nama=EXCLUDED.nama, kodebarang=EXCLUDED.kodebarang, jenisbarang=EXCLUDED.jenisbarang, satuan=EXCLUDED.satuan, spesifikasi=EXCLUDED.spesifikasi, foto=EXCLUDED.foto, stok_saat_ini=EXCLUDED.stok_saat_ini, minimumstok=EXCLUDED.minimumstok, hargasatuan=EXCLUDED.hargasatuan, kategoriid=EXCLUDED.kategoriid, updatedat=NOW(), instansi_id=EXCLUDED.instansi_id\n  RETURNING id, nama, kodebarang, jenisbarang, stok_saat_ini\n),\nins_ua AS (\n  INSERT INTO \"SIMAPO\".unit_aset (id, barangid, nomorinventaris, kondisi, statuspinjam, tahunperolehan, updatedat)\n  SELECT gen_random_uuid(), nb.id, nb.kodebarang || '-' || LPAD(g::text, 3, '0'), 'Baik', false, EXTRACT(YEAR FROM NOW())::int, NOW()\n  FROM new_barang nb\n  CROSS JOIN LATERAL generate_series(1, GREATEST(COALESCE(nb.stok_saat_ini, 0), 1)) AS g\n  WHERE LOWER(REPLACE(nb.jenisbarang,' ','_')) IN ('aset_tetap','asettetap')\n    AND NOT EXISTS (SELECT 1 FROM \"SIMAPO\".unit_aset ua WHERE ua.barangid = nb.id)\n)\nSELECT id, nama FROM new_barang;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -48,
+          432
+        ],
+        "id": "f3cb2814-913f-4785-b257-5bb20f8bf841",
+        "name": "PG UPSERT Barang",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          192,
+          432
+        ],
+        "id": "84e60f77-e6b0-4710-a955-fd2a8bb74bca",
+        "name": "Res Master Save"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "simapo-admin-master-delete",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -528,
+          736
+        ],
+        "id": "b2422d6f-2ca5-43dc-847e-9775868abbb0",
+        "name": "WH Master Delete",
+        "webhookId": "simapo-admin-master-delete"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE \"SIMAPO\".barang SET isactive = false, updatedat = NOW() WHERE id = '{{ (($input.item.json.body || $input.item.json).id).toString().replace(/'/g, \"''\") }}' RETURNING id, nama;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -288,
+          736
+        ],
+        "id": "98080b4f-1173-429c-a4f4-168b0d4acfd6",
+        "name": "PG Soft Delete",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -48,
+          736
+        ],
+        "id": "8fb5c70f-cfb9-46a1-a0b1-c296f133d0cf",
+        "name": "Res Master Delete"
+      }
+    ],
+    "connections": {
+      "Agg Unit List": {
+        "main": [
+          [
+            {
+              "node": "Res Unit List",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WH Katalog": {
+        "main": [
+          [
+            {
+              "node": "PG Katalog",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Katalog": {
+        "main": [
+          [
+            {
+              "node": "Agg Katalog",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Agg Katalog": {
+        "main": [
+          [
+            {
+              "node": "Res Katalog",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WH Master List": {
+        "main": [
+          [
+            {
+              "node": "PG Master List",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Master List": {
+        "main": [
+          [
+            {
+              "node": "Agg Master",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Agg Master": {
+        "main": [
+          [
+            {
+              "node": "Res Master List",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WH Master Save": {
+        "main": [
+          [
+            {
+              "node": "Validate Barang",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate Barang": {
+        "main": [
+          [
+            {
+              "node": "PG UPSERT Barang",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG UPSERT Barang": {
+        "main": [
+          [
+            {
+              "node": "Res Master Save",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WH Master Delete": {
+        "main": [
+          [
+            {
+              "node": "PG Soft Delete",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Soft Delete": {
+        "main": [
+          [
+            {
+              "node": "Res Master Delete",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Achmad Aqil Susanto",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-28T07:20:12.691Z",
+        "id": 1750,
+        "workflowId": "xn3a6tl1cw1Orc8I",
+        "versionId": "823549f8-9a34-4722-97ed-9db6603f22f0",
+        "event": "activated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      },
+      {
+        "createdAt": "2026-09-28T07:20:12.608Z",
+        "id": 1749,
+        "workflowId": "xn3a6tl1cw1Orc8I",
+        "versionId": "823549f8-9a34-4722-97ed-9db6603f22f0",
+        "event": "deactivated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    ]
+  }
+}
