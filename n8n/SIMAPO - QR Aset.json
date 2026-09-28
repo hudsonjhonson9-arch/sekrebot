@@ -28,7 +28,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\n  SELECT ua.id, b.nama AS nama_barang, b.kodebarang, ua.nomorinventaris, ua.kondisi, ua.statuspinjam, b.foto AS foto_barang,\n    (\n      SELECT json_build_object(\n        'id', p.id,\n        'nama', COALESCE(u.\"username\", p.userid),\n        'userid', p.userid\n      )\n      FROM \"SIMAPO\".peminjaman p\n      LEFT JOIN public.user_list u ON u.\"NIP\" = p.userid\n      WHERE p.unitasetid = ua.id AND p.status = 'DIPINJAM'\n      ORDER BY p.createdat DESC LIMIT 1\n    ) AS peminjaman_aktif\n  FROM \"SIMAPO\".unit_aset ua\n  JOIN \"SIMAPO\".barang b ON b.id = ua.barangid\n  WHERE (ua.qrcode = '{{ ($json.query.q).toString().replace(/'/g, \"''\") }}' OR ua.barangid = REPLACE('{{ ($json.query.q).toString().replace(/'/g, \"''\") }}', 'SIMAPO-', ''))\n  ORDER BY ua.nomorinventaris ASC\n) t;",
+        "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\n  SELECT ua.id, b.nama AS nama_barang, b.kodebarang, ua.nomorinventaris, ua.kondisi, ua.statuspinjam, b.foto AS foto_barang,\n    (\n      SELECT json_build_object(\n        'id', p.id,\n        'nama', COALESCE(u.\"username\", p.userid),\n        'userid', p.userid\n      )\n      FROM \"SIMAPO\".peminjaman p\n      LEFT JOIN public.user_list u ON u.\"NIP\" = p.userid\n      WHERE p.unitasetid = ua.id AND p.status = 'DIPINJAM'\n      ORDER BY p.createdat DESC LIMIT 1\n    ) AS peminjaman_aktif\n  FROM \"SIMAPO\".unit_aset ua\n  JOIN \"SIMAPO\".barang b ON b.id = ua.barangid\n  WHERE (\n    ua.qrcode = '{{ ($json.query.q).toString().replace(/'/g, \"''\") }}'\n    OR ua.qrcode LIKE '%qr=' || '{{ ($json.query.q).toString().replace(/'/g, \"''\") }}'\n    OR ua.id = REPLACE('{{ ($json.query.q).toString().replace(/'/g, \"''\") }}', 'SIMAPO-', '')\n    OR ua.barangid = REPLACE('{{ ($json.query.q).toString().replace(/'/g, \"''\") }}', 'SIMAPO-', '')\n  )\n  ORDER BY ua.nomorinventaris ASC\n) t;",
         "options": {}
       },
       "id": "90de713d-7a9d-42c6-a4fd-01b89b85ef8f",
@@ -105,7 +105,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\n  SELECT ua.id, ua.nomorinventaris, ua.kondisi, ua.statuspinjam,\n    (\n      SELECT COALESCE(u.\"username\", p.userid)\n      FROM \"SIMAPO\".peminjaman p\n      LEFT JOIN public.user_list u ON u.\"NIP\" = p.userid\n      WHERE p.unitasetid = ua.id AND p.status = 'DIPINJAM'\n      ORDER BY p.createdat DESC LIMIT 1\n    ) AS nama_peminjam_saat_ini\n  FROM \"SIMAPO\".unit_aset ua\n  WHERE ua.barangid = '{{ ($json.query.barangid).toString().replace(/'/g, \"''\") }}'\n  ORDER BY ua.nomorinventaris ASC\n) t;",
+        "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\n  SELECT ua.id, ua.nomorinventaris, ua.qrcode, ua.kondisi, ua.statuspinjam,\n    (\n      SELECT COALESCE(u.\"username\", p.userid)\n      FROM \"SIMAPO\".peminjaman p\n      LEFT JOIN public.user_list u ON u.\"NIP\" = p.userid\n      WHERE p.unitasetid = ua.id AND p.status = 'DIPINJAM'\n      ORDER BY p.createdat DESC LIMIT 1\n    ) AS nama_peminjam_saat_ini\n  FROM \"SIMAPO\".unit_aset ua\n  WHERE ua.barangid = '{{ ($json.query.barangid).toString().replace(/'/g, \"''\") }}'\n  ORDER BY ua.nomorinventaris ASC\n) t;",
         "options": {}
       },
       "id": "6f5f9dd1-2c4e-41f8-888f-83a88a93be44",
@@ -183,7 +183,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE \"SIMAPO\".unit_aset SET qrcode = '{{ ($json.body.qrcode).toString().replace(/'/g, \"''\") }}', updatedat = CURRENT_TIMESTAMP WHERE id = '{{ ($json.body.id).toString().replace(/'/g, \"''\") }}' RETURNING id, qrcode;",
+        "query": "UPDATE \"SIMAPO\".unit_aset SET qrcode = '{{ ($json.body.qrcode ?? '').toString().replace(/'/g, \"''\") }}', updatedat = CURRENT_TIMESTAMP WHERE id = COALESCE(NULLIF('{{ ($json.body.id ?? '').toString().replace(/'/g, \"''\") }}', ''), '{{ ($json.body.unitasetid ?? '').toString().replace(/'/g, \"''\") }}') RETURNING id, qrcode;",
         "options": {}
       },
       "id": "c20ca438-499f-459a-9362-1cf1e6dfef5e",
