@@ -571,7 +571,7 @@ async function simapoSubmitPinjam() {
         jenisbarang: jenis
       })
     });
-    
+
     if (res.ok) {
       showToast('Pengajuan berhasil dikirim!', 'success');
       // Reset
@@ -587,11 +587,11 @@ async function simapoSubmitPinjam() {
       }
       switchSimapoSection('katalog');
     } else {
-      showToast('Gagal mengirim pengajuan', 'error');
+      showToast(await window.simapoResponseError(res, 'Gagal mengirim pengajuan'), 'error');
     }
   } catch (e) {
-    showToast('(Demo) Pengajuan terkirim!', 'success');
-    switchSimapoSection('katalog');
+    console.error('[SIMAPO] Pengajuan gagal:', e);
+    showToast('Gagal menghubungi server. Pengajuan tidak terkirim.', 'error');
   }
 }
 
@@ -686,11 +686,11 @@ async function simapoSubmitTiket() {
       if (window._simapoCache) window._simapoCache.clear('admin_tiket');
       switchSimapoSection('katalog');
     } else {
-      showToast('Gagal mengirim laporan', 'error');
+      showToast(await window.simapoResponseError(res, 'Gagal mengirim laporan'), 'error');
     }
   } catch (e) {
-    showToast('(Demo) Laporan terkirim!', 'success');
-    switchSimapoSection('katalog');
+    console.error('[SIMAPO] Laporan tiket gagal:', e);
+    showToast('Gagal menghubungi server. Laporan tidak terkirim.', 'error');
   }
 }
 

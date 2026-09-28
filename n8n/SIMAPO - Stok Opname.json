@@ -1,0 +1,444 @@
+{
+  "updatedAt": "2026-09-28T05:41:43.363Z",
+  "createdAt": "2026-05-12T15:09:47.029Z",
+  "id": "xYD44X4T3irX6VBW",
+  "name": "SIMAPO - Stok Opname",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simapo-opname-save",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "10946bfc-542f-4808-bb3d-f27eb86a90bb",
+      "name": "WH Simpan Opname",
+      "webhookId": "simapo-opname-save"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"SIMAPO\".stock_opname (id, nomoropname, tanggal, status, createdat, updatedat, instansi_id, createdbyid) VALUES (gen_random_uuid(), 'OPN-' + TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'), NOW(), 'SELESAI', NOW(), NOW(), '{{ ($json.body.instansi_id || $json.query.instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}', '{{ ($json.headers[\"x-nip\"] || $json.body.nip || \"ADMIN\").toString().replace(/'/g, \"''\") }}') RETURNING id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        0
+      ],
+      "id": "940017f7-be4c-4f12-a1bf-27cbeff1e073",
+      "name": "Insert Opname Head",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $node[\"WH Simpan Opname\"].json.body || $node[\"WH Simpan Opname\"].json;\nconst items = b.items || [];\nconst opnameid = $input.item.json.id;\nreturn items.map(i => ({ json: { \n  opnameid,\n  instansi_id: b.instansi_id || $input.item.json.query?.instansi_id || 'bapperida',\n  barangid: i.id, \n  stokfisik: parseInt(i.stok_fisik) || 0, \n  stoksistem: parseInt(i.stok_sistem) || 0,\n  selisih: (parseInt(i.stok_fisik) || 0) - (parseInt(i.stok_sistem) || 0)\n} }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "id": "2d3b4f71-544a-43f4-85b4-1ccccff9ca3b",
+      "name": "Prepare Details"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"SIMAPO\".detail_opname (id, opnameid, barangid, stoksistem, stokfisik, selisih, instansi_id) VALUES (gen_random_uuid(), '{{ ($json.opnameid).toString().replace(/'/g, \"''\") }}', '{{ ($json.barangid).toString().replace(/'/g, \"''\") }}', {{ ($json.stoksistem).toString().replace(/'/g, \"''\") }}, {{ ($json.stokfisik).toString().replace(/'/g, \"''\") }}, {{ ($json.selisih).toString().replace(/'/g, \"''\") }}, '{{ ($json.instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}'); UPDATE \"SIMAPO\".barang SET stok_saat_ini = {{ ($json.stokfisik).toString().replace(/'/g, \"''\") }}, updatedat = NOW() WHERE id = '{{ ($json.barangid).toString().replace(/'/g, \"''\") }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        720,
+        0
+      ],
+      "id": "9e56ccb1-4c84-47dc-aad2-cd120a5401d7",
+      "name": "PG Insert Detail & Update",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { success: true, message: 'Stok opname berhasil disimpan' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ],
+      "id": "f3ef8195-5691-40a7-83a8-d9a11cb72d4f",
+      "name": "Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "6762b108-964b-4518-a2ce-506a29a58ac2",
+      "name": "Res Simpan Opname"
+    }
+  ],
+  "connections": {
+    "WH Simpan Opname": {
+      "main": [
+        [
+          {
+            "node": "Insert Opname Head",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Opname Head": {
+      "main": [
+        [
+          {
+            "node": "Prepare Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Details": {
+      "main": [
+        [
+          {
+            "node": "PG Insert Detail & Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Insert Detail & Update": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Response": {
+      "main": [
+        [
+          {
+            "node": "Res Simpan Opname",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "98586519-b5da-4073-9e92-5ec07ae91253",
+  "activeVersionId": "98586519-b5da-4073-9e92-5ec07ae91253",
+  "versionCounter": 49,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-05-12T15:09:47.030Z",
+      "createdAt": "2026-05-12T15:09:47.030Z",
+      "role": "workflow:owner",
+      "workflowId": "xYD44X4T3irX6VBW",
+      "projectId": "ZE0tgWH81scm4zQD",
+      "project": {
+        "updatedAt": "2026-03-12T15:42:44.257Z",
+        "createdAt": "2026-03-12T15:19:34.808Z",
+        "id": "ZE0tgWH81scm4zQD",
+        "name": "Achmad Aqil Susanto <ahmadagilsusanto@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-09-28T05:37:24.292Z",
+    "createdAt": "2026-09-28T05:37:24.292Z",
+    "versionId": "98586519-b5da-4073-9e92-5ec07ae91253",
+    "workflowId": "xYD44X4T3irX6VBW",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "simapo-opname-save",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          0
+        ],
+        "id": "10946bfc-542f-4808-bb3d-f27eb86a90bb",
+        "name": "WH Simpan Opname",
+        "webhookId": "simapo-opname-save"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO \"SIMAPO\".stock_opname (id, nomoropname, tanggal, status, createdat, updatedat, instansi_id, createdbyid) VALUES (gen_random_uuid(), 'OPN-' + TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'), NOW(), 'SELESAI', NOW(), NOW(), '{{ ($json.body.instansi_id || $json.query.instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}', '{{ ($json.headers[\"x-nip\"] || $json.body.nip || \"ADMIN\").toString().replace(/'/g, \"''\") }}') RETURNING id;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          240,
+          0
+        ],
+        "id": "940017f7-be4c-4f12-a1bf-27cbeff1e073",
+        "name": "Insert Opname Head",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const b = $node[\"WH Simpan Opname\"].json.body || $node[\"WH Simpan Opname\"].json;\nconst items = b.items || [];\nconst opnameid = $input.item.json.id;\nreturn items.map(i => ({ json: { \n  opnameid,\n  instansi_id: b.instansi_id || $input.item.json.query?.instansi_id || 'bapperida',\n  barangid: i.id, \n  stokfisik: parseInt(i.stok_fisik) || 0, \n  stoksistem: parseInt(i.stok_sistem) || 0,\n  selisih: (parseInt(i.stok_fisik) || 0) - (parseInt(i.stok_sistem) || 0)\n} }));"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          480,
+          0
+        ],
+        "id": "2d3b4f71-544a-43f4-85b4-1ccccff9ca3b",
+        "name": "Prepare Details"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO \"SIMAPO\".detail_opname (id, opnameid, barangid, stoksistem, stokfisik, selisih, instansi_id) VALUES (gen_random_uuid(), '{{ ($json.opnameid).toString().replace(/'/g, \"''\") }}', '{{ ($json.barangid).toString().replace(/'/g, \"''\") }}', {{ ($json.stoksistem).toString().replace(/'/g, \"''\") }}, {{ ($json.stokfisik).toString().replace(/'/g, \"''\") }}, {{ ($json.selisih).toString().replace(/'/g, \"''\") }}, '{{ ($json.instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}'); UPDATE \"SIMAPO\".barang SET stok_saat_ini = {{ ($json.stokfisik).toString().replace(/'/g, \"''\") }}, updatedat = NOW() WHERE id = '{{ ($json.barangid).toString().replace(/'/g, \"''\") }}';",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          720,
+          0
+        ],
+        "id": "9e56ccb1-4c84-47dc-aad2-cd120a5401d7",
+        "name": "PG Insert Detail & Update",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "return [{ json: { success: true, message: 'Stok opname berhasil disimpan' } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          960,
+          0
+        ],
+        "id": "f3ef8195-5691-40a7-83a8-d9a11cb72d4f",
+        "name": "Response"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1200,
+          0
+        ],
+        "id": "6762b108-964b-4518-a2ce-506a29a58ac2",
+        "name": "Res Simpan Opname"
+      }
+    ],
+    "connections": {
+      "WH Simpan Opname": {
+        "main": [
+          [
+            {
+              "node": "Insert Opname Head",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Insert Opname Head": {
+        "main": [
+          [
+            {
+              "node": "Prepare Details",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Details": {
+        "main": [
+          [
+            {
+              "node": "PG Insert Detail & Update",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Insert Detail & Update": {
+        "main": [
+          [
+            {
+              "node": "Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Response": {
+        "main": [
+          [
+            {
+              "node": "Res Simpan Opname",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Achmad Aqil Susanto",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-28T05:37:25.663Z",
+        "id": 1508,
+        "workflowId": "xYD44X4T3irX6VBW",
+        "versionId": "98586519-b5da-4073-9e92-5ec07ae91253",
+        "event": "activated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      },
+      {
+        "createdAt": "2026-09-28T05:41:42.866Z",
+        "id": 1510,
+        "workflowId": "xYD44X4T3irX6VBW",
+        "versionId": "98586519-b5da-4073-9e92-5ec07ae91253",
+        "event": "activated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      },
+      {
+        "createdAt": "2026-09-28T05:41:43.497Z",
+        "id": 1512,
+        "workflowId": "xYD44X4T3irX6VBW",
+        "versionId": "98586519-b5da-4073-9e92-5ec07ae91253",
+        "event": "activated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      },
+      {
+        "createdAt": "2026-09-28T05:37:25.516Z",
+        "id": 1507,
+        "workflowId": "xYD44X4T3irX6VBW",
+        "versionId": "98586519-b5da-4073-9e92-5ec07ae91253",
+        "event": "deactivated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      },
+      {
+        "createdAt": "2026-09-28T05:41:42.787Z",
+        "id": 1509,
+        "workflowId": "xYD44X4T3irX6VBW",
+        "versionId": "98586519-b5da-4073-9e92-5ec07ae91253",
+        "event": "deactivated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      },
+      {
+        "createdAt": "2026-09-28T05:41:43.472Z",
+        "id": 1511,
+        "workflowId": "xYD44X4T3irX6VBW",
+        "versionId": "98586519-b5da-4073-9e92-5ec07ae91253",
+        "event": "deactivated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    ]
+  }
+}

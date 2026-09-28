@@ -1,0 +1,683 @@
+{
+  "updatedAt": "2026-07-04T03:58:43.241Z",
+  "createdAt": "2026-05-12T15:02:10.468Z",
+  "id": "rCVfnn3j6qwkTjfo",
+  "name": "SIMAPO - Tiket Kerusakan (User & Admin)",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simapo-tiket",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d72e1f02-29be-4821-a0c9-ce5a96b71e8f",
+      "name": "WH Lapor Kerusakan",
+      "webhookId": "simapo-tiket"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json.body || $input.item.json;\nconst q = $input.item.json.query || {};\nconst nip = b.nip || $input.item.json.headers?.['x-nip'] || '';\nif (!nip) throw new Error('NIP tidak ditemukan');\nif (!b.judul) throw new Error('Judul tiket kosong');\nreturn [{ json: { \n  userid: nip, \n  judul: b.judul, \n  deskripsi: b.deskripsi, \n  lokasi: b.lokasi || '', \n  nomortiket: 'TKT-' + Date.now(),\n  status: 'MENUNGGU_PENGECEKAN',\n  instansi_id: b.instansi_id || q.instansi_id || 'bapperida'\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "eee41e36-74d2-499a-b9db-224aa42d75c3",
+      "name": "Validate Tiket"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"SIMAPO\".tiket_kerusakan (id, nomortiket, userid, judul, deskripsi, lokasi, status, createdat, updatedat, instansi_id) VALUES (gen_random_uuid(), '{{ ($json.nomortiket).toString().replace(/'/g, \"''\") }}', '{{ ($json.userid).toString().replace(/'/g, \"''\") }}', '{{ ($json.judul).toString().replace(/'/g, \"''\") }}', '{{ ($json.deskripsi).toString().replace(/'/g, \"''\") }}', '{{ ($json.lokasi).toString().replace(/'/g, \"''\") }}', '{{ ($json.status).toString().replace(/'/g, \"''\") }}', NOW(), NOW(), '{{ ($json.instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}') RETURNING id, status;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        0
+      ],
+      "id": "44a82176-cb24-4c0f-8885-3725b56b583b",
+      "name": "PG Insert Tiket",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        0
+      ],
+      "id": "298d381a-926e-4d91-9b8e-277381d46ca2",
+      "name": "Res Lapor Kerusakan"
+    },
+    {
+      "parameters": {
+        "path": "simapo-admin-tiket-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        304
+      ],
+      "id": "68cc628a-c318-42e6-b366-78f285bcfc8a",
+      "name": "WH Admin Tiket List",
+      "webhookId": "simapo-admin-tiket-list"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\nSELECT t.id, t.nomortiket, t.judul, t.deskripsi, t.lokasi, t.status, t.userid, COALESCE(u.\"username\", t.userid) AS nama_pelapor, TO_CHAR(t.createdat,'YYYY-MM-DD') AS createdat FROM \"SIMAPO\".tiket_kerusakan t LEFT JOIN public.user_list u ON u.\"NIP\" = t.userid WHERE t.instansi_id = '{{ ($json.query.instansi_id || 'bapperida').toString().replace(/'/g, \"''\") }}' ORDER BY CASE t.status WHEN 'MENUNGGU_PENGECEKAN' THEN 0 ELSE 1 END, t.createdat DESC LIMIT 100\n) t;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        304
+      ],
+      "id": "8715bb92-dea0-4b3a-aca3-fc9c93dfc858",
+      "name": "PG Admin Tiket List",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: $input.all()[0].json.items || [] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        304
+      ],
+      "id": "4fb7e848-2a20-4b17-bc76-b15e8c61d4cd",
+      "name": "Agg Admin Tiket"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        304
+      ],
+      "id": "c7c5564e-af56-424d-b81d-e050798cec05",
+      "name": "Res Admin Tiket List"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simapo-admin-tiket-action",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        608
+      ],
+      "id": "7cdda985-8ef2-4a29-b18b-2c94d9fc501e",
+      "name": "WH Admin Tiket Action",
+      "webhookId": "simapo-admin-tiket-action"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"SIMAPO\".tiket_kerusakan SET status = '{{ ($json.body.status).toString().replace(/'/g, \"''\") }}', updatedat = NOW() WHERE id = '{{ ($json.body.id).toString().replace(/'/g, \"''\") }}' RETURNING id, status;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        608
+      ],
+      "id": "fd5036a6-56c2-4b0f-8a00-0f19c965d63a",
+      "name": "PG Admin Tiket Action",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        608
+      ],
+      "id": "f2d9a255-3c10-4bfa-adbb-d1898cba97fb",
+      "name": "Res Admin Tiket Action"
+    }
+  ],
+  "connections": {
+    "WH Lapor Kerusakan": {
+      "main": [
+        [
+          {
+            "node": "Validate Tiket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Tiket": {
+      "main": [
+        [
+          {
+            "node": "PG Insert Tiket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Insert Tiket": {
+      "main": [
+        [
+          {
+            "node": "Res Lapor Kerusakan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Admin Tiket List": {
+      "main": [
+        [
+          {
+            "node": "PG Admin Tiket List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Admin Tiket List": {
+      "main": [
+        [
+          {
+            "node": "Agg Admin Tiket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Admin Tiket": {
+      "main": [
+        [
+          {
+            "node": "Res Admin Tiket List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Admin Tiket Action": {
+      "main": [
+        [
+          {
+            "node": "PG Admin Tiket Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Admin Tiket Action": {
+      "main": [
+        [
+          {
+            "node": "Res Admin Tiket Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "badb2c7c-3521-4045-90f0-40b0c35d8f03",
+  "activeVersionId": "badb2c7c-3521-4045-90f0-40b0c35d8f03",
+  "versionCounter": 57,
+  "triggerCount": 3,
+  "shared": [
+    {
+      "updatedAt": "2026-05-12T15:02:10.470Z",
+      "createdAt": "2026-05-12T15:02:10.470Z",
+      "role": "workflow:owner",
+      "workflowId": "rCVfnn3j6qwkTjfo",
+      "projectId": "ZE0tgWH81scm4zQD",
+      "project": {
+        "updatedAt": "2026-03-12T15:42:44.257Z",
+        "createdAt": "2026-03-12T15:19:34.808Z",
+        "id": "ZE0tgWH81scm4zQD",
+        "name": "Achmad Aqil Susanto <ahmadagilsusanto@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T03:58:44.000Z",
+    "createdAt": "2026-07-04T03:58:43.242Z",
+    "versionId": "badb2c7c-3521-4045-90f0-40b0c35d8f03",
+    "workflowId": "rCVfnn3j6qwkTjfo",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "simapo-tiket",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          0
+        ],
+        "id": "d72e1f02-29be-4821-a0c9-ce5a96b71e8f",
+        "name": "WH Lapor Kerusakan",
+        "webhookId": "simapo-tiket"
+      },
+      {
+        "parameters": {
+          "jsCode": "const b = $input.item.json.body || $input.item.json;\nconst q = $input.item.json.query || {};\nconst nip = b.nip || $input.item.json.headers?.['x-nip'] || '';\nif (!nip) throw new Error('NIP tidak ditemukan');\nif (!b.judul) throw new Error('Judul tiket kosong');\nreturn [{ json: { \n  userid: nip, \n  judul: b.judul, \n  deskripsi: b.deskripsi, \n  lokasi: b.lokasi || '', \n  nomortiket: 'TKT-' + Date.now(),\n  status: 'MENUNGGU_PENGECEKAN',\n  instansi_id: b.instansi_id || q.instansi_id || 'bapperida'\n} }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          240,
+          0
+        ],
+        "id": "eee41e36-74d2-499a-b9db-224aa42d75c3",
+        "name": "Validate Tiket"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO \"SIMAPO\".tiket_kerusakan (id, nomortiket, userid, judul, deskripsi, lokasi, status, createdat, updatedat, instansi_id) VALUES (gen_random_uuid(), '{{ ($json.nomortiket).toString().replace(/'/g, \"''\") }}', '{{ ($json.userid).toString().replace(/'/g, \"''\") }}', '{{ ($json.judul).toString().replace(/'/g, \"''\") }}', '{{ ($json.deskripsi).toString().replace(/'/g, \"''\") }}', '{{ ($json.lokasi).toString().replace(/'/g, \"''\") }}', '{{ ($json.status).toString().replace(/'/g, \"''\") }}', NOW(), NOW(), '{{ ($json.instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}') RETURNING id, status;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          480,
+          0
+        ],
+        "id": "44a82176-cb24-4c0f-8885-3725b56b583b",
+        "name": "PG Insert Tiket",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          720,
+          0
+        ],
+        "id": "298d381a-926e-4d91-9b8e-277381d46ca2",
+        "name": "Res Lapor Kerusakan"
+      },
+      {
+        "parameters": {
+          "path": "simapo-admin-tiket-list",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          304
+        ],
+        "id": "68cc628a-c318-42e6-b366-78f285bcfc8a",
+        "name": "WH Admin Tiket List",
+        "webhookId": "simapo-admin-tiket-list"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\nSELECT t.id, t.nomortiket, t.judul, t.deskripsi, t.lokasi, t.status, t.userid, COALESCE(u.\"username\", t.userid) AS nama_pelapor, TO_CHAR(t.createdat,'YYYY-MM-DD') AS createdat FROM \"SIMAPO\".tiket_kerusakan t LEFT JOIN public.user_list u ON u.\"NIP\" = t.userid WHERE t.instansi_id = '{{ ($json.query.instansi_id || 'bapperida').toString().replace(/'/g, \"''\") }}' ORDER BY CASE t.status WHEN 'MENUNGGU_PENGECEKAN' THEN 0 ELSE 1 END, t.createdat DESC LIMIT 100\n) t;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          240,
+          304
+        ],
+        "id": "8715bb92-dea0-4b3a-aca3-fc9c93dfc858",
+        "name": "PG Admin Tiket List",
+        "alwaysOutputData": true,
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "return [{ json: { data: $input.all()[0].json.items || [] } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          480,
+          304
+        ],
+        "id": "4fb7e848-2a20-4b17-bc76-b15e8c61d4cd",
+        "name": "Agg Admin Tiket"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          720,
+          304
+        ],
+        "id": "c7c5564e-af56-424d-b81d-e050798cec05",
+        "name": "Res Admin Tiket List"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "simapo-admin-tiket-action",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          608
+        ],
+        "id": "7cdda985-8ef2-4a29-b18b-2c94d9fc501e",
+        "name": "WH Admin Tiket Action",
+        "webhookId": "simapo-admin-tiket-action"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE \"SIMAPO\".tiket_kerusakan SET status = '{{ ($json.body.status).toString().replace(/'/g, \"''\") }}', updatedat = NOW() WHERE id = '{{ ($json.body.id).toString().replace(/'/g, \"''\") }}' RETURNING id, status;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          240,
+          608
+        ],
+        "id": "fd5036a6-56c2-4b0f-8a00-0f19c965d63a",
+        "name": "PG Admin Tiket Action",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          480,
+          608
+        ],
+        "id": "f2d9a255-3c10-4bfa-adbb-d1898cba97fb",
+        "name": "Res Admin Tiket Action"
+      }
+    ],
+    "connections": {
+      "WH Lapor Kerusakan": {
+        "main": [
+          [
+            {
+              "node": "Validate Tiket",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate Tiket": {
+        "main": [
+          [
+            {
+              "node": "PG Insert Tiket",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Insert Tiket": {
+        "main": [
+          [
+            {
+              "node": "Res Lapor Kerusakan",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WH Admin Tiket List": {
+        "main": [
+          [
+            {
+              "node": "PG Admin Tiket List",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Admin Tiket List": {
+        "main": [
+          [
+            {
+              "node": "Agg Admin Tiket",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Agg Admin Tiket": {
+        "main": [
+          [
+            {
+              "node": "Res Admin Tiket List",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WH Admin Tiket Action": {
+        "main": [
+          [
+            {
+              "node": "PG Admin Tiket Action",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Admin Tiket Action": {
+        "main": [
+          [
+            {
+              "node": "Res Admin Tiket Action",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Achmad Aqil Susanto",
+    "name": "Version badb2c7c",
+    "description": "",
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-07-04T03:58:44.270Z",
+        "id": 1317,
+        "workflowId": "rCVfnn3j6qwkTjfo",
+        "versionId": "badb2c7c-3521-4045-90f0-40b0c35d8f03",
+        "event": "activated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    ]
+  }
+}

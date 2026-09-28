@@ -142,6 +142,13 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
       meja_token: window._session?.token || ''
     };
 
+    // ── GENERATE SIGNATURE ANTI-SPOOFING ──
+    // Wajib: tanpa ini server masuk cabang HMAC lalu ditolak.
+    if (typeof generateSignature === 'function') {
+      const sigBase = `${payload.request_id}${payload.nip}${payload.latitude}${payload.longitude}${payload.timestamp}${window._session?.token || ''}`;
+      payload._signature = await generateSignature(sigBase);
+    }
+
     // Paksa NIP masuk ke URL query agar n8n lebih mudah memproses
     const targetPath = P.absen + (P.absen.includes('?') ? '&' : '?') + 'nip=' + encodeURIComponent(user.nip);
     console.log('[Meja] Sending Payload to n8n:', targetPath, payload);
