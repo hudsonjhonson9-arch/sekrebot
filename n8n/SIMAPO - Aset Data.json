@@ -1,0 +1,1111 @@
+{
+  "name": "SIMAPO - Aset Data",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "simapo-aset-massal",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "webhookId": "simapo-aset-massal"
+      },
+      "id": "250fc5a9-d7fc-46c7-b173-566221a5cfe6",
+      "name": "WH simapo-aset-massal",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        120,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
+      },
+      "id": "07898ec2-8108-4ada-bba0-d95f58901bb9",
+      "name": "Gate simapo-aset-massal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        350,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json.body || {};\nconst rows = Array.isArray(b.rows) ? b.rows : [];\nif (!rows.length) throw new Error('rows kosong');\nconst esc = s => String(s == null ? '' : s).replace(/'/g, \"''\");\nconst q = $input.item.json.query || {};\nconst inst = String(b.instansi_id || q.instansi_id || 'bapperida');\nconst seq = new Map();\nconst vals = [];\nfor (const r of rows) {\n  const kode = String(r.kodebarang || '').trim();\n  const nama = String(r.nama || '').trim();\n  if (!kode || !nama) continue;\n  const n = (seq.get(kode) || 0) + 1;\n  seq.set(kode, n);\n  const nomor = r.nomorinventaris ? String(r.nomorinventaris) : kode + '-' + String(n).padStart(3, '0');\n  vals.push(\n    \"('\" + esc(kode) + \"','\" + esc(nama) + \"',\" + Math.max(0, Number(r.hargasatuan) || 0) +\n    ',' + (r.kategoriid ? \"'\" + esc(r.kategoriid) + \"'\" : 'NULL') +\n    \",'\" + esc(r.kondisi || 'Baik') + \"'\" +\n    \",NULLIF('\" + esc(r.merk_type || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.model_jenis || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.warna || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.tahun_pembuatan || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.roda || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.keterangan || '') + \"','')\" +\n    \",'\" + esc(nomor) + \"')\"\n  );\n}\nif (!vals.length) throw new Error('tidak ada baris valid (kodebarang & nama wajib)');\nconst L = [];\nL.push('WITH src AS (');\nL.push('  SELECT * FROM (VALUES');\nL.push('    ' + vals.join(',\\n    '));\nL.push('  ) AS v(kode, nama, harga, kategoriid, kondisi, merk, model, warna, tahun, roda, keterangan, nomor)');\nL.push('),');\nL.push('ins_barang AS (');\nL.push('  INSERT INTO \"SIMAPO\".barang (id, kodebarang, nama, jenisbarang, satuan, stok_saat_ini, minimumstok, hargasatuan, kategoriid, isactive, createdat, updatedat, instansi_id)');\nL.push(\"  SELECT DISTINCT ON (src.kode) md5('\" + esc(inst) + \":' || src.kode), src.kode, src.nama, 'Aset Tetap', 'unit', 1, 0, src.harga, src.kategoriid, true, NOW(), NOW(), '\" + esc(inst) + \"'\");\nL.push('  FROM src');\nL.push(\"  WHERE NOT EXISTS (SELECT 1 FROM \\\"SIMAPO\\\".barang b WHERE b.kodebarang = src.kode AND b.instansi_id = '\" + esc(inst) + \"')\");\nL.push('  RETURNING id, kodebarang');\nL.push('),');\nL.push('all_barang AS (');\nL.push('  SELECT id, kodebarang FROM ins_barang');\nL.push('  UNION ALL');\nL.push('  SELECT b.id, b.kodebarang FROM \"SIMAPO\".barang b');\nL.push('  JOIN src ON b.kodebarang = src.kode AND b.instansi_id = \\'' + esc(inst) + '\\'');\nL.push('  WHERE NOT EXISTS (SELECT 1 FROM ins_barang ib WHERE ib.kodebarang = b.kodebarang)');\nL.push('),');\nL.push('ins_unit AS (');\nL.push('  INSERT INTO \"SIMAPO\".unit_aset (id, barangid, nomorinventaris, kondisi, statuspinjam, qrcode, merk_type, model_jenis, warna, tahun_pembuatan, roda, keterangan, instansi_id, updatedat)');\nL.push(\"  SELECT gen_random_uuid(), ab.id, src.nomor, src.kondisi, false,\");\nL.push(\"         'https://mindcloud.my.id/?qr=SIMAPO-' || gen_random_uuid(),\");\nL.push(\"         src.merk, src.model, src.warna, src.tahun, src.roda, src.keterangan, '\" + esc(inst) + \"', NOW()\");\nL.push('  FROM src');\nL.push('  JOIN all_barang ab ON ab.kodebarang = src.kode');\nL.push('  WHERE NOT EXISTS (SELECT 1 FROM \"SIMAPO\".unit_aset ua WHERE ua.nomorinventaris = src.nomor)');\nL.push('  RETURNING id');\nL.push(')');\nL.push('SELECT (SELECT count(*) FROM src) AS total,');\nL.push('       (SELECT count(*) FROM ins_barang) AS barang_baru,');\nL.push('       (SELECT count(*) FROM ins_unit) AS unit_baru,');\nL.push(\"       (SELECT COALESCE(json_agg(id), '[]'::json) FROM ins_barang) AS barang_ids;\");\nreturn [{ json: { sql: L.join('\\n') } }];"
+      },
+      "id": "2c41890a-01d7-4349-98d3-f77f5ec8d8c9",
+      "name": "Code Aset Upsert (simapo-aset-massal)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.sql }}",
+        "options": {}
+      },
+      "id": "5d7ff44d-4da8-42d2-85b7-d46899ec42af",
+      "name": "PG Aset Upsert (simapo-aset-massal)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        810,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.all()[0] || {};\nreturn [{ json: { data: {\n  total: Number(j.total || 0),\n  barang_baru: Number(j.barang_baru || 0),\n  unit_baru: Number(j.unit_baru || 0),\n  barang_ids: j.barang_ids || []\n} } }];"
+      },
+      "id": "22f1662d-e147-4f85-ac81-6732504842e8",
+      "name": "Agg Aset Upsert (simapo-aset-massal)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "855cf881-dda1-48d2-91e4-e2b8aaf6da31",
+      "name": "Res Aset Upsert (simapo-aset-massal)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1270,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "path": "simapo-aset-kib",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "webhookId": "simapo-aset-kib"
+      },
+      "id": "d1e4f7fb-b33b-4c0f-b3fb-56bdc8af52d5",
+      "name": "WH simapo-aset-kib",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        120,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
+      },
+      "id": "21d6b47b-7973-4cb3-a12e-e0948fe1880b",
+      "name": "Gate simapo-aset-kib",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        350,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json.body || {};\nconst rows = Array.isArray(b.rows) ? b.rows : [];\nif (!rows.length) throw new Error('rows kosong');\nconst esc = s => String(s == null ? '' : s).replace(/'/g, \"''\");\nconst q = $input.item.json.query || {};\nconst inst = String(b.instansi_id || q.instansi_id || 'bapperida');\nconst seq = new Map();\nconst vals = [];\nfor (const r of rows) {\n  const kode = String(r.kodebarang || '').trim();\n  const nama = String(r.nama || '').trim();\n  if (!kode || !nama) continue;\n  const n = (seq.get(kode) || 0) + 1;\n  seq.set(kode, n);\n  const nomor = r.nomorinventaris ? String(r.nomorinventaris) : kode + '-' + String(n).padStart(3, '0');\n  vals.push(\n    \"('\" + esc(kode) + \"','\" + esc(nama) + \"',\" + Math.max(0, Number(r.hargasatuan) || 0) +\n    ',' + (r.kategoriid ? \"'\" + esc(r.kategoriid) + \"'\" : 'NULL') +\n    \",'\" + esc(r.kondisi || 'Baik') + \"'\" +\n    \",NULLIF('\" + esc(r.merk_type || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.model_jenis || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.warna || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.tahun_pembuatan || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.roda || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.keterangan || '') + \"','')\" +\n    \",'\" + esc(nomor) + \"')\"\n  );\n}\nif (!vals.length) throw new Error('tidak ada baris valid (kodebarang & nama wajib)');\nconst L = [];\nL.push('WITH src AS (');\nL.push('  SELECT * FROM (VALUES');\nL.push('    ' + vals.join(',\\n    '));\nL.push('  ) AS v(kode, nama, harga, kategoriid, kondisi, merk, model, warna, tahun, roda, keterangan, nomor)');\nL.push('),');\nL.push('ins_barang AS (');\nL.push('  INSERT INTO \"SIMAPO\".barang (id, kodebarang, nama, jenisbarang, satuan, stok_saat_ini, minimumstok, hargasatuan, kategoriid, isactive, createdat, updatedat, instansi_id)');\nL.push(\"  SELECT DISTINCT ON (src.kode) md5('\" + esc(inst) + \":' || src.kode), src.kode, src.nama, 'Aset Tetap', 'unit', 1, 0, src.harga, src.kategoriid, true, NOW(), NOW(), '\" + esc(inst) + \"'\");\nL.push('  FROM src');\nL.push(\"  WHERE NOT EXISTS (SELECT 1 FROM \\\"SIMAPO\\\".barang b WHERE b.kodebarang = src.kode AND b.instansi_id = '\" + esc(inst) + \"')\");\nL.push('  RETURNING id, kodebarang');\nL.push('),');\nL.push('all_barang AS (');\nL.push('  SELECT id, kodebarang FROM ins_barang');\nL.push('  UNION ALL');\nL.push('  SELECT b.id, b.kodebarang FROM \"SIMAPO\".barang b');\nL.push('  JOIN src ON b.kodebarang = src.kode AND b.instansi_id = \\'' + esc(inst) + '\\'');\nL.push('  WHERE NOT EXISTS (SELECT 1 FROM ins_barang ib WHERE ib.kodebarang = b.kodebarang)');\nL.push('),');\nL.push('ins_unit AS (');\nL.push('  INSERT INTO \"SIMAPO\".unit_aset (id, barangid, nomorinventaris, kondisi, statuspinjam, qrcode, merk_type, model_jenis, warna, tahun_pembuatan, roda, keterangan, instansi_id, updatedat)');\nL.push(\"  SELECT gen_random_uuid(), ab.id, src.nomor, src.kondisi, false,\");\nL.push(\"         'https://mindcloud.my.id/?qr=SIMAPO-' || gen_random_uuid(),\");\nL.push(\"         src.merk, src.model, src.warna, src.tahun, src.roda, src.keterangan, '\" + esc(inst) + \"', NOW()\");\nL.push('  FROM src');\nL.push('  JOIN all_barang ab ON ab.kodebarang = src.kode');\nL.push('  WHERE NOT EXISTS (SELECT 1 FROM \"SIMAPO\".unit_aset ua WHERE ua.nomorinventaris = src.nomor)');\nL.push('  RETURNING id');\nL.push(')');\nL.push('SELECT (SELECT count(*) FROM src) AS total,');\nL.push('       (SELECT count(*) FROM ins_barang) AS barang_baru,');\nL.push('       (SELECT count(*) FROM ins_unit) AS unit_baru,');\nL.push(\"       (SELECT COALESCE(json_agg(id), '[]'::json) FROM ins_barang) AS barang_ids;\");\nreturn [{ json: { sql: L.join('\\n') } }];"
+      },
+      "id": "85719678-f9c1-4f53-833b-34b8fc149cb9",
+      "name": "Code Aset Upsert (simapo-aset-kib)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.sql }}",
+        "options": {}
+      },
+      "id": "f65e2a2f-3828-43b7-8de4-66fde9039be0",
+      "name": "PG Aset Upsert (simapo-aset-kib)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        810,
+        240
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.all()[0] || {};\nreturn [{ json: { data: {\n  total: Number(j.total || 0),\n  barang_baru: Number(j.barang_baru || 0),\n  unit_baru: Number(j.unit_baru || 0),\n  barang_ids: j.barang_ids || []\n} } }];"
+      },
+      "id": "ae0f5407-4c02-49e6-b3c6-295e132ca147",
+      "name": "Agg Aset Upsert (simapo-aset-kib)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "855db85e-ac90-4cf6-90b9-50fcfa8ecd7d",
+      "name": "Res Aset Upsert (simapo-aset-kib)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1270,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "path": "simapo-aset-summary",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "webhookId": "simapo-aset-summary"
+      },
+      "id": "29ff4c58-10cd-49d1-9f2d-da9a80fd1201",
+      "name": "WH simapo-aset-summary",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        120,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
+      },
+      "id": "fcdf16a3-a8cb-4798-b50d-f7cd9a75b121",
+      "name": "Gate simapo-aset-summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        350,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  (SELECT COUNT(*) FROM \"SIMAPO\".unit_aset ua\n     JOIN \"SIMAPO\".barang b ON b.id = ua.barangid AND b.isactive = true\n    WHERE b.instansi_id = '{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}') AS total_unit,\n  (SELECT COALESCE(SUM(COALESCE(NULLIF(ua.nilaiperolehan, 0), b.hargasatuan)), 0)\n     FROM \"SIMAPO\".unit_aset ua\n     JOIN \"SIMAPO\".barang b ON b.id = ua.barangid AND b.isactive = true\n    WHERE b.instansi_id = '{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}') AS total_nilai,\n  (SELECT COUNT(DISTINCT ua.pegawai_id) FROM \"SIMAPO\".unit_aset ua\n     JOIN \"SIMAPO\".barang b ON b.id = ua.barangid AND b.isactive = true\n    WHERE b.instansi_id = '{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}' AND ua.pegawai_id IS NOT NULL) AS pemegang,\n  (SELECT COUNT(DISTINCT ua.ruangan_id) FROM \"SIMAPO\".unit_aset ua\n     JOIN \"SIMAPO\".barang b ON b.id = ua.barangid AND b.isactive = true\n    WHERE b.instansi_id = '{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}' AND ua.ruangan_id IS NOT NULL) AS ruangan,\n  (SELECT COALESCE(json_agg(t ORDER BY t.jumlah DESC), '[]'::json) FROM (\n     SELECT COALESCE(k.nama, 'Tanpa Kategori') AS kategori, COUNT(*) AS jumlah\n       FROM \"SIMAPO\".unit_aset ua\n       JOIN \"SIMAPO\".barang b ON b.id = ua.barangid AND b.isactive = true\n       LEFT JOIN \"SIMAPO\".kategori_barang k ON k.id = b.kategoriid\n      WHERE b.instansi_id = '{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}'\n      GROUP BY k.nama\n   ) t) AS per_kategori;",
+        "options": {}
+      },
+      "id": "f323a521-3f55-41ab-ab7a-a87a09b90334",
+      "name": "PG simapo-aset-summary",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        580,
+        480
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.all()[0] || {};\nreturn [{ json: { data: {\n  total_unit: Number(j.total_unit || 0),\n  total_nilai: Number(j.total_nilai || 0),\n  pemegang: Number(j.pemegang || 0),\n  ruangan: Number(j.ruangan || 0),\n  per_kategori: j.per_kategori || []\n} } }];"
+      },
+      "id": "6b92906f-731d-460f-b634-c4d00807f27a",
+      "name": "Agg simapo-aset-summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        810,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "7c5e2df4-d128-4c7a-ae75-e7bee67a09af",
+      "name": "Res simapo-aset-summary",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "path": "simapo-pengaturan-get",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "webhookId": "simapo-pengaturan-get"
+      },
+      "id": "7d6c480b-60cc-4ccd-b280-f35401aa2f84",
+      "name": "WH simapo-pengaturan-get",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        120,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
+      },
+      "id": "ce25ce81-5204-4c5f-b2fe-bbb0be94e2d7",
+      "name": "Gate simapo-pengaturan-get",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        350,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_object_agg(key, value), '{}'::json) AS data\nFROM public.pengaturan\nWHERE instansi_id = '{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}'\n  AND key IN ('sekda_nama','sekda_nip','sekda_jabatan','sekda_alamat','p1_id','p1_jabatan','p1_alamat');",
+        "options": {}
+      },
+      "id": "c397b255-e2ae-4a2b-8ce8-38a1c23e5ac3",
+      "name": "PG simapo-pengaturan-get",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        580,
+        720
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: ($input.all()[0] || {}).data || {} } }];"
+      },
+      "id": "0cc67d13-ded0-4034-8337-b29775d0a8af",
+      "name": "Agg simapo-pengaturan-get",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        810,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "0d160a8a-6e56-4a71-81bb-64a65e80034a",
+      "name": "Res simapo-pengaturan-get",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "path": "simapo-pengaturan-set",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "webhookId": "simapo-pengaturan-set"
+      },
+      "id": "c8180939-a410-408d-90a9-e66cc24906f9",
+      "name": "WH simapo-pengaturan-set",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        120,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
+      },
+      "id": "638a4896-ba92-4dc7-8212-66558a78304a",
+      "name": "Gate simapo-pengaturan-set",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        350,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json.body || {};\nconst q = $input.item.json.query || {};\nconst inst = String(q.instansi_id || 'bapperida');\nconst esc = s => String(s == null ? '' : s).replace(/'/g, \"''\");\nconst KEYS = [\"sekda_nama\",\"sekda_nip\",\"sekda_jabatan\",\"sekda_alamat\",\"p1_id\",\"p1_jabatan\",\"p1_alamat\"];\nconst pairs = [];\nfor (const k of KEYS) {\n  if (b[k] !== undefined) pairs.push(\"('\" + k + \"', '\" + esc(b[k]) + \"', '\" + esc(inst) + \"')\");\n}\nif (!pairs.length) throw new Error('tidak ada field untuk disimpan');\nconst sql = 'INSERT INTO public.pengaturan (key, value, instansi_id) VALUES ' + pairs.join(', ') +\n  ' ON CONFLICT (key, instansi_id) DO UPDATE SET value = EXCLUDED.value RETURNING key;';\nreturn [{ json: { sql } }];"
+      },
+      "id": "0e6dc464-89f1-4f45-b127-78d581fcb318",
+      "name": "Code Pengaturan Set",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.sql }}",
+        "options": {}
+      },
+      "id": "fa9b3447-2939-4d78-ae93-afe32e0b7066",
+      "name": "PG Pengaturan Set",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        810,
+        960
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: { ok: true } } }];"
+      },
+      "id": "7b7fae8c-e38b-492e-bd5b-05b7a33a6792",
+      "name": "Agg Pengaturan Set",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "b48659f7-2b9c-4853-b982-2ea9529877f7",
+      "name": "Res Pengaturan Set",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1270,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "path": "simapo-ttd-get",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "webhookId": "simapo-ttd-get"
+      },
+      "id": "f51ccef2-3d9b-4430-90e9-7c12deba4412",
+      "name": "WH simapo-ttd-get",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        120,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
+      },
+      "id": "da60c9b3-6847-4a76-a97f-5276dfd16a6e",
+      "name": "Gate simapo-ttd-get",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        350,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT signature FROM public.tanda_tangan\nWHERE nip = '{{ (($input.item.json.query || {}).nip || \"\").toString().replace(/'/g, \"''\") }}'\nLIMIT 1;",
+        "options": {}
+      },
+      "id": "0542f74e-e44d-4578-863e-4466304cc8a8",
+      "name": "PG simapo-ttd-get",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        580,
+        1200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: { signature: ($input.all()[0] || {}).signature || null } } }];"
+      },
+      "id": "382532c8-b3a3-4099-8d7d-7d4eadf2434d",
+      "name": "Agg simapo-ttd-get",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        810,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "90dbda34-cb05-44e1-bb98-a787f510a72b",
+      "name": "Res simapo-ttd-get",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "path": "simapo-aset-kosongkan",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "webhookId": "simapo-aset-kosongkan"
+      },
+      "id": "c5387310-b0b0-487b-9c8b-1950ee2b7ba2",
+      "name": "WH simapo-aset-kosongkan",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        120,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
+      },
+      "id": "93e46c1c-c53d-4877-a0f0-fc71dbe65e0f",
+      "name": "Gate simapo-aset-kosongkan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        350,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json.body || {};\nif (String(b.confirm || '') !== 'HAPUS') throw new Error('Konfirmasi salah: ketik HAPUS');\nreturn $input.all();"
+      },
+      "id": "f1b76c70-aedd-4344-a95f-dcf915fcaefe",
+      "name": "Code Konfirmasi Kosongkan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH d1 AS (DELETE FROM \"SIMAPO\".riwayat_pemeliharaan RETURNING 1),\n     d2 AS (DELETE FROM \"SIMAPO\".detail_distribusi_aset RETURNING 1),\n     d3 AS (DELETE FROM \"SIMAPO\".jadwal_maintenance RETURNING 1),\n     d4 AS (DELETE FROM \"SIMAPO\".peminjaman RETURNING 1),\n     d5 AS (DELETE FROM \"SIMAPO\".detail_opname RETURNING 1),\n     d6 AS (DELETE FROM \"SIMAPO\".detail_request RETURNING 1),\n     d7 AS (DELETE FROM \"SIMAPO\".detail_pemeliharaan RETURNING 1),\n     d8 AS (DELETE FROM \"SIMAPO\".mutasi_barang RETURNING 1),\n     d9 AS (DELETE FROM \"SIMAPO\".detail_penerimaan RETURNING 1),\n     d10 AS (DELETE FROM \"SIMAPO\".pemeliharaan RETURNING 1)\nSELECT (SELECT count(*) FROM d1) + (SELECT count(*) FROM d2) + (SELECT count(*) FROM d3)\n     + (SELECT count(*) FROM d4) + (SELECT count(*) FROM d5) + (SELECT count(*) FROM d6)\n     + (SELECT count(*) FROM d7) + (SELECT count(*) FROM d8) + (SELECT count(*) FROM d9)\n     + (SELECT count(*) FROM d10) AS rows_dihapus;",
+        "options": {}
+      },
+      "id": "a10a05d7-5016-463f-8ae7-18a1a63a047d",
+      "name": "PG Kosongkan Anak",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        810,
+        1440
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM \"SIMAPO\".unit_aset;",
+        "options": {}
+      },
+      "id": "071c7d1c-5e37-43c9-84fc-2e7270a849d4",
+      "name": "PG Kosongkan Unit",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1040,
+        1440
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM \"SIMAPO\".barang;",
+        "options": {}
+      },
+      "id": "c3c2b6cb-b1f7-436f-a18a-eb24ce48ec07",
+      "name": "PG Kosongkan Barang",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1270,
+        1440
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: { ok: true } } }];"
+      },
+      "id": "e1675963-921e-420c-8eba-6f848c8594bc",
+      "name": "Agg Kosongkan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "34046945-2e34-4a3d-a2ee-114c93d1b0df",
+      "name": "Res Kosongkan",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1730,
+        1440
+      ]
+    }
+  ],
+  "connections": {
+    "WH simapo-aset-massal": {
+      "main": [
+        [
+          {
+            "node": "Gate simapo-aset-massal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate simapo-aset-massal": {
+      "main": [
+        [
+          {
+            "node": "Code Aset Upsert (simapo-aset-massal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Aset Upsert (simapo-aset-massal)": {
+      "main": [
+        [
+          {
+            "node": "PG Aset Upsert (simapo-aset-massal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Aset Upsert (simapo-aset-massal)": {
+      "main": [
+        [
+          {
+            "node": "Agg Aset Upsert (simapo-aset-massal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Aset Upsert (simapo-aset-massal)": {
+      "main": [
+        [
+          {
+            "node": "Res Aset Upsert (simapo-aset-massal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH simapo-aset-kib": {
+      "main": [
+        [
+          {
+            "node": "Gate simapo-aset-kib",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate simapo-aset-kib": {
+      "main": [
+        [
+          {
+            "node": "Code Aset Upsert (simapo-aset-kib)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Aset Upsert (simapo-aset-kib)": {
+      "main": [
+        [
+          {
+            "node": "PG Aset Upsert (simapo-aset-kib)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Aset Upsert (simapo-aset-kib)": {
+      "main": [
+        [
+          {
+            "node": "Agg Aset Upsert (simapo-aset-kib)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Aset Upsert (simapo-aset-kib)": {
+      "main": [
+        [
+          {
+            "node": "Res Aset Upsert (simapo-aset-kib)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH simapo-aset-summary": {
+      "main": [
+        [
+          {
+            "node": "Gate simapo-aset-summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate simapo-aset-summary": {
+      "main": [
+        [
+          {
+            "node": "PG simapo-aset-summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG simapo-aset-summary": {
+      "main": [
+        [
+          {
+            "node": "Agg simapo-aset-summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg simapo-aset-summary": {
+      "main": [
+        [
+          {
+            "node": "Res simapo-aset-summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH simapo-pengaturan-get": {
+      "main": [
+        [
+          {
+            "node": "Gate simapo-pengaturan-get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate simapo-pengaturan-get": {
+      "main": [
+        [
+          {
+            "node": "PG simapo-pengaturan-get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG simapo-pengaturan-get": {
+      "main": [
+        [
+          {
+            "node": "Agg simapo-pengaturan-get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg simapo-pengaturan-get": {
+      "main": [
+        [
+          {
+            "node": "Res simapo-pengaturan-get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH simapo-pengaturan-set": {
+      "main": [
+        [
+          {
+            "node": "Gate simapo-pengaturan-set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate simapo-pengaturan-set": {
+      "main": [
+        [
+          {
+            "node": "Code Pengaturan Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Pengaturan Set": {
+      "main": [
+        [
+          {
+            "node": "PG Pengaturan Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Pengaturan Set": {
+      "main": [
+        [
+          {
+            "node": "Agg Pengaturan Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Pengaturan Set": {
+      "main": [
+        [
+          {
+            "node": "Res Pengaturan Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH simapo-ttd-get": {
+      "main": [
+        [
+          {
+            "node": "Gate simapo-ttd-get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate simapo-ttd-get": {
+      "main": [
+        [
+          {
+            "node": "PG simapo-ttd-get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG simapo-ttd-get": {
+      "main": [
+        [
+          {
+            "node": "Agg simapo-ttd-get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg simapo-ttd-get": {
+      "main": [
+        [
+          {
+            "node": "Res simapo-ttd-get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH simapo-aset-kosongkan": {
+      "main": [
+        [
+          {
+            "node": "Gate simapo-aset-kosongkan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate simapo-aset-kosongkan": {
+      "main": [
+        [
+          {
+            "node": "Code Konfirmasi Kosongkan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Konfirmasi Kosongkan": {
+      "main": [
+        [
+          {
+            "node": "PG Kosongkan Anak",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Kosongkan Anak": {
+      "main": [
+        [
+          {
+            "node": "PG Kosongkan Unit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Kosongkan Unit": {
+      "main": [
+        [
+          {
+            "node": "PG Kosongkan Barang",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Kosongkan Barang": {
+      "main": [
+        [
+          {
+            "node": "Agg Kosongkan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Kosongkan": {
+      "main": [
+        [
+          {
+            "node": "Res Kosongkan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
