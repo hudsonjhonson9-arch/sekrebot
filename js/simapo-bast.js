@@ -49,7 +49,44 @@ function bastHariTanggal(iso) {
   if (isNaN(d.getTime())) return '';
   const h = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
   const b = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-  return h[d.getDay()] + ', ' + d.getDate() + ' ' + b[d.getMonth()] + ' ' + d.getFullYear();
+  const hari = h[d.getDay()] + '  Tanggal ' + bastTerbilang(d.getDate());
+  const tahun = bastTerbilang(d.getFullYear());
+  return 'Pada hari ini ' + hari + ' Bulan ' + b[d.getMonth()] + ' Tahun ' + tahun + ', kami yang bertanda tangan dibawah ini :';
+}
+
+const _BAST_SATUAN = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan'];
+const _BAST_BELAS = ['sepuluh', 'sebelas', 'dua belas', 'tiga belas', 'empat belas', 'lima belas', 'enam belas', 'tujuh belas', 'delapan belas', 'sembilan belas'];
+
+function bastTerbilang(n) {
+  n = Number(n) || 0;
+  const s = _BAST_SATUAN;
+  if (n < 10) return s[n];
+  if (n < 20) return _BAST_BELAS[n - 10];
+  if (n < 100) {
+    const pul = Math.floor(n / 10);
+    return (pul === 1 ? 'sepuluh' : s[pul] + ' puluh') + (n % 10 ? ' ' + s[n % 10] : '');
+  }
+  if (n < 1000) {
+    const rat = Math.floor(n / 100);
+    const rem = n % 100;
+    return (rat === 1 ? 'seratus' : s[rat] + ' ratus') + (rem ? ' ' + bastTerbilang(rem) : '');
+  }
+  if (n < 10000) {
+    const rib = Math.floor(n / 1000);
+    const rem = n % 1000;
+    return (rib === 1 ? 'seribu' : bastTerbilang(rib) + ' ribu') + (rem ? ' ' + bastTerbilang(rem) : '');
+  }
+  const pul = Math.floor(n / 1000);
+  return bastTerbilang(pul) + ' ribu' + (n % 1000 ? ' ' + bastTerbilang(n % 1000) : '');
+}
+
+function bastJumlahUnit(n) {
+  const s = _BAST_SATUAN;
+  return (n <= 9 && s[n]) ? s[n] : String(n);
+}
+
+function bastRodaText(roda) {
+  return Number(roda) > 2 ? 'empat' : 'dua';
 }
 
 function bastFindPegawai(nip) {
@@ -236,18 +273,18 @@ function bastBuildTags() {
     const isKend = /kendaraan/i.test(a.kategori_nama || '') || !!a.no_polisi;
     return {
       No: i + 1,
-      NamaBarang: a.nama_barang || '-',
+      ModelJenis: a.model_jenis || a.nama_barang || '-',
       MerkType: a.merk_type || (isKend ? 'Kendaraan Roda ' + (a.roda || '4') : '-'),
-      Model: a.model_jenis || (isKend ? 'Kendaraan' : '-'),
-      NomorInventaris: a.nomorinventaris || '-',
+      Warna: a.warna || '-',
       Tahun: a.tahun_pembuatan || '-',
-      Harga: bastRupiah(a.harga),
-      Kondisi: a.kondisi || '-',
+      NoRangka: a.no_rangka || '-',
+      NoMesin: a.no_mesin || '-',
+      KodeBarang: a.kodebarang || '-',
       NoPolisi: a.no_polisi || '-',
-      Ruangan: a.ruangan_id ? (bastNamaRuangan(a.ruangan_id) || '-') : '-',
-      Keterangan: a.kategori_nama || (a.kodebarang || '')
+      Roda: Number(a.roda) > 2 ? 4 : 2
     };
   });
+  const firstRoda = Number((items[0] && items[0].roda) || 4);
 
   return {
     tags: {
@@ -256,6 +293,8 @@ function bastBuildTags() {
       Tempat: document.getElementById('bastTempat')?.value.trim() || 'Waikabubak',
       P1Nama: ttd.nama || '', P1NIP: String(ttd.nip || ''), P1Jabatan: ttd.jabatan || '', P1Alamat: alamat,
       P2Nama: pe.nama || '', P2NIP: String(pe.nip || ''), P2Jabatan: pe.jabatan || '', P2Alamat: alamat,
+      JumlahUnit: bastJumlahUnit(asets.length),
+      RodaText: bastRodaText(firstRoda),
       asets
     },
     nomor,
@@ -398,21 +437,23 @@ window.bastReopen = async function(id) {
   if (!b) return;
   const rows = (b.daftar_aset || []).map((r, i) => ({
     No: i + 1,
-    NamaBarang: r.NamaBarang || '',
+    ModelJenis: r.ModelJenis || r.Model || r.NamaBarang || '-',
     MerkType: r.MerkType || '-',
-    Model: r.Model || '-',
-    NomorInventaris: r.NomorInventaris || '-',
+    Warna: r.Warna || '-',
     Tahun: r.Tahun || '-',
-    Harga: r.Harga || '-',
-    Kondisi: r.Kondisi || '-',
+    NoRangka: r.NoRangka || '-',
+    NoMesin: r.NoMesin || '-',
+    KodeBarang: r.KodeBarang || r.NomorInventaris || '-',
     NoPolisi: r.NoPolisi || '-',
-    Ruangan: r.Ruangan || '-',
-    Keterangan: r.Keterangan || ''
+    Roda: Number(r.Roda) > 2 ? 4 : 2
   }));
+  const firstRoda = Number((rows[0] && rows[0].Roda) || 2);
   const tags = {
     Nomor: b.nomor || '',
-    HariTanggal: b.hari_tanggal || '',
+    HariTanggal: b.hari_tanggal || bastHariTanggal(b.tanggal),
     Tempat: b.tempat || '',
+    JumlahUnit: bastJumlahUnit(rows.length),
+    RodaText: bastRodaText(firstRoda),
     P1Nama: b.penandatangan_nama || '', P1NIP: b.penandatangan_nip || '',
     P1Jabatan: b.penandatangan_jabatan || '', P1Alamat: b.penandatangan_alamat || '',
     P2Nama: b.pegawai_nama || '', P2NIP: b.pegawai_nip || '',
