@@ -90,13 +90,18 @@ function link(from, to) { connections[from] = { main: [[{ node: to, type: 'main'
 function newChain() { cx = 0; }
 function endChain() { cy += 240; }
 
-const wh = (p, method) => add(`WH ${p}`, 'n8n-nodes-base.webhook', {
-  path: p,
-  ...(method ? { httpMethod: method } : {}),
-  responseMode: 'responseNode',
-  options: { allowedOrigins: '*' },
-  webhookId: p,
-}, { typeVersion: refWh.typeVersion });
+const wh = (p, method) => {
+  add(`WH ${p}`, 'n8n-nodes-base.webhook', {
+    path: p,
+    ...(method ? { httpMethod: method } : {}),
+    responseMode: 'responseNode',
+    options: { allowedOrigins: '*' },
+  }, { typeVersion: refWh.typeVersion });
+  // webhookId WAJIB di level node (bukan parameters) — tanpa ini n8n tidak
+  // mendaftarkan production webhook saat activate (aktif=true tapi 404)
+  nodes.at(-1).webhookId = p;
+  return `WH ${p}`;
+};
 
 const gate = (p) => add(`Gate ${p}`, 'n8n-nodes-base.code', { jsCode: GATE_JS }, { typeVersion: refCode.typeVersion });
 const code = (n, jsCode) => add(n, 'n8n-nodes-base.code', { jsCode }, { typeVersion: refCode.typeVersion });
@@ -122,7 +127,8 @@ const INST_EXPR_KOSONG = "{{ (($('WH simapo-aset-kosongkan').first().json.query 
 
 const AGG_OK = `return [{ json: { data: { ok: true } } }];`;
 
-const AGG_UPSERT = `const j = $input.all()[0] || {};
+// Semua Agg: $input.all()[0] = ITEM ({json:...}), bukan json — wajib `.json`
+const AGG_UPSERT = `const j = (($input.all()[0] || {}).json) || {};
 return [{ json: { data: {
   total: Number(j.total || 0),
   barang_baru: Number(j.barang_baru || 0),
@@ -130,7 +136,7 @@ return [{ json: { data: {
   barang_ids: j.barang_ids || []
 } } }];`;
 
-const AGG_SUMMARY = `const j = $input.all()[0] || {};
+const AGG_SUMMARY = `const j = (($input.all()[0] || {}).json) || {};
 return [{ json: { data: {
   total_unit: Number(j.total_unit || 0),
   total_nilai: Number(j.total_nilai || 0),
@@ -139,8 +145,8 @@ return [{ json: { data: {
   per_kategori: j.per_kategori || []
 } } }];`;
 
-const AGG_PENG_GET = `return [{ json: { data: ($input.all()[0] || {}).data || {} } }];`;
-const AGG_TTD = `return [{ json: { data: { signature: ($input.all()[0] || {}).signature || null } } }];`;
+const AGG_PENG_GET = `return [{ json: { data: ((($input.all()[0] || {}).json) || {}).data || {} } }];`;
+const AGG_TTD = `return [{ json: { data: { signature: ((($input.all()[0] || {}).json) || {}).signature || null } } }];`;
 
 // ── Code: upsert massal/KIB (idempoten, tanpa unique constraint) ────────
 const UPSERT_JS = String.raw`const b = $input.item.json.body || {};
@@ -386,7 +392,12 @@ async function deploy() {
     if (!put.ok) { console.error('PUT gagal', put.status, await put.text()); process.exit(1); }
     console.log(`updated ${id}`);
   } else {
-    const post = await fetch(BASE + '/api/v1/workflows', { method: 'POST', headers: hdr, body: JSON.stringify({ name: wf.name, nodes: wf.nodes, connections: wf.connections, settings: wf.settings }) });
+    let post = await fetch(BASE + '/api/v1/workflows', { method: 'POST', headers: hdr, body: JSON.stringify({ name: wf.name, nodes: wf.nodes, connections: wf.connections, settings: wf.settings }) });
+    // API menolak key settings tertentu (binaryMode) — fallback sama dengan jalur PUT
+    for (const st of [{ executionOrder: 'v1' }, {}]) {
+      if (post.ok) break;
+      post = await fetch(BASE + '/api/v1/workflows', { method: 'POST', headers: hdr, body: JSON.stringify({ name: wf.name, nodes: wf.nodes, connections: wf.connections, settings: st }) });
+    }
     if (!post.ok) { console.error('POST gagal', post.status, await post.text()); process.exit(1); }
     id = (await post.json()).id;
     console.log(`created ${id}`);
@@ -449,7 +460,7 @@ Expected: `active = True`.
 ```powershell
 curl.exe -s -o NUL -w "%{http_code}" https://mindcloud.my.id/webhook/simapo-aset-summary
 ```
-Expected: kode **bukan** `200` (biasanya `500`) — pola yang sama dipakai `bastSubmit` untuk deteksi gagal.
+Expected: **200 + body kosong** (eksekusi tercatat error `BAST: unauthorized` di n8n — gate menolak, tidak ada query jalan; tidak ada data bocor). Workflow BAST di instance yang sama juga membalas 200 untuk gate rejection, jadi pola instance ini memang 200-kosong, bukan non-200.
 
 - [ ] **Step 4: Cek 3 endpoint baca dengan kunci**
 
@@ -461,7 +472,7 @@ curl.exe -s -H "x-bast-key: $K" 'https://mindcloud.my.id/webhook/simapo-pengatur
 curl.exe -s -H "x-bast-key: $K" 'https://mindcloud.my.id/webhook/simapo-ttd-get?nip=196803241999031003'
 ```
 Expected:
-- summary → JSON `{"data":{"total_unit":16,"total_nilai":<angka>,"pemegang":<n>,"ruangan":<n>,"per_kategori":[...]}}` (angka ≥ data saat ini: 16 unit).
+- summary → JSON `{"data":{"total_unit":<n>,"total_nilai":<angka>,"pemegang":<n>,"ruangan":<n>,"per_kategori":[...]}}` (kesetaraan: nilai endpoint = nilai DB saat verifikasi; pencatatan saat verifikasi: `total_unit` = 2, `total_nilai` = 17.000.000 — data berubah sejak plan ditulis, jangan hardcode angka absolut).
 - pengaturan-get → JSON `{"data":{...}}` (objek, boleh kosong `{}`).
 - ttd-get → JSON `{"data":{"signature":null}}` atau `{"data":{"signature":"data:..."}}` (tergantung NIP pernah simpan tanda tangan atau tidak).
 
@@ -474,7 +485,7 @@ from "SIMAPO".unit_aset ua
 join "SIMAPO".barang b on b.id = ua.barangid and b.isactive = true
 where b.instansi_id = 'bapperida'
 ```
-Expected: angka = `total_unit` dari respons summary.
+Expected: kesetaraan — nilai endpoint = nilai DB **saat itu** (data bisa berubah sejak plan ditulis; pencatatan saat verifikasi: endpoint `total_unit` = 2 == DB 2, `total_nilai` = 17.000.000).
 
 ---
 

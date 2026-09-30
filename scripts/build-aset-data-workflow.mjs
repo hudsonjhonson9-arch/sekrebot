@@ -41,13 +41,18 @@ function link(from, to) { connections[from] = { main: [[{ node: to, type: 'main'
 function newChain() { cx = 0; }
 function endChain() { cy += 240; }
 
-const wh = (p, method) => add(`WH ${p}`, 'n8n-nodes-base.webhook', {
-  path: p,
-  ...(method ? { httpMethod: method } : {}),
-  responseMode: 'responseNode',
-  options: { allowedOrigins: '*' },
-  webhookId: p,
-}, { typeVersion: refWh.typeVersion });
+const wh = (p, method) => {
+  add(`WH ${p}`, 'n8n-nodes-base.webhook', {
+    path: p,
+    ...(method ? { httpMethod: method } : {}),
+    responseMode: 'responseNode',
+    options: { allowedOrigins: '*' },
+  }, { typeVersion: refWh.typeVersion });
+  // webhookId WAJIB di level node (bukan parameters) — tanpa ini n8n tidak
+  // mendaftarkan production webhook saat activate (aktif=true tapi 404)
+  nodes.at(-1).webhookId = p;
+  return `WH ${p}`;
+};
 
 const gate = (p) => add(`Gate ${p}`, 'n8n-nodes-base.code', { jsCode: GATE_JS }, { typeVersion: refCode.typeVersion });
 const code = (n, jsCode) => add(n, 'n8n-nodes-base.code', { jsCode }, { typeVersion: refCode.typeVersion });
@@ -73,7 +78,8 @@ const INST_EXPR_KOSONG = "{{ (($('WH simapo-aset-kosongkan').first().json.query 
 
 const AGG_OK = `return [{ json: { data: { ok: true } } }];`;
 
-const AGG_UPSERT = `const j = $input.all()[0] || {};
+// Semua Agg: $input.all()[0] = ITEM ({json:...}), bukan json — wajib `.json`
+const AGG_UPSERT = `const j = (($input.all()[0] || {}).json) || {};
 return [{ json: { data: {
   total: Number(j.total || 0),
   barang_baru: Number(j.barang_baru || 0),
@@ -81,7 +87,7 @@ return [{ json: { data: {
   barang_ids: j.barang_ids || []
 } } }];`;
 
-const AGG_SUMMARY = `const j = $input.all()[0] || {};
+const AGG_SUMMARY = `const j = (($input.all()[0] || {}).json) || {};
 return [{ json: { data: {
   total_unit: Number(j.total_unit || 0),
   total_nilai: Number(j.total_nilai || 0),
@@ -90,8 +96,8 @@ return [{ json: { data: {
   per_kategori: j.per_kategori || []
 } } }];`;
 
-const AGG_PENG_GET = `return [{ json: { data: ($input.all()[0] || {}).data || {} } }];`;
-const AGG_TTD = `return [{ json: { data: { signature: ($input.all()[0] || {}).signature || null } } }];`;
+const AGG_PENG_GET = `return [{ json: { data: ((($input.all()[0] || {}).json) || {}).data || {} } }];`;
+const AGG_TTD = `return [{ json: { data: { signature: ((($input.all()[0] || {}).json) || {}).signature || null } } }];`;
 
 // ── Code: upsert massal/KIB (idempoten, tanpa unique constraint) ────────
 const UPSERT_JS = String.raw`const b = $input.item.json.body || {};
@@ -337,7 +343,12 @@ async function deploy() {
     if (!put.ok) { console.error('PUT gagal', put.status, await put.text()); process.exit(1); }
     console.log(`updated ${id}`);
   } else {
-    const post = await fetch(BASE + '/api/v1/workflows', { method: 'POST', headers: hdr, body: JSON.stringify({ name: wf.name, nodes: wf.nodes, connections: wf.connections, settings: wf.settings }) });
+    let post = await fetch(BASE + '/api/v1/workflows', { method: 'POST', headers: hdr, body: JSON.stringify({ name: wf.name, nodes: wf.nodes, connections: wf.connections, settings: wf.settings }) });
+    // API menolak key settings tertentu (binaryMode) — fallback sama dengan jalur PUT
+    for (const st of [{ executionOrder: 'v1' }, {}]) {
+      if (post.ok) break;
+      post = await fetch(BASE + '/api/v1/workflows', { method: 'POST', headers: hdr, body: JSON.stringify({ name: wf.name, nodes: wf.nodes, connections: wf.connections, settings: st }) });
+    }
     if (!post.ok) { console.error('POST gagal', post.status, await post.text()); process.exit(1); }
     id = (await post.json()).id;
     console.log(`created ${id}`);
