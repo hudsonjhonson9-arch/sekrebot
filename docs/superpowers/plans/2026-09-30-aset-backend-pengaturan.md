@@ -541,10 +541,13 @@ const P = {
   masterDel: '/webhook/simapo-admin-master-delete',
 };
 
-// 1. tanpa x-bast-key harus ditolak
+// 1. tanpa x-bast-key harus ditolak (kontrak gate: 200 + body kosong, tanpa data)
 {
   const r = await fetch(BASE + P.summary);
-  say('summary tolak tanpa x-bast-key', !r.ok, `status ${r.status}`);
+  let j = null;
+  try { j = await r.json(); } catch (_) {}
+  say('summary tolak tanpa x-bast-key', !r.ok || j === null,
+    `status ${r.status}, body ${j === null ? '(kosong)' : JSON.stringify(j)}`);
 }
 
 // 2. summary terbaca + bentuk data
@@ -587,10 +590,12 @@ const kode = 'SMOKE-TEST-' + Date.now();
   say('cleanup via master-delete', cleaned, `${ids.length} baris`);
 }
 
-// 5. kosongkan: guard konfirmasi (TIDAK test happy-path)
+// 5. kosongkan: guard konfirmasi (TIDAK test happy-path) — tolak = 200 body kosong
 {
   const r = await call('POST', P.kosong, { confirm: 'salah' });
-  say('kosongkan tolak konfirmasi salah', !r.ok, `status ${r.status}`);
+  const tolak = r.status !== 0 && (!r.ok || r.j === null);
+  say('kosongkan tolak konfirmasi salah', tolak,
+    `status ${r.status}, body ${r.j === null ? '(kosong)' : JSON.stringify(r.j)}`);
 }
 
 // 6. ttd-get (opsional)
