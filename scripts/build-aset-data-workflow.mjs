@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-/* Generator workflow "SIMAPO - Aset Data" â†’ n8n/SIMAPO - Aset Data.json
-   node scripts/build-aset-data-workflow.mjs            â†’ tulis JSON lokal
-   node scripts/build-aset-data-workflow.mjs --deploy   â†’ tulis + create/update + activate (butuh N8N_TOKEN)
+/* Generator workflow "SIMAPO - Aset Data" → n8n/SIMAPO - Aset Data.json
+   node scripts/build-aset-data-workflow.mjs            → tulis JSON lokal
+   node scripts/build-aset-data-workflow.mjs --deploy   → tulis + create/update + activate (butuh N8N_TOKEN)
 */
 import { randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -12,10 +12,9 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'n8n', 'SIMAPO - Aset Data.json');
 const NAME = 'SIMAPO - Aset Data';
 const BASE = 'https://mindcloud.my.id';
-const INST = 'bapperida';
 const PG_KEYS = ['sekda_nama', 'sekda_nip', 'sekda_jabatan', 'sekda_alamat', 'p1_id', 'p1_jabatan', 'p1_alamat'];
 
-// â”€â”€ referensi dari workflow BAST yang sudah terbukti jalan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── referensi dari workflow BAST yang sudah terbukti jalan ──────────────
 const BAST = JSON.parse(readFileSync(join(ROOT, 'n8n', 'SIMAPO - BAST.json'), 'utf8'));
 const refOf = (type) => BAST.nodes.find(n => n.type === type);
 const refWh = refOf('n8n-nodes-base.webhook');
@@ -26,7 +25,7 @@ const GATE_JS = BAST.nodes
   .find(n => n.type === 'n8n-nodes-base.code' && n.parameters.jsCode.includes('x-bast-key'))
   .parameters.jsCode;
 
-// â”€â”€ builder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── builder ─────────────────────────────────────────────────────────────
 const nodes = [];
 const connections = {};
 let cx = 0, cy = 0;
@@ -64,6 +63,10 @@ const res = (n) => add(n, 'n8n-nodes-base.respondToWebhook', {
 // instansi dari query (apiFetch selalu menyisipkan instansi_id), fallback bapperida
 const INST_EXPR = "{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}";
 
+// instansi untuk node PG kosongkan setelah PG Kosongkan Anak — input node itu sudah
+// baris hasil query (bukan payload webhook), jadi rujuk node WH-nya secara eksplisit
+const INST_EXPR_KOSONG = "{{ (($('WH simapo-aset-kosongkan').first().json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}";
+
 const AGG_OK = `return [{ json: { data: { ok: true } } }];`;
 
 const AGG_UPSERT = `const j = $input.all()[0] || {};
@@ -86,7 +89,7 @@ return [{ json: { data: {
 const AGG_PENG_GET = `return [{ json: { data: ($input.all()[0] || {}).data || {} } }];`;
 const AGG_TTD = `return [{ json: { data: { signature: ($input.all()[0] || {}).signature || null } } }];`;
 
-// â”€â”€ Code: upsert massal/KIB (idempoten, tanpa unique constraint) â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Code: upsert massal/KIB (idempoten, tanpa unique constraint) ────────
 const UPSERT_JS = String.raw`const b = $input.item.json.body || {};
 const rows = Array.isArray(b.rows) ? b.rows : [];
 if (!rows.length) throw new Error('rows kosong');
@@ -143,7 +146,7 @@ L.push("         'https://mindcloud.my.id/?qr=SIMAPO-' || gen_random_uuid(),");
 L.push("         src.merk, src.model, src.warna, src.tahun, src.roda, src.keterangan, '" + esc(inst) + "', NOW()");
 L.push('  FROM src');
 L.push('  JOIN all_barang ab ON ab.kodebarang = src.kode');
-L.push('  WHERE NOT EXISTS (SELECT 1 FROM "SIMAPO".unit_aset ua WHERE ua.nomorinventaris = src.nomor)');
+  L.push("  WHERE NOT EXISTS (SELECT 1 FROM \"SIMAPO\".unit_aset ua WHERE ua.nomorinventaris = src.nomor AND ua.instansi_id = '" + esc(inst) + "')");
 L.push('  RETURNING id');
 L.push(')');
 L.push('SELECT (SELECT count(*) FROM src) AS total,');
@@ -152,7 +155,7 @@ L.push('       (SELECT count(*) FROM ins_unit) AS unit_baru,');
 L.push("       (SELECT COALESCE(json_agg(id), '[]'::json) FROM ins_barang) AS barang_ids;");
 return [{ json: { sql: L.join('\n') } }];`;
 
-// â”€â”€ Code: simpan pengaturan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Code: simpan pengaturan ─────────────────────────────────────────────
 const SET_JS = `const b = $input.item.json.body || {};
 const q = $input.item.json.query || {};
 const inst = String(q.instansi_id || 'bapperida');
@@ -167,12 +170,50 @@ const sql = 'INSERT INTO public.pengaturan (key, value, instansi_id) VALUES ' + 
   ' ON CONFLICT (key, instansi_id) DO UPDATE SET value = EXCLUDED.value RETURNING key;';
 return [{ json: { sql } }];`;
 
-// â”€â”€ Code: guard konfirmasi kosongkan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── SQL kosongkan anak per instansi ─────────────────────────────────────
+// Semua child FK NO ACTION dihapus dalam SATU statement (dicek di akhir
+// statement); unit_aset/barang dihapus terpisah oleh node PG sesudahnya.
+// arg e = ekspresi runtime berisi instansi yang sudah di-escape; ${e}
+// di-resolve n8n saat eksekusi, bukan saat build.
+const SQL_KIDS = (e) => `WITH d1 AS (DELETE FROM "SIMAPO".riwayat_pemeliharaan
+     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
+ d2 AS (DELETE FROM "SIMAPO".detail_distribusi_aset
+     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
+ d3 AS (DELETE FROM "SIMAPO".jadwal_maintenance
+     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
+ d4 AS (DELETE FROM "SIMAPO".peminjaman
+     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
+ d5 AS (DELETE FROM "SIMAPO".detail_opname
+     WHERE barangid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
+ d6 AS (DELETE FROM "SIMAPO".detail_request
+     WHERE barangid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
+ d7 AS (DELETE FROM "SIMAPO".detail_pemeliharaan
+     WHERE barangid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}')
+        OR riwayatid IN (SELECT id FROM "SIMAPO".riwayat_pemeliharaan
+                         WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}')) RETURNING 1),
+ d8 AS (DELETE FROM "SIMAPO".mutasi_barang
+     WHERE barangkeluarid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}')
+        OR barangmasukid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
+ d9 AS (DELETE FROM "SIMAPO".detail_penerimaan
+     WHERE barang_id IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
+ d10 AS (DELETE FROM "SIMAPO".pemeliharaan
+     WHERE barang_id IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1)
+SELECT (SELECT count(*) FROM d1) + (SELECT count(*) FROM d2) + (SELECT count(*) FROM d3)
+     + (SELECT count(*) FROM d4) + (SELECT count(*) FROM d5) + (SELECT count(*) FROM d6)
+     + (SELECT count(*) FROM d7) + (SELECT count(*) FROM d8) + (SELECT count(*) FROM d9)
+     + (SELECT count(*) FROM d10) AS rows_dihapus;`;
+
+// ── Code: guard konfirmasi kosongkan ────────────────────────────────────
 const CONFIRM_JS = `const b = $input.item.json.body || {};
 if (String(b.confirm || '') !== 'HAPUS') throw new Error('Konfirmasi salah: ketik HAPUS');
-return $input.all();`;
+const q = $input.item.json.query || {};
+const inst = String(q.instansi_id || 'bapperida');
+const esc = s => String(s == null ? '' : s).replace(/'/g, "''");
+const i = esc(inst);
+const sql = \`${SQL_KIDS('${i}')}\`;
+return [{ json: { sql } }];`;
 
-// â”€â”€ SQL statis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── SQL statis ──────────────────────────────────────────────────────────
 const SQL_SUMMARY = `SELECT
   (SELECT COUNT(*) FROM "SIMAPO".unit_aset ua
      JOIN "SIMAPO".barang b ON b.id = ua.barangid AND b.isactive = true
@@ -205,22 +246,7 @@ const SQL_TTD = `SELECT signature FROM public.tanda_tangan
 WHERE nip = '{{ (($input.item.json.query || {}).nip || "").toString().replace(/'/g, "''") }}'
 LIMIT 1;`;
 
-const SQL_KIDS = `WITH d1 AS (DELETE FROM "SIMAPO".riwayat_pemeliharaan RETURNING 1),
-     d2 AS (DELETE FROM "SIMAPO".detail_distribusi_aset RETURNING 1),
-     d3 AS (DELETE FROM "SIMAPO".jadwal_maintenance RETURNING 1),
-     d4 AS (DELETE FROM "SIMAPO".peminjaman RETURNING 1),
-     d5 AS (DELETE FROM "SIMAPO".detail_opname RETURNING 1),
-     d6 AS (DELETE FROM "SIMAPO".detail_request RETURNING 1),
-     d7 AS (DELETE FROM "SIMAPO".detail_pemeliharaan RETURNING 1),
-     d8 AS (DELETE FROM "SIMAPO".mutasi_barang RETURNING 1),
-     d9 AS (DELETE FROM "SIMAPO".detail_penerimaan RETURNING 1),
-     d10 AS (DELETE FROM "SIMAPO".pemeliharaan RETURNING 1)
-SELECT (SELECT count(*) FROM d1) + (SELECT count(*) FROM d2) + (SELECT count(*) FROM d3)
-     + (SELECT count(*) FROM d4) + (SELECT count(*) FROM d5) + (SELECT count(*) FROM d6)
-     + (SELECT count(*) FROM d7) + (SELECT count(*) FROM d8) + (SELECT count(*) FROM d9)
-     + (SELECT count(*) FROM d10) AS rows_dihapus;`;
-
-// â”€â”€ 7 rantai â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── 7 rantai ────────────────────────────────────────────────────────────
 function upsertChain(path) {
   newChain();
   const w = wh(path, 'POST'), g = gate(path);
@@ -260,13 +286,13 @@ readChain('simapo-pengaturan-get', SQL_PENG_GET, AGG_PENG_GET);
 
 readChain('simapo-ttd-get', SQL_TTD, AGG_TTD);
 
-{ // simapo-aset-kosongkan (POST): guard â†’ anak â†’ unit â†’ barang
+{ // simapo-aset-kosongkan (POST): guard → anak → unit → barang (per instansi)
   newChain();
   const w = wh('simapo-aset-kosongkan', 'POST'), g = gate('simapo-aset-kosongkan');
   const c = code('Code Konfirmasi Kosongkan', CONFIRM_JS);
-  const p1 = pg('PG Kosongkan Anak', SQL_KIDS);
-  const p2 = pg('PG Kosongkan Unit', 'DELETE FROM "SIMAPO".unit_aset;');
-  const p3 = pg('PG Kosongkan Barang', 'DELETE FROM "SIMAPO".barang;');
+  const p1 = pg('PG Kosongkan Anak', '={{ $json.sql }}');
+  const p2 = pg('PG Kosongkan Unit', `DELETE FROM "SIMAPO".unit_aset WHERE instansi_id = '${INST_EXPR_KOSONG}';`);
+  const p3 = pg('PG Kosongkan Barang', `DELETE FROM "SIMAPO".barang WHERE instansi_id = '${INST_EXPR_KOSONG}';`);
   const a = code('Agg Kosongkan', AGG_OK);
   const r = res('Res Kosongkan');
   link(w, g); link(g, c); link(c, p1); link(p1, p2); link(p2, p3); link(p3, a); link(a, r);
@@ -283,9 +309,9 @@ const wf = {
   meta: { templateCredsSetupCompleted: true },
 };
 writeFileSync(OUT, JSON.stringify(wf, null, 2) + '\n');
-console.log(`OK: ${nodes.length} nodes, ${Object.keys(connections).length} links â†’ ${OUT}`);
+console.log(`OK: ${nodes.length} nodes, ${Object.keys(connections).length} links → ${OUT}`);
 
-// â”€â”€ deploy (Task 2): create/update + activate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── deploy (Task 2): create/update + activate ───────────────────────────
 async function deploy() {
   const token = process.env.N8N_TOKEN;
   if (!token) { console.error('N8N_TOKEN belum di-set'); process.exit(1); }

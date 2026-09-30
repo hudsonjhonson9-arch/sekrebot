@@ -61,7 +61,6 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'n8n', 'SIMAPO - Aset Data.json');
 const NAME = 'SIMAPO - Aset Data';
 const BASE = 'https://mindcloud.my.id';
-const INST = 'bapperida';
 const PG_KEYS = ['sekda_nama', 'sekda_nip', 'sekda_jabatan', 'sekda_alamat', 'p1_id', 'p1_jabatan', 'p1_alamat'];
 
 // ── referensi dari workflow BAST yang sudah terbukti jalan ──────────────
@@ -112,6 +111,10 @@ const res = (n) => add(n, 'n8n-nodes-base.respondToWebhook', {
 
 // instansi dari query (apiFetch selalu menyisipkan instansi_id), fallback bapperida
 const INST_EXPR = "{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}";
+
+// instansi untuk node PG kosongkan setelah PG Kosongkan Anak — input node itu sudah
+// baris hasil query (bukan payload webhook), jadi rujuk node WH-nya secara eksplisit
+const INST_EXPR_KOSONG = "{{ (($('WH simapo-aset-kosongkan').first().json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}";
 
 const AGG_OK = `return [{ json: { data: { ok: true } } }];`;
 
@@ -192,7 +195,7 @@ L.push("         'https://mindcloud.my.id/?qr=SIMAPO-' || gen_random_uuid(),");
 L.push("         src.merk, src.model, src.warna, src.tahun, src.roda, src.keterangan, '" + esc(inst) + "', NOW()");
 L.push('  FROM src');
 L.push('  JOIN all_barang ab ON ab.kodebarang = src.kode');
-L.push('  WHERE NOT EXISTS (SELECT 1 FROM "SIMAPO".unit_aset ua WHERE ua.nomorinventaris = src.nomor)');
+  L.push("  WHERE NOT EXISTS (SELECT 1 FROM \"SIMAPO\".unit_aset ua WHERE ua.nomorinventaris = src.nomor AND ua.instansi_id = '" + esc(inst) + "')");
 L.push('  RETURNING id');
 L.push(')');
 L.push('SELECT (SELECT count(*) FROM src) AS total,');
@@ -216,10 +219,48 @@ const sql = 'INSERT INTO public.pengaturan (key, value, instansi_id) VALUES ' + 
   ' ON CONFLICT (key, instansi_id) DO UPDATE SET value = EXCLUDED.value RETURNING key;';
 return [{ json: { sql } }];`;
 
+// ── SQL kosongkan anak per instansi ─────────────────────────────────────
+// Semua child FK NO ACTION dihapus dalam SATU statement (dicek di akhir
+// statement); unit_aset/barang dihapus terpisah oleh node PG sesudahnya.
+// arg e = ekspresi runtime berisi instansi yang sudah di-escape; ${e}
+// di-resolve n8n saat eksekusi, bukan saat build.
+const SQL_KIDS = (e) => `WITH d1 AS (DELETE FROM "SIMAPO".riwayat_pemeliharaan
+     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
+ d2 AS (DELETE FROM "SIMAPO".detail_distribusi_aset
+     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
+ d3 AS (DELETE FROM "SIMAPO".jadwal_maintenance
+     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
+ d4 AS (DELETE FROM "SIMAPO".peminjaman
+     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
+ d5 AS (DELETE FROM "SIMAPO".detail_opname
+     WHERE barangid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
+ d6 AS (DELETE FROM "SIMAPO".detail_request
+     WHERE barangid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
+ d7 AS (DELETE FROM "SIMAPO".detail_pemeliharaan
+     WHERE barangid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}')
+        OR riwayatid IN (SELECT id FROM "SIMAPO".riwayat_pemeliharaan
+                         WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}')) RETURNING 1),
+ d8 AS (DELETE FROM "SIMAPO".mutasi_barang
+     WHERE barangkeluarid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}')
+        OR barangmasukid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
+ d9 AS (DELETE FROM "SIMAPO".detail_penerimaan
+     WHERE barang_id IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
+ d10 AS (DELETE FROM "SIMAPO".pemeliharaan
+     WHERE barang_id IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1)
+SELECT (SELECT count(*) FROM d1) + (SELECT count(*) FROM d2) + (SELECT count(*) FROM d3)
+     + (SELECT count(*) FROM d4) + (SELECT count(*) FROM d5) + (SELECT count(*) FROM d6)
+     + (SELECT count(*) FROM d7) + (SELECT count(*) FROM d8) + (SELECT count(*) FROM d9)
+     + (SELECT count(*) FROM d10) AS rows_dihapus;`;
+
 // ── Code: guard konfirmasi kosongkan ────────────────────────────────────
 const CONFIRM_JS = `const b = $input.item.json.body || {};
 if (String(b.confirm || '') !== 'HAPUS') throw new Error('Konfirmasi salah: ketik HAPUS');
-return $input.all();`;
+const q = $input.item.json.query || {};
+const inst = String(q.instansi_id || 'bapperida');
+const esc = s => String(s == null ? '' : s).replace(/'/g, "''");
+const i = esc(inst);
+const sql = \`${SQL_KIDS('${i}')}\`;
+return [{ json: { sql } }];`;
 
 // ── SQL statis ──────────────────────────────────────────────────────────
 const SQL_SUMMARY = `SELECT
@@ -253,21 +294,6 @@ WHERE instansi_id = '${INST_EXPR}'
 const SQL_TTD = `SELECT signature FROM public.tanda_tangan
 WHERE nip = '{{ (($input.item.json.query || {}).nip || "").toString().replace(/'/g, "''") }}'
 LIMIT 1;`;
-
-const SQL_KIDS = `WITH d1 AS (DELETE FROM "SIMAPO".riwayat_pemeliharaan RETURNING 1),
-     d2 AS (DELETE FROM "SIMAPO".detail_distribusi_aset RETURNING 1),
-     d3 AS (DELETE FROM "SIMAPO".jadwal_maintenance RETURNING 1),
-     d4 AS (DELETE FROM "SIMAPO".peminjaman RETURNING 1),
-     d5 AS (DELETE FROM "SIMAPO".detail_opname RETURNING 1),
-     d6 AS (DELETE FROM "SIMAPO".detail_request RETURNING 1),
-     d7 AS (DELETE FROM "SIMAPO".detail_pemeliharaan RETURNING 1),
-     d8 AS (DELETE FROM "SIMAPO".mutasi_barang RETURNING 1),
-     d9 AS (DELETE FROM "SIMAPO".detail_penerimaan RETURNING 1),
-     d10 AS (DELETE FROM "SIMAPO".pemeliharaan RETURNING 1)
-SELECT (SELECT count(*) FROM d1) + (SELECT count(*) FROM d2) + (SELECT count(*) FROM d3)
-     + (SELECT count(*) FROM d4) + (SELECT count(*) FROM d5) + (SELECT count(*) FROM d6)
-     + (SELECT count(*) FROM d7) + (SELECT count(*) FROM d8) + (SELECT count(*) FROM d9)
-     + (SELECT count(*) FROM d10) AS rows_dihapus;`;
 
 // ── 7 rantai ────────────────────────────────────────────────────────────
 function upsertChain(path) {
@@ -309,13 +335,13 @@ readChain('simapo-pengaturan-get', SQL_PENG_GET, AGG_PENG_GET);
 
 readChain('simapo-ttd-get', SQL_TTD, AGG_TTD);
 
-{ // simapo-aset-kosongkan (POST): guard → anak → unit → barang
+{ // simapo-aset-kosongkan (POST): guard → anak → unit → barang (per instansi)
   newChain();
   const w = wh('simapo-aset-kosongkan', 'POST'), g = gate('simapo-aset-kosongkan');
   const c = code('Code Konfirmasi Kosongkan', CONFIRM_JS);
-  const p1 = pg('PG Kosongkan Anak', SQL_KIDS);
-  const p2 = pg('PG Kosongkan Unit', 'DELETE FROM "SIMAPO".unit_aset;');
-  const p3 = pg('PG Kosongkan Barang', 'DELETE FROM "SIMAPO".barang;');
+  const p1 = pg('PG Kosongkan Anak', '={{ $json.sql }}');
+  const p2 = pg('PG Kosongkan Unit', `DELETE FROM "SIMAPO".unit_aset WHERE instansi_id = '${INST_EXPR_KOSONG}';`);
+  const p3 = pg('PG Kosongkan Barang', `DELETE FROM "SIMAPO".barang WHERE instansi_id = '${INST_EXPR_KOSONG}';`);
   const a = code('Agg Kosongkan', AGG_OK);
   const r = res('Res Kosongkan');
   link(w, g); link(g, c); link(c, p1); link(p1, p2); link(p2, p3); link(p3, a); link(a, r);
@@ -646,7 +672,7 @@ Tambahkan satu baris setelah tombol `sa-tab-pks` (sebelum `</div>` penutup `#sa-
             </button>
             <hr style="border-color:rgba(255,255,255,0.08);margin:18px 0;">
             <div class="form-label" style="color:#f87171;">⚠️ Zona Bahaya</div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Kosongkan seluruh data aset (katalog + unit + riwayat transaksi yang merujuknya). Pegawai, ruangan, kategori, pengaturan, dan arsip BAST TIDAK terhapus.</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Kosongkan seluruh data aset instansi ini (katalog + unit + riwayat transaksi yang merujuknya). Pegawai, ruangan, kategori, pengaturan, dan arsip BAST TIDAK terhapus.</div>
             <div style="display:flex;gap:8px;">
               <input class="form-input" id="kosongkanKonfirmasi" placeholder="Ketik HAPUS untuk mengaktifkan">
               <button class="btn-sm-admin" onclick="kosongkanAset()" style="background:rgba(248,113,113,0.2);color:#f87171;white-space:nowrap;">🗑 Kosongkan</button>
@@ -757,7 +783,7 @@ Expected: commit sukses, 3 file masuk.
 Ganti seluruh isi baris 97 (mulai `| \`simapo-aset-kosongkan\` ...`) menjadi:
 
 ```markdown
-| `simapo-aset-kosongkan` | destructive; wajib konfirmasi "HAPUS" di client **dan** guard server-side; cakupan hapus: semua tabel domain aset yang jadi FK-referen `barang`/`unit_aset` (riwayat transaksi ikut terhapus — dipaksa FK Postgres: `riwayat_pemeliharaan`, `detail_distribusi_aset`, `jadwal_maintenance`, `peminjaman`, `detail_opname`, `detail_request`, `detail_pemeliharaan`, `mutasi_barang`, `detail_penerimaan`, `pemeliharaan`, lalu `unit_aset`, `barang`), sedangkan ruangan/kategori/pegawai/pengaturan/tanda_tangan/arsip BAST tetap |
+| `simapo-aset-kosongkan` | destructive; wajib konfirmasi "HAPUS" di client **dan** guard server-side; cakupan hapus (per instansi — `instansi_id` dari query, default `bapperida`; baris instansi lain tidak tersentuh): semua tabel domain aset yang jadi FK-referen `barang`/`unit_aset` (riwayat transaksi ikut terhapus — dipaksa FK Postgres: `riwayat_pemeliharaan`, `detail_distribusi_aset`, `jadwal_maintenance`, `peminjaman`, `detail_opname`, `detail_request`, `detail_pemeliharaan`, `mutasi_barang`, `detail_penerimaan`, `pemeliharaan`, lalu `unit_aset`, `barang`), sedangkan ruangan/kategori/pegawai/pengaturan/tanda_tangan/arsip BAST tetap |
 ```
 
 - [ ] **Step 2: Verifikasi UI via browser**
