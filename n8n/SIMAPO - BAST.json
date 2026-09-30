@@ -1,0 +1,935 @@
+{
+  "name": "SIMAPO - BAST",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "simapo-bast-init",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "httpMethod": "POST"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b9017dc1-620d-43cd-a33f-86aab99d2432",
+      "name": "WH Bast Init",
+      "webhookId": "simapo-bast-init"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        150,
+        0
+      ],
+      "id": "769002c1-793e-4d49-b654-3952ebb33c8c",
+      "name": "Gate Bast Init"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS \"SIMAPO\".ruangan (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  kode TEXT NOT NULL DEFAULT '',\n  nama TEXT NOT NULL,\n  keterangan TEXT,\n  instansi_id TEXT NOT NULL DEFAULT 'bapperida',\n  createdat TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n  UNIQUE(kode, instansi_id)\n);\nALTER TABLE \"SIMAPO\".unit_aset ADD COLUMN IF NOT EXISTS pegawai_id TEXT;\nALTER TABLE \"SIMAPO\".unit_aset ADD COLUMN IF NOT EXISTS ruangan_id UUID;\nALTER TABLE \"SIMAPO\".unit_aset ADD COLUMN IF NOT EXISTS no_polisi TEXT;\nALTER TABLE \"SIMAPO\".unit_aset ADD COLUMN IF NOT EXISTS no_rangka TEXT;\nALTER TABLE \"SIMAPO\".unit_aset ADD COLUMN IF NOT EXISTS no_mesin TEXT;\nALTER TABLE \"SIMAPO\".unit_aset ADD COLUMN IF NOT EXISTS roda TEXT DEFAULT '2';\nALTER TABLE \"SIMAPO\".unit_aset ADD COLUMN IF NOT EXISTS merk_type TEXT;\nALTER TABLE \"SIMAPO\".unit_aset ADD COLUMN IF NOT EXISTS model_jenis TEXT;\nALTER TABLE \"SIMAPO\".unit_aset ADD COLUMN IF NOT EXISTS warna TEXT;\nALTER TABLE \"SIMAPO\".unit_aset ADD COLUMN IF NOT EXISTS tahun_pembuatan TEXT;\nALTER TABLE \"SIMAPO\".unit_aset ADD COLUMN IF NOT EXISTS updatedat TIMESTAMPTZ NOT NULL DEFAULT NOW();\nCREATE TABLE IF NOT EXISTS \"SIMAPO\".bast (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  nomor TEXT NOT NULL,\n  instansi_id TEXT NOT NULL DEFAULT 'bapperida',\n  pegawai_id TEXT,\n  pegawai_nama TEXT,\n  pegawai_nip TEXT,\n  pegawai_jabatan TEXT,\n  pegawai_alamat TEXT,\n  penandatangan_id TEXT,\n  penandatangan_nama TEXT,\n  penandatangan_nip TEXT,\n  penandatangan_jabatan TEXT,\n  penandatangan_alamat TEXT,\n  tanggal TIMESTAMPTZ,\n  hari_tanggal TEXT,\n  tempat TEXT,\n  daftar_aset JSONB NOT NULL DEFAULT '[]'::jsonb,\n  total_aset INT NOT NULL DEFAULT 0,\n  total_nilai NUMERIC(18,2) NOT NULL DEFAULT 0,\n  createdat TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n  updatedat TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n  createdby TEXT\n);\nCREATE INDEX IF NOT EXISTS idx_bast_instansi ON \"SIMAPO\".bast(instansi_id);\nCREATE INDEX IF NOT EXISTS idx_bast_pegawai ON \"SIMAPO\".bast(pegawai_id);\nCREATE INDEX IF NOT EXISTS idx_bast_createdat ON \"SIMAPO\".bast(createdat DESC);\nCREATE INDEX IF NOT EXISTS idx_unit_aset_pemegang ON \"SIMAPO\".unit_aset(pegawai_id);\nCREATE INDEX IF NOT EXISTS idx_unit_aset_ruangan ON \"SIMAPO\".unit_aset(ruangan_id);\nCREATE INDEX IF NOT EXISTS idx_unit_aset_nopolisi ON \"SIMAPO\".unit_aset(no_polisi);\nSELECT 'OK' AS status;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        300,
+        0
+      ],
+      "id": "cfde91b9-7b90-4d07-af30-4aa7fb22d597",
+      "name": "PG Bast Init",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: { ok: true } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        0
+      ],
+      "id": "6b11b0a0-f568-4007-b133-016e2bda2e4f",
+      "name": "Agg Bast Init"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        0
+      ],
+      "id": "28ec8a5e-c10e-41a3-a34b-d310790e45bd",
+      "name": "Res Bast Init"
+    },
+    {
+      "parameters": {
+        "path": "simapo-bast-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        400
+      ],
+      "id": "b6bc742f-bda4-4df9-a59d-f608d2e4d917",
+      "name": "WH Bast List",
+      "webhookId": "simapo-bast-list"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  (SELECT COALESCE(json_agg(t ORDER BY t.nama ASC), '[]'::json) FROM (\n    SELECT u.\"NIP\" AS id, u.\"NIP\" AS nip, u.\"username\" AS nama,\n           COALESCE(u.\"Jabatan\"::text, '') AS jabatan,\n           COALESCE(u.instansi_id::text, '') AS instansi_id\n    FROM public.user_list u\n    WHERE u.\"NIP\" IS NOT NULL\n    ORDER BY u.\"username\" ASC\n  ) t) AS pegawai,\n  (SELECT COALESCE(json_agg(t ORDER BY t.nomorinventaris ASC), '[]'::json) FROM (\n    SELECT ua.id, ua.nomorinventaris, ua.kondisi, ua.statuspinjam, ua.qrcode,\n           ua.pegawai_id, ua.ruangan_id,\n           COALESCE(ua.no_polisi, '') AS no_polisi, COALESCE(ua.no_rangka, '') AS no_rangka,\n           COALESCE(ua.no_mesin, '') AS no_mesin, COALESCE(ua.roda, '') AS roda,\n           COALESCE(ua.merk_type, '') AS merk_type, COALESCE(ua.model_jenis, '') AS model_jenis,\n           COALESCE(ua.warna, '') AS warna, COALESCE(ua.tahun_pembuatan, '') AS tahun_pembuatan,\n           b.nama AS nama_barang, COALESCE(b.kodebarang, '') AS kodebarang, b.kategoriid,\n           COALESCE(k.nama, '') AS kategori_nama, COALESCE(b.hargasatuan, 0) AS harga\n    FROM \"SIMAPO\".unit_aset ua\n    JOIN \"SIMAPO\".barang b ON b.id = ua.barangid AND b.isactive = true\n    LEFT JOIN \"SIMAPO\".kategori_barang k ON k.id = b.kategoriid\n  ) t) AS aset,\n  (SELECT COALESCE(json_agg(t ORDER BY t.nama ASC), '[]'::json) FROM (\n    SELECT r.id, r.kode, r.nama, COALESCE(r.keterangan, '') AS keterangan\n    FROM \"SIMAPO\".ruangan r\n  ) t) AS ruangan,\n  (SELECT COALESCE(json_agg(t ORDER BY t.nama ASC), '[]'::json) FROM (\n    SELECT u.\"NIP\" AS id, u.\"NIP\" AS nip, u.\"username\" AS nama, COALESCE(u.\"Jabatan\"::text, '') AS jabatan\n    FROM public.user_list u\n    WHERE u.\"NIP\" IS NOT NULL\n  ) t) AS penandatangan;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        300,
+        400
+      ],
+      "id": "a89d4413-c606-4e68-a3ef-8b4a66b563c3",
+      "name": "PG Bast List",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: $input.all()[0].json } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        400
+      ],
+      "id": "0c2e660e-a9e4-43bc-9722-2225080dbcf4",
+      "name": "Agg Bast List"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        400
+      ],
+      "id": "8f7cb1dd-43f2-4d23-b5b0-fe342196fdd5",
+      "name": "Res Bast List"
+    },
+    {
+      "parameters": {
+        "path": "simapo-bast-assign",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "httpMethod": "POST"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        800
+      ],
+      "id": "474ebc0a-edd3-4eec-b821-5ed3d7c1b2b3",
+      "name": "WH Bast Assign",
+      "webhookId": "simapo-bast-assign"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        150,
+        800
+      ],
+      "id": "a8120cae-011e-4347-9d1f-fa9d94e54874",
+      "name": "Gate Bast Assign"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"SIMAPO\".unit_aset\nSET pegawai_id = {{ ($input.item.json.body.pegawai_id ? (\"'\" + String($input.item.json.body.pegawai_id).replace(/'/g, \"''\") + \"'\") : \"NULL\") }},\n    ruangan_id = {{ ($input.item.json.body.ruangan_id ? (\"'\" + String($input.item.json.body.ruangan_id).replace(/[^0-9a-f-]/gi, '') + \"'\") : \"NULL\") }},\n    no_polisi = {{ ($input.item.json.body.no_polisi ? (\"'\" + String($input.item.json.body.no_polisi).replace(/'/g, \"''\") + \"'\") : \"no_polisi\") }},\n    no_rangka = {{ ($input.item.json.body.no_rangka ? (\"'\" + String($input.item.json.body.no_rangka).replace(/'/g, \"''\") + \"'\") : \"no_rangka\") }},\n    no_mesin = {{ ($input.item.json.body.no_mesin ? (\"'\" + String($input.item.json.body.no_mesin).replace(/'/g, \"''\") + \"'\") : \"no_mesin\") }},\n    roda = {{ ($input.item.json.body.roda ? (\"'\" + String($input.item.json.body.roda).replace(/[^0-9]/g, '') + \"'\") : \"roda\") }},\n    merk_type = {{ ($input.item.json.body.merk_type ? (\"'\" + String($input.item.json.body.merk_type).replace(/'/g, \"''\") + \"'\") : \"merk_type\") }},\n    model_jenis = {{ ($input.item.json.body.model_jenis ? (\"'\" + String($input.item.json.body.model_jenis).replace(/'/g, \"''\") + \"'\") : \"model_jenis\") }},\n    warna = {{ ($input.item.json.body.warna ? (\"'\" + String($input.item.json.body.warna).replace(/'/g, \"''\") + \"'\") : \"warna\") }},\n    tahun_pembuatan = {{ ($input.item.json.body.tahun_pembuatan ? (\"'\" + String($input.item.json.body.tahun_pembuatan).replace(/[^0-9]/g, '') + \"'\") : \"tahun_pembuatan\") }},\n    updatedat = NOW()\nWHERE id = '{{ ($input.item.json.body.aset_id).toString().replace(/[^0-9a-f-]/gi, '') }}'\nRETURNING id, pegawai_id, ruangan_id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        300,
+        800
+      ],
+      "id": "da3ab493-7a23-465b-8cba-9809fc0020ea",
+      "name": "PG Bast Assign",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: $input.all()[0].json || null } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        800
+      ],
+      "id": "9761ba4b-23f3-40b7-9f3b-a29a5a089ed3",
+      "name": "Agg Bast Assign"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        800
+      ],
+      "id": "7d9684d1-3247-42d2-a6b2-1485c2549165",
+      "name": "Res Bast Assign"
+    },
+    {
+      "parameters": {
+        "path": "simapo-bast-save",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "httpMethod": "POST"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1200
+      ],
+      "id": "73d05529-4350-43f5-877c-913f98da5302",
+      "name": "WH Bast Save",
+      "webhookId": "simapo-bast-save"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        150,
+        1200
+      ],
+      "id": "fa5734d7-f3e6-4dc4-8908-e34f774ee0a4",
+      "name": "Gate Bast Save"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json.body || {};\nconst esc = s => String(s == null ? '' : s).replace(/'/g, \"''\");\nconst id = b.id ? \"'\" + esc(b.id) + \"'\" : 'gen_random_uuid()';\nconst tanggal = b.tanggal ? \"'\" + esc(b.tanggal) + \"'::timestamptz\" : 'NULL';\nconst daset = JSON.stringify(b.daftar_aset || []).replace(/'/g, \"''\");\nconst sql = `INSERT INTO \"SIMAPO\".bast (\n  id, nomor, instansi_id, pegawai_id, pegawai_nama, pegawai_nip, pegawai_jabatan,\n  pegawai_alamat, penandatangan_id, penandatangan_nama, penandatangan_nip,\n  penandatangan_jabatan, penandatangan_alamat, tanggal, hari_tanggal, tempat,\n  daftar_aset, total_aset, total_nilai, createdat, createdby\n) VALUES (\n  ${id},\n  '${esc(b.nomor)}',\n  '${esc(b.instansi_id || 'bapperida')}',\n  ${b.pegawai_id ? \"'\" + esc(b.pegawai_id) + \"'\" : 'NULL'},\n  '${esc(b.pegawai_nama)}',\n  '${esc(b.pegawai_nip)}',\n  '${esc(b.pegawai_jabatan)}',\n  '${esc(b.pegawai_alamat)}',\n  '${esc(b.penandatangan_id)}',\n  '${esc(b.penandatangan_nama)}',\n  '${esc(b.penandatangan_nip)}',\n  '${esc(b.penandatangan_jabatan)}',\n  '${esc(b.penandatangan_alamat)}',\n  ${tanggal},\n  '${esc(b.hari_tanggal)}',\n  '${esc(b.tempat)}',\n  '${daset}'::jsonb,\n  ${Number(b.total_aset) || 0},\n  ${Number(b.total_nilai) || 0},\n  NOW(),\n  '${esc(b.createdby)}'\n)\nON CONFLICT (id) DO UPDATE SET\n  nomor = EXCLUDED.nomor, pegawai_id = EXCLUDED.pegawai_id,\n  pegawai_nama = EXCLUDED.pegawai_nama, pegawai_nip = EXCLUDED.pegawai_nip,\n  pegawai_jabatan = EXCLUDED.pegawai_jabatan, pegawai_alamat = EXCLUDED.pegawai_alamat,\n  penandatangan_id = EXCLUDED.penandatangan_id, penandatangan_nama = EXCLUDED.penandatangan_nama,\n  penandatangan_nip = EXCLUDED.penandatangan_nip, penandatangan_jabatan = EXCLUDED.penandatangan_jabatan,\n  penandatangan_alamat = EXCLUDED.penandatangan_alamat, tanggal = EXCLUDED.tanggal,\n  hari_tanggal = EXCLUDED.hari_tanggal, tempat = EXCLUDED.tempat, daftar_aset = EXCLUDED.daftar_aset,\n  total_aset = EXCLUDED.total_aset, total_nilai = EXCLUDED.total_nilai, updatedat = NOW(),\n  createdby = EXCLUDED.createdby\nRETURNING id, nomor, pegawai_id, total_aset;`;\nreturn [{ json: { sql } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        450,
+        1200
+      ],
+      "id": "4c476971-96da-4956-b24c-9fff6a637fc9",
+      "name": "Code Bast Save"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.sql }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        600,
+        1200
+      ],
+      "id": "1415b0cf-edd4-498c-ab34-26a7561487f9",
+      "name": "PG Bast Save",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: $input.all()[0].json || null } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        1200
+      ],
+      "id": "a9734e2d-4398-4de6-a2d1-8a31c98f676d",
+      "name": "Agg Bast Save"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1150,
+        1200
+      ],
+      "id": "c870de14-c4e9-4a6d-bdd7-b39150815250",
+      "name": "Res Bast Save"
+    },
+    {
+      "parameters": {
+        "path": "simapo-bast-ruangan",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "httpMethod": "POST"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1600
+      ],
+      "id": "09a43696-e42d-41cf-945b-6aa5e99810d2",
+      "name": "WH Bast Ruangan",
+      "webhookId": "simapo-bast-ruangan"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        150,
+        1600
+      ],
+      "id": "9e42c672-8340-4190-95d9-a9fdd0b2b81d",
+      "name": "Gate Bast Ruangan"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"SIMAPO\".ruangan (kode, nama, keterangan, instansi_id)\nVALUES ('{{ (($input.item.json.body.kode) || \"\").toString().replace(/'/g, \"''\") }}',\n        '{{ (($input.item.json.body.nama) || \"\").toString().replace(/'/g, \"''\") }}',\n        '{{ (($input.item.json.body.keterangan) || \"\").toString().replace(/'/g, \"''\") }}',\n        '{{ (($input.item.json.body.instansi_id || \"bapperida\")).toString().replace(/'/g, \"''\") }}')\nON CONFLICT (kode, instansi_id) DO UPDATE SET\n  nama = EXCLUDED.nama, keterangan = EXCLUDED.keterangan\nRETURNING id, kode, nama;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        300,
+        1600
+      ],
+      "id": "da216891-9b32-47ae-a65b-762e19e1a392",
+      "name": "PG Bast Ruangan",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: $input.all()[0].json || null } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        1600
+      ],
+      "id": "dafcdfa3-89ae-4017-9f0e-2b16ad9f074d",
+      "name": "Agg Bast Ruangan"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        1600
+      ],
+      "id": "6218457d-1232-4bdd-b0f6-f5c4db0b914e",
+      "name": "Res Bast Ruangan"
+    },
+    {
+      "parameters": {
+        "path": "simapo-bast-history",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        2000
+      ],
+      "id": "069da4a1-b27e-48c9-b5e6-f52cde673c84",
+      "name": "WH Bast History",
+      "webhookId": "simapo-bast-history"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(t ORDER BY t.createdat DESC), '[]'::json) AS items FROM (\n  SELECT b.id, b.nomor, b.pegawai_id, b.pegawai_nama, b.pegawai_nip, b.pegawai_jabatan,\n         b.penandatangan_nama, b.tanggal, b.hari_tanggal, b.tempat, b.daftar_aset, b.total_aset,\n         b.total_nilai, b.createdat, b.createdby\n  FROM \"SIMAPO\".bast b\n  WHERE b.instansi_id = '{{ ($json.query.instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}'\n) t;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        300,
+        2000
+      ],
+      "id": "50e09af0-ebd3-494e-b399-2a1a9bc88861",
+      "name": "PG Bast History",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: $input.all()[0].json.items || [] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        2000
+      ],
+      "id": "6f3dcbf7-207e-4224-a973-03b404c9830c",
+      "name": "Agg Bast History"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        2000
+      ],
+      "id": "55e47f9a-ffef-4ad2-9388-0802b52c3e81",
+      "name": "Res Bast History"
+    },
+    {
+      "parameters": {
+        "path": "simapo-bast-import-unit",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "httpMethod": "POST"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        2400
+      ],
+      "id": "ea0d3a52-9c90-465b-b5de-b77bbbb9869a",
+      "name": "WH Bast Import",
+      "webhookId": "simapo-bast-import-unit"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        150,
+        2400
+      ],
+      "id": "5f446d2c-b744-4554-ba7e-90afdd792a65",
+      "name": "Gate Bast Import"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH bid AS (\n    SELECT id FROM \"SIMAPO\".barang\n    WHERE kodebarang = '{{ (($input.item.json.body.kodebarang) || \"\").toString().replace(/'/g, \"''\") }}'\n      AND instansi_id = '{{ (($input.item.json.body.instansi_id) || \"bapperida\").toString().replace(/'/g, \"''\") }}'\n  ),\n  barang_ins AS (\n    INSERT INTO \"SIMAPO\".barang (id, kodebarang, nama, jenisbarang, satuan, stok_saat_ini, minimumstok, hargasatuan, kategoriid, isactive, createdat, updatedat, instansi_id)\n    SELECT md5('{{ (($input.item.json.body.instansi_id) || \"bapperida\").toString().replace(/'/g, \"''\") }}:' || '{{ (($input.item.json.body.kodebarang) || \"\").toString().replace(/'/g, \"''\") }}'),\n           '{{ (($input.item.json.body.kodebarang) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.nama) || \"\").toString().replace(/'/g, \"''\") }}',\n           'Aset Tetap', 'unit', 1, 0,\n           {{ Math.max(0, Number(($input.item.json.body.hargasatuan) || 0)) }},\n           {{ ($input.item.json.body.kategoriid ? (\"'\" + String($input.item.json.body.kategoriid).replace(/'/g, \"''\") + \"'\") : \"NULL\") }},\n           true, NOW(), NOW(),\n           '{{ (($input.item.json.body.instansi_id) || \"bapperida\").toString().replace(/'/g, \"''\") }}'\n    WHERE NOT EXISTS (SELECT 1 FROM bid)\n    RETURNING id\n  ),\n  unit_ins AS (\n    INSERT INTO \"SIMAPO\".unit_aset (id, barangid, nomorinventaris, kondisi, statuspinjam, qrcode, pegawai_id, ruangan_id, no_polisi, no_rangka, no_mesin, roda, merk_type, model_jenis, warna, tahun_pembuatan, updatedat)\n    SELECT gen_random_uuid(),\n           COALESCE((SELECT id FROM bid), (SELECT id FROM barang_ins)),\n           '{{ (($input.item.json.body.nomorinventaris) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.kondisi) || \"Baik\").toString().replace(/'/g, \"''\") }}',\n           false,\n           'https://mindcloud.my.id/?qr=SIMAPO-' || gen_random_uuid(),\n           {{ ($input.item.json.body.pegawai_id ? (\"'\" + String($input.item.json.body.pegawai_id).replace(/'/g, \"''\") + \"'\") : \"NULL\") }},\n           {{ ($input.item.json.body.ruangan_id ? (\"'\" + String($input.item.json.body.ruangan_id).replace(/'/g, \"''\") + \"'\") : \"NULL\") }},\n           '{{ (($input.item.json.body.no_polisi) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.no_rangka) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.no_mesin) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.roda) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.merk_type) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.model_jenis) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.warna) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.tahun_pembuatan) || \"\").toString().replace(/'/g, \"''\") }}',\n           NOW()\n    WHERE NOT EXISTS (\n      SELECT 1 FROM \"SIMAPO\".unit_aset ua\n      WHERE ua.nomorinventaris = '{{ (($input.item.json.body.nomorinventaris) || \"\").toString().replace(/'/g, \"''\") }}'\n    )\n    RETURNING id\n  )\n  SELECT COALESCE((SELECT id FROM bid), (SELECT id FROM barang_ins)) AS barang_id,\n         (SELECT id FROM unit_ins) AS unit_id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        300,
+        2400
+      ],
+      "id": "50894d37-cbeb-4417-80b6-026d4bbcf65b",
+      "name": "PG Bast Import",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: $input.all()[0].json || null } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        2400
+      ],
+      "id": "4bff0452-75f8-4166-addd-d49d58b857a2",
+      "name": "Agg Bast Import"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        2400
+      ],
+      "id": "8d4b8760-611e-4754-87ef-333a59f1cb2a",
+      "name": "Res Bast Import"
+    }
+  ],
+  "connections": {
+    "WH Bast Init": {
+      "main": [
+        [
+          {
+            "node": "Gate Bast Init",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate Bast Init": {
+      "main": [
+        [
+          {
+            "node": "PG Bast Init",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Bast Init": {
+      "main": [
+        [
+          {
+            "node": "Agg Bast Init",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Bast Init": {
+      "main": [
+        [
+          {
+            "node": "Res Bast Init",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Bast List": {
+      "main": [
+        [
+          {
+            "node": "PG Bast List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Bast List": {
+      "main": [
+        [
+          {
+            "node": "Agg Bast List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Bast List": {
+      "main": [
+        [
+          {
+            "node": "Res Bast List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Bast Assign": {
+      "main": [
+        [
+          {
+            "node": "Gate Bast Assign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate Bast Assign": {
+      "main": [
+        [
+          {
+            "node": "PG Bast Assign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Bast Assign": {
+      "main": [
+        [
+          {
+            "node": "Agg Bast Assign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Bast Assign": {
+      "main": [
+        [
+          {
+            "node": "Res Bast Assign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Bast Save": {
+      "main": [
+        [
+          {
+            "node": "Gate Bast Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate Bast Save": {
+      "main": [
+        [
+          {
+            "node": "Code Bast Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Bast Save": {
+      "main": [
+        [
+          {
+            "node": "PG Bast Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Bast Save": {
+      "main": [
+        [
+          {
+            "node": "Agg Bast Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Bast Save": {
+      "main": [
+        [
+          {
+            "node": "Res Bast Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Bast Ruangan": {
+      "main": [
+        [
+          {
+            "node": "Gate Bast Ruangan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate Bast Ruangan": {
+      "main": [
+        [
+          {
+            "node": "PG Bast Ruangan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Bast Ruangan": {
+      "main": [
+        [
+          {
+            "node": "Agg Bast Ruangan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Bast Ruangan": {
+      "main": [
+        [
+          {
+            "node": "Res Bast Ruangan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Bast History": {
+      "main": [
+        [
+          {
+            "node": "PG Bast History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Bast History": {
+      "main": [
+        [
+          {
+            "node": "Agg Bast History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Bast History": {
+      "main": [
+        [
+          {
+            "node": "Res Bast History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Bast Import": {
+      "main": [
+        [
+          {
+            "node": "Gate Bast Import",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate Bast Import": {
+      "main": [
+        [
+          {
+            "node": "PG Bast Import",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Bast Import": {
+      "main": [
+        [
+          {
+            "node": "Agg Bast Import",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Bast Import": {
+      "main": [
+        [
+          {
+            "node": "Res Bast Import",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

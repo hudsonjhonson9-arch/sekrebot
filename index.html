@@ -35,6 +35,8 @@
   <script src="js/lib/sweetalert2.all.min.js"></script>
   <script src="js/lib/qrcode.min.js"></script>
   <script src="js/lib/jsQR.min.js"></script>
+  <script src="js/lib/pizzip.min.js"></script>
+  <script src="js/lib/docxtemplater.min.js"></script>
   
   <!-- Flatpickr (Dark Theme to match app) -->
   <link rel="stylesheet" href="css/lib/flatpickr-dark.css">
@@ -1544,6 +1546,7 @@
             <button class="sa-tab" id="sa-tab-mutasi" onclick="switchSATab('mutasi')" data-group="aset">🔄 Mutasi</button>
             <button class="sa-tab" id="sa-tab-opname" onclick="switchSATab('opname')" data-group="aset">📊 Opname</button>
             <button class="sa-tab" id="sa-tab-standar-harga"    onclick="switchSATab('standar-harga')"    data-group="aset">📋 Standar Harga</button>
+            <button class="sa-tab" id="sa-tab-bast"    onclick="switchSATab('bast')"    data-group="aset">📄 Serah Terima (BAST)</button>
             <!-- Transaksi -->
             <button class="sa-tab active" id="sa-tab-pinjam"  onclick="switchSATab('pinjam')" data-group="trans">📋 Pinjaman</button>
             <button class="sa-tab"        id="sa-tab-tiket"  onclick="switchSATab('tiket')"  data-group="trans">🚨 Tiket</button>
@@ -1877,6 +1880,61 @@
             </button>
 
             <div id="adminBKUList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
+          </div>
+        </div>
+
+        <!-- [TAB] SERAH TERIMA (BAST) -->
+        <div id="sa-sect-bast" class="sa-sect" style="display:none">
+          <div class="card glass-card">
+            <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+              <span>📄 Berita Acara Serah Terima Aset</span>
+              <div style="display:flex;gap:6px;">
+                <button class="btn-sm-admin" onclick="runBastMigration()" style="background:rgba(168,85,247,0.2);">⚙️ Init DB</button>
+                <button class="btn-sm-admin" onclick="loadAdminBast(true)" style="background:var(--primary)">🔄</button>
+              </div>
+            </div>
+            <div class="radius-note" style="margin-bottom:12px">Satu pegawai = satu berita acara berisi seluruh aset yang
+              dipegangnya. Kelola pemegang/ruangan lewat tombol “Set Pemegang” pada tiap baris aset.</div>
+            <div id="bastInitResult"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;">
+              <div class="form-group">
+                <label class="form-label">Pegawai — Pihak Kedua (Pemegang)</label>
+                <select class="form-input" id="bastPegawaiSel"><option value="">-- Pilih Pegawai --</option></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Penandatangan — Pihak Pertama</label>
+                <select class="form-input" id="bastTtdSel"><option value="">-- Pilih Penandatangan --</option></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tanggal</label>
+                <input class="form-input" type="date" id="bastTgl">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tempat</label>
+                <input class="form-input" id="bastTempat" placeholder="Kantor BAPPERIDA, Waikabubak">
+              </div>
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Nomor Dokumen</label>
+                <input class="form-input" id="bastNomor" placeholder="NOMOR.001/2026">
+              </div>
+            </div>
+            <div id="bastAsetList">
+              <div class="radius-note">Pilih pegawai untuk memuat daftar aset yang dipegangnya.</div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:14px;">
+              <button class="btn-primary" onclick="bastPreviewDocx()" style="flex:1;">
+                <div class="btn-inner"><span>📄</span> Unduh BAST (.docx)</div>
+              </button>
+              <button class="btn-sm-admin" onclick="bastSaveArchive()" style="background:rgba(34,197,94,0.2);padding:12px 14px;">💾 Simpan Arsip</button>
+            </div>
+          </div>
+
+          <div class="card glass-card" style="margin-top:12px;">
+            <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+              <span>🗂️ Riwayat BAST</span>
+              <button class="btn-sm-admin" onclick="loadBastHistory(true)" style="background:var(--primary)">🔄</button>
+            </div>
+            <div id="bastHistoryList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
           </div>
         </div>
 
@@ -3118,6 +3176,7 @@
   
   
   <script src="js/simapo-ext.js?v=999"></script>
+  <script src="js/simapo-bast.js?v=1"></script>
 
   <!-- 6. Supplementary features -->
 

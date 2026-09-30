@@ -94,6 +94,8 @@ idb.init();
 const SERVER_1 = 'https://mindcloud.my.id';
 const SERVER_2 = 'https://n8n-sp8dtwslkxal.jkt3.sumopod.my.id';
 const isTest = false;
+const BAST_API_KEY = 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u';
+const BAST_API_HEADER = 'x-bast-key';
 let ADMIN_NIPS = [];
 let MANDATORY_FACE_NIPS = [];
 window._adminRoleMap = {};
@@ -267,6 +269,12 @@ const P = {
   pksList: isTest ? '/webhook-test/simapo-pks-list' : '/webhook/simapo-pks-list',
   pksSave: isTest ? '/webhook-test/simapo-pks-save' : '/webhook/simapo-pks-save',
   pksDelete: isTest ? '/webhook-test/simapo-pks-delete' : '/webhook/simapo-pks-delete',
+  simapoBastInit: isTest ? '/webhook-test/simapo-bast-init' : '/webhook/simapo-bast-init',
+  simapoBastList: isTest ? '/webhook-test/simapo-bast-list' : '/webhook/simapo-bast-list',
+  simapoBastAssign: isTest ? '/webhook-test/simapo-bast-assign' : '/webhook/simapo-bast-assign',
+  simapoBastRuangan: isTest ? '/webhook-test/simapo-bast-ruangan' : '/webhook/simapo-bast-ruangan',
+  simapoBastSave: isTest ? '/webhook-test/simapo-bast-save' : '/webhook/simapo-bast-save',
+  simapoBastHistory: isTest ? '/webhook-test/simapo-bast-history' : '/webhook/simapo-bast-history',
 };
 
 function getScopedInstansiId() {

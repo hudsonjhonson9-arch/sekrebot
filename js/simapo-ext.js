@@ -147,6 +147,7 @@ window.switchSATab = function(name, force = false) {
   else if (name === 'pemeliharaan') { window.loadAdminPemeliharaan(force); window.populatePemeliharaanBarang(); }
   else if (name === 'bku') window.loadAdminBKU(force);
   else if (name === 'pks') window.loadAdminPKS(force);
+  else if (name === 'bast') window.loadAdminBast(force);
 };
 
 /* ─── HELPER: SHOW SHIMMER ── */
