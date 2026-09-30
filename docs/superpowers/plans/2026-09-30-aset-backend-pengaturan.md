@@ -100,9 +100,13 @@ const wh = (p, method) => add(`WH ${p}`, 'n8n-nodes-base.webhook', {
 
 const gate = (p) => add(`Gate ${p}`, 'n8n-nodes-base.code', { jsCode: GATE_JS }, { typeVersion: refCode.typeVersion });
 const code = (n, jsCode) => add(n, 'n8n-nodes-base.code', { jsCode }, { typeVersion: refCode.typeVersion });
-const pg = (n, query) => add(n, 'n8n-nodes-base.postgres',
-  { operation: 'executeQuery', query, options: {} },
-  { typeVersion: refPg.typeVersion, creds: refPg.credentials });
+const pg = (n, query) => {
+  add(n, 'n8n-nodes-base.postgres',
+    { operation: 'executeQuery', query, options: {} },
+    { typeVersion: refPg.typeVersion, creds: refPg.credentials });
+  nodes.at(-1).alwaysOutputData = true;
+  return n;
+};
 const res = (n) => add(n, 'n8n-nodes-base.respondToWebhook', {
   respondWith: 'text',
   responseBody: '={{ JSON.stringify($json) }}',
