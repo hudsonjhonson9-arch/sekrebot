@@ -105,7 +105,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\n  SELECT ua.id, ua.nomorinventaris, ua.qrcode, ua.kondisi, ua.statuspinjam,\n    (\n      SELECT COALESCE(u.\"username\", p.userid)\n      FROM \"SIMAPO\".peminjaman p\n      LEFT JOIN public.user_list u ON u.\"NIP\" = p.userid\n      WHERE p.unitasetid = ua.id AND p.status = 'DIPINJAM'\n      ORDER BY p.createdat DESC LIMIT 1\n    ) AS nama_peminjam_saat_ini\n  FROM \"SIMAPO\".unit_aset ua\n  WHERE ua.barangid = '{{ ($json.query.barangid).toString().replace(/'/g, \"''\") }}'\n  ORDER BY ua.nomorinventaris ASC\n) t;",
+        "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\n  SELECT ua.id, ua.nomorinventaris, ua.qrcode, ua.kondisi, ua.statuspinjam,\n    ua.pegawai_id,\n    (SELECT COALESCE(u2.\"username\", '') FROM public.user_list u2 WHERE u2.\"NIP\" = ua.pegawai_id) AS nama_pemegang,\n    ua.ruangan_id,\n    (SELECT COALESCE(r.nama, '') FROM \"SIMAPO\".ruangan r WHERE r.id = ua.ruangan_id) AS nama_ruangan,\n    (\n      SELECT COALESCE(u.\"username\", p.userid)\n      FROM \"SIMAPO\".peminjaman p\n      LEFT JOIN public.user_list u ON u.\"NIP\" = p.userid\n      WHERE p.unitasetid = ua.id AND p.status = 'DIPINJAM'\n      ORDER BY p.createdat DESC LIMIT 1\n    ) AS nama_peminjam_saat_ini\n  FROM \"SIMAPO\".unit_aset ua\n  WHERE ua.barangid = '{{ ($json.query.barangid).toString().replace(/'/g, \"''\") }}'\n  ORDER BY ua.nomorinventaris ASC\n) t;",
         "options": {}
       },
       "id": "6f5f9dd1-2c4e-41f8-888f-83a88a93be44",
