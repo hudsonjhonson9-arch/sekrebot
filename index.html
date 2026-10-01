@@ -1930,11 +1930,11 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;">
               <div class="form-group">
                 <label class="form-label">Pegawai — Pihak Kedua (Pemegang)</label>
-                <select class="form-input" id="bastPegawaiSel"><option value="">-- Pilih Pegawai --</option></select>
+                <select class="form-input" id="bastPegawaiSel" onchange="bastPegawaiChange()"><option value="">-- Pilih Pegawai --</option></select>
               </div>
               <div class="form-group">
                 <label class="form-label">Penandatangan — Pihak Pertama</label>
-                <select class="form-input" id="bastTtdSel"><option value="">-- Pilih Penandatangan --</option></select>
+                <select class="form-input" id="bastTtdSel" onchange="window._bastSel.ttd=this.value"><option value="">-- Pilih Penandatangan --</option></select>
               </div>
               <div class="form-group">
                 <label class="form-label">Tanggal</label>
