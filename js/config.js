@@ -96,6 +96,8 @@ const SERVER_2 = 'https://n8n-sp8dtwslkxal.jkt3.sumopod.my.id';
 const isTest = false;
 const BAST_API_KEY = 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u';
 const BAST_API_HEADER = 'x-bast-key';
+// ponytail: sentinel gate/guard n8n (200 + body kosong) — dipakai apiFetch DI sini dan dicek di bastSubmit, jangan disalin jadi string lain.
+const EMPTY_N8N_RESPONSE = 'Empty N8n Response';
 let ADMIN_NIPS = [];
 let MANDATORY_FACE_NIPS = [];
 window._adminRoleMap = {};
@@ -406,7 +408,7 @@ async function apiFetch(path, opts = {}) {
           const originalJson = r.json.bind(r);
           r.json = async () => {
             const text = await r.text();
-            if (!text || text.trim() === '') return { data: [], message: 'Empty N8n Response' };
+            if (!text || text.trim() === '') return { data: [], message: EMPTY_N8N_RESPONSE };
             try { return JSON.parse(text); } catch(e) { return { data: [], message: text }; }
           };
 

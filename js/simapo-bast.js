@@ -25,10 +25,10 @@ window.bastSubmit = async function(endpoint, payload, opts = {}) {
     return false;
   }
   try { body = await res.json(); } catch (_) {}
-  // ponytail: gate/guard instance balas 200 + body kosong; apiFetch membungkusnya jadi sentinel 'Empty N8n Response' (bukan null) → wajib gagal
-  const empty = !!(body && body.message === 'Empty N8n Response');
+  // ponytail: gate/guard instance balas 200 + body kosong; apiFetch membungkusnya jadi sentinel EMPTY_N8N_RESPONSE (bukan null) → wajib gagal
+  const empty = !!(body && body.message === EMPTY_N8N_RESPONSE);
   if (empty) body.message = 'Respons kosong dari server — permintaan gagal atau ditolak';
-  const ok = res.ok && body !== null && !empty && (typeof isApiSuccess === 'function' ? isApiSuccess(body, true) : true);
+  const ok = res.ok && !empty && (typeof isApiSuccess === 'function' ? isApiSuccess(body, true) : true);
   if (!ok) {
     console.error('[BAST] Ditolak server:', endpoint, res.status, body);
     showToast(typeof getApiErrorMsg === 'function' ? getApiErrorMsg(body, errorMsg) : errorMsg, 'error');
