@@ -9,15 +9,17 @@
       const myRole = String(localStorage.getItem('MY_ROLE') || 'USER').toUpperCase();
       const isAdminGudang = myRole === 'ADMIN GUDANG';
       
-      if (!sectionId) {
-        sectionId = localStorage.getItem('absen_last_admin_section') || (isAdminGudang ? 'simapo-admin' : 'ops');
+      // ADMIN GUDANG tidak punya section admin lagi — Aset kini di sidebar utama
+      if (isAdminGudang) {
+        localStorage.removeItem('absen_last_admin_section');
+        if (typeof switchTab === 'function') switchTab('simapo', true);
+        return;
       }
 
-      // Enforcement for ADMIN GUDANG
-      if (isAdminGudang && sectionId !== 'simapo-admin') {
-         sectionId = 'simapo-admin';
-      }
-      
+      if (!sectionId) sectionId = localStorage.getItem('absen_last_admin_section') || 'ops';
+      // 'simapo-admin' sudah dihapus; guard juga terhadap nilai basi di localStorage
+      if (sectionId === 'simapo-admin' || !$('admin-section-' + sectionId)) sectionId = 'ops';
+
       localStorage.setItem('absen_last_admin_section', sectionId);
 
       // Hide all sections
@@ -47,13 +49,6 @@
         if (typeof initSuperadminPegawaiScoping === 'function') initSuperadminPegawaiScoping();
         loadAdminFaceReg();
       }
-      if (sectionId === 'simapo-admin') {
-        // Staggered loading to prevent connection bottleneck
-        if (typeof loadAdminSimapoPinjam === 'function') loadAdminSimapoPinjam();
-        setTimeout(() => { if (typeof loadAdminSimapoTiket === 'function') loadAdminSimapoTiket(); }, 300);
-        setTimeout(() => { if (typeof loadAdminSimapoMaster === 'function') loadAdminSimapoMaster(); }, 600);
-      }
-
       // Fix Leaflet Map rendering if switching to Config
       if (sectionId === 'config' && typeof adminMap !== 'undefined' && adminMap) {
         setTimeout(() => adminMap.invalidateSize(), 50);
@@ -158,12 +153,10 @@
         }
       });
 
-      // Special for ADMIN GUDANG: hide other admin nav buttons
+      // Special for ADMIN GUDANG: no admin section belongs to them
       if (myRole === 'ADMIN GUDANG') {
         document.querySelectorAll('.admin-nav-btn').forEach(btn => {
-          if (btn && btn.id !== 'btn-nav-simapo-admin') {
-            btn.style.display = 'none';
-          }
+          if (btn) btn.style.display = 'none';
         });
       } else {
         document.querySelectorAll('.admin-nav-btn').forEach(btn => {
@@ -299,7 +292,8 @@
 
       if (tab === 'simapo') {
         if (typeof populateSimapoInstansiSelect === 'function') populateSimapoInstansiSelect();
-        if (typeof switchSimapoSection === 'function') switchSimapoSection('katalog');
+        // Sidebar Aset = grid fitur, bukan langsung Katalog
+        if (typeof switchSimapoSection === 'function') switchSimapoSection('grid');
       }
 
       // Re-apply role based visibility on every switch to ensure consistency

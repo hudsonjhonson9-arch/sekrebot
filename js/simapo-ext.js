@@ -112,43 +112,11 @@ window.getSimapoInstansiName = function() {
 };
 
 /* ─── SUB-TAB SWITCHER ──────────────────────────────────────── */
+/* Router lama tab admin → delegation ke ASET_NAV. */
 window.switchSATab = function(name, force = false) {
-  console.log('[SIMAPO] Switching sub-tab to:', name);
-  document.querySelectorAll('.sa-tab').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.sa-sect').forEach(s => {
-      s.style.display = 'none';
-      s.style.opacity = '0';
-  });
-  
-  const btn = document.getElementById('sa-tab-' + name);
-  const sect = document.getElementById('sa-sect-' + name);
-  if (btn) {
-    btn.classList.add('active');
-    document.querySelectorAll('.sa-tab.hidden').forEach(b => b.classList.remove('hidden'));
-    const group = btn.dataset.group;
-    document.querySelectorAll('.sa-tab').forEach(b => b.classList.toggle('hidden', b.dataset.group !== group));
-    document.querySelectorAll('.sa-group-btn').forEach(b => b.classList.remove('active'));
-    const gbtn = document.getElementById('sa-group-' + group);
-    if (gbtn) gbtn.classList.add('active');
-  }
-  if (sect) {
-      sect.style.display = 'block';
-      setTimeout(() => { sect.style.opacity = '1'; sect.style.transition = 'opacity 0.3s'; }, 10);
-  }
-  
-  if (name === 'pinjam') window.loadAdminSimapoPinjam(force);
-  else if (name === 'tiket') window.loadAdminSimapoTiket(force);
-  else if (name === 'master') window.loadAdminSimapoMaster(force);
-  else if (name === 'mutasi') { window.loadMutasiRiwayat(force); window.populateMutasiBarangSelect(); }
-  else if (name === 'opname') window.loadOpnameForm(force);
-  else if (name === 'kat') window.loadSimapoKategori(true, force);
-  else if (name === 'standar-harga') window.loadStandarHarga();
-  else if (name === 'penerimaan') { window.loadAdminPenerimaan(force); window.populateStandarHargaDatalist(); }
-  else if (name === 'pemeliharaan') { window.loadAdminPemeliharaan(force); window.populatePemeliharaanBarang(); }
-  else if (name === 'bku') window.loadAdminBKU(force);
-  else if (name === 'pks') window.loadAdminPKS(force);
-  else if (name === 'bast') window.loadAdminBast(force);
-  else if (name === 'pengaturan') window.loadSAPengaturan();
+  if (typeof window.ASET_NAV !== 'object') return;
+  const key = (name === 'pinjam-admin') ? 'pinjam' : name;
+  window.ASET_NAV.open(key, force);
 };
 
 /* ─── HELPER: SHOW SHIMMER ── */
@@ -892,24 +860,6 @@ window.generateAllQR = async function(barangId) {
   const btn = document.querySelector(`[onclick*="toggleUnitList('${barangId}'"]`);
   if (btn) { btn.textContent = '▶ Lihat Unit'; }
   window.toggleUnitList(barangId, null);
-};
-
-/* ─── GROUP SWITCHER ──────────────────────────────────────── */
-window.switchSAGroup = function(group) {
-  console.log('[SIMAPO] Switching group to:', group);
-  document.querySelectorAll('.sa-group-btn').forEach(b => b.classList.remove('active'));
-  const btn = document.getElementById('sa-group-' + group);
-  if (btn) btn.classList.add('active');
-
-  document.querySelectorAll('.sa-tab').forEach(b => {
-    b.classList.toggle('hidden', b.dataset.group !== group);
-  });
-
-  const firstVisible = document.querySelector('.sa-tab:not(.hidden)');
-  if (firstVisible) {
-    const name = firstVisible.id.replace('sa-tab-', '');
-    switchSATab(name);
-  }
 };
 
 /* ─── STANDAR HARGA (persisted) ────────────────────────────── */

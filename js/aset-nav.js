@@ -98,6 +98,7 @@
   }
 
   function showGrid() {
+    window._asetCurrent = null;
     screens().forEach(function (s) {
       const el = screenEl(s.key);
       if (el) el.style.display = 'none';
@@ -113,6 +114,7 @@
     const screen = screens().find(function (s) { return s.key === key; });
     if (!screen) return;
     if (screen.role === 'admin' && !isAdmin()) { showGrid(); return; }
+    window._asetCurrent = key;
     const grid = gridEl();
     if (grid) grid.style.display = 'none';
     screens().forEach(function (s) {

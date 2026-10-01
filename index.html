@@ -1342,72 +1342,9 @@
         </select>
       </div>
       
-      <!-- Sub-Navigation SIMAPO (Segmented Control) -->
-      <div style="margin-bottom: 18px; display:flex; padding: 5px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); gap: 4px; overflow-x: auto; scrollbar-width: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);">
-        <button onclick="scanQRAset()" style="flex-shrink:0;padding:7px 12px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);border-radius:8px;color:#22c55e;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">📷</button>
-        <button class="simapo-tab-btn active" id="btn-simapo-katalog" onclick="switchSimapoSection('katalog')">
-          <i class="fas fa-th-large"></i> Katalog
-        </button>
-        <button class="simapo-tab-btn" id="btn-simapo-pinjam" onclick="switchSimapoSection('pinjam')">
-          <i class="fas fa-handshake"></i> Pinjam
-        </button>
-        <button class="simapo-tab-btn" id="btn-simapo-tiket" onclick="switchSimapoSection('tiket')">
-          <i class="fas fa-tools"></i> Lapor
-        </button>
-      </div>
-      <style>
-        .simapo-tab-btn {
-          flex: 1;
-          background: transparent;
-          color: var(--muted);
-          border: none;
-          padding: 10px 0;
-          font-size: 13px;
-          font-weight: 700;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          min-width: 90px;
-        }
-        .simapo-tab-btn:hover {
-          color: var(--white);
-          background: rgba(255,255,255,0.05);
-        }
-        .simapo-tab-btn.active {
-          background: var(--card-bg, #1a2332);
-          color: var(--gold);
-          box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-          border: 1px solid rgba(255,255,255,0.1);
-        }
-        .simapo-kat-badge {
-          padding: 6px 12px;
-          background: rgba(255,255,255,0.05);
-          color: var(--muted);
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 20px;
-          font-size: 11px;
-          font-weight: 700;
-          cursor: pointer;
-          white-space: nowrap;
-          transition: all 0.2s ease;
-        }
-        .simapo-kat-badge:hover {
-          background: rgba(255,255,255,0.1);
-          color: var(--white);
-        }
-        .simapo-kat-badge.active {
-          background: rgba(201,168,76,0.15);
-          color: var(--gold);
-          border-color: rgba(201,168,76,0.4);
-        }
-      </style>
 
       <!-- SECTION: KATALOG ASET -->
-      <div id="simapo-section-katalog" class="simapo-section" style="display:block;">
+      <div id="aset-sect-katalog" class="aset-sect">
         <div style="border-radius: 12px; background: rgba(255,255,255,0.05); padding: 10px 14px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; margin-bottom:10px;">
           <i class="fas fa-search" style="margin-right: 10px; opacity:0.5;"></i>
           <input type="text" id="simapoSearchInput" placeholder="Cari nama barang atau kode..." oninput="if(typeof filterSimapoKatalog === 'function') filterSimapoKatalog(this.value)" autocomplete="off" style="background:transparent; border:none; color:white; width:100%; outline:none; font-family:inherit; font-size:13px;">
@@ -1421,7 +1358,7 @@
       </div>
 
       <!-- SECTION: PEMINJAMAN -->
-      <div id="simapo-section-pinjam" class="simapo-section" style="display:none;">
+      <div id="aset-sect-pinjaman-saya" class="aset-sect">
         <div id="qrConfirmPanel" style="display:none;margin-bottom:12px;"></div>
         <div id="simapoPinjamForm">
           <div class="card glass-card">
@@ -1471,7 +1408,7 @@
       </div>
 
       <!-- SECTION: LAPOR KERUSAKAN -->
-      <div id="simapo-section-tiket" class="simapo-section" style="display:none;">
+      <div id="aset-sect-tiket-saya" class="aset-sect">
         <div class="card glass-card">
           <div class="card-title">Laporkan Aset Rusak</div>
           <div class="form-group" style="margin-bottom:10px;">
@@ -1491,85 +1428,26 @@
           </button>
         </div>
       </div>
-    </div>
-
-    <!-- ══ TAB ADMIN (conditional) ══ -->
-    <div class="panel" id="panel-admin">
-      <div class="admin-header-card" style="margin-bottom:12px">
-        <div class="admin-badge">⚡ AKSES ADMIN</div>
-        <div class="admin-title">Panel Dashboard Utama</div>
-        <div class="admin-sub">Kelola kehadiran, data pegawai, dan konfigurasi sistem</div>
-      </div>
-
-      <!-- Filter Instansi (Only visible to Superadmin) -->
-      <div id="adminInstansiSection" style="display: none; margin-bottom: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 10px 12px;">
-        <div class="date-range-label" style="margin-bottom: 4px; font-weight: 700; color: var(--gold); font-size: 11px;">🏢 Pilih Instansi (Superadmin)</div>
-        <select id="adminInstansiSelect" class="date-range-input" style="width: 100%; height: 38px; cursor: pointer"
-          onchange="onAdminInstansiChange()">
-          <option value="">— Pilih Instansi —</option>
-        </select>
-      </div>
-
-      <!-- Sub-Navigation Admin -->
-      <div class="admin-nav">
-        <button class="admin-nav-btn active" id="btn-nav-ops" onclick="switchAdminSection('ops')">🏢 Operasional</button>
-        <button class="admin-nav-btn" id="btn-nav-user" onclick="switchAdminSection('user')">👥 Kepegawaian</button>
-        <button class="admin-nav-btn" id="btn-nav-config" onclick="switchAdminSection('config')">⚙️ Konfigurasi</button>
-        <button class="admin-nav-btn" id="btn-nav-simapo-admin" onclick="switchAdminSection('simapo-admin')">📦 Inventaris</button>
-      </div>
-
-      <!-- SECTION: ADMIN SIMAPO (Inventaris) -->
-      <div id="admin-section-simapo-admin" class="admin-section" style="display:none">
-
-        <!-- Header -->
-        <div style="background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.05));border:1px solid rgba(201,168,76,0.25);border-radius:16px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
-          <div style="font-size:28px">📦</div>
-          <div>
-            <div style="font-size:13px;font-weight:800;color:var(--gold)">Panel Admin Inventaris</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">Kelola aset, pinjaman, laporan kerusakan, dan stok</div>
-          </div>
-        </div>
-
-        <!-- Group Selector -->
-        <div style="display:flex;gap:6px;margin-bottom:10px;">
-          <button class="sa-group-btn active" id="sa-group-aset" onclick="switchSAGroup('aset')">📦 Kelola Aset</button>
-          <button class="sa-group-btn" id="sa-group-trans" onclick="switchSAGroup('trans')">📋 Transaksi</button>
-          <button class="sa-group-btn" id="sa-group-ref" onclick="switchSAGroup('ref')">📐 Referensi</button>
-        </div>
-
-        <!-- Sub-Tab Internal SIMAPO Admin -->
-        <div style="overflow-x:auto;scrollbar-width:none;margin-bottom:14px;">
-          <div id="sa-tab-bar" style="display:flex;gap:6px;min-width:max-content;padding:5px;background:rgba(0,0,0,0.3);border-radius:12px;border:1px solid rgba(255,255,255,0.05);">
-            <!-- Kelola Aset -->
-            <button class="sa-tab" id="sa-tab-master" onclick="switchSATab('master')" data-group="aset">🗃️ Aset</button>
-            <button class="sa-tab" id="sa-tab-kat"    onclick="switchSATab('kat')"    data-group="aset">🏷️ Kategori</button>
-            <button class="sa-tab" id="sa-tab-mutasi" onclick="switchSATab('mutasi')" data-group="aset">🔄 Mutasi</button>
-            <button class="sa-tab" id="sa-tab-opname" onclick="switchSATab('opname')" data-group="aset">📊 Opname</button>
-            <button class="sa-tab" id="sa-tab-standar-harga"    onclick="switchSATab('standar-harga')"    data-group="aset">📋 Standar Harga</button>
-            <button class="sa-tab" id="sa-tab-bast"    onclick="switchSATab('bast')"    data-group="aset">📄 Serah Terima (BAST)</button>
-            <!-- Transaksi -->
-            <button class="sa-tab active" id="sa-tab-pinjam"  onclick="switchSATab('pinjam')" data-group="trans">📋 Pinjaman</button>
-            <button class="sa-tab"        id="sa-tab-tiket"  onclick="switchSATab('tiket')"  data-group="trans">🚨 Tiket</button>
-            <button class="sa-tab"        id="sa-tab-penerimaan" onclick="switchSATab('penerimaan')" data-group="trans">📥 Penerimaan</button>
-            <button class="sa-tab"        id="sa-tab-pemeliharaan" onclick="switchSATab('pemeliharaan')" data-group="trans">🔧 Pemeliharaan</button>
-            <button class="sa-tab"        id="sa-tab-bku"    onclick="switchSATab('bku')"    data-group="trans">💰 BKU</button>
-            <!-- Referensi -->
-            <button class="sa-tab"        id="sa-tab-pks"    onclick="switchSATab('pks')"    data-group="ref">📐 PKS</button>
-            <button class="sa-tab"        id="sa-tab-pengaturan" onclick="switchSATab('pengaturan')" data-group="ref">⚙️ Pengaturan</button>
-          </div>
-        </div>
-        <style>
-          .sa-tab{background:transparent;color:var(--muted);border:none;padding:9px 14px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;transition:all .25s;white-space:nowrap;font-family:inherit;}
-          .sa-tab:hover{color:var(--white);background:rgba(255,255,255,0.06);}
-          .sa-tab.active{background:var(--card-bg,#1a2332);color:var(--gold);box-shadow:0 3px 10px rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);}
-          .sa-tab.hidden{display:none;}
-          .sa-group-btn{flex:1;padding:8px;background:rgba(255,255,255,0.04);color:var(--muted);border:1px solid rgba(255,255,255,0.08);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit;}
-          .sa-group-btn.active{background:rgba(201,168,76,0.15);color:var(--gold);border-color:rgba(201,168,76,0.4);}
-          .sa-group-btn:hover{color:var(--white);background:rgba(255,255,255,0.08);}
-        </style>
-
-        <!-- [TAB] PINJAMAN -->
-        <div id="sa-sect-pinjam" class="sa-sect">
+<style>
+/* ── ASET: grid fitur (4 / 3 / 2) + kontainer layar ── */
+.aset-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.aset-card{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:104px;padding:16px 10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;color:var(--white);cursor:pointer;font-family:inherit;transition:border-color .18s,background .18s,transform .18s}
+.aset-card:hover{background:rgba(201,168,76,0.10);border-color:rgba(201,168,76,0.45);transform:translateY(-2px)}
+.aset-card:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.aset-card i{font-size:26px;color:var(--gold);line-height:1}
+.aset-card-label{font-size:12px;font-weight:700;text-align:center;line-height:1.35}
+.aset-card-warn{position:absolute;top:8px;right:8px;font-size:11px;color:var(--danger)}
+.aset-sect{display:none}
+@media(max-width:1100px){.aset-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:720px){.aset-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+<div id="aset-grid" class="aset-grid"></div>
+<div id="aset-screen-head" style="display:none;align-items:center;gap:10px;margin-bottom:12px;">
+  <button class="btn-sm-admin" onclick="window.ASET_NAV.showGrid()" aria-label="Kembali ke daftar fitur Aset">
+    <i class="fas fa-arrow-left"></i> Kembali</button>
+  <span id="aset-screen-title" style="font-weight:800;color:var(--gold);font-size:14px;"></span>
+</div>
+        <div id="aset-sect-pinjam" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
               <span>📋 Permintaan Peminjaman</span>
@@ -1597,7 +1475,7 @@
         </div>
 
         <!-- [TAB] TIKET -->
-        <div id="sa-sect-tiket" class="sa-sect" style="display:none">
+        <div id="aset-sect-tiket" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
               <span>🚨 Tiket Kerusakan Aset</span>
@@ -1608,7 +1486,7 @@
         </div>
 
         <!-- [TAB] MASTER ASET -->
-        <div id="sa-sect-master" class="sa-sect" style="display:none">
+        <div id="aset-sect-master" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
               <span>🗃️ Data Master Aset</span>
@@ -1625,7 +1503,7 @@
         </div>
 
         <!-- [TAB] MUTASI STOK -->
-        <div id="sa-sect-mutasi" class="sa-sect" style="display:none">
+        <div id="aset-sect-mutasi" class="aset-sect">
           <div class="card glass-card" style="margin-bottom:12px;">
             <div class="card-title">🔄 Catat Mutasi Stok (Masuk / Keluar)</div>
             <div class="form-group" style="margin-bottom:10px;">
@@ -1667,7 +1545,7 @@
         </div>
 
         <!-- [TAB] STOK OPNAME -->
-        <div id="sa-sect-opname" class="sa-sect" style="display:none">
+        <div id="aset-sect-opname" class="aset-sect">
           <div class="card glass-card" style="margin-bottom:12px;">
             <div class="card-title">📊 Stok Opname — Verifikasi Fisik Aset</div>
             <div style="background:rgba(255,165,0,0.1);border:1px solid rgba(255,165,0,0.3);border-radius:10px;padding:10px;margin-bottom:14px;font-size:11px;color:rgba(255,165,0,0.9);">
@@ -1681,7 +1559,7 @@
         </div>
 
         <!-- [TAB] KATEGORI -->
-        <div id="sa-sect-kat" class="sa-sect" style="display:none">
+        <div id="aset-sect-kat" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
               <span>🏷️ Manajemen Kategori Aset</span>
@@ -1698,7 +1576,7 @@
         </div>
 
         <!-- [TAB] STANDAR HARGA -->
-        <div id="sa-sect-standar-harga" class="sa-sect" style="display:none">
+        <div id="aset-sect-standar-harga" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
               <span>📋 Standar Harga</span>
@@ -1719,7 +1597,7 @@
         </div>
 
         <!-- [TAB] PENERIMAAN BARANG -->
-        <div id="sa-sect-penerimaan" class="sa-sect" style="display:none">
+        <div id="aset-sect-penerimaan" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
               <span>📥 Penerimaan Barang</span>
@@ -1788,7 +1666,7 @@
         </div>
 
         <!-- [TAB] PEMELIHARAAN -->
-        <div id="sa-sect-pemeliharaan" class="sa-sect" style="display:none">
+        <div id="aset-sect-pemeliharaan" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
               <span>🔧 Pemeliharaan Aset</span>
@@ -1819,7 +1697,7 @@
         </div>
 
         <!-- [TAB] PKS — Program, Kegiatan, Subkegiatan -->
-        <div id="sa-sect-pks" class="sa-sect" style="display:none">
+        <div id="aset-sect-pks" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
               <span>📐 Master Program / Kegiatan / Subkegiatan</span>
@@ -1851,7 +1729,7 @@
         </div>
 
         <!-- [TAB] PENGATURAN -->
-        <div id="sa-sect-pengaturan" class="sa-sect" style="display:none">
+        <div id="aset-sect-pengaturan" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
               <span>⚙️ Pengaturan Aset</span>
@@ -1881,7 +1759,7 @@
         </div>
 
         <!-- [TAB] BKU -->
-        <div id="sa-sect-bku" class="sa-sect" style="display:none">
+        <div id="aset-sect-bku" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
               <span>💰 Buku Kas Umum</span>
@@ -1915,7 +1793,7 @@
         </div>
 
         <!-- [TAB] SERAH TERIMA (BAST) -->
-        <div id="sa-sect-bast" class="sa-sect" style="display:none">
+        <div id="aset-sect-bast" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
               <span>📄 Berita Acara Serah Terima Aset</span>
@@ -1969,9 +1847,32 @@
           </div>
         </div>
 
+    </div>
+
+    <!-- ══ TAB ADMIN (conditional) ══ -->
+    <div class="panel" id="panel-admin">
+      <div class="admin-header-card" style="margin-bottom:12px">
+        <div class="admin-badge">⚡ AKSES ADMIN</div>
+        <div class="admin-title">Panel Dashboard Utama</div>
+        <div class="admin-sub">Kelola kehadiran, data pegawai, dan konfigurasi sistem</div>
       </div>
 
-      <!-- SECTION: OPERASIONAL -->
+      <!-- Filter Instansi (Only visible to Superadmin) -->
+      <div id="adminInstansiSection" style="display: none; margin-bottom: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 10px 12px;">
+        <div class="date-range-label" style="margin-bottom: 4px; font-weight: 700; color: var(--gold); font-size: 11px;">🏢 Pilih Instansi (Superadmin)</div>
+        <select id="adminInstansiSelect" class="date-range-input" style="width: 100%; height: 38px; cursor: pointer"
+          onchange="onAdminInstansiChange()">
+          <option value="">— Pilih Instansi —</option>
+        </select>
+      </div>
+
+      <!-- Sub-Navigasi Admin -->
+      <div class="admin-nav">
+        <button class="admin-nav-btn active" id="btn-nav-ops" onclick="switchAdminSection('ops')">⚙️ Operasional</button>
+        <button class="admin-nav-btn" id="btn-nav-user" onclick="switchAdminSection('user')">👥 Kepegawaian</button>
+        <button class="admin-nav-btn" id="btn-nav-config" onclick="switchAdminSection('config')">🛠 Konfigurasi</button>
+      </div>
+
       <div id="admin-section-ops" class="admin-section">
         <!-- ══ KONFIRMASI KETERANGAN ══ -->
         <div class="card">
@@ -3181,7 +3082,7 @@
   <script src="js/api.js"></script>
 
   <!-- 4. Core utilities -->
-  <script src="js/ui.js?v=20260706a"></script>
+  <script src="js/ui.js?v=20261001a"></script>
   <script src="js/helpers.js?v=20260706a"></script>
   <script src="js/network.js"></script>
 
@@ -3206,7 +3107,9 @@
   <!-- simapo-admin.js dihapus (dikonsolidasi ke simapo-ext.js) -->
   
   
-  <script src="js/simapo-ext.js?v=999"></script>
+  <script src="js/aset-screens.js?v=1"></script>
+<script src="js/aset-nav.js?v=1"></script>
+<script src="js/simapo-ext.js?v=999"></script>
   <script src="js/simapo-bast.js?v=2"></script>
 
   <!-- 6. Supplementary features -->

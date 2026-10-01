@@ -6,40 +6,20 @@
 let simapoKatalogData = [];
 
 /**
- * Switch sub-tabs di dalam panel SIMAPO
+ * Router lama (Katalog/Pinjaman/Tiket) → delegation ke ASET_NAV.
+ * Dipakai oleh switchTab('simapo'), tombol dalam markup, dan pemanggil internal.
  */
 function switchSimapoSection(section, force = false) {
-  // Populate Superadmin Dropdown
+  const map = { katalog: 'katalog', pinjam: 'pinjaman-saya', tiket: 'tiket-saya' };
+  const key = map[section] || section;
   if (typeof populateSimapoInstansiSelect === 'function') populateSimapoInstansiSelect();
-
-  // Update Buttons
-  const btns = document.querySelectorAll('.simapo-tab-btn');
-  btns.forEach(b => {
-    if(b.id.includes('simapo')) b.classList.remove('active');
-  });
-  const activeBtn = document.getElementById('btn-simapo-' + section);
-  if(activeBtn) activeBtn.classList.add('active');
-
-  // Update Sections
-  const sects = document.querySelectorAll('.simapo-section');
-  sects.forEach(s => s.style.display = 'none');
-  const activeSect = document.getElementById('simapo-section-' + section);
-  if(activeSect) activeSect.style.display = 'block';
-
-  // Load Data based on section
-  if (section === 'katalog') {
-    loadSimapoKatalog(force);
-    if (window.loadSimapoKategori) window.loadSimapoKategori(false, force);
+  if (typeof window.ASET_NAV !== 'object') return;
+  if (section === 'grid') {
+    window.ASET_NAV.showGrid();
+    window.ASET_NAV.eagerLoad().then(window.ASET_NAV.renderGrid);
+    return;
   }
-  else if (section === 'pinjam') {
-    if (typeof populateSimapoPinjamSelect === 'function') populateSimapoPinjamSelect();
-    if (typeof loadSimapoRiwayatPinjam === 'function') loadSimapoRiwayatPinjam(force);
-    else if (window._simapoCache && typeof window.loadAdminSimapoPinjam === 'function') {
-      window._simapoCache.clear('user_pinjam_riwayat');
-      const el = document.getElementById('btn-simapo-pinjam');
-      el.click();
-    }
-  }
+  window.ASET_NAV.open(key, force);
 }
 
 async function populateSimapoPinjamSelect() {
@@ -744,15 +724,8 @@ function onSimapoInstansiChange() {
   }
   simapoKatalogData = [];
   
-  // Reload current section
-  const activeBtn = document.querySelector('.simapo-tab-btn.active');
-  if (activeBtn) {
-    const id = activeBtn.id; // e.g. btn-simapo-katalog
-    const section = id.replace('btn-simapo-', '');
-    switchSimapoSection(section, true); // force reload
-  } else {
-    switchSimapoSection('katalog', true);
-  }
+  // Reload layar yang sedang terbuka (bukan selalu lompat ke Katalog)
+  switchSimapoSection(window._asetCurrent || 'katalog', true); // force reload
 }
 
 /* ─── QR SCAN FLOW ──────────────────────────────────────────── */
