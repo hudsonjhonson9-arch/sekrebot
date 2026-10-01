@@ -94,7 +94,7 @@ Panel admin pemerintah daerah, trust-first, data-dense → VARIANCE 3–4, MOTIO
   | `simapo-aset-summary` | agregat ringkasan + data export |
   | `simapo-pengaturan-get` / `simapo-pengaturan-set` | key/value P1 di `public.pengaturan` (nama key persis mengikuti `bast_data()` app.py — dibaca saat implementasi) |
   | `simapo-ttd-get?nip=` | gambar TTD dari `public.tanda_tangan` |
-  | `simapo-aset-kosongkan` | destructive; wajib konfirmasi "HAPUS" di client **dan** guard server-side; cakupan hapusnya = port persis `kosongkan_aset` di app.py (dibaca saat implementasi, mis. unit_aset + barang, ruangan/kategori dipertahankan) |
+  | `simapo-aset-kosongkan` | destructive; wajib konfirmasi "HAPUS" di client **dan** guard server-side; cakupan hapus (per instansi — `instansi_id` dari query, default `bapperida`; baris instansi lain tidak tersentuh): semua tabel domain aset yang jadi FK-referen `barang`/`unit_aset` (riwayat transaksi ikut terhapus — dipaksa FK Postgres: `riwayat_pemeliharaan`, `detail_distribusi_aset`, `jadwal_maintenance`, `peminjaman`, `detail_opname`, `detail_request`, `detail_pemeliharaan`, `mutasi_barang`, `detail_penerimaan`, `pemeliharaan`, lalu `unit_aset`, `barang`), sedangkan ruangan/kategori/pegawai/pengaturan/tanda_tangan/arsip BAST tetap |
 - **Tanpa migrasi DB**; export & parse tetap client-side; normalisasi selesai sebelum kirim ke server
 
 ## 7. Bagian 5 — Verifikasi
