@@ -593,7 +593,7 @@ const kode = 'SMOKE-TEST-' + Date.now();
 // 5. kosongkan: guard konfirmasi (TIDAK test happy-path) — tolak = 200 body kosong
 {
   const r = await call('POST', P.kosong, { confirm: 'salah' });
-  const tolak = r.status !== 0 && (!r.ok || r.j === null);
+  const tolak = r.status === 200 && r.j === null;
   say('kosongkan tolak konfirmasi salah', tolak,
     `status ${r.status}, body ${r.j === null ? '(kosong)' : JSON.stringify(r.j)}`);
 }
