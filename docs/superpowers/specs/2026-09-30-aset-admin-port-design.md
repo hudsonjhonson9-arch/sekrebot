@@ -26,7 +26,8 @@ Memindahkan **semua fitur** aplikasi `D:\Code\aset-bapperida` (Flask + SQLite) k
 
 ### 2.2 Target (absensi_refactored_v6)
 - Frontend statis vanilla JS; tab admin SIMAPO di `index.html` (`sa-sect-*`), logic di `js/simapo-ext.js` (86 KB, sudah pakai SheetJS), `js/simapo-bast.js` (render docx client-side via docxtemplater + pizzip)
-- Backend: n8n workflow HTTP → Postgres. BAST lama: `SIMAPO - BAST` id `GRwy3zOtdC4HCLP7` (34 node), gate header `x-bast-key` (`BAST_API_KEY` di `js/config.js`)
+- Backend: n8n workflow HTTP → Postgres. BAST lama: `SIMAPO - BAST` id `jHGUCiYJeaOzUWM6` (34 node), gate header `x-bast-key` (`BAST_API_KEY` di `js/config.js`)
+  - id workflow berubah 2026-10-01: `GRwy3zOtdC4HCLP7` dihapus tak sengaja saat aktivasi ulang, lalu dibuat ulang dari salinan lokal `n8n/SIMAPO - BAST.json`. Path webhook tidak berubah, jadi semua pemanggil tetap jalan.
 - **Database: Postgres via pgAdmin 4** (bukan Supabase) — verifikasi via MCP `postgres-mcp`:
   - skema `SIMAPO`: `barang`, `unit_aset`, `bast`, `ruangan`, `kategori_barang`, `kategori` id kat06/kat07 = "Kendaraan Roda 4/2", `mutasi_barang`, `penerimaan_barang`, `standar_harga`, `request_barang`, `kodefikasi_barang`, `detail_distribusi_aset`
   - `public`: `pengaturan` (key/value), `tanda_tangan` (signature per NIP), `user_list` (pegawai; kolom "Jabatan", tanpa `isactive`)

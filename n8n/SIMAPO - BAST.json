@@ -567,7 +567,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH bid AS (\n    SELECT id FROM \"SIMAPO\".barang\n    WHERE kodebarang = '{{ (($input.item.json.body.kodebarang) || \"\").toString().replace(/'/g, \"''\") }}'\n      AND instansi_id = '{{ (($input.item.json.body.instansi_id) || \"bapperida\").toString().replace(/'/g, \"''\") }}'\n  ),\n  barang_ins AS (\n    INSERT INTO \"SIMAPO\".barang (id, kodebarang, nama, jenisbarang, satuan, stok_saat_ini, minimumstok, hargasatuan, kategoriid, isactive, createdat, updatedat, instansi_id)\n    SELECT md5('{{ (($input.item.json.body.instansi_id) || \"bapperida\").toString().replace(/'/g, \"''\") }}:' || '{{ (($input.item.json.body.kodebarang) || \"\").toString().replace(/'/g, \"''\") }}'),\n           '{{ (($input.item.json.body.kodebarang) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.nama) || \"\").toString().replace(/'/g, \"''\") }}',\n           'Aset Tetap', 'unit', 1, 0,\n           {{ Math.max(0, Number(($input.item.json.body.hargasatuan) || 0)) }},\n           {{ ($input.item.json.body.kategoriid ? (\"'\" + String($input.item.json.body.kategoriid).replace(/'/g, \"''\") + \"'\") : \"NULL\") }},\n           true, NOW(), NOW(),\n           '{{ (($input.item.json.body.instansi_id) || \"bapperida\").toString().replace(/'/g, \"''\") }}'\n    WHERE NOT EXISTS (SELECT 1 FROM bid)\n    RETURNING id\n  ),\n  unit_ins AS (\n    INSERT INTO \"SIMAPO\".unit_aset (id, barangid, nomorinventaris, kondisi, statuspinjam, qrcode, pegawai_id, ruangan_id, no_polisi, no_rangka, no_mesin, roda, merk_type, model_jenis, warna, tahun_pembuatan, updatedat)\n    SELECT gen_random_uuid(),\n           COALESCE((SELECT id FROM bid), (SELECT id FROM barang_ins)),\n           '{{ (($input.item.json.body.nomorinventaris) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.kondisi) || \"Baik\").toString().replace(/'/g, \"''\") }}',\n           false,\n           'https://mindcloud.my.id/?qr=SIMAPO-' || gen_random_uuid(),\n           {{ ($input.item.json.body.pegawai_id ? (\"'\" + String($input.item.json.body.pegawai_id).replace(/'/g, \"''\") + \"'\") : \"NULL\") }},\n           {{ ($input.item.json.body.ruangan_id ? (\"'\" + String($input.item.json.body.ruangan_id).replace(/'/g, \"''\") + \"'\") : \"NULL\") }},\n           '{{ (($input.item.json.body.no_polisi) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.no_rangka) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.no_mesin) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.roda) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.merk_type) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.model_jenis) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.warna) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.tahun_pembuatan) || \"\").toString().replace(/'/g, \"''\") }}',\n           NOW()\n    WHERE NOT EXISTS (\n      SELECT 1 FROM \"SIMAPO\".unit_aset ua\n      WHERE ua.nomorinventaris = '{{ (($input.item.json.body.nomorinventaris) || \"\").toString().replace(/'/g, \"''\") }}'\n    )\n    RETURNING id\n  )\n  SELECT COALESCE((SELECT id FROM bid), (SELECT id FROM barang_ins)) AS barang_id,\n         (SELECT id FROM unit_ins) AS unit_id;",
+        "query": "WITH bid AS (\n    SELECT id FROM \"SIMAPO\".barang\n    WHERE kodebarang = '{{ (($input.item.json.body.kodebarang) || \"\").toString().replace(/'/g, \"''\") }}'\n      AND nama = '{{ (($input.item.json.body.nama) || \"\").toString().replace(/'/g, \"''\") }}'\n      AND instansi_id = '{{ (($input.item.json.body.instansi_id) || \"bapperida\").toString().replace(/'/g, \"''\") }}'\n  ),\n  barang_ins AS (\n    INSERT INTO \"SIMAPO\".barang (id, kodebarang, nama, jenisbarang, satuan, stok_saat_ini, minimumstok, hargasatuan, kategoriid, isactive, createdat, updatedat, instansi_id)\n    SELECT md5('{{ (($input.item.json.body.instansi_id) || \"bapperida\").toString().replace(/'/g, \"''\") }}:' || '{{ (($input.item.json.body.kodebarang) || \"\").toString().replace(/'/g, \"''\") }}' || ':' || '{{ (($input.item.json.body.nama) || \"\").toString().replace(/'/g, \"''\") }}'),\n           '{{ (($input.item.json.body.kodebarang) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.nama) || \"\").toString().replace(/'/g, \"''\") }}',\n           'Aset Tetap', 'unit', 1, 0,\n           {{ Math.max(0, Number(($input.item.json.body.hargasatuan) || 0)) }},\n           {{ ($input.item.json.body.kategoriid ? (\"'\" + String($input.item.json.body.kategoriid).replace(/'/g, \"''\") + \"'\") : \"NULL\") }},\n           true, NOW(), NOW(),\n           '{{ (($input.item.json.body.instansi_id) || \"bapperida\").toString().replace(/'/g, \"''\") }}'\n    WHERE NOT EXISTS (SELECT 1 FROM bid)\n    RETURNING id\n  ),\n  nu AS (\n    SELECT gen_random_uuid() AS id\n  ),\n  unit_ins AS (\n    INSERT INTO \"SIMAPO\".unit_aset (id, barangid, nomorinventaris, kondisi, statuspinjam, qrcode, nilaiperolehan, tahunperolehan, pegawai_id, ruangan_id, no_polisi, no_rangka, no_mesin, roda, merk_type, model_jenis, warna, tahun_pembuatan, updatedat)\n    SELECT (SELECT id FROM nu),\n           COALESCE((SELECT id FROM bid), (SELECT id FROM barang_ins)),\n           '{{ (($input.item.json.body.nomorinventaris) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.kondisi) || \"Baik\").toString().replace(/'/g, \"''\") }}',\n           false,\n           'https://mindcloud.my.id/?qr=SIMAPO-' || (SELECT id FROM nu),\n           {{ ($input.item.json.body.nilaiperolehan != null && isFinite(Number($input.item.json.body.nilaiperolehan)) ? Number($input.item.json.body.nilaiperolehan) : \"NULL\") }},\n           {{ ($input.item.json.body.tahunperolehan ? Number($input.item.json.body.tahunperolehan) : \"NULL\") }},\n           {{ ($input.item.json.body.pegawai_id ? (\"'\" + String($input.item.json.body.pegawai_id).replace(/'/g, \"''\") + \"'\") : \"NULL\") }},\n           {{ ($input.item.json.body.ruangan_id ? (\"'\" + String($input.item.json.body.ruangan_id).replace(/'/g, \"''\") + \"'\") : \"NULL\") }},\n           '{{ (($input.item.json.body.no_polisi) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.no_rangka) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.no_mesin) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.roda) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.merk_type) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.model_jenis) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.warna) || \"\").toString().replace(/'/g, \"''\") }}',\n           '{{ (($input.item.json.body.tahun_pembuatan) || \"\").toString().replace(/'/g, \"''\") }}',\n           NOW()\n    WHERE NOT EXISTS (\n      SELECT 1 FROM \"SIMAPO\".unit_aset ua\n      WHERE ua.nomorinventaris = '{{ (($input.item.json.body.nomorinventaris) || \"\").toString().replace(/'/g, \"''\") }}'\n    )\n    RETURNING id\n  )\n  SELECT COALESCE((SELECT id FROM bid), (SELECT id FROM barang_ins)) AS barang_id,\n         (SELECT id FROM unit_ins) AS unit_id;",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
@@ -593,7 +593,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        600,
+        900,
         2400
       ],
       "id": "4bff0452-75f8-4166-addd-d49d58b857a2",
@@ -617,11 +617,33 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        900,
+        1200,
         2400
       ],
       "id": "8d4b8760-611e-4754-87ef-333a59f1cb2a",
       "name": "Res Bast Import"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH inp AS (\n  SELECT '{{ $items(\"WH Bast Import\")[0].json.body.nomorinventaris }}'::text AS ninv,\n         {{ ($items(\"WH Bast Import\")[0].json.body.nilaiperolehan != null ? Number($items(\"WH Bast Import\")[0].json.body.nilaiperolehan) : \"NULL\") }}::numeric AS nilai,\n         {{ ($items(\"WH Bast Import\")[0].json.body.tahunperolehan ? Number($items(\"WH Bast Import\")[0].json.body.tahunperolehan) : \"NULL\") }}::int AS thn,\n         '{{ $items(\"PG Bast Import\")[0].json.unit_id }}'::text AS uids\n)\nUPDATE \"SIMAPO\".unit_aset ua\nSET nilaiperolehan = inp.nilai,\n    tahunperolehan = inp.thn,\n    barangid = COALESCE(\n      (SELECT b.id FROM \"SIMAPO\".barang b\n       WHERE b.kodebarang='{{ ($items(\"WH Bast Import\")[0].json.body.kodebarang || \"\").toString().replace(/'/g,\"''\") }}'\n         AND b.nama='{{ ($items(\"WH Bast Import\")[0].json.body.nama || \"\").toString().replace(/'/g,\"''\") }}'\n         AND b.instansi_id='{{ (($items(\"WH Bast Import\")[0].json.body.instansi_id)||\"bapperida\").toString().replace(/'/g,\"''\") }}'),\n      ua.barangid),\n    qrcode = 'https://mindcloud.my.id/?qr=SIMAPO-' || ua.id,\n    updatedat = NOW()\nFROM inp\nWHERE ua.nomorinventaris = inp.ninv\nRETURNING ua.barangid,\n       CASE WHEN inp.uids ~ '^[0-9a-fA-F-]{36}$' THEN inp.uids::uuid END AS unit_id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        600,
+        2400
+      ],
+      "id": "9d643989-aa95-4346-acb3-f03149f2c64a",
+      "name": "PG Bast Fixup",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
     }
   ],
   "connections": {
@@ -904,7 +926,7 @@
       "main": [
         [
           {
-            "node": "Agg Bast Import",
+            "node": "PG Bast Fixup",
             "type": "main",
             "index": 0
           }
@@ -916,6 +938,17 @@
         [
           {
             "node": "Res Bast Import",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Bast Fixup": {
+      "main": [
+        [
+          {
+            "node": "Agg Bast Import",
             "type": "main",
             "index": 0
           }

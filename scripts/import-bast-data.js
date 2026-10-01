@@ -21,8 +21,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const BASE = process.env.BAST_BASE || 'https://mindcloud.my.id';
 const API_KEY = process.env.BAST_API_KEY || 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u';
-const ASET_DB = process.env.ASET_DB || path.join(__dirname, '../../aset-bapperida/aset-bapperida/data/aset.db');
+const ASET_DB = process.env.ASET_DB || path.join(__dirname, '../../aset-bapperida/data/aset.db');
 const DRY = process.argv.includes('--dry-run');
+// --limit=N untuk smoke-test sebagian sebelum impor penuh
+const LIMIT = Number((process.argv.find((a) => a.startsWith('--limit=')) || '').split('=')[1]) || Infinity;
 
 const HDR = { 'x-bast-key': API_KEY, 'Content-Type': 'application/json' };
 
@@ -118,7 +120,7 @@ async function main() {
 
   let imported = 0, skipped = 0;
 
-  for (const a of asetRows) {
+  for (const a of asetRows.slice(0, LIMIT)) {
     const kategoriid = mapKategori(a.kategori, a.roda);
     if (!kategoriid) {
       console.warn(`  ⚠️ kategori '${a.kategori}' tidak ditemukan di SIMAPO; skip ${a.kode_barang}`);
@@ -129,6 +131,8 @@ async function main() {
       kodebarang: a.kode_barang || '',
       nama: a.nama || '',
       hargasatuan: a.harga != null ? Number(a.harga) : 0,
+      nilaiperolehan: a.harga != null ? Number(a.harga) : null,
+      tahunperolehan: a.tahun_pembelian ? Number(a.tahun_pembelian) : null,
       kategoriid,
       instansi_id: 'bapperida',
       nomorinventaris: 'INV-' + String(a.kode_barang || '') + '-' + String(a.id).padStart(3, '0'),

@@ -812,10 +812,14 @@ function renderQRConfirmPanel(unit) {
 
   let statusHtml = '';
   const pa = unit.peminjaman_aktif;
+  // ponytail: data produksi berisi 'Baik' (kapitalisasi huruf pertama) sementara default
+  // kolom unit_aset.kondisi = 'BAIK'. Perbandingan case-sensitive bikin semua aset
+  // terbaca rusak. Bandingkan uppercase sampai kasus DB diperbaiki di sisi server.
+  const unitBaik = String(unit.kondisi || '').toUpperCase() === 'BAIK';
   if (dipinjam) {
     statusHtml = `<span style="color:#ef4444;font-weight:800;"><i class="fas fa-circle" aria-hidden="true"></i> Sedang Dipinjam</span>
       <div style="font-size:11px;color:var(--muted);margin-top:4px;">Oleh: ${pa?.nama || pa?.userid || unit.nama_peminjam_saat_ini || '—'}</div>`;
-  } else if (unit.kondisi !== 'BAIK') {
+  } else if (!unitBaik) {
     statusHtml = `<span style="color:#f59e0b;font-weight:800;"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i> Kondisi: ${unit.kondisi}</span>
       <div style="font-size:11px;color:var(--muted);margin-top:4px;">Laporkan kerusakan jika ingin meminjam</div>`;
   } else {
@@ -844,7 +848,7 @@ function renderQRConfirmPanel(unit) {
         <div style="font-weight:700;font-size:13px;color:var(--white);">${escapeHtml(nama)}</div>
         <div style="font-size:11px;color:var(--muted);">NIP: ${escapeHtml(nip)}</div>
       </div>
-      ${dipinjam || unit.kondisi !== 'BAIK' ? `
+      ${dipinjam || !unitBaik ? `
       <button class="btn-primary" onclick="closeQRPanel()" style="width:100%;background:var(--muted);">
         <div class="btn-inner"><span><i class="fas fa-times" aria-hidden="true"></i></span> Tutup</div>
       </button>` : `
