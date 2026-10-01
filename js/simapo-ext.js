@@ -148,6 +148,7 @@ window.switchSATab = function(name, force = false) {
   else if (name === 'bku') window.loadAdminBKU(force);
   else if (name === 'pks') window.loadAdminPKS(force);
   else if (name === 'bast') window.loadAdminBast(force);
+  else if (name === 'pengaturan') window.loadSAPengaturan();
 };
 
 /* ─── HELPER: SHOW SHIMMER ── */
@@ -1828,4 +1829,53 @@ window.deletePKS = async function(id) {
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   }
+};
+
+/* ─── PENGATURAN (P1) + KOSONGKAN ASET ─────────────────────────────── */
+window.bastGet = async function(endpoint) {
+  try {
+    const res = await apiFetch(endpoint, { headers: { [BAST_API_HEADER]: BAST_API_KEY } });
+    if (!res.ok) return null;
+    const body = await res.json();
+    return (body && body.data) || null;
+  } catch (e) {
+    console.error('[SIMAPO] GET gagal:', endpoint, e);
+    return null;
+  }
+};
+
+window.loadSAPengaturan = async function() {
+  const data = (await window.bastGet(P.simapoPengaturanGet)) || {};
+  const fill = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+  fill('setSekdaNama', data.sekda_nama);
+  fill('setSekdaNip', data.sekda_nip);
+  fill('setSekdaJabatan', data.sekda_jabatan);
+  fill('setSekdaAlamat', data.sekda_alamat);
+  fill('setP1Nip', data.p1_id);
+  fill('setP1Jabatan', data.p1_jabatan);
+  fill('setP1Alamat', data.p1_alamat);
+};
+
+window.saveSAPengaturan = async function() {
+  const v = id => ((document.getElementById(id) || {}).value || '').trim();
+  await window.bastSubmit(P.simapoPengaturanSet, {
+    sekda_nama: v('setSekdaNama'),
+    sekda_nip: v('setSekdaNip'),
+    sekda_jabatan: v('setSekdaJabatan'),
+    sekda_alamat: v('setSekdaAlamat'),
+    p1_id: v('setP1Nip'),
+    p1_jabatan: v('setP1Jabatan'),
+    p1_alamat: v('setP1Alamat')
+  }, { successMsg: 'Pengaturan disimpan', errorMsg: 'Gagal menyimpan pengaturan.' });
+};
+
+window.kosongkanAset = async function() {
+  const inp = document.getElementById('kosongkanKonfirmasi');
+  if (!inp || inp.value.trim() !== 'HAPUS') {
+    showToast('Ketik HAPUS dulu di kolom konfirmasi.', 'error');
+    return;
+  }
+  const ok = await window.bastSubmit(P.simapoAsetKosongkan, { confirm: 'HAPUS' },
+    { successMsg: 'Data aset dikosongkan', errorMsg: 'Gagal mengosongkan data aset.' });
+  if (ok) inp.value = '';
 };

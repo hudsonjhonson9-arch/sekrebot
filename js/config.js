@@ -275,6 +275,13 @@ const P = {
   simapoBastRuangan: isTest ? '/webhook-test/simapo-bast-ruangan' : '/webhook/simapo-bast-ruangan',
   simapoBastSave: isTest ? '/webhook-test/simapo-bast-save' : '/webhook/simapo-bast-save',
   simapoBastHistory: isTest ? '/webhook-test/simapo-bast-history' : '/webhook/simapo-bast-history',
+  simapoAsetMassal: isTest ? '/webhook-test/simapo-aset-massal' : '/webhook/simapo-aset-massal',
+  simapoAsetKib: isTest ? '/webhook-test/simapo-aset-kib' : '/webhook/simapo-aset-kib',
+  simapoAsetSummary: isTest ? '/webhook-test/simapo-aset-summary' : '/webhook/simapo-aset-summary',
+  simapoPengaturanGet: isTest ? '/webhook-test/simapo-pengaturan-get' : '/webhook/simapo-pengaturan-get',
+  simapoPengaturanSet: isTest ? '/webhook-test/simapo-pengaturan-set' : '/webhook/simapo-pengaturan-set',
+  simapoTtdGet: isTest ? '/webhook-test/simapo-ttd-get' : '/webhook/simapo-ttd-get',
+  simapoAsetKosongkan: isTest ? '/webhook-test/simapo-aset-kosongkan' : '/webhook/simapo-aset-kosongkan',
 };
 
 function getScopedInstansiId() {

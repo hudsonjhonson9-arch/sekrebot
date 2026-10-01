@@ -25,7 +25,8 @@ window.bastSubmit = async function(endpoint, payload, opts = {}) {
     return false;
   }
   try { body = await res.json(); } catch (_) {}
-  const ok = res.ok && (typeof isApiSuccess === 'function' ? isApiSuccess(body, true) : true);
+  // ponytail: gate/guard instance ini balas 200 + body kosong saat menolak → body null = gagal
+  const ok = res.ok && body !== null && (typeof isApiSuccess === 'function' ? isApiSuccess(body, true) : true);
   if (!ok) {
     console.error('[BAST] Ditolak server:', endpoint, res.status, body);
     showToast(typeof getApiErrorMsg === 'function' ? getApiErrorMsg(body, errorMsg) : errorMsg, 'error');

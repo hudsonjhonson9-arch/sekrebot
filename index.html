@@ -1555,6 +1555,7 @@
             <button class="sa-tab"        id="sa-tab-bku"    onclick="switchSATab('bku')"    data-group="trans">💰 BKU</button>
             <!-- Referensi -->
             <button class="sa-tab"        id="sa-tab-pks"    onclick="switchSATab('pks')"    data-group="ref">📐 PKS</button>
+            <button class="sa-tab"        id="sa-tab-pengaturan" onclick="switchSATab('pengaturan')" data-group="ref">⚙️ Pengaturan</button>
           </div>
         </div>
         <style>
@@ -1846,6 +1847,36 @@
             </div>
             <input type="text" id="pksSearch" class="form-input" placeholder="🔍 Cari kode atau nama..." oninput="filterPKS(this.value)" style="margin-bottom:10px;">
             <div id="adminPKSList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
+          </div>
+        </div>
+
+        <!-- [TAB] PENGATURAN -->
+        <div id="sa-sect-pengaturan" class="sa-sect" style="display:none">
+          <div class="card glass-card">
+            <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+              <span>⚙️ Pengaturan Aset</span>
+              <button class="btn-sm-admin" onclick="loadSAPengaturan()" style="background:var(--primary)">🔄</button>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:10px;">Data Pihak Pertama untuk BAST. Mode Sekda dipakai saat Pihak Kedua = NIP Sekda; selain itu mode Kepala (NIP di bawah).</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="form-group"><label class="form-label">Nama Sekretaris Daerah</label><input class="form-input" id="setSekdaNama" placeholder="Yermia Ndapa Doda, S.Sos"></div>
+              <div class="form-group"><label class="form-label">NIP Sekretaris Daerah</label><input class="form-input" id="setSekdaNip" placeholder="196803241999031003"></div>
+              <div class="form-group"><label class="form-label">Jabatan Sekretaris Daerah</label><input class="form-input" id="setSekdaJabatan" placeholder="Sekretaris Daerah Kabupaten Sumba Barat"></div>
+              <div class="form-group"><label class="form-label">Alamat Sekretaris Daerah</label><input class="form-input" id="setSekdaAlamat" placeholder="Waikabubak"></div>
+              <div class="form-group"><label class="form-label">NIP Pihak Pertama (Kepala)</label><input class="form-input" id="setP1Nip" placeholder="197211022001121001"></div>
+              <div class="form-group"><label class="form-label">Jabatan Pihak Pertama</label><input class="form-input" id="setP1Jabatan" placeholder="Kepala Badan Perencanaan Kabupaten Sumba Barat"></div>
+              <div class="form-group" style="grid-column:1/-1;"><label class="form-label">Alamat Pihak Pertama</label><input class="form-input" id="setP1Alamat" placeholder="Waikabubak"></div>
+            </div>
+            <button class="btn-primary" onclick="saveSAPengaturan()" style="width:100%;margin-top:12px;">
+              <div class="btn-inner"><span>💾</span> Simpan Pengaturan</div>
+            </button>
+            <hr style="border-color:rgba(255,255,255,0.08);margin:18px 0;">
+            <div class="form-label" style="color:#f87171;">⚠️ Zona Bahaya</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Kosongkan seluruh data aset instansi ini (katalog + unit + riwayat transaksi yang merujuknya). Pegawai, ruangan, kategori, pengaturan, dan arsip BAST TIDAK terhapus.</div>
+            <div style="display:flex;gap:8px;">
+              <input class="form-input" id="kosongkanKonfirmasi" placeholder="Ketik HAPUS untuk mengaktifkan">
+              <button class="btn-sm-admin" onclick="kosongkanAset()" style="background:rgba(248,113,113,0.2);color:#f87171;white-space:nowrap;">🗑 Kosongkan</button>
+            </div>
           </div>
         </div>
 
