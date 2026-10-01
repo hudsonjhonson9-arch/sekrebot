@@ -1,6 +1,6 @@
 # Desain: Konsolidasi Fitur Aset ke Sidebar "Aset"
 
-- Status: Disetujui (menunggu review dokumen ini sebelum masuk plan)
+- Status: Selesai diimplementasikan (Task 1–5 selesai; hasil verifikasi di bagian "Hasil Verifikasi")
 - Tanggal: 2026-10-01
 - Milestone: 1 dari 2 (Milestone 2 = parity fitur + impor data penuh, terpisah)
 - Sumber: `D:\Code\absensi_refactored_v6` (root; salinan `www/` diabaikan)
@@ -42,7 +42,7 @@ Keduanya **tidak** dikerjakan di milestone 1.
 | D2 | Konten admin **dipindahkan** ke section Aset (Pendekatan A: pindahkan markup, reuse router/handler) |
 | D3 | `Panel Admin → Inventaris` dihapus dari nav admin |
 | D4 | Grid langsung tampil, eager load di belakang layar, `Promise.allSettled`, gagal ≠ memblokir |
-| D5 | Eager load hanya sekali per sesi masuk section (flag `window._asetLoaded[key]`) |
+| D5 | Eager load hanya sekali per sesi masuk section (flag global `window._asetEagerDone`; kegagalan dikumpulkan di `window._asetFailed[key]`) |
 | D6 | Kartu admin disembunyikan untuk non-admin memakai gate yang sudah ada |
 | D7 | Emoji → ikon FontAwesome hanya di markup yang dipindah + `js/simapo*.js` |
 | D8 | Satu sumber kebenaran: `window.ASET_SCREENS` |
@@ -51,8 +51,9 @@ Keduanya **tidak** dikerjakan di milestone 1.
 
 ### Sumber kebenaran tunggal
 
-Satu konstanta di `js/simapo.js` (dimuat paling awal dari trio Simapo) mendefinisikan
-16 entri. Grid, router, dan eager-load semuanya membacanya:
+Data layar ada di `js/aset-screens.js` (`window.ASET_SCREENS`), dimuat paling awal dari trio
+Aset. Seluruh logika navigasi ada di `js/aset-nav.js` (`window.ASET_NAV`). Grid, router, dan
+eager-load semuanya membaca konstanta yang sama:
 
 ```js
 // load: [namaFungsiGlobal, ...argumen] — argumen wajib untuk fungsi yang butuh flag
@@ -82,62 +83,76 @@ ada dilewati tanpa error (pola yang sama dipakai jalur lama). Argumen `false` ad
 `force`; `loadSimapoKategori` menerima `(isAdmin, force)`. Ikon `fa-exclamation-triangle`
 dan `fa-arrow-left` untuk penanda gagal + tombol kembali juga sudah diverifikasi ada.
 
+Konvensi `force`: pada entri `load`, argumen **terakhir** adalah flag `force`
+(mis. `['loadSimapoKategori', true, false]` → flag-nya `false`). `force` hanya mengubah
+argumen terakhir menjadi `true`; entri tanpa argumen mendapat satu argumen `true`. Argumen
+lain (mis. flag `isAdmin`) tidak pernah disentuh.
+
 Semua ikon sudah diverifikasi ada di `css/lib/font-awesome.min.css` (bundle lokal, tanpa CDN).
 `fa-ticket` **tidak** ada; yang dipakai `fa-ticket-alt`.
 
 ### Gate role
 
 Tidak ada logika auth baru. Gate memakai sumber yang sudah dipakai app di `js/config.js:369`
-(penyaringan `nip=`) dan `js/simapo.js:702-705` (indeks ROLE):
+(penyaringan `nip=`) dan `js/simapo.js:702-705` (indeks ROLE). Di `js/aset-nav.js` gate-nya
+adalah `isAdmin()` internal dan diekspos sebagai `ASET_NAV.isAdmin`:
 
 ```js
-window.asetIsAdmin = function () {
+function isAdmin() {
   if (window.IS_ADMIN) return true;
-  if (typeof _isSuperAdmin === 'function' && _isSuperAdmin()) return true; // SUPER
-  const r = String(localStorage.getItem('MY_ROLE') || '').toLowerCase();
-  if (r.includes('admin')) return true;
+  if (typeof window._isSuperAdmin === 'function' && window._isSuperAdmin()) return true;
+  const role = String(localStorage.getItem('MY_ROLE') || '').toLowerCase();
+  if (role.includes('admin')) return true;
   return String((window.userProfile || {}).role || '').toLowerCase().includes('admin');
-};
+}
 ```
 
-Catatan: `_isSuperAdmin()` adalah function global biasa di `js/config.js`, bukan properti
-`window` — dipanggil langsung dengan guard `typeof`, sama seperti pemakaiannya di
-`js/simapo.js:704`.
+Catatan: `_isSuperAdmin` dicek lewat `window` dengan guard `typeof`, jadi aman kalau
+`js/config.js` belum termuat.
+
+`MY_ROLE` yang dipakai app adalah `'ADMIN GUDANG'` (dengan spasi) — sama persis dengan yang
+dicek `js/ui.js`. Varian dengan underscore tidak ada di repo.
 
 Grid dirender ulang saat gate berubah (dipanggil dari titik yang sama dengan saat
 nav admin disembunyikan sekarang), agar perpindahan role tanpa reload tidak menampilkan
-kartu yang salah.
+kartu yang salah. `open()` juga memeriksa gate, sehingga layar admin tetap tidak bisa dibuka
+dengan `force: true` oleh non-admin.
 
 ### Routing
 
-Satu fungsi menggantikan `switchSimapoSection` + `switchSATab`:
+Satu fungsi di `window.ASET_NAV` menggantikan `switchSimapoSection` + `switchSATab`:
 
 ```js
-window.openAsetScreen = function (key, force = false) {
-  // tampilkan grid, sembunyikan layar lain, set judul + tombol kembali,
-  // panggil loader sesuai ASET_SCREENS (skip yang sudah pernah eager-load)
-};
+ASET_NAV.open(key, force)   // buka layar: set judul + tombol kembali, panggil loader
+ASET_NAV.showGrid()         // kembali ke grid: sembunyikan semua layar
+ASET_NAV.renderGrid()       // cetak ulang kartu sesuai gate role
 ```
 
 - Layar memakai satu namespace id: `aset-sect-<key>` (menggantikan `simapo-section-*` dan
   `sa-sect-*`), grid memakai `aset-grid`.
 - `window.switchSimapoSection` dan `window.switchSATab` **tetap ada** sebagai pembungkus satu
-  baris yang memanggil `openAsetScreen`, supaya tidak ada pemanggil yatim (tombol refresh,
+  baris yang memanggil `ASET_NAV`, supaya tidak ada pemanggil yatim (tombol refresh,
   `onclick` di markup lama, fungsi lain).
 - Group button `sa-group-*` (aset/transaksi/referensi) dihapus bersama tab strip `sa-tab-*`;
   pengelompokan tidak lagi dibutuhkan karena grid sudah flat. Urutan kartu mengikuti
   urutan admin dulu, lalu user.
+- 16 id `aset-sect-*` berpasangan 1:1 dengan 16 key `ASET_SCREENS`.
 
 ### Eager load
 
-Saat `switchTab('simapo')`:
+Saat `switchSimapoSection('grid')`:
 
-1. `renderAsetGrid()` tampilkan kartu sesuai role (sinkron, tanpa jaringan).
+1. `showGrid()` menampilkan grid + `renderGrid()` mencetak kartu sesuai role (sinkron, tanpa
+   jaringan).
 2. Kalau `window._asetEagerDone` belum terpasang, jalankan semua loader yang boleh diakses
-   role saat ini lewat `Promise.allSettled`; pasang flag setelah selesai.
-3. Loader yang gagal → kartu diberi tanda ⚠ (ikon `fa-exclamation-triangle`) +
-   `aria-label` yang menyebut kegagalannya; klik kartu tetap membuka layar dan loader
-   dicoba lagi.
+   role saat ini lewat `Promise.allSettled`; pasang flag setelah selesai, lalu cetak ulang
+   grid.
+3. Loader yang gagal → tercatat di `window._asetFailed[key]`, kartu diberi ikon
+   `fa-exclamation-triangle` dengan `title` `"Gagal dimuat: <pesan>"` (properti DOM, bukan
+   `innerHTML`, jadi tidak perlu escape dan tidak pernah jadi markup); klik kartu tetap
+   membuka layar dan loader dicoba lagi dengan `force`. String kosong berarti sukses.
+4. Loader yang melempar sinkron (bukan rejected Promise) dibungkus `safe()` supaya tidak
+   lolos keluar dari `map()` dan menggagalkan eager load-nya sendiri.
 
 Efek samping yang disengaja: 16 request paralel saat masuk section. Ini sudah jadi
 permintaan saat ini (memilih tiap tab memicu request), hanya dikumpulkan di satu titik.
@@ -146,13 +161,17 @@ permintaan saat ini (memilih tiap tab memicu request), hanya dikumpulkan di satu
 
 | File | Perubahan |
 |---|---|
-| `index.html` | Grid + 16 markup kartu baru; 13 `.sa-sect` admin dipindah ke `#simapoInstansiSection` sebagai `aset-sect-*`; 3 `.simapo-section` user jadi `aset-sect-*`; nav `#btn-nav-simapo-admin` + header "Panel Admin Inventaris" + `sa-group-*`/`sa-tab-*` dihapus; emoji di rentang yang dipindah diganti ikon; satu blok `<style>` baru untuk `.aset-grid`/`.aset-card` (CSS tidak perlu cache-bust karena inline; `css/styles.css` tidak disentuh) |
-| `js/simapo.js` | Tambah `ASET_SCREENS`, `renderAsetGrid`, `openAsetScreen`, `asetIsAdmin`, `eagerLoadAset`; `switchSimapoSection` jadi pembungkus |
-| `js/simapo-ext.js` | `window.switchSATab` jadi pembungkus `openAsetScreen`; hapus logika tab/group; emoji → ikon |
+| `index.html` | Grid + 16 markup kartu baru; 13 `.sa-sect` admin dipindah ke `#simapoInstansiSection` sebagai sibling `aset-sect-*` (bukan di dalam `<details>` modal, supaya bisa Target show/hide); 3 `.simapo-section` user jadi `aset-sect-*`; nav `#btn-nav-simapo-admin` + header "Panel Admin Inventaris" + `sa-group-*`/`sa-tab-*` dihapus; emoji di rentang yang dipindah diganti ikon; satu blok `<style>` baru untuk `.aset-grid`/`.aset-card` (CSS tidak perlu cache-bust karena inline; `css/styles.css` tidak disentuh) |
+| `js/aset-screens.js` | **Baru.** `window.ASET_SCREENS` — 16 entri (label, ikon, role, daftar loader) |
+| `js/aset-nav.js` | **Baru.** `window.ASET_NAV` — `isAdmin`, `visibleScreens`, `loaderCalls`, `eagerLoad`, `renderGrid`, `showGrid`, `open` |
+| `js/simapo.js` | `switchSimapoSection` jadi pembungkus `ASET_NAV`; blok `ASET_SCREENS`/grid/router yang sempat ditarik ke sini dihapus (sumber kebenaran pindah ke `aset-screens.js`); emoji → ikon |
+| `js/simapo-ext.js` | `window.switchSATab` jadi pembungkus `ASET_NAV.open`; hapus logika tab/group; emoji → ikon |
 | `js/simapo-bast.js` | Emoji → ikon saja; logika BAST tidak diubah |
+| `js/ui.js` | `switchAdminSection`: ADMIN GUDANG tidak lagi punya section admin → hapus `absen_last_admin_section` lalu `switchTab('simapo')`; nilai basi `'simapo-admin'` dan section yang hilang jatuh ke `'ops'` |
 | n8n / SQL | Tidak disentuh |
 
 `css/styles 1.css` adalah salinan duplikat dari `styles.css` yang tidak di-link — tidak disentuh.
+`dist/index.html` dan `www/` adalah artefak/salinan yang tidak di-link — tidak disentuh.
 
 ### Emoji → ikon
 
@@ -166,16 +185,44 @@ Untuk badge status (✅/❌/🔴/⚠️) di dalam list, gunakan kelas warna yang
 
 Tidak ada framework test frontend di repo ini; standar yang dipakai:
 
-1. `node --check` untuk setiap file JS yang disentuh.
-2. Checklist manual via chrome-devtools (localhost):
-   - Admin: grid berisi **16** kartu; keenam belas layar terbuka tanpa error console.
-   - Non-admin: grid berisi **3** kartu; kartu admin tidak ada di DOM.
-   - Dari setiap layar, tombol kembali selalu kembali ke grid.
-   - `Inventaris` tidak lagi ada di nav Panel Admin.
-   - Grep emoji pada rentang markup yang dipindah + 3 file `simapo*.js` = 0.
-   - Ukuran 375px: grid 2 kolom, tanpa overflow horizontal.
-3. Smoke test backend n8n tetap hijau (`npm run test:aset`) — harusnya tidak tersentuh,
-   dijalankan sebagai penjaga.
+1. `node --check` untuk setiap file JS yang disentuh, dan `node --test tests/*.test.mjs` untuk
+   test baru (`node:test` bawaan Node 22 — tanpa dependensi baru). Glob `tests/*.test.mjs`
+   dipakai karena `node --test tests/` tidak jalan di Node 22.22.0.
+2. `npm run lint` **tidak** dipakai sebagai gate: baseline repo sudah gagal 16.107 error
+   `no-undef` karena file classic-script tidak mendaftarkan global-nya.
+3. Checklist manual via chrome-devtools — lihat "Hasil Verifikasi".
+4. `node scripts/test-aset-data.mjs` sebagai penjaga endpoint (opsional — butuh
+   `$env:N8N_TOKEN`). Tidak disentuh milestone ini; hanya memastikan tidak regresi.
+
+### Hasil Verifikasi (2026-10-01)
+
+Otomatis: **37 pass, 0 fail** (`node --test tests/*.test.mjs`) dari 5 file test —
+`aset-screens` (5), `aset-nav` (9), `aset-router` (7), `aset-emoji` (3), `aset-markup` (10).
+`node --check` hijau untuk `js/aset-screens.js`, `js/aset-nav.js`, `js/simapo.js`,
+`js/simapo-ext.js`, `js/simapo-bast.js`.
+
+Setiap test diuji balik dengan mutasi nyata (ubah satu hal di `index.html`/`js/ui.js`/
+`js/simapo.js`, pastikan test gagal, lalu `git checkout --`): 5 dari 5 mutasi tertangkap —
+ID screen di-rename, `aset-nav.js` tidak dimuat, ID section admin di-rename, loader tidak
+terdefinisi, dan sidebar membuka Katalog alih-alih grid.
+
+Browser (chrome-devtools, server statis `python -m http.server`, origin `127.0.0.1:5173`):
+
+| Yang diperiksa | Hasil |
+|---|---|
+| Kartu per role | admin 16, user biasa 3 (Katalog Aset, Pinjaman Saya, Tiket Kerusakan), role kosong 3 — semua kartu punya `<i class="fas">` |
+| Judul header tiap kartu | 16/16 cocok dengan label kartu, dan section yang tampil persis `aset-sect-<key>` |
+| Tombol kembali | selalu kembali ke grid (`_asetCurrent` jadi `null`), grid tetap 16 kartu |
+| Eager load ke backend nyata | 16/16 loader sukses dalam ~4 detik, `unhandledrejection` = 0 |
+| Fail-soft | `renderGrid` tetap 16 kartu saat 7 loader gagal; ikon ⚠ + `title` "Gagal dimuat: …" muncul benar saat pesan terisi |
+| Gate role | `open('master', {force:true})` oleh user biasa ditolak, `_asetCurrent` tetap `null`, grid 3 kartu |
+| Key tak dikenal | `open('tidak-ada')` tidak menavigasi ke mana pun |
+| ADMIN GUDANG | `switchAdminSection` → panel Aset aktif, grid tampil, `absen_last_admin_section` terhapus, nol nav admin terlihat |
+| Responsif | 1440px = 4 kolom × 4 baris; 1000px = 3 kolom × 6 baris; ≤720px (diuji 500px, batas minimum window) = 2 kolom × 8 baris; tanpa scroll horizontal, tanpa label terpotong |
+| Console | tanpa exception dari kode Aset; satu-satunya error adalah CORS ke webhook n8n dan `favicon.ico` 404 — keduanya artefak origin `127.0.0.1`, bukan regresi |
+| Emoji | 0 emoji di markup Aset + `js/simapo*.js`; panah `→` (U+2192) dipertahankan karena itu bukan emoji |
+
+Milestone 1 selesai.
 
 ## Risiko
 
