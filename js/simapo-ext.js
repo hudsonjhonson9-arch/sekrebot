@@ -39,10 +39,10 @@ window.simapoErrorState = function(elId, message = 'Gagal memuat data dari serve
   if (!el) return;
   el.innerHTML = `
     <div style="text-align:center;padding:26px 16px;color:var(--danger);font-size:12px;line-height:1.7;">
-      <div style="font-size:26px;">⚠️</div>
+      <div style="font-size:26px;"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i></div>
       <div style="margin:8px 0 4px;font-weight:700;color:var(--white)">${message}</div>
       <div style="font-size:11px;color:var(--muted)">Data tidak dapat ditampilkan. Data lama tidak dihapus.</div>
-      <button onclick="window._simapoRetry('${elId}')" style="margin-top:12px;padding:8px 18px;background:rgba(255,255,255,0.08);color:var(--white);border:1px solid rgba(255,255,255,0.15);border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;">🔄 Coba Lagi</button>
+      <button onclick="window._simapoRetry('${elId}')" style="margin-top:12px;padding:8px 18px;background:rgba(255,255,255,0.08);color:var(--white);border:1px solid rgba(255,255,255,0.15);border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;"><i class="fas fa-sync-alt" aria-hidden="true"></i> Coba Lagi</button>
     </div>`;
 };
 
@@ -181,34 +181,34 @@ window.renderAdminSimapoPinjam = function(data) {
   const el = document.getElementById('adminSimapoPinjamList');
   if (!el) return;
   if (!data || data.length === 0) {
-    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px">📭 Tidak ada data peminjaman.</div>`;
+    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-envelope-open-text" aria-hidden="true"></i> Tidak ada data peminjaman.</div>`;
     return;
   }
   el.innerHTML = data.map(item => {
     const st = (item.status || 'MENUNGGU').toUpperCase();
     const isPending = st === 'MENUNGGU';
-    let badge = `<span style="background:var(--warning);color:#000;">⏳ ${st}</span>`;
-    if (st === 'DISETUJUI' || st === 'DIPINJAM') badge = `<span style="background:var(--success);color:#fff;">✅ ${st}</span>`;
-    if (st === 'DITOLAK') badge = `<span style="background:var(--danger);color:#fff;">❌ ${st}</span>`;
-    if (st === 'KEMBALI' || st === 'DIKEMBALIKAN') badge = `<span style="background:rgba(100,180,255,0.3);color:#64b4ff;">📦 ${st}</span>`;
+    let badge = `<span style="background:var(--warning);color:#000;"><i class="fas fa-hourglass-half" aria-hidden="true"></i> ${st}</span>`;
+    if (st === 'DISETUJUI' || st === 'DIPINJAM') badge = `<span style="background:var(--success);color:#fff;"><i class="fas fa-check" aria-hidden="true"></i> ${st}</span>`;
+    if (st === 'DITOLAK') badge = `<span style="background:var(--danger);color:#fff;"><i class="fas fa-times" aria-hidden="true"></i> ${st}</span>`;
+    if (st === 'KEMBALI' || st === 'DIKEMBALIKAN') badge = `<span style="background:rgba(100,180,255,0.3);color:#64b4ff;"><i class="fas fa-box" aria-hidden="true"></i> ${st}</span>`;
 
     return `
       <div style="padding:14px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
           <div>
             <div style="font-weight:800;font-size:14px;color:var(--white)">${item.nama_barang || 'Tanpa Nama'} <span style="font-size:11px; color:var(--gold); font-weight:700;">(x${item.jumlah || 1})</span></div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">👤 ${item.nama_peminjam || 'Pegawai'} &nbsp;·&nbsp; NIP ${item.userid || item.nip_peminjam || '—'}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;"><i class="fas fa-user" aria-hidden="true"></i> ${item.nama_peminjam || 'Pegawai'} &nbsp;·&nbsp; NIP ${item.userid || item.nip_peminjam || '—'}</div>
           </div>
           <div style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;">${badge}</div>
         </div>
         <div style="font-size:12px;color:var(--gold);margin:10px 0 4px;font-style:italic;">"${item.tujuanpeminjaman || item.tujuan || '—'}"</div>
-        <div style="font-size:11px;color:var(--muted);">${item.jenisbarang === 'Habis Pakai' ? `📅 Diminta pd ${item.tanggalmulai}` : `📅 ${item.tanggalmulai} s/d ${item.tanggalselesai}`}</div>
+        <div style="font-size:11px;color:var(--muted);">${item.jenisbarang === 'Habis Pakai' ? `<i class="fas fa-calendar-alt" aria-hidden="true"></i> Diminta pd ${item.tanggalmulai}` : `<i class="fas fa-calendar-alt" aria-hidden="true"></i> ${item.tanggalmulai} s/d ${item.tanggalselesai}`}</div>
         ${isPending ? `
         <div style="display:flex;gap:8px;margin-top:12px;">
-          <button onclick="window.adminSimapoPinjamAction('${item.id}','${item.jenisbarang === 'Habis Pakai' ? 'SELESAI' : 'DIPINJAM'}')" style="flex:1;padding:8px;background:var(--success);color:#fff;border:none;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer;">✅ Setujui</button>
-          <button onclick="window.adminSimapoPinjamAction('${item.id}','DITOLAK')" style="flex:1;padding:8px;background:var(--danger);color:#fff;border:none;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer;">❌ Tolak</button>
+          <button onclick="window.adminSimapoPinjamAction('${item.id}','${item.jenisbarang === 'Habis Pakai' ? 'SELESAI' : 'DIPINJAM'}')" style="flex:1;padding:8px;background:var(--success);color:#fff;border:none;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer;"><i class="fas fa-check" aria-hidden="true"></i> Setujui</button>
+          <button onclick="window.adminSimapoPinjamAction('${item.id}','DITOLAK')" style="flex:1;padding:8px;background:var(--danger);color:#fff;border:none;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer;"><i class="fas fa-times" aria-hidden="true"></i> Tolak</button>
         </div>` : ( (st === 'DISETUJUI' || st === 'DIPINJAM') && item.jenisbarang !== 'Habis Pakai' ? `
-        <button onclick="window.adminSimapoPinjamAction('${item.id}','DIKEMBALIKAN')" style="width:100%;padding:8px;background:rgba(100,180,255,0.2);color:#64b4ff;border:1px solid rgba(100,180,255,0.3);border-radius:8px;font-weight:800;font-size:12px;cursor:pointer;margin-top:12px;">📦 Tandai Kembali</button>
+        <button onclick="window.adminSimapoPinjamAction('${item.id}','DIKEMBALIKAN')" style="width:100%;padding:8px;background:rgba(100,180,255,0.2);color:#64b4ff;border:1px solid rgba(100,180,255,0.3);border-radius:8px;font-weight:800;font-size:12px;cursor:pointer;margin-top:12px;"><i class="fas fa-box" aria-hidden="true"></i> Tandai Kembali</button>
         ` : '')}
       </div>`;
   }).join('');
@@ -220,14 +220,14 @@ window.renderSADipinjam = function(data) {
   if (!el) return;
   const aktif = (data || window._allPinjamData || []).filter(d => (d.status||'').toUpperCase() === 'DIPINJAM');
   if (!aktif.length) {
-    el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted);font-size:11px">✅ Tidak ada barang sedang dipinjam.</div>`;
+    el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted);font-size:11px"><i class="fas fa-check" aria-hidden="true"></i> Tidak ada barang sedang dipinjam.</div>`;
     return;
   }
   el.innerHTML = aktif.map(item => `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);gap:8px;">
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:12px;color:var(--white)">${item.nama_barang || 'Tanpa Nama'} <span style="font-size:10px;color:#60a5fa;font-weight:700;">(×${item.jumlah || 1})</span></div>
-        <div style="font-size:10px;color:var(--muted)">👤 ${item.nama_peminjam || '—'} · ${item.tujuanpeminjaman || item.tujuan || '—'}</div>
+        <div style="font-size:10px;color:var(--muted)"><i class="fas fa-user" aria-hidden="true"></i> ${item.nama_peminjam || '—'} · ${item.tujuanpeminjaman || item.tujuan || '—'}</div>
       </div>
       <div style="font-size:9px;color:var(--muted);text-align:right;white-space:nowrap">${item.tanggalmulai || '—'}</div>
     </div>
@@ -251,11 +251,11 @@ window.adminQRKembaliScan = function() {
           <div style="text-align:left;font-size:13px;line-height:1.8;">
             <b>${unit.nama_barang}</b><br>
             Inventaris: ${unit.nomorinventaris || '—'}<br>
-            <span style="color:#64b4ff;">👤 Dipinjam oleh: ${pa.nama || pa.userid}</span>
+            <span style="color:#64b4ff;"><i class="fas fa-user" aria-hidden="true"></i> Dipinjam oleh: ${pa.nama || pa.userid}</span>
           </div>`,
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: '📦 Kembalikan',
+        confirmButtonText: 'Kembalikan',
         cancelButtonText: 'Batal',
         background: '#1a1d21',
         color: '#fff',
@@ -304,7 +304,7 @@ window._simapoRetryMap['adminSimapoTiketList'] = window.loadAdminSimapoTiket;
 window.renderAdminSimapoTiket = function(data) {
   const el = document.getElementById('adminSimapoTiketList');
   if (!el) return;
-  if (!data || data.length === 0) { el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px">🚨 Tidak ada tiket kerusakan.</div>`; return; }
+  if (!data || data.length === 0) { el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i> Tidak ada tiket kerusakan.</div>`; return; }
   el.innerHTML = data.map(item => {
     const st = (item.status || 'MASUK').toUpperCase();
     const colorMap = { MASUK: 'var(--warning)', DIPROSES: '#64b4ff', SELESAI: 'var(--success)', DITUTUP: 'var(--muted)' };
@@ -315,12 +315,12 @@ window.renderAdminSimapoTiket = function(data) {
           <div style="font-weight:800;font-size:14px;color:var(--white)">${item.judul}</div>
           <div style="font-size:10px;font-weight:800;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,0.05);color:${color};">${st}</div>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-top:6px;">📍 ${item.lokasi || '—'} &nbsp;·&nbsp; 👤 ${item.nama_pelapor || '—'}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;"><i class="fas fa-map-marker-alt" aria-hidden="true"></i> ${item.lokasi || '—'} &nbsp;·&nbsp; <i class="fas fa-user" aria-hidden="true"></i> ${item.nama_pelapor || '—'}</div>
         <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:8px;font-style:italic;">"${item.deskripsi || ''}"</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px;">📅 ${item.createdat}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;"><i class="fas fa-calendar-alt" aria-hidden="true"></i> ${item.createdat}</div>
         ${(st==='MASUK'||st==='DIPROSES') ? `<div style="display:flex;gap:8px;margin-top:12px;">
-          <button onclick="window.adminSimapoTiketAction('${item.id}','DIPROSES')" style="flex:1;padding:8px;background:rgba(100,180,255,0.2);color:#64b4ff;border:1px solid rgba(100,180,255,0.3);border-radius:8px;font-weight:800;font-size:12px;cursor:pointer;">🔧 Proses</button>
-          <button onclick="window.adminSimapoTiketAction('${item.id}','SELESAI')" style="flex:1;padding:8px;background:var(--success);color:#fff;border:none;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer;">✅ Selesai</button>
+          <button onclick="window.adminSimapoTiketAction('${item.id}','DIPROSES')" style="flex:1;padding:8px;background:rgba(100,180,255,0.2);color:#64b4ff;border:1px solid rgba(100,180,255,0.3);border-radius:8px;font-weight:800;font-size:12px;cursor:pointer;"><i class="fas fa-wrench" aria-hidden="true"></i> Proses</button>
+          <button onclick="window.adminSimapoTiketAction('${item.id}','SELESAI')" style="flex:1;padding:8px;background:var(--success);color:#fff;border:none;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer;"><i class="fas fa-check" aria-hidden="true"></i> Selesai</button>
         </div>` : ''}
       </div>`;
   }).join('');
@@ -358,20 +358,20 @@ window._simapoRetryMap['adminSimapoMasterList'] = window.loadAdminSimapoMaster;
 window.renderAdminSimapoMaster = function(data) {
   const el = document.getElementById('adminSimapoMasterList');
   if (!el) return;
-  if (!data || data.length === 0) { el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px">📦 Belum ada data aset.</div>`; return; }
+  if (!data || data.length === 0) { el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-box" aria-hidden="true"></i> Belum ada data aset.</div>`; return; }
   const fmt = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
 
   el.innerHTML = data.map(item => `
     <div data-barang-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);margin-bottom:8px;">
-      <div style="width:40px;height:40px;border-radius:8px;background:rgba(201,168,76,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📦</div>
+      <div style="width:40px;height:40px;border-radius:8px;background:rgba(201,168,76,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;"><i class="fas fa-box" aria-hidden="true"></i></div>
       <div style="flex:1;min-width:0;">
         <div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.nama}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">${item.kodebarang} &nbsp;·&nbsp; Stok: <span style="color:${item.stok_saat_ini > 0 ? 'var(--success)' : 'var(--danger)'}">${item.stok_saat_ini} ${item.satuan}</span></div>
         <div style="font-size:11px;color:var(--gold);margin-top:2px;">${fmt(item.hargasatuan || 0)}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
-        <button onclick="window.showSimapoMasterForm('${item.id}')" style="padding:6px 10px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;">✏️</button>
-        <button onclick="window.deleteSimapoMaster('${item.id}')" style="padding:6px 10px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;">🗑</button>
+        <button onclick="window.showSimapoMasterForm('${item.id}')" style="padding:6px 10px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-edit" aria-hidden="true"></i></button>
+        <button onclick="window.deleteSimapoMaster('${item.id}')" style="padding:6px 10px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-trash" aria-hidden="true"></i></button>
         <button onclick="toggleUnitList('${item.id}', this)" style="padding:6px 10px;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2);border-radius:6px;font-size:10px;cursor:pointer;font-weight:700;">▶ QR</button>
       </div>
     </div>`).join('');
@@ -415,7 +415,7 @@ window.showSimapoMasterForm = async function(id = null) {
   document.getElementById('smfHarga').value = '0';
   document.getElementById('smfSpesifikasi').value = '';
   const titleEl = document.getElementById('smfTitle');
-  if (titleEl) titleEl.textContent = id ? '✏️ Edit Data Aset' : '➕ Tambah Aset Baru';
+  if (titleEl) titleEl.textContent = id ? 'Edit Data Aset' : 'Tambah Aset Baru';
 
   if (id) {
     const item = window._allMasterData.find(b => b.id === id);
@@ -760,21 +760,21 @@ window.toggleUnitList = async function(barangId, btnEl) {
             </div>
             <div style="flex:1;min-width:0;">
               <div style="font-weight:700;font-size:12px;color:var(--white);">${u.nomorinventaris || '—'}</div>
-              <div style="font-size:10px;color:var(--muted);">Seri: ${u.nomorseri || '—'} · ${isPinjam ? '🔴 Dipinjam' : '✅ Tersedia'}</div>
+              <div style="font-size:10px;color:var(--muted);">Seri: ${u.nomorseri || '—'} · ${isPinjam ? '<i class="fas fa-circle" aria-hidden="true"></i> Dipinjam' : '<i class="fas fa-check" aria-hidden="true"></i> Tersedia'}</div>
             </div>
             <div style="flex-shrink:0;display:flex;gap:4px;align-items:center;">
               ${hasQR
-                ? `<span style="font-size:10px;color:#22c55e;font-weight:700;">✅ QR</span>
-                   <button onclick="viewQRCode('${u.id}')" style="padding:4px 8px;background:rgba(255,255,255,0.06);border:none;border-radius:4px;color:var(--muted);font-size:10px;cursor:pointer;" title="Lihat QR">📱</button>
-                   <button onclick="generateQRCode('${u.id}','${u.nomorinventaris || u.id}')" style="padding:4px 8px;background:rgba(255,255,255,0.06);border:none;border-radius:4px;color:var(--muted);font-size:10px;cursor:pointer;" title="Regenerate">🔄</button>`
-                : `<span style="font-size:10px;color:var(--muted);">❌</span>
+                ? `<span style="font-size:10px;color:#22c55e;font-weight:700;"><i class="fas fa-check" aria-hidden="true"></i> QR</span>
+                   <button onclick="viewQRCode('${u.id}')" style="padding:4px 8px;background:rgba(255,255,255,0.06);border:none;border-radius:4px;color:var(--muted);font-size:10px;cursor:pointer;" title="Lihat QR"><i class="fas fa-mobile-alt" aria-hidden="true"></i></button>
+                   <button onclick="generateQRCode('${u.id}','${u.nomorinventaris || u.id}')" style="padding:4px 8px;background:rgba(255,255,255,0.06);border:none;border-radius:4px;color:var(--muted);font-size:10px;cursor:pointer;" title="Regenerate"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>`
+                : `<span style="font-size:10px;color:var(--muted);"><i class="fas fa-times" aria-hidden="true"></i></span>
                    <button onclick="generateQRCode('${u.id}','${u.nomorinventaris || u.id}')" style="padding:4px 8px;background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.3);border-radius:4px;color:var(--gold);font-size:10px;cursor:pointer;font-weight:700;">Generate QR</button>`
               }
             </div>
           </div>`;
         }).join('')}
         <div style="padding:8px 14px;background:rgba(255,255,255,0.01);text-align:center;border-top:1px solid rgba(255,255,255,0.04);">
-          <button onclick="generateAllQR('${barangId}')" style="padding:6px 14px;background:rgba(201,168,76,0.1);border:1px dashed rgba(201,168,76,0.3);border-radius:6px;color:var(--gold);font-size:11px;cursor:pointer;font-weight:700;">⚡ Generate All QR</button>
+          <button onclick="generateAllQR('${barangId}')" style="padding:6px 14px;background:rgba(201,168,76,0.1);border:1px dashed rgba(201,168,76,0.3);border-radius:6px;color:var(--gold);font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-bolt" aria-hidden="true"></i> Generate All QR</button>
         </div>
       </div>
     `;
@@ -810,7 +810,7 @@ window.generateQRCode = async function(unitasetId, label) {
           </div>
           <div style="font-size:11px;color:var(--muted);word-break:break-all;margin-bottom:8px;">${payload}</div>
           <button onclick="downloadQRImage('${payload}','${label}')" style="padding:8px 20px;background:#22c55e;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;">
-            📥 Download PNG
+            <i class="fas fa-download"></i> Download PNG
           </button>
         </div>
       `,
@@ -971,7 +971,7 @@ window.loadStandarHarga = async function(forceApi = false) {
 
   const data = window._shData;
   if (!data || !data.length) {
-    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px">📋 Klik "Import Excel" untuk memuat standar harga.</div>`;
+    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-clipboard-list" aria-hidden="true"></i> Klik "Import Excel" untuk memuat standar harga.</div>`;
     return;
   }
   el.innerHTML = data.map(i => `
@@ -1046,7 +1046,7 @@ window.renderPenerimaanItems = function() {
         <div style="flex:0 0 60px;text-align:center;font-size:11px;color:var(--muted);">${item.satuan}</div>
         <div style="flex:0 0 100px;text-align:right;font-size:12px;color:var(--gold);">${item.harga ? 'Rp '+fmt(item.harga) : '—'}</div>
         <div style="flex:0 0 110px;text-align:right;font-size:12px;font-weight:700;color:var(--white);">Rp ${fmt(item.total)}</div>
-        <button onclick="removePenerimaanItem(${i})" style="padding:4px 8px;background:rgba(255,60,60,0.15);color:var(--danger);border:none;border-radius:4px;cursor:pointer;font-size:11px;">✕</button>
+        <button onclick="removePenerimaanItem(${i})" style="padding:4px 8px;background:rgba(255,60,60,0.15);color:var(--danger);border:none;border-radius:4px;cursor:pointer;font-size:11px;"><i class="fas fa-times" aria-hidden="true"></i></button>
       </div>`;
     }).join('');
   }
@@ -1076,18 +1076,18 @@ window.loadAdminPenerimaan = async function(force = false) {
 
   if (fetchError) { window.simapoErrorState('adminPenerimaanList', 'Gagal memuat data penerimaan barang.'); return; }
   if (!data || data.length === 0) {
-    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px">📥 Belum ada penerimaan barang.</div>`;
+    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-download" aria-hidden="true"></i> Belum ada penerimaan barang.</div>`;
     return;
   }
   el.innerHTML = data.map(item => {
     const st = item.status_spj || '';
-    const stBadge = st === 'sudah_lapor' ? '<span style="color:var(--success)">✅ '+st+'</span>' : st === 'sudah_di_map' ? '<span style="color:#64b4ff">📁 '+st+'</span>' : '<span style="color:var(--warning)">⏳ '+st+'</span>';
+    const stBadge = st === 'sudah_lapor' ? '<span style="color:var(--success)"><i class="fas fa-check" aria-hidden="true"></i> '+st+'</span>' : st === 'sudah_di_map' ? '<span style="color:#64b4ff"><i class="fas fa-folder" aria-hidden="true"></i> '+st+'</span>' : '<span style="color:var(--warning)"><i class="fas fa-hourglass-half" aria-hidden="true"></i> '+st+'</span>';
     return `
     <div style="padding:14px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
         <div>
           <div style="font-weight:800;font-size:14px;color:var(--white)">${item.no_nota || '—'}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">🏢 ${item.penyedia || '—'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;"><i class="fas fa-building" aria-hidden="true"></i> ${item.penyedia || '—'}</div>
           <div style="font-size:11px;color:var(--gold);margin-top:2px;">${item.total_nilai ? new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(item.total_nilai) : '—'}</div>
         </div>
         <div style="text-align:right;">
@@ -1095,7 +1095,7 @@ window.loadAdminPenerimaan = async function(force = false) {
           <div style="font-size:10px;font-weight:700;margin-top:2px;">${stBadge}</div>
         </div>
       </div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;">📄 SP2D: ${item.no_sp2d || '—'} ${item.kontrak ? '· '+item.kontrak : ''}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"><i class="fas fa-file-alt" aria-hidden="true"></i> SP2D: ${item.no_sp2d || '—'} ${item.kontrak ? '· '+item.kontrak : ''}</div>
     </div>`;
   }).join('');
 };
@@ -1163,7 +1163,7 @@ window.loadAdminPemeliharaan = async function(force = false) {
 
   if (fetchError) { window.simapoErrorState('adminPemeliharaanList', 'Gagal memuat data pemeliharaan.'); return; }
   if (!data || data.length === 0) {
-    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px">🔧 Belum ada data pemeliharaan.</div>`;
+    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-wrench" aria-hidden="true"></i> Belum ada data pemeliharaan.</div>`;
     return;
   }
   el.innerHTML = data.map(item => `
@@ -1171,15 +1171,15 @@ window.loadAdminPemeliharaan = async function(force = false) {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
         <div>
           <div style="font-weight:800;font-size:14px;color:var(--white)">${item.nama_barang || item.namabarang || '—'}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">🛠️ ${item.jenis_pemeliharaan || item.jenis||'—'}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">🏪 ${item.nama_penyedia || item.penyedia||'—'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;"><i class="fas fa-tools" aria-hidden="true"></i> ${item.jenis_pemeliharaan || item.jenis||'—'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;"><i class="fas fa-store" aria-hidden="true"></i> ${item.nama_penyedia || item.penyedia||'—'}</div>
         </div>
         <div style="text-align:right;">
           <div style="font-size:10px;color:var(--muted);">${item.tgl_pemeliharaan || item.tanggal||'—'}</div>
           <div style="font-size:11px;color:var(--gold);margin-top:2px;">${item.biaya ? new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(item.biaya) : '—'}</div>
         </div>
       </div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;">📝 ${item.keterangan || ''}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"><i class="fas fa-file-alt" aria-hidden="true"></i> ${item.keterangan || ''}</div>
     </div>
   `).join('');
 };
@@ -1231,7 +1231,7 @@ window.loadAdminBKU = async function(force = false) {
 
   if (fetchError) { window.simapoErrorState('adminBKUList', 'Gagal memuat data Buku Kas Umum.'); return; }
   if (!data || data.length === 0) {
-    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px">💰 Belum ada data BKU.</div>`;
+    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-money-bill" aria-hidden="true"></i> Belum ada data BKU.</div>`;
     return;
   }
   el.innerHTML = data.map(item => `
@@ -1240,7 +1240,7 @@ window.loadAdminBKU = async function(force = false) {
         <div style="flex:1;min-width:0;">
           <div style="display:flex;gap:8px;font-size:11px;color:var(--muted);">
             <span>#${item.no_urut || '—'}</span>
-            <span>📅 ${item.tgl || item.tanggal || '—'}</span>
+            <span><i class="fas fa-calendar-alt" aria-hidden="true"></i> ${item.tgl || item.tanggal || '—'}</span>
             <span>${item.kode_rekening || ''}</span>
           </div>
           <div style="font-size:12px;color:var(--white);margin-top:2px;font-weight:600;">${item.uraian || ''}</div>
@@ -1668,20 +1668,20 @@ window.renderAdminPKS = function(data) {
   const el = document.getElementById('adminPKSList');
   if (!el) return;
   if (!data || data.length === 0) {
-    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px">📐 Belum ada data.</div>';
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-drafting-compass" aria-hidden="true"></i> Belum ada data.</div>';
     return;
   }
   el.innerHTML = data.map(item => {
     const parentInfo = item.program_kode ? '[' + item.program_kode + '] ' : item.kegiatan_kode ? '[' + item.kegiatan_kode + '] ' : '';
     return '<div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);margin-bottom:8px;">' +
-      '<div style="width:36px;height:36px;border-radius:8px;background:rgba(201,168,76,0.12);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">📐</div>' +
+      '<div style="width:36px;height:36px;border-radius:8px;background:rgba(201,168,76,0.12);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;"><i class="fas fa-drafting-compass" aria-hidden="true"></i></div>' +
       '<div style="flex:1;min-width:0;">' +
         '<div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">[' + item.kode + '] ' + item.nama + '</div>' +
         (parentInfo ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + parentInfo + '</div>' : '') +
       '</div>' +
       '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">' +
-        '<button onclick="window.showPKSForm(\'' + item.id + '\')" style="padding:6px 10px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;">✏️</button>' +
-        '<button onclick="window.deletePKS(\'' + item.id + '\')" style="padding:6px 10px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;">🗑</button>' +
+        '<button onclick="window.showPKSForm(\'' + item.id + '\')" style="padding:6px 10px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-edit" aria-hidden="true"></i></button>' +
+        '<button onclick="window.deletePKS(\'' + item.id + '\')" style="padding:6px 10px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-trash" aria-hidden="true"></i></button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -1715,7 +1715,7 @@ window.showPKSForm = async function(id = null) {
   }
 
   const { value: formValues } = await Swal.fire({
-    title: (id ? '✏️ Edit ' : '➕ Tambah ') + labels[level],
+    title: (id ? 'Edit ' : 'Tambah ') + labels[level],
     html:
       (level !== 'program' ? '<div style="margin-bottom:10px"><select id="pksFormParent" class="form-input" style="width:100%"><option value="">-- Pilih Parent --</option>' + parentOpts + '</select></div>' : '') +
       '<input id="pksFormKode" class="form-input" placeholder="Kode (contoh: 1.01.01)" value="' + kode + '" style="margin-bottom:10px;width:100%">' +

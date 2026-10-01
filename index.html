@@ -1330,12 +1330,12 @@
     <!-- ══ TAB SIMAPO ══ -->
     <div class="panel" id="panel-simapo">
       <div class="rekap-header" style="margin-bottom: 12px;">
-        <div class="rekap-title">📦 Manajemen Aset</div>
+        <div class="rekap-title"><i class="fas fa-box" aria-hidden="true"></i> Manajemen Aset</div>
       </div>
       
       <!-- Filter Instansi SIMAPO (Only visible to Superadmin) -->
       <div id="simapoInstansiSection" style="display: none; margin-bottom: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
-        <div class="form-label" style="margin-bottom: 4px; font-weight:800; color:var(--gold);">🏢 Pilih Instansi (Superadmin)</div>
+        <div class="form-label" style="margin-bottom: 4px; font-weight:800; color:var(--gold);"><i class="fas fa-building" aria-hidden="true"></i> Pilih Instansi (Superadmin)</div>
         <select id="simapoInstansiSelect" class="form-input" style="width: 100%; height: 38px; cursor: pointer; background: var(--card); color: var(--white); border: 1px solid var(--border); border-radius: 12px;"
           onchange="onSimapoInstansiChange()">
           <option value="">— Pilih Instansi —</option>
@@ -1392,7 +1392,7 @@
               </div>
             </div>
             <button class="btn-primary" id="btnSimapoSubmitPinjam" onclick="if(typeof simapoSubmitPinjam === 'function') simapoSubmitPinjam()" style="width:100%">
-              <div class="btn-inner"><span>📤</span> Ajukan Pinjaman</div>
+              <div class="btn-inner"><span><i class="fas fa-upload" aria-hidden="true"></i></span> Ajukan Pinjaman</div>
             </button>
           </div>
         </div>
@@ -1424,7 +1424,7 @@
             <input type="text" class="form-input" id="simapoTiketLokasi" placeholder="Misal: Ruang Rapat Lt 2">
           </div>
           <button class="btn-primary" onclick="if(typeof simapoSubmitTiket === 'function') simapoSubmitTiket()" style="background:var(--danger); width:100%">
-            <div class="btn-inner"><span>🚨</span> Kirim Laporan Kerusakan</div>
+            <div class="btn-inner"><span><i class="fas fa-exclamation-triangle" aria-hidden="true"></i></span> Kirim Laporan Kerusakan</div>
           </button>
         </div>
       </div>
@@ -1450,17 +1450,17 @@
         <div id="aset-sect-pinjam" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>📋 Permintaan Peminjaman</span>
-              <button class="btn-sm-admin" onclick="loadAdminSimapoPinjam()" style="background:var(--primary)">🔄</button>
+              <span><i class="fas fa-clipboard-list" aria-hidden="true"></i> Permintaan Peminjaman</span>
+              <button class="btn-sm-admin" onclick="loadAdminSimapoPinjam()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
             </div>
             <div style="display:flex;gap:6px;margin:10px 0;flex-wrap:wrap;">
-              <button onclick="filterSAPinjam('MENUNGGU',this)" class="sa-filter-btn active" data-filter="MENUNGGU">⏳ Pending</button>
-              <button onclick="filterSAPinjam('DISETUJUI',this)" class="sa-filter-btn">✅ Disetujui</button>
-              <button onclick="filterSAPinjam('DIPINJAM',this)" class="sa-filter-btn" style="border-color:rgba(59,130,246,0.3);color:#60a5fa;">📤 Dipinjam</button>
-              <button onclick="filterSAPinjam('DITOLAK',this)" class="sa-filter-btn">❌ Ditolak</button>
-              <button onclick="filterSAPinjam('KEMBALI',this)" class="sa-filter-btn">📦 Kembali</button>
-              <button onclick="filterSAPinjam('',this)" class="sa-filter-btn">🔍 Semua</button>
-              <button onclick="adminQRKembaliScan()" class="sa-filter-btn" style="border-color:rgba(100,180,255,0.3);color:#64b4ff;">📷 Scan QR Kembali</button>
+              <button onclick="filterSAPinjam('MENUNGGU',this)" class="sa-filter-btn active" data-filter="MENUNGGU"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Pending</button>
+              <button onclick="filterSAPinjam('DISETUJUI',this)" class="sa-filter-btn"><i class="fas fa-check" aria-hidden="true"></i> Disetujui</button>
+              <button onclick="filterSAPinjam('DIPINJAM',this)" class="sa-filter-btn" style="border-color:rgba(59,130,246,0.3);color:#60a5fa;"><i class="fas fa-upload" aria-hidden="true"></i> Dipinjam</button>
+              <button onclick="filterSAPinjam('DITOLAK',this)" class="sa-filter-btn"><i class="fas fa-times" aria-hidden="true"></i> Ditolak</button>
+              <button onclick="filterSAPinjam('KEMBALI',this)" class="sa-filter-btn"><i class="fas fa-box" aria-hidden="true"></i> Kembali</button>
+              <button onclick="filterSAPinjam('',this)" class="sa-filter-btn"><i class="fas fa-search" aria-hidden="true"></i> Semua</button>
+              <button onclick="adminQRKembaliScan()" class="sa-filter-btn" style="border-color:rgba(100,180,255,0.3);color:#64b4ff;"><i class="fas fa-camera" aria-hidden="true"></i> Scan QR Kembali</button>
             </div>
             <style>.sa-filter-btn{padding:4px 10px;font-size:11px;font-weight:700;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;transition:all .2s;font-family:inherit;}.sa-filter-btn.active{background:rgba(201,168,76,0.15);color:var(--gold);border-color:rgba(201,168,76,0.4);}</style>
             <div id="adminSimapoPinjamList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
@@ -1468,7 +1468,7 @@
           <!-- Kartu Barang Sedang Dipinjam -->
           <div class="card glass-card" id="adminSimapoDipinjamCard" style="margin-top:12px">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>📤 Barang Sedang Dipinjam</span>
+              <span><i class="fas fa-upload" aria-hidden="true"></i> Barang Sedang Dipinjam</span>
             </div>
             <div id="adminSimapoDipinjamList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:30px;border-radius:8px"></div></div></div>
           </div>
@@ -1478,8 +1478,8 @@
         <div id="aset-sect-tiket" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>🚨 Tiket Kerusakan Aset</span>
-              <button class="btn-sm-admin" onclick="loadAdminSimapoTiket()" style="background:var(--primary)">🔄</button>
+              <span><i class="fas fa-exclamation-triangle" aria-hidden="true"></i> Tiket Kerusakan Aset</span>
+              <button class="btn-sm-admin" onclick="loadAdminSimapoTiket()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
             </div>
             <div id="adminSimapoTiketList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
           </div>
@@ -1489,15 +1489,15 @@
         <div id="aset-sect-master" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>🗃️ Data Master Aset</span>
+              <span><i class="fas fa-archive" aria-hidden="true"></i> Data Master Aset</span>
               <div style="display:flex;gap:6px;">
-                <button class="btn-sm-admin" onclick="loadAdminSimapoMaster()" style="background:var(--primary)">🔄</button>
+                <button class="btn-sm-admin" onclick="loadAdminSimapoMaster()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
               </div>
             </div>
             <button class="btn-primary" onclick="showSimapoMasterForm()" style="width:100%;margin:10px 0;background:rgba(255,255,255,0.04);border:1px dashed var(--gold);color:var(--gold);">
-              <div class="btn-inner"><span>➕</span> Tambah Aset Baru</div>
+              <div class="btn-inner"><span><i class="fas fa-plus" aria-hidden="true"></i></span> Tambah Aset Baru</div>
             </button>
-            <input type="text" id="saSearchMaster" class="form-input" placeholder="🔍 Cari nama atau kode aset..." oninput="filterSAMaster(this.value)" style="margin-bottom:10px;">
+            <input type="text" id="saSearchMaster" class="form-input" placeholder="<i class="fas fa-search" aria-hidden="true"></i> Cari nama atau kode aset..." oninput="filterSAMaster(this.value)" style="margin-bottom:10px;">
             <div id="adminSimapoMasterList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
           </div>
         </div>
@@ -1505,7 +1505,7 @@
         <!-- [TAB] MUTASI STOK -->
         <div id="aset-sect-mutasi" class="aset-sect">
           <div class="card glass-card" style="margin-bottom:12px;">
-            <div class="card-title">🔄 Catat Mutasi Stok (Masuk / Keluar)</div>
+            <div class="card-title"><i class="fas fa-sync-alt" aria-hidden="true"></i> Catat Mutasi Stok (Masuk / Keluar)</div>
             <div class="form-group" style="margin-bottom:10px;">
               <label class="form-label">Pilih Barang</label>
               <select class="form-input" id="mutasiBarangId">
@@ -1516,10 +1516,10 @@
               <div class="form-group">
                 <label class="form-label">Jenis Mutasi</label>
                 <select class="form-input" id="mutasiJenis">
-                  <option value="MASUK">📥 Barang Masuk</option>
-                  <option value="KELUAR">📤 Barang Keluar</option>
-                  <option value="TRANSFER">🔁 Transfer Bidang</option>
-                  <option value="RUSAK">⚠️ Penghapusan/Rusak</option>
+                  <option value="MASUK"><i class="fas fa-download" aria-hidden="true"></i> Barang Masuk</option>
+                  <option value="KELUAR"><i class="fas fa-upload" aria-hidden="true"></i> Barang Keluar</option>
+                  <option value="TRANSFER"><i class="fas fa-exchange-alt" aria-hidden="true"></i> Transfer Bidang</option>
+                  <option value="RUSAK"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i> Penghapusan/Rusak</option>
                 </select>
               </div>
               <div class="form-group">
@@ -1532,13 +1532,13 @@
               <textarea class="form-textarea" id="mutasiKet" placeholder="Sumber pengadaan, nomor SK, atau catatan lainnya..." style="min-height:60px;"></textarea>
             </div>
             <button class="btn-primary" onclick="submitMutasiBarang()" style="width:100%;">
-              <div class="btn-inner"><span>💾</span> Simpan Mutasi</div>
+              <div class="btn-inner"><span><i class="fas fa-save" aria-hidden="true"></i></span> Simpan Mutasi</div>
             </button>
           </div>
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>📜 Riwayat Mutasi</span>
-              <button class="btn-sm-admin" onclick="loadMutasiRiwayat()" style="background:var(--primary)">🔄</button>
+              <span><i class="fas fa-history" aria-hidden="true"></i> Riwayat Mutasi</span>
+              <button class="btn-sm-admin" onclick="loadMutasiRiwayat()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
             </div>
             <div id="mutasiRiwayatList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
           </div>
@@ -1547,13 +1547,13 @@
         <!-- [TAB] STOK OPNAME -->
         <div id="aset-sect-opname" class="aset-sect">
           <div class="card glass-card" style="margin-bottom:12px;">
-            <div class="card-title">📊 Stok Opname — Verifikasi Fisik Aset</div>
+            <div class="card-title"><i class="fas fa-chart-bar" aria-hidden="true"></i> Stok Opname — Verifikasi Fisik Aset</div>
             <div style="background:rgba(255,165,0,0.1);border:1px solid rgba(255,165,0,0.3);border-radius:10px;padding:10px;margin-bottom:14px;font-size:11px;color:rgba(255,165,0,0.9);">
-              ⚠️ Stok Opname akan membandingkan stok sistem dengan stok fisik yang Anda masukkan. Pastikan data sudah dihitung dengan benar sebelum disimpan.
+              <i class="fas fa-exclamation-triangle" aria-hidden="true"></i> Stok Opname akan membandingkan stok sistem dengan stok fisik yang Anda masukkan. Pastikan data sudah dihitung dengan benar sebelum disimpan.
             </div>
             <div id="opnameFormList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
             <button class="btn-primary" onclick="submitStokOpname()" style="width:100%;margin-top:14px;">
-              <div class="btn-inner"><span>✅</span> Simpan Hasil Opname</div>
+              <div class="btn-inner"><span><i class="fas fa-check" aria-hidden="true"></i></span> Simpan Hasil Opname</div>
             </button>
           </div>
         </div>
@@ -1562,13 +1562,13 @@
         <div id="aset-sect-kat" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>🏷️ Manajemen Kategori Aset</span>
-              <button class="btn-sm-admin" onclick="loadSimapoKategori(true)" style="background:var(--primary)">🔄</button>
+              <span><i class="fas fa-tags" aria-hidden="true"></i> Manajemen Kategori Aset</span>
+              <button class="btn-sm-admin" onclick="loadSimapoKategori(true)" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
             </div>
             <div style="display:flex;gap:8px;margin:10px 0;">
               <input class="form-input" type="text" id="katNamaInput" placeholder="Nama kategori baru..." style="flex:1;" onkeyup="if(event.key === 'Enter') addSimapoKategori()">
               <button class="btn-primary" onclick="addSimapoKategori()" style="padding:0 16px;width:auto;">
-                <div class="btn-inner"><span>➕</span></div>
+                <div class="btn-inner"><span><i class="fas fa-plus" aria-hidden="true"></i></span></div>
               </button>
             </div>
             <div id="adminSimapoKatList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
@@ -1579,19 +1579,19 @@
         <div id="aset-sect-standar-harga" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>📋 Standar Harga</span>
+              <span><i class="fas fa-clipboard-list" aria-hidden="true"></i> Standar Harga</span>
               <div style="display:flex;gap:6px;">
-                <button class="btn-sm-admin" onclick="importStandarHargaExcel()" style="background:rgba(34,197,94,0.2);">📤 Import Excel</button>
-                <button class="btn-sm-admin" onclick="loadStandarHarga()" style="background:var(--primary)">🔄</button>
+                <button class="btn-sm-admin" onclick="importStandarHargaExcel()" style="background:rgba(34,197,94,0.2);"><i class="fas fa-upload" aria-hidden="true"></i> Import Excel</button>
+                <button class="btn-sm-admin" onclick="loadStandarHarga()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
               </div>
             </div>
             <input type="file" id="shExcelFile" style="display:none" accept=".xlsx,.xls" onchange="parseStandarHargaFile(this)">
             <div style="margin:10px 0;">
-              <input type="text" class="form-input" id="shSearch" placeholder="🔍 Cari barang atau harga..." oninput="filterStandarHarga(this.value)">
+              <input type="text" class="form-input" id="shSearch" placeholder="<i class="fas fa-search" aria-hidden="true"></i> Cari barang atau harga..." oninput="filterStandarHarga(this.value)">
             </div>
             <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">Barang pakai habis akan otomatis terisi harganya saat input Penerimaan Barang.</div>
             <div id="adminStandarHargaList">
-              <div style="text-align:center;padding:30px;color:var(--muted);font-size:12px">📋 Klik "Import Excel" untuk memuat standar harga.</div>
+              <div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-clipboard-list" aria-hidden="true"></i> Klik "Import Excel" untuk memuat standar harga.</div>
             </div>
           </div>
         </div>
@@ -1600,8 +1600,8 @@
         <div id="aset-sect-penerimaan" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>📥 Penerimaan Barang</span>
-              <button class="btn-sm-admin" onclick="loadAdminPenerimaan()" style="background:var(--primary)">🔄</button>
+              <span><i class="fas fa-download" aria-hidden="true"></i> Penerimaan Barang</span>
+              <button class="btn-sm-admin" onclick="loadAdminPenerimaan()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
             </div>
 
             <!-- Header Form -->
@@ -1626,7 +1626,7 @@
 
             <!-- Detail Items Table -->
             <div style="margin:14px 0;">
-              <div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:8px;">📋 Daftar Barang</div>
+              <div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:8px;"><i class="fas fa-clipboard-list" aria-hidden="true"></i> Daftar Barang</div>
               <div style="display:grid;grid-template-columns:3fr 1fr 1.5fr 1fr 80px;gap:6px;align-items:end;margin-bottom:8px;">
                 <div class="form-group" style="margin:0;">
                   <label class="form-label">Nama Barang</label>
@@ -1645,7 +1645,7 @@
                   <label class="form-label">Harga Satuan</label>
                   <input class="form-input" id="ptdHarga" type="number" placeholder="0">
                 </div>
-                <button class="btn-sm-admin" onclick="addPenerimaanItem()" style="background:var(--success);height:38px;align-self:end;">➕</button>
+                <button class="btn-sm-admin" onclick="addPenerimaanItem()" style="background:var(--success);height:38px;align-self:end;"><i class="fas fa-plus" aria-hidden="true"></i></button>
               </div>
             </div>
 
@@ -1659,7 +1659,7 @@
             </div>
 
             <button class="btn-primary" onclick="savePenerimaan()" style="width:100%;">
-              <div class="btn-inner"><span>💾</span> Simpan Penerimaan Barang</div>
+              <div class="btn-inner"><span><i class="fas fa-save" aria-hidden="true"></i></span> Simpan Penerimaan Barang</div>
             </button>
             <div style="margin-top:14px;"><div id="adminPenerimaanList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div></div>
           </div>
@@ -1669,8 +1669,8 @@
         <div id="aset-sect-pemeliharaan" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>🔧 Pemeliharaan Aset</span>
-              <button class="btn-sm-admin" onclick="loadAdminPemeliharaan()" style="background:var(--primary)">🔄</button>
+              <span><i class="fas fa-wrench" aria-hidden="true"></i> Pemeliharaan Aset</span>
+              <button class="btn-sm-admin" onclick="loadAdminPemeliharaan()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
             </div>
 
             <!-- Form Input -->
@@ -1690,7 +1690,7 @@
               </div>
             </div>
             <button class="btn-primary" onclick="savePemeliharaan()" style="width:100%;">
-              <div class="btn-inner"><span>💾</span> Simpan Pemeliharaan</div>
+              <div class="btn-inner"><span><i class="fas fa-save" aria-hidden="true"></i></span> Simpan Pemeliharaan</div>
             </button>
             <div style="margin-top:14px;"><div id="adminPemeliharaanList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div></div>
           </div>
@@ -1700,15 +1700,15 @@
         <div id="aset-sect-pks" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>📐 Master Program / Kegiatan / Subkegiatan</span>
+              <span><i class="fas fa-drafting-compass" aria-hidden="true"></i> Master Program / Kegiatan / Subkegiatan</span>
               <div style="display:flex;gap:6px;">
-                <button class="btn-sm-admin" onclick="loadAdminPKS()" style="background:var(--primary)">🔄</button>
+                <button class="btn-sm-admin" onclick="loadAdminPKS()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
               </div>
             </div>
             <div id="pksLevelBar" style="display:flex;gap:8px;margin:14px 0;">
-              <button class="pks-level-btn active" data-level="program" onclick="switchPKSLevel('program',this)">📁 Program</button>
-              <button class="pks-level-btn" data-level="kegiatan" onclick="switchPKSLevel('kegiatan',this)">📂 Kegiatan</button>
-              <button class="pks-level-btn" data-level="subkegiatan" onclick="switchPKSLevel('subkegiatan',this)">📄 Subkegiatan</button>
+              <button class="pks-level-btn active" data-level="program" onclick="switchPKSLevel('program',this)"><i class="fas fa-folder" aria-hidden="true"></i> Program</button>
+              <button class="pks-level-btn" data-level="kegiatan" onclick="switchPKSLevel('kegiatan',this)"><i class="fas fa-folder-open" aria-hidden="true"></i> Kegiatan</button>
+              <button class="pks-level-btn" data-level="subkegiatan" onclick="switchPKSLevel('subkegiatan',this)"><i class="fas fa-file-alt" aria-hidden="true"></i> Subkegiatan</button>
             </div>
             <style>
               .pks-level-btn{padding:6px 14px;font-size:12px;font-weight:700;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;transition:all .2s;font-family:inherit;}
@@ -1716,14 +1716,14 @@
               .pks-level-btn:hover{color:var(--white);background:rgba(255,255,255,0.08);}
             </style>
             <button class="btn-primary" onclick="showPKSForm()" style="width:100%;margin-bottom:12px;background:rgba(255,255,255,0.04);border:1px dashed var(--gold);color:var(--gold);">
-              <div class="btn-inner"><span>➕</span> Tambah Baru</div>
+              <div class="btn-inner"><span><i class="fas fa-plus" aria-hidden="true"></i></span> Tambah Baru</div>
             </button>
             <div id="pksParentSelectWrap" style="display:none;margin-bottom:10px;">
               <select class="form-input" id="pksParentSelect">
                 <option value="">-- Pilih Parent --</option>
               </select>
             </div>
-            <input type="text" id="pksSearch" class="form-input" placeholder="🔍 Cari kode atau nama..." oninput="filterPKS(this.value)" style="margin-bottom:10px;">
+            <input type="text" id="pksSearch" class="form-input" placeholder="<i class="fas fa-search" aria-hidden="true"></i> Cari kode atau nama..." oninput="filterPKS(this.value)" style="margin-bottom:10px;">
             <div id="adminPKSList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
           </div>
         </div>
@@ -1732,8 +1732,8 @@
         <div id="aset-sect-pengaturan" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>⚙️ Pengaturan Aset</span>
-              <button class="btn-sm-admin" onclick="loadSAPengaturan()" style="background:var(--primary)">🔄</button>
+              <span><i class="fas fa-cog" aria-hidden="true"></i> Pengaturan Aset</span>
+              <button class="btn-sm-admin" onclick="loadSAPengaturan()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
             </div>
             <div style="font-size:10px;color:var(--muted);margin-bottom:10px;">Data Pihak Pertama untuk BAST. Mode Sekda dipakai saat Pihak Kedua = NIP Sekda; selain itu mode Kepala (NIP di bawah).</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -1746,14 +1746,14 @@
               <div class="form-group" style="grid-column:1/-1;"><label class="form-label">Alamat Pihak Pertama</label><input class="form-input" id="setP1Alamat" placeholder="Waikabubak"></div>
             </div>
             <button class="btn-primary" onclick="saveSAPengaturan()" style="width:100%;margin-top:12px;">
-              <div class="btn-inner"><span>💾</span> Simpan Pengaturan</div>
+              <div class="btn-inner"><span><i class="fas fa-save" aria-hidden="true"></i></span> Simpan Pengaturan</div>
             </button>
             <hr style="border-color:rgba(255,255,255,0.08);margin:18px 0;">
-            <div class="form-label" style="color:#f87171;">⚠️ Zona Bahaya</div>
+            <div class="form-label" style="color:#f87171;"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i> Zona Bahaya</div>
             <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Kosongkan seluruh data aset instansi ini (katalog + unit + riwayat transaksi yang merujuknya). Pegawai, ruangan, kategori, pengaturan, dan arsip BAST TIDAK terhapus.</div>
             <div style="display:flex;gap:8px;">
               <input class="form-input" id="kosongkanKonfirmasi" placeholder="Ketik HAPUS untuk mengaktifkan">
-              <button class="btn-sm-admin" onclick="kosongkanAset()" style="background:rgba(248,113,113,0.2);color:#f87171;white-space:nowrap;">🗑 Kosongkan</button>
+              <button class="btn-sm-admin" onclick="kosongkanAset()" style="background:rgba(248,113,113,0.2);color:#f87171;white-space:nowrap;"><i class="fas fa-trash" aria-hidden="true"></i> Kosongkan</button>
             </div>
           </div>
         </div>
@@ -1762,11 +1762,11 @@
         <div id="aset-sect-bku" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>💰 Buku Kas Umum</span>
+              <span><i class="fas fa-money-bill" aria-hidden="true"></i> Buku Kas Umum</span>
               <div style="display:flex;gap:6px;">
-                <button class="btn-sm-admin" onclick="exportBKU()" style="background:rgba(59,130,246,0.2);">📥 Export BKU</button>
-                <button class="btn-sm-admin" onclick="document.getElementById('bkuExcelFile').click()" style="background:rgba(34,197,94,0.2);">📤 Import Excel</button>
-                <button class="btn-sm-admin" onclick="loadAdminBKU()" style="background:var(--primary)">🔄</button>
+                <button class="btn-sm-admin" onclick="exportBKU()" style="background:rgba(59,130,246,0.2);"><i class="fas fa-download" aria-hidden="true"></i> Export BKU</button>
+                <button class="btn-sm-admin" onclick="document.getElementById('bkuExcelFile').click()" style="background:rgba(34,197,94,0.2);"><i class="fas fa-upload" aria-hidden="true"></i> Import Excel</button>
+                <button class="btn-sm-admin" onclick="loadAdminBKU()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
               </div>
             </div>
             <input type="file" id="bkuExcelFile" style="display:none" accept=".xlsx,.xls" onchange="importBKUExcel(this)">
@@ -1785,7 +1785,7 @@
               <div class="form-group"><label class="form-label">Saldo (Rp)</label><input class="form-input" id="bkuSaldo" type="number" placeholder="0"></div>
             </div>
             <button class="btn-primary" onclick="saveBKU()" style="width:100%;margin-bottom:14px;">
-              <div class="btn-inner"><span>💾</span> Tambah Baris BKU</div>
+              <div class="btn-inner"><span><i class="fas fa-save" aria-hidden="true"></i></span> Tambah Baris BKU</div>
             </button>
 
             <div id="adminBKUList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
@@ -1796,10 +1796,10 @@
         <div id="aset-sect-bast" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>📄 Berita Acara Serah Terima Aset</span>
+              <span><i class="fas fa-file-alt" aria-hidden="true"></i> Berita Acara Serah Terima Aset</span>
               <div style="display:flex;gap:6px;">
-                <button class="btn-sm-admin" onclick="runBastMigration()" style="background:rgba(168,85,247,0.2);">⚙️ Init DB</button>
-                <button class="btn-sm-admin" onclick="loadAdminBast(true)" style="background:var(--primary)">🔄</button>
+                <button class="btn-sm-admin" onclick="runBastMigration()" style="background:rgba(168,85,247,0.2);"><i class="fas fa-cog" aria-hidden="true"></i> Init DB</button>
+                <button class="btn-sm-admin" onclick="loadAdminBast(true)" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
               </div>
             </div>
             <div class="radius-note" style="margin-bottom:12px">Satu pegawai = satu berita acara berisi seluruh aset yang
@@ -1832,16 +1832,16 @@
             </div>
             <div style="display:flex;gap:8px;margin-top:14px;">
               <button class="btn-primary" onclick="bastPreviewDocx()" style="flex:1;">
-                <div class="btn-inner"><span>📄</span> Unduh BAST (.docx)</div>
+                <div class="btn-inner"><span><i class="fas fa-file-alt" aria-hidden="true"></i></span> Unduh BAST (.docx)</div>
               </button>
-              <button class="btn-sm-admin" onclick="bastSaveArchive()" style="background:rgba(34,197,94,0.2);padding:12px 14px;">💾 Simpan Arsip</button>
+              <button class="btn-sm-admin" onclick="bastSaveArchive()" style="background:rgba(34,197,94,0.2);padding:12px 14px;"><i class="fas fa-save" aria-hidden="true"></i> Simpan Arsip</button>
             </div>
           </div>
 
           <div class="card glass-card" style="margin-top:12px;">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>🗂️ Riwayat BAST</span>
-              <button class="btn-sm-admin" onclick="loadBastHistory(true)" style="background:var(--primary)">🔄</button>
+              <span><i class="fas fa-folder-open" aria-hidden="true"></i> Riwayat BAST</span>
+              <button class="btn-sm-admin" onclick="loadBastHistory(true)" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
             </div>
             <div id="bastHistoryList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
           </div>

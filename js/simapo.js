@@ -114,11 +114,11 @@ function selectSimapoPinjamItem(id, nama, stok = 0, jenis = 'Aset Tetap') {
   if (jenis === 'Habis Pakai') {
     if (tglSelesaiCol) tglSelesaiCol.style.display = 'none';
     if (tglMulaiCol) tglMulaiCol.querySelector('label').textContent = 'Tgl Permintaan';
-    if (btnPinjam) btnPinjam.innerHTML = '<div class="btn-inner"><span>🚀</span> Ajukan Permintaan</div>';
+    if (btnPinjam) btnPinjam.innerHTML = '<div class="btn-inner"><span><i class="fas fa-rocket" aria-hidden="true"></i></span> Ajukan Permintaan</div>';
   } else {
     if (tglSelesaiCol) tglSelesaiCol.style.display = 'block';
     if (tglMulaiCol) tglMulaiCol.querySelector('label').textContent = 'Tgl Mulai';
-    if (btnPinjam) btnPinjam.innerHTML = '<div class="btn-inner"><span>📤</span> Ajukan Pinjaman</div>';
+    if (btnPinjam) btnPinjam.innerHTML = '<div class="btn-inner"><span><i class="fas fa-upload" aria-hidden="true"></i></span> Ajukan Pinjaman</div>';
   }
   
   const listEl = document.getElementById('simapoPinjamList');
@@ -144,7 +144,7 @@ function resetSimapoPinjamSelection() {
   // Reset form labels
   if (tglSelesaiCol) tglSelesaiCol.style.display = 'block';
   if (tglMulaiCol) tglMulaiCol.querySelector('label').textContent = 'Tgl Mulai';
-  if (btnPinjam) btnPinjam.innerHTML = '<div class="btn-inner"><span>📤</span> Ajukan Pinjaman</div>';
+  if (btnPinjam) btnPinjam.innerHTML = '<div class="btn-inner"><span><i class="fas fa-upload" aria-hidden="true"></i></span> Ajukan Pinjaman</div>';
   // Re-show dropdown with all items
   filterSimapoPinjamDropdown('');
   if (listEl) listEl.style.display = 'block';
@@ -272,7 +272,7 @@ function showSimapoDetail(id) {
              <div style="font-weight:800;">Rp ${parseInt(item.hargasatuan || 0).toLocaleString()}</div>
           </div>
         </div>
-        <button onclick="event.stopPropagation();showQRKatalog('${item.id}','${item.nama}')" style="margin-top:12px;width:100%;padding:10px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:10px;color:#22c55e;font-weight:700;font-size:12px;cursor:pointer;">📱 Unduh QR Code</button>
+        <button onclick="event.stopPropagation();showQRKatalog('${item.id}','${item.nama}')" style="margin-top:12px;width:100%;padding:10px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:10px;color:#22c55e;font-weight:700;font-size:12px;cursor:pointer;"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Unduh QR Code</button>
       </div>
     `,
     showCancelButton: true,
@@ -315,7 +315,7 @@ window.showQRKatalog = function(id, nama) {
           <img src="${dataUrl}" style="width:160px;height:160px;display:block;">
         </div>
         <div style="font-size:11px;color:var(--muted);word-break:break-all;margin-bottom:8px;">${payload}</div>
-        <button onclick="downloadQRFromCatalog('${id}','${nama}')" style="padding:8px 20px;background:#22c55e;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;">📥 Download PNG</button>
+        <button onclick="downloadQRFromCatalog('${id}','${nama}')" style="padding:8px 20px;background:#22c55e;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;"><i class="fas fa-download" aria-hidden="true"></i> Download PNG</button>
       </div>
     `,
     confirmButtonText: 'Tutup'
@@ -369,10 +369,10 @@ function _qrBuildFallbackUI(overlay) {
   const div = overlay.querySelector('._qr-content');
   div.innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:16px;padding:20px;">
-      <div style="width:80px;height:80px;border-radius:20px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:40px;">📷</div>
+      <div style="width:80px;height:80px;border-radius:20px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:40px;"><i class="fas fa-camera" aria-hidden="true"></i></div>
       <div style="font-size:14px;color:var(--muted);text-align:center;">Kamera tidak tersedia.<br>Ambil foto QR untuk memindai.</div>
       <button class="btn-primary" id="_qrFallbackBtn" style="width:100%;max-width:280px;">
-        <div class="btn-inner"><span>📸</span> Ambil Foto</div>
+        <div class="btn-inner"><span><i class="fas fa-camera" aria-hidden="true"></i></span> Ambil Foto</div>
       </button>
       <button onclick="_qrOverlayClose()" style="padding:10px 24px;background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--muted);font-size:12px;cursor:pointer;">Batal</button>
     </div>
@@ -440,7 +440,7 @@ window.scanQRAset = function() {
     <div style="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;flex-shrink:0;">
         <div style="font-weight:700;font-size:14px;color:var(--white);">Scan QR Aset</div>
-        <button id="_qrCloseBtn" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+        <button id="_qrCloseBtn" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-times" aria-hidden="true"></i></button>
       </div>
       <div class="_qr-content" style="flex:1;display:flex;flex-direction:column;position:relative;">
         <video id="_qrVideo" autoplay playsinline muted
@@ -770,14 +770,14 @@ function showUnitPicker(units) {
   panel.innerHTML = `
     <div class="card glass-card" style="border:2px solid rgba(201,168,76,0.3);">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-        <span style="font-size:24px;">📋</span>
+        <span style="font-size:24px;"><i class="fas fa-clipboard-list" aria-hidden="true"></i></span>
         <div style="font-weight:800;font-size:14px;color:var(--gold);">Pilih Unit Aset</div>
       </div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Ditemukan ${units.length} unit untuk barang ini:</div>
       ${units.map(u => {
         const tersedia = u.statuspinjam !== true && u.statuspinjam !== 'true';
         return `<div onclick="${tersedia ? `renderQRConfirmPanel(simpanPinjamUnits.find(x=>x.id==='${u.id}'))` : ''}" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);margin-bottom:6px;${tersedia ? 'cursor:pointer' : 'opacity:0.5'}" ${tersedia ? `onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'"` : ''}>
-          <div style="width:36px;height:36px;border-radius:6px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;font-size:16px;">${u.foto_barang ? '<img src="'+u.foto_barang+'" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">' : '📦'}</div>
+          <div style="width:36px;height:36px;border-radius:6px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;font-size:16px;">${u.foto_barang ? '<img src="'+u.foto_barang+'" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">' : '<i class="fas fa-box" aria-hidden="true"></i>'}</div>
           <div style="flex:1;min-width:0;">
             <div style="font-weight:700;font-size:12px;color:var(--white);">${escapeHtml(u.nama_barang)}</div>
             <div style="font-size:10px;color:var(--muted);">${u.nomorinventaris || '—'} · ${tersedia ? '<span style="color:#22c55e">Tersedia</span>' : '<span style="color:#ef4444">Dipinjam</span>'}</div>
@@ -813,24 +813,24 @@ function renderQRConfirmPanel(unit) {
   let statusHtml = '';
   const pa = unit.peminjaman_aktif;
   if (dipinjam) {
-    statusHtml = `<span style="color:#ef4444;font-weight:800;">🔴 Sedang Dipinjam</span>
+    statusHtml = `<span style="color:#ef4444;font-weight:800;"><i class="fas fa-circle" aria-hidden="true"></i> Sedang Dipinjam</span>
       <div style="font-size:11px;color:var(--muted);margin-top:4px;">Oleh: ${pa?.nama || pa?.userid || unit.nama_peminjam_saat_ini || '—'}</div>`;
   } else if (unit.kondisi !== 'BAIK') {
-    statusHtml = `<span style="color:#f59e0b;font-weight:800;">⚠️ Kondisi: ${unit.kondisi}</span>
+    statusHtml = `<span style="color:#f59e0b;font-weight:800;"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i> Kondisi: ${unit.kondisi}</span>
       <div style="font-size:11px;color:var(--muted);margin-top:4px;">Laporkan kerusakan jika ingin meminjam</div>`;
   } else {
-    statusHtml = `<span style="color:#22c55e;font-weight:800;">✅ Tersedia</span>`;
+    statusHtml = `<span style="color:#22c55e;font-weight:800;"><i class="fas fa-check" aria-hidden="true"></i> Tersedia</span>`;
   }
 
   panel.innerHTML = `
     <div class="card glass-card" style="border:2px solid rgba(201,168,76,0.3);">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-        <span style="font-size:24px;">📷</span>
+        <span style="font-size:24px;"><i class="fas fa-camera" aria-hidden="true"></i></span>
         <div style="font-weight:800;font-size:14px;color:var(--gold);">Hasil Scan QR</div>
       </div>
       <div style="display:flex;gap:14px;background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,0.07);margin-bottom:14px;">
         <div style="width:60px;height:60px;border-radius:8px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;overflow:hidden;">
-          ${unit.foto_barang ? `<img src="${unit.foto_barang}" style="width:100%;height:100%;object-fit:cover;">` : '📦'}
+          ${unit.foto_barang ? `<img src="${unit.foto_barang}" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-box" aria-hidden="true"></i>'}
         </div>
         <div style="flex:1;min-width:0;">
           <div style="font-weight:800;font-size:14px;color:var(--white);">${escapeHtml(unit.nama_barang || 'Aset')}</div>
@@ -840,13 +840,13 @@ function renderQRConfirmPanel(unit) {
         </div>
       </div>
       <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px;margin-bottom:12px;">
-        <div style="font-size:11px;color:var(--muted);">👤 Peminjam</div>
+        <div style="font-size:11px;color:var(--muted);"><i class="fas fa-user" aria-hidden="true"></i> Peminjam</div>
         <div style="font-weight:700;font-size:13px;color:var(--white);">${escapeHtml(nama)}</div>
         <div style="font-size:11px;color:var(--muted);">NIP: ${escapeHtml(nip)}</div>
       </div>
       ${dipinjam || unit.kondisi !== 'BAIK' ? `
       <button class="btn-primary" onclick="closeQRPanel()" style="width:100%;background:var(--muted);">
-        <div class="btn-inner"><span>✕</span> Tutup</div>
+        <div class="btn-inner"><span><i class="fas fa-times" aria-hidden="true"></i></span> Tutup</div>
       </button>` : `
       <div class="form-group" style="margin-bottom:10px;">
         <label class="form-label">Tujuan Peminjaman</label>
@@ -863,7 +863,7 @@ function renderQRConfirmPanel(unit) {
         </div>
       </div>
       <button class="btn-primary" onclick="submitQRPinjam()" style="width:100%;">
-        <div class="btn-inner"><span>📤</span> Konfirmasi Pinjam</div>
+        <div class="btn-inner"><span><i class="fas fa-upload" aria-hidden="true"></i></span> Konfirmasi Pinjam</div>
       </button>
       <button onclick="closeQRPanel()" style="width:100%;margin-top:8px;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--muted);font-size:12px;cursor:pointer;">Batal</button>
       `}

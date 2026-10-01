@@ -110,16 +110,16 @@ window._bastCacheKey = 'bast_list';
 window.runBastMigration = async function() {
   const resEl = document.getElementById('bastInitResult');
   if (!resEl) return;
-  resEl.innerHTML = '<div class="radius-note" style="color:#c9a84c;">⏳ Menjalankan inisialisasi tabel BAST...</div>';
+  resEl.innerHTML = '<div class="radius-note" style="color:#c9a84c;"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Menjalankan inisialisasi tabel BAST...</div>';
   const ok = await window.bastSubmit(P.simapoBastInit, {}, {
     successMsg: 'Database BAST siap digunakan',
     errorMsg: 'Gagal inisialisasi database BAST'
   });
   if (ok) {
-    resEl.innerHTML = '<div class="radius-note" style="color:#22c55e;">✅ Tabel & kolom BAST siap.</div>';
+    resEl.innerHTML = '<div class="radius-note" style="color:#22c55e;"><i class="fas fa-check" aria-hidden="true"></i> Tabel & kolom BAST siap.</div>';
     window.loadAdminBast(true);
   } else {
-    resEl.innerHTML = '<div class="radius-note" style="color:var(--danger);">⚠️ Inisialisasi gagal. Periksa log n8n.</div>';
+    resEl.innerHTML = '<div class="radius-note" style="color:var(--danger);"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i> Inisialisasi gagal. Periksa log n8n.</div>';
   }
 };
 
@@ -169,7 +169,7 @@ window.renderBastAsetTotal = function() {
   const ids = Object.keys(window._bastSel.incl);
   const items = (window._bastData.aset || []).filter(a => ids.includes(String(a.id)));
   const total = items.reduce((s, a) => s + (Number(a.harga) || 0), 0);
-  el.innerHTML = '<div class="radius-note" style="color:#22c55e;">✔️ <b>' + items.length + '</b> aset dipilih · Total nilai <b>' + bastRupiah(total) + '</b></div>';
+  el.innerHTML = '<div class="radius-note" style="color:#22c55e;"><i class="fas fa-check" aria-hidden="true"></i> <b>' + items.length + '</b> aset dipilih · Total nilai <b>' + bastRupiah(total) + '</b></div>';
 };
 
 window.renderBastAsetList = function() {
@@ -189,7 +189,7 @@ window.renderBastAsetList = function() {
     const id = a.id;
     const owned = String(a.pegawai_id || '') === String(pe);
     const checked = !!window._bastSel.incl[id];
-    const pemegangName = owned ? ('✔️ ' + (bastFindPegawai(a.pegawai_id)?.nama || '')) : (a.pegawai_id ? (bastFindPegawai(a.pegawai_id)?.nama || ' (pemegang lain)') : '— belum ada');
+    const pemegangName = owned ? (bastFindPegawai(a.pegawai_id)?.nama || '') : (a.pegawai_id ? (bastFindPegawai(a.pegawai_id)?.nama || ' (pemegang lain)') : '— belum ada');
     const ruang = a.ruangan_id ? (bastNamaRuangan(a.ruangan_id) || '—') : '—';
     const isKend = /kendaraan/i.test(a.kategori_nama || '') || !!a.no_polisi;
     return `
@@ -198,18 +198,18 @@ window.renderBastAsetList = function() {
       <div style="flex:1;min-width:0;">
         <div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nama_barang || '-'}</div>
         <div style="font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:2px;">
-          <span>📌 ${a.nomorinventaris || '-'}</span>
-          ${a.merk_type ? '<span>🏷️ ' + (a.merk_type || '') + '</span>' : ''}
-          <span>📅 ${a.tahun_pembuatan || '-'}</span>
-          ${isKend ? '<span>🚗 ' + (a.no_polisi || '-') + '</span>' : ''}
-          <span>💰 ${bastRupiah(a.harga)}</span>
-          <span>🧾 ${a.kondisi || '-'}</span>
+          <span><i class="fas fa-thumbtack" aria-hidden="true"></i> ${a.nomorinventaris || '-'}</span>
+          ${a.merk_type ? '<span><i class="fas fa-tags" aria-hidden="true"></i> ' + (a.merk_type || '') + '</span>' : ''}
+          <span><i class="fas fa-calendar-alt" aria-hidden="true"></i> ${a.tahun_pembuatan || '-'}</span>
+          ${isKend ? '<span><i class="fas fa-car" aria-hidden="true"></i> ' + (a.no_polisi || '-') + '</span>' : ''}
+          <span><i class="fas fa-money-bill" aria-hidden="true"></i> ${bastRupiah(a.harga)}</span>
+          <span><i class="fas fa-receipt" aria-hidden="true"></i> ${a.kondisi || '-'}</span>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">
-          👤 Pemegang: <b style="color:${owned ? '#22c55e' : 'var(--white)'};">${pemegangName}</b> · 🏢 Ruangan: <b>${ruang}</b>
+          <i class="fas fa-user" aria-hidden="true"></i> Pemegang: <b style="color:${owned ? '#22c55e' : 'var(--white)'};">${pemegangName}</b> · <i class="fas fa-building" aria-hidden="true"></i> Ruangan: <b>${ruang}</b>
         </div>
       </div>
-      <button class="btn-sm-admin" onclick="setBastPemegang('${id}')" style="flex-shrink:0;background:rgba(59,130,246,0.15);">⚙️ Set Pemegang</button>
+      <button class="btn-sm-admin" onclick="setBastPemegang('${id}')" style="flex-shrink:0;background:rgba(59,130,246,0.15);"><i class="fas fa-cog" aria-hidden="true"></i> Set Pemegang</button>
     </div>`;
   }).join('');
   el.innerHTML = rows + '<div id="bastAsetTotal" style="margin-top:6px;"></div>';
@@ -228,7 +228,7 @@ window.setBastPemegang = async function(asetId) {
     String(r.nama || '') + '</option>').join('');
 
   const { value: v } = await Swal.fire({
-    title: '⚙️ Atur Pemegang Aset',
+    title: 'Atur Pemegang Aset',
     html:
       '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">' + (a.nama_barang || 'Aset') + '<br><b>' + (a.nomorinventaris || '') + '</b></div>' +
       '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Pemegang (Pegawai)</label>' +
@@ -236,7 +236,7 @@ window.setBastPemegang = async function(asetId) {
       '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Ruangan</label>' +
       '<select id="bastRuanganSel" class="form-input" style="width:100%;">' + ruangOpts + '</select>',
     showCancelButton: true,
-    confirmButtonText: '💾 Simpan',
+    confirmButtonText: 'Simpan',
     cancelButtonText: 'Batal',
     confirmButtonColor: 'var(--primary)',
     focusConfirm: false,
@@ -415,7 +415,7 @@ window.loadBastHistory = async function(force = false) {
   }
 
   if (!items || items.length === 0) {
-    el.innerHTML = '<div style="text-align:center;padding:26px;color:var(--muted);font-size:12px;">🗂️ Belum ada berita acara tersimpan.</div>';
+    el.innerHTML = '<div style="text-align:center;padding:26px;color:var(--muted);font-size:12px;"><i class="fas fa-folder-open" aria-hidden="true"></i> Belum ada berita acara tersimpan.</div>';
     return;
   }
   el.innerHTML = items.map(b => {
@@ -425,11 +425,11 @@ window.loadBastHistory = async function(force = false) {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
         <div style="flex:1;min-width:0;">
           <div style="font-weight:800;font-size:13px;color:var(--gold);">${b.nomor || '-'}</div>
-          <div style="font-size:12px;color:var(--white);margin-top:3px;">👤 ${b.pegawai_nama || '-'}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">📅 ${b.hari_tanggal || (b.tanggal ? new Date(b.tanggal).toLocaleDateString('id-ID') : '-')} · 🏢 ${b.tempat || '-'}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${da.length} aset · 💰 ${bastRupiah(b.total_nilai)} · 📝 ${b.penandatangan_nama || '-'}</div>
+          <div style="font-size:12px;color:var(--white);margin-top:3px;"><i class="fas fa-user" aria-hidden="true"></i> ${b.pegawai_nama || '-'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;"><i class="fas fa-calendar-alt" aria-hidden="true"></i> ${b.hari_tanggal || (b.tanggal ? new Date(b.tanggal).toLocaleDateString('id-ID') : '-')} · <i class="fas fa-building" aria-hidden="true"></i> ${b.tempat || '-'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${da.length} aset · <i class="fas fa-money-bill" aria-hidden="true"></i> ${bastRupiah(b.total_nilai)} · <i class="fas fa-file-alt" aria-hidden="true"></i> ${b.penandatangan_nama || '-'}</div>
         </div>
-        <button class="btn-sm-admin" onclick="bastReopen('${b.id}')" style="flex-shrink:0;background:rgba(34,197,94,0.15);">📄 Buka</button>
+        <button class="btn-sm-admin" onclick="bastReopen('${b.id}')" style="flex-shrink:0;background:rgba(34,197,94,0.15);"><i class="fas fa-file-alt" aria-hidden="true"></i> Buka</button>
       </div>
     </div>`;
   }).join('');
