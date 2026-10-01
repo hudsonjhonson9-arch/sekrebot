@@ -28,7 +28,8 @@ window.bastSubmit = async function(endpoint, payload, opts = {}) {
   // ponytail: gate/guard instance balas 200 + body kosong; apiFetch membungkusnya jadi sentinel EMPTY_N8N_RESPONSE (bukan null) → wajib gagal
   const empty = !!(body && body.message === EMPTY_N8N_RESPONSE);
   if (empty) body.message = 'Respons kosong dari server — permintaan gagal atau ditolak';
-  const ok = res.ok && !empty && (typeof isApiSuccess === 'function' ? isApiSuccess(body, true) : true);
+  // ponytail: `body !== null` menangkap res.json() yang throw (body stream putus) pada respons 200 — tanpa itu isApiSuccess(null) = true → false success. Bukan kondisi mati.
+  const ok = res.ok && body !== null && !empty && (typeof isApiSuccess === 'function' ? isApiSuccess(body, true) : true);
   if (!ok) {
     console.error('[BAST] Ditolak server:', endpoint, res.status, body);
     showToast(typeof getApiErrorMsg === 'function' ? getApiErrorMsg(body, errorMsg) : errorMsg, 'error');
