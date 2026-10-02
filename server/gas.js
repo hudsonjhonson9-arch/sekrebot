@@ -1,0 +1,49 @@
+import { fileIdFromDriveUrl } from './media-payload.js';
+
+const TIMEOUT_MS = 45_000;
+
+// Fail-fast saat dipanggil, bukan saat import: test meng-import modul tanpa env.
+function gasUrl_() {
+  const url = process.env.GAS_WEBAPP_URL;
+  if (!url) throw new Error('GAS_WEBAPP_URL belum diset');
+  return url;
+}
+
+async function callGas_(path, init = {}) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(gasUrl_() + path, { ...init, signal: ctrl.signal });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.ok) {
+      // pesan dari Apps Script diteruskan apa adanya (mis. batas 5 MB)
+      throw new Error(json.message || `Apps Script HTTP ${res.status}`);
+    }
+    return json;
+  } finally {
+    clearTimeout(tid);
+  }
+}
+
+export function gasHealth() {
+  return callGas_('/?action=health');
+}
+
+export async function gasUpsert({ filename, mimeType, dataBase64, fileId }) {
+  // dataBase64 dikirim verbatim, tanpa re-wrap: Code.gs menghitung panjang string
+  // sebelum decode dan akan 413 kalau ada line break. Buffer#toString('base64')
+  // sudah tidak menghasilkan newline.
+  const out = await callGas_('', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'mediaUpsert', filename, mimeType, dataBase64, fileId: fileId || null }),
+  });
+  if (!out.fileId || !out.url) throw new Error('Apps Script tidak mengembalikan fileId');
+  return { fileId: out.fileId, url: out.url };
+}
+
+// Code.gs hanya menerima id file Drive polos, bukan URL — URL disimpan di DB,
+// jadi id diekstrak di sisi server ini.
+export function existingFileId(previousUrl) {
+  return fileIdFromDriveUrl(previousUrl);
+}

@@ -22,3 +22,143 @@ test('bearerToken membaca header Authorization', () => {
   assert.equal(bearerToken({ headers: {} }), null);
   assert.equal(bearerToken({ headers: { authorization: 'Basic abc' } }), null);
 });
+
+// --- Task 3: validasi payload + klien Apps Script -----------------------------
+// fetch di-stub, tidak ada jaringan. gas.js tetap butuh GAS_WEBAPP_URL ada,
+// jadi diset di sini supaya `node --test` tanpa env eksternal tetap hijau.
+const GAS_URL = process.env.GAS_WEBAPP_URL || 'https://example.invalid/exec';
+process.env.GAS_WEBAPP_URL = GAS_URL;
+
+import { decodeDataUrl, fileIdFromDriveUrl, MAX_IMAGE_BYTES } from './media-payload.js';
+import { gasHealth, gasUpsert, existingFileId } from './gas.js';
+
+const REAL_FETCH = globalThis.fetch;
+
+function stubFetch(handler) {
+  globalThis.fetch = handler;
+}
+
+function restoreFetch() {
+  globalThis.fetch = REAL_FETCH;
+}
+
+function okJson(body) {
+  return { ok: true, status: 200, json: async () => body };
+}
+
+test('decodeDataUrl memecah data URL gambar', () => {
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]).toString('base64');
+  const out = decodeDataUrl(`data:image/png;base64,${png}`);
+  assert.equal(out.mimeType, 'image/png');
+  assert.deepEqual([...out.buffer], [0x89, 0x50, 0x4e, 0x47]);
+});
+
+test('decodeDataUrl menolak input yang bukan data URL gambar', () => {
+  const bad = [
+    '',
+    'https://drive.google.com/file/d/abc/view',
+    'data:text/plain;base64,aGk=',
+    'data:image/png,notbase64',
+    'data:image/png;base64,',
+    'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=',
+    null,
+    undefined,
+  ];
+  for (const value of bad) {
+    assert.throws(() => decodeDataUrl(value), `harus menolak: ${String(value)}`);
+  }
+  // svg ditolak karena alasan svg, bukan sekadar gagal regex — aturan sama dengan Code.gs
+  assert.throws(() => decodeDataUrl('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4='), /svg/);
+  assert.equal(fileIdFromDriveUrl('https://drive.google.com/file/d/1AbCdEfGh/view'), '1AbCdEfGh');
+  assert.equal(fileIdFromDriveUrl('https://drive.google.com/open?id=1AbCdEfGh'), null);
+  assert.equal(fileIdFromDriveUrl(''), null);
+  assert.equal(fileIdFromDriveUrl(null), null);
+});
+
+test('decodeDataUrl menolak gambar melebihi 5 MB', () => {
+  const big = Buffer.alloc(5 * 1024 * 1024 + 1).toString('base64');
+  assert.throws(() => decodeDataUrl(`data:image/png;base64,${big}`), /5 MB/);
+  // batas pas 5 MB masih diterima; nilai ini harus sama dengan MAX_BYTES di Code.gs
+  assert.equal(MAX_IMAGE_BYTES, 5 * 1024 * 1024);
+  const exact = decodeDataUrl(`data:image/png;base64,${Buffer.alloc(MAX_IMAGE_BYTES).toString('base64')}`);
+  assert.equal(exact.buffer.length, MAX_IMAGE_BYTES);
+  // base64 yang tidak menghasilkan byte apa pun -> buffer kosong
+  assert.throws(() => decodeDataUrl('data:image/png;base64,####'), /kosong/);
+});
+
+test('gasUpsert mengirim base64 dan mengembalikan fileId + url', async () => {
+  const calls = [];
+  stubFetch(async (url, init) => {
+    calls.push({ url, init, body: JSON.parse(init.body || 'null') });
+    return okJson({ ok: true, fileId: 'F1', url: 'https://drive.google.com/file/d/F1/view' });
+  });
+  try {
+    // id diambil dari URL yang tersimpan; Code.gs hanya menerima id polos, bukan URL
+    const previousUrl = 'https://drive.google.com/file/d/1AbCdEfGh/view';
+    const out = await gasUpsert({
+      filename: 'a.png',
+      mimeType: 'image/png',
+      dataBase64: 'AAA+/w==',
+      fileId: existingFileId(previousUrl),
+    });
+    assert.equal(out.fileId, 'F1');
+    assert.equal(out.url, 'https://drive.google.com/file/d/F1/view');
+    assert.equal(calls[0].url, GAS_URL);
+    assert.equal(calls[0].body.action, 'mediaUpsert');
+    assert.equal(calls[0].body.filename, 'a.png');
+    assert.equal(calls[0].body.mimeType, 'image/png');
+    assert.equal(calls[0].body.dataBase64, 'AAA+/w==');
+    assert.ok(calls[0].init.signal instanceof AbortSignal);
+    // Code.gs menolak fileId yang berisi URL; id hasil ekstraksi harus lolos FILE_ID_RE
+    assert.equal(calls[0].body.fileId, '1AbCdEfGh');
+    assert.match(calls[0].body.fileId, /^[-\w]{5,200}$/);
+    // tidak boleh ada line break: Code.gs menghitung panjang sebelum decode dan akan 413
+    assert.ok(!/\s/.test(calls[0].body.dataBase64), 'base64 tidak boleh dibungkus baris');
+
+    const health = await gasHealth();
+    assert.equal(health.ok, true);
+    assert.equal(calls[1].url, `${GAS_URL}/?action=health`);
+  } finally {
+    restoreFetch();
+  }
+});
+
+test('gasUpsert melempar error saat Apps Script menolak', async () => {
+  stubFetch(async () => ({
+    ok: false,
+    status: 413,
+    json: async () => ({ ok: false, message: 'ukuran file melebihi 5 MB' }),
+  }));
+  try {
+    await assert.rejects(
+      () => gasUpsert({ filename: 'a.png', mimeType: 'image/png', dataBase64: 'AAAA' }),
+      /5 MB/,
+    );
+
+    stubFetch(async () => okJson({ ok: true, fileId: 'F1' }));
+    await assert.rejects(
+      () => gasUpsert({ filename: 'a.png', mimeType: 'image/png', dataBase64: 'AAAA' }),
+      /fileId/,
+    );
+
+    stubFetch(async () => okJson({ ok: true, url: 'https://drive.google.com/file/d/F1/view' }));
+    await assert.rejects(
+      () => gasUpsert({ filename: 'a.png', mimeType: 'image/png', dataBase64: 'AAAA' }),
+      /fileId/,
+    );
+
+    stubFetch(async () => okJson({ ok: true, fileId: 'F1', url: 'u' }));
+    const saved = process.env.GAS_WEBAPP_URL;
+    delete process.env.GAS_WEBAPP_URL;
+    try {
+      await assert.rejects(
+        () => gasUpsert({ filename: 'a.png', mimeType: 'image/png', dataBase64: 'AAAA' }),
+        /GAS_WEBAPP_URL/,
+      );
+    } finally {
+      process.env.GAS_WEBAPP_URL = saved;
+    }
+  } finally {
+    restoreFetch();
+  }
+});
