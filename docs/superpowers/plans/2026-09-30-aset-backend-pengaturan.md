@@ -1,5 +1,7 @@
 # SIMAPO Aset Data Backend + Tab Pengaturan (Plan 1 dari 3) — Implementation Plan
 
+> **Status: DONE.** Semua task terimplementasi dan ter-commit (`7f0dedb`..`800014d`), review serangkaian fix (`84ddd33`, `85ca2b4`, `7049e2c`, `8bcf547`, `0977873`, `72d805c`).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Membangun workflow n8n `SIMAPO - Aset Data` (7 endpoint bergate `x-bast-key`) + tab "⚙️ Pengaturan" (data P1 Sekda/Kepala + Kosongkan Aset) di panel admin SIMAPO.
@@ -42,7 +44,7 @@
 - Consumes: `n8n/SIMAPO - BAST.json` (referensi `typeVersion` webhook/code/postgres/respond + `credentials.postgres`), env `N8N_TOKEN` (hanya untuk `--deploy`, Task 2).
 - Produces: file JSON workflow dengan tepat 7 webhook: `simapo-aset-massal` (POST), `simapo-aset-kib` (POST), `simapo-aset-summary` (GET), `simapo-pengaturan-get` (GET), `simapo-pengaturan-set` (POST), `simapo-ttd-get` (GET), `simapo-aset-kosongkan` (POST) — masing-masing diawali node `Gate <path>` yang menyalin verbatim `jsCode` gate dari BAST. Kontrak respons: semua membalas `{data: ...}`.
 
-- [ ] **Step 1: Tulis generator (kode lengkap)**
+- [x] **Step 1: Tulis generator (kode lengkap)**
 
 Buat `scripts/build-aset-data-workflow.mjs`:
 
@@ -408,12 +410,12 @@ async function deploy() {
 if (process.argv.includes('--deploy')) await deploy();
 ```
 
-- [ ] **Step 2: Jalankan generator**
+- [x] **Step 2: Jalankan generator**
 
 Run: `node scripts/build-aset-data-workflow.mjs` (workdir `D:\Code\absensi_refactored_v6`)
 Expected: `OK: 41 nodes, 34 links → ...\n8n\SIMAPO - Aset Data.json` (angka nodes/links tepat 41/34; jika beda, hitung ulang rantai: 6+6+5+5+6+5+8=41, links = nodes − 7 rantai = 34).
 
-- [ ] **Step 3: Validasi struktural JSON**
+- [x] **Step 3: Validasi struktural JSON**
 
 Run:
 ```powershell
@@ -421,7 +423,7 @@ node -e "const w=require('./n8n/SIMAPO - Aset Data.json'); const paths=w.nodes.f
 ```
 Expected: `webhooks 7 gates 7 pg 9` + daftar 7 path + `VALID`. (9 node PG = 2 upsert + summary + peng-get + peng-set + ttd + 3 kosongkan.)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add scripts/build-aset-data-workflow.mjs "n8n/SIMAPO - Aset Data.json"
@@ -439,7 +441,7 @@ Expected: commit sukses, 2 file masuk.
 - Consumes: output Task 1, env `N8N_TOKEN` (minta ke user kalau belum ada; n8n → Settings → n8n API; kalau 401 berarti token kedaluwarsa — minta baru, lihat AGENTS.md).
 - Produces: workflow `SIMAPO - Aset Data` aktif di `https://mindcloud.my.id`; 3 endpoint baca terverifikasi.
 
-- [ ] **Step 1: Deploy**
+- [x] **Step 1: Deploy**
 
 ```powershell
 node scripts/build-aset-data-workflow.mjs --deploy
@@ -447,7 +449,7 @@ node scripts/build-aset-data-workflow.mjs --deploy
 (Wajibkan env `N8N_TOKEN` dulu di sesi ini, mis. `$env:N8N_TOKEN = '<dari user>'` — nilai token jangan ditulis ke file mana pun.)
 Expected: `created <id>` (atau `updated <id>`) lalu `activate: HTTP 200`.
 
-- [ ] **Step 2: Verifikasi workflow aktif**
+- [x] **Step 2: Verifikasi workflow aktif**
 
 ```powershell
 $r = Invoke-RestMethod -Uri 'https://mindcloud.my.id/api/v1/workflows?limit=200' -Headers @{'X-N8N-API-KEY'=$env:N8N_TOKEN}
@@ -455,14 +457,14 @@ $r = Invoke-RestMethod -Uri 'https://mindcloud.my.id/api/v1/workflows?limit=200'
 ```
 Expected: `active = True`.
 
-- [ ] **Step 3: Cek Gate menolak tanpa kunci**
+- [x] **Step 3: Cek Gate menolak tanpa kunci**
 
 ```powershell
 curl.exe -s -o NUL -w "%{http_code}" https://mindcloud.my.id/webhook/simapo-aset-summary
 ```
 Expected: **200 + body kosong** (eksekusi tercatat error `BAST: unauthorized` di n8n — gate menolak, tidak ada query jalan; tidak ada data bocor). Workflow BAST di instance yang sama juga membalas 200 untuk gate rejection, jadi pola instance ini memang 200-kosong, bukan non-200.
 
-- [ ] **Step 4: Cek 3 endpoint baca dengan kunci**
+- [x] **Step 4: Cek 3 endpoint baca dengan kunci**
 
 (Kunci = `BAST_API_KEY` yang sudah ada di `js/config.js`, nilai publik klien.)
 ```powershell
@@ -476,7 +478,7 @@ Expected:
 - pengaturan-get → JSON `{"data":{...}}` (objek, boleh kosong `{}`).
 - ttd-get → JSON `{"data":{"signature":null}}` atau `{"data":{"signature":"data:..."}}` (tergantung NIP pernah simpan tanda tangan atau tidak).
 
-- [ ] **Step 5: Cross-check summary against DB (read-only MCP)**
+- [x] **Step 5: Cross-check summary against DB (read-only MCP)**
 
 Jalankan query MCP `postgres-mcp`:
 ```sql
@@ -498,7 +500,7 @@ Expected: kesetaraan — nilai endpoint = nilai DB **saat itu** (data bisa berub
 - Consumes: endpoint hasil Task 2; `simapo-admin-master-delete` (POST `{id}`, soft delete `isactive=false`, webhook tanpa gate — terverifikasi di `n8n/SIMAPO Katalog & Master Barang.json`).
 - Produces: exit code 0 = semua pass; baris test massal dibersihkan (soft-delete), pengaturan dikembalikan ke nilai sebelum test. Efek samping yang diterima: 1 baris `unit_aset` orphan (barang-nya isactive=false) — tidak dihitung summary karena filter `b.isactive = true`, dan 1 baris `pengaturan` yang nilainya kembali semula.
 
-- [ ] **Step 1: Tulis script (kode lengkap)**
+- [x] **Step 1: Tulis script (kode lengkap)**
 
 Buat `scripts/test-aset-data.mjs`:
 
@@ -610,19 +612,19 @@ console.log(fails ? `\n${fails} GAGAL` : '\nSEMUA PASS');
 process.exit(fails ? 1 : 0);
 ```
 
-- [ ] **Step 2: Jalankan**
+- [x] **Step 2: Jalankan**
 
 Run: `node scripts/test-aset-data.mjs`
 Expected: semua baris `PASS` (ttd-get boleh `SKIP`), diakhiri `SEMUA PASS`, exit code 0.
 
-- [ ] **Step 3: Verifikasi DB untuk baris massal (read-only MCP)**
+- [x] **Step 3: Verifikasi DB untuk baris massal (read-only MCP)**
 
 ```sql
 select count(*) from "SIMAPO".barang where kodebarang like 'SMOKE-TEST-%' and isactive = true
 ```
 Expected: `0` (sudah soft-delete oleh cleanup). Kalau > 0, jalankan ulang cleanup manual via `simapo-admin-master-delete`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add scripts/test-aset-data.mjs
@@ -643,7 +645,7 @@ Expected: commit sukses.
 - Consumes: endpoint Task 2; helper global yang sudah ada: `apiFetch(path, opts)` (config.js — selalu menambah `_t` + `instansi_id`), `bastSubmit(endpoint, payload, opts)` (js/simapo-bast.js:12, return `boolean`, sudah toast), `BAST_API_KEY`/`BAST_API_HEADER` (config.js), `showToast(msg, type)`.
 - Produces: `window.bastGet(endpoint) → object|null` (GET ber-header `x-bast-key`, mengembalikan `body.data`); `window.loadSAPengaturan()`; `window.saveSAPengaturan()`; `window.kosongkanAset()`; key `P.simapoAsetMassal|simapoAsetKib|simapoAsetSummary|simapoPengaturanGet|simapoPengaturanSet|simapoTtdGet|simapoAsetKosongkan`. (Plan 2 memakai `bastGet` + `bastSubmit`; Plan 3 memakai `simapoAsetMassal`/`simapoAsetKib`/`simapoAsetSummary`.)
 
-- [ ] **Step 1: `js/config.js` — 7 entri `P.*` baru**
+- [x] **Step 1: `js/config.js` — 7 entri `P.*` baru**
 
 Ganti baris 277-278 (anchor: entri terakhir `simapoBastHistory` lalu `};`) menjadi:
 
@@ -659,7 +661,7 @@ Ganti baris 277-278 (anchor: entri terakhir `simapoBastHistory` lalu `};`) menja
 };
 ```
 
-- [ ] **Step 2: `index.html` — tombol tab (sesudah baris 1557, anchor `sa-tab-pks`)**
+- [x] **Step 2: `index.html` — tombol tab (sesudah baris 1557, anchor `sa-tab-pks`)**
 
 Tambahkan satu baris setelah tombol `sa-tab-pks` (sebelum `</div>` penutup `#sa-tab-bar`):
 
@@ -667,7 +669,7 @@ Tambahkan satu baris setelah tombol `sa-tab-pks` (sebelum `</div>` penutup `#sa-
             <button class="sa-tab"        id="sa-tab-pengaturan" onclick="switchSATab('pengaturan')" data-group="ref">⚙️ Pengaturan</button>
 ```
 
-- [ ] **Step 3: `index.html` — section form (sesudah baris 1850, sebelum komentar `<!-- [TAB] BKU -->`)**
+- [x] **Step 3: `index.html` — section form (sesudah baris 1850, sebelum komentar `<!-- [TAB] BKU -->`)**
 
 ```html
         <!-- [TAB] PENGATURAN -->
@@ -702,7 +704,7 @@ Tambahkan satu baris setelah tombol `sa-tab-pks` (sebelum `</div>` penutup `#sa-
 
 ```
 
-- [ ] **Step 4: `js/simapo-ext.js` — case baru di `switchSATab` (baris 150)**
+- [x] **Step 4: `js/simapo-ext.js` — case baru di `switchSATab` (baris 150)**
 
 Ganti:
 
@@ -717,7 +719,7 @@ menjadi:
   else if (name === 'pengaturan') window.loadSAPengaturan();
 ```
 
-- [ ] **Step 5: `js/simapo-ext.js` — tambahkan blok berikut di AKHIR FILE (setelah baris terakhir)**
+- [x] **Step 5: `js/simapo-ext.js` — tambahkan blok berikut di AKHIR FILE (setelah baris terakhir)**
 
 ```js
 /* ─── PENGATURAN (P1) + KOSONGKAN ASET ─────────────────────────────── */
@@ -770,7 +772,7 @@ window.kosongkanAset = async function() {
 };
 ```
 
-- [ ] **Step 6: Cek sintaks + build**
+- [x] **Step 6: Cek sintaks + build**
 
 ```powershell
 node --check js/simapo-ext.js; if (-not $?) { exit 1 }
@@ -779,7 +781,7 @@ npm run build
 ```
 Expected: tanpa error; `npm run build` selesai (vite).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add js/config.js index.html js/simapo-ext.js
@@ -798,7 +800,7 @@ Expected: commit sukses, 3 file masuk.
 - Consumes: hasil Task 4, endpoint Task 2.
 - Produces: spec konsisten dengan implementasi; bukti UI jalan.
 
-- [ ] **Step 1: Edit spec baris 97**
+- [x] **Step 1: Edit spec baris 97**
 
 Ganti seluruh isi baris 97 (mulai `| \`simapo-aset-kosongkan\` ...`) menjadi:
 
@@ -806,7 +808,7 @@ Ganti seluruh isi baris 97 (mulai `| \`simapo-aset-kosongkan\` ...`) menjadi:
 | `simapo-aset-kosongkan` | destructive; wajib konfirmasi "HAPUS" di client **dan** guard server-side; cakupan hapus (per instansi — `instansi_id` dari query, default `bapperida`; baris instansi lain tidak tersentuh): semua tabel domain aset yang jadi FK-referen `barang`/`unit_aset` (riwayat transaksi ikut terhapus — dipaksa FK Postgres: `riwayat_pemeliharaan`, `detail_distribusi_aset`, `jadwal_maintenance`, `peminjaman`, `detail_opname`, `detail_request`, `detail_pemeliharaan`, `mutasi_barang`, `detail_penerimaan`, `pemeliharaan`, lalu `unit_aset`, `barang`), sedangkan ruangan/kategori/pegawai/pengaturan/tanda_tangan/arsip BAST tetap |
 ```
 
-- [ ] **Step 2: Verifikasi UI via browser**
+- [x] **Step 2: Verifikasi UI via browser**
 
 Jalankan dev server: `npm run dev` (vite), lalu dengan skill `browser-harness` buka URL dev → login (kredensial dari user; kalau tidak tersedia, minta user verifikasi manual) → Admin SIMAPO → group **📐 Referensi** → tab **⚙️ Pengaturan**. Cek:
 1. Tab tampil di group Referensi dan section form tampil saat diklik (data termuat / placeholder defaults terlihat).
@@ -814,7 +816,7 @@ Jalankan dev server: `npm run dev` (vite), lalu dengan skill `browser-harness` b
 3. Zona Bahaya: klik **🗑 Kosongkan** tanpa mengetik → toast error, server TIDAK dipanggil (guard client).
 4. Kembali ke tab 📐 PKS dan group 📦 Kelola Aset → semuanya masih tampil normal (regresi `switchSATab`).
 
-- [ ] **Step 3: Verifikasi regresi singkat endpoint lama**
+- [x] **Step 3: Verifikasi regresi singkat endpoint lama**
 
 ```powershell
 $K = 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u'
@@ -822,7 +824,7 @@ curl.exe -s -H "x-bast-key: $K" 'https://mindcloud.my.id/webhook/simapo-bast-lis
 ```
 Expected: JSON `{"data":[...]}` (workflow BAST lama tidak terdampak; gate memakai kode yang sama).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add docs/superpowers/specs/2026-09-30-aset-admin-port-design.md
