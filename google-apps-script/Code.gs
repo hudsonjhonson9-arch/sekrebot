@@ -84,8 +84,15 @@ function doPost(e) {
     if (p.fileId) {
       // upload ulang menimpa file yang sama lewat fileId, bukan membuat duplikat
       file = DriveApp.getFileById(p.fileId);
+      // cek SEMUA parent, bukan cuma yang pertama: file dari versi lama
+      // (DriveApp.createFile + addFile) punya dua parent (root + folder tujuan)
+      // dan Drive tidak menjamin urutannya, jadi file sah bisa permanent 403.
       const parents = file.getParents();
-      if (!parents.hasNext() || parents.next().getId() !== folder.getId()) {
+      let inFolder = false;
+      while (parents.hasNext()) {
+        if (parents.next().getId() === folder.getId()) inFolder = true;
+      }
+      if (!inFolder) {
         return jsonOut(403, { ok: false, message: 'fileId bukan milik folder tujuan' });
       }
       file.setName(p.filename);
