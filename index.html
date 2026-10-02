@@ -1497,7 +1497,7 @@
             <button class="btn-primary" onclick="showSimapoMasterForm()" style="width:100%;margin:10px 0;background:rgba(255,255,255,0.04);border:1px dashed var(--gold);color:var(--gold);">
               <div class="btn-inner"><span><i class="fas fa-plus" aria-hidden="true"></i></span> Tambah Aset Baru</div>
             </button>
-            <input type="text" id="saSearchMaster" class="form-input" placeholder="<i class="fas fa-search" aria-hidden="true"></i> Cari nama atau kode aset..." oninput="filterSAMaster(this.value)" style="margin-bottom:10px;">
+            <input type="text" id="saSearchMaster" class="form-input" placeholder="Cari nama atau kode aset..." oninput="filterSAMaster(this.value)" style="margin-bottom:10px;">
             <div id="adminSimapoMasterList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
           </div>
         </div>
@@ -1587,7 +1587,7 @@
             </div>
             <input type="file" id="shExcelFile" style="display:none" accept=".xlsx,.xls" onchange="parseStandarHargaFile(this)">
             <div style="margin:10px 0;">
-              <input type="text" class="form-input" id="shSearch" placeholder="<i class="fas fa-search" aria-hidden="true"></i> Cari barang atau harga..." oninput="filterStandarHarga(this.value)">
+              <input type="text" class="form-input" id="shSearch" placeholder="Cari barang atau harga..." oninput="filterStandarHarga(this.value)">
             </div>
             <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">Barang pakai habis akan otomatis terisi harganya saat input Penerimaan Barang.</div>
             <div id="adminStandarHargaList">
@@ -1719,11 +1719,9 @@
               <div class="btn-inner"><span><i class="fas fa-plus" aria-hidden="true"></i></span> Tambah Baru</div>
             </button>
             <div id="pksParentSelectWrap" style="display:none;margin-bottom:10px;">
-              <select class="form-input" id="pksParentSelect">
-                <option value="">-- Pilih Parent --</option>
-              </select>
+              <div class="custom-search-dropdown" id="pksParentDropdown"></div>
             </div>
-            <input type="text" id="pksSearch" class="form-input" placeholder="<i class="fas fa-search" aria-hidden="true"></i> Cari kode atau nama..." oninput="filterPKS(this.value)" style="margin-bottom:10px;">
+            <input type="text" id="pksSearch" class="form-input" placeholder="Cari kode atau nama..." oninput="filterPKS(this.value)" style="margin-bottom:10px;">
             <div id="adminPKSList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
           </div>
         </div>

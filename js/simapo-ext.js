@@ -1613,6 +1613,88 @@ window.viewQRCode = async function(unitasetId) {
   showToast('Unit tidak ditemukan di cache', 'error');
 };
 
+/* ─── Custom searchable dropdown (pola .custom-search-dropdown bawaan app) ──
+   Memakai CSS .dropdown-trigger/.dropdown-list-wrap/.dropdown-item yang sudah ada.
+   Nilai tetap disimpan di <select> tersembunyi supaya pemanggil lama tetap baca .value.
+   ponytail: list di dalam modal Swal diposition:relative — .swal2-popup overflow:auto
+   akan memotong list absolut. Ganti ke static kalau dropdown pindah ke luar modal. */
+window._pksDDs = {};
+window.pksEsc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+window.pksDropdownHtml = function(ddId, selectId, items, selected, opts) {
+  items = items || [];
+  selected = String(selected == null ? '' : selected);
+  let hit = null;
+  items.forEach(d => { if (String(d.id) === selected) hit = d; });
+  const label = hit ? '[' + hit.kode + '] ' + hit.nama : '';
+  window._pksDDs[ddId] = { selectId: selectId, items: items, label: label };
+  const wrapStyle = opts.static ? ' style="position:relative;top:auto;left:auto;right:auto;max-height:170px;"' : '';
+  return '<div class="dropdown-trigger" onclick="window.pksOpenDropdown(\'' + ddId + '\')">' +
+    '<i class="fas fa-search search-icon" aria-hidden="true"></i>' +
+    '<input type="text" placeholder="' + window.pksEsc(opts.ph) + '" autocomplete="off" value="' + window.pksEsc(label) + '" onfocus="window.pksOpenDropdown(\'' + ddId + '\')" oninput="window.pksFilterDropdown(\'' + ddId + '\', this.value)">' +
+    '<i class="fas fa-chevron-down arrow-icon" aria-hidden="true"></i>' +
+  '</div>' +
+  '<div class="dropdown-list-wrap"' + wrapStyle + '>' + window.pksOptionsHtml(ddId, '') + '</div>' +
+  '<select id="' + selectId + '" style="display:none">' +
+    '<option value="">' + window.pksEsc(opts.empty) + '</option>' +
+    items.map(d => '<option value="' + d.id + '"' + (String(d.id) === selected ? ' selected' : '') + '>' +
+      window.pksEsc('[' + d.kode + '] ' + d.nama) + '</option>').join('') +
+  '</select>';
+};
+
+window.pksOptionsHtml = function(ddId, q) {
+  const st = window._pksDDs[ddId];
+  if (!st) return '';
+  q = String(q || '').toLowerCase().trim();
+  const rows = st.items.filter(d => !q ||
+    String(d.kode || '').toLowerCase().includes(q) ||
+    String(d.nama || '').toLowerCase().includes(q));
+  if (!rows.length) return '<div class="dropdown-item" style="color:var(--muted);">Tidak ditemukan</div>';
+  const selEl = document.getElementById(st.selectId);
+  const cur = selEl ? String(selEl.value) : '';
+  return rows.map(d => '<div class="dropdown-item' + (String(d.id) === cur ? ' selected' : '') +
+    '" onclick="window.pksPickOption(\'' + ddId + '\', \'' + d.id + '\')">' +
+    '<span class="item-name">' + window.pksEsc('[' + d.kode + '] ' + d.nama) + '</span></div>').join('');
+};
+
+window.pksFilterDropdown = function(ddId, val) {
+  const wrap = document.getElementById(ddId);
+  if (!wrap) return;
+  wrap.querySelector('.dropdown-list-wrap').innerHTML = window.pksOptionsHtml(ddId, val);
+  wrap.classList.add('open');
+};
+
+window.pksOpenDropdown = function(ddId) {
+  const wrap = document.getElementById(ddId);
+  if (!wrap) return;
+  const st = window._pksDDs[ddId];
+  const input = wrap.querySelector('.dropdown-trigger input');
+  // input masih berisi label pilihan lama -> bersihkan sebelum mengetik
+  if (input && st && input.value === st.label) input.value = '';
+  wrap.querySelector('.dropdown-list-wrap').innerHTML = window.pksOptionsHtml(ddId, input ? input.value : '');
+  wrap.classList.add('open');
+};
+
+window.pksPickOption = function(ddId, value) {
+  const st = window._pksDDs[ddId];
+  const wrap = document.getElementById(ddId);
+  if (!st || !wrap) return;
+  const selEl = document.getElementById(st.selectId);
+  if (selEl) selEl.value = value;
+  const item = st.items.filter(d => String(d.id) === String(value))[0];
+  st.label = item ? '[' + item.kode + '] ' + item.nama : '';
+  const input = wrap.querySelector('.dropdown-trigger input');
+  if (input) input.value = st.label;
+  wrap.classList.remove('open');
+  if (ddId === 'pksParentDropdown') window.loadAdminPKS(true);
+};
+
+document.addEventListener('click', e => {
+  document.querySelectorAll('.custom-search-dropdown.open').forEach(el => {
+    if (el && !el.contains(e.target)) el.classList.remove('open');
+  });
+});
+
 /* ─── ADMIN: PKS (Program, Kegiatan, Subkegiatan) ── */
 window._pksLevel = 'program';
 window._pksData = [];
@@ -1650,18 +1732,18 @@ window.switchPKSLevel = function(level, btn) {
 };
 
 window.populatePKSParentSelect = async function() {
-  const sel = document.getElementById('pksParentSelect');
-  if (!sel) return;
+  const wrap = document.getElementById('pksParentDropdown');
+  if (!wrap) return;
   const parentEndpoint = window._pksLevel === 'kegiatan' ? 'program' : 'kegiatan';
+  const selEl = document.getElementById('pksParentSelect');
+  const prev = selEl ? selEl.value : '';
+  let data = [];
   try {
     const res = await apiFetch(P.pksList + '&type=' + parentEndpoint);
-    const json = await res.json();
-    const data = parseApiResponse(json);
-    sel.innerHTML = '<option value="">-- Semua --</option>' + (data || []).map(d =>
-      '<option value="' + d.id + '">[' + d.kode + '] ' + d.nama + '</option>'
-    ).join('');
+    data = parseApiResponse(await res.json()) || [];
   } catch {}
-  sel.onchange = () => window.loadAdminPKS(true);
+  wrap.innerHTML = window.pksDropdownHtml('pksParentDropdown', 'pksParentSelect', data, prev,
+    { ph: 'Cari kode atau nama parent...', empty: '-- Semua --' });
 };
 
 window.renderAdminPKS = function(data) {
@@ -1696,28 +1778,30 @@ window.filterPKS = function(val) {
 };
 
 window.showPKSForm = async function(id = null) {
-  const item = id ? window._pksData.find(d => d.id === id) : null;
+  const item = id != null && id !== '' ? window._pksData.find(d => String(d.id) === String(id)) : null;
   const level = window._pksLevel;
   const labels = { program: 'Program', kegiatan: 'Kegiatan', subkegiatan: 'Subkegiatan' };
   const kode = item ? item.kode : '';
   const nama = item ? item.nama : '';
 
-  let parentOpts = '';
+  let parentDd = '';
   if (level !== 'program') {
+    let parents = [];
     try {
       const res = await apiFetch(P.pksList + '&type=' + (level === 'kegiatan' ? 'program' : 'kegiatan'));
-      const json = await res.json();
-      const parents = parseApiResponse(json);
-      parentOpts = parents.map(p =>
-        '<option value="' + p.id + '"' + (item && (item.program_id === p.id || item.kegiatan_id === p.id) ? ' selected' : '') + '>[' + p.kode + '] ' + p.nama + '</option>'
-      ).join('');
+      parents = parseApiResponse(await res.json()) || [];
     } catch {}
+    const selId = item ? (level === 'kegiatan' ? item.program_id : item.kegiatan_id) : '';
+    parentDd = '<div style="margin-bottom:10px"><div class="custom-search-dropdown" id="pksFormParentDd">' +
+      window.pksDropdownHtml('pksFormParentDd', 'pksFormParent', parents, selId,
+        { ph: 'Cari kode atau nama parent...', empty: '-- Pilih Parent --', static: true }) +
+      '</div></div>';
   }
 
   const { value: formValues } = await Swal.fire({
     title: (id ? 'Edit ' : 'Tambah ') + labels[level],
     html:
-      (level !== 'program' ? '<div style="margin-bottom:10px"><select id="pksFormParent" class="form-input" style="width:100%"><option value="">-- Pilih Parent --</option>' + parentOpts + '</select></div>' : '') +
+      parentDd +
       '<input id="pksFormKode" class="form-input" placeholder="Kode (contoh: 1.01.01)" value="' + kode + '" style="margin-bottom:10px;width:100%">' +
       '<input id="pksFormNama" class="form-input" placeholder="Nama ' + labels[level] + '" value="' + nama.replace(/"/g, '&quot;') + '" style="width:100%">',
     focusConfirm: false,
@@ -1752,7 +1836,7 @@ window.showPKSForm = async function(id = null) {
 };
 
 window.deletePKS = async function(id) {
-  const item = window._pksData.find(d => d.id === id);
+  const item = window._pksData.find(d => String(d.id) === String(id));
   const label = item ? '[' + item.kode + '] ' + item.nama : id;
   const { isConfirmed } = await Swal.fire({
     title: 'Hapus?',

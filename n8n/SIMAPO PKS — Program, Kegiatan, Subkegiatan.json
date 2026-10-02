@@ -408,7 +408,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT id, kode, nama FROM \"SIMAPO\".program ORDER BY kode) t",
+        "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT id, kode, nama, tahun FROM public.pks_program ORDER BY urutan, kode) t",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
@@ -429,7 +429,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT k.id, k.kode, k.nama, k.program_id, p.kode as program_kode FROM \"SIMAPO\".kegiatan k JOIN \"SIMAPO\".program p ON p.id = k.program_id WHERE ('{{ ($json.query.program_id || '').toString().replace(/'/g, \"''\") }}' = '' OR k.program_id::text = '{{ ($json.query.program_id || '').toString().replace(/'/g, \"''\") }}') ORDER BY k.kode) t",
+        "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT k.id, k.kode, k.nama, k.program_id, p.kode as program_kode FROM public.pks_kegiatan k JOIN public.pks_program p ON p.id = k.program_id AND p.tahun = k.tahun WHERE ('{{ ($json.query.program_id || '').toString().replace(/'/g, \"''\") }}' = '' OR k.program_id::text = '{{ ($json.query.program_id || '').toString().replace(/'/g, \"''\") }}') ORDER BY k.urutan, k.kode) t",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
@@ -450,7 +450,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT s.id, s.kode, s.nama, s.kegiatan_id, k.kode as kegiatan_kode FROM \"SIMAPO\".subkegiatan s JOIN \"SIMAPO\".kegiatan k ON k.id = s.kegiatan_id WHERE ('{{ ($json.query.kegiatan_id || '').toString().replace(/'/g, \"''\") }}' = '' OR s.kegiatan_id::text = '{{ ($json.query.kegiatan_id || '').toString().replace(/'/g, \"''\") }}') ORDER BY s.kode) t",
+        "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT s.id, s.kode, s.nama, s.kegiatan_id, k.kode as kegiatan_kode FROM public.pks_subkegiatan s JOIN public.pks_kegiatan k ON k.id = s.kegiatan_id AND k.tahun = s.tahun WHERE ('{{ ($json.query.kegiatan_id || '').toString().replace(/'/g, \"''\") }}' = '' OR s.kegiatan_id::text = '{{ ($json.query.kegiatan_id || '').toString().replace(/'/g, \"''\") }}') ORDER BY s.urutan, s.kode) t",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
@@ -471,7 +471,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO \"SIMAPO\".program (kode, nama) VALUES ('{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}') ON CONFLICT (kode) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama",
+        "query": "INSERT INTO public.pks_program (kode, nama, tahun) VALUES ('{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}', (SELECT tahun FROM public.pks_tahun ORDER BY tahun DESC LIMIT 1)) ON CONFLICT (kode, tahun) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama, tahun",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
@@ -492,7 +492,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO \"SIMAPO\".kegiatan (program_id, kode, nama) VALUES (NULLIF('{{ ($json.body.program_id || '').toString().replace(/'/g, \"''\") }}','')::uuid, '{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}') ON CONFLICT (kode) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama",
+        "query": "INSERT INTO public.pks_kegiatan (program_id, kode, nama, tahun) SELECT p.id, '{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}', p.tahun FROM public.pks_program p WHERE p.id = NULLIF('{{ ($json.body.program_id || '').toString().replace(/'/g, \"''\") }}','')::int ON CONFLICT (kode, tahun) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama, tahun",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
@@ -513,7 +513,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO \"SIMAPO\".subkegiatan (kegiatan_id, kode, nama) VALUES (NULLIF('{{ ($json.body.kegiatan_id || '').toString().replace(/'/g, \"''\") }}','')::uuid, '{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}') ON CONFLICT (kode) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama",
+        "query": "INSERT INTO public.pks_subkegiatan (kegiatan_id, kode, nama, tahun) SELECT k.id, '{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}', k.tahun FROM public.pks_kegiatan k WHERE k.id = NULLIF('{{ ($json.body.kegiatan_id || '').toString().replace(/'/g, \"''\") }}','')::int ON CONFLICT (kode, tahun) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama, tahun",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
@@ -534,7 +534,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "DELETE FROM \"SIMAPO\".program WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::uuid RETURNING id, kode",
+        "query": "DELETE FROM public.pks_program WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::int RETURNING id, kode",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
@@ -555,7 +555,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "DELETE FROM \"SIMAPO\".kegiatan WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::uuid RETURNING id, kode",
+        "query": "DELETE FROM public.pks_kegiatan WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::int RETURNING id, kode",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
@@ -576,7 +576,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "DELETE FROM \"SIMAPO\".subkegiatan WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::uuid RETURNING id, kode",
+        "query": "DELETE FROM public.pks_subkegiatan WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::int RETURNING id, kode",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
@@ -1556,7 +1556,7 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT id, kode, nama FROM \"SIMAPO\".program ORDER BY kode) t",
+          "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT id, kode, nama, tahun FROM public.pks_program ORDER BY urutan, kode) t",
           "options": {}
         },
         "type": "n8n-nodes-base.postgres",
@@ -1577,7 +1577,7 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT k.id, k.kode, k.nama, k.program_id, p.kode as program_kode FROM \"SIMAPO\".kegiatan k JOIN \"SIMAPO\".program p ON p.id = k.program_id WHERE ('{{ ($json.query.program_id || '').toString().replace(/'/g, \"''\") }}' = '' OR k.program_id::text = '{{ ($json.query.program_id || '').toString().replace(/'/g, \"''\") }}') ORDER BY k.kode) t",
+          "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT k.id, k.kode, k.nama, k.program_id, p.kode as program_kode FROM public.pks_kegiatan k JOIN public.pks_program p ON p.id = k.program_id AND p.tahun = k.tahun WHERE ('{{ ($json.query.program_id || '').toString().replace(/'/g, \"''\") }}' = '' OR k.program_id::text = '{{ ($json.query.program_id || '').toString().replace(/'/g, \"''\") }}') ORDER BY k.urutan, k.kode) t",
           "options": {}
         },
         "type": "n8n-nodes-base.postgres",
@@ -1598,7 +1598,7 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT s.id, s.kode, s.nama, s.kegiatan_id, k.kode as kegiatan_kode FROM \"SIMAPO\".subkegiatan s JOIN \"SIMAPO\".kegiatan k ON k.id = s.kegiatan_id WHERE ('{{ ($json.query.kegiatan_id || '').toString().replace(/'/g, \"''\") }}' = '' OR s.kegiatan_id::text = '{{ ($json.query.kegiatan_id || '').toString().replace(/'/g, \"''\") }}') ORDER BY s.kode) t",
+          "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT s.id, s.kode, s.nama, s.kegiatan_id, k.kode as kegiatan_kode FROM public.pks_subkegiatan s JOIN public.pks_kegiatan k ON k.id = s.kegiatan_id AND k.tahun = s.tahun WHERE ('{{ ($json.query.kegiatan_id || '').toString().replace(/'/g, \"''\") }}' = '' OR s.kegiatan_id::text = '{{ ($json.query.kegiatan_id || '').toString().replace(/'/g, \"''\") }}') ORDER BY s.urutan, s.kode) t",
           "options": {}
         },
         "type": "n8n-nodes-base.postgres",
@@ -1619,7 +1619,7 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "INSERT INTO \"SIMAPO\".program (kode, nama) VALUES ('{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}') ON CONFLICT (kode) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama",
+          "query": "INSERT INTO public.pks_program (kode, nama, tahun) VALUES ('{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}', (SELECT tahun FROM public.pks_tahun ORDER BY tahun DESC LIMIT 1)) ON CONFLICT (kode, tahun) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama, tahun",
           "options": {}
         },
         "type": "n8n-nodes-base.postgres",
@@ -1640,7 +1640,7 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "INSERT INTO \"SIMAPO\".kegiatan (program_id, kode, nama) VALUES (NULLIF('{{ ($json.body.program_id || '').toString().replace(/'/g, \"''\") }}','')::uuid, '{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}') ON CONFLICT (kode) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama",
+          "query": "INSERT INTO public.pks_kegiatan (program_id, kode, nama, tahun) SELECT p.id, '{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}', p.tahun FROM public.pks_program p WHERE p.id = NULLIF('{{ ($json.body.program_id || '').toString().replace(/'/g, \"''\") }}','')::int ON CONFLICT (kode, tahun) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama, tahun",
           "options": {}
         },
         "type": "n8n-nodes-base.postgres",
@@ -1661,7 +1661,7 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "INSERT INTO \"SIMAPO\".subkegiatan (kegiatan_id, kode, nama) VALUES (NULLIF('{{ ($json.body.kegiatan_id || '').toString().replace(/'/g, \"''\") }}','')::uuid, '{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}') ON CONFLICT (kode) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama",
+          "query": "INSERT INTO public.pks_subkegiatan (kegiatan_id, kode, nama, tahun) SELECT k.id, '{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}', k.tahun FROM public.pks_kegiatan k WHERE k.id = NULLIF('{{ ($json.body.kegiatan_id || '').toString().replace(/'/g, \"''\") }}','')::int ON CONFLICT (kode, tahun) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama, tahun",
           "options": {}
         },
         "type": "n8n-nodes-base.postgres",
@@ -1682,7 +1682,7 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "DELETE FROM \"SIMAPO\".program WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::uuid RETURNING id, kode",
+          "query": "DELETE FROM public.pks_program WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::int RETURNING id, kode",
           "options": {}
         },
         "type": "n8n-nodes-base.postgres",
@@ -1703,7 +1703,7 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "DELETE FROM \"SIMAPO\".kegiatan WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::uuid RETURNING id, kode",
+          "query": "DELETE FROM public.pks_kegiatan WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::int RETURNING id, kode",
           "options": {}
         },
         "type": "n8n-nodes-base.postgres",
@@ -1724,7 +1724,7 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "DELETE FROM \"SIMAPO\".subkegiatan WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::uuid RETURNING id, kode",
+          "query": "DELETE FROM public.pks_subkegiatan WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::int RETURNING id, kode",
           "options": {}
         },
         "type": "n8n-nodes-base.postgres",
