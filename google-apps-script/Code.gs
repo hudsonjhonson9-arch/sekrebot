@@ -1,7 +1,6 @@
-// /file/d/fileIdPattern
-// test pattern: /file/d/([-\w]+)
 const MAX_BYTES = 5 * 1024 * 1024;
 const MIME_PREFIX = 'image/';
+const FILE_ID_RE = /^[-\w]{5,200}$/;
 
 function jsonOut(code, body) {
   return ContentService
@@ -24,11 +23,6 @@ function folderId_() {
   return id;
 }
 
-function fileIdFromUrl(url) {
-  const m = String(url || '').match(/\/file\/d\/([-\w]+)/);
-  return m ? m[1] : null;
-}
-
 function canonicalUrl_(fileId) {
   return 'https://drive.google.com/file/d/' + fileId + '/view';
 }
@@ -41,7 +35,8 @@ function doGet(e) {
     }
     return jsonOut(404, { ok: false, message: 'action tidak dikenal' });
   } catch (err) {
-    return jsonOut(500, { ok: false, message: String(err && err.message || err) });
+    console.error('health gagal', err);
+    return jsonOut(500, { ok: false, message: 'health check gagal' });
   }
 }
 
@@ -53,11 +48,20 @@ function doPost(e) {
   if (!p.filename || !p.mimeType) {
     return jsonOut(400, { ok: false, message: 'filename dan mimeType wajib diisi' });
   }
-  if (MIME_PREFIX.indexOf(p.mimeType) !== 0) {
-    return jsonOut(400, { ok: false, message: 'mimeType harus berupa image/*' });
+  // svg ditolak: bisa membawa <script>, tidak pernah dibutuhkan untuk foto/signature.
+  if (MIME_PREFIX.indexOf(p.mimeType) !== 0 || /svg/.test(p.mimeType)) {
+    return jsonOut(400, { ok: false, message: 'mimeType harus image/* dan bukan svg' });
   }
-  if (!p.dataBase64) {
+  if (typeof p.dataBase64 !== 'string' || !p.dataBase64) {
     return jsonOut(400, { ok: false, message: 'dataBase64 wajib diisi' });
+  }
+  // ponytail: guard pra-decode, base64 ~4/3 byte asli + 4. Cabut kalau backend sudah membatasi ukuran body.
+  if (p.dataBase64.length > MAX_BYTES * 4 / 3 + 4) {
+    return jsonOut(413, { ok: false, message: 'ukuran file melebihi 5 MB' });
+  }
+  // only id file Drive, bukan URL — URL disimpan di DB dan di-extract di sisi server.
+  if (p.fileId && !FILE_ID_RE.test(p.fileId)) {
+    return jsonOut(400, { ok: false, message: 'fileId harus id file Drive, bukan URL' });
   }
 
   let bytes;
@@ -71,16 +75,27 @@ function doPost(e) {
   }
 
   try {
+    // Folder diresolve lebih dulu: kalau DRIVE_FOLDER_ID belum diset, file tidak
+    // boleh ikut berubah. Dan karena endpoint ini publik, fileId dari luar tidak
+    // boleh menimpa file operator di luar folder tujuan.
+    const folder = DriveApp.getFolderById(folderId_());
     const blob = Utilities.newBlob(bytes, p.mimeType, p.filename);
-    const file = p.fileId
-      ? DriveApp.getFileById(p.fileId)
-      : DriveApp.createFile(blob);
+    let file;
     if (p.fileId) {
+      // upload ulang menimpa file yang sama lewat fileId, bukan membuat duplikat
+      file = DriveApp.getFileById(p.fileId);
+      const parents = file.getParents();
+      if (!parents.hasNext() || parents.next().getId() !== folder.getId()) {
+        return jsonOut(403, { ok: false, message: 'fileId bukan milik folder tujuan' });
+      }
       file.setName(p.filename);
       file.setContent(blob);
+    } else {
+      // createFile di dalam folder, bukan DriveApp.createFile + addFile yang
+      // menyisakan file yatim di root My Drive.
+      file = folder.createFile(blob);
     }
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    DriveApp.getFolderById(folderId_()).addFile(file);
 
     return jsonOut(200, {
       ok: true,
@@ -89,6 +104,7 @@ function doPost(e) {
       name: file.getName()
     });
   } catch (err) {
-    return jsonOut(500, { ok: false, message: String(err && err.message || err) });
+    console.error('mediaUpsert gagal', err);
+    return jsonOut(500, { ok: false, message: 'gagal menyimpan file' });
   }
 }
