@@ -15,11 +15,11 @@ export function createApp() {
 const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop());
 if (isMain) {
   const port = Number(process.env.PORT || 8081);
-  createApp().listen(port, () => console.log(`[media] listening on :${port}`));
+  const server = createApp().listen(port, () => console.log(`[media] listening on :${port}`));
   for (const sig of ['SIGINT', 'SIGTERM']) {
-    process.on(sig, async () => {
-      await closePool();
-      process.exit(0);
+    // Tutup HTTP dulu, lalu keluar apa pun hasil closePool (I-1: jangan andalkan await di listener).
+    process.on(sig, () => {
+      server.close(() => closePool().finally(() => process.exit(0)));
     });
   }
 }

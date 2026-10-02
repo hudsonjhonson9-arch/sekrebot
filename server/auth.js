@@ -10,7 +10,8 @@ export function parseToken(token) {
 export function bearerToken(req) {
   const raw = (req.headers?.authorization || '').trim();
   if (!raw) return null;
-  const sp = raw.indexOf(' ');
-  if (sp === -1) return raw;
-  return raw.slice(0, sp).toLowerCase() === 'bearer' && raw.slice(sp + 1).trim() ? raw.slice(sp + 1).trim() : null;
+  const m = /^Bearer\s+(\S+)$/i.exec(raw);
+  if (m) return m[1];
+  // Skema tanpa kredensial ("Bearer") ditolak; bentuk tanpa skema harus satu kata tanpa spasi.
+  return /^\S+$/.test(raw) && !/^bearer$/i.test(raw) ? raw : null;
 }
