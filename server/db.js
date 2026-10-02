@@ -21,7 +21,9 @@ export function getPool() {
   return pool;
 }
 
-export function query(text, params) {
+// N-2: async supaya guard DATABASE_URL muncul sebagai rejected Promise, bukan throw sinkron
+// yang lolos dari `query(...).catch(...)` milik pemanggil.
+export async function query(text, params) {
   return getPool().query(text, params);
 }
 

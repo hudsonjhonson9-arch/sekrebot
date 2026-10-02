@@ -17,9 +17,12 @@ if (isMain) {
   const port = Number(process.env.PORT || 8081);
   const server = createApp().listen(port, () => console.log(`[media] listening on :${port}`));
   for (const sig of ['SIGINT', 'SIGTERM']) {
-    // Tutup HTTP dulu, lalu keluar apa pun hasil closePool (I-1: jangan andalkan await di listener).
     process.on(sig, () => {
-      server.close(() => closePool().finally(() => process.exit(0)));
+      // N-1: response yang sudah started tapi belum ended menahan callback server.close(),
+      // jadi jangan bergantung pada callback itu — drop koneksi, lalu keluar tanpa syarat.
+      server.close();
+      server.closeAllConnections?.();
+      closePool().finally(() => process.exit(0));
     });
   }
 }
