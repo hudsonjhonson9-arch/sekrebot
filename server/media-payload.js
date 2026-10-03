@@ -18,9 +18,13 @@ export function decodeDataUrl(dataUrl) {
 }
 
 export function fileIdFromDriveUrl(url) {
-  const m = /\/file\/d\/([-\w]+)/.exec(String(url || ''));
-  // Batas ini dikunci sama dengan FILE_ID_RE di Code.gs:3. Tanpa itu, id kepotong
-  // atau kepanjangan dikirim apa adanya lalu ditolak Apps Script dengan 400
-  // "fileId harus id file Drive, bukan URL" — pesan yang menyebut salah penyebab.
-  return m && /^[-\w]{5,200}$/.test(m[1]) ? m[1] : null;
+  // Batas {5,200} dikunci sama dengan FILE_ID_RE di Code.gs:3, dan letak batas itu
+  // wajib di dalam pattern. Lookahead di belakang wajib juga: tanpa itu segment
+  // dengan karakter invalid di tengah hanya terpotong jadi prefix yang tetap lolos
+  // FILE_ID_RE (`/file/d/1AbCd EfGh/view` -> "1AbCd"), dan gasUpsert lalu menunjuk
+  // file Drive yang lain, bukan file yang dimaksud. Lebih baik null.
+  // Batas depan `/`, `?`, `#`, atau akhir string; `?`/`#` dipakai Share link Drive
+  // ("...&usp=sharing"), jadi tidak boleh ikut dipotong.
+  const m = /\/file\/d\/([-\w]{5,200})(?=[/?#]|$)/.exec(String(url || ''));
+  return m ? m[1] : null;
 }
