@@ -38,6 +38,30 @@ const SIGNATURE_UPSERT_SQL = `INSERT INTO "tanda_tangan" ("nip","signature","sav
   ON CONFLICT ("nip") DO UPDATE SET "signature" = EXCLUDED."signature",
     "saved_by" = EXCLUDED."saved_by", "updated_at" = NOW()`;
 
+// Scope jadi WHERE, bukan filter di JS: satu query untuk SUPERADMIN (melihat semua)
+// dan ADMIN (instansinya saja), dengan bentuk parameter yang sama seperti
+// SIGNATURE_UPSERT_SQL. Kolom eksplisit — lihat catatan di route /signatures.
+const SIGNATURE_LIST_SQL = `SELECT t."nip", t.signature
+  FROM "tanda_tangan" t
+  LEFT JOIN "user_list" u ON u."NIP" = t."nip"
+  WHERE t.signature IS NOT NULL
+    AND (COALESCE(u."instansi_id",'') IS NOT DISTINCT FROM $1 OR $2::boolean)
+  ORDER BY t."nip"`;
+
+// Siapa saja yang menyimpan fileId ini. C-5: dua bentuk URL hidup berdampingan —
+// wajah /file/d/<id>/, tanda tangan ?export=view&id=<id>. Dual LIKE wajib; salah
+// satu saja berarti setiap file tanda tangan 404 padahal jelas milik orang itu.
+// UNION (bukan OR) supaya tanda tangan milik orang yang tidak ada di user_list
+// tetap ikut terhitung. LIMIT 50: di luar itu, 403 sudah cukup — jangan diam-diam
+// jadi 200 untuk pegawai ke-51 yang kebetulan satu instansi.
+const RAW_OWNER_SQL = `SELECT u."instansi_id" FROM "user_list" u
+  WHERE u."face_photo" LIKE $1 OR u."face_photo" LIKE $2
+  UNION
+  SELECT u."instansi_id" FROM "tanda_tangan" t
+  LEFT JOIN "user_list" u ON u."NIP" = t.nip
+  WHERE t.signature LIKE $1 OR t.signature LIKE $2
+  LIMIT 50`;
+
 const ok = (res, body) => res.json({ ok: true, ...body });
 const fail = (res, code, message) => res.status(code).json({ ok: false, message });
 
@@ -269,6 +293,96 @@ export function createMediaRouter({ query, gasUpsert }) {
       return ok(res, { signature: uploaded.url, fileId: uploaded.fileId });
     } catch (e) {
       console.error('[media/signature] tak tertangani', e);
+      return fail(res, 503, 'Layanan sedang tidak tersedia');
+    }
+  });
+
+  // Baca foto wajah. Params route SELALU string, jadi targetUserId() di sini juga
+  // menolak ' 42 ', '0x2a', '1e3' — bukan hanya number seperti di POST /face.
+  router.get('/face/:user_id', async (req, res) => {
+    try {
+      if (!req.user) return fail(res, 403, 'Forbidden');
+
+      const targetId = targetUserId(req.params.user_id);
+      if (!targetId) return fail(res, 400, 'user_id harus integer positif');
+
+      const target = (await query(FACE_TARGET_SQL, [targetId])).rows[0];
+      if (!target) return fail(res, 404, 'Pengguna tidak ditemukan');
+      if (!inScope(req.user, target)) return fail(res, 403, 'Forbidden');
+
+      return ok(res, { photoUrl: target.face_photo || null });
+    } catch (e) {
+      console.error('[media/face] tak tertangani', e);
+      return fail(res, 503, 'Layanan sedang tidak tersedia');
+    }
+  });
+
+  // SELECT-nya sudah bring-the-user: tanda_tangan LEFT JOIN user_list, jadi
+  // inScope() punya id + instansi_id tanpa query kedua.
+  router.get('/signature/:nip', async (req, res) => {
+    try {
+      if (!req.user) return fail(res, 403, 'Forbidden');
+
+      const nip = norm(req.params.nip);
+      if (!nip) return fail(res, 400, 'nip wajib diisi');
+
+      const target = (await query(SIGNATURE_TARGET_SQL, [nip])).rows[0];
+      if (!target) return fail(res, 404, 'Data tanda tangan tidak ditemukan');
+      if (!inScope(req.user, target)) return fail(res, 403, 'Forbidden');
+
+      return ok(res, { signature: target.signature || null });
+    } catch (e) {
+      console.error('[media/signature] tak tertangani', e);
+      return fail(res, 503, 'Layanan sedang tidak tersedia');
+    }
+  });
+
+  // Daftar tanda tangan untuk form. Kolom ditulis eksplisit: tanda_tangan juga
+  // punya saved_by/saved_at, dan operacionais tidak butuh keduanya di sini.
+  router.get('/signatures', async (req, res) => {
+    try {
+      if (!req.user) return fail(res, 403, 'Forbidden');
+
+      const rows = (await query(SIGNATURE_LIST_SQL, scopeParams(req.user))).rows;
+      return ok(res, { rows });
+    } catch (e) {
+      console.error('[media/signatures] tak tertangani', e);
+      return fail(res, 503, 'Layanan sedang tidak tersedia');
+    }
+  });
+
+  // C-5: dua bentuk URL hidup berdampingan — wajah /file/d/<id>/, tanda tangan
+  // ?export=view&id=<id>. Dual LIKE wajib; salah satu saja = file tanda tangan
+  // selalu 404 padahal jelas milik orang itu.
+
+  router.get('/raw/:fileId', async (req, res) => {
+    try {
+      if (!req.user) return fail(res, 403, 'Forbidden');
+
+      // driveFileId(), bukan regex sendiri: sudah menolak host non-Google dan
+      // kata sentinel ('undefined' dsb) yang akan jadi 502 permanen.
+      const fileId = driveFileId(req.params.fileId);
+      if (!fileId) return fail(res, 400, 'fileId tidak valid');
+
+      const rows = (
+        await query(RAW_OWNER_SQL, [`%/file/d/${fileId}/%`, `%export=view&id=${fileId}%`])
+      ).rows;
+      if (!rows.length) return fail(res, 404, 'File tidak ditemukan');
+
+      const allowed = rows.some((r) => sameInstansi(req.user, norm(r.instansi_id)));
+      if (!allowed) return fail(res, 403, 'Forbidden');
+
+      const upstream = await fetch(`https://drive.google.com/uc?export=download&id=${fileId}`);
+      if (!upstream.ok) return fail(res, 502, 'Layanan penyimpanan sedang bermasalah');
+
+      const type = upstream.headers.get('content-type') || '';
+      if (!type.startsWith('image/')) return fail(res, 415, 'Bukan file gambar');
+
+      res.setHeader('Content-Type', type);
+      res.setHeader('Cache-Control', 'private, max-age=3600');
+      return res.end(Buffer.from(await upstream.arrayBuffer()));
+    } catch (e) {
+      console.error('[media/raw] tak tertangani', e);
       return fail(res, 503, 'Layanan sedang tidak tersedia');
     }
   });

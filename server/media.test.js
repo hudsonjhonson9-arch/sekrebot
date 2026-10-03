@@ -602,6 +602,37 @@ async function post(h, path, body, headers = {}, { signal } = {}) {
   }
 }
 
+// Versi GET dari `post`: route baca tidak mengirim body, tapi /raw/:fileId
+// membalas byte gambar, jadi body JSON harus di-ballast dan byte-nya ditahan
+// terpisah supaya test bisa memeriksa Content-Type dan panjangnya.
+async function get(h, path, headers = {}, { signal } = {}) {
+  const server = await new Promise((resolve) => {
+    const s = h.app.listen(0, () => resolve(s));
+  });
+  try {
+    const res = await fetch(`http://127.0.0.1:${server.address().port}${path}`, {
+      headers: { Authorization: `Bearer ${TOKEN}`, ...headers },
+      signal,
+    });
+    const ct = res.headers.get('content-type') || '';
+    if (ct.startsWith('image/')) {
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      return { status: res.status, body: {}, bytes, contentType: ct };
+    }
+    const json = await res.json().catch(() => ({}));
+    return { status: res.status, body: json, bytes: null, contentType: ct };
+  } finally {
+    server.close();
+    server.closeAllConnections?.();
+  }
+}
+
+async function getWithDeadline(h, path, ms = 2000) {
+  return get(h, path, {}, { signal: AbortSignal.timeout(ms) })
+    .then((res) => ({ ...res, hung: false }))
+    .catch(() => ({ status: 0, body: null, bytes: null, contentType: '', hung: true }));
+}
+
 // Membedakan "handler menjawab" dari "handler tidak menjawab sama sekali". Express 4
 // tidak meneruskan rejected promise dari handler async ke error handler, jadi penolakan
 // yang lolos jadi request menggantung tanpa balasan — dan test akan hang, bukan merah.
@@ -1102,3 +1133,148 @@ test('F-5: kasus luar-instansi biasa tetap 403 sebelum Drive (bukan 500)', async
   assert.equal(res.status, 403, 'penolakan otorisasi normal tetap 403');
   assert.equal(h.gas.length, 0, 'dan tetap sebelum gasUpsert: tidak ada file yatim');
 });
+
+// --- Task 6: route baca ---------------------------------------------------------
+// C-5: dua bentuk URL Drive hidup berdampingan. Wajah disimpan sebagai
+// /file/d/<id>/, tanda tangan sebagai ?export=view&id=<id>. Keduanya harus
+// bisa dibaca lewat /raw/:fileId, jadi ownership dicek dengan dua LIKE.
+test('GET /api/media/face/:user_id mengembalikan URL kanonik', async () => {
+  const h = harness({
+    query: async () => ({
+      rows: [{ face_photo: 'https://drive.google.com/file/d/F1/view', instansi_id: ME.instansi_id }],
+    }),
+  });
+  const res = await get(h, '/api/media/face/42');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.photoUrl, 'https://drive.google.com/file/d/F1/view');
+});
+
+test('GET /api/media/face/:user_id null face_photo -> photoUrl null, bukan string "null"', async () => {
+  const h = harness({
+    query: async () => ({ rows: [{ face_photo: null, instansi_id: ME.instansi_id }] }),
+  });
+  const res = await get(h, '/api/media/face/42');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.photoUrl, null);
+});
+
+test('GET /api/media/face/:user_id menolak 用户 milik instansi lain dengan 403', async () => {
+  const h = harness({
+    query: async () => ({ rows: [{ face_photo: 'https://drive.google.com/file/d/F1/view', instansi_id: 'dpmptsp' }] }),
+  });
+  const res = await get(h, '/api/media/face/42');
+  assert.equal(res.status, 403);
+});
+
+test('GET /api/media/signature/:nip mengembalikan signature milik NIP itu', async () => {
+  const h = harness({
+    query: async () => ({ rows: [{ signature: PNG, instansi_id: ME.instansi_id }] }),
+  });
+  const res = await get(h, `/api/media/signature/${ME.nip}`);
+  assert.equal(res.status, 200);
+  assert.equal(res.body.signature, PNG);
+});
+
+test('GET /api/media/signatures hanya dua kolom nip+signature', async () => {
+  let seen = null;
+  const h = harness({
+    query: async (sql, params) => {
+      seen = { sql, params };
+      return { rows: [{ nip: ME.nip, signature: PNG }] };
+    },
+  });
+  const res = await get(h, '/api/media/signatures');
+  assert.equal(res.status, 200);
+  assert.deepEqual(Object.keys(res.body.rows[0]).sort(), ['nip', 'signature']);
+  // Kolom eksplisit: tanda_tangan juga punya saved_by/saved_at/updated_at, dan
+  // SELECT * akan ikut menariknya ke response.
+  assert.equal(seen.sql.includes('SELECT t."nip", t.signature'), true, seen.sql);
+  assert.equal(seen.sql.includes('saved_by'), false);
+  assert.equal(seen.sql.includes('saved_at'), false);
+});
+
+test('GET /api/media/signatures scoping: scope ikut di parameter SQL, bukan filter JS', async () => {
+  const calls = [];
+  const h = harness({
+    query: async (sql, params) => {
+      calls.push(params);
+      return { rows: [] };
+    },
+  });
+  await get(h, '/api/media/signatures');
+  assert.deepEqual(calls[0], [ME.instansi_id, false], 'ADMIN -> instansinya sendiri');
+
+  await get(harness({ user: { ...ME, role: 'SUPERADMIN' }, query: async (sql, params) => {
+    calls.push(params);
+    return { rows: [] };
+  } }), '/api/media/signatures');
+  assert.deepEqual(calls[1], [ME.instansi_id, true], 'SUPERADMIN -> semua instansi');
+});
+
+test('GET /api/media/raw/:fileId menolak fileId mencurigakan dengan 400, tanpa query', async () => {
+  let calls = 0;
+  const h = harness({ query: async () => { calls++; return { rows: [] }; } });
+  for (const bad of ['..%2f..', "abc'; DROP TABLE user_list;--", 'a/b', 'short']) {
+    const res = await get(h, `/api/media/raw/${encodeURIComponent(bad)}`);
+    assert.equal(res.status, 400, `harus 400 untuk ${bad}`);
+  }
+  assert.equal(calls, 0, 'validasi gagal = tidak menyentuh database');
+});
+
+test('GET /api/media/raw/:fileId menemukan id dari BENTUK export=view (tanda tangan)', async () => {
+  const seen = [];
+  // Stub hanya untuk Drive; request ke server uji sendiri harus lewat asli.
+  stubFetch(async (url, opts) => (String(url).includes('drive.google.com')
+    ? new Response(Buffer.from([0x89, 0x50]), { status: 200, headers: { 'content-type': 'image/png' } })
+    : REAL_FETCH(url, opts)));
+  try {
+    const h = harness({
+      query: async (sql, params) => { seen.push(params); return { rows: [{ instansi_id: ME.instansi_id }] }; },
+    });
+    const res = await get(h, '/api/media/raw/1AbCdEfGhIjKlMnOpQrStUvWxYz');
+    assert.equal(res.status, 200);
+    // Dua LIKE harus terkirim: id harus dicocokkan ke kedua bentuk URL.
+    assert.equal(seen[0].length, 2, JSON.stringify(seen[0]));
+    assert.equal(seen[0][1].includes('export=view&id=1AbCdEfGhIjKlMnOpQrStUvWxYz'), true);
+    assert.equal(res.contentType, 'image/png');
+    assert.equal(res.bytes.length, 2);
+  } finally {
+    restoreFetch();
+  }
+});
+
+test('GET /api/media/raw/:fileId 403 bila file milik instansi lain', async () => {
+  let fetched = 0;
+  stubFetch(async (url, opts) => {
+    if (String(url).includes('drive.google.com')) {
+      fetched++;
+      return new Response(Buffer.from([1]), { status: 200, headers: { 'content-type': 'image/png' } });
+    }
+    return REAL_FETCH(url, opts);
+  });
+  try {
+    const h = harness({ query: async () => ({ rows: [{ instansi_id: 'dpmptsp' }] }) });
+    const res = await get(h, '/api/media/raw/1AbCdEfGhIjKlMnOpQrStUvWxYz');
+    assert.equal(res.status, 403);
+    assert.equal(fetched, 0, 'tidak boleh meneruskan ke Drive kalau 403');
+  } finally {
+    restoreFetch();
+  }
+});
+
+// Express 4 tidak meneruskan rejected promise dari handler async ke error handler,
+// jadi query() yang melempar = request menggantung selamanya, bukan 503. Deadline
+// supaya kegagalan itu jadi error yang terbaca.
+for (const [label, path] of [
+  ['face', '/api/media/face/42'],
+  ['signature', `/api/media/signature/${ME.nip}`],
+  ['signatures', '/api/media/signatures'],
+  ['raw', '/api/media/raw/1AbCdEfGhIjKlMnOpQrStUvWxYz'],
+]) {
+  test(`GET /api/media/${label} query() menolak -> 503, request tidak menggantung`, async () => {
+    const h = harness({ query: async () => { throw new Error('pool habis'); } });
+    const res = await getWithDeadline(h, path);
+    assert.equal(res.hung, false, 'handler HARUS menjawab; menggantung = bug');
+    assert.equal(res.status, 503);
+  });
+}
