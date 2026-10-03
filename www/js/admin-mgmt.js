@@ -10,8 +10,7 @@ async function loadAdminMgmt() {
   try {
     // 1. Fetch full user list
     // Efficiently fetch only admin/management users from the new dedicated endpoint
-    const instId = getScopedInstansiId() || 'bapperida';
-    const ur = await apiGet(P.adminList, { instansi_id: instId });
+    const ur = await apiGet(P.adminList);
     if (!ur.ok) throw new Error('Gagal memuat data pengguna');
     
     // SAFETY FIX: Prioritize ur.rows (parsed by apiGet) over raw ur.data
@@ -127,7 +126,7 @@ async function loadAdminMgmt() {
                 </div>
               </div>
               ${!isMe ? `
-                <button onclick="hapusAdmin('${escapeHtml(id)}','${escapeHtml(nama)}', '${escapeHtml(nip)}')" 
+                <button onclick="hapusAdmin('${id}','${nama.replace(/'/g, "&#39;")}', '${nip}')" 
                         style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:#f87171; font-size:10px; padding:5px 8px; border-radius:8px; cursor:pointer; font-weight:700">
                   Cabut
                 </button>
@@ -138,7 +137,7 @@ async function loadAdminMgmt() {
       </div>
     `;
   } catch (e) {
-    el.innerHTML = `<div class="empty-state" style="padding:12px"><div class="empty-icon">🔌</div><div class="empty-text">Gagal memuat daftar manajemen: ${escapeHtml(e.message)}</div></div>`;
+    el.innerHTML = `<div class="empty-state" style="padding:12px"><div class="empty-icon">🔌</div><div class="empty-text">Gagal memuat daftar manajemen: ${e.message}</div></div>`;
   }
 }
 
@@ -148,13 +147,12 @@ function toggleAdminForm() {
 }
 
 async function tambahAdmin() {
-  if (!requireAdmin()) return;
   const idInput = $('inputAdminTgId');
   const nipInput = $('inputAdminNip');
   const namaInput = $('inputAdminNama');
   const roleInput = $('inputAdminRole');
   const tgId = (idInput?.value || '').trim();
-  const nip = (nipInput?.value || '').trim().replace(/\s/g, '');
+  const nip = (nipInput?.value || '').trim();
   const nama = (namaInput?.value || '').trim();
   const role = roleInput?.value || 'admin';
 
@@ -197,7 +195,6 @@ async function tambahAdmin() {
 }
 
 async function hapusAdmin(tgId, nama, nip) {
-  if (!requireAdmin()) return;
   if (tgId == MY_ID) {
     _showAdminMgmtResult('warning', '⚠️', 'Tidak Bisa', 'Anda tidak bisa mencabut hak akses Anda sendiri.');
     return;
@@ -247,10 +244,7 @@ let _jamAbsenPromise = null;   // Promise aktif yang sedang berjalan
 async function _getJamAbsen() {
   if (_jamAbsenCache) return _jamAbsenCache;
   if (_jamAbsenPromise) return _jamAbsenPromise;
-  const configSelect = $('configInstansiSelect');
-  const instId = (configSelect && configSelect.value) || getScopedInstansiId();
-  const params = instId ? { instansi_id: instId } : {};
-  _jamAbsenPromise = apiGet(P.jamAbsen, params)
+  _jamAbsenPromise = apiGet(P.jamAbsen)
     .then(res => {
       if (!res.ok) return Promise.reject(new Error('HTTP error'));
       const raw = res.data;
@@ -305,7 +299,6 @@ async function loadJamAbsen() {
     try { localStorage.setItem('jam_absen_bapperida', JSON.stringify({ masuk: menitToStr(JAM_MASUK_MENIT), pulang: menitToStr(JAM_PULANG_MENIT) })); } catch (_) { }
     updateClock();
     initJamAdminUI();
-    if (typeof initSuperadminConfigScoping === 'function') initSuperadminConfigScoping();
 
     // FIX: Jika sedang di tab admin saat data jam/admin dimuat, refresh UI admin
     const activeTab = document.querySelector('.tab.active')?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
@@ -328,11 +321,8 @@ function _applyAdminUI() {
   if (!panelAdmin) return;
 
   // Update visibility of manual log button in Rekap tab
-  // ponytail: hanya admin bapperida yang boleh tambah log
-  const myInstansi = (window.userProfile?.instansi_id || localStorage.getItem('MY_INSTANSI') || '').toLowerCase().trim();
-  const canAddLog = IS_ADMIN && myInstansi === 'bapperida';
   const btnLog = $('btnTambahLog');
-  if (btnLog) btnLog.style.display = canAddLog ? 'inline-block' : 'none';
+  if (btnLog) btnLog.style.display = IS_ADMIN ? 'inline-block' : 'none';
 
   // Update More Menu items
   const btnAdmin = $('more-admin');
@@ -378,12 +368,9 @@ async function simpanJamAbsen() {
   const btn = $('btnSimpanJam');
   if (btn) { btn.disabled = true; dom.setText('btnJamText', '💾 Menyimpan...'); }
   try {
-    const configSelect = $('configInstansiSelect');
-    const instId = (configSelect && configSelect.value) || getScopedInstansiId() || 'bapperida';
     await apiPost(P.jamAbsen, {
       masuk: inM.value,
       pulang: inP.value,
-      instansi_id: instId,
       diubah_oleh: MY_ID,
       nip: localStorage.getItem('MY_NIP') || '',
       timestamp: Math.floor(Date.now() / 1000)
@@ -437,81 +424,4 @@ function initJamAdminUI() {
     if (m !== null) { JAM_PULANG_MENIT = m; updateJamPreview(); updateClock(); }
   });
 }
-
-function initSuperadminConfigScoping() {
-  const isSA = typeof _isSuperAdmin === 'function' && _isSuperAdmin();
-  const sec = $('configInstansiSection');
-  if (!sec) return;
-
-  if (isSA) {
-    sec.style.display = 'block';
-    const el = $('configInstansiSelect');
-    if (el) {
-      if (el.options.length <= 1) {
-        try {
-          const cached = localStorage.getItem('absen_instansi_map');
-          if (cached) {
-            const map = JSON.parse(cached);
-            const keys = Object.keys(map);
-            el.innerHTML = '<option value="">— Pilih Instansi —</option>' +
-              keys.map(k => {
-                const inst = map[k];
-                const id = inst.id || inst.ID || k;
-                const name = inst.nama_instansi || inst.header || inst.nama || id.toUpperCase();
-                return `<option value="${id}">${name}</option>`;
-              }).join('');
-          }
-        } catch (e) {
-          console.error('[Config Superadmin] populate error:', e);
-        }
-      }
-      const scoped = getScopedInstansiId();
-      if (scoped) {
-        el.value = scoped;
-      }
-    }
-  } else {
-    sec.style.display = 'none';
-  }
-}
-
-async function onConfigInstansiChange() {
-  const el = $('configInstansiSelect');
-  if (!el) return;
-  const instId = el.value;
-  if (!instId) return;
-
-  _resetJamAbsenCache();
-  try {
-    const res = await apiGet(P.jamAbsen, { instansi_id: instId });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = res.data;
-    const jam = data?.data || data || {};
-    
-    const inM = $('inputJamMasuk'), inP = $('inputJamPulang');
-    if (inM && jam.masuk) inM.value = jam.masuk;
-    if (inP && jam.pulang) inP.value = jam.pulang;
-    
-    if (jam.masuk) { const m = toMenitStr(jam.masuk); if (m !== null) JAM_MASUK_MENIT = m; }
-    if (jam.pulang) { const m = toMenitStr(jam.pulang); if (m !== null) JAM_PULANG_MENIT = m; }
-    
-    updateClock();
-    updateJamPreview();
-    
-    // Sync other dropdowns
-    const mainSelect = $('adminInstansiSelect');
-    if (mainSelect) {
-      mainSelect.value = instId;
-      // Set local storage and trigger update
-      localStorage.setItem('MY_INSTANSI', instId);
-      if (window.userProfile) window.userProfile.instansi_id = instId;
-    }
-  } catch (e) {
-    console.error('[Config Scoping] Failed to load jam for instansi:', instId, e);
-  }
-}
-
-window.initSuperadminConfigScoping = initSuperadminConfigScoping;
-window.onConfigInstansiChange = onConfigInstansiChange;
-
 
