@@ -21,22 +21,15 @@ async function loadAdminMgmt() {
     // BE MORE INCLUSIVE: Accept any user that has a NIP, ID, or Telegram ID
     const users = rawList.filter(u => u && (u.nip || u.NIP || u.id || u.ID || u.telegram_id));
     
-    const managementRoles = ['admin', 'superadmin', 'kepala', 'sekretaris', 'kabid', 'irban', 'inspektur'];
-    
-    // Filter users who have is_admin true OR management roles OR are in the dynamic ADMIN_NIPS list
+    // Filter users strictly by is_admin column (or superadmin role)
     const admins = users.filter(u => {
-      const nip = String(u.nip || u.NIP || '').trim();
-      const tid = String(u.id || u.ID || u.telegram_id || '').trim();
       const roleStr = String(u.role || u.Role || 'user').toLowerCase().trim();
       
-      // Robust admin flag check from is_admin column (handles boolean, string "true", and number 1)
+      // Strict admin flag check from is_admin column (handles boolean, string "true", and number 1)
       const admVal = u.is_admin ?? u.Is_Admin ?? u.IS_ADMIN;
       const isAdminFlag = admVal === true || String(admVal).toLowerCase() === 'true' || Number(admVal) === 1;
       
-      // Check against global admin list
-      const isInAdminList = (nip && ADMIN_NIPS.includes(nip)) || (tid && ADMIN_NIPS.includes(tid));
-      
-      return isAdminFlag || managementRoles.some(mr => roleStr.includes(mr)) || isInAdminList;
+      return isAdminFlag || roleStr.includes('superadmin');
     });
 
     // Update global ADMIN_NIPS
