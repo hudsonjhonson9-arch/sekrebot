@@ -6,7 +6,7 @@
     let _sigDrawing = false;
     let _sigHasContent = false;
     let _sigPhotoData = null;     // base64 dari upload foto
-    let _sigTargetNip = null;    // NIP pemilik tanda tangan
+    let _sigTargetId = null;     // telegram_id pemilik tanda tangan
     let _sigCallback = null;     // callback setelah simpan berhasil
 
     // ── State tanda tangan tersimpan per pegawai (cache lokal) ──
@@ -15,11 +15,11 @@
     // ── Buka signature pad ──
     /**
      * Buka overlay untuk menggambar atau mengupload tanda tangan digital.
-     * @param {string} nip - NIP pemilik tanda tangan
+     * @param {string|number} telegramId - ID Telegram pemilik tanda tangan
      * @param {Function|null} callback - Dipanggil setelah simpan berhasil
      */
-        function openSignaturePad(nip, callback) {
-      _sigTargetNip = nip || localStorage.getItem('MY_NIP') || '';
+        function openSignaturePad(telegramId, callback) {
+      _sigTargetId = telegramId || MY_ID;
       _sigCallback = callback || null;
       _sigMode = 'draw';
       _sigHasContent = false;
@@ -28,9 +28,8 @@
       // Reset title
       const titleEl = $('sigOverlayTitle');
       if (titleEl) {
-        const myNip = localStorage.getItem('MY_NIP') || '';
-        const isOwnSig = _sigTargetNip === myNip;
-        titleEl.textContent = isOwnSig ? 'Tanda Tangan Saya' : `Tanda Tangan NIP: ${_sigTargetNip}`;
+        const isOwnSig = String(_sigTargetId) === String(MY_ID);
+        titleEl.textContent = isOwnSig ? 'Tanda Tangan Saya' : `Tanda Tangan: ${_sigTargetId}`;
       }
 
       // Reset UI
@@ -276,10 +275,13 @@
       if (btnTxt) btnTxt.textContent = 'Menyimpan...';
 
       try {
-        const nip = _sigTargetNip || localStorage.getItem('MY_NIP') || '';
+        const targetNip = String(_sigTargetId) === String(MY_ID) 
+          ? (localStorage.getItem('MY_NIP') || '') 
+          : (window._adminNipMap ? window._adminNipMap[_sigTargetId] : '');
 
         const payload = {
-          nip: nip,
+          telegram_id: _sigTargetId,
+          nip: targetNip,
           signature: dataUrl,
           savedAt: new Date().toISOString(),
           savedBy: MY_ID
@@ -287,23 +289,25 @@
         const { ok: sigOk, data: res } = await apiPost(P.signatureSave, payload);
 
         if (sigOk) {
-          _sigCache[nip] = dataUrl;
-          try { localStorage.setItem(`sig_${nip}`, dataUrl); } catch (_) { }
+          // Cache lokal
+          _sigCache[String(_sigTargetId)] = dataUrl;
+          try { localStorage.setItem(`sig_${_sigTargetId}`, dataUrl); } catch (_) { }
 
           _showSigMsg('✅ Tanda tangan berhasil disimpan!', 'ok');
           // Update UI profil
-          if (nip === localStorage.getItem('MY_NIP')) updateProfilSigUI(dataUrl);
+          if (String(_sigTargetId) === String(MY_ID)) updateProfilSigUI(dataUrl);
+          // Callback jika ada
           if (typeof _sigCallback === 'function') _sigCallback(dataUrl);
+          // Tutup overlay setelah 1.5 detik
           setTimeout(() => closeSignaturePad(), 1500);
         } else {
           throw new Error('Server error ' + 200);
         }
       } catch (e) {
         // Fallback: simpan lokal saja
-        const nip = _sigTargetNip || localStorage.getItem('MY_NIP') || '';
-        _sigCache[nip] = dataUrl;
-        try { localStorage.setItem(`sig_${nip}`, dataUrl); } catch (_) { }
-        if (nip === localStorage.getItem('MY_NIP')) updateProfilSigUI(dataUrl);
+        _sigCache[String(_sigTargetId)] = dataUrl;
+        try { localStorage.setItem(`sig_${_sigTargetId}`, dataUrl); } catch (_) { }
+        if (String(_sigTargetId) === String(MY_ID)) updateProfilSigUI(dataUrl);
         _showSigMsg('⚠️ Tersimpan lokal (server tidak merespons)', 'warn');
         setTimeout(() => closeSignaturePad(), 1800);
       } finally {
@@ -359,24 +363,22 @@
 
     // ── Load tanda tangan dari server atau localStorage ──
     async function loadMySignature() {
-      const myNip = localStorage.getItem('MY_NIP') || '';
-      if (!myNip) return;
-      const cacheKey = `sig_${myNip}`;
-
+      const uid = String(MY_ID);
       // Cek cache lokal dulu
       let cached = null;
-      try { cached = localStorage.getItem(cacheKey); } catch (_) { }
-      if (cached) { updateProfilSigUI(cached); _sigCache[myNip] = cached; }
+      try { cached = localStorage.getItem(`sig_${uid}`); } catch (_) { }
+      if (cached) { updateProfilSigUI(cached); _sigCache[uid] = cached; }
 
       // Fetch dari server
       try {
-        const res = await apiGet(P.signatureGet, { nip: myNip });
+        const myNip = localStorage.getItem('MY_NIP') || '';
+        const res = await apiGet(P.signatureGet, { telegram_id: uid, nip: myNip });
         if (res.ok) {
           const d = res?.data ?? {};
           const sig = d.signature || d.data?.signature || null;
           if (sig) {
-            _sigCache[myNip] = sig;
-            try { localStorage.setItem(cacheKey, sig); } catch (_) { }
+            _sigCache[uid] = sig;
+            try { localStorage.setItem(`sig_${uid}`, sig); } catch (_) { }
             updateProfilSigUI(sig);
           }
         }
@@ -404,7 +406,7 @@
         if (sr.status === 'fulfilled' && sr.value.ok) {
           const sd = sr.value?.data ?? {};
           const arr = Array.isArray(sd) ? sd : (sd.data || []);
-          arr.forEach(s => { sigMap[String(s.nip || s.telegram_id || s.id || '')] = s; });
+          arr.forEach(s => { sigMap[String(s.telegram_id || s.id || '')] = s; });
         }
 
         if (!users.length) {
@@ -414,22 +416,11 @@
 
         el.innerHTML = users.map(u => {
           const uid = String(u.ID || u.id || u.telegram_id || '');
-          const nip = String(u.nip || u.NIP || '');
           const nama = u.Nama || u.nama || u.username || uid;
-          const hasSig = !!sigMap[nip] || !!sigMap[uid];
-          const sigData = sigMap[nip] || sigMap[uid] || {};
-          const tgl = hasSig && sigData.saved_at
-            ? new Date(sigData.saved_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: '2-digit' })
+          const hasSig = !!sigMap[uid];
+          const tgl = hasSig && sigMap[uid].savedAt
+            ? new Date(sigMap[uid].savedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: '2-digit' })
             : null;
-
-          // NOTE: Google retired third-party embedding of `uc?export=view` links
-          // (Jan 2024, third-party cookie deprecation) — that path now often fails to
-          // render as a plain <img> on our domain. `thumbnail` still works for embeds.
-          const rawSig = sigData.signature || '';
-          const driveIdMatch = rawSig.match(/[?&]id=([a-zA-Z0-9_-]+)/) || rawSig.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-          const previewSrc = rawSig.startsWith('data:')
-            ? rawSig
-            : (driveIdMatch ? `https://drive.google.com/thumbnail?id=${driveIdMatch[1]}&sz=w200` : rawSig);
 
           return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;margin-bottom:5px">
         <div style="font-size:16px">${hasSig ? '✅' : '⬜'}</div>
@@ -438,7 +429,7 @@
           <div style="font-size:9px;color:var(--muted);margin-top:1px">${hasSig ? `Didaftarkan: ${tgl || '—'}` : 'Belum ada tanda tangan'}</div>
         </div>
         ${hasSig
-              ? `<div style="width:60px;height:34px;border-radius:6px;overflow:hidden;border:1px solid var(--border);background:#fff"><img src="${previewSrc}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'"></div>`
+              ? `<div style="width:60px;height:34px;border-radius:6px;overflow:hidden;border:1px solid var(--border);background:#fff"><img src="${sigMap[uid].signature || ''}" style="width:100%;height:100%;object-fit:contain"></div>`
               : `<span style="font-size:9px;color:var(--muted);background:rgba(255,255,255,.05);padding:3px 8px;border-radius:6px">—</span>`
             }
       </div>`;
