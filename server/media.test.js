@@ -525,3 +525,404 @@ test('⚠️ risiko diketahui: id polos bukan URL -> Apps Script buat duplikat d
   // bentuk yang benar tetap jadi id polos, jadi gasUpsert mengirim fileId, bukan URL
   assert.equal(existingFileId('https://drive.google.com/file/d/1AbCdEfGh/view'), '1AbCdEfGh');
 });
+
+// --- Task 5: router tulis media (foto wajah + tanda tangan) ----------------------
+// Router diuji lewat app Express sungguhan dengan requireRole ASLI, jadi rantai
+// token 192-hex -> allowlist role -> req.user -> route ikut teruji, bukan cuma handler.
+// Router SENGAJA belum dipasang di server/index.js: js/auth.js:386 membuat token
+// 'tg_<id>_<ts>' sendiri di sisi klien (bukan auth_sessions) dengan role 'USER', jadi
+// dipasang sebelum Task 12 akan memblokir semua pengguna Telegram WebApp.
+import express from 'express';
+import { createMediaRouter } from './media.js';
+
+const ME = { id: '42', nip: '199001012010011001', role: 'ADMIN', instansi_id: 'bapperida' };
+const PNG = `data:image/png;base64,${Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]).toString('base64')}`;
+const CANON = 'https://drive.google.com/file/d/NEW1/view';
+
+// Baris user_list yang dikembalikan stub. Default = pemanggil sendiri, tanpa media.
+function row(over = {}) {
+  return {
+    id: ME.id,
+    nip: ME.nip,
+    instansi_id: ME.instansi_id,
+    face_photo: null,
+    signature: null,
+    ...over,
+  };
+}
+
+function harness({ user = ME, userRow = row(), auth = true, query, gasUpsert } = {}) {
+  const sql = [];
+  const gas = [];
+  const deps = {
+    query: async (text, params) => {
+      sql.push({ text, params });
+      if (query) return query(text, params);
+      if (/INSERT\s+INTO\s+"tanda_tangan"/i.test(text)) return { rows: [{ nip: ME.nip }] };
+      if (/UPDATE\s+"user_list"/i.test(text)) return { rows: [{ id: String(params[4]) }] };
+      if (/\bFROM\s+"user_list"/i.test(text)) return { rows: [userRow] };
+      return { rows: [] };
+    },
+    gasUpsert: async (arg) => {
+      gas.push(arg);
+      if (gasUpsert) return gasUpsert(arg);
+      return { fileId: 'NEW1', url: CANON };
+    },
+  };
+  const app = express();
+  app.use(express.json({ limit: '8mb' }));
+  if (auth) {
+    app.use(requireRole(MEDIA_ROLES, { lookup: async () => ({ ...user }) }));
+  }
+  app.use('/api/media', createMediaRouter(deps));
+  return { app, sql, gas };
+}
+
+async function post(h, path, body, headers = {}) {
+  const server = await new Promise((resolve) => {
+    const s = h.app.listen(0, () => resolve(s));
+  });
+  try {
+    const res = await fetch(`http://127.0.0.1:${server.address().port}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // 192 hex asli, bukan `usr_<id>_<ts>` yang ditolak isSessionToken() (D-5).
+        // Header ini bukan hiasan: requireRole di app uji membacanya.
+        Authorization: `Bearer ${TOKEN}`,
+        ...headers,
+      },
+      body: JSON.stringify(body),
+    });
+    return { status: res.status, body: await res.json().catch(() => null) };
+  } finally {
+    server.close();
+    server.closeAllConnections?.();
+  }
+}
+
+const FACE = {
+  user_id: 42,
+  foto_base64: PNG,
+  face_descriptor: [0.1, 0.2],
+  face_model: 'v1',
+  saved_at: '2026-10-02T00:00:00.000Z',
+};
+const SIG = { nip: ME.nip, signature: PNG };
+
+// --- D-1: perbandingan "dir sendiri" -------------------------------------------
+// Plan lama: `targetId !== req.user.id` dengan targetId = Number(user_id) dan
+// req.user.id = string ::text. '42' !== 42 selalu true, jadi SETIAP user
+// non-SUPERADMIN dapat 403 saat mengupload fotonya sendiri.
+test('face: pemanggil menulis fotonya sendiri -> 200 (regresi D-1)', async () => {
+  const h = harness();
+  const res = await post(h, '/api/media/face', { ...FACE });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.photoUrl, CANON);
+  assert.equal(res.body.fileId, 'NEW1');
+  const upd = h.sql.find((s) => /UPDATE\s+"user_list"/i.test(s.text));
+  assert.ok(upd, 'harus ada UPDATE user_list');
+  assert.match(upd.text, /WHERE\s+"id"/i, 'PK user_list adalah "id"');
+  assert.ok(upd.params.includes(CANON), 'URL kanonik dikirim sebagai parameter');
+  assert.equal(h.gas.length, 1);
+});
+
+test('face: user_id string dan number dianggap sama (req.user.id itu ::text)', async () => {
+  assert.equal((await post(harness(), '/api/media/face', { ...FACE, user_id: 42 })).status, 200);
+  assert.equal((await post(harness(), '/api/media/face', { ...FACE, user_id: '42' })).status, 200);
+});
+
+test('face: pegawai lain dalam instansi yang sama -> 200', async () => {
+  const h = harness({
+    userRow: row({ id: '77', nip: '199501012015011003', instansi_id: 'bapperida' }),
+  });
+  const res = await post(h, '/api/media/face', { ...FACE, user_id: 77 });
+  assert.equal(res.status, 200);
+  assert.equal(h.gas.length, 1);
+});
+
+test('face: pegawai instansi lain -> 403 dan Drive tidak dipanggil', async () => {
+  const h = harness({
+    userRow: row({ id: '77', nip: '199501012015011003', instansi_id: 'dpmptsp' }),
+  });
+  const res = await post(h, '/api/media/face', { ...FACE, user_id: 77 });
+  assert.equal(res.status, 403);
+  assert.equal(h.gas.length, 0, '403 harus sebelum gasUpsert');
+  assert.equal(h.sql.filter((s) => /UPDATE/i.test(s.text)).length, 0);
+});
+
+test('face: SUPERADMIN boleh menulis untuk pegawai instansi mana pun', async () => {
+  const h = harness({
+    user: { ...ME, role: 'SUPERADMIN' },
+    userRow: row({ id: '77', nip: '199501012015011003', instansi_id: 'dpmptsp' }),
+  });
+  const res = await post(h, '/api/media/face', { ...FACE, user_id: 77 });
+  assert.equal(res.status, 200);
+  assert.equal(h.gas.length, 1);
+});
+
+test("face: user tanpa ('') instansi hanya boleh dirinya sendiri", async () => {
+  const anonymous = { ...ME, instansi_id: '' };
+  const own = harness({ user: anonymous, userRow: row({ instansi_id: '' }) });
+  assert.equal((await post(own, '/api/media/face', { ...FACE })).status, 200);
+
+  // '' == '' BUKAN izin: tanpa ini setiap user tanpa instansi cocok dengan setiap
+  // target tanpa instansi, 즉 kebocoran lintas instansi.
+  const other = harness({
+    user: anonymous,
+    userRow: row({ id: '77', nip: '199501012015011003', instansi_id: '' }),
+  });
+  const res = await post(other, '/api/media/face', { ...FACE, user_id: 77 });
+  assert.equal(res.status, 403);
+  assert.equal(other.gas.length, 0);
+});
+
+test('face: target dengan instansi_id NULL -> 403, bukan lolos sebagai "tanpa filter"', async () => {
+  // Kolomnya nullable, dan sameInstansi memakai null sebagai "panggil tidak membatasi"
+  // (untuk endpoint global). Tanpa normalisasi ke '', user mana pun yang lolos
+  // role boleh menulis media pegawai tanpa instansi.
+  const h = harness({
+    userRow: row({ id: '77', nip: '199501012015011003', instansi_id: null }),
+  });
+  const res = await post(h, '/api/media/face', { ...FACE, user_id: 77 });
+  assert.equal(res.status, 403);
+  assert.equal(h.gas.length, 0);
+});
+
+test('face: router tanpa requireRole gagal tertutup (403), bukan 200', async () => {
+  // Router dipasang tanpa middleware auth = req.user undefined. Perbandingan
+  // "dir sendiri" tidak boleh berubah jadi '' === '' dan meloloskan semua orang.
+  const h = harness({ auth: false });
+  const res = await post(h, '/api/media/face', { ...FACE });
+  assert.equal(res.status, 403);
+  assert.equal(h.gas.length, 0);
+});
+
+// --- validasi & kegagalan upstream ---------------------------------------------
+test('face: user_id bukan integer positif -> 400 tanpa menyentuh database', async () => {
+  for (const bad of [undefined, null, 0, -1, 1.5, 'abc', '', {}, []]) {
+    const h = harness();
+    const res = await post(h, '/api/media/face', { ...FACE, user_id: bad });
+    assert.equal(res.status, 400, JSON.stringify(bad));
+    assert.equal(h.sql.length, 0);
+    assert.equal(h.gas.length, 0);
+  }
+});
+
+test('face: payload bukan data URL image -> 400 dan tidak sampai ke Drive', async () => {
+  const bad = [
+    '',
+    'https://drive.google.com/file/d/abc/view',
+    'data:text/plain;base64,aGk=',
+    'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=',
+    null,
+    undefined,
+  ];
+  for (const value of bad) {
+    const h = harness();
+    const res = await post(h, '/api/media/face', { ...FACE, foto_base64: value });
+    assert.equal(res.status, 400, JSON.stringify(value));
+    assert.equal(h.gas.length, 0);
+  }
+});
+
+test('face: foto di atas 5 MB -> 400 dan tidak sampai ke Drive', async () => {
+  const big = `data:image/png;base64,${Buffer.alloc(MAX_IMAGE_BYTES + 1).toString('base64')}`;
+  const h = harness();
+  const res = await post(h, '/api/media/face', { ...FACE, foto_base64: big });
+  assert.equal(res.status, 400);
+  assert.match(res.body.message, /5 MB/);
+  assert.equal(h.gas.length, 0);
+});
+
+test('face: Apps Script gagal -> 502 dan database tetap bersih', async () => {
+  const h = harness({
+    gasUpsert: async () => {
+      throw new Error('Drive penuh');
+    },
+  });
+  const res = await post(h, '/api/media/face', { ...FACE });
+  assert.equal(res.status, 502);
+  assert.equal(h.sql.filter((s) => /UPDATE/i.test(s.text)).length, 0, 'tidak ada query tulis');
+  assert.equal(h.sql.length, 1, 'hanya resolusi target');
+});
+
+test('face: user_id tidak ada -> 404 dan Drive tidak dipanggil', async () => {
+  const h = harness({ query: async () => ({ rows: [] }) });
+  const res = await post(h, '/api/media/face', { ...FACE, user_id: 999 });
+  assert.equal(res.status, 404);
+  assert.equal(h.gas.length, 0);
+});
+
+test('face: UPDATE 0 baris -> 403 fail-closed (gate scope di SQL menolak)', async () => {
+  const h = harness({
+    query: async (text) => (/UPDATE/i.test(text) ? { rows: [] } : { rows: [row()] }),
+  });
+  const res = await post(h, '/api/media/face', { ...FACE });
+  assert.equal(res.status, 403, '0 baris = scope SQL tidak cocok = tolak');
+});
+
+test('face: descriptor, model, dan saved_at diteruskan apa adanya', async () => {
+  const h = harness();
+  await post(h, '/api/media/face', { ...FACE, face_descriptor: [0.1, 0.2, 0.3] });
+  const upd = h.sql.find((s) => /UPDATE/i.test(s.text));
+  assert.equal(upd.params[1], JSON.stringify([0.1, 0.2, 0.3]));
+  assert.equal(upd.params[2], '2026-10-02T00:00:00.000Z');
+  assert.equal(upd.params[3], 'v1');
+  // scope harus ikut di WHERE, bukan hanya di if: route lain yang lupa memanggil
+  // sameInstansi() tetap terkunci oleh klausa WHERE-nya sendiri.
+  assert.match(upd.text, /"instansi_id"/i);
+  assert.match(upd.text, /OR\s+\$7::boolean/i);
+});
+
+test('face: nama file Drive memakai NIP dari user_list, bukan dari body', async () => {
+  const h = harness({ userRow: row({ id: '77', nip: '199501012015011003' }) });
+  const res = await post(h, '/api/media/face', {
+    ...FACE,
+    user_id: 77,
+    nip: 'PALANG-BOHONG',
+    nama: '<script>alert(1)</script>',
+  });
+  assert.equal(res.status, 200);
+  assert.equal(h.gas[0].filename, 'face-77-199501012015011003.png');
+});
+
+// --- D-4: tanda tangan harus punya otorisasi ------------------------------------
+// Plan lama menulis tanda_tangan dari `nip` body apa adanya: user allowlist mana pun
+// bisa menimpa tanda tangan pegawai instansi mana pun.
+test('signature: NIP seinstansi -> 200 dan upsert berdasarkan nip', async () => {
+  const h = harness({
+    userRow: row({ id: '77', nip: '199501012015011003', instansi_id: 'bapperida' }),
+  });
+  const res = await post(h, '/api/media/signature', { ...SIG, nip: '199501012015011003' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.signature, CANON);
+  assert.equal(res.body.fileId, 'NEW1');
+  const up = h.sql.find((s) => /INSERT\s+INTO\s+"tanda_tangan"/i.test(s.text));
+  assert.ok(up, 'harus ada upsert tanda_tangan');
+  assert.match(up.text, /ON\s+CONFLICT\s*\("nip"\)/i, 'index unik tanda_tangan_nip_key');
+  assert.match(up.text, /NOW\(\)/);
+  assert.doesNotMatch(up.text, /NOW\(\)\s*::\s*text/, 'saved_at timestamptz, bukan text');
+  assert.match(up.text, /FROM\s+"user_list"/i, 'upsert digerakkan user_list supaya scope ikut di SQL');
+  assert.ok(up.params.includes(ME.id), 'saved_by = id pemanggil');
+});
+
+test('signature: NIP sendiri -> 200 walau ini tanda tangan pertama', async () => {
+  const h = harness();
+  const res = await post(h, '/api/media/signature', SIG);
+  assert.equal(res.status, 200);
+  assert.equal(h.gas.length, 1);
+});
+
+test('signature: NIP instansi lain -> 403 dan Drive tidak dipanggil (regresi D-4)', async () => {
+  const h = harness({
+    userRow: row({ id: '77', nip: '199501012015011003', instansi_id: 'dpmptsp' }),
+  });
+  const res = await post(h, '/api/media/signature', { ...SIG, nip: '199501012015011003' });
+  assert.equal(res.status, 403);
+  assert.equal(h.gas.length, 0);
+  assert.equal(h.sql.filter((s) => /INSERT/i.test(s.text)).length, 0);
+});
+
+test('signature: NIP kosong -> 400 tanpa menyentuh database', async () => {
+  for (const bad of ['', '   ', null, undefined]) {
+    const h = harness();
+    const res = await post(h, '/api/media/signature', { ...SIG, nip: bad });
+    assert.equal(res.status, 400, JSON.stringify(bad));
+    assert.equal(h.sql.length, 0);
+    assert.equal(h.gas.length, 0);
+  }
+});
+
+test('signature: NIP tidak dikenal -> 404 (keputusan tetap: 404, bukan 403)', async () => {
+  const h = harness({ query: async () => ({ rows: [] }) });
+  const res = await post(h, '/api/media/signature', { ...SIG, nip: '000000000000000000' });
+  assert.equal(res.status, 404);
+  assert.equal(h.gas.length, 0);
+});
+
+test('signature: NIP dobel di user_list -> 403, tidak pernah memilih salah satu', async () => {
+  const h = harness({ query: async () => ({ rows: [row(), row({ id: '78' })] }) });
+  const res = await post(h, '/api/media/signature', SIG);
+  assert.equal(res.status, 403, 'baris mana yang terpilih menentukan otorisasi');
+  assert.equal(h.gas.length, 0);
+});
+
+// --- D-7: nilai kolom lama tidak boleh membuat file Drive kedua -------------------
+// Bentuk yang BENAR-BENAR ada di produksi: 48/48 baris tanda_tangan berisi
+// `https://drive.google.com/uc?export=view&id=<id>`, bukan `/file/d/<id>/view`.
+// fileIdFromDriveUrl() hanya kena bentuk /file/d/, jadi tanpa penanganan ini setiap
+// upload tanda tangan akan membuat file Drive kedua dan foto lama tidak pernah
+// ter-update.
+test('signature: URL lama uc?export=view&id=<id> diteruskan, bukan diBuat duplikat', async () => {
+  const previous = 'https://drive.google.com/uc?export=view&id=1QS_k34SxIkP5EsRy';
+  const h = harness({ userRow: row({ signature: previous }) });
+  const res = await post(h, '/api/media/signature', SIG);
+  assert.equal(res.status, 200);
+  assert.equal(h.gas.length, 1);
+  assert.equal(h.gas[0].fileId, '1QS_k34SxIkP5EsRy', 'fileId lama wajib diteruskan');
+  assert.match(h.gas[0].fileId, /^[-\w]{5,200}$/, 'harus lolos FILE_ID_RE Code.gs');
+});
+
+test('media: semua bentuk nilai kolom dipetakan eksplisit, tidak ada jatuh-through', async () => {
+  const cases = [
+    ['https://drive.google.com/file/d/1AbCdEfGh/view', '1AbCdEfGh'], // kanonik ( hasil canonicalUrl_ )
+    ['https://drive.google.com/uc?export=view&id=1QS_k34SxIkP5EsRy', '1QS_k34SxIkP5EsRy'], // bentuk produksi
+    ['https://drive.google.com/open?id=1AbCdEfGh', '1AbCdEfGh'],
+    ['https://drive.google.com/file/d/1AbCdEfGh/view?usp=sharing', '1AbCdEfGh'],
+    ['1AbCdEfGh', '1AbCdEfGh'], // id polos: TIDAK boleh jadi null -> file kedua
+    [null, null], // belum ada
+    ['', null],
+    ['   ', null], // satu baris user_list berisi spasi
+    ['data:image/png;base64,AAAA', null], // legacy inline, belum ada file Drive
+    ['https://cdn.example.com/p/foto-12345.png', null], // bukan Drive -> jangan tebak
+  ];
+  for (const [previous, expected] of cases) {
+    const h = harness({ userRow: row({ face_photo: previous }) });
+    const res = await post(h, '/api/media/face', { ...FACE });
+    assert.equal(res.status, 200, JSON.stringify(previous));
+    assert.equal(h.gas[0].fileId, expected, JSON.stringify(previous));
+  }
+});
+
+// --- D-6 + D-8: pesan internal dan orphan Drive ----------------------------------
+test('D-6: detail error internal tidak bocor ke klien tapi masuk log server', async () => {
+  const logs = [];
+  const realError = console.error;
+  console.error = (...args) => logs.push(args.map(String).join(' '));
+  try {
+    const h = harness({
+      gasUpsert: async () => {
+        throw new Error('https://script.google.com/macros/s/DEPLOY-ID/exec 403 quota habis');
+      },
+    });
+    const res = await post(h, '/api/media/face', { ...FACE });
+    assert.equal(res.status, 502);
+    assert.doesNotMatch(JSON.stringify(res.body), /script\.google\.com|quota|DEPLOY-ID/);
+    assert.match(logs.join('\n'), /quota/, 'detail harus tetap tercatat di sisi server');
+  } finally {
+    console.error = realError;
+  }
+});
+
+test('D-8: gagal simpan DB -> 500 pesan tetap, file Drive yatim tercatat, tidak ada delete', async () => {
+  const logs = [];
+  const realError = console.error;
+  console.error = (...args) => logs.push(args.map(String).join(' '));
+  try {
+    const h = harness({
+      query: async (text) => {
+        if (/UPDATE/i.test(text)) throw new Error('permission denied for table user_list');
+        return { rows: [row()] };
+      },
+    });
+    const res = await post(h, '/api/media/face', { ...FACE });
+    assert.equal(res.status, 500);
+    assert.doesNotMatch(JSON.stringify(res.body), /permission denied|user_list/);
+    assert.match(logs.join('\n'), /NEW1/, 'fileId yatim harus tercatat supaya bisa direkonsiliasi');
+    assert.equal(h.gas.length, 1, 'tidak ada upaya menghapus file Drive: delete yang salah lebih buruk');
+  } finally {
+    console.error = realError;
+  }
+});
