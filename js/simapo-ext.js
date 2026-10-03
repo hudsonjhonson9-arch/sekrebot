@@ -713,8 +713,40 @@ window.deleteSimapoKategori = async function(id) {
 window.renderUserSimapoKatFilter = function(data) {
   const el = document.getElementById('simapoKatFilterBar');
   if (!el) return;
-  el.innerHTML = '<button onclick="filterSimapoKatalog(\'\')" class="simapo-kat-badge active">Semua</button>' + 
-    data.map(k => `<button onclick="filterSimapoKatalog('${k.nama}')" class="simapo-kat-badge">${k.nama}</button>`).join('');
+  const cats = [{ nama: 'Semua' }].concat((data || []).map(k => ({ nama: k.nama })));
+  const cur = window._simapoKat || 'Semua';
+  el.innerHTML =
+    '<div class="custom-search-dropdown" id="simapoKatDd">' +
+      '<div class="dropdown-trigger" onclick="window._simapoKatDdOpen()">' +
+        '<i class="fas fa-tags search-icon" aria-hidden="true"></i>' +
+        '<input type="text" id="simapoKatInput" placeholder="Semua kategori" autocomplete="off" readonly value="' + window.pksEsc(cur) + '">' +
+        '<i class="fas fa-chevron-down arrow-icon" aria-hidden="true"></i>' +
+      '</div>' +
+      '<div class="dropdown-list-wrap">' +
+        cats.map(c => '<div class="dropdown-item' + (c.nama === cur ? ' selected' : '') +
+          '" data-nama="' + window.pksEsc(c.nama) + '" onclick="window._simapoKatPick(this)">' +
+          '<span class="item-name">' + window.pksEsc(c.nama) + '</span></div>').join('') +
+      '</div>' +
+    '</div>';
+};
+
+window._simapoKatDdOpen = function() {
+  const wrap = document.getElementById('simapoKatDd');
+  if (wrap) wrap.classList.toggle('open');
+};
+
+window._simapoKatPick = function(item) {
+  const nama = item.dataset.nama;
+  const wrap = document.getElementById('simapoKatDd');
+  if (wrap) {
+    wrap.classList.remove('open');
+    wrap.querySelectorAll('.dropdown-item').forEach(el =>
+      el.classList.toggle('selected', el.dataset.nama === nama));
+  }
+  window._simapoKat = nama;
+  const input = document.getElementById('simapoKatInput');
+  if (input) input.value = nama;
+  window.filterSimapoKatalog(nama === 'Semua' ? '' : nama);
 };
 
 /* ─── ADMIN: QR GENERATOR ──────────────────────────────────── */

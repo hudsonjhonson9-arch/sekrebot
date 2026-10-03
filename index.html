@@ -1343,13 +1343,20 @@
       </div>
       
 
+      <div id="aset-grid" class="aset-grid"></div>
+<div id="aset-screen-head" style="display:none;align-items:center;gap:10px;margin-bottom:12px;">
+  <button class="btn-sm-admin" onclick="window.ASET_NAV.showGrid()" aria-label="Kembali ke daftar fitur Aset">
+    <i class="fas fa-arrow-left"></i> Kembali</button>
+  <span id="aset-screen-title" style="font-weight:800;color:var(--gold);font-size:14px;"></span>
+</div>
+
       <!-- SECTION: KATALOG ASET -->
       <div id="aset-sect-katalog" class="aset-sect">
         <div style="border-radius: 12px; background: rgba(255,255,255,0.05); padding: 10px 14px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; margin-bottom:10px;">
           <i class="fas fa-search" style="margin-right: 10px; opacity:0.5;"></i>
           <input type="text" id="simapoSearchInput" placeholder="Cari nama barang atau kode..." oninput="if(typeof filterSimapoKatalog === 'function') filterSimapoKatalog(this.value)" autocomplete="off" style="background:transparent; border:none; color:white; width:100%; outline:none; font-family:inherit; font-size:13px;">
         </div>
-        <div id="simapoKatFilterBar" style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:12px;"></div>
+        <div id="simapoKatFilterBar" style="margin-bottom:12px;"></div>
         <div id="simapoKatalogList" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;">
            <div class="shimmer-wrapper" style="width:100%">
              <div class="shimmer sh-line" style="height:120px; border-radius:12px"></div>
@@ -1441,12 +1448,6 @@
 @media(max-width:1100px){.aset-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:720px){.aset-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
-<div id="aset-grid" class="aset-grid"></div>
-<div id="aset-screen-head" style="display:none;align-items:center;gap:10px;margin-bottom:12px;">
-  <button class="btn-sm-admin" onclick="window.ASET_NAV.showGrid()" aria-label="Kembali ke daftar fitur Aset">
-    <i class="fas fa-arrow-left"></i> Kembali</button>
-  <span id="aset-screen-title" style="font-weight:800;color:var(--gold);font-size:14px;"></span>
-</div>
         <div id="aset-sect-pinjam" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">

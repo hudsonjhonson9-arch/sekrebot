@@ -47,6 +47,21 @@ test('13 payload admin menjadi saudara #simapoInstansiSection, bukan anak Panel 
   }
 });
 
+test('grid + header Kembali mendahului SEMUA 16 section, termasuk 3 layar user', () => {
+  // Regresi: 3 section user pernah mendahului #aset-screen-head, jadi tombol
+  // Kembali + judul tampil DI BAWAH konten untuk user biasa.
+  const grid = lines.findIndex(l => l.includes('id="aset-grid"'));
+  const head = lines.findIndex(l => l.includes('id="aset-screen-head"'));
+  assert.ok(grid > 0 && head > 0, 'grid dan header harus ada');
+  assert.ok(grid < head, 'grid harus sebelum header');
+  const user = SCREENS.filter(s => s.role === 'user').map(s => s.key);
+  assert.ok(user.length > 0, 'harus ada layar user');
+  for (const s of SCREENS) {
+    const i = lines.findIndex(l => l.includes('id="aset-sect-' + s.key + '"'));
+    assert.ok(i > head, s.key + ' harus setelah #aset-screen-head');
+  }
+});
+
 test('grid 4/3/2 responsif dan .aset-sect tersembunyi secara default', () => {
   assert.match(html, /\.aset-grid\{display:grid;grid-template-columns:repeat\(4,1fr\)/);
   assert.match(html, /max-width:1100px\)\{\.aset-grid\{grid-template-columns:repeat\(3,1fr\)/);
