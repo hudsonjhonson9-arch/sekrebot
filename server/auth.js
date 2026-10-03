@@ -14,17 +14,6 @@ export const MEDIA_ROLES = new Set([
 // di sini, sebelum database disentuh.
 const SESSION_TOKEN_RE = /^[0-9a-f]{192}$/;
 
-// Dipakai HANYA oleh test lama. Ini BUKAN otentikasi: id-nya dipilih penyerang dan
-// timestamp-nya tak pernah diperiksa, jadi `usr_1_<apa saja>` bisa dipalsukan.
-// requireRole() sengaja tidak memakainya.
-export function parseToken(token) {
-  if (typeof token !== 'string') return null;
-  const parts = token.split('_');
-  if (parts.length < 3 || parts[0] !== 'usr') return null;
-  const id = Number(parts[1]);
-  return Number.isSafeInteger(id) && id > 0 ? id : null;
-}
-
 // Header tanpa skema ("usr_1_2") juga diterima; skema selain "bearer" ditolak.
 export function bearerToken(req) {
   const raw = (req.headers?.authorization || '').trim();
@@ -44,40 +33,59 @@ export function isSessionToken(token) {
 // baris sesi: role di auth_sessions hanya snapshot saat login, jadi user yang di-
 // downgrade masih membawa privilege lamanya sampai token 24 jamnya kadaluarsa. Join
 // yang meleset (user dihapus) -> nol baris -> 401, tanpa jatuh ke snapshot.
+// `u.id::text` disengaja: user_list.id itu bigint, dan parser default node-postgres
+// (OID 20/int8) sudah mengembalikan string, jadi tanpa cast ini id diam-diam bisa
+// berubah tipe. Text juga satu-satunya yang aman: max(id) live 9999999999 > int4.
+// TANPA `LIMIT 1` — user_list."NIP" hanya punya index NON-unique, jadi NIP ganda
+// mem-fan-out join ini dan LIMIT 1 akan memilih satu baris secara acak (lihat
+// singleSessionRow). Memakai DISTINCT tidak menolong: id/NIP/role ikut tercampur.
 export const SESSION_LOOKUP_SQL =
-  'SELECT u.id, u."NIP" AS nip, u.role, u.instansi_id ' +
+  'SELECT u.id::text AS id, u."NIP" AS nip, u.role, u.instansi_id ' +
   'FROM auth_sessions s ' +
   'JOIN user_list u ON u."NIP" = s.nip ' +
-  'WHERE s.session_token = $1 AND s.is_active AND s.expires_at > now() ' +
-  'LIMIT 1';
+  'WHERE s.session_token = $1 AND s.is_active AND s.expires_at > now()';
+
+// Nol baris = sesi tak dikenal/kedaluwarsa. Lebih dari satu = NIP dobel di user_list,
+// jadi request ini tidak bisa dikaitkan ke tepat satu identitas: JANGAN pernah pilih
+// salah satu, karena "baris mana yang kebetulan duluan" menentukan otorisasi.
+// Keduanya dikembalikan sebagai null -> 401 yang sama persis, jadi ambiguitas data
+// tidak bocor sebagai token yang valid (500 justru akan membocorkan itu).
+export function singleSessionRow(rows) {
+  return rows.length === 1 ? rows[0] : null;
+}
 
 async function defaultLookup(sessionToken) {
   const { rows } = await query(SESSION_LOOKUP_SQL, [sessionToken]);
-  return rows[0] || null;
+  return singleSessionRow(rows);
 }
 
 export function requireRole(roles, deps = {}) {
   const lookup = deps.lookup || defaultLookup;
-  // `async` + return res.status(...) di setiap cabang: tidak ada await di luar
-  // try/catch, jadi Express 4 tidak pernah melihat rejected promise dari sini.
+  // Semua yang bisa gagal (await lookup, roles.has dari pemanggil yang salah bentuk,
+  // res.status) ada DI DALAM try, jadi fungsi async ini tidak pernah menolak: Express 4
+  // tidak meneruskan rejected promise ke error handler, dan penolakan seperti itu akan
+  // menggantung request selamanya. next() disinkronkan dan di luar try.
   return async function authMiddleware(req, res, next) {
     const token = bearerToken(req);
     // 401 yang sama untuk tanpa token / token rusak / tak dikenal / kedaluwarsa,
     // supaya statusnya tidak membocorkan apakah token itu ada.
     if (!isSessionToken(token)) return unauthorized(res);
     let row;
+    let role;
     try {
       row = await lookup(token);
+      if (!row) return unauthorized(res);
+      role = String(row.role || '').trim().toUpperCase();
+      if (!roles.has(role)) {
+        return res.status(403).json({ ok: false, message: 'Forbidden' });
+      }
     } catch {
       // DB mati = 500, bukan next(): error lookup yang jatuh ke next() akan
       // mengubah outage menjadi bypass otorisasi.
       return res.status(500).json({ ok: false, message: 'Gagal memverifikasi sesi' });
     }
-    if (!row) return unauthorized(res);
-    const role = String(row.role || '').trim().toUpperCase();
-    if (!roles.has(role)) {
-      return res.status(403).json({ ok: false, message: 'Forbidden' });
-    }
+    // id tetap string (lihat ::text di SQL): Task 5 harus memakainya lewat String(),
+    // jangan pernah `req.user.id === <number>`.
     req.user = { id: row.id, nip: row.nip, role, instansi_id: row.instansi_id };
     next();
   };

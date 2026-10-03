@@ -1,28 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  parseToken,
   bearerToken,
   requireRole,
   sameInstansi,
   isSessionToken,
   MEDIA_ROLES,
   SESSION_LOOKUP_SQL,
+  singleSessionRow,
 } from './auth.js';
-
-test('parseToken membaca user id dari token sesi', () => {
-  assert.equal(parseToken('usr_1383864355_1750000000000'), 1383864355);
-});
-
-test('parseToken menolak bentuk token lain', () => {
-  for (const bad of ['', 'abc', 'usr_', 'usr_abc_123', 'usr_12', null, undefined, 12345]) {
-    assert.equal(parseToken(bad), null, `harus menolak: ${String(bad)}`);
-  }
-});
-
-test('parseToken menolak prefix yang bukan usr', () => {
-  assert.equal(parseToken('admin_1383864355_1750000000000'), null);
-});
 
 test('bearerToken membaca header Authorization', () => {
   assert.equal(bearerToken({ headers: { authorization: 'Bearer usr_1_2' } }), 'usr_1_2');
@@ -324,7 +310,7 @@ test('requireRole menolak request tanpa header Authorization', async () => {
 test('requireRole menolak token legacy usr_<id>_<ts> tanpa query', async () => {
   // Format lama n8n: id dibaca langsung dari token tanpa tanda tangan, jadi
   // `usr_1_1` berarti user 1. Di sini harus mati di gerbang bentuk token, bukan
-  // di parseToken, dan tidak boleh sampai ke database.
+  // di gerbang 192-hex, dan tidak boleh sampai ke database.
   const calls = { count: 0 };
   for (const legacy of ['usr_7_1', 'usr_1_1750000000000', 'usr_1383864355_1']) {
     const { status, body, nexted } = await runAuth(
@@ -391,7 +377,7 @@ test('requireRole memberi 500 dan tidak memanggil next() saat database error', a
 test('requireRole memberi 403 untuk role di luar allowlist', async () => {
   const { status, body, nexted } = await runAuth(
     requireRole(MEDIA_ROLES, {
-      lookup: async () => ({ id: 7, nip: '1990', role: 'USER', instansi_id: 'bapperida' }),
+      lookup: async () => ({ id: '7', nip: '1990', role: 'USER', instansi_id: 'bapperida' }),
     }),
     { headers: { authorization: `Bearer ${TOKEN}` } },
   );
@@ -404,23 +390,61 @@ test('requireRole meneruskan request dan menempelkan identitas untuk role yang d
   const req = { headers: { authorization: `Bearer ${TOKEN}` } };
   const { status, body, nexted } = await runAuth(
     requireRole(MEDIA_ROLES, {
-      lookup: async () => ({ id: 7, nip: '1990', role: 'ADMIN', instansi_id: 'bapperida' }),
+      lookup: async () => ({ id: '7', nip: '1990', role: 'ADMIN', instansi_id: 'bapperida' }),
     }),
     req,
   );
   assert.equal(status, 0, 'tidak boleh membalas sendiri kalau sudah lolos');
   assert.equal(body, null);
   assert.equal(nexted, true);
-  assert.deepEqual(req.user, { id: 7, nip: '1990', role: 'ADMIN', instansi_id: 'bapperida' });
+  assert.deepEqual(req.user, { id: '7', nip: '1990', role: 'ADMIN', instansi_id: 'bapperida' });
+  // Kontrak tipe id: STRING, bukan number. user_list.id itu bigint dan parser default
+  // node-postgres (OID 20) sudah jadi string; ::text di SQL mengunci itu. Kalau ini
+  // jadi number, `req.user.id === 7` di Task 5 diam-diam salah.
+  assert.equal(typeof req.user.id, 'string');
+  assert.ok(!Object.is(req.user.id, 7), 'id tidak boleh number');
+  // tidak ada perbandingan === terhadap number di server/ — nilai-looking-numeric
+  // dipakai lewat String(), bukan identitas tipe.
+  assert.match(SESSION_LOOKUP_SQL, /SELECT\s+u\.id::text AS id,/i);
+  assert.doesNotMatch(SESSION_LOOKUP_SQL, /u\.id::(int|integer|int4|bigint|numeric)/i);
 });
 
 test('role hidup dari user_list menang atas snapshot role di baris sesi', () => {
   // Bagian SQL: kolom yang dibaca adalah u.role, bukan s.role.
-  assert.match(SESSION_LOOKUP_SQL, /SELECT\s+u\.id,\s*u\."NIP" AS nip,\s*u\.role,\s*u\.instansi_id/i);
+  assert.match(
+    SESSION_LOOKUP_SQL,
+    /SELECT\s+u\.id::text AS id,\s*u\."NIP" AS nip,\s*u\.role,\s*u\.instansi_id/i,
+  );
   assert.doesNotMatch(SESSION_LOOKUP_SQL, /\bs\.role\b/, 'snapshot role sesi tidak boleh dipakai');
   assert.match(SESSION_LOOKUP_SQL, /JOIN\s+user_list\s+u\s+ON\s+u\."NIP"\s*=\s*s\.nip/i);
   assert.match(SESSION_LOOKUP_SQL, /s\.is_active/i);
   assert.match(SESSION_LOOKUP_SQL, /s\.expires_at\s*>\s*now\(\)/i);
+  // M-1: tanpa LIMIT 1, fan-out NIP dobel terlihat dan singleSessionRow yang menolak.
+  assert.doesNotMatch(SESSION_LOOKUP_SQL, /\bLIMIT\b/i, 'LIMIT 1 menyembunyikan NIP dobel');
+  assert.doesNotMatch(SESSION_LOOKUP_SQL, /\bOFFSET\b/i);
+});
+
+test('singleSessionRow hanya menerima tepat satu baris, tidak pernah memilih', () => {
+  const row = { id: '7', nip: '1990', role: 'ADMIN', instansi_id: 'bapperida' };
+  assert.equal(singleSessionRow([row]), row);
+  // nol baris = sesi tak dikenal/kedaluwarsa
+  assert.equal(singleSessionRow([]), null);
+  // lebih dari satu = NIP dobel di user_list (index-nya NON-unique). Memilih rows[0]
+  // di sini berarti otorisasi bergantung pada urutan yang tidak dijamin.
+  assert.equal(singleSessionRow([row, { ...row, id: '8', role: 'SUPERADMIN' }]), null);
+  assert.equal(singleSessionRow([row, row, row]), null);
+});
+
+test('requireRole memberi 500, bukan menggantung, saat roles bukan Set', async () => {
+  // roles.has() di luar try dulu membuat pemanggil yang salah bentuk (Array, bukan
+  // Set) menolak di dalam async middleware — Express 4 tidak meneruskan rejected
+  // promise, jadi request menggantung selamanya, bukan 403/500.
+  const { status, nexted } = await runAuth(
+    requireRole(['ADMIN'], { lookup: async () => ({ id: '7', nip: '1990', role: 'ADMIN' }) }),
+    { headers: { authorization: `Bearer ${TOKEN}` } },
+  );
+  assert.equal(status, 500);
+  assert.equal(nexted, false);
 });
 
 test('requireRole menolak session yang role live-nya USER walau snapshot-nya ADMIN', async () => {
@@ -429,7 +453,7 @@ test('requireRole menolak session yang role live-nya USER walau snapshot-nya ADM
   const { status, nexted } = await runAuth(
     requireRole(MEDIA_ROLES, {
       lookup: async () => ({
-        id: 7,
+        id: '7',
         nip: '1990',
         role: 'USER',
         sesi_role: 'ADMIN',
@@ -488,15 +512,6 @@ test('sameInstansi: target kosong fail-closed, bukan lolos', () => {
   assert.equal(sameInstansi({ role: 'ADMIN', instansi_id: '' }, 'bapperida'), false);
   // hanya SUPERADMIN yang tetap boleh melewati
   assert.equal(sameInstansi({ role: 'SUPERADMIN', instansi_id: '' }, ''), true);
-});
-
-test('⚠️ risiko diketahui: parseToken lama tetap menerima token yang bisa dipalsukan', () => {
-  // M-1 sejak Task 1: parseToken tidak pernah memeriksa timestamp, jadi
-  // `usr_1_<apa saja>` lolos. Tidak dipakai requireRole — test ini hanya menjaga
-  // supaya tidak ada yang mengandalkannya tanpa lookup server-side.
-  assert.equal(parseToken('usr_1_0'), 1);
-  assert.equal(parseToken('usr_1_99999999999999'), 1);
-  assert.equal(isSessionToken('usr_1_0'), false);
 });
 
 test('⚠️ risiko diketahui: id polos bukan URL -> Apps Script buat duplikat diam-diam', () => {
