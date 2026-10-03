@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseToken, bearerToken } from './auth.js';
+import {
+  parseToken,
+  bearerToken,
+  requireRole,
+  sameInstansi,
+  isSessionToken,
+  MEDIA_ROLES,
+  SESSION_LOOKUP_SQL,
+} from './auth.js';
 
 test('parseToken membaca user id dari token sesi', () => {
   assert.equal(parseToken('usr_1383864355_1750000000000'), 1383864355);
@@ -242,6 +250,253 @@ test('callGas_ melapor respons bukan JSON dan body JSON null', async () => {
   } finally {
     restoreFetch();
   }
+});
+
+// --- Task 4: middleware autentikasi sesi -----------------------------------------
+// Token sesi nyata = encode(gen_random_bytes(48),'hex') -> 192 hex huruf kecil.
+const TOKEN = 'a1b2c3d4'.repeat(24);
+
+function fakeRes() {
+  const out = { status: 0, body: null };
+  return {
+    out,
+    status(code) {
+      out.status = code;
+      return this;
+    },
+    json(body) {
+      out.body = body;
+      return this;
+    },
+  };
+}
+
+async function runAuth(mw, req) {
+  const res = fakeRes();
+  let nexted = false;
+  await mw(req, res, () => {
+    nexted = true;
+  });
+  return { ...res.out, nexted };
+}
+
+// lookup yang dipanggil selalu melempar — jadi "tidak menyentuh database" bisa
+// dibuktikan dari calls.count, bukan sekadar diklaim dari status 401.
+function forbiddenLookup(calls) {
+  return async () => {
+    calls.count += 1;
+    throw new Error('lookup tidak boleh dipanggil');
+  };
+}
+
+test('MEDIA_ROLES memuat tepat enam peran yang diizinkan', () => {
+  assert.deepEqual(
+    [...MEDIA_ROLES].sort(),
+    ['ADMIN', 'IRBAN', 'KABID', 'KEPALA', 'SEKRETARIS', 'SUPERADMIN'],
+  );
+  assert.ok(MEDIA_ROLES instanceof Set);
+});
+
+test('isSessionToken hanya menerima 192 hex huruf kecil', () => {
+  assert.equal(isSessionToken(TOKEN), true);
+  assert.equal(isSessionToken('a'.repeat(191)), false, '191 hex');
+  assert.equal(isSessionToken('a'.repeat(193)), false, '193 hex');
+  assert.equal(isSessionToken('A'.repeat(192)), false, 'huruf besar: encode hex PG lowercase');
+  assert.equal(isSessionToken(`${'a'.repeat(191)}z`), false, 'bukan hex');
+  assert.equal(isSessionToken(` ${TOKEN}`), false, 'spasi');
+  for (const bad of [null, undefined, 123, '', 'usr_7_1']) {
+    assert.equal(isSessionToken(bad), false, `harus menolak: ${String(bad)}`);
+  }
+});
+
+test('requireRole menolak request tanpa header Authorization', async () => {
+  const calls = { count: 0 };
+  const { status, body, nexted } = await runAuth(
+    requireRole(MEDIA_ROLES, { lookup: forbiddenLookup(calls) }),
+    { headers: {} },
+  );
+  assert.equal(status, 401);
+  assert.equal(body.ok, false);
+  assert.equal(nexted, false);
+  assert.equal(calls.count, 0, 'tanpa token tidak boleh menyentuh database');
+});
+
+test('requireRole menolak token legacy usr_<id>_<ts> tanpa query', async () => {
+  // Format lama n8n: id dibaca langsung dari token tanpa tanda tangan, jadi
+  // `usr_1_1` berarti user 1. Di sini harus mati di gerbang bentuk token, bukan
+  // di parseToken, dan tidak boleh sampai ke database.
+  const calls = { count: 0 };
+  for (const legacy of ['usr_7_1', 'usr_1_1750000000000', 'usr_1383864355_1']) {
+    const { status, body, nexted } = await runAuth(
+      requireRole(MEDIA_ROLES, { lookup: forbiddenLookup(calls) }),
+      { headers: { authorization: `Bearer ${legacy}` } },
+    );
+    assert.equal(status, 401, legacy);
+    assert.equal(body.ok, false, legacy);
+    assert.equal(nexted, false, legacy);
+  }
+  assert.equal(calls.count, 0);
+});
+
+test('requireRole menolak token yang bukan 192 hex tanpa query', async () => {
+  const calls = { count: 0 };
+  const junk = ['', 'Bearer', 'abc', 'a'.repeat(191), 'a'.repeat(193), 'z'.repeat(192), 'A'.repeat(192)];
+  for (const token of junk) {
+    const { status, nexted } = await runAuth(
+      requireRole(MEDIA_ROLES, { lookup: forbiddenLookup(calls) }),
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    assert.equal(status, 401, token);
+    assert.equal(nexted, false, token);
+  }
+  assert.equal(calls.count, 0);
+});
+
+test('requireRole memberi 401 saat lookup tidak menemukan sesi', async () => {
+  const calls = { count: 0 };
+  let seen = null;
+  const { status, body, nexted } = await runAuth(
+    requireRole(MEDIA_ROLES, {
+      lookup: async (token) => {
+        calls.count += 1;
+        seen = token;
+        return null; // unknown atau sudah expired — query tidak membedakan keduanya
+      },
+    }),
+    { headers: { authorization: `Bearer ${TOKEN}` } },
+  );
+  assert.equal(status, 401);
+  assert.equal(body.ok, false);
+  assert.equal(nexted, false);
+  assert.equal(calls.count, 1);
+  assert.equal(seen, TOKEN, 'token mentah harus diteruskan ke lookup apa adanya');
+});
+
+test('requireRole memberi 500 dan tidak memanggil next() saat database error', async () => {
+  const { status, body, nexted } = await runAuth(
+    requireRole(MEDIA_ROLES, {
+      lookup: async () => {
+        throw new Error('ECONNREFUSED 127.0.0.1:5432');
+      },
+    }),
+    { headers: { authorization: `Bearer ${TOKEN}` } },
+  );
+  assert.equal(status, 500, 'outage database bukan 401/403');
+  assert.equal(body.ok, false);
+  assert.equal(nexted, false, 'next() di sini = outage jadi bypass otorisasi');
+  // pesan tidak boleh membocorkan detail internal
+  assert.doesNotMatch(JSON.stringify(body), /ECONNREFUSED|5432/);
+});
+
+test('requireRole memberi 403 untuk role di luar allowlist', async () => {
+  const { status, body, nexted } = await runAuth(
+    requireRole(MEDIA_ROLES, {
+      lookup: async () => ({ id: 7, nip: '1990', role: 'USER', instansi_id: 'bapperida' }),
+    }),
+    { headers: { authorization: `Bearer ${TOKEN}` } },
+  );
+  assert.equal(status, 403);
+  assert.equal(body.ok, false);
+  assert.equal(nexted, false);
+});
+
+test('requireRole meneruskan request dan menempelkan identitas untuk role yang diizinkan', async () => {
+  const req = { headers: { authorization: `Bearer ${TOKEN}` } };
+  const { status, body, nexted } = await runAuth(
+    requireRole(MEDIA_ROLES, {
+      lookup: async () => ({ id: 7, nip: '1990', role: 'ADMIN', instansi_id: 'bapperida' }),
+    }),
+    req,
+  );
+  assert.equal(status, 0, 'tidak boleh membalas sendiri kalau sudah lolos');
+  assert.equal(body, null);
+  assert.equal(nexted, true);
+  assert.deepEqual(req.user, { id: 7, nip: '1990', role: 'ADMIN', instansi_id: 'bapperida' });
+});
+
+test('role hidup dari user_list menang atas snapshot role di baris sesi', () => {
+  // Bagian SQL: kolom yang dibaca adalah u.role, bukan s.role.
+  assert.match(SESSION_LOOKUP_SQL, /SELECT\s+u\.id,\s*u\."NIP" AS nip,\s*u\.role,\s*u\.instansi_id/i);
+  assert.doesNotMatch(SESSION_LOOKUP_SQL, /\bs\.role\b/, 'snapshot role sesi tidak boleh dipakai');
+  assert.match(SESSION_LOOKUP_SQL, /JOIN\s+user_list\s+u\s+ON\s+u\."NIP"\s*=\s*s\.nip/i);
+  assert.match(SESSION_LOOKUP_SQL, /s\.is_active/i);
+  assert.match(SESSION_LOOKUP_SQL, /s\.expires_at\s*>\s*now\(\)/i);
+});
+
+test('requireRole menolak session yang role live-nya USER walau snapshot-nya ADMIN', async () => {
+  // Baris hasil query hanya punya role live; kalau ada kolom snapshot ikut terbawa,
+  // middleware tetap harus menolak.
+  const { status, nexted } = await runAuth(
+    requireRole(MEDIA_ROLES, {
+      lookup: async () => ({
+        id: 7,
+        nip: '1990',
+        role: 'USER',
+        sesi_role: 'ADMIN',
+        session_role: 'ADMIN',
+      }),
+    }),
+    { headers: { authorization: `Bearer ${TOKEN}` } },
+  );
+  assert.equal(status, 403);
+  assert.equal(nexted, false);
+});
+
+test('semua jalur 401 memakai pesan yang sama dan tidak membocorkan token', async () => {
+  const messages = [];
+  const push = (r) => messages.push([r.status, r.body.message]);
+  push(
+    await runAuth(requireRole(MEDIA_ROLES, { lookup: forbiddenLookup({ count: 0 }) }), {
+      headers: {},
+    }),
+  );
+  push(
+    await runAuth(requireRole(MEDIA_ROLES, { lookup: forbiddenLookup({ count: 0 }) }), {
+      headers: { authorization: 'Bearer usr_7_1' },
+    }),
+  );
+  push(
+    await runAuth(requireRole(MEDIA_ROLES, { lookup: async () => null }), {
+      headers: { authorization: `Bearer ${TOKEN}` },
+    }),
+  );
+  for (const [status, message] of messages) {
+    assert.equal(status, 401);
+    assert.equal(message, 'Unauthorized', 'pesan 401 harus seragam');
+  }
+  const joined = JSON.stringify(messages);
+  assert.doesNotMatch(joined, new RegExp(TOKEN.slice(0, 16)));
+  assert.doesNotMatch(joined, /usr_7_1/);
+});
+
+test('sameInstansi: SUPERADMIN lolos, null/undefined tanpa filter, string dibandingkan', () => {
+  assert.equal(sameInstansi({ role: 'SUPERADMIN', instansi_id: 'bapperida' }, 'lain'), true);
+  assert.equal(sameInstansi({ role: 'ADMIN', instansi_id: 'bapperida' }, 'bapperida'), true);
+  assert.equal(sameInstansi({ role: 'ADMIN', instansi_id: 'bapperida' }, 'lain'), false);
+  // user_list menyimpan instansi_id sebagai text, target bisa number dari param
+  assert.equal(sameInstansi({ role: 'ADMIN', instansi_id: '3' }, 3), true);
+  assert.equal(sameInstansi({ role: 'ADMIN', instansi_id: '3' }, null), true);
+  assert.equal(sameInstansi({ role: 'ADMIN', instansi_id: '3' }, undefined), true);
+});
+
+test('sameInstansi: target kosong fail-closed, bukan lolos', () => {
+  // auth_sessions.user_list menyimpan '' (bukan null) untuk user tanpa instansi.
+  // Kalau '' diperlakukan sebagai "tanpa filter", setiap user tanpa instansi cocok
+  // dengan setiap target tanpa instansi -> kebocoran lintas instansi.
+  assert.equal(sameInstansi({ role: 'ADMIN', instansi_id: 'bapperida' }, ''), false);
+  assert.equal(sameInstansi({ role: 'ADMIN', instansi_id: '' }, ''), false);
+  assert.equal(sameInstansi({ role: 'ADMIN', instansi_id: '' }, 'bapperida'), false);
+  // hanya SUPERADMIN yang tetap boleh melewati
+  assert.equal(sameInstansi({ role: 'SUPERADMIN', instansi_id: '' }, ''), true);
+});
+
+test('⚠️ risiko diketahui: parseToken lama tetap menerima token yang bisa dipalsukan', () => {
+  // M-1 sejak Task 1: parseToken tidak pernah memeriksa timestamp, jadi
+  // `usr_1_<apa saja>` lolos. Tidak dipakai requireRole — test ini hanya menjaga
+  // supaya tidak ada yang mengandalkannya tanpa lookup server-side.
+  assert.equal(parseToken('usr_1_0'), 1);
+  assert.equal(parseToken('usr_1_99999999999999'), 1);
+  assert.equal(isSessionToken('usr_1_0'), false);
 });
 
 test('⚠️ risiko diketahui: id polos bukan URL -> Apps Script buat duplikat diam-diam', () => {
