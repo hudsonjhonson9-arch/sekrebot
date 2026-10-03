@@ -19,5 +19,8 @@ export function decodeDataUrl(dataUrl) {
 
 export function fileIdFromDriveUrl(url) {
   const m = /\/file\/d\/([-\w]+)/.exec(String(url || ''));
-  return m ? m[1] : null;
+  // Batas ini dikunci sama dengan FILE_ID_RE di Code.gs:3. Tanpa itu, id kepotong
+  // atau kepanjangan dikirim apa adanya lalu ditolak Apps Script dengan 400
+  // "fileId harus id file Drive, bukan URL" — pesan yang menyebut salah penyebab.
+  return m && /^[-\w]{5,200}$/.test(m[1]) ? m[1] : null;
 }

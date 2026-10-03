@@ -14,10 +14,18 @@ async function callGas_(path, init = {}) {
   const tid = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
     const res = await fetch(gasUrl_() + path, { ...init, signal: ctrl.signal });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.ok) {
+    let json;
+    try {
+      json = await res.json();
+    } catch {
+      // body HTML = halaman login Google, artinya deployment belum dibuka untuk
+      // "Anyone". Status tetap 200, jadi "HTTP 200" saja akan menyesatkan.
+      throw new Error(`Apps Script HTTP ${res.status} (respons bukan JSON — cek izin deploy "Anyone" dan URL /exec)`);
+    }
+    // `?.` menutup dua kasus: body JSON `null` dan body `{}` tanpa field ok
+    if (!res.ok || !json?.ok) {
       // pesan dari Apps Script diteruskan apa adanya (mis. batas 5 MB)
-      throw new Error(json.message || `Apps Script HTTP ${res.status}`);
+      throw new Error(json?.message || `Apps Script HTTP ${res.status}`);
     }
     return json;
   } finally {

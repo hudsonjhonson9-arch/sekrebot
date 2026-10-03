@@ -61,6 +61,12 @@ test('decodeDataUrl menolak input yang bukan data URL gambar', () => {
     'data:image/png,notbase64',
     'data:image/png;base64,',
     'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=',
+    // varian huruf besar: .toLowerCase() di media-payload.js:10 wajib ada, karena
+    // /svg/ di Code.gs:52 juga case-sensitive dan tidak bisa diandalkan
+    'data:image/SVG+XML;base64,PHN2Zz48L3N2Zz4=',
+    'data:image/Svg+xml;base64,PHN2Zz48L3N2Zz4=',
+    'data:image/SVG+xml;base64,PHN2Zz48L3N2Zz4=',
+    'DATA:image/SVG+xml;base64,PHN2Zz48L3N2Zz4=',
     null,
     undefined,
   ];
@@ -68,11 +74,29 @@ test('decodeDataUrl menolak input yang bukan data URL gambar', () => {
     assert.throws(() => decodeDataUrl(value), `harus menolak: ${String(value)}`);
   }
   // svg ditolak karena alasan svg, bukan sekadar gagal regex — aturan sama dengan Code.gs
-  assert.throws(() => decodeDataUrl('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4='), /svg/);
+  for (const svg of [
+    'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=',
+    'data:image/SVG+XML;base64,PHN2Zz48L3N2Zz4=',
+    'data:image/Svg+xml;base64,PHN2Zz48L3N2Zz4=',
+    'data:image/SVG+xml;base64,PHN2Zz48L3N2Zz4=',
+    'DATA:image/SVG+xml;base64,PHN2Zz48L3N2Zz4=',
+  ]) {
+    assert.throws(() => decodeDataUrl(svg), /svg/, `harus ditolak karena svg: ${svg}`);
+  }
   assert.equal(fileIdFromDriveUrl('https://drive.google.com/file/d/1AbCdEfGh/view'), '1AbCdEfGh');
   assert.equal(fileIdFromDriveUrl('https://drive.google.com/open?id=1AbCdEfGh'), null);
   assert.equal(fileIdFromDriveUrl(''), null);
   assert.equal(fileIdFromDriveUrl(null), null);
+  // id di luar 5..200 karakter ditolak di sini, bukan diteruskan ke Apps Script
+  // yang akan membalas 400 "fileId harus id file Drive, bukan URL"
+  assert.equal(fileIdFromDriveUrl('https://drive.google.com/file/d/abc/view'), null);
+  assert.equal(fileIdFromDriveUrl('https://drive.google.com/file/d/ab/view'), null);
+  assert.equal(fileIdFromDriveUrl(`https://drive.google.com/file/d/${'x'.repeat(201)}/view`), null);
+  // spasi di tengah id: regex lama memotong jadi '1Ab' yang ditolak Apps Script
+  assert.equal(fileIdFromDriveUrl('https://drive.google.com/file/d/1Ab CdEf/view'), null);
+  // batas panjang tetap diterima: 5 dan 200 karakter lolos FILE_ID_RE
+  assert.equal(fileIdFromDriveUrl(`https://drive.google.com/file/d/${'x'.repeat(200)}/view`), 'x'.repeat(200));
+  assert.equal(fileIdFromDriveUrl('https://drive.google.com/file/d/abcde/view'), 'abcde');
 });
 
 test('decodeDataUrl menolak gambar melebihi 5 MB', () => {
@@ -161,4 +185,62 @@ test('gasUpsert melempar error saat Apps Script menolak', async () => {
   } finally {
     restoreFetch();
   }
+});
+
+test('callGas_ melapor respons bukan JSON dan body JSON null', async () => {
+  // body HTML dengan status 200 = deployment belum di-deploy untuk "Anyone".
+  // Error wajib menyebut bukan JSON, bukan "HTTP 200" yang menyesatkan.
+  stubFetch(async () => ({
+    ok: true,
+    status: 200,
+    json: async () => {
+      throw new SyntaxError('Unexpected token < in JSON at position 0');
+    },
+  }));
+  try {
+    await assert.rejects(
+      () => gasUpsert({ filename: 'a.png', mimeType: 'image/png', dataBase64: 'AAAA' }),
+      (err) => {
+        assert.ok(err instanceof Error, 'harus Error biasa');
+        assert.equal(err.name, 'Error', 'harus Error, bukan TypeError');
+        assert.match(err.message, /respons bukan JSON/);
+        assert.match(err.message, /"Anyone"/);
+        assert.match(err.message, /\/exec/);
+        return true;
+      },
+    );
+
+    // body JSON `null` dulu bocor TypeError: Cannot read properties of null
+    stubFetch(async () => ({ ok: true, status: 200, json: async () => null }));
+    await assert.rejects(
+      () => gasUpsert({ filename: 'a.png', mimeType: 'image/png', dataBase64: 'AAAA' }),
+      (err) => {
+        assert.equal(err.name, 'Error', 'harus Error, bukan TypeError');
+        assert.doesNotMatch(err.message, /Cannot read properties/);
+        assert.match(err.message, /Apps Script HTTP 200/);
+        return true;
+      },
+    );
+
+    // body `{}` tanpa field ok: pesan default, tidak bocor undefined
+    stubFetch(async () => ({ ok: true, status: 200, json: async () => ({}) }));
+    await assert.rejects(
+      () => gasUpsert({ filename: 'a.png', mimeType: 'image/png', dataBase64: 'AAAA' }),
+      /Apps Script HTTP 200/,
+    );
+  } finally {
+    restoreFetch();
+  }
+});
+
+test('⚠️ risiko diketahui: id polos bukan URL -> Apps Script buat duplikat diam-diam', () => {
+  // Code.gs:63 hanya menolak fileId yang ADA tapi tidak lolos FILE_ID_RE.
+  // fileId null berarti "buat file baru" tanpa error sama sekali. Kalau kolom DB
+  // menyimpan id polos (bukan URL /file/d/<id>/view hasil canonicalUrl_), setiap
+  // upload membuat duplikat dan foto lama tidak pernah di-update.
+  // Batas-batas ini tidak bisa memutuskan masalahnya — Task 4/5 harus query nilainya.
+  assert.equal(existingFileId('1AbCdEfGh'), null);
+  assert.equal(existingFileId('1AbCdEfGh'), fileIdFromDriveUrl('1AbCdEfGh'));
+  // bentuk yang benar tetap jadi id polos, jadi gasUpsert mengirim fileId, bukan URL
+  assert.equal(existingFileId('https://drive.google.com/file/d/1AbCdEfGh/view'), '1AbCdEfGh');
 });
