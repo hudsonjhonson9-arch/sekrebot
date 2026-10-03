@@ -578,7 +578,7 @@ function harness({ user = ME, userRow = row(), auth = true, query, gasUpsert } =
   return { app, sql, gas };
 }
 
-async function post(h, path, body, headers = {}) {
+async function post(h, path, body, headers = {}, { signal } = {}) {
   const server = await new Promise((resolve) => {
     const s = h.app.listen(0, () => resolve(s));
   });
@@ -593,11 +593,34 @@ async function post(h, path, body, headers = {}) {
         ...headers,
       },
       body: JSON.stringify(body),
+      signal,
     });
     return { status: res.status, body: await res.json().catch(() => null) };
   } finally {
     server.close();
     server.closeAllConnections?.();
+  }
+}
+
+// Membedakan "handler menjawab" dari "handler tidak menjawab sama sekali". Express 4
+// tidak meneruskan rejected promise dari handler async ke error handler, jadi penolakan
+// yang lolos jadi request menggantung tanpa balasan — dan test akan hang, bukan merah.
+// Deadline membuat kegagalan itu jadi error yang bisa dibaca.
+async function postWithDeadline(h, path, body, ms = 2000) {
+  return post(h, path, body, {}, { signal: AbortSignal.timeout(ms) })
+    .then((res) => ({ ...res, hung: false }))
+    .catch(() => ({ status: 0, body: null, hung: true }));
+}
+
+// Jalankan fn sambil menangkap console.error, lalu kembalikan log yang terkumpul.
+async function captureLogs(fn) {
+  const logs = [];
+  const realError = console.error;
+  console.error = (...args) => logs.push(args.map(String).join(' '));
+  try {
+    return { result: await fn(), logs };
+  } finally {
+    console.error = realError;
   }
 }
 
@@ -755,12 +778,24 @@ test('face: user_id tidak ada -> 404 dan Drive tidak dipanggil', async () => {
   assert.equal(h.gas.length, 0);
 });
 
-test('face: UPDATE 0 baris -> 403 fail-closed (gate scope di SQL menolak)', async () => {
-  const h = harness({
-    query: async (text) => (/UPDATE/i.test(text) ? { rows: [] } : { rows: [row()] }),
+test('face: UPDATE 0 baris -> 500 + fileId yatim tercatat (bukan 403 senyap)', async () => {
+  // 0 baris SETELAH inScope() mengizinkan bukan penolakan otorisasi — itu sudah
+  // tertangkap lebih awal sebagai 403 sebelum gasUpsert (lihat test 403 di atas).
+  // Di titik ini klausa WHERE dan aturan JS sudah ekuivalen, jadi 0 baris berarti
+  // invarian yang jebol: 500 + log, bukan 403 yang menipu operator.
+  const { result: res, logs } = await captureLogs(() => {
+    const h = harness({
+      query: async (text) => (/UPDATE/i.test(text) ? { rows: [] } : { rows: [row()] }),
+    });
+    return post(h, '/api/media/face', { ...FACE }).then((r) => ({ r, h }));
   });
-  const res = await post(h, '/api/media/face', { ...FACE });
-  assert.equal(res.status, 403, '0 baris = scope SQL tidak cocok = tolak');
+  assert.equal(res.r.status, 500, '0 baris = invarian scope, bukan penolakan otorisasi');
+  assert.equal(res.h.gas.length, 1, 'file Drive sudah dibuat, jadi ini yatim');
+  assert.match(
+    logs.join('\n'),
+    /NEW1/,
+    'fileId yatim harus tercatat: penolakan yang tidak dilaporkan adalah bug',
+  );
 });
 
 test('face: descriptor, model, dan saved_at diteruskan apa adanya', async () => {
@@ -925,4 +960,145 @@ test('D-8: gagal simpan DB -> 500 pesan tetap, file Drive yatim tercatat, tidak 
   } finally {
     console.error = realError;
   }
+});
+
+// --- Fix round (review findings 1-5) ---------------------------------------------
+// Baseline commit c1290a0.
+
+// F-1: Express 4 tidak meneruskan rejected promise dari handler async. Tanpa try/catch
+// yang membungkus SELURUH isi handler, satu lookup yang menolak menggantung request
+// selamanya atau, tanpa listener unhandledRejection, mematikan proses beserta /health
+// dan setiap request lain.
+test('F-1: lookup target menolak -> 503, tidak menggantung, tidak ada rejection lolos', async () => {
+  const escaped = [];
+  const onRejection = (reason) => escaped.push(reason);
+  process.on('unhandledRejection', onRejection);
+  try {
+    for (const [path, body] of [
+      ['/api/media/face', { ...FACE }],
+      ['/api/media/signature', { ...SIG }],
+    ]) {
+      const { result: res, logs } = await captureLogs(() => {
+        const h = harness({
+          query: async () => {
+            throw new Error('connect ECONNREFUSED 127.0.0.1:5432');
+          },
+        });
+        return postWithDeadline(h, path, body);
+      });
+      assert.equal(res.hung, false, `${path} tidak boleh menggantung tanpa balasan`);
+      assert.equal(res.status, 503, `${path}: database tidak tersedia = 503, bukan 500`);
+      assert.equal(res.body.ok, false);
+      assert.doesNotMatch(JSON.stringify(res.body), /ECONNREFUSED|5432/, 'D-6 tetap tidak bocor');
+      assert.match(logs.join('\n'), /ECONNREFUSED/, 'detail tetap masuk log server');
+    }
+  } finally {
+    process.off('unhandledRejection', onRejection);
+  }
+  // Biarkan macrotask berlalu supaya rejection yang menggantung sempat terlihat.
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(escaped.map(String), [], 'penolakan tidak boleh lolos dari handler async');
+});
+
+// F-2: 0 baris setelah upload = file Drive yatim. Jalur /face diuji di atas
+// ('UPDATE 0 baris'); ini pasangan /signature-nya, bentuk log harus sama.
+test('F-2: signature upsert 0 baris -> 500 + fileId yatim tercatat', async () => {
+  const { result: res, logs } = await captureLogs(() => {
+    const h = harness({
+      query: async (text) => (/INSERT/i.test(text) ? { rows: [] } : { rows: [row()] }),
+    });
+    return post(h, '/api/media/signature', { ...SIG }).then((r) => ({ r, h }));
+  });
+  assert.equal(res.r.status, 500);
+  assert.equal(res.h.gas.length, 1, 'file Drive sudah dibuat sebelum upsert');
+  assert.match(logs.join('\n'), /NEW1/, 'fileId yatim harus tercatat supaya bisa direkonsiliasi');
+});
+
+// F-3: Number() lama menerima semua ini ([5]->5, true->1, '0x2a'->42, '1e3'->1000,
+// ' 42 '->42) dan menulis ke target yang salah.
+test('F-3: user_id yang dipaksa Number() ditolak 400, tanpa menyentuh database', async () => {
+  for (const bad of [[5], true, false, '0x2a', '1e3', ' 42 ', '42 ', 9007199254740992]) {
+    const h = harness();
+    const res = await post(h, '/api/media/face', { ...FACE, user_id: bad });
+    assert.equal(res.status, 400, `user_id=${JSON.stringify(bad)}`);
+    assert.equal(h.sql.length, 0, `user_id=${JSON.stringify(bad)} tidak boleh query`);
+    assert.equal(h.gas.length, 0, `user_id=${JSON.stringify(bad)} tidak boleh ke Drive`);
+  }
+});
+
+test('F-3: user_id > 2^53 diteruskan persis sebagai teks, tanpa pembulatan', async () => {
+  const big = '9007199254740993';
+  // Bukti kenapa Number() salah: ia membulatkan ke ...992 sebelum Postgres melihatnya.
+  assert.notEqual(String(Number(big)), big, 'Number() membulatkan, jadi nilainya harus teks');
+  const h = harness({ userRow: row({ id: big }) });
+  const res = await post(h, '/api/media/face', { ...FACE, user_id: big });
+  assert.equal(res.status, 200);
+  const sel = h.sql.find((s) => /FROM\s+"user_list"/i.test(s.text));
+  assert.equal(sel.params[0], big, 'lookup target menerima digit persis');
+  assert.equal(typeof sel.params[0], 'string');
+  const upd = h.sql.find((s) => /UPDATE/i.test(s.text));
+  assert.equal(upd.params[0], big, 'UPDATE menulis ke id persis, bukan yang dibulatkan');
+  assert.equal(typeof upd.params[0], 'string', 'selalu teks: tidak pernah menyentuh float');
+});
+
+// F-4: sentinel dan ?id= non-Drive dulu diteruskan ke DriveApp.getFileById() dan muncul
+// sebagai 502 permanen yang tidak bisa ditindaklanjuti untuk pegawai itu.
+test('F-4: kata sentinel dan ?id= non-Drive tidak pernah jadi fileId', async () => {
+  for (const sentinel of ['undefined', 'DELETED', 'NOT_SET']) {
+    const h = harness({ userRow: row({ face_photo: sentinel }) });
+    const res = await post(h, '/api/media/face', { ...FACE });
+    assert.equal(res.status, 200, sentinel);
+    assert.equal(h.gas[0].fileId, null, `${sentinel} bukan id Drive`);
+  }
+  const other = harness({
+    userRow: row({ face_photo: 'https://example.com/x?id=abcdefghij' }),
+  });
+  assert.equal((await post(other, '/api/media/face', { ...FACE })).status, 200);
+  assert.equal(other.gas[0].fileId, null, '?id= pada host non-Drive bukan file Drive');
+
+  // Cabang load-bearing tetap hidup: 48/48 baris produksi berbentuk ini.
+  const prod = harness({
+    userRow: row({ signature: 'https://drive.google.com/uc?export=view&id=abc123def' }),
+  });
+  await post(prod, '/api/media/signature', { ...SIG });
+  assert.equal(prod.gas[0].fileId, 'abc123def');
+});
+
+// F-5: klausa WHERE harus ekuivalen dengan inScope() di JS. user_list.instansi_id
+// nullable: tanpa COALESCE, SQL menolak (NULL IS NOT DISTINCT FROM '' = false) apa yang
+// JS izinkan (self), menghasilkan 403 palsu + file Drive yatim. Diverifikasi live.
+test('F-5: scope SQL dinormalisasi COALESCE di kedua statement, parameternya teks', async () => {
+  const face = harness();
+  await post(face, '/api/media/face', { ...FACE });
+  const upd = face.sql.find((s) => /UPDATE\s+"user_list"/i.test(s.text));
+  assert.match(
+    upd.text,
+    /COALESCE\(\s*"instansi_id"\s*,\s*''\s*\)\s+IS\s+NOT\s+DISTINCT\s+FROM\s+\$6/i,
+    'sisi SQL dinormalkan sama seperti norm() di JS',
+  );
+  assert.doesNotMatch(
+    upd.text,
+    /"instansi_id"\s+IS\s+NOT\s+DISTINCT\s+FROM\s+\$6/i,
+    'bentuk lama (tanpa COALESCE) harus hilang',
+  );
+  assert.equal(upd.params[5], 'bapperida', 'scope dikirim sebagai teks, bukan angka');
+  assert.equal(typeof upd.params[5], 'string');
+  assert.equal(upd.params[6], false, 'ADMIN -> $7::boolean tidak membuka scope');
+
+  const sig = harness();
+  await post(sig, '/api/media/signature', { ...SIG });
+  const up = sig.sql.find((s) => /INSERT\s+INTO\s+"tanda_tangan"/i.test(s.text));
+  assert.match(up.text, /COALESCE\(\s*"instansi_id"\s*,\s*''\s*\)\s+IS\s+NOT\s+DISTINCT\s+FROM\s+\$4/i);
+  assert.doesNotMatch(up.text, /"instansi_id"\s+IS\s+NOT\s+DISTINCT\s+FROM\s+\$4/i);
+  assert.equal(up.params[3], 'bapperida');
+  assert.equal(up.params[4], false);
+});
+
+test('F-5: kasus luar-instansi biasa tetap 403 sebelum Drive (bukan 500)', async () => {
+  const h = harness({
+    userRow: row({ id: '77', nip: '199501012015011003', instansi_id: 'dpmptsp' }),
+  });
+  const res = await post(h, '/api/media/face', { ...FACE, user_id: 77 });
+  assert.equal(res.status, 403, 'penolakan otorisasi normal tetap 403');
+  assert.equal(h.gas.length, 0, 'dan tetap sebelum gasUpsert: tidak ada file yatim');
 });
