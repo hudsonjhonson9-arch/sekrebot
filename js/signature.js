@@ -287,13 +287,15 @@
         const { ok: sigOk, data: res } = await apiPost(P.signatureSave, payload);
 
         if (sigOk) {
-          _sigCache[nip] = dataUrl;
-          try { localStorage.setItem(`sig_${nip}`, dataUrl); } catch (_) { }
+          const d = res?.data ?? res ?? {};
+          const savedSig = d.signature || d.fileUrl || d.url || dataUrl;
+          _sigCache[nip] = savedSig;
+          try { localStorage.setItem(`sig_${nip}`, savedSig); } catch (_) { }
 
           _showSigMsg('✅ Tanda tangan berhasil disimpan!', 'ok');
           // Update UI profil
-          if (nip === localStorage.getItem('MY_NIP')) updateProfilSigUI(dataUrl);
-          if (typeof _sigCallback === 'function') _sigCallback(dataUrl);
+          if (nip === localStorage.getItem('MY_NIP')) updateProfilSigUI(savedSig);
+          if (typeof _sigCallback === 'function') _sigCallback(savedSig);
           setTimeout(() => closeSignaturePad(), 1500);
         } else {
           throw new Error('Server error ' + 200);

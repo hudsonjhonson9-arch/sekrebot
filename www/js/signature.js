@@ -289,15 +289,17 @@
         const { ok: sigOk, data: res } = await apiPost(P.signatureSave, payload);
 
         if (sigOk) {
+          const d = res?.data ?? res ?? {};
+          const savedSig = d.signature || d.fileUrl || d.url || dataUrl;
           // Cache lokal
-          _sigCache[String(_sigTargetId)] = dataUrl;
-          try { localStorage.setItem(`sig_${_sigTargetId}`, dataUrl); } catch (_) { }
+          _sigCache[String(_sigTargetId)] = savedSig;
+          try { localStorage.setItem(`sig_${_sigTargetId}`, savedSig); } catch (_) { }
 
           _showSigMsg('✅ Tanda tangan berhasil disimpan!', 'ok');
           // Update UI profil
-          if (String(_sigTargetId) === String(MY_ID)) updateProfilSigUI(dataUrl);
+          if (String(_sigTargetId) === String(MY_ID)) updateProfilSigUI(savedSig);
           // Callback jika ada
-          if (typeof _sigCallback === 'function') _sigCallback(dataUrl);
+          if (typeof _sigCallback === 'function') _sigCallback(savedSig);
           // Tutup overlay setelah 1.5 detik
           setTimeout(() => closeSignaturePad(), 1500);
         } else {
