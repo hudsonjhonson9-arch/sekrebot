@@ -17,9 +17,14 @@ const FACE_TARGET_SQL = `SELECT "id"::text AS id, "NIP" AS nip, "instansi_id", "
 // diri sendiri dengan instansi_id NULL). Klausa ini ada supaya jadi defence in depth —
 // route berikutnya yang lupa memanggil inScope() tetap terkunci WHERE-nya sendiri — jadi
 // ekuivalensi itu syarat, bukan sesuatu yang harus diasumsikan.
+// user_list tidak punya kolom "face_descriptor" maupun "updated_at" -- keduanya
+// hasil asumsi, akan 500 di production. Deskriptor disimpan di "face_histogram"
+// (kolom yang sama dipakai frontend sebagai sumber utama: auth.js, meja.js,
+// desktop.js, admin-face.js semua baca face_histogram dulu). Field request tetap
+// "face_descriptor" karena itu yang dikirim face.js:155.
 const FACE_UPDATE_SQL = `UPDATE "user_list"
-  SET "face_photo" = $5, "face_descriptor" = $2, "face_saved_at" = $3,
-      "face_model" = $4, "updated_at" = NOW()
+  SET "face_photo" = $5, "face_histogram" = $2, "face_saved_at" = $3,
+      "face_model" = $4
   WHERE "id" = $1::bigint
     AND (COALESCE("instansi_id",'') IS NOT DISTINCT FROM $6 OR $7::boolean)`;
 
