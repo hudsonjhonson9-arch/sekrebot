@@ -1,0 +1,3931 @@
+﻿{
+  "nodes": [
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, message: 'Konfirmasi berhasil diproses.' }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "ea1ca515-2421-463c-aaeb-841db342ddf9",
+      "name": "Respond OK Approve",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2800,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "45834deb-0529-42fb-bb84-eb4d7f003e31",
+      "name": "Broadcast ke Semua Pegawai",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2576,
+        960
+      ],
+      "webhookId": "2308f650-7d3a-4364-af3a-711e03ee2abd",
+      "retryOnFail": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "GSEMSscu6roPnSCy",
+          "name": "BAPPERIDA"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Auto Approve (S, T, TUBEL, CUTI)').first().json;\nconst INSTANSI_MAP = { bapperida: 'BAPPERIDA Sumba Barat', dpmptsp: 'DPMPTSP Sumba Barat' };\nconst instansi_id = d.instansi_id || 'bapperida';\nconst instansi_name = INSTANSI_MAP[instansi_id] || instansi_id.toUpperCase();\nconst jenis = d.row_jenis_base;\nconst em = { IZIN: '🙏', SAKIT: '🤒', TUGAS: '💼' }[jenis] || '📝';\nconst isApprove = d.action === 'APPROVE';\nconst icon = isApprove ? '✅' : '❌';\nconst label = isApprove ? 'DISETUJUI' : 'DITOLAK';\nconst text = `DIINFORMASIKAN BAHWA\\n━━━━━━━━━━━━━━━━━━\\n${icon} *STATUS: ${label}*\\n${em} *${jenis}* — ${d.tgl_range}\\n👤 *${d.row_nama}*\\n📝 ${d.row_ket || '—'}\\n━━━━━━━━━━━━━━━━━━\\n_Pengumuman dari Admin ${instansi_name}_`;\n\nconst pegawai = $input.all().map(i => i.json).filter(p => {\n  const id = String(p.id || '').trim();\n  const st = String(p.Status || p.status || 'AKTIF').toUpperCase();\n  return id && st !== 'NONAKTIF' && st !== 'INACTIVE';\n});\n\nreturn pegawai.map(p => ({ json: { chat_id: String(p.id), text } }));"
+      },
+      "id": "f7ed04ec-7d4f-4d0e-ba1a-9850805d8de5",
+      "name": "Format Broadcast Approve",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2352,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *, \"instansi_id\" FROM \"user_list\" WHERE \"instansi_id\" = COALESCE(NULLIF('{{ ($json.instansi_id).toString() }}', ''), 'bapperida')",
+        "options": {}
+      },
+      "id": "d523ea2d-fc23-400d-b5b0-9b5e1092b653",
+      "name": "Get Semua Pegawai",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2128,
+        960
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"user_list\" SET \"Status\" = '{{ ($json.action === 'APPROVE' ? $json.row_jenis_base : 'AKTIF').toString().replace(/'/g, \"''\") }}' WHERE \"id\" = '{{ (String($json.row_id)).toString().replace(/'/g, \"''\") }}' RETURNING *",
+        "options": {}
+      },
+      "name": "Update Status Approve",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "id": "100792a8-74a0-4180-929a-e2e200f8aa76",
+      "position": [
+        1888,
+        960
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Proses Konfirmasi').first().json }];"
+      },
+      "id": "e3f1235a-48a0-4c25-8041-778af4db8fd1",
+      "name": "Selesai Update Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Proses Konfirmasi').first().json }];"
+      },
+      "name": "Collapse Log Approve",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "2bdede13-2fc1-47d0-94bf-52e95da80703",
+      "position": [
+        1440,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"Log_Absen\" (\"Nama\", \"NIP\", \"Tanggal\", \"Jam\", \"Jenis Absen\", \"Lokasi\", \"Ket\", \"koordinat\", \"ID\", \"request_id\", \"instansi_id\") VALUES ('{{ ($json.row_nama).toString().replace(/'/g, \"''\") }}','{{ ($json.row_nip).toString().replace(/'/g, \"''\") }}','{{ ($json.tanggal_this).toString().replace(/'/g, \"''\") }}','{{ ($json.row_jam).toString().replace(/'/g, \"''\") }}','{{ ($json.row_jenis_base).toString().replace(/'/g, \"''\") }}','-','{{ ($json.row_ket).toString().replace(/'/g, \"''\") }}','-','{{ ($json.row_id).toString().replace(/'/g, \"''\") }}', '{{ ($json.request_id).toString().replace(/'/g, \"''\") }}', COALESCE((SELECT instansi_id FROM user_list WHERE \"NIP\" = '{{ ($json.row_nip).toString().replace(/'/g, \"''\") }}' LIMIT 1), (SELECT instansi_id FROM user_list WHERE id::text = '{{ ($json.row_id).toString().replace(/'/g, \"''\") }}' LIMIT 1), 'bapperida')) RETURNING *",
+        "options": {
+          "queryBatching": "independently"
+        }
+      },
+      "name": "Insert Log IZIN Approve",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "id": "7928177a-0c3a-4f52-ba65-c5cac8dc6467",
+      "position": [
+        1216,
+        864
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Proses Konfirmasi').first().json }];"
+      },
+      "name": "Skip Insert (Reject)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "7c65e3d0-8817-4ae5-8d61-67129fdaf2c1",
+      "position": [
+        1440,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "APPROVE",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "id": "is_approve"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Is Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "id": "09721251-11d0-48fb-b2ee-c0c9265c2fb8",
+      "position": [
+        992,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\n\nconst dates = (d.dates && d.dates.length) ? d.dates : [d.row_tgl_mulai].filter(Boolean);\nif (!dates.length) return [{json:{...d, tanggal_this:'', id_ket: (d.target_id_ket||'UNK') + '_01'}}];\n\nconst prefixMap = { IZIN:'IZN', SAKIT:'SKT', TUGAS:'TGS' };\nconst jenisBase = (d.row_jenis_base||'').toUpperCase();\nconst prefix = prefixMap[jenisBase] || jenisBase.slice(0,3);\nconst tglKey = (d.row_tgl_mulai||'').replace(/-/g,'');\n\nconst out = [];\ndates.forEach((tgl, i) => {\n  const suffix = String(i+1).padStart(2,'0');\n  const tglSuffix = tgl.replace(/-/g, '');\n  // 1. Catat Keterangan Utama (IZIN/SAKIT/TUGAS)\n  out.push({\n    json: {\n      ...d,\n      tanggal_this: tgl,\n      id_ket: `${prefix}${tglKey}_${d.row_id}_${suffix}`,\n      request_id: (d.request_id || '') + '_' + tglSuffix + suffix\n    }\n  });\n\n  // 2. Jika IZIN dan Selesai >= 14:30, Otomatis Catat PULANG\n  const jamSelesai = d.row_jam_selesai || '';\n  if (jenisBase === 'IZIN' && jamSelesai >= '14:30') {\n    out.push({\n      json: {\n        ...d,\n        tanggal_this: tgl,\n        row_jenis_base: 'PULANG',\n        row_jam: jamSelesai,\n        row_ket: `${d.row_ket} (Auto Pulang dari Izin Jam)`,\n        id_ket: `PLG${tglKey}_${d.row_id}_${suffix}`,\n        request_id: (d.request_id || '') + '_' + tglSuffix + suffix + '_PLG'\n      }\n    });\n  }\n});\nreturn out;"
+      },
+      "name": "Expand Log Approve",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "61171407-b992-4cd9-9c8a-d3fd5ac5d23f",
+      "position": [
+        1248,
+        1072
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Proses Konfirmasi').first().json }];"
+      },
+      "id": "1e6490a0-09a1-44ef-90da-65a8151e9e43",
+      "name": "Selesai Update KET TEMP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"ket_temp\" SET \"Status\" = '{{ ($json.new_status).toString().replace(/'/g, \"''\") }}', \"Jenis Absen\" = '{{ ($json.new_jenis_absen).toString().replace(/'/g, \"''\") }}' WHERE \"ID_Ket\" = '{{ ($json.target_id_ket).toString().replace(/'/g, \"''\") }}' RETURNING *",
+        "options": {}
+      },
+      "id": "457dfc04-e34b-4b10-a07f-1cb213be319c",
+      "name": "Update KET TEMP Row",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        320,
+        960
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\n// ket_temp = 1 row per pengajuan, matching = [ID_Ket]\nconst rows = Array.isArray(d.matching_ket_rows) ? d.matching_ket_rows.flat().map(String).filter(Boolean) : [String(d.target_id_ket)];\nreturn rows.map(idKet => ({ json: { ...d, target_id_ket: idKet } }));"
+      },
+      "id": "c9626e84-c75f-4c31-bae1-ae02ea2a345b",
+      "name": "Expand KET TEMP Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, message: $('Proses Konfirmasi').item.json.message }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "032edbd3-550d-439a-b5cc-a84fa106cbc9",
+      "name": "Respond Fail Found",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        96,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "found"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bbb7af02-751f-4c22-9c00-a5d7ffae4e3b",
+      "name": "Is Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -128,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d=$input.first().json;\nif(!d.ok) return [{json:d}];\nconst AUTO=['SAKIT','TUGAS','TUBEL','CUTI'];\nif(AUTO.includes(d.row_jenis_base)) return [{json:{...d,action:'APPROVE',new_jenis_absen:d.row_jenis_base,_auto:true}}];\nreturn [{json:d}];"
+      },
+      "id": "ed95abbe-1ca2-4c72-adf9-2e73daf19b04",
+      "name": "Auto Approve (S, T, TUBEL, CUTI)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const idKetRaw = $('Validasi Approve').item.json.id_ket;\nconst action   = $('Validasi Approve').item.json.action;\nconst jenis    = $('Validasi Approve').item.json.jenis;\nconst allRows  = $input.all();\n\n// Normalisasi: strip suffix _01/_02 jika ada (ket_temp simpan tanpa suffix)\nconst idKet = String(idKetRaw).replace(/_\\d{2}$/, '');\n\nconst match = allRows.find(r => String(r.json.ID_Ket||'').trim() === idKet.trim());\nif (!match) return [{json:{ok:false, message:'Data tidak ditemukan di ket_temp.'}}];\n\nconst r = match.json;\n\nconst tglMulai   = r.tgl_mulai || '';\nconst tglSelesai = r.tgl_selesai || tglMulai;\nconst tglRange   = r.tanggal || (tglMulai === tglSelesai ? tglMulai : `${tglMulai} s.d. ${tglSelesai}`);\n\n// Generate dates dari tgl_mulai sampai tgl_selesai\nconst dates = [];\nif (tglMulai) {\n  const start = new Date(tglMulai), end = new Date(tglSelesai||tglMulai);\n  for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1))\n    dates.push(d.toISOString().split('T')[0]);\n}\nif (!dates.length) dates.push(tglMulai);\n\nconst nowStr = new Date().toLocaleString('en-US', {timeZone:'Asia/Makassar', hour12:false});\nconst now    = new Date(nowStr);\nconst tsStr  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;\n\nconst newStatus     = action === 'APPROVE' ? 'DISETUJUI' : 'DITOLAK';\nconst newJenisAbsen = action === 'APPROVE' ? jenis : jenis + ' DITOLAK';\n\nreturn [{json:{\n  ok:                true,\n  target_id_ket:     idKet,\n  matching_ket_rows: [idKet],\n  dates,\n  tgl_range:         tglRange,\n  new_status:        newStatus,\n  new_jenis_absen:   newJenisAbsen,\n  action,\n  row_id:            String(r.ID_Pegawai || r.telegram_id || ''),\n  row_nama:          r.Nama || r.nama || '',\n  row_nip:           r.NIP  || r.nip  || '',\n  row_tgl_mulai:     tglMulai,\n  row_tgl_selesai:   tglSelesai,\n  row_jam:           r.Jam || r.diajukan_at || tsStr.split(' ')[1],\n  row_ket:           r.Ket || r.keterangan || '',\n  row_jenis_base:    jenis,\n  request_id:        r.request_id || '',\n  instansi_id:       r.instansi_id || '',\n  timestamp:         tsStr\n}}];"
+      },
+      "id": "b64579fd-81a8-4d6d-966f-06e4e0106bf1",
+      "name": "Proses Konfirmasi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -576,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM \"ket_temp\" WHERE \"Status\" = 'PENDING'",
+        "options": {}
+      },
+      "id": "3f7b4adf-0ea0-4b03-9057-cc5ab31443f3",
+      "name": "Get Ket Row",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -800,
+        1056
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, message: $('Validasi Approve').item.json.message }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "5b02fa9e-ffe9-45d0-a0e1-67a8d8c4624a",
+      "name": "Respond Fail Approve",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -800,
+        1248
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "is_valid_a"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4c0c0825-e5e5-47fe-8cf8-bb5cfd470d89",
+      "name": "Is Valid?3",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1024,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body=$('CORS Ket Approve').first().json.body||{};\nlet ADMIN_IDS=[];\ntry{\n  const adminRows=$('Get Admin List Approve').all().map(i=>i.json);\n  ADMIN_IDS=adminRows.map(r=>parseInt(r.telegram_id||r.Telegram_ID||r.telegram_Id||0)).filter(id=>id>0);\n}catch(_){}\nif(!ADMIN_IDS.length) ADMIN_IDS=[1383864355];\nconst adminId=parseInt(body.admin_id||0);\nif(!ADMIN_IDS.includes(adminId)) return [{json:{ok:false,message:'Akses ditolak. Bukan admin.'}}];\nconst action=(body.action||'').toUpperCase();\nif(!['APPROVE','REJECT'].includes(action)) return [{json:{ok:false,message:'Action tidak valid.'}}];\nconst idKetApprove=String(body.id_ket||'').trim();\nif(!idKetApprove) return [{json:{ok:false,message:'id_ket wajib ada.'}}];\nconst jenis=(body.jenis||'').toUpperCase();\nif(!jenis) return [{json:{ok:false,message:'jenis wajib ada.'}}];\nreturn [{json:{ok:true,id_ket:idKetApprove,admin_id:adminId,action,jenis,tanggal:body.tanggal||''}}];"
+      },
+      "id": "60a8c107-57c0-46f0-a6d2-60f99adb777c",
+      "name": "Validasi Approve",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1248,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id AS telegram_id, \"NIP\", instansi_id FROM user_list WHERE is_admin = true OR UPPER(role) IN ('SUPERADMIN', 'SUPER ADMIN')",
+        "options": {}
+      },
+      "id": "c4e6dc6c-f001-44ef-84cd-e548af96a63f",
+      "name": "Get Admin List Approve",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1472,
+        1152
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const method=$input.first().json.headers?.['x-forwarded-method']||$input.first().json.method||'';\nif(method==='OPTIONS'){$execution.respond({statusCode:200,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'},body:''});return[];}\nreturn $input.all();"
+      },
+      "id": "66919146-c008-4b1a-8bf8-a8a86ea0c7be",
+      "name": "CORS Ket Approve",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1696,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ket-approve",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "c3efcd90-cbbf-47fe-8a15-f7bdd08ae452",
+      "name": "Ket Approve Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1920,
+        1152
+      ],
+      "webhookId": "ket-approve-0001"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -352,
+        1504
+      ],
+      "id": "ff0c06f4-540f-4202-a5ae-4fcb6664f1b3",
+      "name": "Respond Ket List"
+    },
+    {
+      "parameters": {
+        "jsCode": "const VALID_JENIS = ['IZIN', 'SAKIT', 'TUGAS'];\n\nconst rows = $input.all()\n  .map(i => {\n    const r = i.json;\n\n    // Normalisasi field — handle schema baru (Supabase) dan lama (GSheets)\n    const id_ket     = r.ID_Ket      || r.id_ket     || '';\n    const user_id    = String(r.telegram_id || r.ID_Pegawai || r.ID || r.id || '').trim();\n    const nama       = r.nama        || r.Nama        || '';\n    const nip        = r.nip         || r.NIP         || '';\n    const tanggal    = r.tanggal     || r.Tanggal     || '';\n    const jam        = r.diajukan_at || r.Jam         || '';\n    const jenis_raw  = String(r.jenis || r['Jenis Absen'] || r.jenis_absen || '').trim().toUpperCase();\n    const keterangan = r.keterangan  || r.Ket         || '';\n    const status     = String(r.status || r.Status    || '').trim();\n\n    // Buang row yang tidak punya user_id atau jenis valid\n    if (!user_id || !jenis_raw) return null;\n\n    // Normalisasi jenis: hapus suffix status (PENDING, DITOLAK, DISETUJUI)\n    const jenis_base = jenis_raw\n      .replace(' PENDING','').replace(' DITOLAK','')\n      .replace(' TOLAK','').replace(' DISETUJUI','').trim();\n    if (!VALID_JENIS.includes(jenis_base)) return null;\n\n    return {\n      id_ket,\n      user_id,\n      nama,\n      nip,\n      tanggal,\n      jam,\n      jenis: jenis_base,\n      keterangan,\n      status,\n    };\n  })\n  .filter(Boolean);\n\nreturn [{ json: { ok: true, data: rows, count: rows.length } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -576,
+        1504
+      ],
+      "id": "39c5dbb0-4698-412c-925d-63a8613bd8bb",
+      "name": "Format Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Parse Query').item.json.is_admin_request }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "is-admin"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1024,
+        1504
+      ],
+      "id": "37264892-0908-463a-872d-e0da4d4d7b1c",
+      "name": "Is Admin Request?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM \"ket_temp\" WHERE \"Status\" = 'PENDING' AND instansi_id = '{{ $('Ket List Webhook').item.json.query.instansi_id }}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -800,
+        1408
+      ],
+      "id": "427ca6f5-4c7c-4cb0-ac1e-f4d3804859ca",
+      "name": "Get All Ket",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM \"ket_temp\" WHERE \"ID_Pegawai\" = {{ ($json.user_id).toString().replace(/'/g, \"''\") }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -800,
+        1600
+      ],
+      "id": "67f0a754-ec4d-43d6-aa49-59d58fb7a424",
+      "name": "Get Ket by User",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const q = $input.first().json.query || $input.first().json.params || {};\nconst userId       = String(q.user_id || '').trim();\nconst statusFilter = String(q.status  || '').trim().toUpperCase();\n// Admin request: ada is_admin=true atau tidak ada user_id tapi ada status filter\nconst isAdmin = q.is_admin === 'true' || q.is_admin === true || (!userId && statusFilter === 'PENDING');\nreturn [{ json: {\n  user_id:          userId,\n  status_filter:    statusFilter,\n  is_admin_request: isAdmin\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1248,
+        1504
+      ],
+      "id": "ec0b5448-335c-448d-a32e-d5564cd4adaf",
+      "name": "Parse Query"
+    },
+    {
+      "parameters": {
+        "jsCode": "const method=$input.first().json.headers?.['x-forwarded-method']||$input.first().json.method||'';\nif(method==='OPTIONS'){$execution.respond({statusCode:200,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'},body:''});return[];}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1472,
+        1504
+      ],
+      "id": "fc81a043-2bed-4d40-821e-cfffc698c3ca",
+      "name": "CORS Ket List"
+    },
+    {
+      "parameters": {
+        "path": "ket-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1696,
+        1504
+      ],
+      "id": "28a55d44-0c68-405e-a265-3dc8bc3bca20",
+      "name": "Ket List Webhook",
+      "webhookId": "ket-list-0001"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"user_list\" SET \"Status\" = 'AKTIF' WHERE \"id\" = {{ ($json.user_id).toString().replace(/'/g, \"''\") }} RETURNING *",
+        "options": {}
+      },
+      "name": "Update Status Delete",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "id": "03fdd508-13a2-4a20-9bb5-387182dfa5c8",
+      "position": [
+        992,
+        1808
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ok:false,message:$('Verifikasi Row1').item.json.message}) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "9d06a474-e4ec-4544-a89b-6b49c226ec13",
+      "name": "Respond Fail Verify1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -128,
+        2000
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "ok2"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "92daafaf-259e-4118-9704-d41cf3e0965f",
+      "name": "Is Verified?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -352,
+        1904
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const idKet  = $('Parse Delete').item.json.id_ket;\nconst userId = $('Parse Delete').item.json.user_id;\nconst allRows = $input.all();\nconst match = allRows.find(r =>\n  String(r.json.ID_Ket||'').trim() === String(idKet).trim() &&\n  String(r.json.telegram_id||'').trim() === String(userId).trim()\n);\nif (!match) return [{json:{ok:false,message:'Data tidak ditemukan atau bukan milik Anda.'}}];\nif ((match.json.status||'').toUpperCase() !== 'PENDING')\n  return [{json:{ok:false,message:'Hanya keterangan PENDING yang bisa dihapus.'}}];\nconst tglMulai   = String(match.json.tanggal||$('Parse Delete').first().json.tgl_mulai||'');\nconst tglSelesai = String($('Parse Delete').first().json.tgl_selesai||tglMulai);\nconst dates=[];\nfor(let d=new Date(tglMulai),e=new Date(tglSelesai);d<=e;d.setDate(d.getDate()+1))\n  dates.push(d.toISOString().split('T')[0]);\nconst idPrefix = String(idKet).split('_').slice(0,2).join('_');\nconst idsToDelete = allRows.filter(r=>String(r.json.ID_Ket||'').startsWith(idPrefix)).map(r=>String(r.json.ID_Ket));\nreturn [{json:{...match.json,ok:true,user_id:userId,ket_temp_row:idKet,ids_to_delete:idsToDelete,dates}}];"
+      },
+      "id": "741efcb2-4b26-4284-b467-6ec15875446a",
+      "name": "Verifikasi Row1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -576,
+        1904
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM \"ket_temp\" WHERE \"ID_Pegawai\" = '{{ ($('Parse Delete').item.json.user_id).toString().replace(/'/g, \"''\") }}'",
+        "options": {}
+      },
+      "id": "2bf25bd7-36b5-47ea-b4a7-48f61660307e",
+      "name": "Get Rows Milik User1",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -800,
+        1904
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ok:true,message:\"Keterangan dan data log absensi berhasil dihapus.\"}) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "9c8e1123-758f-4856-826c-f72e066f6f21",
+      "name": "Respond OK Delete",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1440,
+        1808
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM \"ket_temp\" WHERE \"ID_Ket\" = {{ ($json._id_ket_to_delete).toString().replace(/'/g, \"''\") }} RETURNING *",
+        "options": {}
+      },
+      "id": "1c5dae02-7775-4fe0-ada1-88ead7aa7573",
+      "name": "Delete Row KET TEMP",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1216,
+        1808
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Expand Log Delete Rows').first().json }];"
+      },
+      "id": "4f58b80a-8dcb-419f-b1b4-34d5b99d3d7f",
+      "name": "Collapse Setelah Delete Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        1808
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM \"Log_Absen\" WHERE \"id\" = {{ ($json.id).toString().replace(/'/g, \"''\") }} RETURNING *",
+        "options": {}
+      },
+      "id": "e7d39c73-5520-4c42-93b5-b47b8ad18dfb",
+      "name": "Delete Log Absensi Row",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        544,
+        1808
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d=$input.first().json;\nconst ids=d.ids_to_delete||[d.ket_temp_row];\nif(!ids.length) return [{json:{...d,_id_ket_to_delete:d.ket_temp_row,_skip_log:true}}];\nreturn ids.map((idKet,i)=>({json:{...d,_id_ket_to_delete:idKet,_is_last:i===ids.length-1}}));"
+      },
+      "id": "2a5d3922-0fbd-408e-a8e2-3ef846ed185c",
+      "name": "Expand Log Delete Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        1808
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const verif=$('Verifikasi Row1').first().json;\nconst idPrefix=verif.ids_to_delete?String(verif.ID_Ket||verif.id_ket||'').split('_').slice(0,2).join('_'):'';\nreturn [{json:{...verif,id_ket_prefix:idPrefix,ids_to_delete:verif.ids_to_delete||[verif.ket_temp_row],row_numbers_to_delete:[]}}];"
+      },
+      "id": "211f2b67-bc5c-414b-8a9b-e976983aa013",
+      "name": "Filter Log Rows To Delete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        1808
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM \"Log_Absen\" WHERE \"ID\" = '{{ ($json.user_id).toString().replace(/'/g, \"''\") }}'",
+        "options": {}
+      },
+      "id": "b0972cce-25de-435c-8a8d-766d2583bfc0",
+      "name": "Get Log Absensi User",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -128,
+        1808
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ok:false,message:$('Parse Delete').item.json.message}) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "fdad7648-065c-4a33-bdf2-32833dcf06a9",
+      "name": "Respond Fail Delete",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -800,
+        2096
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "ok"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6aabd5c0-fbb8-4da8-b42f-2c4c30739f92",
+      "name": "Is Valid?2",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1024,
+        2000
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body=$input.first().json.body||{};\nconst userId=String(body.user_id||'').trim();\nconst rowNum=parseInt(body.row_number||0);\nconst tglMulai=String(body.tgl_mulai||body.tanggal||'').trim();\nconst tglSelesai=String(body.tgl_selesai||body.tanggal||'').trim();\nif(!userId) return [{json:{ok:false,message:'user_id wajib ada.'}}];\nif(!rowNum)  return [{json:{ok:false,message:'row_number tidak valid.'}}];\nconst idKet = String(body.id_ket || '').trim();\nreturn [{json:{ok:true,user_id:userId,id_ket:idKet,tgl_mulai:tglMulai,tgl_selesai:tglSelesai}}];"
+      },
+      "id": "c0a4a390-e761-43d1-9cf9-bc50b278152f",
+      "name": "Parse Delete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1248,
+        2000
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const method=$input.first().json.headers?.['x-forwarded-method']||$input.first().json.method||'';\nif(method==='OPTIONS'){$execution.respond({statusCode:200,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'},body:''});return[];}\nreturn $input.all();"
+      },
+      "id": "542131a6-1c8b-4bcd-99c7-19e25a0f2e6c",
+      "name": "CORS Ket Delete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1472,
+        2000
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ket-delete",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "f05c777a-307f-4a48-a9c8-a32705cbf92c",
+      "name": "Ket Delete Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1696,
+        2000
+      ],
+      "webhookId": "ket-delete-0001"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "ok"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1024,
+        2512
+      ],
+      "id": "5cf0ee3b-fd1f-4062-bd5a-ab9532dd1f75",
+      "name": "Is Valid?1"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ok:true,message:\"Keterangan berhasil diperbarui.\"}) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        96,
+        2320
+      ],
+      "id": "f59a899c-8d27-4f36-af28-7023ecaa260d",
+      "name": "Respond OK Edit"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"ket_temp\" SET \"Tanggal\" = {{ ($('Validasi Edit').item.json.tgl_mulai).toString().replace(/'/g, \"''\") }}, \"Jenis Absn\" = {{ ($('Validasi Edit').item.json.jenis).toString().replace(/'/g, \"''\") }}, \"Ket\" = {{ ($('Validasi Edit').item.json.keterangan).toString().replace(/'/g, \"''\") }}, \"Status\" = 'PENDING' WHERE \"ID_Ket\" = {{ ($('Validasi Edit').item.json.id_ket).toString().replace(/'/g, \"''\") }} RETURNING *",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -128,
+        2320
+      ],
+      "id": "2e97a059-e249-4c5f-bcfd-cfd10f1fbb71",
+      "name": "Update Row KET TEMP",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ok:false,message:$('Verifikasi Row').item.json.message}) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -128,
+        2512
+      ],
+      "id": "2795deff-4419-45be-b275-408609e6bfc7",
+      "name": "Respond Fail Verify"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "ok2"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -352,
+        2416
+      ],
+      "id": "a268db06-f9dd-4165-9d8c-dec91c874644",
+      "name": "Is Verified?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const idKet  = $('Validasi Edit').item.json.id_ket;\nconst userId = $('Validasi Edit').item.json.user_id;\nconst match  = $input.all().find(r =>\n  String(r.json.ID_Ket||'').trim() === String(idKet).trim() &&\n  String(r.json.telegram_id||'').trim() === String(userId).trim()\n);\nif (!match) return [{json:{ok:false,message:'Data tidak ditemukan atau bukan milik Anda.'}}];\nif ((match.json.status||'').toUpperCase() !== 'PENDING')\n  return [{json:{ok:false,message:'Hanya keterangan PENDING yang bisa diedit.'}}];\nreturn [{json:{...match.json, ok:true}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -576,
+        2416
+      ],
+      "id": "068323ae-5414-417b-8f1d-593571acbbb8",
+      "name": "Verifikasi Row"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM \"ket_temp\" WHERE \"telegram_id\" = {{ ($('Validasi Edit').item.json.user_id).toString().replace(/'/g, \"''\") }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -800,
+        2416
+      ],
+      "id": "b2d72661-0794-4995-9909-cab485b01b8b",
+      "name": "Get Rows Milik User",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ok:false,message:$('Validasi Edit').item.json.message}) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -800,
+        2608
+      ],
+      "id": "31f49f38-3de2-4f8a-b600-cfdf35d88497",
+      "name": "Respond Fail Edit"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst userId = String(body.user_id||'').trim();\nconst rowNum = parseInt(body.row_number||0);\nconst jenis  = (body.jenis||'').toUpperCase();\nconst tglMulai   = body.tgl_mulai||'';\nconst tglSelesai = body.tgl_selesai||'';\nconst keterangan = (body.keterangan||'').trim();\nconst jenisValid = ['IZIN','SAKIT','TUGAS','TUBEL','CUTI'];\nif(!userId)    return [{json:{ok:false,message:'user_id wajib ada.'}}];\nif(!rowNum)    return [{json:{ok:false,message:'row_number tidak valid.'}}];\nif(!jenisValid.includes(jenis)) return [{json:{ok:false,message:'Jenis tidak valid. Pilih: IZIN, SAKIT, TUGAS, TUBEL, atau CUTI.'}}];\nif(!tglMulai||!tglSelesai) return [{json:{ok:false,message:'Tanggal wajib diisi.'}}];\nif(!keterangan) return [{json:{ok:false,message:'Keterangan tidak boleh kosong.'}}];\nconst start=new Date(tglMulai),end=new Date(tglSelesai);\nif(end<start) return [{json:{ok:false,message:'Tanggal selesai tidak boleh lebih awal.'}}];\nconst idKet = String(body.id_ket || '').trim();\nif(!idKet) return [{json:{ok:false,message:'id_ket wajib ada.'}}];\nreturn [{json:{ok:true,id_ket:idKet,user_id:userId,row_number:rowNum,jenis,tgl_mulai:tglMulai,tgl_selesai:tglSelesai,keterangan}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1248,
+        2512
+      ],
+      "id": "1d66d425-f30e-4c8a-8a4b-512b74c15f84",
+      "name": "Validasi Edit"
+    },
+    {
+      "parameters": {
+        "jsCode": "const method=$input.first().json.headers?.['x-forwarded-method']||$input.first().json.method||'';\nif(method==='OPTIONS'){$execution.respond({statusCode:200,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'},body:''});return[];}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1472,
+        2512
+      ],
+      "id": "5d66b0ee-e01e-46ef-a016-b519f146ad59",
+      "name": "CORS Ket Edit"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ket-edit",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1696,
+        2512
+      ],
+      "id": "1dad3f2c-ee6a-4a9e-a911-49a1a7b165a7",
+      "name": "Ket Edit Webhook",
+      "webhookId": "ket-edit-0001"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"user_list\" SET \"Status\" = '{{ ($json[\"Jenis Absen\"]).toString().replace(/'/g, \"''\") }}' WHERE \"id\" = '{{ ($json.ID_Pegawai).toString().replace(/'/g, \"''\") }}' RETURNING *",
+        "options": {}
+      },
+      "name": "Update Status Auto B",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "id": "95f4cae3-37b4-4ff4-958d-b0a966269000",
+      "position": [
+        1120,
+        576
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"user_list\" SET \"Status\" = '{{ ($json[\"Jenis Absen\"]).toString().replace(/'/g, \"''\") }}' WHERE \"id\" = '{{ ($json.ID_Pegawai).toString().replace(/'/g, \"''\") }}' RETURNING *",
+        "options": {}
+      },
+      "name": "Update Status Auto",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "id": "5f6d5344-921f-4da9-8819-deb6b3fa9b55",
+      "position": [
+        1792,
+        384
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "b5ae7bc0-dd5c-4344-80ff-5d4203db9ca7",
+      "name": "Kirim Broadcast Tanpa Bukti",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        576
+      ],
+      "webhookId": "aut00022-aut0-aut0-aut0-aut000000022",
+      "credentials": {
+        "telegramApi": {
+          "id": "105ym9gulSlVnPHh",
+          "name": "DPMPTSP"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Collapse Auto Tanpa Bukti').first().json;\nconst INSTANSI_MAP = { bapperida: 'BAPPERIDA Sumba Barat', dpmptsp: 'DPMPTSP Sumba Barat' };\nconst instansi_id = d.instansi_id || 'bapperida';\nconst instansi_name = INSTANSI_MAP[instansi_id] || instansi_id.toUpperCase();\nconst jenis = d.jenis;\nconst em = jenis === 'SAKIT' ? '🤧' : '💼';\nconst label = jenis === 'SAKIT' ? 'SAKIT' : 'SURAT TUGAS / DINAS LUAR (DL)';\nconst text = `${em} *INFO ${label} — TERCATAT OTOMATIS*\\n━━━━━━━━━━━━━━━━━━\\n👤 *${d.nama}*\\n🪪 NIP: ${d.nip}\\n🏢 ${d.jabatan||'—'}\\n\\n📅 *Tanggal* : ${d.tgl_range}\\n⏱️ *Durasi*  : ${d.durasi} hari\\n📝 *Keterangan*:\\n${d.keterangan}\\n━━━━━━━━━━━━━━━━━━\\n_Info otomatis dari sistem ${instansi_name}_`;\nconst pegawai = $input.all().map(i=>i.json).filter(p => String(p.status||p.Status||'AKTIF').toUpperCase() !== 'NONAKTIF' && String(p.id||'').trim());\nreturn pegawai.map(p => ({ json: { chat_id: String(p.id), text } }));"
+      },
+      "id": "10776529-9cc6-4f10-b48a-3e2dfc2ab690",
+      "name": "Format Broadcast Tanpa Bukti",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *, \"instansi_id\" FROM public.view_user_mgmt WHERE \"instansi_id\" = COALESCE(NULLIF('{{ ($json.instansi_id).toString() }}', ''), 'bapperida')",
+        "options": {}
+      },
+      "id": "d6b63cd7-e830-4f9b-9430-2c98695a315e",
+      "name": "Get Semua Pegawai Broadcast B",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1344,
+        576
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, message: \"Keterangan \" + $(\"Validasi & Cek Bukti\").first().json.jenis + \" berhasil tercatat otomatis.\", status: \"APPROVED\" }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "b6dea7bb-5f1c-4086-b195-91f7841780c2",
+      "name": "Respond OK Auto Tanpa Bukti",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        576
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Expand Auto Tanpa Bukti').first().json }];"
+      },
+      "id": "70838eb1-4f98-43ad-9a80-20e74f3069e0",
+      "name": "Collapse Auto Tanpa Bukti",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"ket_temp\" (\"ID_Ket\", \"ID_Pegawai\", \"Nama\", \"NIP\", \"Tanggal\", \"tgl_mulai\", \"tgl_selesai\", \"Jam\", \"Jenis Absen\", \"Ket\", \"Status\", \"request_id\", \"instansi_id\") VALUES ('{{ ($json.id_ket).toString().replace(/'/g, \"''\") }}',{{ ($json.user_id).toString().replace(/'/g, \"''\") }},'{{ ($json.nama).toString().replace(/'/g, \"''\") }}','{{ ($json.nip).toString().replace(/'/g, \"''\") }}','{{ ($json.tanggal).toString().replace(/'/g, \"''\") }}','{{ ($json.tgl_mulai).toString().replace(/'/g, \"''\") }}','{{ ($json.tgl_selesai).toString().replace(/'/g, \"''\") }}','{{ ($json.jam).toString().replace(/'/g, \"''\") }}','{{ ($json.jenis).toString().replace(/'/g, \"''\") }}','{{ ($json.keterangan).toString().replace(/'/g, \"''\") }}','DISETUJUI', '{{ ($('Keterangan').first().json.body.request_id).toString().replace(/'/g, \"''\") }}', COALESCE((SELECT instansi_id FROM user_list WHERE \"NIP\" = '{{ ($json.nip).toString().replace(/'/g, \"''\") }}' LIMIT 1), (SELECT instansi_id FROM user_list WHERE id::text = '{{ ($json.user_id).toString().replace(/'/g, \"''\") }}' LIMIT 1), 'bapperida')) RETURNING *",
+        "options": {
+          "queryBatching": "independently"
+        }
+      },
+      "id": "27b885c0-139e-4dc3-a4cb-4c4c56786820",
+      "name": "Simpan ket_temp Auto Tanpa Bukti",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        672,
+        576
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"Log_Absen\" (\"Nama\", \"NIP\", \"Tanggal\", \"Jam\", \"Jenis Absen\", \"Lokasi\", \"Ket\", \"koordinat\", \"ID\", \"request_id\", \"instansi_id\") VALUES ('{{ ($json.nama).toString().replace(/'/g, \"''\") }}','{{ ($json.nip).toString().replace(/'/g, \"''\") }}','{{ ($json.tanggal).toString().replace(/'/g, \"''\") }}','{{ ($json.jam).toString().replace(/'/g, \"''\") }}','{{ ($json.jenis).toString().replace(/'/g, \"''\") }}','-','{{ ($json.keterangan).toString().replace(/'/g, \"''\") }}','-','{{ ($json.user_id).toString().replace(/'/g, \"''\") }}', '{{ ($('Keterangan').first().json.body.request_id).toString().replace(/'/g, \"''\") }}', COALESCE((SELECT instansi_id FROM user_list WHERE \"NIP\" = '{{ ($json.nip).toString().replace(/'/g, \"''\") }}' LIMIT 1), (SELECT instansi_id FROM user_list WHERE id::text = '{{ ($json.user_id).toString().replace(/'/g, \"''\") }}' LIMIT 1), 'bapperida')) RETURNING *",
+        "options": {
+          "queryBatching": "independently"
+        }
+      },
+      "id": "8aedd742-ba25-4498-ba1c-8ffc79b1fe75",
+      "name": "Simpan Log Auto Tanpa Bukti",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        224,
+        576
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst prefixMap = { SAKIT: 'SKT', TUGAS: 'TGS' };\nconst prefix = prefixMap[d.jenis] || d.jenis.slice(0, 3).toUpperCase();\nconst tglKey = (d.tgl_mulai || '').replace(/-/g, '');\nreturn d.dates.map((tgl, i) => ({\n  json: {\n    ...d,\n    tanggal: tgl,\n    drive_link: '',\n    id_ket: `${prefix}${tglKey}_${d.user_id}_${String(i+1).padStart(2,'0')}`,\n    request_id: (d.request_id || '') + '_' + tgl.replace(/-/g, '')\n  }\n}));"
+      },
+      "id": "a8e3f040-7f5b-46dd-93bc-91fa0e8b2148",
+      "name": "Expand Auto Tanpa Bukti",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Format Broadcast Ada Bukti').item.json.chat_id }}",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "={{ '📎 Bukti ' + ($('Validasi & Cek Bukti').first().json.jenis === 'SAKIT' ? 'Izin Sakit' : 'Surat Tugas') + ' — ' + $('Validasi & Cek Bukti').first().json.nama }} ",
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "c8fb90c2-e747-4e0f-8309-52dd6edc47f0",
+      "name": "Kirim Foto Broadcast ke Semua",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2688,
+        480
+      ],
+      "webhookId": "aut00014-aut0-aut0-aut0-aut000000014",
+      "credentials": {
+        "telegramApi": {
+          "id": "GSEMSscu6roPnSCy",
+          "name": "BAPPERIDA"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "bukti_base64",
+        "options": {}
+      },
+      "id": "7dd465f8-0d62-40f8-b151-5c9a59a8f93d",
+      "name": "Convert Bukti Broadcast",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2464,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "c2f2c2f0-9cdf-4bef-952d-a9b41a3dc810",
+      "name": "Kirim Broadcast Ada Bukti",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2464,
+        288
+      ],
+      "webhookId": "aut00012-aut0-aut0-aut0-aut000000012",
+      "credentials": {
+        "telegramApi": {
+          "id": "GSEMSscu6roPnSCy",
+          "name": "BAPPERIDA"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Collapse Auto Ada Bukti').first().json;\nconst INSTANSI_MAP = { bapperida: 'BAPPERIDA Sumba Barat', dpmptsp: 'DPMPTSP Sumba Barat' };\nconst instansi_id = d.instansi_id || 'bapperida';\nconst instansi_name = INSTANSI_MAP[instansi_id] || instansi_id.toUpperCase();\nconst driveLink = d.drive_link || '';\nconst jenis = d.jenis;\nconst em = jenis === 'SAKIT' ? '🤧' : '💼';\nconst label = jenis === 'SAKIT' ? 'SAKIT' : 'SURAT TUGAS / DINAS LUAR (DL)';\nconst text = `${em} *INFO ${label} — TERCATAT OTOMATIS*\\n━━━━━━━━━━━━━━━━━━\\n👤 *${d.nama}*\\n🪪 NIP: ${d.nip}\\n🏢 ${d.jabatan||'—'}\\n\\n📅 *Tanggal* : ${d.tgl_range}\\n⏱️ *Durasi*  : ${d.durasi} hari\\n📝 *Keterangan*:\\n${d.keterangan}\\n` + (driveLink ? `📎 *Bukti*   : [Lihat di Google Drive](${driveLink})\\n` : '') + `━━━━━━━━━━━━━━━━━━\\n_Info otomatis dari sistem ${instansi_name}_`;\nconst pegawai = $input.all().map(i=>i.json).filter(p => String(p.status||p.Status||'AKTIF').toUpperCase() !== 'NONAKTIF' && String(p.id||'').trim());\nreturn pegawai.map(p => ({ json: { chat_id: String(p.id), text, bukti_base64: $('Keterangan').first().json.body.bukti_base64 || '' } }));"
+      },
+      "id": "27f5d8aa-3182-4f33-9617-9bc6cfdb8f1a",
+      "name": "Format Broadcast Ada Bukti",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *, \"instansi_id\" FROM public.view_user_mgmt WHERE \"instansi_id\" = COALESCE(NULLIF('{{ ($json.instansi_id).toString() }}', ''), 'bapperida')",
+        "options": {}
+      },
+      "id": "3b198229-7e8f-49d2-862a-92ad5730d725",
+      "name": "Get Semua Pegawai Broadcast A",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2016,
+        384
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, message: \"Keterangan \" + $(\"Validasi & Cek Bukti\").first().json.jenis + \" berhasil tercatat otomatis.\", status: \"APPROVED\" }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "4a60fb68-d4e1-44a6-b1f0-f7b0ad945dfd",
+      "name": "Respond OK Auto Ada Bukti",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1568,
+        384
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Expand Auto Ada Bukti').first().json }];"
+      },
+      "id": "fbd6eabc-7a32-48b2-871c-8a2c4246145e",
+      "name": "Collapse Auto Ada Bukti",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"ket_temp\" (\"ID_Ket\", \"ID_Pegawai\", \"Nama\", \"NIP\", \"Tanggal\", \"tgl_mulai\", \"tgl_selesai\", \"Jam\", \"Jenis Absen\", \"Ket\", \"Status\", \"drive_link\", \"request_id\", \"instansi_id\") VALUES ('{{ ($json.id_ket).toString().replace(/'/g, \"''\") }}','{{ ($json.user_id).toString().replace(/'/g, \"''\") }}','{{ ($json.nama).toString().replace(/'/g, \"''\") }}','{{ ($json.nip).toString().replace(/'/g, \"''\") }}','{{ ($json.tanggal).toString().replace(/'/g, \"''\") }}','{{ ($json.tgl_mulai).toString().replace(/'/g, \"''\") }}','{{ ($json.tgl_selesai).toString().replace(/'/g, \"''\") }}','{{ ($json.jam).toString().replace(/'/g, \"''\") }}','{{ ($json.jenis).toString().replace(/'/g, \"''\") }}','{{ ($json.keterangan).toString().replace(/'/g, \"''\") }}','DISETUJUI','{{ ($json.drive_link).toString().replace(/'/g, \"''\") }}', '{{ ($('Keterangan').first().json.body.request_id).toString().replace(/'/g, \"''\") }}', COALESCE((SELECT instansi_id FROM user_list WHERE \"NIP\" = '{{ ($json.nip).toString().replace(/'/g, \"''\") }}' LIMIT 1), (SELECT instansi_id FROM user_list WHERE id::text = '{{ ($json.user_id).toString().replace(/'/g, \"''\") }}' LIMIT 1), 'bapperida')) RETURNING *",
+        "options": {
+          "queryBatching": "independently"
+        }
+      },
+      "id": "4f0b2ec6-1409-446b-8634-9428c8b120c9",
+      "name": "Simpan ket_temp Auto Ada Bukti",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1344,
+        384
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"Log_Absen\" (\"Nama\", \"NIP\", \"Tanggal\", \"Jam\", \"Jenis Absen\", \"Lokasi\", \"Ket\", \"koordinat\", \"ID\", \"request_id\", \"instansi_id\") VALUES ('{{ ($json.nama).toString().replace(/'/g, \"''\") }}','{{ ($json.nip).toString().replace(/'/g, \"''\") }}','{{ ($json.tanggal).toString().replace(/'/g, \"''\") }}','{{ ($json.jam).toString().replace(/'/g, \"''\") }}','{{ ($json.jenis).toString().replace(/'/g, \"''\") }}','-','{{ ($json.keterangan + \" | Drive: \" + $json.drive_link).toString().replace(/'/g, \"''\") }}','-','{{ ($json.user_id).toString().replace(/'/g, \"''\") }}', '{{ ($json.request_id).toString().replace(/'/g, \"''\") }}', COALESCE((SELECT instansi_id FROM user_list WHERE \"NIP\" = '{{ ($json.nip).toString().replace(/'/g, \"''\") }}' LIMIT 1), (SELECT instansi_id FROM user_list WHERE id::text = '{{ ($json.user_id).toString().replace(/'/g, \"''\") }}' LIMIT 1), 'bapperida')) RETURNING *",
+        "options": {
+          "queryBatching": "independently"
+        }
+      },
+      "id": "dec48248-5179-44cf-9d47-6ac125f5af02",
+      "name": "Simpan Log Auto Ada Bukti",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        896,
+        384
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const driveLink = $input.first().json.webViewLink || $input.first().json.webContentLink || '';\nconst d = $('Validasi & Cek Bukti').first().json;\nconst prefixMap = { SAKIT: 'SKT', TUGAS: 'TGS' };\nconst prefix = prefixMap[d.jenis] || d.jenis.slice(0, 3).toUpperCase();\nconst tglKey = (d.tgl_mulai || '').replace(/-/g, '');\nreturn d.dates.map((tgl, i) => ({\n  json: {\n    ...d,\n    tanggal: tgl,\n    drive_link: driveLink,\n    id_ket: `${prefix}${tglKey}_${d.user_id}_${String(i+1).padStart(2,'0')}`,\n    request_id: (d.request_id || '') + '_' + tgl.replace(/-/g, '')\n  }\n}));"
+      },
+      "id": "296575ca-a947-47e0-9217-e62fad383f71",
+      "name": "Expand Auto Ada Bukti",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Validasi & Cek Bukti').first().json.user_id }}_{{ $('Validasi & Cek Bukti').first().json.tgl_mulai }}_{{ $('Validasi & Cek Bukti').first().json.tgl_selesai }}_{{ $('Validasi & Cek Bukti').first().json.jenis }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1bc8fIt6tW5Bj9mLW6OD-lG-jkcaM9cGq",
+          "mode": "list",
+          "cachedResultName": "Bukti Keterangan Absensi"
+        },
+        "options": {}
+      },
+      "id": "fa25c7cb-65c4-4226-92b4-d213034f9532",
+      "name": "Upload GDrive Auto",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        448,
+        384
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "53IL2urNBWm95sLS",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "body.bukti_base64",
+        "options": {}
+      },
+      "id": "1d4f90c2-6e74-4f43-a033-49a617ccb122",
+      "name": "Convert to File Auto",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set_ba",
+              "name": "body.bukti_base64",
+              "value": "={{ $('Keterangan').first().json.body.bukti_base64 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8bd4e005-c1fe-40de-ac16-7f920b114219",
+      "name": "Set Bukti Auto",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ada_bukti }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "ab_auto"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "27fc473c-6b9c-4d0e-9e65-a8fa58ccb006",
+      "name": "Ada Bukti? Auto",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -224,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, message: \"Pengajuan IZIN berhasil dikirim ke admin untuk disetujui.\", status: \"PENDING\" }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "0b28dce6-9961-41fe-88ed-77f46084d4b2",
+      "name": "Respond OK IZIN PENDING Tanpa Bukti",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1344,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "fd67850c-51f2-4588-bcc4-63e7f4f1498a",
+      "name": "Kirim ke Admin Tanpa Bukti",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        192
+      ],
+      "webhookId": "izn00018-izn0-izn0-izn0-izn000000018",
+      "credentials": {
+        "telegramApi": {
+          "id": "GSEMSscu6roPnSCy",
+          "name": "BAPPERIDA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Collapse IZIN Tanpa Bukti').first().json;\nconst INSTANSI_MAP = { bapperida: 'BAPPERIDA Sumba Barat', dpmptsp: 'DPMPTSP Sumba Barat' };\nconst instansi_id = d.instansi_id || 'bapperida';\nconst instansi_name = INSTANSI_MAP[instansi_id] || instansi_id.toUpperCase();\nconst text = `🙏 *PENGAJUAN IZIN — BUTUH KONFIRMASI ADMIN*\\n━━━━━━━━━━━━━━━━━━\\n👤 *${d.nama}*\\n🪪 NIP: ${d.nip}\\n🏢 ${d.jabatan||'—'}\\n\\n📅 *Tanggal* : ${d.tgl_range}\\n⏱️ *Durasi*  : ${d.durasi} hari\\n📝 *Keterangan*:\\n${d.keterangan}\\n━━━━━━━━━━━━━━━━━━\\n_Buka Panel Admin untuk Menyetujui / Menolak._`;\nlet adminIds = [];\ntry { const adminRows = $('Get Admin List Tanpa Bukti').all().map(i => i.json); adminIds = adminRows.map(r => parseInt(r.telegram_id||r.Telegram_ID||r.telegram_Id||0)).filter(id => id > 0); } catch(_) {}\nif (!adminIds.length) adminIds = [1383864355];\nreturn adminIds.map(id => ({ json: { chat_id: String(id), text, ada_bukti: false, instansi_id } }));"
+      },
+      "id": "4c4fe6b5-110e-4de1-8439-f63cf2ee4889",
+      "name": "Format Notif Admin Tanpa Bukti",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id AS telegram_id, \"NIP\", instansi_id FROM user_list WHERE is_admin = true AND (instansi_id = COALESCE(NULLIF('{{ ($('Simpan ket_temp IZIN Tanpa Bukti').item.json.instansi_id).toString() }}', ''), 'bapperida') OR UPPER(role) IN ('SUPERADMIN', 'SUPER ADMIN'))",
+        "options": {}
+      },
+      "id": "375eaab0-a070-4e83-92b9-eef21dbac78b",
+      "name": "Get Admin List Tanpa Bukti",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        672,
+        192
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Expand IZIN Tanpa Bukti').first().json }];"
+      },
+      "id": "356498df-5b1e-4de2-bbe0-9f20083e5d75",
+      "name": "Collapse IZIN Tanpa Bukti",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"ket_temp\" (\"ID_Ket\", \"ID_Pegawai\", \"Nama\", \"NIP\", \"Tanggal\", \"tgl_mulai\", \"tgl_selesai\", \"Jam\", \"Jenis Absen\", \"Ket\", \"Status\", \"request_id\", \"instansi_id\") VALUES ('{{ ($json.id_ket).toString().replace(/'/g, \"''\") }}','{{ ($json.user_id).toString().replace(/'/g, \"''\") }}','{{ ($json.nama).toString().replace(/'/g, \"''\") }}','{{ ($json.nip).toString().replace(/'/g, \"''\") }}','{{ ($json.tanggal).toString().replace(/'/g, \"''\") }}','{{ ($json.tgl_mulai).toString().replace(/'/g, \"''\") }}','{{ ($json.tgl_selesai).toString().replace(/'/g, \"''\") }}','{{ ($json.jam).toString().replace(/'/g, \"''\") }}','IZIN','{{ ($json.keterangan).toString().replace(/'/g, \"''\") }}', 'PENDING', '{{ ($('Keterangan').first().json.body.request_id).toString().replace(/'/g, \"''\") }}', COALESCE((SELECT instansi_id FROM user_list WHERE \"NIP\" = '{{ ($json.nip).toString().replace(/'/g, \"''\") }}' LIMIT 1), (SELECT instansi_id FROM user_list WHERE id::text = '{{ ($json.user_id).toString().replace(/'/g, \"''\") }}' LIMIT 1), 'bapperida')) RETURNING *",
+        "options": {
+          "queryBatching": "independently"
+        }
+      },
+      "id": "2b74f206-0f0b-47f9-b35f-f94676abb3c2",
+      "name": "Simpan ket_temp IZIN Tanpa Bukti",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        224,
+        192
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst prefix = 'IZN';\nconst tglKey = (d.tgl_mulai || '').replace(/-/g, '');\nreturn d.dates.map((tgl, i) => ({\n  json: {\n    ...d,\n    tanggal: tgl,\n    drive_link: '',\n    id_ket: `${prefix}${tglKey}_${d.user_id}`\n  }\n}\n));"
+      },
+      "id": "aa34c64b-379f-4f69-b6f4-e43f842ad940",
+      "name": "Expand IZIN Tanpa Bukti",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, message: \"Pengajuan IZIN berhasil dikirim ke admin untuk disetujui.\", status: \"PENDING\" }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "cb1d5f9c-b711-41b0-99ec-2b50247a23aa",
+      "name": "Respond OK IZIN PENDING Ada Bukti",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2688,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Format Notif Admin Ada Bukti').item.json.chat_id }}",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "📎 *Bukti IZIN dari pegawai*",
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "7a5b31e7-c45d-49fa-8c9b-6ca419f3b3ee",
+      "name": "Kirim Bukti ke Admin",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2464,
+        0
+      ],
+      "webhookId": "izn00011-izn0-izn0-izn0-izn000000011",
+      "credentials": {
+        "telegramApi": {
+          "id": "GSEMSscu6roPnSCy",
+          "name": "BAPPERIDA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "bukti_base64",
+        "options": {}
+      },
+      "id": "ccdf64b0-6627-4767-9db2-4fb24a9e6fb9",
+      "name": "Convert Bukti IZIN Admin",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "prep-bukti-adm",
+              "name": "bukti_base64",
+              "value": "={{ $('Keterangan').first().json.body.bukti_base64 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "aa3ee37a-a5af-4efc-a661-81f776005077",
+      "name": "Set Bukti For Admin",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2016,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "ce9e1832-84d4-4045-88b5-7db67a26fa78",
+      "name": "Kirim ke Admin Ada Bukti",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        0
+      ],
+      "webhookId": "izn00010-izn0-izn0-izn0-izn000000010",
+      "credentials": {
+        "telegramApi": {
+          "id": "GSEMSscu6roPnSCy",
+          "name": "BAPPERIDA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Collapse IZIN Ada Bukti').first().json;\nconst INSTANSI_MAP = { bapperida: 'BAPPERIDA Sumba Barat', dpmptsp: 'DPMPTSP Sumba Barat' };\nconst instansi_id = d.instansi_id || 'bapperida';\nconst instansi_name = INSTANSI_MAP[instansi_id] || instansi_id.toUpperCase();\nconst driveLink = d.drive_link || '';\nconst text = `🙏 *PENGAJUAN IZIN — BUTUH KONFIRMASI ADMIN*\\n━━━━━━━━━━━━━━━━━━\\n👤 *${d.nama}*\\n🪪 NIP: ${d.nip}\\n🏢 ${d.jabatan||'—'}\\n\\n📅 *Tanggal* : ${d.tgl_range}\\n⏱️ *Durasi*  : ${d.durasi} hari\\n📝 *Keterangan*:\\n${d.keterangan}\\n` + (driveLink ? `📎 *Bukti*   : [Lihat di Google Drive](${driveLink})\\n` : '') + `━━━━━━━━━━━━━━━━━━\\n_Buka Panel Admin untuk Menyetujui / Menolak._`;\nlet adminIds = [];\ntry { const adminRows = $('Get Admin List Ada Bukti').all().map(i => i.json); adminIds = adminRows.map(r => parseInt(r.telegram_id||r.Telegram_ID||r.telegram_Id||0)).filter(id => id > 0); } catch(_) {}\nif (!adminIds.length) adminIds = [1383864355];\nreturn adminIds.map(id => ({ json: { chat_id: String(id), text, ada_bukti: true, instansi_id } }));"
+      },
+      "id": "87d070d1-2e6a-4a3f-9826-1afb339cecff",
+      "name": "Format Notif Admin Ada Bukti",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id AS telegram_id, \"NIP\", instansi_id FROM user_list WHERE is_admin = true AND (instansi_id = COALESCE(NULLIF('{{ ($json.instansi_id).toString() }}', ''), 'bapperida') OR UPPER(role) IN ('SUPERADMIN', 'SUPER ADMIN'))",
+        "options": {}
+      },
+      "id": "a7774517-ed85-4a13-9174-36a8814f8470",
+      "name": "Get Admin List Ada Bukti",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1344,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Expand IZIN Ada Bukti').first().json }];"
+      },
+      "id": "d0d187c2-4aa2-46da-9eea-98a3ba445981",
+      "name": "Collapse IZIN Ada Bukti",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"ket_temp\" (\"ID_Ket\", \"ID_Pegawai\", \"Nama\", \"NIP\", \"Tanggal\", \"tgl_mulai\", \"tgl_selesai\", \"Jam\", \"Jenis Absen\", \"Ket\", \"Status\", \"drive_link\", \"request_id\", \"instansi_id\") VALUES ('{{ (({'IZIN':'IZN','SAKIT':'SKT','TUGAS':'TGS'}[$('Validasi & Cek Bukti').first().json.jenis.toUpperCase()]||$('Validasi & Cek Bukti').first().json.jenis.slice(0,3).toUpperCase()) + $('Validasi & Cek Bukti').first().json.tgl_mulai.replace(/-/g,'') + '_' + $('Validasi & Cek Bukti').first().json.nip).toString().replace(/'/g, \"''\") }}','{{ ($('Validasi & Cek Bukti').first().json.user_id).toString().replace(/'/g, \"''\") }}','{{ ($('Validasi & Cek Bukti').first().json.nama).toString().replace(/'/g, \"''\") }}','{{ ($('Validasi & Cek Bukti').first().json.nip).toString().replace(/'/g, \"''\") }}','{{ ($('Validasi & Cek Bukti').first().json.tgl_range).toString().replace(/'/g, \"''\") }}','{{ ($('Validasi & Cek Bukti').first().json.tgl_mulai).toString().replace(/'/g, \"''\") }}','{{ ($('Validasi & Cek Bukti').first().json.tgl_selesai).toString().replace(/'/g, \"''\") }}','{{ ($('Validasi & Cek Bukti').first().json.jam).toString().replace(/'/g, \"''\") }}','IZIN','{{ ($('Validasi & Cek Bukti').first().json.keterangan).toString().replace(/'/g, \"''\") }}','PENDING','{{ ($json.webViewLink || $json.webContentLink || '').toString().replace(/'/g, \"''\") }}', '{{ ($('Keterangan').first().json.body.request_id).toString().replace(/'/g, \"''\") }}', COALESCE(NULLIF('{{ ($('Keterangan').first().json.body.user.instansi_id || '').toString().replace(/'/g, \"''\") }}', ''), (SELECT instansi_id FROM user_list WHERE \"NIP\" = '{{ ($json.nip || '').toString().replace(/'/g, \"''\") }}' LIMIT 1), (SELECT instansi_id FROM user_list WHERE id::text = '{{ ($json.user_id || $('Validasi & Cek Bukti').first().json.user_id || '').toString().replace(/'/g, \"''\") }}' LIMIT 1), 'bapperida')) RETURNING *",
+        "options": {
+          "queryBatching": "independently"
+        }
+      },
+      "id": "e27a0e02-1731-4062-95cf-65c61a8a6ac4",
+      "name": "Simpan ket_temp IZIN Ada Bukti",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        672,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const driveLink = $input.first().json.webViewLink || $input.first().json.webContentLink || '';\nconst d = $('Validasi & Cek Bukti').first().json;\nconst prefix = 'IZN';\nconst tglKey = (d.tgl_mulai || '').replace(/-/g, '');\nreturn d.dates.map((tgl, i) => ({\n  json: {\n    ...d,\n    tanggal: tgl,\n    drive_link: driveLink,\n    id_ket: `${prefix}${tglKey}_${d.user_id}`\n  }\n}));"
+      },
+      "id": "93400ac7-898a-4968-843d-5c55ee6ef81c",
+      "name": "Expand IZIN Ada Bukti",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Validasi & Cek Bukti').first().json.user_id }}_{{ $('Validasi & Cek Bukti').first().json.tgl_mulai }}_{{ $('Validasi & Cek Bukti').first().json.tgl_selesai }}_IZIN",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1bc8fIt6tW5Bj9mLW6OD-lG-jkcaM9cGq",
+          "mode": "list",
+          "cachedResultName": "Bukti Keterangan Absensi"
+        },
+        "options": {}
+      },
+      "id": "c3057ba0-88fe-4c5f-98fe-5d305fe8e3c5",
+      "name": "Upload GDrive IZIN",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        448,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "53IL2urNBWm95sLS",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "body.bukti_base64",
+        "options": {}
+      },
+      "id": "7ad54121-3f2c-4cb9-a1b5-3d85019747d5",
+      "name": "Convert to File IZIN",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set_bi",
+              "name": "body.bukti_base64",
+              "value": "={{ $('Keterangan').first().json.body.bukti_base64 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "64b997fa-a01a-4c18-b84d-0037348c2a61",
+      "name": "Set Bukti IZIN",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ada_bukti }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "ab_izin"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4222a257-16ed-4066-b07b-7533db42baae",
+      "name": "Ada Bukti? IZIN",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -224,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.jenis }}",
+              "rightValue": "IZIN",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "id": "is_izin"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e40feafe-1fb9-4568-b26b-92413529d2d0",
+      "name": "Apakah IZIN?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -448,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, message: $('Validasi & Cek Bukti').item.json.message }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning, Accept, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "ee642d07-feeb-4e71-a883-8331be3bd8a0",
+      "name": "Respond Fail Keterangan",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -448,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "is_valid"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fc092d60-4542-41e2-b620-10b0454378ab",
+      "name": "Is Valid? Ket",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -672,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Keterangan').first().json.body || {};\nconst user = body.user || {};\nconst rows = $('Get Pegawai Ket').all();\nconst pgwRow = rows.find(r => Object.values(r.json).some(v => String(v||'').trim() !== ''));\nif (!pgwRow) return [{ json:{ ok:false, message:'Anda tidak terdaftar dalam sistem. Hubungi admin.' } }];\nconst pgw = pgwRow.json;\nconst status = (pgw.Status || pgw.status || 'AKTIF').toUpperCase();\nconst nama = pgw.username || pgw.nama || pgw.name || user.first_name || '—';\nconst nip = pgw.NIP || pgw.nip || '—';\nconst jabatan = pgw.Jabatan || pgw.jabatan || '—';\nif (status === 'NONAKTIF') return [{ json:{ ok:false, message:'Akun Anda dinonaktifkan. Hubungi admin.' } }];\nif (!body.tgl_mulai || !body.tgl_selesai) return [{ json:{ ok:false, message:'Tanggal mulai dan selesai wajib diisi.' } }];\nif (!(body.keterangan||'').trim()) return [{ json:{ ok:false, message:'Keterangan tidak boleh kosong.' } }];\nconst jenisValid = ['IZIN','SAKIT','TUGAS','TUBEL','CUTI'];\nif (!body.jenis || !jenisValid.includes(body.jenis.toUpperCase())) return [{ json:{ ok:false, message:'Jenis tidak valid. Pilih: IZIN, SAKIT, TUGAS, TUBEL, atau CUTI.' } }];\nconst start = new Date(body.tgl_mulai);\nconst end = new Date(body.tgl_selesai);\nif (isNaN(start) || isNaN(end)) return [{ json:{ ok:false, message:'Format tanggal tidak valid.' } }];\nif (end < start) return [{ json:{ ok:false, message:'Tanggal selesai tidak boleh sebelum tanggal mulai.' } }];\nconst durasi = Math.round((end - start) / (864e5)) + 1;\nconst jenis = body.jenis.toUpperCase();\nconst adaBukti = !!body.bukti_base64;\nif (jenis === 'TUGAS' && !adaBukti) return [{ json:{ ok:false, message:'📎 Surat Tugas / Dinas Luar wajib menyertakan bukti (foto/dokumen surat tugas).' } }];\nif (jenis === 'SAKIT' && durasi > 1 && !adaBukti) return [{ json:{ ok:false, message:`📎 Izin Sakit lebih dari 1 hari (${durasi} hari) wajib menyertakan bukti (surat dokter / keterangan sakit).` } }];\n// Backend time gate: non-admin cannot submit after jam masuk\nif (body.source !== 'admin_panel') {\n  const _nowStr = new Date().toLocaleString('en-US',{timeZone:'Asia/Makassar',hour12:false});\n  const _n = new Date(_nowStr);\n  const _nowMenit = _n.getHours() * 60 + _n.getMinutes();\n  if (_nowMenit > 480) {\n    return [{ json:{ ok:false, message:'⏰ Lewat batas waktu pengajuan. Pengajuan keterangan hanya bisa dikirim sebelum jam 08:00 WITA. Silakan hubungi admin.' } }];\n  }\n}\nconst nowStr = new Date().toLocaleString('en-US',{timeZone:'Asia/Makassar',hour12:false});\nconst now = new Date(nowStr);\nconst ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;\nconst dates = [];\nfor (let i = 0; i < durasi; i++) { const d = new Date(start); d.setDate(start.getDate() + i); dates.push(d.toISOString().split('T')[0]); }\nlet tglRange = body.tgl_mulai === body.tgl_selesai ? body.tgl_mulai : `${body.tgl_mulai} s.d. ${body.tgl_selesai}`;\nif (body.jam_mulai && body.jam_selesai) tglRange += ` (${body.jam_mulai} - ${body.jam_selesai})`;\nreturn [{ json:{ ok:true, user_id:String(user.id||''), nip, nama, jabatan, jenis, tgl_mulai:body.tgl_mulai, tgl_selesai:body.tgl_selesai, tgl_range:tglRange, durasi, dates, keterangan:body.keterangan.trim(), request_id:body.request_id||'', timestamp:ts, jam: (body.jam_mulai && body.jam_selesai) ? `${body.jam_mulai} - ${body.jam_selesai}` : ts.split(' ')[1], ada_bukti:adaBukti, instansi_id: pgw.instansi_id || '', jam_mulai: body.jam_mulai||'', jam_selesai: body.jam_selesai||'' } }];"
+      },
+      "id": "a710d712-3dff-4d4d-9888-90983dac9827",
+      "name": "Validasi & Cek Bukti",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -896,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM \"user_list\" WHERE \"NIP\" = '{{ ($(\"Keterangan\").item.json.body?.user?.nip || $(\"Keterangan\").item.json.body?.nip).toString().replace(/'/g, \"''\") }}' OR \"id\" = {{ ($(\"Keterangan\").item.json.body?.user?.id || 0).toString().replace(/'/g, \"''\") }} LIMIT 1",
+        "options": {}
+      },
+      "id": "6aa36bad-80a6-4ea8-b108-223eb8efa626",
+      "name": "Get Pegawai Ket",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1120,
+        384
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM \"ket_temp\" WHERE \"request_id\" = '{{ ($json.body.request_id).toString().replace(/'/g, \"''\") }}' LIMIT 1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1568,
+        288
+      ],
+      "id": "3b1dc5b3-5ed8-44c3-895f-95c9610db23b",
+      "name": "Check Idempotency Ket",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-rid-ket",
+              "leftValue": "={{ $json.request_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1344,
+        288
+      ],
+      "id": "92f13ecd-5886-45ab-a31e-eaba8d34e111",
+      "name": "Is Duplicate Ket?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\":true, \"message\":\"Pengajuan sudah diterima (Idempotent)\"}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -1120,
+        192
+      ],
+      "id": "93a4c2c6-ec78-435b-9aa6-195d31bd3bf9",
+      "name": "Respond Duplicate Ket Early"
+    },
+    {
+      "parameters": {
+        "jsCode": "const headers = $input.first().json.headers || {};\nconst authH = headers['authorization'] || headers['Authorization'] || '';\nconst bearer = authH.replace(/^Bearer\\s+/i, '').trim();\nif (!bearer) {\n  $execution.respond({\n    statusCode: 401,\n    headers: { 'Access-Control-Allow-Origin': '*' },\n    body: JSON.stringify({ ok: false, message: 'Unauthorized: Invalid Token' })\n  });\n  return [];\n}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1792,
+        288
+      ],
+      "id": "b629717d-b7ff-4a03-a068-071e4bdad414",
+      "name": "Security Gate Ket"
+    },
+    {
+      "parameters": {
+        "jsCode": "const m=$input.first().json.headers?.['x-forwarded-method']||$input.first().json.method||'';\nif(m==='OPTIONS'){$execution.respond({statusCode:200,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'},body:''});return[];}\nreturn $input.all();"
+      },
+      "id": "8b2bcc8f-5f84-4aad-9cdb-37c0f756241d",
+      "name": "CORS Keterangan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2016,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "keterangan",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "3b557244-21a8-4f02-b49a-205bbda42f6e",
+      "name": "Keterangan",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2240,
+        288
+      ],
+      "webhookId": "95b70783-5bfb-45eb-8837-5f94ca2d7360"
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "=default",
+        "chatId": "=6281239788212-1551250724@g.us",
+        "text": "={{ $json.text }}",
+        "linkPreview": false,
+        "requestOptions": {}
+      },
+      "type": "@devlikeapro/n8n-nodes-waha.WAHA",
+      "typeVersion": 202502,
+      "position": [
+        1792,
+        752
+      ],
+      "id": "6fa6e844-52ec-4f6c-8de1-d812b3b5085f",
+      "name": "Send a text message",
+      "credentials": {
+        "wahaApi": {
+          "id": "H0bIiGSgklTFolrc",
+          "name": "WAHA account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "=default",
+        "chatId": "=6281239788212-1551250724@g.us",
+        "text": "={{ $json.text }}",
+        "linkPreview": false,
+        "requestOptions": {}
+      },
+      "type": "@devlikeapro/n8n-nodes-waha.WAHA",
+      "typeVersion": 202502,
+      "position": [
+        2464,
+        160
+      ],
+      "id": "5257091c-ec02-4f8c-a8d2-db9b1409ac4a",
+      "name": "Send a text message1",
+      "credentials": {
+        "wahaApi": {
+          "id": "H0bIiGSgklTFolrc",
+          "name": "WAHA account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "=default",
+        "chatId": "=6281239788212-1551250724@g.us",
+        "text": "={{ $json.text }}",
+        "linkPreview": false,
+        "requestOptions": {}
+      },
+      "type": "@devlikeapro/n8n-nodes-waha.WAHA",
+      "typeVersion": 202502,
+      "position": [
+        2576,
+        1136
+      ],
+      "id": "f8e82bec-3e80-4207-97f0-64ff4561a4a7",
+      "name": "Send a text message2",
+      "credentials": {
+        "wahaApi": {
+          "id": "H0bIiGSgklTFolrc",
+          "name": "WAHA account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Broadcast ke Semua Pegawai": {
+      "main": [
+        [
+          {
+            "node": "Respond OK Approve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Broadcast Approve": {
+      "main": [
+        [
+          {
+            "node": "Broadcast ke Semua Pegawai",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a text message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Semua Pegawai": {
+      "main": [
+        [
+          {
+            "node": "Format Broadcast Approve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status Approve": {
+      "main": [
+        [
+          {
+            "node": "Get Semua Pegawai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Selesai Update Log": {
+      "main": [
+        [
+          {
+            "node": "Update Status Approve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collapse Log Approve": {
+      "main": [
+        [
+          {
+            "node": "Selesai Update Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Log IZIN Approve": {
+      "main": [
+        [
+          {
+            "node": "Collapse Log Approve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Insert (Reject)": {
+      "main": [
+        [
+          {
+            "node": "Selesai Update Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Approve?": {
+      "main": [
+        [
+          {
+            "node": "Insert Log IZIN Approve",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Insert (Reject)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Log Approve": {
+      "main": [
+        [
+          {
+            "node": "Is Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Selesai Update KET TEMP": {
+      "main": [
+        [
+          {
+            "node": "Expand Log Approve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update KET TEMP Row": {
+      "main": [
+        [
+          {
+            "node": "Selesai Update KET TEMP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand KET TEMP Rows": {
+      "main": [
+        [
+          {
+            "node": "Update KET TEMP Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Found?": {
+      "main": [
+        [
+          {
+            "node": "Expand KET TEMP Rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Fail Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto Approve (S, T, TUBEL, CUTI)": {
+      "main": [
+        [
+          {
+            "node": "Is Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Proses Konfirmasi": {
+      "main": [
+        [
+          {
+            "node": "Auto Approve (S, T, TUBEL, CUTI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Ket Row": {
+      "main": [
+        [
+          {
+            "node": "Proses Konfirmasi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid?3": {
+      "main": [
+        [
+          {
+            "node": "Get Ket Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Fail Approve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validasi Approve": {
+      "main": [
+        [
+          {
+            "node": "Is Valid?3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Admin List Approve": {
+      "main": [
+        [
+          {
+            "node": "Validasi Approve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS Ket Approve": {
+      "main": [
+        [
+          {
+            "node": "Get Admin List Approve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ket Approve Webhook": {
+      "main": [
+        [
+          {
+            "node": "CORS Ket Approve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Ket List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Admin Request?": {
+      "main": [
+        [
+          {
+            "node": "Get All Ket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Ket by User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Ket": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Ket by User": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Query": {
+      "main": [
+        [
+          {
+            "node": "Is Admin Request?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS Ket List": {
+      "main": [
+        [
+          {
+            "node": "Parse Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ket List Webhook": {
+      "main": [
+        [
+          {
+            "node": "CORS Ket List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status Delete": {
+      "main": [
+        [
+          {
+            "node": "Delete Row KET TEMP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Verified?1": {
+      "main": [
+        [
+          {
+            "node": "Get Log Absensi User",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Fail Verify1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verifikasi Row1": {
+      "main": [
+        [
+          {
+            "node": "Is Verified?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Rows Milik User1": {
+      "main": [
+        [
+          {
+            "node": "Verifikasi Row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Row KET TEMP": {
+      "main": [
+        [
+          {
+            "node": "Respond OK Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collapse Setelah Delete Log": {
+      "main": [
+        [
+          {
+            "node": "Update Status Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Log Absensi Row": {
+      "main": [
+        [
+          {
+            "node": "Collapse Setelah Delete Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Log Delete Rows": {
+      "main": [
+        [
+          {
+            "node": "Delete Log Absensi Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Log Rows To Delete": {
+      "main": [
+        [
+          {
+            "node": "Expand Log Delete Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Log Absensi User": {
+      "main": [
+        [
+          {
+            "node": "Filter Log Rows To Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid?2": {
+      "main": [
+        [
+          {
+            "node": "Get Rows Milik User1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Fail Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Delete": {
+      "main": [
+        [
+          {
+            "node": "Is Valid?2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS Ket Delete": {
+      "main": [
+        [
+          {
+            "node": "Parse Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ket Delete Webhook": {
+      "main": [
+        [
+          {
+            "node": "CORS Ket Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid?1": {
+      "main": [
+        [
+          {
+            "node": "Get Rows Milik User",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Fail Edit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Row KET TEMP": {
+      "main": [
+        [
+          {
+            "node": "Respond OK Edit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Verified?": {
+      "main": [
+        [
+          {
+            "node": "Update Row KET TEMP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Fail Verify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verifikasi Row": {
+      "main": [
+        [
+          {
+            "node": "Is Verified?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Rows Milik User": {
+      "main": [
+        [
+          {
+            "node": "Verifikasi Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validasi Edit": {
+      "main": [
+        [
+          {
+            "node": "Is Valid?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS Ket Edit": {
+      "main": [
+        [
+          {
+            "node": "Validasi Edit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ket Edit Webhook": {
+      "main": [
+        [
+          {
+            "node": "CORS Ket Edit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status Auto B": {
+      "main": [
+        [
+          {
+            "node": "Get Semua Pegawai Broadcast B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status Auto": {
+      "main": [
+        [
+          {
+            "node": "Get Semua Pegawai Broadcast A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Broadcast Tanpa Bukti": {
+      "main": [
+        [
+          {
+            "node": "Kirim Broadcast Tanpa Bukti",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Semua Pegawai Broadcast B": {
+      "main": [
+        [
+          {
+            "node": "Format Broadcast Tanpa Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond OK Auto Tanpa Bukti": {
+      "main": [
+        [
+          {
+            "node": "Update Status Auto B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collapse Auto Tanpa Bukti": {
+      "main": [
+        [
+          {
+            "node": "Simpan ket_temp Auto Tanpa Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simpan ket_temp Auto Tanpa Bukti": {
+      "main": [
+        [
+          {
+            "node": "Respond OK Auto Tanpa Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simpan Log Auto Tanpa Bukti": {
+      "main": [
+        [
+          {
+            "node": "Collapse Auto Tanpa Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Auto Tanpa Bukti": {
+      "main": [
+        [
+          {
+            "node": "Simpan Log Auto Tanpa Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Bukti Broadcast": {
+      "main": [
+        [
+          {
+            "node": "Kirim Foto Broadcast ke Semua",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Broadcast Ada Bukti": {
+      "main": [
+        [
+          {
+            "node": "Convert Bukti Broadcast",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Kirim Broadcast Ada Bukti",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Semua Pegawai Broadcast A": {
+      "main": [
+        [
+          {
+            "node": "Format Broadcast Ada Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond OK Auto Ada Bukti": {
+      "main": [
+        [
+          {
+            "node": "Update Status Auto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collapse Auto Ada Bukti": {
+      "main": [
+        [
+          {
+            "node": "Simpan ket_temp Auto Ada Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simpan ket_temp Auto Ada Bukti": {
+      "main": [
+        [
+          {
+            "node": "Respond OK Auto Ada Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simpan Log Auto Ada Bukti": {
+      "main": [
+        [
+          {
+            "node": "Collapse Auto Ada Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Auto Ada Bukti": {
+      "main": [
+        [
+          {
+            "node": "Simpan Log Auto Ada Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload GDrive Auto": {
+      "main": [
+        [
+          {
+            "node": "Expand Auto Ada Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File Auto": {
+      "main": [
+        [
+          {
+            "node": "Upload GDrive Auto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Bukti Auto": {
+      "main": [
+        [
+          {
+            "node": "Convert to File Auto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ada Bukti? Auto": {
+      "main": [
+        [
+          {
+            "node": "Set Bukti Auto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Expand Auto Tanpa Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim ke Admin Tanpa Bukti": {
+      "main": [
+        [
+          {
+            "node": "Respond OK IZIN PENDING Tanpa Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Notif Admin Tanpa Bukti": {
+      "main": [
+        [
+          {
+            "node": "Kirim ke Admin Tanpa Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Admin List Tanpa Bukti": {
+      "main": [
+        [
+          {
+            "node": "Format Notif Admin Tanpa Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collapse IZIN Tanpa Bukti": {
+      "main": [
+        [
+          {
+            "node": "Get Admin List Tanpa Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simpan ket_temp IZIN Tanpa Bukti": {
+      "main": [
+        [
+          {
+            "node": "Collapse IZIN Tanpa Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand IZIN Tanpa Bukti": {
+      "main": [
+        [
+          {
+            "node": "Simpan ket_temp IZIN Tanpa Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim Bukti ke Admin": {
+      "main": [
+        [
+          {
+            "node": "Respond OK IZIN PENDING Ada Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Bukti IZIN Admin": {
+      "main": [
+        [
+          {
+            "node": "Kirim Bukti ke Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Bukti For Admin": {
+      "main": [
+        [
+          {
+            "node": "Convert Bukti IZIN Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim ke Admin Ada Bukti": {
+      "main": [
+        [
+          {
+            "node": "Set Bukti For Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Notif Admin Ada Bukti": {
+      "main": [
+        [
+          {
+            "node": "Kirim ke Admin Ada Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Admin List Ada Bukti": {
+      "main": [
+        [
+          {
+            "node": "Format Notif Admin Ada Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collapse IZIN Ada Bukti": {
+      "main": [
+        [
+          {
+            "node": "Get Admin List Ada Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simpan ket_temp IZIN Ada Bukti": {
+      "main": [
+        [
+          {
+            "node": "Expand IZIN Ada Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand IZIN Ada Bukti": {
+      "main": [
+        [
+          {
+            "node": "Collapse IZIN Ada Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload GDrive IZIN": {
+      "main": [
+        [
+          {
+            "node": "Simpan ket_temp IZIN Ada Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File IZIN": {
+      "main": [
+        [
+          {
+            "node": "Upload GDrive IZIN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Bukti IZIN": {
+      "main": [
+        [
+          {
+            "node": "Convert to File IZIN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ada Bukti? IZIN": {
+      "main": [
+        [
+          {
+            "node": "Set Bukti IZIN",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Expand IZIN Tanpa Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apakah IZIN?": {
+      "main": [
+        [
+          {
+            "node": "Ada Bukti? IZIN",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ada Bukti? Auto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid? Ket": {
+      "main": [
+        [
+          {
+            "node": "Apakah IZIN?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Fail Keterangan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validasi & Cek Bukti": {
+      "main": [
+        [
+          {
+            "node": "Is Valid? Ket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pegawai Ket": {
+      "main": [
+        [
+          {
+            "node": "Validasi & Cek Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Idempotency Ket": {
+      "main": [
+        [
+          {
+            "node": "Is Duplicate Ket?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Duplicate Ket?": {
+      "main": [
+        [
+          {
+            "node": "Respond Duplicate Ket Early",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Pegawai Ket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Gate Ket": {
+      "main": [
+        [
+          {
+            "node": "Check Idempotency Ket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS Keterangan": {
+      "main": [
+        [
+          {
+            "node": "Security Gate Ket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keterangan": {
+      "main": [
+        [
+          {
+            "node": "CORS Keterangan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Ket List Webhook": [
+      {
+        "headers": {
+          "host": "mindcloud.my.id",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+          "accept": "application/json",
+          "accept-encoding": "gzip, deflate, br, zstd",
+          "accept-language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,zh;q=0.5",
+          "ngrok-skip-browser-warning": "true",
+          "origin": "https://absensi.mindcloud.my.id",
+          "priority": "u=1, i",
+          "referer": "https://absensi.mindcloud.my.id/",
+          "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"Windows\"",
+          "sec-fetch-dest": "empty",
+          "sec-fetch-mode": "cors",
+          "sec-fetch-site": "same-site",
+          "x-app-token": "BAPPERIDA_SECURE_TOKEN_2025",
+          "x-forwarded-for": "110.136.219.182",
+          "x-forwarded-host": "mindcloud.my.id",
+          "x-forwarded-port": "443",
+          "x-forwarded-proto": "https",
+          "x-forwarded-server": "69401d40dc9d",
+          "x-real-ip": "110.136.219.182"
+        },
+        "params": {},
+        "query": {
+          "is_admin": "true",
+          "status": "PENDING",
+          "_t": "1782299198293",
+          "instansi_id": "dpmptsp"
+        },
+        "body": {},
+        "webhookUrl": "https://mindcloud.my.id/webhook/ket-list",
+        "executionMode": "production"
+      }
+    ],
+    "Keterangan": [
+      {
+        "headers": {
+          "host": "mindcloud.my.id",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+          "content-length": "422",
+          "accept": "application/json",
+          "accept-encoding": "gzip, deflate, br, zstd",
+          "accept-language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,zh;q=0.5",
+          "content-type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+          "origin": "https://absensi.mindcloud.my.id",
+          "priority": "u=1, i",
+          "referer": "https://absensi.mindcloud.my.id/",
+          "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": "\"Windows\"",
+          "sec-fetch-dest": "empty",
+          "sec-fetch-mode": "cors",
+          "sec-fetch-site": "same-site",
+          "x-app-token": "BAPPERIDA_SECURE_TOKEN_2025",
+          "x-forwarded-for": "110.136.219.182",
+          "x-forwarded-host": "mindcloud.my.id",
+          "x-forwarded-port": "443",
+          "x-forwarded-proto": "https",
+          "x-forwarded-server": "69401d40dc9d",
+          "x-real-ip": "110.136.219.182"
+        },
+        "params": {},
+        "query": {
+          "_t": "1782297669412",
+          "instansi_id": "dpmptsp"
+        },
+        "body": {
+          "nip": "198412072010012035",
+          "request_id": "admin_ket_198412072010012035_1782297669411",
+          "user": {
+            "id": "116329",
+            "nama": "Diana Kadi Mala Awang",
+            "nip": "198412072010012035"
+          },
+          "jenis": "IZIN",
+          "keterangan": "test",
+          "tgl_mulai": "2026-06-24",
+          "tgl_selesai": "2026-06-24",
+          "bukti_base64": null,
+          "bukti_mime": null,
+          "bukti_nama": null,
+          "admin_id": "1383864355",
+          "admin_nama": "Achmad Aqil Susanto, S.Kom",
+          "source": "admin_panel",
+          "timestamp": 1782297669
+        },
+        "webhookUrl": "https://mindcloud.my.id/webhook/keterangan",
+        "executionMode": "production"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4b55943efb5f219d407bc408d9277d6d643804fc75070b4ed56250fe03c8ea67"
+  }
+}

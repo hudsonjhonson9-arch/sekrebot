@@ -1,0 +1,140 @@
+{
+  "updatedAt": "2026-03-16T02:53:52.859Z",
+  "createdAt": "2026-03-16T01:46:10.523Z",
+  "id": "ESxuCgHoFbljNh10",
+  "name": "Otomasi Input Barang",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "On clicking 'execute'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        64,
+        -48
+      ],
+      "typeVersion": 1,
+      "id": "f67137e9-2752-4d70-9d5b-1990a17fae6e"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1WHw2pooLzdPisVajTCBLzkBd4rMorZGa",
+          "mode": "list",
+          "cachedResultName": "CV ATS Agil EN.pdf",
+          "cachedResultUrl": "https://drive.google.com/file/d/1WHw2pooLzdPisVajTCBLzkBd4rMorZGa/view?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        272,
+        -48
+      ],
+      "id": "9b197dec-bc27-479d-abe4-520b46edb03c",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "53IL2urNBWm95sLS",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        464,
+        -48
+      ],
+      "id": "f9b68cce-817a-4f70-a7cf-46cd498a2e34",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "content": "Jadi Buat Web untuk bidang - bidang mengupload kwitansi dan berita acara pengadaan ATK dll yang nantinya akan dibaca oleh sistem secara otomatis \ndan memasukannya ke dalam google sheet"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        864,
+        -32
+      ],
+      "id": "4e7bde5a-9797-4a62-b5c8-ae842c731c2e",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "On clicking 'execute'": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "b62ae4de-2065-468d-be41-b0ba35c868eb",
+  "activeVersionId": null,
+  "versionCounter": 31,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-03-16T01:46:10.533Z",
+      "createdAt": "2026-03-16T01:46:10.533Z",
+      "role": "workflow:owner",
+      "workflowId": "ESxuCgHoFbljNh10",
+      "projectId": "ZE0tgWH81scm4zQD",
+      "project": {
+        "updatedAt": "2026-03-12T15:42:44.257Z",
+        "createdAt": "2026-03-12T15:19:34.808Z",
+        "id": "ZE0tgWH81scm4zQD",
+        "name": "Achmad Aqil Susanto <ahmadagilsusanto@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

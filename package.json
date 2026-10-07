@@ -1,0 +1,39 @@
+{
+  "name": "absensi-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "start": "node server/index.js",
+    "test": "node --test server/*.test.js tests/gas-media.test.js tests/aset-emoji.test.mjs tests/aset-kategori-dropdown.test.mjs tests/aset-kondisi.test.mjs tests/aset-markup.test.mjs tests/aset-nav.test.mjs tests/aset-router.test.mjs tests/aset-screens.test.mjs tests/workflow-mutasi.test.mjs",
+    "test:live": "node --test tests/n8n-face.test.mjs tests/pks.test.mjs"
+  },
+  "dependencies": {
+    "@vladmandic/human": "^3.3.6",
+    "dotenv": "^18.0.5",
+    "express": "^4.22.3",
+    "pg": "^8.23.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@eslint/js": "^9.39.4",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "docxtemplater": "^3.71.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.4.0",
+    "pizzip": "^3.1.4",
+    "vite": "^8.0.4"
+  }
+}

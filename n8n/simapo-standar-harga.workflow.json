@@ -1,0 +1,200 @@
+{
+  "name": "SIMAPO Standar Harga",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "simapo-standar-harga-list",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "httpMethod": "GET",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "sh-001",
+      "name": "WH Standar Harga List",
+      "webhookId": "simapo-standar-harga-list",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "simapo-standar-harga-save",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "httpMethod": "POST",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "id": "sh-002",
+      "name": "WH Standar Harga Save",
+      "webhookId": "simapo-standar-harga-save",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT id, nama_barang as nama, satuan, harga_satuan as harga, sheet_name FROM \"SIMAPO\".standar_harga ORDER BY nama) t",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        300,
+        0
+      ],
+      "id": "sh-003",
+      "name": "PG Standar Harga List",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"SIMAPO\".standar_harga (nama_barang, satuan, harga_satuan, sheet_name) SELECT (r->>'nama')::varchar, (r->>'satuan')::varchar, (r->>'harga')::numeric, (r->>'sheet' || '')::varchar FROM jsonb_array_elements($json.body.rows) r ON CONFLICT DO NOTHING RETURNING (SELECT count(*) FROM \"SIMAPO\".standar_harga) as total",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        300,
+        200
+      ],
+      "id": "sh-004",
+      "name": "PG Standar Harga Save",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        0
+      ],
+      "id": "sh-005",
+      "name": "Res Standar Harga List"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        200
+      ],
+      "id": "sh-006",
+      "name": "Res Standar Harga Save"
+    }
+  ],
+  "connections": {
+    "WH Standar Harga List": {
+      "main": [
+        [
+          {
+            "node": "PG Standar Harga List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Standar Harga List": {
+      "main": [
+        [
+          {
+            "node": "Res Standar Harga List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Standar Harga Save": {
+      "main": [
+        [
+          {
+            "node": "PG Standar Harga Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Standar Harga Save": {
+      "main": [
+        [
+          {
+            "node": "Res Standar Harga Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "versionId": "sh-1784547017535",
+  "active": false,
+  "settings": {},
+  "tags": []
+}

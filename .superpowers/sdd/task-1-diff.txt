@@ -1,0 +1,1759 @@
+﻿
+84ddd33 fix(aset): alwaysOutputData pada node PG agar ttd-get balas null saat TTD kosong
+87a5ab3 fix(aset): skop instansi idempotensi unit_aset, kosongkan per instansi, bersihkan mojibake
+7f0dedb feat(aset): generator workflow SIMAPO Aset Data (7 endpoint bergate)
+ .../plans/2026-09-30-aset-backend-pengaturan.md    |   84 +-
+ n8n/SIMAPO - Aset Data.json                        | 1120 ++++++++++++++++++++
+ scripts/build-aset-data-workflow.mjs               |  348 ++++++
+ 3 files changed, 1525 insertions(+), 27 deletions(-)
+diff --git a/docs/superpowers/plans/2026-09-30-aset-backend-pengaturan.md b/docs/superpowers/plans/2026-09-30-aset-backend-pengaturan.md
+index 9d24fa4..3e28550 100644
+--- a/docs/superpowers/plans/2026-09-30-aset-backend-pengaturan.md
++++ b/docs/superpowers/plans/2026-09-30-aset-backend-pengaturan.md
+@@ -54,21 +54,20 @@ Buat `scripts/build-aset-data-workflow.mjs`:
+ */
+ import { randomUUID } from 'node:crypto';
+ import { readFileSync, writeFileSync } from 'node:fs';
+ import { dirname, join } from 'node:path';
+ import { fileURLToPath } from 'node:url';
+ 
+ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+ const OUT = join(ROOT, 'n8n', 'SIMAPO - Aset Data.json');
+ const NAME = 'SIMAPO - Aset Data';
+ const BASE = 'https://mindcloud.my.id';
+-const INST = 'bapperida';
+ const PG_KEYS = ['sekda_nama', 'sekda_nip', 'sekda_jabatan', 'sekda_alamat', 'p1_id', 'p1_jabatan', 'p1_alamat'];
+ 
+ // ΓöÇΓöÇ referensi dari workflow BAST yang sudah terbukti jalan ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ const BAST = JSON.parse(readFileSync(join(ROOT, 'n8n', 'SIMAPO - BAST.json'), 'utf8'));
+ const refOf = (type) => BAST.nodes.find(n => n.type === type);
+ const refWh = refOf('n8n-nodes-base.webhook');
+ const refCode = refOf('n8n-nodes-base.code');
+ const refPg = refOf('n8n-nodes-base.postgres');
+ const refRes = refOf('n8n-nodes-base.respondToWebhook');
+ const GATE_JS = BAST.nodes
+@@ -94,32 +93,40 @@ function endChain() { cy += 240; }
+ const wh = (p, method) => add(`WH ${p}`, 'n8n-nodes-base.webhook', {
+   path: p,
+   ...(method ? { httpMethod: method } : {}),
+   responseMode: 'responseNode',
+   options: { allowedOrigins: '*' },
+   webhookId: p,
+ }, { typeVersion: refWh.typeVersion });
+ 
+ const gate = (p) => add(`Gate ${p}`, 'n8n-nodes-base.code', { jsCode: GATE_JS }, { typeVersion: refCode.typeVersion });
+ const code = (n, jsCode) => add(n, 'n8n-nodes-base.code', { jsCode }, { typeVersion: refCode.typeVersion });
+-const pg = (n, query) => add(n, 'n8n-nodes-base.postgres',
+-  { operation: 'executeQuery', query, options: {} },
+-  { typeVersion: refPg.typeVersion, creds: refPg.credentials });
++const pg = (n, query) => {
++  add(n, 'n8n-nodes-base.postgres',
++    { operation: 'executeQuery', query, options: {} },
++    { typeVersion: refPg.typeVersion, creds: refPg.credentials });
++  nodes.at(-1).alwaysOutputData = true;
++  return n;
++};
+ const res = (n) => add(n, 'n8n-nodes-base.respondToWebhook', {
+   respondWith: 'text',
+   responseBody: '={{ JSON.stringify($json) }}',
+   options: { responseHeaders: { entries: [{ name: 'Content-Type', value: 'application/json' }] } },
+ }, { typeVersion: refRes.typeVersion });
+ 
+ // instansi dari query (apiFetch selalu menyisipkan instansi_id), fallback bapperida
+ const INST_EXPR = "{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}";
+ 
++// instansi untuk node PG kosongkan setelah PG Kosongkan Anak ΓÇö input node itu sudah
++// baris hasil query (bukan payload webhook), jadi rujuk node WH-nya secara eksplisit
++const INST_EXPR_KOSONG = "{{ (($('WH simapo-aset-kosongkan').first().json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}";
++
+ const AGG_OK = `return [{ json: { data: { ok: true } } }];`;
+ 
+ const AGG_UPSERT = `const j = $input.all()[0] || {};
+ return [{ json: { data: {
+   total: Number(j.total || 0),
+   barang_baru: Number(j.barang_baru || 0),
+   unit_baru: Number(j.unit_baru || 0),
+   barang_ids: j.barang_ids || []
+ } } }];`;
+ 
+@@ -185,21 +192,21 @@ L.push('  SELECT b.id, b.kodebarang FROM "SIMAPO".barang b');
+ L.push('  JOIN src ON b.kodebarang = src.kode AND b.instansi_id = \'' + esc(inst) + '\'');
+ L.push('  WHERE NOT EXISTS (SELECT 1 FROM ins_barang ib WHERE ib.kodebarang = b.kodebarang)');
+ L.push('),');
+ L.push('ins_unit AS (');
+ L.push('  INSERT INTO "SIMAPO".unit_aset (id, barangid, nomorinventaris, kondisi, statuspinjam, qrcode, merk_type, model_jenis, warna, tahun_pembuatan, roda, keterangan, instansi_id, updatedat)');
+ L.push("  SELECT gen_random_uuid(), ab.id, src.nomor, src.kondisi, false,");
+ L.push("         'https://mindcloud.my.id/?qr=SIMAPO-' || gen_random_uuid(),");
+ L.push("         src.merk, src.model, src.warna, src.tahun, src.roda, src.keterangan, '" + esc(inst) + "', NOW()");
+ L.push('  FROM src');
+ L.push('  JOIN all_barang ab ON ab.kodebarang = src.kode');
+-L.push('  WHERE NOT EXISTS (SELECT 1 FROM "SIMAPO".unit_aset ua WHERE ua.nomorinventaris = src.nomor)');
++  L.push("  WHERE NOT EXISTS (SELECT 1 FROM \"SIMAPO\".unit_aset ua WHERE ua.nomorinventaris = src.nomor AND ua.instansi_id = '" + esc(inst) + "')");
+ L.push('  RETURNING id');
+ L.push(')');
+ L.push('SELECT (SELECT count(*) FROM src) AS total,');
+ L.push('       (SELECT count(*) FROM ins_barang) AS barang_baru,');
+ L.push('       (SELECT count(*) FROM ins_unit) AS unit_baru,');
+ L.push("       (SELECT COALESCE(json_agg(id), '[]'::json) FROM ins_barang) AS barang_ids;");
+ return [{ json: { sql: L.join('\n') } }];`;
+ 
+ // ΓöÇΓöÇ Code: simpan pengaturan ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ const SET_JS = `const b = $input.item.json.body || {};
+@@ -209,24 +216,62 @@ const esc = s => String(s == null ? '' : s).replace(/'/g, "''");
+ const KEYS = ${JSON.stringify(PG_KEYS)};
+ const pairs = [];
+ for (const k of KEYS) {
+   if (b[k] !== undefined) pairs.push("('" + k + "', '" + esc(b[k]) + "', '" + esc(inst) + "')");
+ }
+ if (!pairs.length) throw new Error('tidak ada field untuk disimpan');
+ const sql = 'INSERT INTO public.pengaturan (key, value, instansi_id) VALUES ' + pairs.join(', ') +
+   ' ON CONFLICT (key, instansi_id) DO UPDATE SET value = EXCLUDED.value RETURNING key;';
+ return [{ json: { sql } }];`;
+ 
++// ΓöÇΓöÇ SQL kosongkan anak per instansi ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++// Semua child FK NO ACTION dihapus dalam SATU statement (dicek di akhir
++// statement); unit_aset/barang dihapus terpisah oleh node PG sesudahnya.
++// arg e = ekspresi runtime berisi instansi yang sudah di-escape; ${e}
++// di-resolve n8n saat eksekusi, bukan saat build.
++const SQL_KIDS = (e) => `WITH d1 AS (DELETE FROM "SIMAPO".riwayat_pemeliharaan
++     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
++ d2 AS (DELETE FROM "SIMAPO".detail_distribusi_aset
++     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
++ d3 AS (DELETE FROM "SIMAPO".jadwal_maintenance
++     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
++ d4 AS (DELETE FROM "SIMAPO".peminjaman
++     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
++ d5 AS (DELETE FROM "SIMAPO".detail_opname
++     WHERE barangid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
++ d6 AS (DELETE FROM "SIMAPO".detail_request
++     WHERE barangid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
++ d7 AS (DELETE FROM "SIMAPO".detail_pemeliharaan
++     WHERE barangid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}')
++        OR riwayatid IN (SELECT id FROM "SIMAPO".riwayat_pemeliharaan
++                         WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}')) RETURNING 1),
++ d8 AS (DELETE FROM "SIMAPO".mutasi_barang
++     WHERE barangkeluarid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}')
++        OR barangmasukid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
++ d9 AS (DELETE FROM "SIMAPO".detail_penerimaan
++     WHERE barang_id IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
++ d10 AS (DELETE FROM "SIMAPO".pemeliharaan
++     WHERE barang_id IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1)
++SELECT (SELECT count(*) FROM d1) + (SELECT count(*) FROM d2) + (SELECT count(*) FROM d3)
++     + (SELECT count(*) FROM d4) + (SELECT count(*) FROM d5) + (SELECT count(*) FROM d6)
++     + (SELECT count(*) FROM d7) + (SELECT count(*) FROM d8) + (SELECT count(*) FROM d9)
++     + (SELECT count(*) FROM d10) AS rows_dihapus;`;
++
+ // ΓöÇΓöÇ Code: guard konfirmasi kosongkan ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ const CONFIRM_JS = `const b = $input.item.json.body || {};
+ if (String(b.confirm || '') !== 'HAPUS') throw new Error('Konfirmasi salah: ketik HAPUS');
+-return $input.all();`;
++const q = $input.item.json.query || {};
++const inst = String(q.instansi_id || 'bapperida');
++const esc = s => String(s == null ? '' : s).replace(/'/g, "''");
++const i = esc(inst);
++const sql = \`${SQL_KIDS('${i}')}\`;
++return [{ json: { sql } }];`;
+ 
+ // ΓöÇΓöÇ SQL statis ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ const SQL_SUMMARY = `SELECT
+   (SELECT COUNT(*) FROM "SIMAPO".unit_aset ua
+      JOIN "SIMAPO".barang b ON b.id = ua.barangid AND b.isactive = true
+     WHERE b.instansi_id = '${INST_EXPR}') AS total_unit,
+   (SELECT COALESCE(SUM(COALESCE(NULLIF(ua.nilaiperolehan, 0), b.hargasatuan)), 0)
+      FROM "SIMAPO".unit_aset ua
+      JOIN "SIMAPO".barang b ON b.id = ua.barangid AND b.isactive = true
+     WHERE b.instansi_id = '${INST_EXPR}') AS total_nilai,
+@@ -247,35 +292,20 @@ const SQL_SUMMARY = `SELECT
+ 
+ const SQL_PENG_GET = `SELECT COALESCE(json_object_agg(key, value), '{}'::json) AS data
+ FROM public.pengaturan
+ WHERE instansi_id = '${INST_EXPR}'
+   AND key IN ('sekda_nama','sekda_nip','sekda_jabatan','sekda_alamat','p1_id','p1_jabatan','p1_alamat');`;
+ 
+ const SQL_TTD = `SELECT signature FROM public.tanda_tangan
+ WHERE nip = '{{ (($input.item.json.query || {}).nip || "").toString().replace(/'/g, "''") }}'
+ LIMIT 1;`;
+ 
+-const SQL_KIDS = `WITH d1 AS (DELETE FROM "SIMAPO".riwayat_pemeliharaan RETURNING 1),
+-     d2 AS (DELETE FROM "SIMAPO".detail_distribusi_aset RETURNING 1),
+-     d3 AS (DELETE FROM "SIMAPO".jadwal_maintenance RETURNING 1),
+-     d4 AS (DELETE FROM "SIMAPO".peminjaman RETURNING 1),
+-     d5 AS (DELETE FROM "SIMAPO".detail_opname RETURNING 1),
+-     d6 AS (DELETE FROM "SIMAPO".detail_request RETURNING 1),
+-     d7 AS (DELETE FROM "SIMAPO".detail_pemeliharaan RETURNING 1),
+-     d8 AS (DELETE FROM "SIMAPO".mutasi_barang RETURNING 1),
+-     d9 AS (DELETE FROM "SIMAPO".detail_penerimaan RETURNING 1),
+-     d10 AS (DELETE FROM "SIMAPO".pemeliharaan RETURNING 1)
+-SELECT (SELECT count(*) FROM d1) + (SELECT count(*) FROM d2) + (SELECT count(*) FROM d3)
+-     + (SELECT count(*) FROM d4) + (SELECT count(*) FROM d5) + (SELECT count(*) FROM d6)
+-     + (SELECT count(*) FROM d7) + (SELECT count(*) FROM d8) + (SELECT count(*) FROM d9)
+-     + (SELECT count(*) FROM d10) AS rows_dihapus;`;
+-
+ // ΓöÇΓöÇ 7 rantai ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ function upsertChain(path) {
+   newChain();
+   const w = wh(path, 'POST'), g = gate(path);
+   const c = code(`Code Aset Upsert (${path})`, UPSERT_JS);
+   const p = pg(`PG Aset Upsert (${path})`, '={{ $json.sql }}');
+   const a = code(`Agg Aset Upsert (${path})`, AGG_UPSERT);
+   const r = res(`Res Aset Upsert (${path})`);
+   link(w, g); link(g, c); link(c, p); link(p, a); link(a, r);
+   endChain();
+@@ -302,27 +332,27 @@ readChain('simapo-pengaturan-get', SQL_PENG_GET, AGG_PENG_GET);
+   const c = code('Code Pengaturan Set', SET_JS);
+   const p = pg('PG Pengaturan Set', '={{ $json.sql }}');
+   const a = code('Agg Pengaturan Set', AGG_OK);
+   const r = res('Res Pengaturan Set');
+   link(w, g); link(g, c); link(c, p); link(p, a); link(a, r);
+   endChain();
+ }
+ 
+ readChain('simapo-ttd-get', SQL_TTD, AGG_TTD);
+ 
+-{ // simapo-aset-kosongkan (POST): guard ΓåÆ anak ΓåÆ unit ΓåÆ barang
++{ // simapo-aset-kosongkan (POST): guard ΓåÆ anak ΓåÆ unit ΓåÆ barang (per instansi)
+   newChain();
+   const w = wh('simapo-aset-kosongkan', 'POST'), g = gate('simapo-aset-kosongkan');
+   const c = code('Code Konfirmasi Kosongkan', CONFIRM_JS);
+-  const p1 = pg('PG Kosongkan Anak', SQL_KIDS);
+-  const p2 = pg('PG Kosongkan Unit', 'DELETE FROM "SIMAPO".unit_aset;');
+-  const p3 = pg('PG Kosongkan Barang', 'DELETE FROM "SIMAPO".barang;');
++  const p1 = pg('PG Kosongkan Anak', '={{ $json.sql }}');
++  const p2 = pg('PG Kosongkan Unit', `DELETE FROM "SIMAPO".unit_aset WHERE instansi_id = '${INST_EXPR_KOSONG}';`);
++  const p3 = pg('PG Kosongkan Barang', `DELETE FROM "SIMAPO".barang WHERE instansi_id = '${INST_EXPR_KOSONG}';`);
+   const a = code('Agg Kosongkan', AGG_OK);
+   const r = res('Res Kosongkan');
+   link(w, g); link(g, c); link(c, p1); link(p1, p2); link(p2, p3); link(p3, a); link(a, r);
+   endChain();
+ }
+ 
+ const wf = {
+   name: NAME,
+   nodes,
+   connections,
+@@ -639,21 +669,21 @@ Tambahkan satu baris setelah tombol `sa-tab-pks` (sebelum `</div>` penutup `#sa-
+               <div class="form-group"><label class="form-label">Alamat Sekretaris Daerah</label><input class="form-input" id="setSekdaAlamat" placeholder="Waikabubak"></div>
+               <div class="form-group"><label class="form-label">NIP Pihak Pertama (Kepala)</label><input class="form-input" id="setP1Nip" placeholder="197211022001121001"></div>
+               <div class="form-group"><label class="form-label">Jabatan Pihak Pertama</label><input class="form-input" id="setP1Jabatan" placeholder="Kepala Badan Perencanaan Kabupaten Sumba Barat"></div>
+               <div class="form-group" style="grid-column:1/-1;"><label class="form-label">Alamat Pihak Pertama</label><input class="form-input" id="setP1Alamat" placeholder="Waikabubak"></div>
+             </div>
+             <button class="btn-primary" onclick="saveSAPengaturan()" style="width:100%;margin-top:12px;">
+               <div class="btn-inner"><span>≡ƒÆ╛</span> Simpan Pengaturan</div>
+             </button>
+             <hr style="border-color:rgba(255,255,255,0.08);margin:18px 0;">
+             <div class="form-label" style="color:#f87171;">ΓÜá∩╕Å Zona Bahaya</div>
+-            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Kosongkan seluruh data aset (katalog + unit + riwayat transaksi yang merujuknya). Pegawai, ruangan, kategori, pengaturan, dan arsip BAST TIDAK terhapus.</div>
++            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Kosongkan seluruh data aset instansi ini (katalog + unit + riwayat transaksi yang merujuknya). Pegawai, ruangan, kategori, pengaturan, dan arsip BAST TIDAK terhapus.</div>
+             <div style="display:flex;gap:8px;">
+               <input class="form-input" id="kosongkanKonfirmasi" placeholder="Ketik HAPUS untuk mengaktifkan">
+               <button class="btn-sm-admin" onclick="kosongkanAset()" style="background:rgba(248,113,113,0.2);color:#f87171;white-space:nowrap;">≡ƒùæ Kosongkan</button>
+             </div>
+           </div>
+         </div>
+ 
+ ```
+ 
+ - [ ] **Step 4: `js/simapo-ext.js` ΓÇö case baru di `switchSATab` (baris 150)**
+@@ -750,21 +780,21 @@ Expected: commit sukses, 3 file masuk.
+ 
+ **Interfaces:**
+ - Consumes: hasil Task 4, endpoint Task 2.
+ - Produces: spec konsisten dengan implementasi; bukti UI jalan.
+ 
+ - [ ] **Step 1: Edit spec baris 97**
+ 
+ Ganti seluruh isi baris 97 (mulai `| \`simapo-aset-kosongkan\` ...`) menjadi:
+ 
+ ```markdown
+-| `simapo-aset-kosongkan` | destructive; wajib konfirmasi "HAPUS" di client **dan** guard server-side; cakupan hapus: semua tabel domain aset yang jadi FK-referen `barang`/`unit_aset` (riwayat transaksi ikut terhapus ΓÇö dipaksa FK Postgres: `riwayat_pemeliharaan`, `detail_distribusi_aset`, `jadwal_maintenance`, `peminjaman`, `detail_opname`, `detail_request`, `detail_pemeliharaan`, `mutasi_barang`, `detail_penerimaan`, `pemeliharaan`, lalu `unit_aset`, `barang`), sedangkan ruangan/kategori/pegawai/pengaturan/tanda_tangan/arsip BAST tetap |
++| `simapo-aset-kosongkan` | destructive; wajib konfirmasi "HAPUS" di client **dan** guard server-side; cakupan hapus (per instansi ΓÇö `instansi_id` dari query, default `bapperida`; baris instansi lain tidak tersentuh): semua tabel domain aset yang jadi FK-referen `barang`/`unit_aset` (riwayat transaksi ikut terhapus ΓÇö dipaksa FK Postgres: `riwayat_pemeliharaan`, `detail_distribusi_aset`, `jadwal_maintenance`, `peminjaman`, `detail_opname`, `detail_request`, `detail_pemeliharaan`, `mutasi_barang`, `detail_penerimaan`, `pemeliharaan`, lalu `unit_aset`, `barang`), sedangkan ruangan/kategori/pegawai/pengaturan/tanda_tangan/arsip BAST tetap |
+ ```
+ 
+ - [ ] **Step 2: Verifikasi UI via browser**
+ 
+ Jalankan dev server: `npm run dev` (vite), lalu dengan skill `browser-harness` buka URL dev ΓåÆ login (kredensial dari user; kalau tidak tersedia, minta user verifikasi manual) ΓåÆ Admin SIMAPO ΓåÆ group **≡ƒôÉ Referensi** ΓåÆ tab **ΓÜÖ∩╕Å Pengaturan**. Cek:
+ 1. Tab tampil di group Referensi dan section form tampil saat diklik (data termuat / placeholder defaults terlihat).
+ 2. Ubah satu field (mis. Alamat Pihak Pertama) ΓåÆ **Simpan** ΓåÆ toast sukses ΓåÆ reload tab ΓåÆ nilai tersimpan (GET roundtrip).
+ 3. Zona Bahaya: klik **≡ƒùæ Kosongkan** tanpa mengetik ΓåÆ toast error, server TIDAK dipanggil (guard client).
+ 4. Kembali ke tab ≡ƒôÉ PKS dan group ≡ƒôª Kelola Aset ΓåÆ semuanya masih tampil normal (regresi `switchSATab`).
+ 
+diff --git a/n8n/SIMAPO - Aset Data.json b/n8n/SIMAPO - Aset Data.json
+new file mode 100644
+index 0000000..079bc79
+--- /dev/null
++++ b/n8n/SIMAPO - Aset Data.json	
+@@ -0,0 +1,1120 @@
++{
++  "name": "SIMAPO - Aset Data",
++  "nodes": [
++    {
++      "parameters": {
++        "path": "simapo-aset-massal",
++        "httpMethod": "POST",
++        "responseMode": "responseNode",
++        "options": {
++          "allowedOrigins": "*"
++        },
++        "webhookId": "simapo-aset-massal"
++      },
++      "id": "53ebca63-6093-45fc-a8ff-d3770265cb97",
++      "name": "WH simapo-aset-massal",
++      "type": "n8n-nodes-base.webhook",
++      "typeVersion": 2,
++      "position": [
++        120,
++        0
++      ]
++    },
++    {
++      "parameters": {
++        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
++      },
++      "id": "244e3235-12e1-4e87-8206-771fee290d98",
++      "name": "Gate simapo-aset-massal",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        350,
++        0
++      ]
++    },
++    {
++      "parameters": {
++        "jsCode": "const b = $input.item.json.body || {};\nconst rows = Array.isArray(b.rows) ? b.rows : [];\nif (!rows.length) throw new Error('rows kosong');\nconst esc = s => String(s == null ? '' : s).replace(/'/g, \"''\");\nconst q = $input.item.json.query || {};\nconst inst = String(b.instansi_id || q.instansi_id || 'bapperida');\nconst seq = new Map();\nconst vals = [];\nfor (const r of rows) {\n  const kode = String(r.kodebarang || '').trim();\n  const nama = String(r.nama || '').trim();\n  if (!kode || !nama) continue;\n  const n = (seq.get(kode) || 0) + 1;\n  seq.set(kode, n);\n  const nomor = r.nomorinventaris ? String(r.nomorinventaris) : kode + '-' + String(n).padStart(3, '0');\n  vals.push(\n    \"('\" + esc(kode) + \"','\" + esc(nama) + \"',\" + Math.max(0, Number(r.hargasatuan) || 0) +\n    ',' + (r.kategoriid ? \"'\" + esc(r.kategoriid) + \"'\" : 'NULL') +\n    \",'\" + esc(r.kondisi || 'Baik') + \"'\" +\n    \",NULLIF('\" + esc(r.merk_type || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.model_jenis || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.warna || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.tahun_pembuatan || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.roda || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.keterangan || '') + \"','')\" +\n    \",'\" + esc(nomor) + \"')\"\n  );\n}\nif (!vals.length) throw new Error('tidak ada baris valid (kodebarang & nama wajib)');\nconst L = [];\nL.push('WITH src AS (');\nL.push('  SELECT * FROM (VALUES');\nL.push('    ' + vals.join(',\\n    '));\nL.push('  ) AS v(kode, nama, harga, kategoriid, kondisi, merk, model, warna, tahun, roda, keterangan, nomor)');\nL.push('),');\nL.push('ins_barang AS (');\nL.push('  INSERT INTO \"SIMAPO\".barang (id, kodebarang, nama, jenisbarang, satuan, stok_saat_ini, minimumstok, hargasatuan, kategoriid, isactive, createdat, updatedat, instansi_id)');\nL.push(\"  SELECT DISTINCT ON (src.kode) md5('\" + esc(inst) + \":' || src.kode), src.kode, src.nama, 'Aset Tetap', 'unit', 1, 0, src.harga, src.kategoriid, true, NOW(), NOW(), '\" + esc(inst) + \"'\");\nL.push('  FROM src');\nL.push(\"  WHERE NOT EXISTS (SELECT 1 FROM \\\"SIMAPO\\\".barang b WHERE b.kodebarang = src.kode AND b.instansi_id = '\" + esc(inst) + \"')\");\nL.push('  RETURNING id, kodebarang');\nL.push('),');\nL.push('all_barang AS (');\nL.push('  SELECT id, kodebarang FROM ins_barang');\nL.push('  UNION ALL');\nL.push('  SELECT b.id, b.kodebarang FROM \"SIMAPO\".barang b');\nL.push('  JOIN src ON b.kodebarang = src.kode AND b.instansi_id = \\'' + esc(inst) + '\\'');\nL.push('  WHERE NOT EXISTS (SELECT 1 FROM ins_barang ib WHERE ib.kodebarang = b.kodebarang)');\nL.push('),');\nL.push('ins_unit AS (');\nL.push('  INSERT INTO \"SIMAPO\".unit_aset (id, barangid, nomorinventaris, kondisi, statuspinjam, qrcode, merk_type, model_jenis, warna, tahun_pembuatan, roda, keterangan, instansi_id, updatedat)');\nL.push(\"  SELECT gen_random_uuid(), ab.id, src.nomor, src.kondisi, false,\");\nL.push(\"         'https://mindcloud.my.id/?qr=SIMAPO-' || gen_random_uuid(),\");\nL.push(\"         src.merk, src.model, src.warna, src.tahun, src.roda, src.keterangan, '\" + esc(inst) + \"', NOW()\");\nL.push('  FROM src');\nL.push('  JOIN all_barang ab ON ab.kodebarang = src.kode');\n  L.push(\"  WHERE NOT EXISTS (SELECT 1 FROM \\\"SIMAPO\\\".unit_aset ua WHERE ua.nomorinventaris = src.nomor AND ua.instansi_id = '\" + esc(inst) + \"')\");\nL.push('  RETURNING id');\nL.push(')');\nL.push('SELECT (SELECT count(*) FROM src) AS total,');\nL.push('       (SELECT count(*) FROM ins_barang) AS barang_baru,');\nL.push('       (SELECT count(*) FROM ins_unit) AS unit_baru,');\nL.push(\"       (SELECT COALESCE(json_agg(id), '[]'::json) FROM ins_barang) AS barang_ids;\");\nreturn [{ json: { sql: L.join('\\n') } }];"
++      },
++      "id": "8baff1b6-2813-43e7-b275-806c134788b6",
++      "name": "Code Aset Upsert (simapo-aset-massal)",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        580,
++        0
++      ]
++    },
++    {
++      "parameters": {
++        "operation": "executeQuery",
++        "query": "={{ $json.sql }}",
++        "options": {}
++      },
++      "id": "51b4a2fb-7bae-419a-bcfa-bccb48f72798",
++      "name": "PG Aset Upsert (simapo-aset-massal)",
++      "type": "n8n-nodes-base.postgres",
++      "typeVersion": 2.6,
++      "position": [
++        810,
++        0
++      ],
++      "credentials": {
++        "postgres": {
++          "id": "vYOiyrTftLtD3zzd",
++          "name": "Postgres account"
++        }
++      },
++      "alwaysOutputData": true
++    },
++    {
++      "parameters": {
++        "jsCode": "const j = $input.all()[0] || {};\nreturn [{ json: { data: {\n  total: Number(j.total || 0),\n  barang_baru: Number(j.barang_baru || 0),\n  unit_baru: Number(j.unit_baru || 0),\n  barang_ids: j.barang_ids || []\n} } }];"
++      },
++      "id": "ebf85517-7bb9-4bec-ad17-9c3c59da2101",
++      "name": "Agg Aset Upsert (simapo-aset-massal)",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        1040,
++        0
++      ]
++    },
++    {
++      "parameters": {
++        "respondWith": "text",
++        "responseBody": "={{ JSON.stringify($json) }}",
++        "options": {
++          "responseHeaders": {
++            "entries": [
++              {
++                "name": "Content-Type",
++                "value": "application/json"
++              }
++            ]
++          }
++        }
++      },
++      "id": "ff9dbc4a-bb64-4266-bab7-5210bc36aee8",
++      "name": "Res Aset Upsert (simapo-aset-massal)",
++      "type": "n8n-nodes-base.respondToWebhook",
++      "typeVersion": 1.1,
++      "position": [
++        1270,
++        0
++      ]
++    },
++    {
++      "parameters": {
++        "path": "simapo-aset-kib",
++        "httpMethod": "POST",
++        "responseMode": "responseNode",
++        "options": {
++          "allowedOrigins": "*"
++        },
++        "webhookId": "simapo-aset-kib"
++      },
++      "id": "12fe7835-0fbb-46e4-b6c0-2ba7ccf0c145",
++      "name": "WH simapo-aset-kib",
++      "type": "n8n-nodes-base.webhook",
++      "typeVersion": 2,
++      "position": [
++        120,
++        240
++      ]
++    },
++    {
++      "parameters": {
++        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
++      },
++      "id": "f8efb6eb-daa6-42d3-864d-6ce7c36849cb",
++      "name": "Gate simapo-aset-kib",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        350,
++        240
++      ]
++    },
++    {
++      "parameters": {
++        "jsCode": "const b = $input.item.json.body || {};\nconst rows = Array.isArray(b.rows) ? b.rows : [];\nif (!rows.length) throw new Error('rows kosong');\nconst esc = s => String(s == null ? '' : s).replace(/'/g, \"''\");\nconst q = $input.item.json.query || {};\nconst inst = String(b.instansi_id || q.instansi_id || 'bapperida');\nconst seq = new Map();\nconst vals = [];\nfor (const r of rows) {\n  const kode = String(r.kodebarang || '').trim();\n  const nama = String(r.nama || '').trim();\n  if (!kode || !nama) continue;\n  const n = (seq.get(kode) || 0) + 1;\n  seq.set(kode, n);\n  const nomor = r.nomorinventaris ? String(r.nomorinventaris) : kode + '-' + String(n).padStart(3, '0');\n  vals.push(\n    \"('\" + esc(kode) + \"','\" + esc(nama) + \"',\" + Math.max(0, Number(r.hargasatuan) || 0) +\n    ',' + (r.kategoriid ? \"'\" + esc(r.kategoriid) + \"'\" : 'NULL') +\n    \",'\" + esc(r.kondisi || 'Baik') + \"'\" +\n    \",NULLIF('\" + esc(r.merk_type || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.model_jenis || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.warna || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.tahun_pembuatan || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.roda || '') + \"','')\" +\n    \",NULLIF('\" + esc(r.keterangan || '') + \"','')\" +\n    \",'\" + esc(nomor) + \"')\"\n  );\n}\nif (!vals.length) throw new Error('tidak ada baris valid (kodebarang & nama wajib)');\nconst L = [];\nL.push('WITH src AS (');\nL.push('  SELECT * FROM (VALUES');\nL.push('    ' + vals.join(',\\n    '));\nL.push('  ) AS v(kode, nama, harga, kategoriid, kondisi, merk, model, warna, tahun, roda, keterangan, nomor)');\nL.push('),');\nL.push('ins_barang AS (');\nL.push('  INSERT INTO \"SIMAPO\".barang (id, kodebarang, nama, jenisbarang, satuan, stok_saat_ini, minimumstok, hargasatuan, kategoriid, isactive, createdat, updatedat, instansi_id)');\nL.push(\"  SELECT DISTINCT ON (src.kode) md5('\" + esc(inst) + \":' || src.kode), src.kode, src.nama, 'Aset Tetap', 'unit', 1, 0, src.harga, src.kategoriid, true, NOW(), NOW(), '\" + esc(inst) + \"'\");\nL.push('  FROM src');\nL.push(\"  WHERE NOT EXISTS (SELECT 1 FROM \\\"SIMAPO\\\".barang b WHERE b.kodebarang = src.kode AND b.instansi_id = '\" + esc(inst) + \"')\");\nL.push('  RETURNING id, kodebarang');\nL.push('),');\nL.push('all_barang AS (');\nL.push('  SELECT id, kodebarang FROM ins_barang');\nL.push('  UNION ALL');\nL.push('  SELECT b.id, b.kodebarang FROM \"SIMAPO\".barang b');\nL.push('  JOIN src ON b.kodebarang = src.kode AND b.instansi_id = \\'' + esc(inst) + '\\'');\nL.push('  WHERE NOT EXISTS (SELECT 1 FROM ins_barang ib WHERE ib.kodebarang = b.kodebarang)');\nL.push('),');\nL.push('ins_unit AS (');\nL.push('  INSERT INTO \"SIMAPO\".unit_aset (id, barangid, nomorinventaris, kondisi, statuspinjam, qrcode, merk_type, model_jenis, warna, tahun_pembuatan, roda, keterangan, instansi_id, updatedat)');\nL.push(\"  SELECT gen_random_uuid(), ab.id, src.nomor, src.kondisi, false,\");\nL.push(\"         'https://mindcloud.my.id/?qr=SIMAPO-' || gen_random_uuid(),\");\nL.push(\"         src.merk, src.model, src.warna, src.tahun, src.roda, src.keterangan, '\" + esc(inst) + \"', NOW()\");\nL.push('  FROM src');\nL.push('  JOIN all_barang ab ON ab.kodebarang = src.kode');\n  L.push(\"  WHERE NOT EXISTS (SELECT 1 FROM \\\"SIMAPO\\\".unit_aset ua WHERE ua.nomorinventaris = src.nomor AND ua.instansi_id = '\" + esc(inst) + \"')\");\nL.push('  RETURNING id');\nL.push(')');\nL.push('SELECT (SELECT count(*) FROM src) AS total,');\nL.push('       (SELECT count(*) FROM ins_barang) AS barang_baru,');\nL.push('       (SELECT count(*) FROM ins_unit) AS unit_baru,');\nL.push(\"       (SELECT COALESCE(json_agg(id), '[]'::json) FROM ins_barang) AS barang_ids;\");\nreturn [{ json: { sql: L.join('\\n') } }];"
++      },
++      "id": "40b19953-0b22-4ffa-a2d9-48edef2d8770",
++      "name": "Code Aset Upsert (simapo-aset-kib)",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        580,
++        240
++      ]
++    },
++    {
++      "parameters": {
++        "operation": "executeQuery",
++        "query": "={{ $json.sql }}",
++        "options": {}
++      },
++      "id": "0ae9ad13-e9d7-43c3-a602-3fa3126298be",
++      "name": "PG Aset Upsert (simapo-aset-kib)",
++      "type": "n8n-nodes-base.postgres",
++      "typeVersion": 2.6,
++      "position": [
++        810,
++        240
++      ],
++      "credentials": {
++        "postgres": {
++          "id": "vYOiyrTftLtD3zzd",
++          "name": "Postgres account"
++        }
++      },
++      "alwaysOutputData": true
++    },
++    {
++      "parameters": {
++        "jsCode": "const j = $input.all()[0] || {};\nreturn [{ json: { data: {\n  total: Number(j.total || 0),\n  barang_baru: Number(j.barang_baru || 0),\n  unit_baru: Number(j.unit_baru || 0),\n  barang_ids: j.barang_ids || []\n} } }];"
++      },
++      "id": "75b6093e-c832-4abd-9e1a-c19e2bc9ec27",
++      "name": "Agg Aset Upsert (simapo-aset-kib)",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        1040,
++        240
++      ]
++    },
++    {
++      "parameters": {
++        "respondWith": "text",
++        "responseBody": "={{ JSON.stringify($json) }}",
++        "options": {
++          "responseHeaders": {
++            "entries": [
++              {
++                "name": "Content-Type",
++                "value": "application/json"
++              }
++            ]
++          }
++        }
++      },
++      "id": "b7360bf3-cc6f-4ebb-b44b-9d21bcbeb263",
++      "name": "Res Aset Upsert (simapo-aset-kib)",
++      "type": "n8n-nodes-base.respondToWebhook",
++      "typeVersion": 1.1,
++      "position": [
++        1270,
++        240
++      ]
++    },
++    {
++      "parameters": {
++        "path": "simapo-aset-summary",
++        "responseMode": "responseNode",
++        "options": {
++          "allowedOrigins": "*"
++        },
++        "webhookId": "simapo-aset-summary"
++      },
++      "id": "82b7ccbe-81a4-4b2f-9ce5-b1aa09739a16",
++      "name": "WH simapo-aset-summary",
++      "type": "n8n-nodes-base.webhook",
++      "typeVersion": 2,
++      "position": [
++        120,
++        480
++      ]
++    },
++    {
++      "parameters": {
++        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
++      },
++      "id": "e8c377a7-4a63-4f54-985f-439e1204ef4a",
++      "name": "Gate simapo-aset-summary",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        350,
++        480
++      ]
++    },
++    {
++      "parameters": {
++        "operation": "executeQuery",
++        "query": "SELECT\n  (SELECT COUNT(*) FROM \"SIMAPO\".unit_aset ua\n     JOIN \"SIMAPO\".barang b ON b.id = ua.barangid AND b.isactive = true\n    WHERE b.instansi_id = '{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}') AS total_unit,\n  (SELECT COALESCE(SUM(COALESCE(NULLIF(ua.nilaiperolehan, 0), b.hargasatuan)), 0)\n     FROM \"SIMAPO\".unit_aset ua\n     JOIN \"SIMAPO\".barang b ON b.id = ua.barangid AND b.isactive = true\n    WHERE b.instansi_id = '{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}') AS total_nilai,\n  (SELECT COUNT(DISTINCT ua.pegawai_id) FROM \"SIMAPO\".unit_aset ua\n     JOIN \"SIMAPO\".barang b ON b.id = ua.barangid AND b.isactive = true\n    WHERE b.instansi_id = '{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}' AND ua.pegawai_id IS NOT NULL) AS pemegang,\n  (SELECT COUNT(DISTINCT ua.ruangan_id) FROM \"SIMAPO\".unit_aset ua\n     JOIN \"SIMAPO\".barang b ON b.id = ua.barangid AND b.isactive = true\n    WHERE b.instansi_id = '{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}' AND ua.ruangan_id IS NOT NULL) AS ruangan,\n  (SELECT COALESCE(json_agg(t ORDER BY t.jumlah DESC), '[]'::json) FROM (\n     SELECT COALESCE(k.nama, 'Tanpa Kategori') AS kategori, COUNT(*) AS jumlah\n       FROM \"SIMAPO\".unit_aset ua\n       JOIN \"SIMAPO\".barang b ON b.id = ua.barangid AND b.isactive = true\n       LEFT JOIN \"SIMAPO\".kategori_barang k ON k.id = b.kategoriid\n      WHERE b.instansi_id = '{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}'\n      GROUP BY k.nama\n   ) t) AS per_kategori;",
++        "options": {}
++      },
++      "id": "2bb70811-535b-453c-b510-d7aed6e2f8c6",
++      "name": "PG simapo-aset-summary",
++      "type": "n8n-nodes-base.postgres",
++      "typeVersion": 2.6,
++      "position": [
++        580,
++        480
++      ],
++      "credentials": {
++        "postgres": {
++          "id": "vYOiyrTftLtD3zzd",
++          "name": "Postgres account"
++        }
++      },
++      "alwaysOutputData": true
++    },
++    {
++      "parameters": {
++        "jsCode": "const j = $input.all()[0] || {};\nreturn [{ json: { data: {\n  total_unit: Number(j.total_unit || 0),\n  total_nilai: Number(j.total_nilai || 0),\n  pemegang: Number(j.pemegang || 0),\n  ruangan: Number(j.ruangan || 0),\n  per_kategori: j.per_kategori || []\n} } }];"
++      },
++      "id": "c81dc0ef-345d-44f5-a4b6-7c1865b5ae26",
++      "name": "Agg simapo-aset-summary",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        810,
++        480
++      ]
++    },
++    {
++      "parameters": {
++        "respondWith": "text",
++        "responseBody": "={{ JSON.stringify($json) }}",
++        "options": {
++          "responseHeaders": {
++            "entries": [
++              {
++                "name": "Content-Type",
++                "value": "application/json"
++              }
++            ]
++          }
++        }
++      },
++      "id": "65453f32-2711-4c62-b470-c1e103b623d8",
++      "name": "Res simapo-aset-summary",
++      "type": "n8n-nodes-base.respondToWebhook",
++      "typeVersion": 1.1,
++      "position": [
++        1040,
++        480
++      ]
++    },
++    {
++      "parameters": {
++        "path": "simapo-pengaturan-get",
++        "responseMode": "responseNode",
++        "options": {
++          "allowedOrigins": "*"
++        },
++        "webhookId": "simapo-pengaturan-get"
++      },
++      "id": "73c1c4d3-3a4c-43b1-8921-d08922752aee",
++      "name": "WH simapo-pengaturan-get",
++      "type": "n8n-nodes-base.webhook",
++      "typeVersion": 2,
++      "position": [
++        120,
++        720
++      ]
++    },
++    {
++      "parameters": {
++        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
++      },
++      "id": "78b44227-3781-4a30-b9f7-ed15ab975144",
++      "name": "Gate simapo-pengaturan-get",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        350,
++        720
++      ]
++    },
++    {
++      "parameters": {
++        "operation": "executeQuery",
++        "query": "SELECT COALESCE(json_object_agg(key, value), '{}'::json) AS data\nFROM public.pengaturan\nWHERE instansi_id = '{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}'\n  AND key IN ('sekda_nama','sekda_nip','sekda_jabatan','sekda_alamat','p1_id','p1_jabatan','p1_alamat');",
++        "options": {}
++      },
++      "id": "44fd1ffa-eb8f-495e-9170-da8f2783bd2a",
++      "name": "PG simapo-pengaturan-get",
++      "type": "n8n-nodes-base.postgres",
++      "typeVersion": 2.6,
++      "position": [
++        580,
++        720
++      ],
++      "credentials": {
++        "postgres": {
++          "id": "vYOiyrTftLtD3zzd",
++          "name": "Postgres account"
++        }
++      },
++      "alwaysOutputData": true
++    },
++    {
++      "parameters": {
++        "jsCode": "return [{ json: { data: ($input.all()[0] || {}).data || {} } }];"
++      },
++      "id": "865b0b97-3381-4461-9e30-6ef628a91c73",
++      "name": "Agg simapo-pengaturan-get",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        810,
++        720
++      ]
++    },
++    {
++      "parameters": {
++        "respondWith": "text",
++        "responseBody": "={{ JSON.stringify($json) }}",
++        "options": {
++          "responseHeaders": {
++            "entries": [
++              {
++                "name": "Content-Type",
++                "value": "application/json"
++              }
++            ]
++          }
++        }
++      },
++      "id": "bec54146-32a5-4af8-a0b8-2e128ec19bc9",
++      "name": "Res simapo-pengaturan-get",
++      "type": "n8n-nodes-base.respondToWebhook",
++      "typeVersion": 1.1,
++      "position": [
++        1040,
++        720
++      ]
++    },
++    {
++      "parameters": {
++        "path": "simapo-pengaturan-set",
++        "httpMethod": "POST",
++        "responseMode": "responseNode",
++        "options": {
++          "allowedOrigins": "*"
++        },
++        "webhookId": "simapo-pengaturan-set"
++      },
++      "id": "f6e2463e-28a0-4e7b-bbc4-fb9146003e45",
++      "name": "WH simapo-pengaturan-set",
++      "type": "n8n-nodes-base.webhook",
++      "typeVersion": 2,
++      "position": [
++        120,
++        960
++      ]
++    },
++    {
++      "parameters": {
++        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
++      },
++      "id": "9ec9c4cc-1784-4b54-9f48-7b9ab8f5a15b",
++      "name": "Gate simapo-pengaturan-set",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        350,
++        960
++      ]
++    },
++    {
++      "parameters": {
++        "jsCode": "const b = $input.item.json.body || {};\nconst q = $input.item.json.query || {};\nconst inst = String(q.instansi_id || 'bapperida');\nconst esc = s => String(s == null ? '' : s).replace(/'/g, \"''\");\nconst KEYS = [\"sekda_nama\",\"sekda_nip\",\"sekda_jabatan\",\"sekda_alamat\",\"p1_id\",\"p1_jabatan\",\"p1_alamat\"];\nconst pairs = [];\nfor (const k of KEYS) {\n  if (b[k] !== undefined) pairs.push(\"('\" + k + \"', '\" + esc(b[k]) + \"', '\" + esc(inst) + \"')\");\n}\nif (!pairs.length) throw new Error('tidak ada field untuk disimpan');\nconst sql = 'INSERT INTO public.pengaturan (key, value, instansi_id) VALUES ' + pairs.join(', ') +\n  ' ON CONFLICT (key, instansi_id) DO UPDATE SET value = EXCLUDED.value RETURNING key;';\nreturn [{ json: { sql } }];"
++      },
++      "id": "2b716685-8d40-478e-9b8a-ba4e3819882f",
++      "name": "Code Pengaturan Set",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        580,
++        960
++      ]
++    },
++    {
++      "parameters": {
++        "operation": "executeQuery",
++        "query": "={{ $json.sql }}",
++        "options": {}
++      },
++      "id": "ce099072-309e-4bb9-8e99-7412b15b433f",
++      "name": "PG Pengaturan Set",
++      "type": "n8n-nodes-base.postgres",
++      "typeVersion": 2.6,
++      "position": [
++        810,
++        960
++      ],
++      "credentials": {
++        "postgres": {
++          "id": "vYOiyrTftLtD3zzd",
++          "name": "Postgres account"
++        }
++      },
++      "alwaysOutputData": true
++    },
++    {
++      "parameters": {
++        "jsCode": "return [{ json: { data: { ok: true } } }];"
++      },
++      "id": "954f3e83-c0b1-4fb1-96c9-128cc9b7a7d2",
++      "name": "Agg Pengaturan Set",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        1040,
++        960
++      ]
++    },
++    {
++      "parameters": {
++        "respondWith": "text",
++        "responseBody": "={{ JSON.stringify($json) }}",
++        "options": {
++          "responseHeaders": {
++            "entries": [
++              {
++                "name": "Content-Type",
++                "value": "application/json"
++              }
++            ]
++          }
++        }
++      },
++      "id": "19d3bb87-ae0d-42d7-8d3a-f1589ffbc7a3",
++      "name": "Res Pengaturan Set",
++      "type": "n8n-nodes-base.respondToWebhook",
++      "typeVersion": 1.1,
++      "position": [
++        1270,
++        960
++      ]
++    },
++    {
++      "parameters": {
++        "path": "simapo-ttd-get",
++        "responseMode": "responseNode",
++        "options": {
++          "allowedOrigins": "*"
++        },
++        "webhookId": "simapo-ttd-get"
++      },
++      "id": "57fc97fd-3fad-4dbf-b195-4874261df6a3",
++      "name": "WH simapo-ttd-get",
++      "type": "n8n-nodes-base.webhook",
++      "typeVersion": 2,
++      "position": [
++        120,
++        1200
++      ]
++    },
++    {
++      "parameters": {
++        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
++      },
++      "id": "aef63a1c-2c92-42a2-8b70-2531bec0f314",
++      "name": "Gate simapo-ttd-get",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        350,
++        1200
++      ]
++    },
++    {
++      "parameters": {
++        "operation": "executeQuery",
++        "query": "SELECT signature FROM public.tanda_tangan\nWHERE nip = '{{ (($input.item.json.query || {}).nip || \"\").toString().replace(/'/g, \"''\") }}'\nLIMIT 1;",
++        "options": {}
++      },
++      "id": "041d22fd-5a7e-4464-a5b8-93ed778626f7",
++      "name": "PG simapo-ttd-get",
++      "type": "n8n-nodes-base.postgres",
++      "typeVersion": 2.6,
++      "position": [
++        580,
++        1200
++      ],
++      "credentials": {
++        "postgres": {
++          "id": "vYOiyrTftLtD3zzd",
++          "name": "Postgres account"
++        }
++      },
++      "alwaysOutputData": true
++    },
++    {
++      "parameters": {
++        "jsCode": "return [{ json: { data: { signature: ($input.all()[0] || {}).signature || null } } }];"
++      },
++      "id": "9747e96b-ca10-48ed-9ea2-fe0a3dd93a1b",
++      "name": "Agg simapo-ttd-get",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        810,
++        1200
++      ]
++    },
++    {
++      "parameters": {
++        "respondWith": "text",
++        "responseBody": "={{ JSON.stringify($json) }}",
++        "options": {
++          "responseHeaders": {
++            "entries": [
++              {
++                "name": "Content-Type",
++                "value": "application/json"
++              }
++            ]
++          }
++        }
++      },
++      "id": "d7eeb3e5-435f-4532-92c0-77994310f6a0",
++      "name": "Res simapo-ttd-get",
++      "type": "n8n-nodes-base.respondToWebhook",
++      "typeVersion": 1.1,
++      "position": [
++        1040,
++        1200
++      ]
++    },
++    {
++      "parameters": {
++        "path": "simapo-aset-kosongkan",
++        "httpMethod": "POST",
++        "responseMode": "responseNode",
++        "options": {
++          "allowedOrigins": "*"
++        },
++        "webhookId": "simapo-aset-kosongkan"
++      },
++      "id": "60ff3501-f04f-460c-8737-9b12560f31c5",
++      "name": "WH simapo-aset-kosongkan",
++      "type": "n8n-nodes-base.webhook",
++      "typeVersion": 2,
++      "position": [
++        120,
++        1440
++      ]
++    },
++    {
++      "parameters": {
++        "jsCode": "const b = $input.item.json || {};\nconst key = String((b.headers || {})['x-bast-key'] || (b.headers || {})['X-Bast-Key'] || '');\nif (key !== 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u') throw new Error('BAST: unauthorized');\nreturn $input.all();"
++      },
++      "id": "c85e723d-dfc2-4e03-89b8-705ce7740a8b",
++      "name": "Gate simapo-aset-kosongkan",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        350,
++        1440
++      ]
++    },
++    {
++      "parameters": {
++        "jsCode": "const b = $input.item.json.body || {};\nif (String(b.confirm || '') !== 'HAPUS') throw new Error('Konfirmasi salah: ketik HAPUS');\nconst q = $input.item.json.query || {};\nconst inst = String(q.instansi_id || 'bapperida');\nconst esc = s => String(s == null ? '' : s).replace(/'/g, \"''\");\nconst i = esc(inst);\nconst sql = `WITH d1 AS (DELETE FROM \"SIMAPO\".riwayat_pemeliharaan\n     WHERE unitasetid IN (SELECT id FROM \"SIMAPO\".unit_aset WHERE instansi_id = '${i}') RETURNING 1),\n d2 AS (DELETE FROM \"SIMAPO\".detail_distribusi_aset\n     WHERE unitasetid IN (SELECT id FROM \"SIMAPO\".unit_aset WHERE instansi_id = '${i}') RETURNING 1),\n d3 AS (DELETE FROM \"SIMAPO\".jadwal_maintenance\n     WHERE unitasetid IN (SELECT id FROM \"SIMAPO\".unit_aset WHERE instansi_id = '${i}') RETURNING 1),\n d4 AS (DELETE FROM \"SIMAPO\".peminjaman\n     WHERE unitasetid IN (SELECT id FROM \"SIMAPO\".unit_aset WHERE instansi_id = '${i}') RETURNING 1),\n d5 AS (DELETE FROM \"SIMAPO\".detail_opname\n     WHERE barangid IN (SELECT id FROM \"SIMAPO\".barang WHERE instansi_id = '${i}') RETURNING 1),\n d6 AS (DELETE FROM \"SIMAPO\".detail_request\n     WHERE barangid IN (SELECT id FROM \"SIMAPO\".barang WHERE instansi_id = '${i}') RETURNING 1),\n d7 AS (DELETE FROM \"SIMAPO\".detail_pemeliharaan\n     WHERE barangid IN (SELECT id FROM \"SIMAPO\".barang WHERE instansi_id = '${i}')\n        OR riwayatid IN (SELECT id FROM \"SIMAPO\".riwayat_pemeliharaan\n                         WHERE unitasetid IN (SELECT id FROM \"SIMAPO\".unit_aset WHERE instansi_id = '${i}')) RETURNING 1),\n d8 AS (DELETE FROM \"SIMAPO\".mutasi_barang\n     WHERE barangkeluarid IN (SELECT id FROM \"SIMAPO\".barang WHERE instansi_id = '${i}')\n        OR barangmasukid IN (SELECT id FROM \"SIMAPO\".barang WHERE instansi_id = '${i}') RETURNING 1),\n d9 AS (DELETE FROM \"SIMAPO\".detail_penerimaan\n     WHERE barang_id IN (SELECT id FROM \"SIMAPO\".barang WHERE instansi_id = '${i}') RETURNING 1),\n d10 AS (DELETE FROM \"SIMAPO\".pemeliharaan\n     WHERE barang_id IN (SELECT id FROM \"SIMAPO\".barang WHERE instansi_id = '${i}') RETURNING 1)\nSELECT (SELECT count(*) FROM d1) + (SELECT count(*) FROM d2) + (SELECT count(*) FROM d3)\n     + (SELECT count(*) FROM d4) + (SELECT count(*) FROM d5) + (SELECT count(*) FROM d6)\n     + (SELECT count(*) FROM d7) + (SELECT count(*) FROM d8) + (SELECT count(*) FROM d9)\n     + (SELECT count(*) FROM d10) AS rows_dihapus;`;\nreturn [{ json: { sql } }];"
++      },
++      "id": "c3717681-6d22-454c-9e76-dd95eccdc4da",
++      "name": "Code Konfirmasi Kosongkan",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        580,
++        1440
++      ]
++    },
++    {
++      "parameters": {
++        "operation": "executeQuery",
++        "query": "={{ $json.sql }}",
++        "options": {}
++      },
++      "id": "c8f8e0bb-1ea0-424f-835b-ed0125afa5bc",
++      "name": "PG Kosongkan Anak",
++      "type": "n8n-nodes-base.postgres",
++      "typeVersion": 2.6,
++      "position": [
++        810,
++        1440
++      ],
++      "credentials": {
++        "postgres": {
++          "id": "vYOiyrTftLtD3zzd",
++          "name": "Postgres account"
++        }
++      },
++      "alwaysOutputData": true
++    },
++    {
++      "parameters": {
++        "operation": "executeQuery",
++        "query": "DELETE FROM \"SIMAPO\".unit_aset WHERE instansi_id = '{{ (($('WH simapo-aset-kosongkan').first().json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}';",
++        "options": {}
++      },
++      "id": "9a2f5e98-14df-45af-86c7-887eb3300b2f",
++      "name": "PG Kosongkan Unit",
++      "type": "n8n-nodes-base.postgres",
++      "typeVersion": 2.6,
++      "position": [
++        1040,
++        1440
++      ],
++      "credentials": {
++        "postgres": {
++          "id": "vYOiyrTftLtD3zzd",
++          "name": "Postgres account"
++        }
++      },
++      "alwaysOutputData": true
++    },
++    {
++      "parameters": {
++        "operation": "executeQuery",
++        "query": "DELETE FROM \"SIMAPO\".barang WHERE instansi_id = '{{ (($('WH simapo-aset-kosongkan').first().json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}';",
++        "options": {}
++      },
++      "id": "9e6859a4-378e-4fb2-9565-23389c72f585",
++      "name": "PG Kosongkan Barang",
++      "type": "n8n-nodes-base.postgres",
++      "typeVersion": 2.6,
++      "position": [
++        1270,
++        1440
++      ],
++      "credentials": {
++        "postgres": {
++          "id": "vYOiyrTftLtD3zzd",
++          "name": "Postgres account"
++        }
++      },
++      "alwaysOutputData": true
++    },
++    {
++      "parameters": {
++        "jsCode": "return [{ json: { data: { ok: true } } }];"
++      },
++      "id": "51a2b43e-ab16-43f3-af56-c2156c663cf0",
++      "name": "Agg Kosongkan",
++      "type": "n8n-nodes-base.code",
++      "typeVersion": 2,
++      "position": [
++        1500,
++        1440
++      ]
++    },
++    {
++      "parameters": {
++        "respondWith": "text",
++        "responseBody": "={{ JSON.stringify($json) }}",
++        "options": {
++          "responseHeaders": {
++            "entries": [
++              {
++                "name": "Content-Type",
++                "value": "application/json"
++              }
++            ]
++          }
++        }
++      },
++      "id": "8302fc08-0025-4c1b-a912-01d7bf481ea4",
++      "name": "Res Kosongkan",
++      "type": "n8n-nodes-base.respondToWebhook",
++      "typeVersion": 1.1,
++      "position": [
++        1730,
++        1440
++      ]
++    }
++  ],
++  "connections": {
++    "WH simapo-aset-massal": {
++      "main": [
++        [
++          {
++            "node": "Gate simapo-aset-massal",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Gate simapo-aset-massal": {
++      "main": [
++        [
++          {
++            "node": "Code Aset Upsert (simapo-aset-massal)",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Code Aset Upsert (simapo-aset-massal)": {
++      "main": [
++        [
++          {
++            "node": "PG Aset Upsert (simapo-aset-massal)",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "PG Aset Upsert (simapo-aset-massal)": {
++      "main": [
++        [
++          {
++            "node": "Agg Aset Upsert (simapo-aset-massal)",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Agg Aset Upsert (simapo-aset-massal)": {
++      "main": [
++        [
++          {
++            "node": "Res Aset Upsert (simapo-aset-massal)",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "WH simapo-aset-kib": {
++      "main": [
++        [
++          {
++            "node": "Gate simapo-aset-kib",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Gate simapo-aset-kib": {
++      "main": [
++        [
++          {
++            "node": "Code Aset Upsert (simapo-aset-kib)",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Code Aset Upsert (simapo-aset-kib)": {
++      "main": [
++        [
++          {
++            "node": "PG Aset Upsert (simapo-aset-kib)",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "PG Aset Upsert (simapo-aset-kib)": {
++      "main": [
++        [
++          {
++            "node": "Agg Aset Upsert (simapo-aset-kib)",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Agg Aset Upsert (simapo-aset-kib)": {
++      "main": [
++        [
++          {
++            "node": "Res Aset Upsert (simapo-aset-kib)",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "WH simapo-aset-summary": {
++      "main": [
++        [
++          {
++            "node": "Gate simapo-aset-summary",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Gate simapo-aset-summary": {
++      "main": [
++        [
++          {
++            "node": "PG simapo-aset-summary",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "PG simapo-aset-summary": {
++      "main": [
++        [
++          {
++            "node": "Agg simapo-aset-summary",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Agg simapo-aset-summary": {
++      "main": [
++        [
++          {
++            "node": "Res simapo-aset-summary",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "WH simapo-pengaturan-get": {
++      "main": [
++        [
++          {
++            "node": "Gate simapo-pengaturan-get",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Gate simapo-pengaturan-get": {
++      "main": [
++        [
++          {
++            "node": "PG simapo-pengaturan-get",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "PG simapo-pengaturan-get": {
++      "main": [
++        [
++          {
++            "node": "Agg simapo-pengaturan-get",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Agg simapo-pengaturan-get": {
++      "main": [
++        [
++          {
++            "node": "Res simapo-pengaturan-get",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "WH simapo-pengaturan-set": {
++      "main": [
++        [
++          {
++            "node": "Gate simapo-pengaturan-set",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Gate simapo-pengaturan-set": {
++      "main": [
++        [
++          {
++            "node": "Code Pengaturan Set",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Code Pengaturan Set": {
++      "main": [
++        [
++          {
++            "node": "PG Pengaturan Set",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "PG Pengaturan Set": {
++      "main": [
++        [
++          {
++            "node": "Agg Pengaturan Set",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Agg Pengaturan Set": {
++      "main": [
++        [
++          {
++            "node": "Res Pengaturan Set",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "WH simapo-ttd-get": {
++      "main": [
++        [
++          {
++            "node": "Gate simapo-ttd-get",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Gate simapo-ttd-get": {
++      "main": [
++        [
++          {
++            "node": "PG simapo-ttd-get",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "PG simapo-ttd-get": {
++      "main": [
++        [
++          {
++            "node": "Agg simapo-ttd-get",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Agg simapo-ttd-get": {
++      "main": [
++        [
++          {
++            "node": "Res simapo-ttd-get",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "WH simapo-aset-kosongkan": {
++      "main": [
++        [
++          {
++            "node": "Gate simapo-aset-kosongkan",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Gate simapo-aset-kosongkan": {
++      "main": [
++        [
++          {
++            "node": "Code Konfirmasi Kosongkan",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Code Konfirmasi Kosongkan": {
++      "main": [
++        [
++          {
++            "node": "PG Kosongkan Anak",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "PG Kosongkan Anak": {
++      "main": [
++        [
++          {
++            "node": "PG Kosongkan Unit",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "PG Kosongkan Unit": {
++      "main": [
++        [
++          {
++            "node": "PG Kosongkan Barang",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "PG Kosongkan Barang": {
++      "main": [
++        [
++          {
++            "node": "Agg Kosongkan",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    },
++    "Agg Kosongkan": {
++      "main": [
++        [
++          {
++            "node": "Res Kosongkan",
++            "type": "main",
++            "index": 0
++          }
++        ]
++      ]
++    }
++  },
++  "settings": {
++    "executionOrder": "v1",
++    "binaryMode": "separate"
++  },
++  "staticData": null,
++  "pinData": {},
++  "meta": {
++    "templateCredsSetupCompleted": true
++  }
++}
+diff --git a/scripts/build-aset-data-workflow.mjs b/scripts/build-aset-data-workflow.mjs
+new file mode 100644
+index 0000000..b0041ff
+--- /dev/null
++++ b/scripts/build-aset-data-workflow.mjs
+@@ -0,0 +1,348 @@
++#!/usr/bin/env node
++/* Generator workflow "SIMAPO - Aset Data" ΓåÆ n8n/SIMAPO - Aset Data.json
++   node scripts/build-aset-data-workflow.mjs            ΓåÆ tulis JSON lokal
++   node scripts/build-aset-data-workflow.mjs --deploy   ΓåÆ tulis + create/update + activate (butuh N8N_TOKEN)
++*/
++import { randomUUID } from 'node:crypto';
++import { readFileSync, writeFileSync } from 'node:fs';
++import { dirname, join } from 'node:path';
++import { fileURLToPath } from 'node:url';
++
++const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
++const OUT = join(ROOT, 'n8n', 'SIMAPO - Aset Data.json');
++const NAME = 'SIMAPO - Aset Data';
++const BASE = 'https://mindcloud.my.id';
++const PG_KEYS = ['sekda_nama', 'sekda_nip', 'sekda_jabatan', 'sekda_alamat', 'p1_id', 'p1_jabatan', 'p1_alamat'];
++
++// ΓöÇΓöÇ referensi dari workflow BAST yang sudah terbukti jalan ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++const BAST = JSON.parse(readFileSync(join(ROOT, 'n8n', 'SIMAPO - BAST.json'), 'utf8'));
++const refOf = (type) => BAST.nodes.find(n => n.type === type);
++const refWh = refOf('n8n-nodes-base.webhook');
++const refCode = refOf('n8n-nodes-base.code');
++const refPg = refOf('n8n-nodes-base.postgres');
++const refRes = refOf('n8n-nodes-base.respondToWebhook');
++const GATE_JS = BAST.nodes
++  .find(n => n.type === 'n8n-nodes-base.code' && n.parameters.jsCode.includes('x-bast-key'))
++  .parameters.jsCode;
++
++// ΓöÇΓöÇ builder ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++const nodes = [];
++const connections = {};
++let cx = 0, cy = 0;
++
++function add(name, type, parameters, extra = {}) {
++  const node = { parameters, id: randomUUID(), name, type, typeVersion: extra.typeVersion, position: [120 + cx, cy] };
++  if (extra.creds) node.credentials = extra.creds;
++  nodes.push(node);
++  cx += 230;
++  return name;
++}
++function link(from, to) { connections[from] = { main: [[{ node: to, type: 'main', index: 0 }]] }; }
++function newChain() { cx = 0; }
++function endChain() { cy += 240; }
++
++const wh = (p, method) => add(`WH ${p}`, 'n8n-nodes-base.webhook', {
++  path: p,
++  ...(method ? { httpMethod: method } : {}),
++  responseMode: 'responseNode',
++  options: { allowedOrigins: '*' },
++  webhookId: p,
++}, { typeVersion: refWh.typeVersion });
++
++const gate = (p) => add(`Gate ${p}`, 'n8n-nodes-base.code', { jsCode: GATE_JS }, { typeVersion: refCode.typeVersion });
++const code = (n, jsCode) => add(n, 'n8n-nodes-base.code', { jsCode }, { typeVersion: refCode.typeVersion });
++const pg = (n, query) => {
++  add(n, 'n8n-nodes-base.postgres',
++    { operation: 'executeQuery', query, options: {} },
++    { typeVersion: refPg.typeVersion, creds: refPg.credentials });
++  nodes.at(-1).alwaysOutputData = true;
++  return n;
++};
++const res = (n) => add(n, 'n8n-nodes-base.respondToWebhook', {
++  respondWith: 'text',
++  responseBody: '={{ JSON.stringify($json) }}',
++  options: { responseHeaders: { entries: [{ name: 'Content-Type', value: 'application/json' }] } },
++}, { typeVersion: refRes.typeVersion });
++
++// instansi dari query (apiFetch selalu menyisipkan instansi_id), fallback bapperida
++const INST_EXPR = "{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}";
++
++// instansi untuk node PG kosongkan setelah PG Kosongkan Anak ΓÇö input node itu sudah
++// baris hasil query (bukan payload webhook), jadi rujuk node WH-nya secara eksplisit
++const INST_EXPR_KOSONG = "{{ (($('WH simapo-aset-kosongkan').first().json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}";
++
++const AGG_OK = `return [{ json: { data: { ok: true } } }];`;
++
++const AGG_UPSERT = `const j = $input.all()[0] || {};
++return [{ json: { data: {
++  total: Number(j.total || 0),
++  barang_baru: Number(j.barang_baru || 0),
++  unit_baru: Number(j.unit_baru || 0),
++  barang_ids: j.barang_ids || []
++} } }];`;
++
++const AGG_SUMMARY = `const j = $input.all()[0] || {};
++return [{ json: { data: {
++  total_unit: Number(j.total_unit || 0),
++  total_nilai: Number(j.total_nilai || 0),
++  pemegang: Number(j.pemegang || 0),
++  ruangan: Number(j.ruangan || 0),
++  per_kategori: j.per_kategori || []
++} } }];`;
++
++const AGG_PENG_GET = `return [{ json: { data: ($input.all()[0] || {}).data || {} } }];`;
++const AGG_TTD = `return [{ json: { data: { signature: ($input.all()[0] || {}).signature || null } } }];`;
++
++// ΓöÇΓöÇ Code: upsert massal/KIB (idempoten, tanpa unique constraint) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++const UPSERT_JS = String.raw`const b = $input.item.json.body || {};
++const rows = Array.isArray(b.rows) ? b.rows : [];
++if (!rows.length) throw new Error('rows kosong');
++const esc = s => String(s == null ? '' : s).replace(/'/g, "''");
++const q = $input.item.json.query || {};
++const inst = String(b.instansi_id || q.instansi_id || 'bapperida');
++const seq = new Map();
++const vals = [];
++for (const r of rows) {
++  const kode = String(r.kodebarang || '').trim();
++  const nama = String(r.nama || '').trim();
++  if (!kode || !nama) continue;
++  const n = (seq.get(kode) || 0) + 1;
++  seq.set(kode, n);
++  const nomor = r.nomorinventaris ? String(r.nomorinventaris) : kode + '-' + String(n).padStart(3, '0');
++  vals.push(
++    "('" + esc(kode) + "','" + esc(nama) + "'," + Math.max(0, Number(r.hargasatuan) || 0) +
++    ',' + (r.kategoriid ? "'" + esc(r.kategoriid) + "'" : 'NULL') +
++    ",'" + esc(r.kondisi || 'Baik') + "'" +
++    ",NULLIF('" + esc(r.merk_type || '') + "','')" +
++    ",NULLIF('" + esc(r.model_jenis || '') + "','')" +
++    ",NULLIF('" + esc(r.warna || '') + "','')" +
++    ",NULLIF('" + esc(r.tahun_pembuatan || '') + "','')" +
++    ",NULLIF('" + esc(r.roda || '') + "','')" +
++    ",NULLIF('" + esc(r.keterangan || '') + "','')" +
++    ",'" + esc(nomor) + "')"
++  );
++}
++if (!vals.length) throw new Error('tidak ada baris valid (kodebarang & nama wajib)');
++const L = [];
++L.push('WITH src AS (');
++L.push('  SELECT * FROM (VALUES');
++L.push('    ' + vals.join(',\n    '));
++L.push('  ) AS v(kode, nama, harga, kategoriid, kondisi, merk, model, warna, tahun, roda, keterangan, nomor)');
++L.push('),');
++L.push('ins_barang AS (');
++L.push('  INSERT INTO "SIMAPO".barang (id, kodebarang, nama, jenisbarang, satuan, stok_saat_ini, minimumstok, hargasatuan, kategoriid, isactive, createdat, updatedat, instansi_id)');
++L.push("  SELECT DISTINCT ON (src.kode) md5('" + esc(inst) + ":' || src.kode), src.kode, src.nama, 'Aset Tetap', 'unit', 1, 0, src.harga, src.kategoriid, true, NOW(), NOW(), '" + esc(inst) + "'");
++L.push('  FROM src');
++L.push("  WHERE NOT EXISTS (SELECT 1 FROM \"SIMAPO\".barang b WHERE b.kodebarang = src.kode AND b.instansi_id = '" + esc(inst) + "')");
++L.push('  RETURNING id, kodebarang');
++L.push('),');
++L.push('all_barang AS (');
++L.push('  SELECT id, kodebarang FROM ins_barang');
++L.push('  UNION ALL');
++L.push('  SELECT b.id, b.kodebarang FROM "SIMAPO".barang b');
++L.push('  JOIN src ON b.kodebarang = src.kode AND b.instansi_id = \'' + esc(inst) + '\'');
++L.push('  WHERE NOT EXISTS (SELECT 1 FROM ins_barang ib WHERE ib.kodebarang = b.kodebarang)');
++L.push('),');
++L.push('ins_unit AS (');
++L.push('  INSERT INTO "SIMAPO".unit_aset (id, barangid, nomorinventaris, kondisi, statuspinjam, qrcode, merk_type, model_jenis, warna, tahun_pembuatan, roda, keterangan, instansi_id, updatedat)');
++L.push("  SELECT gen_random_uuid(), ab.id, src.nomor, src.kondisi, false,");
++L.push("         'https://mindcloud.my.id/?qr=SIMAPO-' || gen_random_uuid(),");
++L.push("         src.merk, src.model, src.warna, src.tahun, src.roda, src.keterangan, '" + esc(inst) + "', NOW()");
++L.push('  FROM src');
++L.push('  JOIN all_barang ab ON ab.kodebarang = src.kode');
++  L.push("  WHERE NOT EXISTS (SELECT 1 FROM \"SIMAPO\".unit_aset ua WHERE ua.nomorinventaris = src.nomor AND ua.instansi_id = '" + esc(inst) + "')");
++L.push('  RETURNING id');
++L.push(')');
++L.push('SELECT (SELECT count(*) FROM src) AS total,');
++L.push('       (SELECT count(*) FROM ins_barang) AS barang_baru,');
++L.push('       (SELECT count(*) FROM ins_unit) AS unit_baru,');
++L.push("       (SELECT COALESCE(json_agg(id), '[]'::json) FROM ins_barang) AS barang_ids;");
++return [{ json: { sql: L.join('\n') } }];`;
++
++// ΓöÇΓöÇ Code: simpan pengaturan ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++const SET_JS = `const b = $input.item.json.body || {};
++const q = $input.item.json.query || {};
++const inst = String(q.instansi_id || 'bapperida');
++const esc = s => String(s == null ? '' : s).replace(/'/g, "''");
++const KEYS = ${JSON.stringify(PG_KEYS)};
++const pairs = [];
++for (const k of KEYS) {
++  if (b[k] !== undefined) pairs.push("('" + k + "', '" + esc(b[k]) + "', '" + esc(inst) + "')");
++}
++if (!pairs.length) throw new Error('tidak ada field untuk disimpan');
++const sql = 'INSERT INTO public.pengaturan (key, value, instansi_id) VALUES ' + pairs.join(', ') +
++  ' ON CONFLICT (key, instansi_id) DO UPDATE SET value = EXCLUDED.value RETURNING key;';
++return [{ json: { sql } }];`;
++
++// ΓöÇΓöÇ SQL kosongkan anak per instansi ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++// Semua child FK NO ACTION dihapus dalam SATU statement (dicek di akhir
++// statement); unit_aset/barang dihapus terpisah oleh node PG sesudahnya.
++// arg e = ekspresi runtime berisi instansi yang sudah di-escape; ${e}
++// di-resolve n8n saat eksekusi, bukan saat build.
++const SQL_KIDS = (e) => `WITH d1 AS (DELETE FROM "SIMAPO".riwayat_pemeliharaan
++     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
++ d2 AS (DELETE FROM "SIMAPO".detail_distribusi_aset
++     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
++ d3 AS (DELETE FROM "SIMAPO".jadwal_maintenance
++     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
++ d4 AS (DELETE FROM "SIMAPO".peminjaman
++     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
++ d5 AS (DELETE FROM "SIMAPO".detail_opname
++     WHERE barangid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
++ d6 AS (DELETE FROM "SIMAPO".detail_request
++     WHERE barangid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
++ d7 AS (DELETE FROM "SIMAPO".detail_pemeliharaan
++     WHERE barangid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}')
++        OR riwayatid IN (SELECT id FROM "SIMAPO".riwayat_pemeliharaan
++                         WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}')) RETURNING 1),
++ d8 AS (DELETE FROM "SIMAPO".mutasi_barang
++     WHERE barangkeluarid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}')
++        OR barangmasukid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
++ d9 AS (DELETE FROM "SIMAPO".detail_penerimaan
++     WHERE barang_id IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
++ d10 AS (DELETE FROM "SIMAPO".pemeliharaan
++     WHERE barang_id IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1)
++SELECT (SELECT count(*) FROM d1) + (SELECT count(*) FROM d2) + (SELECT count(*) FROM d3)
++     + (SELECT count(*) FROM d4) + (SELECT count(*) FROM d5) + (SELECT count(*) FROM d6)
++     + (SELECT count(*) FROM d7) + (SELECT count(*) FROM d8) + (SELECT count(*) FROM d9)
++     + (SELECT count(*) FROM d10) AS rows_dihapus;`;
++
++// ΓöÇΓöÇ Code: guard konfirmasi kosongkan ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++const CONFIRM_JS = `const b = $input.item.json.body || {};
++if (String(b.confirm || '') !== 'HAPUS') throw new Error('Konfirmasi salah: ketik HAPUS');
++const q = $input.item.json.query || {};
++const inst = String(q.instansi_id || 'bapperida');
++const esc = s => String(s == null ? '' : s).replace(/'/g, "''");
++const i = esc(inst);
++const sql = \`${SQL_KIDS('${i}')}\`;
++return [{ json: { sql } }];`;
++
++// ΓöÇΓöÇ SQL statis ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++const SQL_SUMMARY = `SELECT
++  (SELECT COUNT(*) FROM "SIMAPO".unit_aset ua
++     JOIN "SIMAPO".barang b ON b.id = ua.barangid AND b.isactive = true
++    WHERE b.instansi_id = '${INST_EXPR}') AS total_unit,
++  (SELECT COALESCE(SUM(COALESCE(NULLIF(ua.nilaiperolehan, 0), b.hargasatuan)), 0)
++     FROM "SIMAPO".unit_aset ua
++     JOIN "SIMAPO".barang b ON b.id = ua.barangid AND b.isactive = true
++    WHERE b.instansi_id = '${INST_EXPR}') AS total_nilai,
++  (SELECT COUNT(DISTINCT ua.pegawai_id) FROM "SIMAPO".unit_aset ua
++     JOIN "SIMAPO".barang b ON b.id = ua.barangid AND b.isactive = true
++    WHERE b.instansi_id = '${INST_EXPR}' AND ua.pegawai_id IS NOT NULL) AS pemegang,
++  (SELECT COUNT(DISTINCT ua.ruangan_id) FROM "SIMAPO".unit_aset ua
++     JOIN "SIMAPO".barang b ON b.id = ua.barangid AND b.isactive = true
++    WHERE b.instansi_id = '${INST_EXPR}' AND ua.ruangan_id IS NOT NULL) AS ruangan,
++  (SELECT COALESCE(json_agg(t ORDER BY t.jumlah DESC), '[]'::json) FROM (
++     SELECT COALESCE(k.nama, 'Tanpa Kategori') AS kategori, COUNT(*) AS jumlah
++       FROM "SIMAPO".unit_aset ua
++       JOIN "SIMAPO".barang b ON b.id = ua.barangid AND b.isactive = true
++       LEFT JOIN "SIMAPO".kategori_barang k ON k.id = b.kategoriid
++      WHERE b.instansi_id = '${INST_EXPR}'
++      GROUP BY k.nama
++   ) t) AS per_kategori;`;
++
++const SQL_PENG_GET = `SELECT COALESCE(json_object_agg(key, value), '{}'::json) AS data
++FROM public.pengaturan
++WHERE instansi_id = '${INST_EXPR}'
++  AND key IN ('sekda_nama','sekda_nip','sekda_jabatan','sekda_alamat','p1_id','p1_jabatan','p1_alamat');`;
++
++const SQL_TTD = `SELECT signature FROM public.tanda_tangan
++WHERE nip = '{{ (($input.item.json.query || {}).nip || "").toString().replace(/'/g, "''") }}'
++LIMIT 1;`;
++
++// ΓöÇΓöÇ 7 rantai ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++function upsertChain(path) {
++  newChain();
++  const w = wh(path, 'POST'), g = gate(path);
++  const c = code(`Code Aset Upsert (${path})`, UPSERT_JS);
++  const p = pg(`PG Aset Upsert (${path})`, '={{ $json.sql }}');
++  const a = code(`Agg Aset Upsert (${path})`, AGG_UPSERT);
++  const r = res(`Res Aset Upsert (${path})`);
++  link(w, g); link(g, c); link(c, p); link(p, a); link(a, r);
++  endChain();
++}
++function readChain(path, query, aggJs) {
++  newChain();
++  const w = wh(path), g = gate(path);
++  const p = pg(`PG ${path}`, query);
++  const a = code(`Agg ${path}`, aggJs);
++  const r = res(`Res ${path}`);
++  link(w, g); link(g, p); link(p, a); link(a, r);
++  endChain();
++}
++
++upsertChain('simapo-aset-massal');
++upsertChain('simapo-aset-kib');
++
++readChain('simapo-aset-summary', SQL_SUMMARY, AGG_SUMMARY);
++readChain('simapo-pengaturan-get', SQL_PENG_GET, AGG_PENG_GET);
++
++{ // simapo-pengaturan-set (POST)
++  newChain();
++  const w = wh('simapo-pengaturan-set', 'POST'), g = gate('simapo-pengaturan-set');
++  const c = code('Code Pengaturan Set', SET_JS);
++  const p = pg('PG Pengaturan Set', '={{ $json.sql }}');
++  const a = code('Agg Pengaturan Set', AGG_OK);
++  const r = res('Res Pengaturan Set');
++  link(w, g); link(g, c); link(c, p); link(p, a); link(a, r);
++  endChain();
++}
++
++readChain('simapo-ttd-get', SQL_TTD, AGG_TTD);
++
++{ // simapo-aset-kosongkan (POST): guard ΓåÆ anak ΓåÆ unit ΓåÆ barang (per instansi)
++  newChain();
++  const w = wh('simapo-aset-kosongkan', 'POST'), g = gate('simapo-aset-kosongkan');
++  const c = code('Code Konfirmasi Kosongkan', CONFIRM_JS);
++  const p1 = pg('PG Kosongkan Anak', '={{ $json.sql }}');
++  const p2 = pg('PG Kosongkan Unit', `DELETE FROM "SIMAPO".unit_aset WHERE instansi_id = '${INST_EXPR_KOSONG}';`);
++  const p3 = pg('PG Kosongkan Barang', `DELETE FROM "SIMAPO".barang WHERE instansi_id = '${INST_EXPR_KOSONG}';`);
++  const a = code('Agg Kosongkan', AGG_OK);
++  const r = res('Res Kosongkan');
++  link(w, g); link(g, c); link(c, p1); link(p1, p2); link(p2, p3); link(p3, a); link(a, r);
++  endChain();
++}
++
++const wf = {
++  name: NAME,
++  nodes,
++  connections,
++  settings: { executionOrder: 'v1', binaryMode: 'separate' },
++  staticData: null,
++  pinData: {},
++  meta: { templateCredsSetupCompleted: true },
++};
++writeFileSync(OUT, JSON.stringify(wf, null, 2) + '\n');
++console.log(`OK: ${nodes.length} nodes, ${Object.keys(connections).length} links ΓåÆ ${OUT}`);
++
++// ΓöÇΓöÇ deploy (Task 2): create/update + activate ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++async function deploy() {
++  const token = process.env.N8N_TOKEN;
++  if (!token) { console.error('N8N_TOKEN belum di-set'); process.exit(1); }
++  const hdr = { 'X-N8N-API-KEY': token, 'content-type': 'application/json' };
++  const list = await (await fetch(BASE + '/api/v1/workflows?limit=200', { headers: hdr })).json();
++  const found = (list.data || []).find(x => x.name === NAME);
++  let id;
++  if (found) {
++    id = found.id;
++    const live = await (await fetch(`${BASE}/api/v1/workflows/${id}`, { headers: hdr })).json();
++    const idByName = new Map((live.nodes || []).map(n => [n.name, n.id]));
++    const outNodes = wf.nodes.map(n => (idByName.has(n.name) ? { ...n, id: idByName.get(n.name) } : n));
++    const body = { name: wf.name, nodes: outNodes, connections: wf.connections, settings: wf.settings };
++    let put = await fetch(`${BASE}/api/v1/workflows/${id}`, { method: 'PUT', headers: hdr, body: JSON.stringify(body) });
++    for (const st of [{ executionOrder: 'v1', binaryMode: 'separate' }, { executionOrder: 'v1' }, {}]) {
++      if (put.ok) break;
++      put = await fetch(`${BASE}/api/v1/workflows/${id}`, { method: 'PUT', headers: hdr, body: JSON.stringify({ ...body, settings: st }) });
++    }
++    if (!put.ok) { console.error('PUT gagal', put.status, await put.text()); process.exit(1); }
++    console.log(`updated ${id}`);
++  } else {
++    const post = await fetch(BASE + '/api/v1/workflows', { method: 'POST', headers: hdr, body: JSON.stringify({ name: wf.name, nodes: wf.nodes, connections: wf.connections, settings: wf.settings }) });
++    if (!post.ok) { console.error('POST gagal', post.status, await post.text()); process.exit(1); }
++    id = (await post.json()).id;
++    console.log(`created ${id}`);
++  }
++  const act = await fetch(`${BASE}/api/v1/workflows/${id}/activate`, { method: 'POST', headers: hdr });
++  console.log(`activate: HTTP ${act.status}`);
++}
++if (process.argv.includes('--deploy')) await deploy();

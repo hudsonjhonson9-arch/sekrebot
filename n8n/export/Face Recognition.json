@@ -1,0 +1,1435 @@
+{
+  "updatedAt": "2026-07-06T04:53:23.358Z",
+  "createdAt": "2026-05-06T11:46:24.409Z",
+  "id": "c0EkTXxAPiPk1Mfz",
+  "name": "Face Recognition",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\":true,\"message\":\"Pengaturan face recognition berhasil disimpan\"}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        896
+      ],
+      "id": "209301ab-e846-45f2-af36-5f878bb61cd7",
+      "name": "Respond Face POST"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"pengaturan\" SET \"value\" = '{{ ($json.value).toString().replace(/'/g, \"''\") }}' WHERE \"key\" = '{{ ($json.key).toString().replace(/'/g, \"''\") }}' AND \"instansi_id\" = '{{ ($json.instansi_id || '').replace(/'/g, \"''\") }}' RETURNING *",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        672,
+        896
+      ],
+      "id": "9ed70dfb-25ec-46f2-9037-0699ae4858f5",
+      "name": "Update Face Setting",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body=$input.first().json.body||$input.first().json;\nconst ADMIN_IDS=[1383864355];\nconst adminId=parseInt(body.admin_id||0);\nif(!ADMIN_IDS.includes(adminId)){$execution.respond({statusCode:403,headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify({ok:false,message:'Akses ditolak.'})});return[];}\nconst val=String(body.enabled);\nconst value=(val==='true'||val==='1')?'1':'0';\nreturn [{json:{key:'face_recognition', value, instansi_id: body.instansi_id || ''}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        896
+      ],
+      "id": "ea8becbf-c53c-45d3-8dc6-9ae79e9bb10f",
+      "name": "Parse Face POST"
+    },
+    {
+      "parameters": {
+        "jsCode": "const method=$input.first().json.headers?.['x-forwarded-method']||$input.first().json.method||'';\nif(method==='OPTIONS'){$execution.respond({statusCode:200,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'},body:''});return[];}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        896
+      ],
+      "id": "e6d600b7-b767-4941-9c2b-33705ca98b03",
+      "name": "CORS Face POST"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "face-toggle",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        896
+      ],
+      "id": "9733f301-cd0b-4d43-bf69-6ec5017b5455",
+      "name": "Face Toggle POST Webhook",
+      "webhookId": "face-toggle-post-0001"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        672
+      ],
+      "id": "9193f7ab-e94f-413a-b8d8-5cdc16cd8310",
+      "name": "Respond Face GET"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows=$input.all().map(i=>i.json);\nconst row=rows[0]||{};\nconst enabled = row.value !== undefined ? (String(row.value).trim()!=='0') : false;\nreturn [{json:{enabled,value:enabled?'1':'0'}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        672
+      ],
+      "id": "a23f39c4-ff0e-43ca-9600-edf9c34d8e79",
+      "name": "Format Face GET"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM \"pengaturan\" WHERE \"key\" = 'face_recognition' AND \"instansi_id\" = '{{ ($input.first().json.query.instansi_id || '').replace(/'/g, \"''\") }}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        448,
+        672
+      ],
+      "id": "314ad548-7cc8-4002-b7fe-c95078fdac31",
+      "name": "Get Face Setting",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const method=$input.first().json.headers?.['x-forwarded-method']||$input.first().json.method||'';\nif(method==='OPTIONS'){$execution.respond({statusCode:200,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'},body:''});return[];}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        672
+      ],
+      "id": "9692907d-751b-451c-9db8-e285b3b2cb28",
+      "name": "CORS Face Toggle GET"
+    },
+    {
+      "parameters": {
+        "path": "face-toggle",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        672
+      ],
+      "id": "e54c7fa7-fc38-4608-9e81-427d7a67094c",
+      "name": "Face Toggle GET Webhook",
+      "webhookId": "face-toggle-get-0001"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        448
+      ],
+      "id": "552ba35b-997e-4d4a-8fc9-f9746d01de13",
+      "name": "Respon Face Get"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row     = $input.first().json;\nconst histStr = String(row.face_histogram || '').trim();\nconst savedAt = row.face_saved_at || null;\nconst dataUrl = String(row.face_photo || '').trim() || null;\nconst face_model = row.face_model || null;\n\nif (!histStr || histStr === '[]') {\n  return [{ json: { ok: false, message: 'Belum ada data wajah', histogram: null, face_descriptor: null, descriptor: null, dataUrl: null } }];\n}\n\ntry {\n  const histogram = JSON.parse(histStr);\n  // Return all aliases so frontend can find descriptor regardless of field name\n  return [{ json: { \n    ok: true, \n    histogram,\n    face_descriptor: histogram,\n    descriptor: histogram,\n    face_model: face_model || (histogram.length >= 512 ? 'human' : 'faceapi'),\n    saved_at: savedAt,\n    savedAt: savedAt,\n    dataUrl\n  } }];\n} catch(_) {\n  return [{ json: { ok: false, message: 'Data histogram tidak valid', histogram: null, face_descriptor: null, descriptor: null, dataUrl: null } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        448
+      ],
+      "id": "3d8410ce-e2cc-4202-9934-5783172b07ed",
+      "name": "Format Histogram Response"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "user_list",
+          "mode": "list",
+          "cachedResultName": "user_list"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "id",
+              "value": "={{ $input.first().json.query.user_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        448,
+        448
+      ],
+      "id": "9cc2faa4-ff5c-4746-a785-069a4f035105",
+      "name": "Get Pegawai dari user_list",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const method=$input.first().json.headers?.['x-forwarded-method']||$input.first().json.method||'';\nif(method==='OPTIONS'){$execution.respond({statusCode:200,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'},body:''});return[];}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        448
+      ],
+      "id": "8d5bf12b-565e-486a-919d-030241039b91",
+      "name": "CORS Face Get"
+    },
+    {
+      "parameters": {
+        "path": "face-get",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        448
+      ],
+      "id": "4634b756-bf96-4f53-ad0d-7b1c00aff0ea",
+      "name": "Face Get Webhook",
+      "webhookId": "face-get-0001"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\":true,\"message\":\"Data wajah berhasil disimpan\"}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1568,
+        0
+      ],
+      "id": "b3473147-b4aa-4bfd-b404-0779aec6f061",
+      "name": "Respon Face Register"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"user_list\" SET \"face_histogram\" = '{{ ($json.histogram_str).toString().replace(/'/g, \"''\") }}', \"face_photo\" = '{{ ($json.foto_base64).toString().replace(/'/g, \"''\") }}', \"face_saved_at\" = '{{ ($json.saved_at).toString().replace(/'/g, \"''\") }}', \"face_model\" = '{{ ($json.face_model).toString().replace(/'/g, \"''\") }}' WHERE \"id\" = '{{ ($json.user_id).toString().replace(/'/g, \"''\") }}' RETURNING *",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1344,
+        0
+      ],
+      "id": "c09e2faf-9b77-45eb-8f41-9602b449c1f8",
+      "name": "Simpan Histogram ke user_list",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nconst user_id = String(body.user_id || '').trim();\nconst saved_at = body.saved_at || new Date().toISOString();\nconst face_model = body.face_model || 'faceapi';\n\n// 1. Validasi user_id\nif (!user_id) {\n  return [{\n    json: { error: true, statusCode: 400, message: 'user_id wajib diisi' }\n  }];\n}\n\n// 2. Mode RESET\nif (body._reset) {\n  return [{ \n    json: { user_id, histogram_str: '[]', foto_base64: '', saved_at: '', face_model: 'faceapi', error: false } \n  }];\n}\n\n// 3. Mode SIMPAN\nconst face_descriptor = body.face_descriptor; \nconst foto_base64 = String(body.foto_base64 || '').trim();\n\nif (!face_descriptor || !Array.isArray(face_descriptor)) {\n  return [{\n    json: { error: true, statusCode: 400, message: 'face_descriptor wajib diisi (Array)' }\n  }];\n}\n\n// 4. Berhasil Parse\nreturn [{\n  json: {\n    user_id: user_id,\n    histogram_str: JSON.stringify(face_descriptor),\n    face_model: face_model,\n    foto_base64: foto_base64,\n    saved_at: saved_at,\n    error: false\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "8df1592f-fe3e-4e03-9330-2fafe6e59206",
+      "name": "Parse Face Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const method = $input.first().json.headers?.['x-forwarded-method'] || $input.first().json.method || '';\n\nif (method === 'OPTIONS') {\n  $execution.respond({\n    statusCode: 200,\n    headers: {\n      'Access-Control-Allow-Origin': '*',\n      'Access-Control-Allow-Methods': 'POST,GET,OPTIONS',\n      'Access-Control-Allow-Headers': 'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'\n    },\n    body: ''\n  });\n  return [];\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "e829e0af-995c-48a9-b3c3-698350d2d978",
+      "name": "CORS Face Register"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "face-register",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ef260010-7f76-47d3-a49e-db7e6b24e6db",
+      "name": "Face Register Webhook",
+      "webhookId": "face-register-0001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const auth = ($json.headers.authorization || $json.headers['x-app-token'] || '').trim();\nif (!auth) {\n  return [{ json: { ok: false, error: 'Unauthorized: token tidak ditemukan' } }];\n}\n\nlet token = auth;\nif (/^Bearer\\s+/i.test(token)) {\n  token = token.replace(/^Bearer\\s+/i, '').trim();\n}\n\nconst VALID_TOKEN = 'BAPPERIDA_SECURE_TOKEN_2025';\nif (token !== VALID_TOKEN) {\n  return [{ json: { ok: false, error: 'Unauthorized: token tidak valid' } }];\n}\n\nconst ts = Date.now();\nconst hmac = require('crypto').createHmac('sha256', VALID_TOKEN);\nhmac.update(String(ts));\nconst sig = hmac.digest('hex');\n\nreturn [{\n  json: {\n    ...$json,\n    _auth_ok: true,\n    _server_ts: ts,\n    _sig: sig\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "0d85d5a3-a609-4964-a309-1270ad987280",
+      "name": "Security Gate Face-Register"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \"id\", \"role\", \"instansi_id\"\nFROM \"user_list\"\nWHERE \"id\" = split_part('{{ $json.headers.authorization.replace(/^Bearer\\s+/i, '').trim() }}', '_', 2)::bigint\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        672,
+        0
+      ],
+      "id": "e0da9e2e-7e16-4ebc-ae7f-8dc5b3f4cca2",
+      "name": "Validate Session Face-Register",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst session = rows[0]?.json;\n\nif (!session || !session.id) {\n  return [{ json: { ok: false, error: \"Sesi tidak valid atau telah kedaluwarsa\", code: \"SESSION_INVALID\" } }];\n}\n\nconst role = (session.role || '').toUpperCase();\nconst allowed = [\"ADMIN\",\"SUPERADMIN\",\"KEPALA\",\"SEKRETARIS\",\"KABID\"].map(r => r.toUpperCase());\n\nif (!allowed.includes(role)) {\n  return [{ json: { ok: false, error: \"Akses ditolak: role \" + role + \" tidak memiliki izin\", code: \"FORBIDDEN\" } }];\n}\n\nreturn [{ json: { ...($('Face Register Webhook').first().json.body || $('Face Register Webhook').first().json), _session: session } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "cc35a005-e152-49b6-a364-0dd821e8873a",
+      "name": "Check Role Face-Register"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 403,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Authorization, Content-Type, X-App-Token"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        224
+      ],
+      "id": "c88f1a9e-f0c7-4f71-8fa5-4dd7a7d17e6b",
+      "name": "Respond Forbidden Face-Register"
+    }
+  ],
+  "connections": {
+    "Update Face Setting": {
+      "main": [
+        [
+          {
+            "node": "Respond Face POST",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Face POST": {
+      "main": [
+        [
+          {
+            "node": "Update Face Setting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS Face POST": {
+      "main": [
+        [
+          {
+            "node": "Parse Face POST",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Face Toggle POST Webhook": {
+      "main": [
+        [
+          {
+            "node": "CORS Face POST",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Face GET": {
+      "main": [
+        [
+          {
+            "node": "Respond Face GET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Face Setting": {
+      "main": [
+        [
+          {
+            "node": "Format Face GET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS Face Toggle GET": {
+      "main": [
+        [
+          {
+            "node": "Get Face Setting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Face Toggle GET Webhook": {
+      "main": [
+        [
+          {
+            "node": "CORS Face Toggle GET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Histogram Response": {
+      "main": [
+        [
+          {
+            "node": "Respon Face Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pegawai dari user_list": {
+      "main": [
+        [
+          {
+            "node": "Format Histogram Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS Face Get": {
+      "main": [
+        [
+          {
+            "node": "Get Pegawai dari user_list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Face Get Webhook": {
+      "main": [
+        [
+          {
+            "node": "CORS Face Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simpan Histogram ke user_list": {
+      "main": [
+        [
+          {
+            "node": "Respon Face Register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Face Data": {
+      "main": [
+        [
+          {
+            "node": "Simpan Histogram ke user_list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS Face Register": {
+      "main": [
+        [
+          {
+            "node": "Security Gate Face-Register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Face Register Webhook": {
+      "main": [
+        [
+          {
+            "node": "CORS Face Register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Gate Face-Register": {
+      "main": [
+        [
+          {
+            "node": "Validate Session Face-Register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Session Face-Register": {
+      "main": [
+        [
+          {
+            "node": "Check Role Face-Register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Role Face-Register": {
+      "main": [
+        [
+          {
+            "node": "Parse Face Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "3c9926db-4eaa-47ac-89a0-56b3cdaa4d9d",
+  "activeVersionId": "3c9926db-4eaa-47ac-89a0-56b3cdaa4d9d",
+  "versionCounter": 37,
+  "triggerCount": 4,
+  "shared": [
+    {
+      "updatedAt": "2026-05-06T11:46:24.411Z",
+      "createdAt": "2026-05-06T11:46:24.411Z",
+      "role": "workflow:owner",
+      "workflowId": "c0EkTXxAPiPk1Mfz",
+      "projectId": "ZE0tgWH81scm4zQD",
+      "project": {
+        "updatedAt": "2026-03-12T15:42:44.257Z",
+        "createdAt": "2026-03-12T15:19:34.808Z",
+        "id": "ZE0tgWH81scm4zQD",
+        "name": "Achmad Aqil Susanto <ahmadagilsusanto@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-06T04:53:24.000Z",
+    "createdAt": "2026-07-06T04:53:23.360Z",
+    "versionId": "3c9926db-4eaa-47ac-89a0-56b3cdaa4d9d",
+    "workflowId": "c0EkTXxAPiPk1Mfz",
+    "nodes": [
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\"ok\":true,\"message\":\"Pengaturan face recognition berhasil disimpan\"}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.5,
+        "position": [
+          896,
+          896
+        ],
+        "id": "209301ab-e846-45f2-af36-5f878bb61cd7",
+        "name": "Respond Face POST"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE \"pengaturan\" SET \"value\" = '{{ ($json.value).toString().replace(/'/g, \"''\") }}' WHERE \"key\" = '{{ ($json.key).toString().replace(/'/g, \"''\") }}' AND \"instansi_id\" = '{{ ($json.instansi_id || '').replace(/'/g, \"''\") }}' RETURNING *",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          672,
+          896
+        ],
+        "id": "9ed70dfb-25ec-46f2-9037-0699ae4858f5",
+        "name": "Update Face Setting",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const body=$input.first().json.body||$input.first().json;\nconst ADMIN_IDS=[1383864355];\nconst adminId=parseInt(body.admin_id||0);\nif(!ADMIN_IDS.includes(adminId)){$execution.respond({statusCode:403,headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify({ok:false,message:'Akses ditolak.'})});return[];}\nconst val=String(body.enabled);\nconst value=(val==='true'||val==='1')?'1':'0';\nreturn [{json:{key:'face_recognition', value, instansi_id: body.instansi_id || ''}}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          448,
+          896
+        ],
+        "id": "ea8becbf-c53c-45d3-8dc6-9ae79e9bb10f",
+        "name": "Parse Face POST"
+      },
+      {
+        "parameters": {
+          "jsCode": "const method=$input.first().json.headers?.['x-forwarded-method']||$input.first().json.method||'';\nif(method==='OPTIONS'){$execution.respond({statusCode:200,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'},body:''});return[];}\nreturn $input.all();"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          224,
+          896
+        ],
+        "id": "e6d600b7-b767-4941-9c2b-33705ca98b03",
+        "name": "CORS Face POST"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "face-toggle",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          896
+        ],
+        "id": "9733f301-cd0b-4d43-bf69-6ec5017b5455",
+        "name": "Face Toggle POST Webhook",
+        "webhookId": "face-toggle-post-0001"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.5,
+        "position": [
+          896,
+          672
+        ],
+        "id": "9193f7ab-e94f-413a-b8d8-5cdc16cd8310",
+        "name": "Respond Face GET"
+      },
+      {
+        "parameters": {
+          "jsCode": "const rows=$input.all().map(i=>i.json);\nconst row=rows[0]||{};\nconst enabled = row.value !== undefined ? (String(row.value).trim()!=='0') : false;\nreturn [{json:{enabled,value:enabled?'1':'0'}}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          672,
+          672
+        ],
+        "id": "a23f39c4-ff0e-43ca-9600-edf9c34d8e79",
+        "name": "Format Face GET"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT * FROM \"pengaturan\" WHERE \"key\" = 'face_recognition' AND \"instansi_id\" = '{{ ($input.first().json.query.instansi_id || '').replace(/'/g, \"''\") }}'",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          448,
+          672
+        ],
+        "id": "314ad548-7cc8-4002-b7fe-c95078fdac31",
+        "name": "Get Face Setting",
+        "alwaysOutputData": true,
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const method=$input.first().json.headers?.['x-forwarded-method']||$input.first().json.method||'';\nif(method==='OPTIONS'){$execution.respond({statusCode:200,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'},body:''});return[];}\nreturn $input.all();"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          224,
+          672
+        ],
+        "id": "9692907d-751b-451c-9db8-e285b3b2cb28",
+        "name": "CORS Face Toggle GET"
+      },
+      {
+        "parameters": {
+          "path": "face-toggle",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          672
+        ],
+        "id": "e54c7fa7-fc38-4608-9e81-427d7a67094c",
+        "name": "Face Toggle GET Webhook",
+        "webhookId": "face-toggle-get-0001"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.5,
+        "position": [
+          896,
+          448
+        ],
+        "id": "552ba35b-997e-4d4a-8fc9-f9746d01de13",
+        "name": "Respon Face Get"
+      },
+      {
+        "parameters": {
+          "jsCode": "const row     = $input.first().json;\nconst histStr = String(row.face_histogram || '').trim();\nconst savedAt = row.face_saved_at || null;\nconst dataUrl = String(row.face_photo || '').trim() || null;\nconst face_model = row.face_model || null;\n\nif (!histStr || histStr === '[]') {\n  return [{ json: { ok: false, message: 'Belum ada data wajah', histogram: null, face_descriptor: null, descriptor: null, dataUrl: null } }];\n}\n\ntry {\n  const histogram = JSON.parse(histStr);\n  // Return all aliases so frontend can find descriptor regardless of field name\n  return [{ json: { \n    ok: true, \n    histogram,\n    face_descriptor: histogram,\n    descriptor: histogram,\n    face_model: face_model || (histogram.length >= 512 ? 'human' : 'faceapi'),\n    saved_at: savedAt,\n    savedAt: savedAt,\n    dataUrl\n  } }];\n} catch(_) {\n  return [{ json: { ok: false, message: 'Data histogram tidak valid', histogram: null, face_descriptor: null, descriptor: null, dataUrl: null } }];\n}"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          672,
+          448
+        ],
+        "id": "3d8410ce-e2cc-4202-9934-5783172b07ed",
+        "name": "Format Histogram Response"
+      },
+      {
+        "parameters": {
+          "operation": "select",
+          "schema": {
+            "__rl": true,
+            "mode": "list",
+            "value": "public"
+          },
+          "table": {
+            "__rl": true,
+            "value": "user_list",
+            "mode": "list",
+            "cachedResultName": "user_list"
+          },
+          "where": {
+            "values": [
+              {
+                "column": "id",
+                "value": "={{ $input.first().json.query.user_id }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          448,
+          448
+        ],
+        "id": "9cc2faa4-ff5c-4746-a785-069a4f035105",
+        "name": "Get Pegawai dari user_list",
+        "alwaysOutputData": true,
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const method=$input.first().json.headers?.['x-forwarded-method']||$input.first().json.method||'';\nif(method==='OPTIONS'){$execution.respond({statusCode:200,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'},body:''});return[];}\nreturn $input.all();"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          224,
+          448
+        ],
+        "id": "8d5bf12b-565e-486a-919d-030241039b91",
+        "name": "CORS Face Get"
+      },
+      {
+        "parameters": {
+          "path": "face-get",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          448
+        ],
+        "id": "4634b756-bf96-4f53-ad0d-7b1c00aff0ea",
+        "name": "Face Get Webhook",
+        "webhookId": "face-get-0001"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\"ok\":true,\"message\":\"Data wajah berhasil disimpan\"}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.5,
+        "position": [
+          1568,
+          0
+        ],
+        "id": "b3473147-b4aa-4bfd-b404-0779aec6f061",
+        "name": "Respon Face Register"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE \"user_list\" SET \"face_histogram\" = '{{ ($json.histogram_str).toString().replace(/'/g, \"''\") }}', \"face_photo\" = '{{ ($json.foto_base64).toString().replace(/'/g, \"''\") }}', \"face_saved_at\" = '{{ ($json.saved_at).toString().replace(/'/g, \"''\") }}', \"face_model\" = '{{ ($json.face_model).toString().replace(/'/g, \"''\") }}' WHERE \"id\" = '{{ ($json.user_id).toString().replace(/'/g, \"''\") }}' RETURNING *",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          1344,
+          0
+        ],
+        "id": "c09e2faf-9b77-45eb-8f41-9602b449c1f8",
+        "name": "Simpan Histogram ke user_list",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nconst user_id = String(body.user_id || '').trim();\nconst saved_at = body.saved_at || new Date().toISOString();\nconst face_model = body.face_model || 'faceapi';\n\n// 1. Validasi user_id\nif (!user_id) {\n  return [{\n    json: { error: true, statusCode: 400, message: 'user_id wajib diisi' }\n  }];\n}\n\n// 2. Mode RESET\nif (body._reset) {\n  return [{ \n    json: { user_id, histogram_str: '[]', foto_base64: '', saved_at: '', face_model: 'faceapi', error: false } \n  }];\n}\n\n// 3. Mode SIMPAN\nconst face_descriptor = body.face_descriptor; \nconst foto_base64 = String(body.foto_base64 || '').trim();\n\nif (!face_descriptor || !Array.isArray(face_descriptor)) {\n  return [{\n    json: { error: true, statusCode: 400, message: 'face_descriptor wajib diisi (Array)' }\n  }];\n}\n\n// 4. Berhasil Parse\nreturn [{\n  json: {\n    user_id: user_id,\n    histogram_str: JSON.stringify(face_descriptor),\n    face_model: face_model,\n    foto_base64: foto_base64,\n    saved_at: saved_at,\n    error: false\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1120,
+          0
+        ],
+        "id": "8df1592f-fe3e-4e03-9330-2fafe6e59206",
+        "name": "Parse Face Data"
+      },
+      {
+        "parameters": {
+          "jsCode": "const method = $input.first().json.headers?.['x-forwarded-method'] || $input.first().json.method || '';\n\nif (method === 'OPTIONS') {\n  $execution.respond({\n    statusCode: 200,\n    headers: {\n      'Access-Control-Allow-Origin': '*',\n      'Access-Control-Allow-Methods': 'POST,GET,OPTIONS',\n      'Access-Control-Allow-Headers': 'Content-Type,ngrok-skip-browser-warning,Accept,Authorization'\n    },\n    body: ''\n  });\n  return [];\n}\n\nreturn $input.all();"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          224,
+          0
+        ],
+        "id": "e829e0af-995c-48a9-b3c3-698350d2d978",
+        "name": "CORS Face Register"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "face-register",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          0
+        ],
+        "id": "ef260010-7f76-47d3-a49e-db7e6b24e6db",
+        "name": "Face Register Webhook",
+        "webhookId": "face-register-0001"
+      },
+      {
+        "parameters": {
+          "jsCode": "const auth = ($json.headers.authorization || $json.headers['x-app-token'] || '').trim();\nif (!auth) {\n  return [{ json: { ok: false, error: 'Unauthorized: token tidak ditemukan' } }];\n}\n\nlet token = auth;\nif (/^Bearer\\s+/i.test(token)) {\n  token = token.replace(/^Bearer\\s+/i, '').trim();\n}\n\nconst VALID_TOKEN = 'BAPPERIDA_SECURE_TOKEN_2025';\nif (token !== VALID_TOKEN) {\n  return [{ json: { ok: false, error: 'Unauthorized: token tidak valid' } }];\n}\n\nconst ts = Date.now();\nconst hmac = require('crypto').createHmac('sha256', VALID_TOKEN);\nhmac.update(String(ts));\nconst sig = hmac.digest('hex');\n\nreturn [{\n  json: {\n    ...$json,\n    _auth_ok: true,\n    _server_ts: ts,\n    _sig: sig\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          448,
+          0
+        ],
+        "id": "0d85d5a3-a609-4964-a309-1270ad987280",
+        "name": "Security Gate Face-Register"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT \"id\", \"role\", \"instansi_id\"\nFROM \"user_list\"\nWHERE \"id\" = split_part('{{ $json.headers.authorization.replace(/^Bearer\\s+/i, '').trim() }}', '_', 2)::bigint\nLIMIT 1;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          672,
+          0
+        ],
+        "id": "e0da9e2e-7e16-4ebc-ae7f-8dc5b3f4cca2",
+        "name": "Validate Session Face-Register",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const rows = $input.all();\nconst session = rows[0]?.json;\n\nif (!session || !session.id) {\n  return [{ json: { ok: false, error: \"Sesi tidak valid atau telah kedaluwarsa\", code: \"SESSION_INVALID\" } }];\n}\n\nconst role = (session.role || '').toUpperCase();\nconst allowed = [\"ADMIN\",\"SUPERADMIN\",\"KEPALA\",\"SEKRETARIS\",\"KABID\"].map(r => r.toUpperCase());\n\nif (!allowed.includes(role)) {\n  return [{ json: { ok: false, error: \"Akses ditolak: role \" + role + \" tidak memiliki izin\", code: \"FORBIDDEN\" } }];\n}\n\nreturn [{ json: { ...($('Face Register Webhook').first().json.body || $('Face Register Webhook').first().json), _session: session } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          896,
+          0
+        ],
+        "id": "cc35a005-e152-49b6-a364-0dd821e8873a",
+        "name": "Check Role Face-Register"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseCode": 403,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "name": "Access-Control-Allow-Headers",
+                  "value": "Authorization, Content-Type, X-App-Token"
+                },
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.5,
+        "position": [
+          0,
+          224
+        ],
+        "id": "c88f1a9e-f0c7-4f71-8fa5-4dd7a7d17e6b",
+        "name": "Respond Forbidden Face-Register"
+      }
+    ],
+    "connections": {
+      "Update Face Setting": {
+        "main": [
+          [
+            {
+              "node": "Respond Face POST",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Face POST": {
+        "main": [
+          [
+            {
+              "node": "Update Face Setting",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "CORS Face POST": {
+        "main": [
+          [
+            {
+              "node": "Parse Face POST",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Face Toggle POST Webhook": {
+        "main": [
+          [
+            {
+              "node": "CORS Face POST",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Face GET": {
+        "main": [
+          [
+            {
+              "node": "Respond Face GET",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Face Setting": {
+        "main": [
+          [
+            {
+              "node": "Format Face GET",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "CORS Face Toggle GET": {
+        "main": [
+          [
+            {
+              "node": "Get Face Setting",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Face Toggle GET Webhook": {
+        "main": [
+          [
+            {
+              "node": "CORS Face Toggle GET",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Histogram Response": {
+        "main": [
+          [
+            {
+              "node": "Respon Face Get",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Pegawai dari user_list": {
+        "main": [
+          [
+            {
+              "node": "Format Histogram Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "CORS Face Get": {
+        "main": [
+          [
+            {
+              "node": "Get Pegawai dari user_list",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Face Get Webhook": {
+        "main": [
+          [
+            {
+              "node": "CORS Face Get",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Simpan Histogram ke user_list": {
+        "main": [
+          [
+            {
+              "node": "Respon Face Register",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Face Data": {
+        "main": [
+          [
+            {
+              "node": "Simpan Histogram ke user_list",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "CORS Face Register": {
+        "main": [
+          [
+            {
+              "node": "Security Gate Face-Register",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Face Register Webhook": {
+        "main": [
+          [
+            {
+              "node": "CORS Face Register",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Security Gate Face-Register": {
+        "main": [
+          [
+            {
+              "node": "Validate Session Face-Register",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate Session Face-Register": {
+        "main": [
+          [
+            {
+              "node": "Check Role Face-Register",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Role Face-Register": {
+        "main": [
+          [
+            {
+              "node": "Parse Face Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Achmad Aqil Susanto",
+    "name": "Version 3c9926db",
+    "description": "",
+    "autosaved": true,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-07-06T04:53:24.529Z",
+        "id": 1356,
+        "workflowId": "c0EkTXxAPiPk1Mfz",
+        "versionId": "3c9926db-4eaa-47ac-89a0-56b3cdaa4d9d",
+        "event": "activated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    ]
+  }
+}

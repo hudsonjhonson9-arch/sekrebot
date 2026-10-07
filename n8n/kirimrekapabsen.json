@@ -1,0 +1,348 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kirim-rekap",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "authentication": "none"
+      },
+      "name": "Kirim Rekap",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1184,
+        32
+      ],
+      "id": "fe1891ff-dc1b-42e0-ac76-35b448026b6b",
+      "webhookId": "13301915-2a3a-46e9-b2dc-fcae03ca4f25",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const method = $input.first().json.headers?.['x-forwarded-method'] || $input.first().json.method || '';\nif (method === 'OPTIONS') {\n  $execution.respond({\n    statusCode: 200,\n    headers: {\n      'Access-Control-Allow-Origin': '*',\n      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',\n      'Access-Control-Allow-Headers': 'Content-Type, ngrok-skip-browser-warning, Accept, Authorization'\n    },\n    body: ''\n  });\n  return [];\n}\nreturn $input.all();"
+      },
+      "name": "CORS Kirim",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -992,
+        32
+      ],
+      "id": "005fd369-e431-4861-aa28-526685f5e1a6"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rekap is read-only — all authenticated users need access\n// Pass through without blocking. CORS headers set by downstream nodes.\nreturn $input.all();"
+      },
+      "name": "Security Gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        32
+      ],
+      "id": "security-gate-rekap-node"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check",
+              "leftValue": "={{ $json.body.pdf_base64 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Is Direct PDF?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -768,
+        32
+      ],
+      "id": "d067891c-91f6-4a8e-8b4c-e1f8e206bd6b"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "body.pdf_base64",
+        "options": {
+          "fileName": "={{ $node[\"CORS Kirim\"].json.body.namaFilePdf || 'Rekap_Absensi.pdf' }}",
+          "mimeType": "application/pdf"
+        }
+      },
+      "name": "Base64 to PDF",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        -96,
+        -64
+      ],
+      "id": "629ffec1-e0bc-4274-97cf-64c1b3b143df"
+    },
+    {
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "={{ $node[\"CORS Kirim\"].json.body.chat_id }}",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "=📊 *REKAP ABSENSI — {{ ($node[\"CORS Kirim\"].json.body.instansi_name || $node[\"CORS Kirim\"].json.body.instansi_id || 'BAPPERIDA').toUpperCase() }}*\n📅 {{ $node[\"CORS Kirim\"].json.body.tanggal_label }}\n────────────────\n_File PDF Terlampir_",
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Kirim Direct PDF",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        128,
+        -64
+      ],
+      "id": "8ff62048-a2d5-4616-981b-a18c1dd07cd4",
+      "webhookId": "02316a8b-7c2f-42ea-b294-d6058645ef47",
+      "credentials": {
+        "telegramApi": {
+          "id": "GSEMSscu6roPnSCy",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst dari = body.dari || '—';\nconst sampai = body.sampai || '—';\nconst chatId = String(body.chat_id || '');\nconst pegawai = body.pegawai || [];\nconst isHarian = body.is_harian === true || dari === sampai;\nconst tanggalLabel = body.tanggal_label || (dari === sampai ? dari : `${dari} s.d. ${sampai}`);\nconst instName = (body.instansi_name || body.instansi_id || 'BAPPERIDA').toUpperCase();\n\nlet msg = `📊 *REKAP ABSENSI — ${instName}*\\n📅 ${tanggalLabel}\\n────────────────\\n_File Excel Terlampir_`;\n\nconst dataExcel = pegawai.map((p, index) => ({\n  'No': index + 1, 'Nama': p.nama, 'NIP': p.nip || '—', 'Jam Masuk': p.jamMasuk || '—', 'Jam Pulang': p.jamPulang || '—', 'Keterangan': p.dataExcelRow?.Keterangan || (p.masuk > 0 ? 'Hadir' : '—')\n}));\n\nconst htmlRows = pegawai.map((p, i) => `<tr><td>${i+1}</td><td>${p.nama}</td><td>${p.jamMasuk || '—'}</td><td>${p.jamPulang || '—'}</td><td>${p.dataExcelRow?.Keterangan || 'Hadir'}</td></tr>`).join('');\nconst htmlContent = `<html><body style=\"font-family:Arial\"><h2>REKAP ABSENSI</h2><p>Periode: ${tanggalLabel}</p><table border=\"1\" style=\"border-collapse:collapse;width:100%\"><tr><th>No</th><th>Nama</th><th>Masuk</th><th>Pulang</th><th>Ket</th></tr>${htmlRows}</table></body></html>`;\n\nconst namaFile = isHarian ? `Rekap_Harian_${dari}` : `Rekap_Periode_${dari}_sd_${sampai}`;\n\nreturn [{ json: { chat_id: chatId, text: msg, dataExcel, htmlContent, namaFileXls: namaFile + '.xlsx', namaFilePdf: namaFile + '.pdf' } }];"
+      },
+      "name": "Format Pesan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -544,
+        128
+      ],
+      "id": "905f578d-6d63-4ba9-ae5f-e44c5b9b4dbe"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "dataExcel",
+        "options": {}
+      },
+      "name": "Split Out",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        128
+      ],
+      "id": "0b2b8fd0-29a3-47df-b069-940bc33614cf"
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "options": {
+          "fileName": "={{ $node[\"Format Pesan\"].json.namaFileXls }}"
+        }
+      },
+      "name": "Generate XLSX",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        -96,
+        128
+      ],
+      "id": "cb5cc3b8-a153-4951-bff3-65ec4608cf9e"
+    },
+    {
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "={{ $node[\"Format Pesan\"].json.chat_id }}",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "={{ $node[\"Format Pesan\"].json.text }}",
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Kirim Excel",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        128,
+        128
+      ],
+      "id": "3611e7fe-9be4-44cc-b192-f47ac710e9b0",
+      "webhookId": "08cb6ac3-9068-4b5e-b38b-4eaac193d305",
+      "credentials": {
+        "telegramApi": {
+          "id": "GSEMSscu6roPnSCy",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\":true}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Respon Kirim",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        352,
+        32
+      ],
+      "id": "979fcfc6-1177-4c18-b232-196eaefe43fe"
+    }
+  ],
+  "connections": {
+    "Kirim Rekap": {
+      "main": [
+        [
+          {
+            "node": "CORS Kirim",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS Kirim": {
+      "main": [
+        [
+          {
+            "node": "Security Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Gate": {
+      "main": [
+        [
+          {
+            "node": "Is Direct PDF?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Direct PDF?": {
+      "main": [
+        [
+          {
+            "node": "Base64 to PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Pesan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Base64 to PDF": {
+      "main": [
+        [
+          {
+            "node": "Kirim Direct PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim Direct PDF": {
+      "main": [
+        [
+          {
+            "node": "Respon Kirim",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Pesan": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Generate XLSX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate XLSX": {
+      "main": [
+        [
+          {
+            "node": "Kirim Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim Excel": {
+      "main": [
+        [
+          {
+            "node": "Respon Kirim",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "4b55943efb5f219d407bc408d9277d6d643804fc75070b4ed56250fe03c8ea67"
+  }
+}

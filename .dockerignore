@@ -1,0 +1,39 @@
+# Secret dan credential. Ini yang paling penting: .env berisi DATABASE_URL
+# produksi dan TELEGRAM_BOT_TOKEN. Kalau bocor ke image, siapa pun yang bisa
+# menarik image itu punya akses penuh ke database.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Workflow n8n: berisi token API dan struktur internal.
+n8n/
+
+# Dokumen procurement dan arsip, 3.5 MB tidak perlu di image.
+docs/
+
+# Test dan alat bantu: tidak dipakai saat runtime.
+tests/
+scripts/
+.mcp.json
+.github/
+
+# VCS dan editor.
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Output build Vite: nginx menyajikan root, bukan dist. Lihat nginx.conf.
+dist/
+
+# Log dan OS.
+*.log
+Thumbs.db
+.DS_Store
+
+# Dependency lokal. WAJIB: kalau ikut, seluruh node_modules (ratusan MB) masuk
+# image lewat konteks build, dan yang tersalin ke image bisa tidak cocok dengan
+# package-lock. npm ci di dalam image yang installs yang benar.
+node_modules/

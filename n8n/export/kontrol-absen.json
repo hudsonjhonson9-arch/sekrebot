@@ -1,0 +1,765 @@
+{
+  "updatedAt": "2026-08-11T13:34:20.078Z",
+  "createdAt": "2026-08-11T01:56:25.022Z",
+  "id": "HUOXv71CWnU26BHA",
+  "name": "kontrol-absen",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "path": "kontrol-absen",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "994e1758-1d1e-4fb0-a838-3b9e5deedc74",
+      "name": "Webhook GET",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        -448
+      ],
+      "webhookId": "kontrol-absen-get-0001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const q = $input.first().json.query || {};\nconst instId = String(q.instansi_id || q.instansi || 'bapperida').replace(/'/g, \"''\");\n\nreturn [{ json: { sql: `SELECT key, value FROM pengaturan WHERE key = 'kontrol_absen' AND instansi_id = '${instId}'` } }];"
+      },
+      "id": "47164d32-215f-412b-a905-d90a3e70cf67",
+      "name": "Get Instansi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        -448
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.sql }}",
+        "options": {}
+      },
+      "id": "1829247d-a662-4883-8dc5-3851c39b3782",
+      "name": "Select Config",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        272,
+        -448
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst DEFAULT = { enabled: false, toleransi: 30, times: [{ jam: '10:00', aktif: true }] };\nlet config = DEFAULT;\nif (items.length && items[0].json && typeof items[0].json.value === 'string') {\n  try { config = { ...DEFAULT, ...JSON.parse(items[0].json.value) }; } catch (_) {}\n  if (!Array.isArray(config.times)) config.times = [];\n}\n\nreturn [{ json: { ok: true, config } }];"
+      },
+      "id": "f3eb9517-b0c6-4821-bcc9-80456f86a182",
+      "name": "Format Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        -448
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, config: $json.config }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "e9a6be89-8788-4f3b-8d29-8cb09e6469f4",
+      "name": "Respond Get",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        704,
+        -448
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kontrol-absen",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "69437386-85f2-4d8a-a16c-7a62377fe767",
+      "name": "Webhook POST",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        -128
+      ],
+      "webhookId": "kontrol-absen-post-0001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst body = input.body || {};\nconst hdrs = input.headers || {};\nconst instId = String(body.instansi_id || 'bapperida').replace(/'/g, \"''\");\n\nconst times = Array.isArray(body.times) ? body.times.map(t => ({\n  jam: String(t.jam || '').slice(0, 5),\n  aktif: t.aktif !== false\n})) : [];\nconst value = JSON.stringify({\n  enabled: !!body.enabled,\n  toleransi: parseInt(body.toleransi, 10) || 30,\n  times\n});\n\nconst auth = String(hdrs.authorization || hdrs.Authorization || '').replace(/^Bearer\\s+/i, '').trim();\nconst parts = auth.split('_');\nconst userId = parseInt(parts[1]) || 0;\n\nconst sql = `SELECT COALESCE((SELECT is_admin FROM user_list WHERE id = ${userId}), false) AS is_admin, '${value.replace(/'/g, \"''\")}' AS value, '${instId}' AS inst_id`;\nreturn [{ json: { sql } }];"
+      },
+      "id": "522abeb4-b940-434f-8e76-b13b8d705f09",
+      "name": "Prepare Auth Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.sql }}",
+        "options": {}
+      },
+      "id": "7f0384d3-cbb9-4c95-8aec-6575b7180629",
+      "name": "Check Admin",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        272,
+        -128
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-admin",
+              "leftValue": "={{ $json.is_admin }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bb4b0860-77a8-43ae-af6b-4c31f1a9dde0",
+      "name": "Is Admin?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        496,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nconst instId = String(j.inst_id || 'bapperida').replace(/'/g, \"''\");\nconst value = String(j.value || '').replace(/'/g, \"''\");\n\nconst sql = `INSERT INTO pengaturan (key, value, instansi_id) VALUES ('kontrol_absen', '${value}', '${instId}') ON CONFLICT (key, instansi_id) DO UPDATE SET value = EXCLUDED.value RETURNING key`;\nreturn [{ json: { sql } }];"
+      },
+      "id": "63306940-083e-49a1-9375-1b9034c7f28b",
+      "name": "Build Upsert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.sql }}",
+        "options": {}
+      },
+      "id": "0428bf1f-a344-4fbf-9356-cd0f183f82c5",
+      "name": "Save Config",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        928,
+        -208
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "017376d7-b681-4c30-bc87-65e3f91fc057",
+      "name": "Respond Post",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1152,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'Admin access required' }) }}",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "id": "cb5519d7-329e-4da1-bb22-7732658bf52b",
+      "name": "Reject Not Admin",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        704,
+        -16
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook GET": {
+      "main": [
+        [
+          {
+            "node": "Get Instansi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Instansi": {
+      "main": [
+        [
+          {
+            "node": "Select Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Config": {
+      "main": [
+        [
+          {
+            "node": "Format Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Config": {
+      "main": [
+        [
+          {
+            "node": "Respond Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook POST": {
+      "main": [
+        [
+          {
+            "node": "Prepare Auth Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Auth Check": {
+      "main": [
+        [
+          {
+            "node": "Check Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Admin": {
+      "main": [
+        [
+          {
+            "node": "Is Admin?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Admin?": {
+      "main": [
+        [
+          {
+            "node": "Build Upsert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Not Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Upsert": {
+      "main": [
+        [
+          {
+            "node": "Save Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Config": {
+      "main": [
+        [
+          {
+            "node": "Respond Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "84f054f0-0a31-4515-aede-0bca5a902a2d",
+  "activeVersionId": "84f054f0-0a31-4515-aede-0bca5a902a2d",
+  "versionCounter": 22,
+  "triggerCount": 2,
+  "shared": [
+    {
+      "updatedAt": "2026-08-11T01:56:25.032Z",
+      "createdAt": "2026-08-11T01:56:25.032Z",
+      "role": "workflow:owner",
+      "workflowId": "HUOXv71CWnU26BHA",
+      "projectId": "ZE0tgWH81scm4zQD",
+      "project": {
+        "updatedAt": "2026-03-12T15:42:44.257Z",
+        "createdAt": "2026-03-12T15:19:34.808Z",
+        "id": "ZE0tgWH81scm4zQD",
+        "name": "Achmad Aqil Susanto <ahmadagilsusanto@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-08-11T13:34:22.000Z",
+    "createdAt": "2026-08-11T13:34:20.088Z",
+    "versionId": "84f054f0-0a31-4515-aede-0bca5a902a2d",
+    "workflowId": "HUOXv71CWnU26BHA",
+    "nodes": [
+      {
+        "parameters": {
+          "path": "kontrol-absen",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "994e1758-1d1e-4fb0-a838-3b9e5deedc74",
+        "name": "Webhook GET",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -176,
+          -448
+        ],
+        "webhookId": "kontrol-absen-get-0001"
+      },
+      {
+        "parameters": {
+          "jsCode": "const q = $input.first().json.query || {};\nconst instId = String(q.instansi_id || q.instansi || 'bapperida').replace(/'/g, \"''\");\n\nreturn [{ json: { sql: `SELECT key, value FROM pengaturan WHERE key = 'kontrol_absen' AND instansi_id = '${instId}'` } }];"
+        },
+        "id": "47164d32-215f-412b-a905-d90a3e70cf67",
+        "name": "Get Instansi",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          48,
+          -448
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "{{ $json.sql }}",
+          "options": {}
+        },
+        "id": "1829247d-a662-4883-8dc5-3851c39b3782",
+        "name": "Select Config",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          272,
+          -448
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const items = $input.all();\nconst DEFAULT = { enabled: false, toleransi: 30, times: [{ jam: '10:00', aktif: true }] };\nlet config = DEFAULT;\nif (items.length && items[0].json && typeof items[0].json.value === 'string') {\n  try { config = { ...DEFAULT, ...JSON.parse(items[0].json.value) }; } catch (_) {}\n  if (!Array.isArray(config.times)) config.times = [];\n}\n\nreturn [{ json: { ok: true, config } }];"
+        },
+        "id": "f3eb9517-b0c6-4821-bcc9-80456f86a182",
+        "name": "Format Config",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          496,
+          -448
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ ok: true, config: $json.config }) }}",
+          "options": {
+            "responseCode": 200
+          }
+        },
+        "id": "e9a6be89-8788-4f3b-8d29-8cb09e6469f4",
+        "name": "Respond Get",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          704,
+          -448
+        ]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "kontrol-absen",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "69437386-85f2-4d8a-a16c-7a62377fe767",
+        "name": "Webhook POST",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -176,
+          -128
+        ],
+        "webhookId": "kontrol-absen-post-0001"
+      },
+      {
+        "parameters": {
+          "jsCode": "const input = $input.first().json;\nconst body = input.body || {};\nconst hdrs = input.headers || {};\nconst instId = String(body.instansi_id || 'bapperida').replace(/'/g, \"''\");\n\nconst times = Array.isArray(body.times) ? body.times.map(t => ({\n  jam: String(t.jam || '').slice(0, 5),\n  aktif: t.aktif !== false\n})) : [];\nconst value = JSON.stringify({\n  enabled: !!body.enabled,\n  toleransi: parseInt(body.toleransi, 10) || 30,\n  times\n});\n\nconst auth = String(hdrs.authorization || hdrs.Authorization || '').replace(/^Bearer\\s+/i, '').trim();\nconst parts = auth.split('_');\nconst userId = parseInt(parts[1]) || 0;\n\nconst sql = `SELECT COALESCE((SELECT is_admin FROM user_list WHERE id = ${userId}), false) AS is_admin, '${value.replace(/'/g, \"''\")}' AS value, '${instId}' AS inst_id`;\nreturn [{ json: { sql } }];"
+        },
+        "id": "522abeb4-b940-434f-8e76-b13b8d705f09",
+        "name": "Prepare Auth Check",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          48,
+          -128
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "{{ $json.sql }}",
+          "options": {}
+        },
+        "id": "7f0384d3-cbb9-4c95-8aec-6575b7180629",
+        "name": "Check Admin",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          272,
+          -128
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "cond-admin",
+                "leftValue": "={{ $json.is_admin }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "bb4b0860-77a8-43ae-af6b-4c31f1a9dde0",
+        "name": "Is Admin?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          496,
+          -128
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const j = $input.first().json;\nconst instId = String(j.inst_id || 'bapperida').replace(/'/g, \"''\");\nconst value = String(j.value || '').replace(/'/g, \"''\");\n\nconst sql = `INSERT INTO pengaturan (key, value, instansi_id) VALUES ('kontrol_absen', '${value}', '${instId}') ON CONFLICT (key, instansi_id) DO UPDATE SET value = EXCLUDED.value RETURNING key`;\nreturn [{ json: { sql } }];"
+        },
+        "id": "63306940-083e-49a1-9375-1b9034c7f28b",
+        "name": "Build Upsert",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          704,
+          -208
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "{{ $json.sql }}",
+          "options": {}
+        },
+        "id": "0428bf1f-a344-4fbf-9356-cd0f183f82c5",
+        "name": "Save Config",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          928,
+          -208
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ ok: true }) }}",
+          "options": {
+            "responseCode": 200
+          }
+        },
+        "id": "017376d7-b681-4c30-bc87-65e3f91fc057",
+        "name": "Respond Post",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1152,
+          -208
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ ok: false, error: 'Admin access required' }) }}",
+          "options": {
+            "responseCode": 403
+          }
+        },
+        "id": "cb5519d7-329e-4da1-bb22-7732658bf52b",
+        "name": "Reject Not Admin",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          704,
+          -16
+        ]
+      }
+    ],
+    "connections": {
+      "Webhook GET": {
+        "main": [
+          [
+            {
+              "node": "Get Instansi",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Instansi": {
+        "main": [
+          [
+            {
+              "node": "Select Config",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Select Config": {
+        "main": [
+          [
+            {
+              "node": "Format Config",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Config": {
+        "main": [
+          [
+            {
+              "node": "Respond Get",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook POST": {
+        "main": [
+          [
+            {
+              "node": "Prepare Auth Check",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Auth Check": {
+        "main": [
+          [
+            {
+              "node": "Check Admin",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Admin": {
+        "main": [
+          [
+            {
+              "node": "Is Admin?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Is Admin?": {
+        "main": [
+          [
+            {
+              "node": "Build Upsert",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Reject Not Admin",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Upsert": {
+        "main": [
+          [
+            {
+              "node": "Save Config",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Save Config": {
+        "main": [
+          [
+            {
+              "node": "Respond Post",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Achmad Aqil Susanto",
+    "name": "Version 84f054f0",
+    "description": "",
+    "autosaved": true,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-08-11T13:34:22.593Z",
+        "id": 1484,
+        "workflowId": "HUOXv71CWnU26BHA",
+        "versionId": "84f054f0-0a31-4515-aede-0bca5a902a2d",
+        "event": "activated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    ]
+  }
+}

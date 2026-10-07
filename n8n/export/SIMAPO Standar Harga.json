@@ -1,0 +1,431 @@
+{
+  "updatedAt": "2026-07-20T11:31:39.788Z",
+  "createdAt": "2026-07-20T11:31:26.793Z",
+  "id": "FAjaP6XGO9gDkTCC",
+  "name": "SIMAPO Standar Harga",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "path": "simapo-standar-harga-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "071abeec-34c1-4aaf-8711-cca97041c82f",
+      "name": "WH Standar Harga List",
+      "webhookId": "simapo-standar-harga-list"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simapo-standar-harga-save",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        208
+      ],
+      "id": "a71f9dec-da25-47b1-95c0-f1d4e4d51e28",
+      "name": "WH Standar Harga Save",
+      "webhookId": "simapo-standar-harga-save"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT id, nama_barang as nama, satuan, harga_satuan as harga, sheet_name FROM \"SIMAPO\".standar_harga ORDER BY nama) t",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        304,
+        0
+      ],
+      "id": "08af8a4b-9256-4a0f-ad42-7a6270d60e14",
+      "name": "PG Standar Harga List",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"SIMAPO\".standar_harga (nama_barang, satuan, harga_satuan, sheet_name) SELECT (r->>'nama')::varchar, (r->>'satuan')::varchar, (r->>'harga')::numeric, (r->>'sheet' || '')::varchar FROM jsonb_array_elements($json.body.rows) r ON CONFLICT DO NOTHING RETURNING (SELECT count(*) FROM \"SIMAPO\".standar_harga) as total",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        304,
+        208
+      ],
+      "id": "14526714-b944-422b-8106-635607dc3b76",
+      "name": "PG Standar Harga Save",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        608,
+        0
+      ],
+      "id": "29a8f8ec-15d7-430d-a33b-c71ab3fd63e9",
+      "name": "Res Standar Harga List"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        608,
+        208
+      ],
+      "id": "4fe850c1-de29-4a3e-90c4-774e3931c88f",
+      "name": "Res Standar Harga Save"
+    }
+  ],
+  "connections": {
+    "WH Standar Harga List": {
+      "main": [
+        [
+          {
+            "node": "PG Standar Harga List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Standar Harga List": {
+      "main": [
+        [
+          {
+            "node": "Res Standar Harga List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Standar Harga Save": {
+      "main": [
+        [
+          {
+            "node": "PG Standar Harga Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Standar Harga Save": {
+      "main": [
+        [
+          {
+            "node": "Res Standar Harga Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "f49bdb28-e0eb-4760-842e-f40e05d5a1db",
+  "activeVersionId": "f49bdb28-e0eb-4760-842e-f40e05d5a1db",
+  "versionCounter": 7,
+  "triggerCount": 2,
+  "shared": [
+    {
+      "updatedAt": "2026-07-20T11:31:26.798Z",
+      "createdAt": "2026-07-20T11:31:26.798Z",
+      "role": "workflow:owner",
+      "workflowId": "FAjaP6XGO9gDkTCC",
+      "projectId": "ZE0tgWH81scm4zQD",
+      "project": {
+        "updatedAt": "2026-03-12T15:42:44.257Z",
+        "createdAt": "2026-03-12T15:19:34.808Z",
+        "id": "ZE0tgWH81scm4zQD",
+        "name": "Achmad Aqil Susanto <ahmadagilsusanto@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-20T11:31:28.000Z",
+    "createdAt": "2026-07-20T11:31:26.799Z",
+    "versionId": "f49bdb28-e0eb-4760-842e-f40e05d5a1db",
+    "workflowId": "FAjaP6XGO9gDkTCC",
+    "nodes": [
+      {
+        "parameters": {
+          "path": "simapo-standar-harga-list",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          0
+        ],
+        "id": "071abeec-34c1-4aaf-8711-cca97041c82f",
+        "name": "WH Standar Harga List",
+        "webhookId": "simapo-standar-harga-list"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "simapo-standar-harga-save",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          208
+        ],
+        "id": "a71f9dec-da25-47b1-95c0-f1d4e4d51e28",
+        "name": "WH Standar Harga Save",
+        "webhookId": "simapo-standar-harga-save"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT id, nama_barang as nama, satuan, harga_satuan as harga, sheet_name FROM \"SIMAPO\".standar_harga ORDER BY nama) t",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          304,
+          0
+        ],
+        "id": "08af8a4b-9256-4a0f-ad42-7a6270d60e14",
+        "name": "PG Standar Harga List",
+        "alwaysOutputData": true,
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO \"SIMAPO\".standar_harga (nama_barang, satuan, harga_satuan, sheet_name) SELECT (r->>'nama')::varchar, (r->>'satuan')::varchar, (r->>'harga')::numeric, (r->>'sheet' || '')::varchar FROM jsonb_array_elements($json.body.rows) r ON CONFLICT DO NOTHING RETURNING (SELECT count(*) FROM \"SIMAPO\".standar_harga) as total",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          304,
+          208
+        ],
+        "id": "14526714-b944-422b-8106-635607dc3b76",
+        "name": "PG Standar Harga Save",
+        "alwaysOutputData": true,
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          608,
+          0
+        ],
+        "id": "29a8f8ec-15d7-430d-a33b-c71ab3fd63e9",
+        "name": "Res Standar Harga List"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          608,
+          208
+        ],
+        "id": "4fe850c1-de29-4a3e-90c4-774e3931c88f",
+        "name": "Res Standar Harga Save"
+      }
+    ],
+    "connections": {
+      "WH Standar Harga List": {
+        "main": [
+          [
+            {
+              "node": "PG Standar Harga List",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Standar Harga List": {
+        "main": [
+          [
+            {
+              "node": "Res Standar Harga List",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WH Standar Harga Save": {
+        "main": [
+          [
+            {
+              "node": "PG Standar Harga Save",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Standar Harga Save": {
+        "main": [
+          [
+            {
+              "node": "Res Standar Harga Save",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Achmad Aqil Susanto",
+    "name": "Version f49bdb28",
+    "description": "",
+    "autosaved": true,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-07-20T11:31:28.703Z",
+        "id": 1453,
+        "workflowId": "FAjaP6XGO9gDkTCC",
+        "versionId": "f49bdb28-e0eb-4760-842e-f40e05d5a1db",
+        "event": "activated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      },
+      {
+        "createdAt": "2026-07-20T11:31:39.856Z",
+        "id": 1455,
+        "workflowId": "FAjaP6XGO9gDkTCC",
+        "versionId": "f49bdb28-e0eb-4760-842e-f40e05d5a1db",
+        "event": "activated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      },
+      {
+        "createdAt": "2026-07-20T11:31:39.827Z",
+        "id": 1454,
+        "workflowId": "FAjaP6XGO9gDkTCC",
+        "versionId": "f49bdb28-e0eb-4760-842e-f40e05d5a1db",
+        "event": "deactivated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    ]
+  }
+}

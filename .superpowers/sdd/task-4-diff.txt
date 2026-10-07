@@ -1,0 +1,233 @@
+﻿
+d7aac6d fix(aset): bastSubmit gagal saat respons kosong ΓÇö cegah false success (review Task 4)
+800014d feat(aset): tab Pengaturan (P1 sekda/kepala + kosongkan) dan entri endpoint aset data
+ index.html        | 31 +++++++++++++++++++++++++++++++
+ js/config.js      |  7 +++++++
+ js/simapo-bast.js |  5 ++++-
+ js/simapo-ext.js  | 50 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 92 insertions(+), 1 deletion(-)
+diff --git a/index.html b/index.html
+index ff0ac2d..06b50a9 100644
+--- a/index.html
++++ b/index.html
+@@ -1548,20 +1548,21 @@
+             <button class="sa-tab" id="sa-tab-standar-harga"    onclick="switchSATab('standar-harga')"    data-group="aset">≡ƒôï Standar Harga</button>
+             <button class="sa-tab" id="sa-tab-bast"    onclick="switchSATab('bast')"    data-group="aset">≡ƒôä Serah Terima (BAST)</button>
+             <!-- Transaksi -->
+             <button class="sa-tab active" id="sa-tab-pinjam"  onclick="switchSATab('pinjam')" data-group="trans">≡ƒôï Pinjaman</button>
+             <button class="sa-tab"        id="sa-tab-tiket"  onclick="switchSATab('tiket')"  data-group="trans">≡ƒÜ¿ Tiket</button>
+             <button class="sa-tab"        id="sa-tab-penerimaan" onclick="switchSATab('penerimaan')" data-group="trans">≡ƒôÑ Penerimaan</button>
+             <button class="sa-tab"        id="sa-tab-pemeliharaan" onclick="switchSATab('pemeliharaan')" data-group="trans">≡ƒöº Pemeliharaan</button>
+             <button class="sa-tab"        id="sa-tab-bku"    onclick="switchSATab('bku')"    data-group="trans">≡ƒÆ░ BKU</button>
+             <!-- Referensi -->
+             <button class="sa-tab"        id="sa-tab-pks"    onclick="switchSATab('pks')"    data-group="ref">≡ƒôÉ PKS</button>
++            <button class="sa-tab"        id="sa-tab-pengaturan" onclick="switchSATab('pengaturan')" data-group="ref">ΓÜÖ∩╕Å Pengaturan</button>
+           </div>
+         </div>
+         <style>
+           .sa-tab{background:transparent;color:var(--muted);border:none;padding:9px 14px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;transition:all .25s;white-space:nowrap;font-family:inherit;}
+           .sa-tab:hover{color:var(--white);background:rgba(255,255,255,0.06);}
+           .sa-tab.active{background:var(--card-bg,#1a2332);color:var(--gold);box-shadow:0 3px 10px rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);}
+           .sa-tab.hidden{display:none;}
+           .sa-group-btn{flex:1;padding:8px;background:rgba(255,255,255,0.04);color:var(--muted);border:1px solid rgba(255,255,255,0.08);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit;}
+           .sa-group-btn.active{background:rgba(201,168,76,0.15);color:var(--gold);border-color:rgba(201,168,76,0.4);}
+           .sa-group-btn:hover{color:var(--white);background:rgba(255,255,255,0.08);}
+@@ -1842,20 +1843,50 @@
+             <div id="pksParentSelectWrap" style="display:none;margin-bottom:10px;">
+               <select class="form-input" id="pksParentSelect">
+                 <option value="">-- Pilih Parent --</option>
+               </select>
+             </div>
+             <input type="text" id="pksSearch" class="form-input" placeholder="≡ƒöì Cari kode atau nama..." oninput="filterPKS(this.value)" style="margin-bottom:10px;">
+             <div id="adminPKSList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
+           </div>
+         </div>
+ 
++        <!-- [TAB] PENGATURAN -->
++        <div id="sa-sect-pengaturan" class="sa-sect" style="display:none">
++          <div class="card glass-card">
++            <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
++              <span>ΓÜÖ∩╕Å Pengaturan Aset</span>
++              <button class="btn-sm-admin" onclick="loadSAPengaturan()" style="background:var(--primary)">≡ƒöä</button>
++            </div>
++            <div style="font-size:10px;color:var(--muted);margin-bottom:10px;">Data Pihak Pertama untuk BAST. Mode Sekda dipakai saat Pihak Kedua = NIP Sekda; selain itu mode Kepala (NIP di bawah).</div>
++            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
++              <div class="form-group"><label class="form-label">Nama Sekretaris Daerah</label><input class="form-input" id="setSekdaNama" placeholder="Yermia Ndapa Doda, S.Sos"></div>
++              <div class="form-group"><label class="form-label">NIP Sekretaris Daerah</label><input class="form-input" id="setSekdaNip" placeholder="196803241999031003"></div>
++              <div class="form-group"><label class="form-label">Jabatan Sekretaris Daerah</label><input class="form-input" id="setSekdaJabatan" placeholder="Sekretaris Daerah Kabupaten Sumba Barat"></div>
++              <div class="form-group"><label class="form-label">Alamat Sekretaris Daerah</label><input class="form-input" id="setSekdaAlamat" placeholder="Waikabubak"></div>
++              <div class="form-group"><label class="form-label">NIP Pihak Pertama (Kepala)</label><input class="form-input" id="setP1Nip" placeholder="197211022001121001"></div>
++              <div class="form-group"><label class="form-label">Jabatan Pihak Pertama</label><input class="form-input" id="setP1Jabatan" placeholder="Kepala Badan Perencanaan Kabupaten Sumba Barat"></div>
++              <div class="form-group" style="grid-column:1/-1;"><label class="form-label">Alamat Pihak Pertama</label><input class="form-input" id="setP1Alamat" placeholder="Waikabubak"></div>
++            </div>
++            <button class="btn-primary" onclick="saveSAPengaturan()" style="width:100%;margin-top:12px;">
++              <div class="btn-inner"><span>≡ƒÆ╛</span> Simpan Pengaturan</div>
++            </button>
++            <hr style="border-color:rgba(255,255,255,0.08);margin:18px 0;">
++            <div class="form-label" style="color:#f87171;">ΓÜá∩╕Å Zona Bahaya</div>
++            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Kosongkan seluruh data aset instansi ini (katalog + unit + riwayat transaksi yang merujuknya). Pegawai, ruangan, kategori, pengaturan, dan arsip BAST TIDAK terhapus.</div>
++            <div style="display:flex;gap:8px;">
++              <input class="form-input" id="kosongkanKonfirmasi" placeholder="Ketik HAPUS untuk mengaktifkan">
++              <button class="btn-sm-admin" onclick="kosongkanAset()" style="background:rgba(248,113,113,0.2);color:#f87171;white-space:nowrap;">≡ƒùæ Kosongkan</button>
++            </div>
++          </div>
++        </div>
++
+         <!-- [TAB] BKU -->
+         <div id="sa-sect-bku" class="sa-sect" style="display:none">
+           <div class="card glass-card">
+             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+               <span>≡ƒÆ░ Buku Kas Umum</span>
+               <div style="display:flex;gap:6px;">
+                 <button class="btn-sm-admin" onclick="exportBKU()" style="background:rgba(59,130,246,0.2);">≡ƒôÑ Export BKU</button>
+                 <button class="btn-sm-admin" onclick="document.getElementById('bkuExcelFile').click()" style="background:rgba(34,197,94,0.2);">≡ƒôñ Import Excel</button>
+                 <button class="btn-sm-admin" onclick="loadAdminBKU()" style="background:var(--primary)">≡ƒöä</button>
+               </div>
+diff --git a/js/config.js b/js/config.js
+index 055b4f9..99b9cb3 100644
+--- a/js/config.js
++++ b/js/config.js
+@@ -268,20 +268,27 @@ const P = {
+   gpsTrack: isTest ? '/webhook-test/gps-track' : '/webhook/gps-track',
+   pksList: isTest ? '/webhook-test/simapo-pks-list' : '/webhook/simapo-pks-list',
+   pksSave: isTest ? '/webhook-test/simapo-pks-save' : '/webhook/simapo-pks-save',
+   pksDelete: isTest ? '/webhook-test/simapo-pks-delete' : '/webhook/simapo-pks-delete',
+   simapoBastInit: isTest ? '/webhook-test/simapo-bast-init' : '/webhook/simapo-bast-init',
+   simapoBastList: isTest ? '/webhook-test/simapo-bast-list' : '/webhook/simapo-bast-list',
+   simapoBastAssign: isTest ? '/webhook-test/simapo-bast-assign' : '/webhook/simapo-bast-assign',
+   simapoBastRuangan: isTest ? '/webhook-test/simapo-bast-ruangan' : '/webhook/simapo-bast-ruangan',
+   simapoBastSave: isTest ? '/webhook-test/simapo-bast-save' : '/webhook/simapo-bast-save',
+   simapoBastHistory: isTest ? '/webhook-test/simapo-bast-history' : '/webhook/simapo-bast-history',
++  simapoAsetMassal: isTest ? '/webhook-test/simapo-aset-massal' : '/webhook/simapo-aset-massal',
++  simapoAsetKib: isTest ? '/webhook-test/simapo-aset-kib' : '/webhook/simapo-aset-kib',
++  simapoAsetSummary: isTest ? '/webhook-test/simapo-aset-summary' : '/webhook/simapo-aset-summary',
++  simapoPengaturanGet: isTest ? '/webhook-test/simapo-pengaturan-get' : '/webhook/simapo-pengaturan-get',
++  simapoPengaturanSet: isTest ? '/webhook-test/simapo-pengaturan-set' : '/webhook/simapo-pengaturan-set',
++  simapoTtdGet: isTest ? '/webhook-test/simapo-ttd-get' : '/webhook/simapo-ttd-get',
++  simapoAsetKosongkan: isTest ? '/webhook-test/simapo-aset-kosongkan' : '/webhook/simapo-aset-kosongkan',
+ };
+ 
+ function getScopedInstansiId() {
+   const p = window.userProfile || {};
+   const myNip = p.nip || localStorage.getItem('MY_NIP');
+   const isSA = _isSuperAdmin();
+ 
+   const currentTab = localStorage.getItem('absen_last_tab') || 'absen';
+   if (isSA) {
+     if (currentTab === 'rekap') {
+diff --git a/js/simapo-bast.js b/js/simapo-bast.js
+index 2ccaf88..7016231 100644
+--- a/js/simapo-bast.js
++++ b/js/simapo-bast.js
+@@ -18,21 +18,24 @@ window.bastSubmit = async function(endpoint, payload, opts = {}) {
+       method: 'POST',
+       body: JSON.stringify(payload),
+       headers: { [BAST_API_HEADER]: BAST_API_KEY }
+     });
+   } catch (e) {
+     console.error('[BAST] Request gagal:', endpoint, e);
+     showToast('Gagal menghubungi server.', 'error');
+     return false;
+   }
+   try { body = await res.json(); } catch (_) {}
+-  const ok = res.ok && (typeof isApiSuccess === 'function' ? isApiSuccess(body, true) : true);
++  // ponytail: gate/guard instance balas 200 + body kosong; apiFetch membungkusnya jadi sentinel 'Empty N8n Response' (bukan null) ΓåÆ wajib gagal
++  const empty = !!(body && body.message === 'Empty N8n Response');
++  if (empty) body.message = 'Respons kosong dari server ΓÇö permintaan gagal atau ditolak';
++  const ok = res.ok && body !== null && !empty && (typeof isApiSuccess === 'function' ? isApiSuccess(body, true) : true);
+   if (!ok) {
+     console.error('[BAST] Ditolak server:', endpoint, res.status, body);
+     showToast(typeof getApiErrorMsg === 'function' ? getApiErrorMsg(body, errorMsg) : errorMsg, 'error');
+     return false;
+   }
+   if (successMsg) showToast(successMsg, 'success');
+   if (typeof opts.onSuccess === 'function') opts.onSuccess();
+   return true;
+ };
+ 
+diff --git a/js/simapo-ext.js b/js/simapo-ext.js
+index 931158e..69b48df 100644
+--- a/js/simapo-ext.js
++++ b/js/simapo-ext.js
+@@ -141,20 +141,21 @@ window.switchSATab = function(name, force = false) {
+   else if (name === 'master') window.loadAdminSimapoMaster(force);
+   else if (name === 'mutasi') { window.loadMutasiRiwayat(force); window.populateMutasiBarangSelect(); }
+   else if (name === 'opname') window.loadOpnameForm(force);
+   else if (name === 'kat') window.loadSimapoKategori(true, force);
+   else if (name === 'standar-harga') window.loadStandarHarga();
+   else if (name === 'penerimaan') { window.loadAdminPenerimaan(force); window.populateStandarHargaDatalist(); }
+   else if (name === 'pemeliharaan') { window.loadAdminPemeliharaan(force); window.populatePemeliharaanBarang(); }
+   else if (name === 'bku') window.loadAdminBKU(force);
+   else if (name === 'pks') window.loadAdminPKS(force);
+   else if (name === 'bast') window.loadAdminBast(force);
++  else if (name === 'pengaturan') window.loadSAPengaturan();
+ };
+ 
+ /* ΓöÇΓöÇΓöÇ HELPER: SHOW SHIMMER ΓöÇΓöÇ */
+ window.showAdminSimapoShimmer = function(elId) {
+   const el = document.getElementById(elId);
+   if (!el) return;
+   el.innerHTML = `
+     <div class="shimmer-wrapper" style="width:100%;">
+       <div class="shimmer sh-line" style="height:80px; border-radius:12px; margin-bottom:10px;"></div>
+       <div class="shimmer sh-line" style="height:80px; border-radius:12px; margin-bottom:10px;"></div>
+@@ -1822,10 +1823,59 @@ window.deletePKS = async function(id) {
+     if (res.ok) {
+       showToast('Dihapus', 'success');
+       window.loadAdminPKS(true);
+     } else {
+       showToast('Gagal menghapus', 'error');
+     }
+   } catch (e) {
+     showToast('Error: ' + e.message, 'error');
+   }
+ };
++
++/* ΓöÇΓöÇΓöÇ PENGATURAN (P1) + KOSONGKAN ASET ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
++window.bastGet = async function(endpoint) {
++  try {
++    const res = await apiFetch(endpoint, { headers: { [BAST_API_HEADER]: BAST_API_KEY } });
++    if (!res.ok) return null;
++    const body = await res.json();
++    return (body && body.data) || null;
++  } catch (e) {
++    console.error('[SIMAPO] GET gagal:', endpoint, e);
++    return null;
++  }
++};
++
++window.loadSAPengaturan = async function() {
++  const data = (await window.bastGet(P.simapoPengaturanGet)) || {};
++  const fill = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
++  fill('setSekdaNama', data.sekda_nama);
++  fill('setSekdaNip', data.sekda_nip);
++  fill('setSekdaJabatan', data.sekda_jabatan);
++  fill('setSekdaAlamat', data.sekda_alamat);
++  fill('setP1Nip', data.p1_id);
++  fill('setP1Jabatan', data.p1_jabatan);
++  fill('setP1Alamat', data.p1_alamat);
++};
++
++window.saveSAPengaturan = async function() {
++  const v = id => ((document.getElementById(id) || {}).value || '').trim();
++  await window.bastSubmit(P.simapoPengaturanSet, {
++    sekda_nama: v('setSekdaNama'),
++    sekda_nip: v('setSekdaNip'),
++    sekda_jabatan: v('setSekdaJabatan'),
++    sekda_alamat: v('setSekdaAlamat'),
++    p1_id: v('setP1Nip'),
++    p1_jabatan: v('setP1Jabatan'),
++    p1_alamat: v('setP1Alamat')
++  }, { successMsg: 'Pengaturan disimpan', errorMsg: 'Gagal menyimpan pengaturan.' });
++};
++
++window.kosongkanAset = async function() {
++  const inp = document.getElementById('kosongkanKonfirmasi');
++  if (!inp || inp.value.trim() !== 'HAPUS') {
++    showToast('Ketik HAPUS dulu di kolom konfirmasi.', 'error');
++    return;
++  }
++  const ok = await window.bastSubmit(P.simapoAsetKosongkan, { confirm: 'HAPUS' },
++    { successMsg: 'Data aset dikosongkan', errorMsg: 'Gagal mengosongkan data aset.' });
++  if (ok) inp.value = '';
++};

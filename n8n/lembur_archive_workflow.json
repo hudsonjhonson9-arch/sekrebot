@@ -1,0 +1,258 @@
+{
+  "name": "Rekap Lembur Archive Nodes",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lembur-save",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        },
+        "authentication": "none"
+      },
+      "name": "Webhook: lemburSave",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        800
+      ],
+      "webhookId": "lembur-save-id",
+      "id": "aa000001-0000-0000-0000-000000000001",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ (() => { const b = $json.body; return `CREATE TABLE IF NOT EXISTS rekap_lembur (id SERIAL PRIMARY KEY, judul TEXT NOT NULL, nomor_surat TEXT, tanggal_dari DATE NOT NULL, tanggal_sampai DATE NOT NULL, tanggal_list TEXT[], pegawai_nips TEXT NOT NULL, pegawai_names TEXT NOT NULL, data_json JSONB NOT NULL, instansi_id TEXT, saved_by_nip TEXT, saved_by_nama TEXT, created_at TIMESTAMP DEFAULT NOW()); INSERT INTO rekap_lembur (judul, nomor_surat, tanggal_dari, tanggal_sampai, tanggal_list, pegawai_nips, pegawai_names, data_json, instansi_id, saved_by_nip, saved_by_nama) VALUES ('${(b.judul || '').replace(/'/g, \"''\")}', '${(b.nomor_surat || '').replace(/'/g, \"''\")}', '${b.tanggal_dari}', '${b.tanggal_sampai}', ARRAY[${(b.tanggal_list || []).map(d => \"'\" + d + \"'\").join(',')}]::TEXT[], '${(b.pegawai_nips || '').replace(/'/g, \"''\")}', '${(b.pegawai_names || '').replace(/'/g, \"''\")}', '${JSON.stringify(b.data_json || []).replace(/'/g, \"''\")}', '${(b.instansi_id || '').replace(/'/g, \"''\")}', '${b.saved_by_nip || ''}', '${(b.saved_by_nama || '').replace(/'/g, \"''\")}') RETURNING *;`; })() }}",
+        "options": {}
+      },
+      "name": "Postgres: Save Rekap Lembur",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -144,
+        800
+      ],
+      "id": "aa000002-0000-0000-0000-000000000002",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "lembur-archive-list",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        },
+        "authentication": "none"
+      },
+      "name": "Webhook: lemburArchiveList",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        1000
+      ],
+      "webhookId": "lembur-archive-list-id",
+      "id": "aa000003-0000-0000-0000-000000000003",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ (() => { const q = $json.query || {}; const instansi = (q.instansi_id || '').replace(/'/g, \"''\"); const limit = parseInt(q.limit) || 30; const withData = q.with_data === 'true' || q.with_data === '1'; const id = q.id; if (id) { return `SELECT * FROM rekap_lembur WHERE id = ${parseInt(id)};`; } const cols = withData ? '*' : 'id, judul, nomor_surat, tanggal_dari, tanggal_sampai, pegawai_nips, pegawai_names, instansi_id, saved_by_nip, saved_by_nama, created_at'; const where = instansi ? `WHERE instansi_id = '${instansi}'` : ''; return `SELECT ${cols} FROM rekap_lembur ${where} ORDER BY created_at DESC LIMIT ${limit};`; })() }}",
+        "options": {}
+      },
+      "name": "Postgres: List Rekap Lembur",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -144,
+        1000
+      ],
+      "id": "aa000004-0000-0000-0000-000000000004",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lembur-archive-delete",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        },
+        "authentication": "none"
+      },
+      "name": "Webhook: lemburArchiveDelete",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        1200
+      ],
+      "webhookId": "lembur-archive-delete-id",
+      "id": "aa000005-0000-0000-0000-000000000005",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "r01tQvSvzADocRWE",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ (`DELETE FROM rekap_lembur WHERE id = ${parseInt($json.body.id)} RETURNING id;`).toString().replace(/'/g, \"''\") }}",
+        "options": {}
+      },
+      "name": "Postgres: Delete Rekap Lembur",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -144,
+        1200
+      ],
+      "id": "aa000006-0000-0000-0000-000000000006",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, data: $input.all().map(i => i.json) } }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Respond Success (Lembur Archive)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        144,
+        1000
+      ],
+      "id": "aa000007-0000-0000-0000-000000000007"
+    }
+  ],
+  "connections": {
+    "Webhook: lemburSave": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Save Rekap Lembur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: Save Rekap Lembur": {
+      "main": [
+        [
+          {
+            "node": "Respond Success (Lembur Archive)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: lemburArchiveList": {
+      "main": [
+        [
+          {
+            "node": "Postgres: List Rekap Lembur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: List Rekap Lembur": {
+      "main": [
+        [
+          {
+            "node": "Respond Success (Lembur Archive)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: lemburArchiveDelete": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Delete Rekap Lembur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: Delete Rekap Lembur": {
+      "main": [
+        [
+          {
+            "node": "Respond Success (Lembur Archive)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HADIR — UI/UX Mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --navy: #0a1628;
+      --navy-light: #112240;
+      --gold: #c9a84c;
+      --gold-dim: rgba(201, 168, 76, .15);
+      --white: #f0f4ff;
+      --muted: #7a90b8;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #60a5fa;
+      --card-bg: rgba(17, 34, 64, .85);
+      --border: rgba(201, 168, 76, .2);
+      --admin: #a78bfa;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #060d1a;
+      color: var(--white);
+      min-height: 100vh;
+    }
+
+    /* ═══ PAGE LAYOUT ═══ */
+    .page-header {
+      background: linear-gradient(135deg, #0d1b2a 0%, #0a1628 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .page-header h1 { font-size: 20px; font-weight: 800; color: var(--gold); }
+    .page-header p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .screen-nav {
+      display: flex; gap: 8px; padding: 16px 32px;
+      background: #0a1628; border-bottom: 1px solid rgba(255,255,255,.05);
+      position: sticky; top: 68px; z-index: 99;
+      overflow-x: auto;
+    }
+    .screen-nav a {
+      padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700;
+      color: var(--muted); text-decoration: none; white-space: nowrap;
+      border: 1px solid transparent; transition: all .2s;
+    }
+    .screen-nav a:hover, .screen-nav a.active {
+      color: var(--gold); background: var(--gold-dim); border-color: var(--border);
+    }
+
+    .screens { padding: 32px; max-width: 1200px; margin: 0 auto; }
+
+    .screen-section { margin-bottom: 60px; }
+    .screen-section > h2 {
+      font-size: 14px; font-weight: 700; color: var(--gold);
+      text-transform: uppercase; letter-spacing: .1em;
+      margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+    }
+    .screen-section > h2::before {
+      content: ''; width: 4px; height: 16px; background: var(--gold);
+      border-radius: 2px;
+    }
+
+    /* ═══ PHONE FRAME ═══ */
+    .phone-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 32px; align-items: start;
+    }
+    .phone-frame {
+      width: 100%; max-width: 380px; margin: 0 auto;
+      background: var(--navy);
+      border: 2px solid rgba(201,168,76,.3);
+      border-radius: 32px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5), 0 0 40px rgba(201,168,76,.08);
+      position: relative;
+    }
+    .phone-notch {
+      height: 28px; background: #000; display: flex;
+      align-items: center; justify-content: center;
+    }
+    .phone-notch::after {
+      content: ''; width: 80px; height: 20px; background: #1a1a1a;
+      border-radius: 12px;
+    }
+    .phone-screen { min-height: 600px; position: relative; overflow-y: auto; max-height: 700px; }
+    .phone-label {
+      text-align: center; font-size: 12px; font-weight: 700;
+      color: var(--muted); margin-top: 12px; text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    /* ═══ COMPONENT STYLES (mirrors actual app) ═══ */
+
+    /* Header */
+    .app-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px; border-bottom: 1px solid var(--border);
+    }
+    .logo-sm {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: var(--gold-dim); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; font-size: 16px;
+    }
+    .org-label { font-size: 9px; font-weight: 700; color: var(--gold); letter-spacing: .12em; text-transform: uppercase; }
+    .org-name { font-size: 14px; font-weight: 800; color: var(--white); }
+
+    /* Clock Card */
+    .clock-card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 16px; padding: 16px; margin: 12px;
+      backdrop-filter: blur(12px); position: relative; overflow: hidden;
+    }
+    .clock-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 2px; background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+    .clock-label { font-size: 8px; font-weight: 600; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
+    .clock-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 34px; font-weight: 700; color: var(--white); letter-spacing: -1.5px; line-height: 1.1;
+    }
+    .clock-time span { color: var(--gold); }
+    .clock-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .clock-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--gold-dim); border: 1px solid var(--border);
+      border-radius: 20px; padding: 2px 9px; font-size: 9px; font-weight: 600; color: var(--gold); margin-top: 5px;
+    }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); animation: blink 1.5s infinite; }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+    .clock-loc {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.25);
+      border-radius: 20px; padding: 2px 9px; font-size: 9px; font-weight: 600; color: var(--success); margin-top: 5px;
+    }
+
+    .clock-batas {
+      margin-top: 6px; background: var(--gold-dim); border: 1px solid rgba(201,168,76,.35);
+      border-radius: 8px; padding: 5px 8px; display: flex; align-items: center; gap: 6px;
+      width: 100%;
+    }
+    .clock-batas span { font-size: 12px; font-weight: 800; color: var(--gold); }
+
+    /* User Card */
+    .user-card {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 14px; padding: 12px 14px; margin: 0 12px 10px;
+      backdrop-filter: blur(12px);
+    }
+    .avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), #9b6e1a);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 800; color: var(--navy); flex-shrink: 0;
+    }
+    .user-name { font-size: 13px; font-weight: 700; color: var(--white); }
+    .user-jab { font-size: 10px; color: var(--muted); }
+    .user-meta { font-size: 9px; color: var(--muted); margin-top: 2px; }
+    .badge {
+      font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+      text-transform: uppercase; letter-spacing: .03em;
+    }
+    .badge-aktif { background: rgba(34,197,94,.12); color: var(--success); border: 1px solid rgba(34,197,94,.3); }
+
+    /* GPS Card */
+    .card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px; margin: 0 12px 10px;
+      backdrop-filter: blur(12px);
+    }
+    .card-title {
+      font-size: 12px; font-weight: 700; color: var(--white);
+      margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+    }
+    .gps-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 8px; }
+    .gps-box {
+      background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.05);
+      border-radius: 10px; padding: 8px; text-align: center;
+    }
+    .gps-key { font-size: 7px; font-weight: 800; color: var(--muted); letter-spacing: .5px; }
+    .gps-val {
+      font-size: 12px; font-weight: 700; color: var(--white);
+      font-family: 'JetBrains Mono', monospace; margin-top: 3px;
+    }
+    .gps-address {
+      background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.05);
+      border-radius: 10px; padding: 8px; text-align: center;
+    }
+    .gps-address .gps-val { color: var(--gold); white-space: normal; line-height: 1.4; font-size: 11px; }
+    .acc-bar { height: 4px; background: rgba(255,255,255,.1); border-radius: 4px; margin-top: 8px; overflow: hidden; }
+    .acc-fill { height: 100%; background: linear-gradient(90deg, var(--danger), var(--warning), var(--success)); border-radius: 4px; transition: width .5s; }
+
+    /* WiFi Bar */
+    .wifi-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(34,197,94,.06); border: 1px solid rgba(34,197,94,.2);
+      border-radius: 12px; padding: 10px 12px; margin: 0 12px 10px;
+    }
+    .wifi-icon { font-size: 20px; }
+    .wifi-status { font-size: 11px; font-weight: 700; color: var(--success); }
+    .wifi-detail { font-size: 9px; color: var(--muted); }
+
+    /* Buttons */
+    .btn-primary {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: calc(100% - 24px); margin: 0 12px 10px; padding: 14px;
+      background: linear-gradient(135deg, var(--gold), #9b6e1a);
+      border: none; border-radius: 14px; color: var(--navy);
+      font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer;
+      box-shadow: 0 6px 20px rgba(201,168,76,.3);
+      transition: all .2s;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(201,168,76,.4); }
+    .btn-secondary {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: calc(100% - 24px); margin: 0 12px 10px; padding: 12px;
+      background: rgba(255,255,255,.05); border: 1px dashed rgba(255,255,255,.2);
+      border-radius: 14px; color: var(--white); font-family: inherit;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+    }
+
+    /* Bottom Nav */
+    .bottom-nav {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      padding: 8px 8px 16px; background: rgba(10,22,40,.95);
+      border-top: 1px solid rgba(201,168,76,.1);
+      position: sticky; bottom: 0;
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+      background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px 0;
+      font-family: inherit;
+    }
+    .nav-item i { font-size: 16px; }
+    .nav-item span { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    .nav-item.active { color: var(--gold); }
+    .nav-item.active i { transform: translateY(-3px); text-shadow: 0 0 12px rgba(201,168,76,.5); }
+    .nav-main {
+      flex: 0 0 60px; height: 60px; background: linear-gradient(135deg, var(--gold), #9b6e1a);
+      border-radius: 50%; margin-bottom: 20px; border: 4px solid var(--navy);
+      color: var(--navy) !important; justify-content: center;
+      box-shadow: 0 8px 25px rgba(0,0,0,.6), 0 0 20px rgba(201,168,76,.3);
+    }
+    .nav-main i { font-size: 20px; transform: none !important; text-shadow: none !important; }
+    .nav-main span { font-size: 7px; font-weight: 900; }
+
+    /* ═══ LOGIN SCREEN ═══ */
+    .login-wrap {
+      min-height: 600px; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #1a3a2a 0%, #0d5c2e 50%, #1a4a3a 100%);
+      padding: 20px;
+    }
+    .login-card {
+      background: #fff; border-radius: 16px; padding: 32px 28px; width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    }
+    .login-logo {
+      width: 50px; height: 50px; background: linear-gradient(135deg, #1a7a4a, #0d5c2e);
+      border-radius: 13px; display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 12px; font-size: 22px;
+    }
+    .login-title { text-align: center; font-size: 20px; font-weight: 800; color: #1a3a2a; letter-spacing: -.3px; }
+    .login-sub { text-align: center; font-size: 11px; color: #666; margin-top: 3px; }
+    .login-label { font-size: 11px; font-weight: 600; color: #444; display: block; margin-bottom: 5px; }
+    .login-input {
+      width: 100%; padding: 10px 12px; border: 1.5px solid #e0e0e0; border-radius: 8px;
+      font-size: 13px; font-family: inherit; outline: none; margin-bottom: 14px;
+      box-sizing: border-box;
+    }
+    .login-input:focus { border-color: #1a7a4a; }
+    .login-btn {
+      width: 100%; padding: 12px; background: linear-gradient(135deg, #1a7a4a, #0d5c2e);
+      color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+    }
+    .login-quick {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; justify-content: center;
+    }
+    .login-chip {
+      padding: 5px 10px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 20px;
+      font-size: 10px; color: #333; cursor: pointer; font-weight: 600;
+    }
+    .login-chip:hover { background: #e0e0e0; }
+
+    /* ═══ REKAP SCREEN ═══ */
+    .rekap-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px; margin-bottom: 10px;
+    }
+    .rekap-title { font-size: 16px; font-weight: 800; }
+    .filter-row {
+      display: flex; gap: 6px; padding: 0 14px 10px; overflow-x: auto;
+    }
+    .filter-chip {
+      padding: 5px 12px; border-radius: 20px; font-size: 10px; font-weight: 700;
+      background: rgba(255,255,255,.05); color: var(--muted); border: 1px solid transparent;
+      cursor: pointer; white-space: nowrap; font-family: inherit;
+    }
+    .filter-chip.active { background: var(--gold-dim); color: var(--gold); border-color: var(--border); }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; padding: 0 14px 10px; }
+    .stat-box {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 8px 5px; text-align: center;
+    }
+    .stat-num {
+      font-size: 18px; font-weight: 800; font-family: 'JetBrains Mono', monospace;
+    }
+    .stat-num.green { color: var(--success); }
+    .stat-num.yellow { color: var(--warning); }
+    .stat-num.red { color: var(--danger); }
+    .stat-num.blue { color: var(--info); }
+    .stat-label { font-size: 7px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: .03em; }
+
+    .rekap-table {
+      margin: 0 14px; background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+    }
+    .rekap-row {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 4px;
+      padding: 8px 10px; font-size: 10px; border-bottom: 1px solid rgba(255,255,255,.03);
+      align-items: center;
+    }
+    .rekap-row.head { color: var(--muted); font-weight: 700; text-transform: uppercase; font-size: 8px; letter-spacing: .05em; }
+    .rekap-name { font-weight: 700; color: var(--white); }
+    .rekap-val { text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+
+    /* ═══ ADMIN SCREEN ═══ */
+    .admin-section {
+      padding: 14px; margin-bottom: 10px;
+    }
+    .admin-section-title {
+      font-size: 11px; font-weight: 800; color: var(--admin);
+      text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px;
+    }
+    .admin-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+    .admin-tile {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px 10px; text-align: center; cursor: pointer; transition: all .2s;
+    }
+    .admin-tile:hover { border-color: var(--admin); transform: translateY(-2px); }
+    .admin-tile i { font-size: 22px; color: var(--admin); margin-bottom: 6px; display: block; }
+    .admin-tile span { font-size: 10px; font-weight: 700; color: var(--white); }
+
+    /* ═══ KETERANGAN SCREEN ═══ */
+    .jenis-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .jenis-pill {
+      padding: 7px 14px; border-radius: 20px; font-size: 11px; font-weight: 700;
+      background: rgba(255,255,255,.05); color: var(--muted); border: 1px solid transparent;
+      cursor: pointer; font-family: inherit;
+    }
+    .jenis-pill.active { background: var(--gold-dim); color: var(--gold); border-color: var(--border); }
+
+    .form-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; display: block; margin-bottom: 5px; }
+    .form-input {
+      width: 100%; padding: 10px 12px; background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1); border-radius: 10px;
+      color: var(--white); font-size: 13px; font-family: inherit; outline: none;
+      box-sizing: border-box;
+    }
+    .form-input:focus { border-color: var(--gold); }
+    .form-textarea {
+      width: 100%; padding: 10px 12px; background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1); border-radius: 10px;
+      color: var(--white); font-size: 13px; font-family: inherit; outline: none;
+      resize: vertical; min-height: 70px; box-sizing: border-box;
+    }
+
+    .bukti-row { display: flex; gap: 8px; margin-top: 8px; }
+    .bukti-btn {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px; background: rgba(255,255,255,.05); border: 1px dashed rgba(255,255,255,.15);
+      border-radius: 10px; color: var(--white); font-size: 11px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+    }
+
+    /* ═══ PROFIL SCREEN ═══ */
+    .profil-hero {
+      display: flex; align-items: center; gap: 14px;
+      background: linear-gradient(135deg, rgba(201,168,76,.12), rgba(201,168,76,.04));
+      border: 1px solid var(--border); border-radius: 16px;
+      padding: 16px; margin: 12px;
+    }
+    .profil-avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), #9b6e1a);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 800; color: var(--navy); flex-shrink: 0;
+    }
+    .profil-nama { font-size: 16px; font-weight: 800; }
+    .profil-jab { font-size: 11px; color: var(--muted); }
+    .profil-nip { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+    .profil-badges { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+
+    .profil-section { padding: 0 14px; margin-bottom: 14px; }
+    .profil-section-title {
+      font-size: 11px; font-weight: 800; color: var(--gold);
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px;
+    }
+    .profil-card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+      padding: 12px; display: flex; align-items: center; gap: 10px;
+    }
+    .profil-card-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      background: rgba(255,255,255,.05); border: 1px solid rgba(201,168,76,.3);
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+      flex-shrink: 0;
+    }
+    .profil-card-label { font-size: 11px; font-weight: 800; color: var(--muted); }
+    .profil-card-sub { font-size: 9px; color: var(--muted); margin-top: 2px; }
+    .profil-card-btn {
+      margin-left: auto; padding: 6px 12px;
+      background: linear-gradient(135deg, rgba(201,168,76,.2), rgba(201,168,76,.08));
+      border: 1px solid rgba(201,168,76,.4); border-radius: 8px;
+      color: var(--gold); font-size: 10px; font-weight: 700; cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* Log History */
+    .log-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.03);
+    }
+    .log-icon {
+      width: 32px; height: 32px; border-radius: 8px; display: flex;
+      align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;
+    }
+    .log-icon.masuk { background: rgba(34,197,94,.1); }
+    .log-icon.pulang { background: rgba(96,165,250,.1); }
+    .log-icon.izin { background: rgba(245,158,11,.1); }
+    .log-title { font-size: 12px; font-weight: 700; color: var(--white); }
+    .log-sub { font-size: 9px; color: var(--muted); }
+    .log-time { margin-left: auto; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--muted); font-weight: 600; }
+
+    /* Result Card */
+    .result-card {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.25);
+      border-radius: 12px; padding: 12px; margin: 0 12px 10px;
+    }
+    .result-card .r-icon { font-size: 24px; }
+    .result-card .r-title { font-size: 13px; font-weight: 700; color: var(--success); }
+    .result-card .r-msg { font-size: 10px; color: var(--muted); }
+
+    /* Tabs */
+    .tab-bar {
+      display: flex; border-bottom: 1px solid rgba(255,255,255,.05); padding: 0 14px;
+    }
+    .tab-item {
+      padding: 10px 14px; font-size: 11px; font-weight: 700; color: var(--muted);
+      border-bottom: 2px solid transparent; cursor: pointer;
+    }
+    .tab-item.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(201,168,76,.3); border-radius: 4px; }
+
+    .section-note {
+      font-size: 11px; color: var(--muted); background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.05); border-radius: 10px;
+      padding: 10px 14px; margin: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-header">
+    <h1>HADIR — UI/UX Mockup</h1>
+    <p>Sistem Absensi Digital BAPPERIDA Kabupaten Sumba Barat · Dark Theme · Mobile-first</p>
+  </div>
+
+  <nav class="screen-nav">
+    <a href="#login" class="active">Login</a>
+    <a href="#absen">Absen</a>
+    <a href="#keterangan">Keterangan</a>
+    <a href="#rekap">Rekap</a>
+    <a href="#profil">Profil</a>
+    <a href="#admin">Admin</a>
+  </nav>
+
+  <div class="screens">
+
+    <!-- ═══════════════ LOGIN ═══════════════ -->
+    <div class="screen-section" id="login">
+      <h2>Login Screen</h2>
+      <div class="phone-row">
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="login-wrap">
+                <div class="login-card">
+                  <div class="login-logo">🏛️</div>
+                  <div class="login-title">HADIR</div>
+                  <div class="login-sub">Sistem Absensi Digital BAPPERIDA</div>
+                  <div style="margin-top: 20px">
+                    <label class="login-label" style="color:#444">NIP</label>
+                    <input class="login-input" placeholder="Masukkan NIP" style="color:#333; background:#f9f9f9">
+                    <label class="login-label" style="color:#444">Password</label>
+                    <input class="login-input" type="password" placeholder="••••••••" style="color:#333; background:#f9f9f9">
+                    <button class="login-btn">Masuk</button>
+                  </div>
+                  <div class="login-quick">
+                    <span class="login-chip">👤 Agustina</span>
+                    <span class="login-chip">👤 Kabid</span>
+                    <span class="login-chip">👤 Yohanes</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-label">Login — Light Theme</div>
+        </div>
+
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen" style="background:var(--navy)">
+              <div class="login-wrap" style="background: linear-gradient(135deg, #0d2b1a, #0a1628)">
+                <div class="login-card" style="background: var(--navy-light); border: 1px solid var(--border);">
+                  <div class="login-logo">🏛️</div>
+                  <div class="login-title" style="color:var(--white)">HADIR</div>
+                  <div class="login-sub" style="color:var(--muted)">Sistem Absensi Digital BAPPERIDA</div>
+                  <div style="margin-top: 20px">
+                    <label class="login-label">NIP</label>
+                    <input class="login-input" placeholder="Masukkan NIP">
+                    <label class="login-label">Password</label>
+                    <input class="login-input" type="password" placeholder="••••••••">
+                    <button class="login-btn">Masuk</button>
+                  </div>
+                  <div class="login-quick">
+                    <span class="login-chip" style="background:rgba(255,255,255,.05);color:var(--muted);border-color:var(--border)">👤 Agustina</span>
+                    <span class="login-chip" style="background:rgba(255,255,255,.05);color:var(--muted);border-color:var(--border)">👤 Kabid</span>
+                    <span class="login-chip" style="background:rgba(255,255,255,.05);color:var(--muted);border-color:var(--border)">👤 Yohanes</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-label">Login — Dark Theme</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ ABSEN ═══════════════ -->
+    <div class="screen-section" id="absen">
+      <h2>Tab Absen (Main Screen)</h2>
+      <div class="phone-row">
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <!-- Header -->
+              <div class="app-header">
+                <div class="logo-sm">🏛️</div>
+                <div>
+                  <div class="org-label">Sekretariat</div>
+                  <div class="org-name">BAPPERIDA Sumba Barat</div>
+                </div>
+              </div>
+
+              <!-- Clock -->
+              <div class="clock-card">
+                <div class="clock-label">Waktu Indonesia Tengah (WITA)</div>
+                <div class="clock-time">08<span>:</span>32<span>:</span>15</div>
+                <div class="clock-date">Jumat, 4 Juli 2025</div>
+                <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:5px">
+                  <div class="clock-badge"><div class="dot"></div><span>MASUK</span></div>
+                  <div class="clock-loc">📍 Kantor BAPPERIDA</div>
+                </div>
+                <div class="clock-batas">
+                  <span style="font-size:14px">⏰</span>
+                  <span>Batas absen: 08:30 WITA</span>
+                </div>
+              </div>
+
+              <!-- User Card -->
+              <div class="user-card">
+                <div class="avatar">YL</div>
+                <div style="flex:1; min-width:0">
+                  <div class="user-name">Yohanes Rangga Lado</div>
+                  <div class="user-jab">Staf Bidang Ekonomi dan SDA</div>
+                  <div class="user-meta">NIP: 199305252025211040</div>
+                </div>
+                <div class="badge badge-aktif">AKTIF</div>
+              </div>
+
+              <!-- GPS Card -->
+              <div class="card">
+                <div class="card-title">🛰️ Data GPS Satelit</div>
+                <div class="gps-grid">
+                  <div class="gps-box">
+                    <div class="gps-key">LATITUDE</div>
+                    <div class="gps-val">-9.8412</div>
+                  </div>
+                  <div class="gps-box">
+                    <div class="gps-key">LONGITUDE</div>
+                    <div class="gps-val">119.8621</div>
+                  </div>
+                  <div class="gps-box">
+                    <div class="gps-key">AKURASI</div>
+                    <div class="gps-val">4.2m</div>
+                  </div>
+                </div>
+                <div class="gps-address">
+                  <div class="gps-key">ALAMAT TERDETEKSI</div>
+                  <div class="gps-val">Jl. Tambolaka, Lamboya, Sumba Barat</div>
+                </div>
+                <div class="acc-bar"><div class="acc-fill" style="width:85%"></div></div>
+              </div>
+
+              <!-- WiFi -->
+              <div class="wifi-bar">
+                <div class="wifi-icon">📶</div>
+                <div>
+                  <div class="wifi-status">WiFi Kantor Terdeteksi</div>
+                  <div class="wifi-detail">IP: 103.150.xxx.xxx · CIDR Valid ✓</div>
+                </div>
+              </div>
+
+              <!-- Today Log -->
+              <div class="card">
+                <div class="card-title">📋 Log Absen Hari Ini</div>
+                <div class="log-item" style="padding:8px 0; border:none">
+                  <div class="log-icon masuk">✅</div>
+                  <div>
+                    <div class="log-title" style="color:var(--success)">Masuk</div>
+                    <div class="log-sub">08:32 WITA · GPS OK</div>
+                  </div>
+                  <div class="log-time" style="color:var(--success)">08:32</div>
+                </div>
+              </div>
+
+              <!-- Result -->
+              <div class="result-card">
+                <div class="r-icon">✅</div>
+                <div>
+                  <div class="r-title">Absen Masuk Berhasil!</div>
+                  <div class="r-msg">Tercatat pada 08:32 WITA · GPS diverifikasi</div>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div style="padding:0 0 8px">
+                <button class="btn-primary">📍 Kirim Lokasi & Absen</button>
+                <button class="btn-secondary">📝 Ajukan Keterangan</button>
+              </div>
+
+              <!-- Bottom Nav -->
+              <div class="bottom-nav">
+                <button class="nav-item"><i class="fas fa-file-alt"></i><span>Keterangan</span></button>
+                <button class="nav-item"><i class="fas fa-chart-bar"></i><span>Rekap</span></button>
+                <button class="nav-item nav-main active"><i class="fas fa-map-marker-alt"></i><span>Absen</span></button>
+                <button class="nav-item"><i class="fas fa-user"></i><span>Profil</span></button>
+                <button class="nav-item"><i class="fas fa-ellipsis-h"></i><span>Lainnya</span></button>
+              </div>
+            </div>
+          </div>
+          <div class="phone-label">Absen — Full Flow</div>
+        </div>
+
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="app-header">
+                <div class="logo-sm">🏛️</div>
+                <div>
+                  <div class="org-label">Sekretariat</div>
+                  <div class="org-name">BAPPERIDA Sumba Barat</div>
+                </div>
+              </div>
+
+              <!-- Clock -->
+              <div class="clock-card">
+                <div class="clock-label">Waktu Indonesia Tengah (WITA)</div>
+                <div class="clock-time">14<span>:</span>45<span>:</span>03</div>
+                <div class="clock-date">Jumat, 4 Juli 2025</div>
+                <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:5px">
+                  <div class="clock-badge" style="background:rgba(96,165,250,.12);border-color:rgba(96,165,250,.3);color:var(--info)"><div class="dot" style="background:var(--info)"></div><span>PULANG</span></div>
+                  <div class="clock-loc">📍 Kantor BAPPERIDA</div>
+                </div>
+                <div class="clock-batas" style="background:rgba(96,165,250,.08);border-color:rgba(96,165,250,.25)">
+                  <span style="font-size:14px">⏰</span>
+                  <span style="color:var(--info)">Batas pulang: 14:30 WITA</span>
+                </div>
+              </div>
+
+              <!-- Log Hari Ini (2 entries) -->
+              <div class="card">
+                <div class="card-title">📋 Log Absen Hari Ini</div>
+                <div class="log-item" style="padding:6px 0; border:none">
+                  <div class="log-icon masuk">✅</div>
+                  <div style="flex:1">
+                    <div class="log-title" style="color:var(--success)">Masuk</div>
+                    <div class="log-sub">08:32 WITA</div>
+                  </div>
+                  <div class="log-time" style="color:var(--success)">08:32</div>
+                </div>
+                <div class="log-item" style="padding:6px 0; border:none">
+                  <div class="log-icon pulang">🔵</div>
+                  <div style="flex:1">
+                    <div class="log-title" style="color:var(--info)">Pulang</div>
+                    <div class="log-sub">14:45 WITA · Terlambat 15 menit</div>
+                  </div>
+                  <div class="log-time" style="color:var(--warning)">14:45</div>
+                </div>
+              </div>
+
+              <!-- Pulang Luar -->
+              <div style="padding:0 12px 8px">
+                <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:12px;margin-bottom:10px">
+                  <div style="font-size:11px;font-weight:700;color:var(--warning);margin-bottom:4px">⚠️ Pegawai di Lapangan</div>
+                  <div style="font-size:10px;color:var(--muted)">Khusus yang tidak kembali ke kantor</div>
+                </div>
+                <div class="form-label">📝 Keterangan Lokasi Lapangan</div>
+                <textarea class="form-textarea" placeholder="Sebutkan kegiatan/tujuan lapangan..." style="min-height:60px;font-size:12px"></textarea>
+                <button class="btn-primary" style="background:linear-gradient(135deg,#f59e0b,#d97706);margin-top:8px">🏃 Pulang dari Lapangan</button>
+              </div>
+
+              <div class="bottom-nav">
+                <button class="nav-item"><i class="fas fa-file-alt"></i><span>Keterangan</span></button>
+                <button class="nav-item"><i class="fas fa-chart-bar"></i><span>Rekap</span></button>
+                <button class="nav-item nav-main"><i class="fas fa-map-marker-alt"></i><span>Absen</span></button>
+                <button class="nav-item"><i class="fas fa-user"></i><span>Profil</span></button>
+                <button class="nav-item"><i class="fas fa-ellipsis-h"></i><span>Lainnya</span></button>
+              </div>
+            </div>
+          </div>
+          <div class="phone-label">Absen — Sudah Pulang</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ KETERANGAN ═══════════════ -->
+    <div class="screen-section" id="keterangan">
+      <h2>Tab Keterangan / Izin</h2>
+      <div class="phone-row">
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="app-header">
+                <div class="logo-sm">🏛️</div>
+                <div>
+                  <div class="org-label">Sekretariat</div>
+                  <div class="org-name">BAPPERIDA Sumba Barat</div>
+                </div>
+              </div>
+
+              <!-- User -->
+              <div class="user-card" style="margin-top:10px">
+                <div class="avatar">YL</div>
+                <div style="flex:1">
+                  <div class="user-name">Yohanes Rangga Lado</div>
+                  <div class="user-jab">Staf Bidang Ekonomi dan SDA</div>
+                </div>
+              </div>
+
+              <!-- Jenis -->
+              <div class="card">
+                <div class="card-title">📝 Jenis Keterangan</div>
+                <div class="jenis-grid">
+                  <button class="jenis-pill active">🙏 Keterangan</button>
+                  <button class="jenis-pill">🤒 Sakit</button>
+                  <button class="jenis-pill">💼 Tugas</button>
+                  <button class="jenis-pill">🎓 Tubel</button>
+                  <button class="jenis-pill">🏖️ Cuti</button>
+                </div>
+
+                <!-- Izin Per Jam -->
+                <div style="margin-bottom:12px">
+                  <div style="cursor:pointer;padding:8px;background:var(--gold-dim);border-radius:8px;border:1px dashed var(--gold);display:flex;align-items:center;justify-content:center;gap:6px;font-size:10px;font-weight:700;color:var(--gold)">
+                    ⏰ IZIN PER JAM
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
+                    <div>
+                      <label class="form-label">🕒 Jam Mulai</label>
+                      <input class="form-input" type="time" value="08:00" style="font-family:'JetBrains Mono',monospace;font-size:12px">
+                    </div>
+                    <div>
+                      <label class="form-label">🕒 Jam Selesai</label>
+                      <input class="form-input" type="time" value="10:00" style="font-family:'JetBrains Mono',monospace;font-size:12px">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Tanggal -->
+                <div style="margin-bottom:12px">
+                  <label class="form-label">📅 Rentang Tanggal</label>
+                  <input class="form-input" value="04 Jul 2025 — 04 Jul 2025" style="cursor:pointer;font-weight:600">
+                </div>
+
+                <!-- Keterangan -->
+                <div style="margin-bottom:12px">
+                  <label class="form-label">📝 Keterangan</label>
+                  <textarea class="form-textarea" placeholder="Tuliskan keterangan lengkap...">Keperluan pribadi, izin setengah hari</textarea>
+                </div>
+
+                <!-- Bukti -->
+                <div>
+                  <label class="form-label">📸 Bukti (Foto/Dokumen)</label>
+                  <div class="bukti-row">
+                    <button class="bukti-btn">📷 Ambil Foto</button>
+                    <button class="bukti-btn">📂 Pilih File</button>
+                  </div>
+                </div>
+              </div>
+
+              <button class="btn-primary">📤 Kirim Keterangan</button>
+
+              <!-- Riwayat -->
+              <div style="padding:0 14px; margin-bottom:12px">
+                <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:8px">📋 Riwayat Pengajuan Saya</div>
+                <div class="card" style="margin:0">
+                  <div class="log-item" style="padding:6px 0;border:none">
+                    <div class="log-icon izin">📝</div>
+                    <div style="flex:1">
+                      <div class="log-title" style="font-size:11px">Izin — 4 Juli 2025</div>
+                      <div class="log-sub">Keperluan pribadi · ⏰ 08:00–10:00</div>
+                    </div>
+                    <span class="badge" style="background:rgba(245,158,11,.12);color:var(--warning);border:1px solid rgba(245,158,11,.3);font-size:8px">PENDING</span>
+                  </div>
+                  <div class="log-item" style="padding:6px 0;border:none">
+                    <div class="log-icon" style="background:rgba(34,197,94,.1)">🤒</div>
+                    <div style="flex:1">
+                      <div class="log-title" style="font-size:11px">Sakit — 2 Juli 2025</div>
+                      <div class="log-sub">Demam · Surat dokter dilampirkan</div>
+                    </div>
+                    <span class="badge" style="background:rgba(34,197,94,.12);color:var(--success);border:1px solid rgba(34,197,94,.3);font-size:8px">DISETUJUI</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bottom-nav">
+                <button class="nav-item active"><i class="fas fa-file-alt"></i><span>Keterangan</span></button>
+                <button class="nav-item"><i class="fas fa-chart-bar"></i><span>Rekap</span></button>
+                <button class="nav-item nav-main"><i class="fas fa-map-marker-alt"></i><span>Absen</span></button>
+                <button class="nav-item"><i class="fas fa-user"></i><span>Profil</span></button>
+                <button class="nav-item"><i class="fas fa-ellipsis-h"></i><span>Lainnya</span></button>
+              </div>
+            </div>
+          </div>
+          <div class="phone-label">Keterangan — Form Keterangan</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ REKAP ═══════════════ -->
+    <div class="screen-section" id="rekap">
+      <h2>Tab Rekap Absensi</h2>
+      <div class="phone-row">
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="app-header">
+                <div class="logo-sm">🏛️</div>
+                <div>
+                  <div class="org-label">Sekretariat</div>
+                  <div class="org-name">BAPPERIDA Sumba Barat</div>
+                </div>
+              </div>
+
+              <div class="rekap-header">
+                <div class="rekap-title">📊 Rekap Absensi</div>
+              </div>
+
+              <!-- Filters -->
+              <div class="filter-row">
+                <button class="filter-chip active">Hari Ini</button>
+                <button class="filter-chip">Minggu Ini</button>
+                <button class="filter-chip">Bulan Ini</button>
+                <button class="filter-chip">30 Hari</button>
+                <button class="filter-chip">Kustom</button>
+              </div>
+
+              <!-- Stats -->
+              <div class="stat-grid">
+                <div class="stat-box"><div class="stat-num green">24</div><div class="stat-label">Masuk</div></div>
+                <div class="stat-box"><div class="stat-num blue">22</div><div class="stat-label">Pulang</div></div>
+                <div class="stat-box"><div class="stat-num yellow">3</div><div class="stat-label">Terlambat</div></div>
+                <div class="stat-box"><div class="stat-num red">1</div><div class="stat-label">Keterangan</div></div>
+              </div>
+              <div class="stat-grid">
+                <div class="stat-box"><div class="stat-num" style="color:var(--muted)">2</div><div class="stat-label">Sakit</div></div>
+                <div class="stat-box"><div class="stat-num" style="color:var(--admin)">1</div><div class="stat-label">Tugas</div></div>
+                <div class="stat-box"><div class="stat-num" style="color:#f97316">2</div><div class="stat-label">Lapangan</div></div>
+                <div class="stat-box"><div class="stat-num" style="color:var(--muted)">0</div><div class="stat-label">TB</div></div>
+              </div>
+
+              <!-- Table -->
+              <div class="rekap-table">
+                <div class="rekap-row head">
+                  <div>Nama</div><div style="text-align:center">H</div><div style="text-align:center">I</div><div style="text-align:center">S</div><div style="text-align:center">TL</div>
+                </div>
+                <div class="rekap-row">
+                  <div class="rekap-name">Agustina Malo</div>
+                  <div class="rekap-val" style="color:var(--success)">22</div>
+                  <div class="rekap-val" style="color:var(--warning)">1</div>
+                  <div class="rekap-val">0</div>
+                  <div class="rekap-val" style="color:var(--danger)">2</div>
+                </div>
+                <div class="rekap-row">
+                  <div class="rekap-name">Yohanes Rangga</div>
+                  <div class="rekap-val" style="color:var(--success)">20</div>
+                  <div class="rekap-val">0</div>
+                  <div class="rekap-val">1</div>
+                  <div class="rekap-val" style="color:var(--danger)">1</div>
+                </div>
+                <div class="rekap-row">
+                  <div class="rekap-name">Maria Lende</div>
+                  <div class="rekap-val" style="color:var(--success)">21</div>
+                  <div class="rekap-val">0</div>
+                  <div class="rekap-val">1</div>
+                  <div class="rekap-val">0</div>
+                </div>
+                <div class="rekap-row">
+                  <div class="rekap-name">Dominikus Tamu</div>
+                  <div class="rekap-val" style="color:var(--success)">19</div>
+                  <div class="rekap-val" style="color:var(--warning)">2</div>
+                  <div class="rekap-val">0</div>
+                  <div class="rekap-val" style="color:var(--danger)">3</div>
+                </div>
+              </div>
+
+              <!-- Export -->
+              <div style="display:flex;gap:8px;padding:12px 14px">
+                <button style="flex:1;padding:10px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;color:var(--success);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">📊 Export Excel</button>
+                <button style="flex:1;padding:10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;color:var(--danger);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">📄 Export PDF</button>
+                <button style="flex:1;padding:10px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);border-radius:10px;color:var(--info);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">📤 Kirim</button>
+              </div>
+
+              <div class="bottom-nav">
+                <button class="nav-item"><i class="fas fa-file-alt"></i><span>Keterangan</span></button>
+                <button class="nav-item active"><i class="fas fa-chart-bar"></i><span>Rekap</span></button>
+                <button class="nav-item nav-main"><i class="fas fa-map-marker-alt"></i><span>Absen</span></button>
+                <button class="nav-item"><i class="fas fa-user"></i><span>Profil</span></button>
+                <button class="nav-item"><i class="fas fa-ellipsis-h"></i><span>Lainnya</span></button>
+              </div>
+            </div>
+          </div>
+          <div class="phone-label">Rekap — Bulanan</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ PROFIL ═══════════════ -->
+    <div class="screen-section" id="profil">
+      <h2>Tab Profil Pegawai</h2>
+      <div class="phone-row">
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="app-header">
+                <div class="logo-sm">🏛️</div>
+                <div>
+                  <div class="org-label">Sekretariat</div>
+                  <div class="org-name">BAPPERIDA Sumba Barat</div>
+                </div>
+              </div>
+
+              <!-- Hero -->
+              <div class="profil-hero">
+                <div class="profil-avatar">AM</div>
+                <div>
+                  <div class="profil-nama">Agustina Malo</div>
+                  <div class="profil-jab">Kepala Bidang Ekonomi dan SDA</div>
+                  <div class="profil-nip">NIP: 198204012009032011</div>
+                  <div class="profil-badges">
+                    <span class="badge badge-aktif">⚙️ AKTIF</span>
+                    <span class="badge" style="background:rgba(167,139,250,.12);color:var(--admin);border:1px solid rgba(167,139,250,.3)">👑 ADMIN</span>
+                    <span class="badge" style="background:rgba(96,165,250,.12);color:var(--info);border:1px solid rgba(96,165,250,.3)">🔗 T. Terhubung</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Face Recognition -->
+              <div class="profil-section">
+                <div class="profil-section-title">🧠 Face Recognition</div>
+                <div class="profil-card">
+                  <div class="profil-card-icon">😊</div>
+                  <div style="flex:1;min-width:0">
+                    <div class="profil-card-label" style="color:var(--success)">✓ Wajah Terdaftar</div>
+                    <div class="profil-card-sub">Human.js 512-dim · Tersimpan 3 Jul 2025</div>
+                  </div>
+                  <button class="profil-card-btn">📷 Daftarkan Ulang</button>
+                </div>
+              </div>
+
+              <!-- Tanda Tangan -->
+              <div class="profil-section">
+                <div class="profil-section-title">✍️ Tanda Tangan Digital</div>
+                <div class="profil-card">
+                  <div class="profil-card-icon" style="background:#fff;border-color:#ddd">
+                    <span style="font-size:16px;font-style:italic;color:#333">Agustina</span>
+                  </div>
+                  <div style="flex:1;min-width:0">
+                    <div class="profil-card-label" style="color:var(--success)">✓ TTD Tersimpan</div>
+                    <div class="profil-card-sub">PNG transparan · Untuk rekap PDF</div>
+                  </div>
+                  <button class="profil-card-btn">✏️ Buat</button>
+                </div>
+              </div>
+
+              <!-- Dokumen -->
+              <div class="profil-section">
+                <div class="profil-section-title">📁 Dokumen Kepegawaian</div>
+                <div class="card" style="margin:0">
+                  <div class="log-item" style="padding:6px 0;border:none">
+                    <div class="log-icon" style="background:rgba(239,68,68,.1)">📄</div>
+                    <div style="flex:1">
+                      <div class="log-title" style="font-size:11px">SK Pengangkatan</div>
+                      <div class="log-sub">PDF · 1.2 MB · 1 Jan 2024</div>
+                    </div>
+                    <i class="fas fa-download" style="color:var(--gold);font-size:12px"></i>
+                  </div>
+                  <div class="log-item" style="padding:6px 0;border:none">
+                    <div class="log-icon" style="background:rgba(96,165,250,.1)">🖼️</div>
+                    <div style="flex:1">
+                      <div class="log-title" style="font-size:11px">Foto Profil</div>
+                      <div class="log-sub">JPG · 856 KB · 15 Mar 2025</div>
+                    </div>
+                    <i class="fas fa-download" style="color:var(--gold);font-size:12px"></i>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Riwayat -->
+              <div class="profil-section">
+                <div class="profil-section-title">📋 Riwayat Absen</div>
+                <div class="filter-row" style="padding:0;margin-bottom:8px">
+                  <button class="filter-chip active" style="font-size:9px;padding:4px 10px">Semua</button>
+                  <button class="filter-chip" style="font-size:9px;padding:4px 10px">✅ Hadir</button>
+                  <button class="filter-chip" style="font-size:9px;padding:4px 10px">⏰ Terlambat</button>
+                </div>
+                <div class="card" style="margin:0">
+                  <div class="log-item" style="padding:6px 0;border:none">
+                    <div class="log-icon masuk">✅</div>
+                    <div style="flex:1">
+                      <div class="log-title" style="font-size:11px">Masuk</div>
+                      <div class="log-sub">Kamis, 3 Jul · 08:28 WITA</div>
+                    </div>
+                    <div class="log-time" style="color:var(--success);font-size:10px">08:28</div>
+                  </div>
+                  <div class="log-item" style="padding:6px 0;border:none">
+                    <div class="log-icon pulang">🔵</div>
+                    <div style="flex:1">
+                      <div class="log-title" style="font-size:11px">Pulang</div>
+                      <div class="log-sub">Kamis, 3 Jul · 14:32 WITA</div>
+                    </div>
+                    <div class="log-time" style="color:var(--info);font-size:10px">14:32</div>
+                  </div>
+                  <div class="log-item" style="padding:6px 0;border:none">
+                    <div class="log-icon masuk">✅</div>
+                    <div style="flex:1">
+                      <div class="log-title" style="font-size:11px">Masuk</div>
+                      <div class="log-sub">Rabu, 2 Jul · 08:05 WITA</div>
+                    </div>
+                    <div class="log-time" style="color:var(--success);font-size:10px">08:05</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bottom-nav">
+                <button class="nav-item"><i class="fas fa-file-alt"></i><span>Keterangan</span></button>
+                <button class="nav-item"><i class="fas fa-chart-bar"></i><span>Rekap</span></button>
+                <button class="nav-item nav-main"><i class="fas fa-map-marker-alt"></i><span>Absen</span></button>
+                <button class="nav-item active"><i class="fas fa-user"></i><span>Profil</span></button>
+                <button class="nav-item"><i class="fas fa-ellipsis-h"></i><span>Lainnya</span></button>
+              </div>
+            </div>
+          </div>
+          <div class="phone-label">Profil — Admin Pegawai</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ ADMIN ═══════════════ -->
+    <div class="screen-section" id="admin">
+      <h2>Panel Admin</h2>
+      <div class="phone-row">
+        <div>
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="app-header">
+                <div class="logo-sm" style="background:rgba(167,139,250,.15);border-color:rgba(167,139,250,.3)">🛡️</div>
+                <div>
+                  <div class="org-label" style="color:var(--admin)">Panel Admin</div>
+                  <div class="org-name">BAPPERIDA Sumba Barat</div>
+                </div>
+              </div>
+
+              <!-- Operasional -->
+              <div class="admin-section">
+                <div class="admin-section-title">⚙️ Operasional</div>
+                <div class="admin-grid">
+                  <div class="admin-tile"><i class="fas fa-clipboard-check"></i><span>Konfirmasi Keterangan</span></div>
+                  <div class="admin-tile"><i class="fas fa-edit"></i><span>Input Manual</span></div>
+                  <div class="admin-tile"><i class="fas fa-calendar-check"></i><span>Hari Libur</span></div>
+                </div>
+              </div>
+
+              <!-- Kepegawaian -->
+              <div class="admin-section">
+                <div class="admin-section-title">👤 Kepegawaian</div>
+                <div class="admin-grid">
+                  <div class="admin-tile"><i class="fas fa-users"></i><span>Pegawai</span></div>
+                  <div class="admin-tile"><i class="fas fa-building"></i><span>Bidang</span></div>
+                  <div class="admin-tile"><i class="fas fa-landmark"></i><span>Instansi</span></div>
+                </div>
+              </div>
+
+              <!-- Konfigurasi -->
+              <div class="admin-section">
+                <div class="admin-section-title">🔧 Konfigurasi</div>
+                <div class="admin-grid">
+                  <div class="admin-tile"><i class="fas fa-map-marker-alt"></i><span>Lokasi</span></div>
+                  <div class="admin-tile"><i class="fas fa-clock"></i><span>Jam Absen</span></div>
+                  <div class="admin-tile"><i class="fas fa-face-smile"></i><span>Wajah</span></div>
+                  <div class="admin-tile"><i class="fas fa-list"></i><span>Log Absen</span></div>
+                  <div class="admin-tile"><i class="fas fa-user-shield"></i><span>Admin</span></div>
+                  <div class="admin-tile"><i class="fas fa-tshirt"></i><span>Seragam</span></div>
+                </div>
+              </div>
+
+              <!-- Inventaris -->
+              <div class="admin-section">
+                <div class="admin-section-title">📦 Inventaris (SIMAPO)</div>
+                <div class="admin-grid">
+                  <div class="admin-tile"><i class="fas fa-boxes-stacked"></i><span>Master Barang</span></div>
+                  <div class="admin-tile"><i class="fas fa-handshake"></i><span>Pinjaman</span></div>
+                  <div class="admin-tile"><i class="fas fa-ticket"></i><span>Tiket</span></div>
+                  <div class="admin-tile"><i class="fas fa-exchange-alt"></i><span>Mutasi</span></div>
+                  <div class="admin-tile"><i class="fas fa-clipboard-list"></i><span>Opname</span></div>
+                  <div class="admin-tile"><i class="fas fa-tags"></i><span>Kategori</span></div>
+                </div>
+              </div>
+
+              <!-- Confirmation List -->
+              <div style="padding:0 14px 14px">
+                <div style="font-size:11px;font-weight:800;color:var(--admin);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">📋 Menunggu Konfirmasi</div>
+                <div class="card" style="margin:0">
+                  <div class="log-item" style="padding:8px 0;border:none">
+                    <div class="log-icon izin">📝</div>
+                    <div style="flex:1">
+                      <div class="log-title" style="font-size:11px">Yohanes Rangga — Keterangan</div>
+                      <div class="log-sub">4 Jul · 08:00–10:00 · Keperluan pribadi</div>
+                    </div>
+                    <div style="display:flex;gap:4px">
+                      <button style="padding:4px 8px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;color:var(--success);font-size:10px;cursor:pointer">✓</button>
+                      <button style="padding:4px 8px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:6px;color:var(--danger);font-size:10px;cursor:pointer">✕</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bottom-nav">
+                <button class="nav-item"><i class="fas fa-file-alt"></i><span>Keterangan</span></button>
+                <button class="nav-item"><i class="fas fa-chart-bar"></i><span>Rekap</span></button>
+                <button class="nav-item nav-main"><i class="fas fa-map-marker-alt"></i><span>Absen</span></button>
+                <button class="nav-item"><i class="fas fa-user"></i><span>Profil</span></button>
+                <button class="nav-item admin-tab active" style="color:var(--admin)"><i class="fas fa-user-shield"></i><span>Admin</span></button>
+              </div>
+            </div>
+          </div>
+          <div class="phone-label">Panel Admin — Dashboard</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Smooth scroll nav highlight
+    const navLinks = document.querySelectorAll('.screen-nav a');
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          navLinks.forEach(l => l.classList.remove('active'));
+          const link = document.querySelector(`.screen-nav a[href="#${e.target.id}"]`);
+          if (link) link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-100px 0px -60% 0px' });
+    document.querySelectorAll('.screen-section').forEach(s => observer.observe(s));
+  </script>
+</body>
+</html>

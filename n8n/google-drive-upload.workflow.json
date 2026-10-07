@@ -1,0 +1,159 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "google-drive-upload",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 0],
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Google Drive Upload Webhook",
+      "webhookId": "gdrive-upload-0001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const method = $input.first().json.headers?.['x-forwarded-method'] || $input.first().json.method || '';\nif (method === 'OPTIONS') {\n  $execution.respond({\n    statusCode: 200,\n    headers: {\n      'Access-Control-Allow-Origin': '*',\n      'Access-Control-Allow-Methods': 'POST, OPTIONS',\n      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-App-Token'\n    },\n    body: ''\n  });\n  return [];\n}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [224, 0],
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "CORS Google Drive Upload"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst base64Data = body.file_base64 || body.base64 || body.data || '';\nconst fileName = body.file_name || body.fileName || `signature_${Date.now()}.jpg`;\nconst folderId = body.folder_id || body.folderId || '';\n\nif (!base64Data) {\n  return [{ json: { ok: false, error: 'No file data provided' } }];\n}\n\n// Remove data URL prefix if present\nlet cleanBase64 = base64Data;\nlet mimeType = 'image/jpeg';\nif (base64Data.startsWith('data:')) {\n  const matches = base64Data.match(/^data:([^;]+);base64,(.+)$/);\n  if (matches) {\n    mimeType = matches[1];\n    cleanBase64 = matches[2];\n  }\n}\n\n// Convert base64 to binary buffer\nconst buffer = Buffer.from(cleanBase64, 'base64');\n\nreturn [{\n  json: {\n    ok: true,\n    file_name: fileName,\n    mime_type: mimeType,\n    folder_id: folderId,\n    file_size: buffer.length,\n    _buffer: buffer.toString('base64')\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [448, 0],
+      "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+      "name": "Prepare File for Upload"
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "name": "={{ $json.file_name }}",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "folderId": "={{ $json.folder_id || '' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 2.1,
+      "position": [672, 0],
+      "id": "d4e5f6a7-b8c9-0123-defa-234567890123",
+      "name": "Upload to Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const uploadResult = $input.first().json;\nconst fileId = uploadResult.id || '';\nconst fileName = uploadResult.name || '';\n\nif (!fileId) {\n  return [{ json: { ok: false, error: 'Upload failed - no file ID returned' } }];\n}\n\n// Build Google Drive view URL\nconst driveUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;\n\nreturn [{\n  json: {\n    ok: true,\n    file_id: fileId,\n    file_name: fileName,\n    drive_url: driveUrl,\n    message: 'File uploaded successfully'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [896, 0],
+      "id": "e5f6a7b8-c9d0-1234-efab-345678901234",
+      "name": "Format Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1120, 0],
+      "id": "f6a7b8c9-d0e1-2345-fabc-456789012345",
+      "name": "Respond with URL"
+    }
+  ],
+  "connections": {
+    "Google Drive Upload Webhook": {
+      "main": [
+        [
+          {
+            "node": "CORS Google Drive Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CORS Google Drive Upload": {
+      "main": [
+        [
+          {
+            "node": "Prepare File for Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare File for Upload": {
+      "main": [
+        [
+          {
+            "node": "Upload to Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond with URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

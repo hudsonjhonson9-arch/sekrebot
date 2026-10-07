@@ -1,0 +1,2290 @@
+{
+  "updatedAt": "2026-09-28T06:37:17.510Z",
+  "createdAt": "2026-07-22T00:35:36.369Z",
+  "id": "q1sjC6zjJZkelxgm",
+  "name": "SIMAPO PKS — Program, Kegiatan, Subkegiatan",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "path": "simapo-pks-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        224
+      ],
+      "id": "c030e7f1-f8bd-46b5-b82c-44671a6e2336",
+      "name": "WH PKS List",
+      "webhookId": "simapo-pks-list"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simapo-pks-save",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        1120
+      ],
+      "id": "55f7c789-fe4f-41a9-975c-ec87288ad6ec",
+      "name": "WH PKS Save",
+      "webhookId": "simapo-pks-save"
+    },
+    {
+      "parameters": {
+        "httpMethod": "DELETE",
+        "path": "simapo-pks-delete",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        2016
+      ],
+      "id": "f3f0fb52-8315-4e1d-be51-fec0f1372adb",
+      "name": "WH PKS Delete",
+      "webhookId": "simapo-pks-delete"
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "da8a4b03-c23d-4faa-860c-df2601307717",
+                    "leftValue": "={{ ($json.query.type || '').toString().toLowerCase().trim() }}",
+                    "rightValue": "program",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "program"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "39d6d9fb-92b5-4646-8dfd-e6467992e296",
+                    "leftValue": "={{ ($json.query.type || '').toString().toLowerCase().trim() }}",
+                    "rightValue": "kegiatan",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "kegiatan"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f9e051c7-9644-4a0f-a384-ae51787469ed",
+                    "leftValue": "={{ ($json.query.type || '').toString().toLowerCase().trim() }}",
+                    "rightValue": "subkegiatan",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "subkegiatan"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "fa5d141d-77e5-4cbf-8b54-5e4f3b6d5e7e",
+                    "leftValue": "={{ \"cocok-semua\" }}",
+                    "rightValue": "cocok-semua",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "lainnya"
+            }
+          ]
+        },
+        "fallbackOutput": "none"
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -176,
+        224
+      ],
+      "id": "9b941483-0a48-458a-ae14-0942cec71dc1",
+      "name": "SW PKS List"
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5401ed89-04f8-4d6d-82ce-b50544501593",
+                    "leftValue": "={{ ($json.body.type || '').toString().toLowerCase().trim() }}",
+                    "rightValue": "program",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "program"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d6710753-1a45-4ad7-b10a-34f863226ce5",
+                    "leftValue": "={{ ($json.body.type || '').toString().toLowerCase().trim() }}",
+                    "rightValue": "kegiatan",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "kegiatan"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "84888c8b-e2d7-4b53-aafc-e9e70e279270",
+                    "leftValue": "={{ ($json.body.type || '').toString().toLowerCase().trim() }}",
+                    "rightValue": "subkegiatan",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "subkegiatan"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8e589e39-b40a-4e7c-93a0-1ef69e666823",
+                    "leftValue": "={{ \"cocok-semua\" }}",
+                    "rightValue": "cocok-semua",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "lainnya"
+            }
+          ]
+        },
+        "fallbackOutput": "none"
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -176,
+        1120
+      ],
+      "id": "f2b55b18-7a10-4263-b348-a8d98a6fe294",
+      "name": "SW PKS Save"
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5857fd26-b60b-426d-b76e-c876108fb9ba",
+                    "leftValue": "={{ ($json.body.type || '').toString().toLowerCase().trim() }}",
+                    "rightValue": "program",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "program"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "9ba9d76d-6b1c-4984-9751-0773be6685c7",
+                    "leftValue": "={{ ($json.body.type || '').toString().toLowerCase().trim() }}",
+                    "rightValue": "kegiatan",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "kegiatan"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4cb43f67-4886-45fe-b5ba-ce93ebf7b18a",
+                    "leftValue": "={{ ($json.body.type || '').toString().toLowerCase().trim() }}",
+                    "rightValue": "subkegiatan",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "subkegiatan"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0797036d-48ae-41be-a07f-eb83e7623959",
+                    "leftValue": "={{ \"cocok-semua\" }}",
+                    "rightValue": "cocok-semua",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "lainnya"
+            }
+          ]
+        },
+        "fallbackOutput": "none"
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -176,
+        2016
+      ],
+      "id": "178da8b5-70e3-44bb-bb82-d87f6435d9b6",
+      "name": "SW PKS Delete"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT id, kode, nama, tahun FROM public.pks_program ORDER BY urutan, kode) t",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -400,
+        0
+      ],
+      "id": "7c9e8df4-c440-48ce-8139-4f5f0f34ea51",
+      "name": "PG Program List",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT k.id, k.kode, k.nama, k.program_id, p.kode as program_kode FROM public.pks_kegiatan k JOIN public.pks_program p ON p.id = k.program_id AND p.tahun = k.tahun WHERE ('{{ ($json.query.program_id || '').toString().replace(/'/g, \"''\") }}' = '' OR k.program_id::text = '{{ ($json.query.program_id || '').toString().replace(/'/g, \"''\") }}') ORDER BY k.urutan, k.kode) t",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -400,
+        448
+      ],
+      "id": "c96950b7-2aa9-4aba-9886-a39b0f92efaa",
+      "name": "PG Kegiatan List",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT s.id, s.kode, s.nama, s.kegiatan_id, k.kode as kegiatan_kode FROM public.pks_subkegiatan s JOIN public.pks_kegiatan k ON k.id = s.kegiatan_id AND k.tahun = s.tahun WHERE ('{{ ($json.query.kegiatan_id || '').toString().replace(/'/g, \"''\") }}' = '' OR s.kegiatan_id::text = '{{ ($json.query.kegiatan_id || '').toString().replace(/'/g, \"''\") }}') ORDER BY s.urutan, s.kode) t",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -400,
+        672
+      ],
+      "id": "f87f8321-1236-485c-846d-3e13f0e04adf",
+      "name": "PG Subkegiatan List",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.pks_program (kode, nama, tahun) VALUES ('{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}', (SELECT tahun FROM public.pks_tahun ORDER BY tahun DESC LIMIT 1)) ON CONFLICT (kode, tahun) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama, tahun",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -400,
+        896
+      ],
+      "id": "edf84c77-b358-43b5-82a6-05951ad3a8ea",
+      "name": "PG Program Save",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.pks_kegiatan (program_id, kode, nama, tahun) SELECT p.id, '{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}', p.tahun FROM public.pks_program p WHERE p.id = NULLIF('{{ ($json.body.program_id || '').toString().replace(/'/g, \"''\") }}','')::int ON CONFLICT (kode, tahun) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama, tahun",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -400,
+        1344
+      ],
+      "id": "8b4f3bc3-3101-40f8-a488-8b50dbe42a09",
+      "name": "PG Kegiatan Save",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.pks_subkegiatan (kegiatan_id, kode, nama, tahun) SELECT k.id, '{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}', k.tahun FROM public.pks_kegiatan k WHERE k.id = NULLIF('{{ ($json.body.kegiatan_id || '').toString().replace(/'/g, \"''\") }}','')::int ON CONFLICT (kode, tahun) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama, tahun",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -400,
+        1568
+      ],
+      "id": "2418f8fc-8167-4b64-a88b-4c812c088ca7",
+      "name": "PG Subkegiatan Save",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM public.pks_program WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::int RETURNING id, kode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -400,
+        1792
+      ],
+      "id": "5012e359-9193-4dfe-83f7-0ed730b905fc",
+      "name": "PG Program Delete",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM public.pks_kegiatan WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::int RETURNING id, kode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -400,
+        2240
+      ],
+      "id": "90074468-e7f1-41c8-a5dc-b26d528acbb9",
+      "name": "PG Kegiatan Delete",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM public.pks_subkegiatan WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::int RETURNING id, kode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -400,
+        2464
+      ],
+      "id": "3acca89f-90f1-42c3-8212-ecd9b5caa19c",
+      "name": "PG Subkegiatan Delete",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -176,
+        0
+      ],
+      "id": "7e36c735-82e0-4763-9c6d-badb5ca46734",
+      "name": "Res Program List"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -176,
+        448
+      ],
+      "id": "62d29986-4c40-4b52-b297-0c55aac035a7",
+      "name": "Res Kegiatan List"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -176,
+        672
+      ],
+      "id": "7dbe509d-4b4a-418c-bfda-faedabb4a76b",
+      "name": "Res Subkegiatan List"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -176,
+        896
+      ],
+      "id": "77a12fed-d2bf-4dbc-9411-6d7ff66b9ad2",
+      "name": "Res Program Save"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -176,
+        1344
+      ],
+      "id": "e9be17c5-b4b4-4b52-b363-faf1865903da",
+      "name": "Res Kegiatan Save"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -176,
+        1568
+      ],
+      "id": "99a20a5a-2495-4282-a2c4-4408c9f8cd7e",
+      "name": "Res Subkegiatan Save"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -176,
+        1792
+      ],
+      "id": "6559942d-eee7-421c-97fd-854e8394b7b9",
+      "name": "Res Program Delete"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -176,
+        2240
+      ],
+      "id": "023ac742-9c59-43eb-92d6-142783d993db",
+      "name": "Res Kegiatan Delete"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -176,
+        2464
+      ],
+      "id": "15c460a0-5002-48f4-83a4-2e71d49a1c5a",
+      "name": "Res Subkegiatan Delete"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: \"type tidak valid: gunakan program, kegiatan, atau subkegiatan\" }) }}",
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "4ba4e3ed-251f-405c-b916-2cbcc90dc54a",
+      "name": "Res Error List",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -368,
+        2800
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: \"type tidak valid: gunakan program, kegiatan, atau subkegiatan\" }) }}",
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "02201b8a-f5e1-4f10-96b3-9857cf77bbf1",
+      "name": "Res Error Save",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -368,
+        2800
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: \"type tidak valid: gunakan program, kegiatan, atau subkegiatan\" }) }}",
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "2b697988-907e-4f23-a335-a551c9e5bb3f",
+      "name": "Res Error Delete",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -368,
+        2800
+      ]
+    }
+  ],
+  "connections": {
+    "WH PKS List": {
+      "main": [
+        [
+          {
+            "node": "SW PKS List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH PKS Save": {
+      "main": [
+        [
+          {
+            "node": "SW PKS Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH PKS Delete": {
+      "main": [
+        [
+          {
+            "node": "SW PKS Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Program List": {
+      "main": [
+        [
+          {
+            "node": "Res Program List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Kegiatan List": {
+      "main": [
+        [
+          {
+            "node": "Res Kegiatan List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Subkegiatan List": {
+      "main": [
+        [
+          {
+            "node": "Res Subkegiatan List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Program Save": {
+      "main": [
+        [
+          {
+            "node": "Res Program Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Kegiatan Save": {
+      "main": [
+        [
+          {
+            "node": "Res Kegiatan Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Subkegiatan Save": {
+      "main": [
+        [
+          {
+            "node": "Res Subkegiatan Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Program Delete": {
+      "main": [
+        [
+          {
+            "node": "Res Program Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Kegiatan Delete": {
+      "main": [
+        [
+          {
+            "node": "Res Kegiatan Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Subkegiatan Delete": {
+      "main": [
+        [
+          {
+            "node": "Res Subkegiatan Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SW PKS List": {
+      "main": [
+        [
+          {
+            "node": "PG Program List",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PG Kegiatan List",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PG Subkegiatan List",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Res Error List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SW PKS Save": {
+      "main": [
+        [
+          {
+            "node": "PG Program Save",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PG Kegiatan Save",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PG Subkegiatan Save",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Res Error Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SW PKS Delete": {
+      "main": [
+        [
+          {
+            "node": "PG Program Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PG Kegiatan Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PG Subkegiatan Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Res Error Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "5f936870-d8f4-43e8-b6a6-0dc3f46d72af",
+  "activeVersionId": "5f936870-d8f4-43e8-b6a6-0dc3f46d72af",
+  "versionCounter": 180,
+  "triggerCount": 3,
+  "shared": [
+    {
+      "updatedAt": "2026-07-22T00:35:36.376Z",
+      "createdAt": "2026-07-22T00:35:36.376Z",
+      "role": "workflow:owner",
+      "workflowId": "q1sjC6zjJZkelxgm",
+      "projectId": "ZE0tgWH81scm4zQD",
+      "project": {
+        "updatedAt": "2026-03-12T15:42:44.257Z",
+        "createdAt": "2026-03-12T15:19:34.808Z",
+        "id": "ZE0tgWH81scm4zQD",
+        "name": "Achmad Aqil Susanto <ahmadagilsusanto@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-09-28T06:37:17.511Z",
+    "createdAt": "2026-09-28T06:37:17.511Z",
+    "versionId": "5f936870-d8f4-43e8-b6a6-0dc3f46d72af",
+    "workflowId": "q1sjC6zjJZkelxgm",
+    "nodes": [
+      {
+        "parameters": {
+          "path": "simapo-pks-list",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -400,
+          224
+        ],
+        "id": "c030e7f1-f8bd-46b5-b82c-44671a6e2336",
+        "name": "WH PKS List",
+        "webhookId": "simapo-pks-list"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "simapo-pks-save",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -400,
+          1120
+        ],
+        "id": "55f7c789-fe4f-41a9-975c-ec87288ad6ec",
+        "name": "WH PKS Save",
+        "webhookId": "simapo-pks-save"
+      },
+      {
+        "parameters": {
+          "httpMethod": "DELETE",
+          "path": "simapo-pks-delete",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -400,
+          2016
+        ],
+        "id": "f3f0fb52-8315-4e1d-be51-fec0f1372adb",
+        "name": "WH PKS Delete",
+        "webhookId": "simapo-pks-delete"
+      },
+      {
+        "parameters": {
+          "mode": "rules",
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "da8a4b03-c23d-4faa-860c-df2601307717",
+                      "leftValue": "={{ ($json.query.type || '').toString().toLowerCase().trim() }}",
+                      "rightValue": "program",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "program"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "39d6d9fb-92b5-4646-8dfd-e6467992e296",
+                      "leftValue": "={{ ($json.query.type || '').toString().toLowerCase().trim() }}",
+                      "rightValue": "kegiatan",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "kegiatan"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "f9e051c7-9644-4a0f-a384-ae51787469ed",
+                      "leftValue": "={{ ($json.query.type || '').toString().toLowerCase().trim() }}",
+                      "rightValue": "subkegiatan",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "subkegiatan"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "fa5d141d-77e5-4cbf-8b54-5e4f3b6d5e7e",
+                      "leftValue": "={{ \"cocok-semua\" }}",
+                      "rightValue": "cocok-semua",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "lainnya"
+              }
+            ]
+          },
+          "fallbackOutput": "none"
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3,
+        "position": [
+          -176,
+          224
+        ],
+        "id": "9b941483-0a48-458a-ae14-0942cec71dc1",
+        "name": "SW PKS List"
+      },
+      {
+        "parameters": {
+          "mode": "rules",
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "5401ed89-04f8-4d6d-82ce-b50544501593",
+                      "leftValue": "={{ ($json.body.type || '').toString().toLowerCase().trim() }}",
+                      "rightValue": "program",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "program"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "d6710753-1a45-4ad7-b10a-34f863226ce5",
+                      "leftValue": "={{ ($json.body.type || '').toString().toLowerCase().trim() }}",
+                      "rightValue": "kegiatan",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "kegiatan"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "84888c8b-e2d7-4b53-aafc-e9e70e279270",
+                      "leftValue": "={{ ($json.body.type || '').toString().toLowerCase().trim() }}",
+                      "rightValue": "subkegiatan",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "subkegiatan"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "8e589e39-b40a-4e7c-93a0-1ef69e666823",
+                      "leftValue": "={{ \"cocok-semua\" }}",
+                      "rightValue": "cocok-semua",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "lainnya"
+              }
+            ]
+          },
+          "fallbackOutput": "none"
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3,
+        "position": [
+          -176,
+          1120
+        ],
+        "id": "f2b55b18-7a10-4263-b348-a8d98a6fe294",
+        "name": "SW PKS Save"
+      },
+      {
+        "parameters": {
+          "mode": "rules",
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "5857fd26-b60b-426d-b76e-c876108fb9ba",
+                      "leftValue": "={{ ($json.body.type || '').toString().toLowerCase().trim() }}",
+                      "rightValue": "program",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "program"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "9ba9d76d-6b1c-4984-9751-0773be6685c7",
+                      "leftValue": "={{ ($json.body.type || '').toString().toLowerCase().trim() }}",
+                      "rightValue": "kegiatan",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "kegiatan"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "4cb43f67-4886-45fe-b5ba-ce93ebf7b18a",
+                      "leftValue": "={{ ($json.body.type || '').toString().toLowerCase().trim() }}",
+                      "rightValue": "subkegiatan",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "subkegiatan"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "0797036d-48ae-41be-a07f-eb83e7623959",
+                      "leftValue": "={{ \"cocok-semua\" }}",
+                      "rightValue": "cocok-semua",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "lainnya"
+              }
+            ]
+          },
+          "fallbackOutput": "none"
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3,
+        "position": [
+          -176,
+          2016
+        ],
+        "id": "178da8b5-70e3-44bb-bb82-d87f6435d9b6",
+        "name": "SW PKS Delete"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT id, kode, nama, tahun FROM public.pks_program ORDER BY urutan, kode) t",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -400,
+          0
+        ],
+        "id": "7c9e8df4-c440-48ce-8139-4f5f0f34ea51",
+        "name": "PG Program List",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT k.id, k.kode, k.nama, k.program_id, p.kode as program_kode FROM public.pks_kegiatan k JOIN public.pks_program p ON p.id = k.program_id AND p.tahun = k.tahun WHERE ('{{ ($json.query.program_id || '').toString().replace(/'/g, \"''\") }}' = '' OR k.program_id::text = '{{ ($json.query.program_id || '').toString().replace(/'/g, \"''\") }}') ORDER BY k.urutan, k.kode) t",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -400,
+          448
+        ],
+        "id": "c96950b7-2aa9-4aba-9886-a39b0f92efaa",
+        "name": "PG Kegiatan List",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) as data FROM (SELECT s.id, s.kode, s.nama, s.kegiatan_id, k.kode as kegiatan_kode FROM public.pks_subkegiatan s JOIN public.pks_kegiatan k ON k.id = s.kegiatan_id AND k.tahun = s.tahun WHERE ('{{ ($json.query.kegiatan_id || '').toString().replace(/'/g, \"''\") }}' = '' OR s.kegiatan_id::text = '{{ ($json.query.kegiatan_id || '').toString().replace(/'/g, \"''\") }}') ORDER BY s.urutan, s.kode) t",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -400,
+          672
+        ],
+        "id": "f87f8321-1236-485c-846d-3e13f0e04adf",
+        "name": "PG Subkegiatan List",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO public.pks_program (kode, nama, tahun) VALUES ('{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}', (SELECT tahun FROM public.pks_tahun ORDER BY tahun DESC LIMIT 1)) ON CONFLICT (kode, tahun) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama, tahun",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -400,
+          896
+        ],
+        "id": "edf84c77-b358-43b5-82a6-05951ad3a8ea",
+        "name": "PG Program Save",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO public.pks_kegiatan (program_id, kode, nama, tahun) SELECT p.id, '{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}', p.tahun FROM public.pks_program p WHERE p.id = NULLIF('{{ ($json.body.program_id || '').toString().replace(/'/g, \"''\") }}','')::int ON CONFLICT (kode, tahun) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama, tahun",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -400,
+          1344
+        ],
+        "id": "8b4f3bc3-3101-40f8-a488-8b50dbe42a09",
+        "name": "PG Kegiatan Save",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO public.pks_subkegiatan (kegiatan_id, kode, nama, tahun) SELECT k.id, '{{ ($json.body.kode || '').toString().replace(/'/g, \"''\") }}', '{{ ($json.body.nama || '').toString().replace(/'/g, \"''\") }}', k.tahun FROM public.pks_kegiatan k WHERE k.id = NULLIF('{{ ($json.body.kegiatan_id || '').toString().replace(/'/g, \"''\") }}','')::int ON CONFLICT (kode, tahun) DO UPDATE SET nama = EXCLUDED.nama, updated_at = NOW() RETURNING id, kode, nama, tahun",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -400,
+          1568
+        ],
+        "id": "2418f8fc-8167-4b64-a88b-4c812c088ca7",
+        "name": "PG Subkegiatan Save",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "DELETE FROM public.pks_program WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::int RETURNING id, kode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -400,
+          1792
+        ],
+        "id": "5012e359-9193-4dfe-83f7-0ed730b905fc",
+        "name": "PG Program Delete",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "DELETE FROM public.pks_kegiatan WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::int RETURNING id, kode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -400,
+          2240
+        ],
+        "id": "90074468-e7f1-41c8-a5dc-b26d528acbb9",
+        "name": "PG Kegiatan Delete",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "DELETE FROM public.pks_subkegiatan WHERE id = NULLIF('{{ ($json.body.id || '').toString().replace(/'/g, \"''\") }}','')::int RETURNING id, kode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -400,
+          2464
+        ],
+        "id": "3acca89f-90f1-42c3-8212-ecd9b5caa19c",
+        "name": "PG Subkegiatan Delete",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -176,
+          0
+        ],
+        "id": "7e36c735-82e0-4763-9c6d-badb5ca46734",
+        "name": "Res Program List"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -176,
+          448
+        ],
+        "id": "62d29986-4c40-4b52-b297-0c55aac035a7",
+        "name": "Res Kegiatan List"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -176,
+          672
+        ],
+        "id": "7dbe509d-4b4a-418c-bfda-faedabb4a76b",
+        "name": "Res Subkegiatan List"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -176,
+          896
+        ],
+        "id": "77a12fed-d2bf-4dbc-9411-6d7ff66b9ad2",
+        "name": "Res Program Save"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -176,
+          1344
+        ],
+        "id": "e9be17c5-b4b4-4b52-b363-faf1865903da",
+        "name": "Res Kegiatan Save"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -176,
+          1568
+        ],
+        "id": "99a20a5a-2495-4282-a2c4-4408c9f8cd7e",
+        "name": "Res Subkegiatan Save"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -176,
+          1792
+        ],
+        "id": "6559942d-eee7-421c-97fd-854e8394b7b9",
+        "name": "Res Program Delete"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -176,
+          2240
+        ],
+        "id": "023ac742-9c59-43eb-92d6-142783d993db",
+        "name": "Res Kegiatan Delete"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -176,
+          2464
+        ],
+        "id": "15c460a0-5002-48f4-83a4-2e71d49a1c5a",
+        "name": "Res Subkegiatan Delete"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify({ ok: false, error: \"type tidak valid: gunakan program, kegiatan, atau subkegiatan\" }) }}",
+          "options": {
+            "responseCode": 400,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "id": "4ba4e3ed-251f-405c-b916-2cbcc90dc54a",
+        "name": "Res Error List",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          -368,
+          2800
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify({ ok: false, error: \"type tidak valid: gunakan program, kegiatan, atau subkegiatan\" }) }}",
+          "options": {
+            "responseCode": 400,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "id": "02201b8a-f5e1-4f10-96b3-9857cf77bbf1",
+        "name": "Res Error Save",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          -368,
+          2800
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify({ ok: false, error: \"type tidak valid: gunakan program, kegiatan, atau subkegiatan\" }) }}",
+          "options": {
+            "responseCode": 400,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "id": "2b697988-907e-4f23-a335-a551c9e5bb3f",
+        "name": "Res Error Delete",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          -368,
+          2800
+        ]
+      }
+    ],
+    "connections": {
+      "WH PKS List": {
+        "main": [
+          [
+            {
+              "node": "SW PKS List",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WH PKS Save": {
+        "main": [
+          [
+            {
+              "node": "SW PKS Save",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WH PKS Delete": {
+        "main": [
+          [
+            {
+              "node": "SW PKS Delete",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Program List": {
+        "main": [
+          [
+            {
+              "node": "Res Program List",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Kegiatan List": {
+        "main": [
+          [
+            {
+              "node": "Res Kegiatan List",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Subkegiatan List": {
+        "main": [
+          [
+            {
+              "node": "Res Subkegiatan List",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Program Save": {
+        "main": [
+          [
+            {
+              "node": "Res Program Save",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Kegiatan Save": {
+        "main": [
+          [
+            {
+              "node": "Res Kegiatan Save",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Subkegiatan Save": {
+        "main": [
+          [
+            {
+              "node": "Res Subkegiatan Save",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Program Delete": {
+        "main": [
+          [
+            {
+              "node": "Res Program Delete",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Kegiatan Delete": {
+        "main": [
+          [
+            {
+              "node": "Res Kegiatan Delete",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Subkegiatan Delete": {
+        "main": [
+          [
+            {
+              "node": "Res Subkegiatan Delete",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "SW PKS List": {
+        "main": [
+          [
+            {
+              "node": "PG Program List",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "PG Kegiatan List",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "PG Subkegiatan List",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Res Error List",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "SW PKS Save": {
+        "main": [
+          [
+            {
+              "node": "PG Program Save",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "PG Kegiatan Save",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "PG Subkegiatan Save",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Res Error Save",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "SW PKS Delete": {
+        "main": [
+          [
+            {
+              "node": "PG Program Delete",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "PG Kegiatan Delete",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "PG Subkegiatan Delete",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Res Error Delete",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Achmad Aqil Susanto",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-09-28T06:37:17.730Z",
+        "id": 1646,
+        "workflowId": "q1sjC6zjJZkelxgm",
+        "versionId": "5f936870-d8f4-43e8-b6a6-0dc3f46d72af",
+        "event": "activated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      },
+      {
+        "createdAt": "2026-09-28T06:37:17.692Z",
+        "id": 1645,
+        "workflowId": "q1sjC6zjJZkelxgm",
+        "versionId": "5f936870-d8f4-43e8-b6a6-0dc3f46d72af",
+        "event": "deactivated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    ]
+  }
+}

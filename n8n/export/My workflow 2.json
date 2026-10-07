@@ -1,0 +1,91 @@
+{
+  "updatedAt": "2026-07-21T10:52:17.657Z",
+  "createdAt": "2026-07-21T10:52:17.657Z",
+  "id": "iTE5FOyMcJNREzUy",
+  "name": "My workflow 2",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "@devlikeapro/n8n-nodes-waha.wahaTrigger",
+      "typeVersion": 202502,
+      "position": [
+        0,
+        0
+      ],
+      "id": "67d7b3cb-fab0-4f8f-947f-21fa762f7e9e",
+      "name": "WAHA Trigger",
+      "webhookId": "2b76642a-06e8-4ef5-9189-6f219fb9f9af"
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "03bcf1a4-72c0-4ea3-a1e1-aac527ed16a9",
+  "activeVersionId": "03bcf1a4-72c0-4ea3-a1e1-aac527ed16a9",
+  "versionCounter": 4,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-07-21T10:52:17.664Z",
+      "createdAt": "2026-07-21T10:52:17.664Z",
+      "role": "workflow:owner",
+      "workflowId": "iTE5FOyMcJNREzUy",
+      "projectId": "ZE0tgWH81scm4zQD",
+      "project": {
+        "updatedAt": "2026-03-12T15:42:44.257Z",
+        "createdAt": "2026-03-12T15:19:34.808Z",
+        "id": "ZE0tgWH81scm4zQD",
+        "name": "Achmad Aqil Susanto <ahmadagilsusanto@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-21T10:52:39.000Z",
+    "createdAt": "2026-07-21T10:52:17.665Z",
+    "versionId": "03bcf1a4-72c0-4ea3-a1e1-aac527ed16a9",
+    "workflowId": "iTE5FOyMcJNREzUy",
+    "nodes": [
+      {
+        "parameters": {},
+        "type": "@devlikeapro/n8n-nodes-waha.wahaTrigger",
+        "typeVersion": 202502,
+        "position": [
+          0,
+          0
+        ],
+        "id": "67d7b3cb-fab0-4f8f-947f-21fa762f7e9e",
+        "name": "WAHA Trigger",
+        "webhookId": "2b76642a-06e8-4ef5-9189-6f219fb9f9af"
+      }
+    ],
+    "connections": {},
+    "authors": "Achmad Aqil Susanto",
+    "name": "Version 03bcf1a4",
+    "description": "",
+    "autosaved": true,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-07-21T10:52:39.223Z",
+        "id": 1456,
+        "workflowId": "iTE5FOyMcJNREzUy",
+        "versionId": "03bcf1a4-72c0-4ea3-a1e1-aac527ed16a9",
+        "event": "activated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    ]
+  }
+}

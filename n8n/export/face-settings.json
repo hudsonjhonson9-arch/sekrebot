@@ -1,0 +1,690 @@
+{
+  "updatedAt": "2026-08-11T05:53:07.459Z",
+  "createdAt": "2026-07-05T23:25:24.151Z",
+  "id": "Ba1UWeU2t9NNzgiH",
+  "name": "face-settings",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "path": "face-settings",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ab7f26c9-4c23-46fe-826f-288f998a7bc4",
+      "name": "Webhook GET",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        192
+      ],
+      "webhookId": "face-settings-get-0001"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-get",
+              "leftValue": "={{ $json.headers.authorization }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "33d5e971-90ec-4e6e-965d-6c231a5a9307",
+      "name": "Has Auth?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'Missing authorization' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "b00589c1-13d5-4246-8712-2109d733024b",
+      "name": "Reject No Auth",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -448,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const auth = $input.first().json.headers.authorization || '';\nconst token = auth.replace(/^Bearer\\s+/i, '').trim();\n\n// Format: tg_<user_id>_<ts> or usr_<user_id>_<ts>\nconst parts = token.split('_');\nif (parts.length < 2) {\n  return [{ json: { ok: false, error: 'Invalid token format' } }];\n}\nconst userId = parseInt(parts[1]);\nif (isNaN(userId)) {\n  return [{ json: { ok: false, error: 'Invalid user ID in token' } }];\n}\n\n// Verify user exists\nconst { rows } = await $pg.query('SELECT id, is_admin FROM user_list WHERE id = $1', [userId]);\nif (!rows.length) {\n  return [{ json: { ok: false, error: 'User not found' } }];\n}\n\nreturn [{ json: { ok: true, user_id: userId, is_admin: rows[0].is_admin } }];"
+      },
+      "id": "a9036beb-819a-404a-ad4d-f7f3bcb02e85",
+      "name": "Validate Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-admin",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "caeabd49-c5e7-4c60-9084-759d3e8bc61e",
+      "name": "Is Admin?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'Admin access required' }) }}",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "id": "eb2c0d38-9855-4f53-9e79-173791bab578",
+      "name": "Reject Not Admin",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = await $pg.query(\"SELECT key, value FROM pengaturan WHERE instansi_id = 'bapperida' AND key IN ('face_liveness_enabled', 'face_threshold', 'face_meja_threshold', 'face_liveness_score', 'face_mandatory_nips')\");\n\nconst settings = {};\nfor (const r of rows) {\n  if (r.key === 'face_liveness_enabled') settings.liveness_enabled = r.value === 'true';\n  else if (r.key === 'face_threshold') settings.face_threshold = parseFloat(r.value) || 0.55;\n  else if (r.key === 'face_meja_threshold') settings.meja_threshold = parseFloat(r.value) || 0.55;\n  else if (r.key === 'face_liveness_score') settings.liveness_score = parseFloat(r.value) || 0.40;\n  else if (r.key === 'face_mandatory_nips') {\n    try { settings.mandatory_nips = JSON.parse(r.value); } catch { settings.mandatory_nips = []; }\n  }\n}\n\nreturn [{ json: { ok: true, settings } }];"
+      },
+      "id": "dd5ec08d-8f04-443b-b275-4e14f3e00783",
+      "name": "Get Settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, updated: $json.updated }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "d45f5b8f-c322-419d-a2fc-685020ce37d1",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -224,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "face-settings",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "07c7e8f1-e2f8-4ade-9470-ca9173299ee8",
+      "name": "Webhook POST",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        512
+      ],
+      "webhookId": "face-settings-post-0001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst auth = (body.headers?.authorization || '').replace(/^Bearer\\s+/i, '').trim();\nconst parts = auth.split('_');\nconst userId = parseInt(parts[1]);\n\nif (!userId) {\n  return [{ json: { ok: false, error: 'Unauthorized' } }];\n}\n\nconst { rows } = await $pg.query('SELECT id, is_admin FROM user_list WHERE id = $1', [userId]);\nif (!rows.length || !rows[0].is_admin) {\n  return [{ json: { ok: false, error: 'Admin access required' } }];\n}\n\nreturn [{ json: { ok: true, user_id: userId, settings: body.settings || body } }];"
+      },
+      "id": "82895f45-81f3-4c6f-b1c6-3b74ec6d2710",
+      "name": "Validate Token & Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const s = $input.first().json.settings || {};\nconst updates = [];\nconst params = [];\nlet idx = 1;\n\nconst fields = [\n  ['face_liveness_enabled', s.liveness_enabled],\n  ['face_threshold', s.face_threshold],\n  ['face_meja_threshold', s.meja_threshold],\n  ['face_liveness_score', s.liveness_score],\n  ['face_mandatory_nips', Array.isArray(s.mandatory_nips) ? JSON.stringify(s.mandatory_nips) : s.mandatory_nips]\n];\n\nfor (const [key, val] of fields) {\n  if (val !== undefined && val !== null) {\n    updates.push(`(${idx}, '${key}', '${String(val)}', 'bapperida')`);\n    idx++;\n  }\n}\n\nif (!updates.length) {\n  return [{ json: { ok: false, error: 'No settings to update' } }];\n}\n\nconst sql = `INSERT INTO pengaturan (id, key, value, instansi_id) VALUES ${updates.join(', ')}\n  ON CONFLICT (key, instansi_id) DO UPDATE SET value = EXCLUDED.value`;\n\nawait $pg.query(sql);\nreturn [{ json: { ok: true, updated: fields.map(f => f[0]) } }];"
+      },
+      "id": "dc1fe3bd-901a-44ce-a8ef-edbe4fb85729",
+      "name": "Upsert Settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        512
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook GET": {
+      "main": [
+        [
+          {
+            "node": "Has Auth?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Auth?": {
+      "main": [
+        [
+          {
+            "node": "Validate Token",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject No Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Token": {
+      "main": [
+        [
+          {
+            "node": "Is Admin?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Admin?": {
+      "main": [
+        [
+          {
+            "node": "Get Settings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Not Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Settings": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook POST": {
+      "main": [
+        [
+          {
+            "node": "Validate Token & Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Token & Body": {
+      "main": [
+        [
+          {
+            "node": "Upsert Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Settings": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "d1f7fedf-7047-4e11-9de4-a0e625cbf035",
+  "activeVersionId": "c3bbb388-728a-4342-af3b-f48a23ca032d",
+  "versionCounter": 8,
+  "triggerCount": 2,
+  "shared": [
+    {
+      "updatedAt": "2026-07-05T23:25:24.158Z",
+      "createdAt": "2026-07-05T23:25:24.158Z",
+      "role": "workflow:owner",
+      "workflowId": "Ba1UWeU2t9NNzgiH",
+      "projectId": "ZE0tgWH81scm4zQD",
+      "project": {
+        "updatedAt": "2026-03-12T15:42:44.257Z",
+        "createdAt": "2026-03-12T15:19:34.808Z",
+        "id": "ZE0tgWH81scm4zQD",
+        "name": "Achmad Aqil Susanto <ahmadagilsusanto@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-05T23:25:26.000Z",
+    "createdAt": "2026-07-05T23:25:24.161Z",
+    "versionId": "c3bbb388-728a-4342-af3b-f48a23ca032d",
+    "workflowId": "Ba1UWeU2t9NNzgiH",
+    "nodes": [
+      {
+        "parameters": {
+          "path": "face-settings",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "ab7f26c9-4c23-46fe-826f-288f998a7bc4",
+        "name": "Webhook GET",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -880,
+          192
+        ],
+        "webhookId": "face-settings-get-0001"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "cond-get",
+                "leftValue": "={{ $json.headers.authorization }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "exists"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "33d5e971-90ec-4e6e-965d-6c231a5a9307",
+        "name": "Has Auth?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          -656,
+          192
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ ok: false, error: 'Missing authorization' }) }}",
+          "options": {
+            "responseCode": 401
+          }
+        },
+        "id": "b00589c1-13d5-4246-8712-2109d733024b",
+        "name": "Reject No Auth",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -448,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const auth = $input.first().json.headers.authorization || '';\nconst token = auth.replace(/^Bearer\\s+/i, '').trim();\n\n// Format: tg_<user_id>_<ts> or usr_<user_id>_<ts>\nconst parts = token.split('_');\nif (parts.length < 2) {\n  return [{ json: { ok: false, error: 'Invalid token format' } }];\n}\nconst userId = parseInt(parts[1]);\nif (isNaN(userId)) {\n  return [{ json: { ok: false, error: 'Invalid user ID in token' } }];\n}\n\n// Verify user exists\nconst { rows } = await $pg.query('SELECT id, is_admin FROM user_list WHERE id = $1', [userId]);\nif (!rows.length) {\n  return [{ json: { ok: false, error: 'User not found' } }];\n}\n\nreturn [{ json: { ok: true, user_id: userId, is_admin: rows[0].is_admin } }];"
+        },
+        "id": "a9036beb-819a-404a-ad4d-f7f3bcb02e85",
+        "name": "Validate Token",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -448,
+          112
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "cond-admin",
+                "leftValue": "={{ $json.ok }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "caeabd49-c5e7-4c60-9084-759d3e8bc61e",
+        "name": "Is Admin?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          -224,
+          112
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ ok: false, error: 'Admin access required' }) }}",
+          "options": {
+            "responseCode": 403
+          }
+        },
+        "id": "eb2c0d38-9855-4f53-9e79-173791bab578",
+        "name": "Reject Not Admin",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          0,
+          224
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const rows = await $pg.query(\"SELECT key, value FROM pengaturan WHERE instansi_id = 'bapperida' AND key IN ('face_liveness_enabled', 'face_threshold', 'face_meja_threshold', 'face_liveness_score', 'face_mandatory_nips')\");\n\nconst settings = {};\nfor (const r of rows) {\n  if (r.key === 'face_liveness_enabled') settings.liveness_enabled = r.value === 'true';\n  else if (r.key === 'face_threshold') settings.face_threshold = parseFloat(r.value) || 0.55;\n  else if (r.key === 'face_meja_threshold') settings.meja_threshold = parseFloat(r.value) || 0.55;\n  else if (r.key === 'face_liveness_score') settings.liveness_score = parseFloat(r.value) || 0.40;\n  else if (r.key === 'face_mandatory_nips') {\n    try { settings.mandatory_nips = JSON.parse(r.value); } catch { settings.mandatory_nips = []; }\n  }\n}\n\nreturn [{ json: { ok: true, settings } }];"
+        },
+        "id": "dd5ec08d-8f04-443b-b275-4e14f3e00783",
+        "name": "Get Settings",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          0,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ ok: true, updated: $json.updated }) }}",
+          "options": {
+            "responseCode": 200
+          }
+        },
+        "id": "d45f5b8f-c322-419d-a2fc-685020ce37d1",
+        "name": "Respond OK",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -224,
+          512
+        ]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "face-settings",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "07c7e8f1-e2f8-4ade-9470-ca9173299ee8",
+        "name": "Webhook POST",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -880,
+          512
+        ],
+        "webhookId": "face-settings-post-0001"
+      },
+      {
+        "parameters": {
+          "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst auth = (body.headers?.authorization || '').replace(/^Bearer\\s+/i, '').trim();\nconst parts = auth.split('_');\nconst userId = parseInt(parts[1]);\n\nif (!userId) {\n  return [{ json: { ok: false, error: 'Unauthorized' } }];\n}\n\nconst { rows } = await $pg.query('SELECT id, is_admin FROM user_list WHERE id = $1', [userId]);\nif (!rows.length || !rows[0].is_admin) {\n  return [{ json: { ok: false, error: 'Admin access required' } }];\n}\n\nreturn [{ json: { ok: true, user_id: userId, settings: body.settings || body } }];"
+        },
+        "id": "82895f45-81f3-4c6f-b1c6-3b74ec6d2710",
+        "name": "Validate Token & Body",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -656,
+          512
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const s = $input.first().json.settings || {};\nconst updates = [];\nconst params = [];\nlet idx = 1;\n\nconst fields = [\n  ['face_liveness_enabled', s.liveness_enabled],\n  ['face_threshold', s.face_threshold],\n  ['face_meja_threshold', s.meja_threshold],\n  ['face_liveness_score', s.liveness_score],\n  ['face_mandatory_nips', Array.isArray(s.mandatory_nips) ? JSON.stringify(s.mandatory_nips) : s.mandatory_nips]\n];\n\nfor (const [key, val] of fields) {\n  if (val !== undefined && val !== null) {\n    updates.push(`(${idx}, '${key}', '${String(val)}', 'bapperida')`);\n    idx++;\n  }\n}\n\nif (!updates.length) {\n  return [{ json: { ok: false, error: 'No settings to update' } }];\n}\n\nconst sql = `INSERT INTO pengaturan (id, key, value, instansi_id) VALUES ${updates.join(', ')}\n  ON CONFLICT (key, instansi_id) DO UPDATE SET value = EXCLUDED.value`;\n\nawait $pg.query(sql);\nreturn [{ json: { ok: true, updated: fields.map(f => f[0]) } }];"
+        },
+        "id": "dc1fe3bd-901a-44ce-a8ef-edbe4fb85729",
+        "name": "Upsert Settings",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -448,
+          512
+        ]
+      }
+    ],
+    "connections": {
+      "Webhook GET": {
+        "main": [
+          [
+            {
+              "node": "Has Auth?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Has Auth?": {
+        "main": [
+          [
+            {
+              "node": "Validate Token",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Reject No Auth",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate Token": {
+        "main": [
+          [
+            {
+              "node": "Is Admin?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Is Admin?": {
+        "main": [
+          [
+            {
+              "node": "Get Settings",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Reject Not Admin",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Settings": {
+        "main": [
+          [
+            {
+              "node": "Respond OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook POST": {
+        "main": [
+          [
+            {
+              "node": "Validate Token & Body",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate Token & Body": {
+        "main": [
+          [
+            {
+              "node": "Upsert Settings",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Upsert Settings": {
+        "main": [
+          [
+            {
+              "node": "Respond OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Achmad Aqil Susanto",
+    "name": "Version c3bbb388",
+    "description": "",
+    "autosaved": true,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-07-05T23:25:26.082Z",
+        "id": 1354,
+        "workflowId": "Ba1UWeU2t9NNzgiH",
+        "versionId": "c3bbb388-728a-4342-af3b-f48a23ca032d",
+        "event": "activated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      },
+      {
+        "createdAt": "2026-07-19T03:06:24.052Z",
+        "id": 1367,
+        "workflowId": "Ba1UWeU2t9NNzgiH",
+        "versionId": "c3bbb388-728a-4342-af3b-f48a23ca032d",
+        "event": "activated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      },
+      {
+        "createdAt": "2026-07-19T03:06:24.028Z",
+        "id": 1366,
+        "workflowId": "Ba1UWeU2t9NNzgiH",
+        "versionId": "c3bbb388-728a-4342-af3b-f48a23ca032d",
+        "event": "deactivated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    ]
+  }
+}

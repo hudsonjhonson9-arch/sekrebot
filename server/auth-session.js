@@ -1,0 +1,49 @@
+import express from 'express';
+import crypto from 'node:crypto';
+import { verifyInitData } from './telegram.js';
+import { query as realQuery } from './db.js';
+
+const EMPLOYEE_SQL = `
+  SELECT id::text AS id, "NIP" AS nip, role, instansi_id
+  FROM user_list WHERE id::text = $1 LIMIT 1`;
+
+const INSERT_SESSION_SQL = `
+  INSERT INTO auth_sessions (session_token, nip, user_id, role, instansi_id, created_at, expires_at, last_used_at, is_active)
+  VALUES ($1,$2,$3,$4,$5, now(), now() + interval '12 hours', now(), true)
+  RETURNING session_token`;
+
+const DEACTIVATE_SQL = `UPDATE auth_sessions SET is_active = false WHERE session_token = $1`;
+
+const TOKEN_RE = /^[0-9a-f]{192}$/;
+
+export function createAuthSessionRouter({ query = realQuery } = {}) {
+  const router = express.Router();
+
+  router.post('/api/auth/session', async (req, res) => {
+    const auth = verifyInitData(req.body?.init_data, process.env.TELEGRAM_BOT_TOKEN, { maxAgeSeconds: 86400 });
+    if (!auth.ok) return res.status(401).json({ ok: false, message: 'Bukti identitas tidak valid.' });
+
+    // Identitas diambil dari init_data yang sudah diverifikasi, bukan body.nip.
+    // NIP tidak unik di user_list, jadi membiarkannya memilih baris pegawai berarti
+    // siapa pun yang tahu NIP orang lain bisa meminta sesi atas nama orang itu.
+    const employee = (await query(EMPLOYEE_SQL, [String(auth.user.id)])).rows[0];
+    if (!employee) return res.status(404).json({ ok: false, message: 'Pegawai tidak dikenal.' });
+
+    const token = crypto.randomBytes(96).toString('hex');
+    const { rows } = await query(INSERT_SESSION_SQL, [token, employee.nip, employee.id, employee.role, employee.instansi_id]);
+    if (!rows.length) return res.status(500).json({ ok: false, message: 'Gagal membuat sesi.' });
+
+    return res.status(200).json({ ok: true, session_token: rows[0].session_token });
+  });
+
+  router.post('/api/auth/logout', async (req, res) => {
+    const token = req.body?.session_token;
+    if (typeof token !== 'string' || !TOKEN_RE.test(token)) {
+      return res.status(400).json({ ok: false, message: 'session_token tidak valid.' });
+    }
+    await query(DEACTIVATE_SQL, [token]);
+    return res.status(200).json({ ok: true });
+  });
+
+  return router;
+}

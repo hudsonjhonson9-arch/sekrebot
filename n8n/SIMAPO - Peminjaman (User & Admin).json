@@ -1,0 +1,903 @@
+{
+  "updatedAt": "2026-07-19T10:21:45.936Z",
+  "createdAt": "2026-05-12T15:01:55.153Z",
+  "id": "bAMQvq4bhstMJkmF",
+  "name": "SIMAPO - Peminjaman (User & Admin)",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simapo-pinjam",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        160,
+        1408
+      ],
+      "id": "0881c613-92d6-4035-b199-c62031980442",
+      "name": "WH Ajukan Pinjam",
+      "webhookId": "simapo-pinjam"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.item.json.body || $input.item.json;\nconst q = $input.item.json.query || {};\nconst nip = b.nip || $input.item.json.headers?.['x-nip'] || '';\nif (!nip) throw new Error('NIP tidak ditemukan');\nif (!b.unitasetid) throw new Error('Barang belum dipilih');\nif (!b.tujuanpeminjaman) throw new Error('Tujuan kosong');\nreturn [{ json: { \n  userid: nip, \n  unitasetid: b.unitasetid, \n  tujuanpeminjaman: b.tujuanpeminjaman, \n  tanggalmulai: b.tanggalmulai, \n  tanggalselesai: b.tanggalselesai, \n  nomorpeminjaman: 'PMJ-' + Date.now(),\n  instansi_id: b.instansi_id || q.instansi_id || 'bapperida'\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1408
+      ],
+      "id": "69c5420b-f44d-4d5c-8975-6334f21229c4",
+      "name": "Validate Pinjam"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"SIMAPO\".peminjaman (id, nomorpeminjaman, userid, unitasetid, tujuanpeminjaman, tanggalmulai, tanggalselesai, status, createdat, updatedat, instansi_id) VALUES (gen_random_uuid(), '{{ ($json.nomorpeminjaman).toString().replace(/'/g, \"''\") }}', '{{ ($json.userid).toString().replace(/'/g, \"''\") }}', '{{ ($json.unitasetid).toString().replace(/'/g, \"''\") }}', '{{ ($json.tujuanpeminjaman).toString().replace(/'/g, \"''\") }}', '{{ ($json.tanggalmulai).toString().replace(/'/g, \"''\") }}', '{{ ($json.tanggalselesai).toString().replace(/'/g, \"''\") }}', 'MENUNGGU', NOW(), NOW(), '{{ ($json.instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}') RETURNING id, status;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        640,
+        1408
+      ],
+      "id": "eb94a65e-9e5a-44ac-a642-0de3721f9ac8",
+      "name": "PG Insert Pinjaman",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        1408
+      ],
+      "id": "635f1c7c-8b79-452a-aa4e-82a71e7889c7",
+      "name": "Res Ajukan Pinjam"
+    },
+    {
+      "parameters": {
+        "path": "simapo-pinjam-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        160,
+        1712
+      ],
+      "id": "8b7ea04f-c929-44e5-892b-2ce79513538a",
+      "name": "WH Riwayat Pinjam",
+      "webhookId": "simapo-pinjam-list"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\nSELECT p.id, COALESCE(b.nama, b2.nama) AS nama_barang, COALESCE(b.kodebarang, ua.nomorinventaris) AS kodebarang, p.tujuanpeminjaman, TO_CHAR(p.tanggalmulai,'YYYY-MM-DD') as tanggalmulai, TO_CHAR(p.tanggalselesai,'YYYY-MM-DD') as tanggalselesai, p.status, TO_CHAR(p.createdat,'YYYY-MM-DD') AS createdat FROM \"SIMAPO\".peminjaman p LEFT JOIN \"SIMAPO\".barang b ON b.id = p.unitasetid LEFT JOIN \"SIMAPO\".unit_aset ua ON ua.id = p.unitasetid LEFT JOIN \"SIMAPO\".barang b2 ON b2.id = ua.barangid WHERE p.userid = '{{ ($json.query.nip).toString().replace(/'/g, \"''\") }}' ORDER BY p.createdat DESC LIMIT 30\n) t;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        1712
+      ],
+      "id": "6f4fa545-ed7b-447c-8931-ef846ea50463",
+      "name": "PG Riwayat Pinjam",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: $input.all()[0].json.items || [] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        1712
+      ],
+      "id": "76ea7760-185d-410f-9dd6-155b89227cdf",
+      "name": "Agg Pinjam"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        1712
+      ],
+      "id": "e21e81f9-68e7-4b94-af33-fe52f78797af",
+      "name": "Res Riwayat Pinjam"
+    },
+    {
+      "parameters": {
+        "path": "simapo-admin-pinjam-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        160,
+        2016
+      ],
+      "id": "9651e0f1-84a1-4e1c-8e34-aa90cc9ecf36",
+      "name": "WH Admin Pinjam List",
+      "webhookId": "simapo-admin-pinjam-list"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\nSELECT p.id, p.userid, COALESCE(u.\"username\", p.userid) AS nama_peminjam, COALESCE(b.nama, b2.nama) AS nama_barang, COALESCE(b.kodebarang, ua.nomorinventaris) AS kodebarang, p.tujuanpeminjaman, TO_CHAR(p.tanggalmulai,'YYYY-MM-DD') as tanggalmulai, TO_CHAR(p.tanggalselesai,'YYYY-MM-DD') as tanggalselesai, p.status, TO_CHAR(p.createdat,'YYYY-MM-DD') AS createdat FROM \"SIMAPO\".peminjaman p LEFT JOIN \"SIMAPO\".barang b ON b.id = p.unitasetid LEFT JOIN \"SIMAPO\".unit_aset ua ON ua.id = p.unitasetid LEFT JOIN \"SIMAPO\".barang b2 ON b2.id = ua.barangid LEFT JOIN public.user_list u ON u.\"NIP\" = p.userid WHERE p.instansi_id = '{{ ($json.query.instansi_id || 'bapperida').toString().replace(/'/g, \"''\") }}' ORDER BY CASE p.status WHEN 'MENUNGGU' THEN 0 WHEN 'DIPINJAM' THEN 1 ELSE 2 END, p.createdat DESC LIMIT 100\n) t;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        2016
+      ],
+      "id": "c72b2181-b1b0-42c0-8c4c-bd5102b70e22",
+      "name": "PG Admin Pinjam List",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { data: $input.all()[0].json.items || [] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        2016
+      ],
+      "id": "dcfad919-0c02-49c4-bea4-bf139104f389",
+      "name": "Agg Admin Pinjam"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        2016
+      ],
+      "id": "075998f4-599c-4818-ab3f-a0fe3c81509b",
+      "name": "Res Admin Pinjam List"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simapo-admin-pinjam-action",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        160,
+        2320
+      ],
+      "id": "aba17725-8a2b-4b6a-9db1-4cedc7f2220b",
+      "name": "WH Admin Pinjam Action",
+      "webhookId": "simapo-admin-pinjam-action"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH p_old AS (\n  SELECT id, unitasetid, status FROM \"SIMAPO\".peminjaman WHERE id = '{{ ($json.body.id).toString().replace(/'/g, \"''\") }}'\n),\nbarang_resolve AS (\n  SELECT COALESCE(b.id, b2.id) AS barang_id\n  FROM \"SIMAPO\".peminjaman p\n  LEFT JOIN \"SIMAPO\".barang b ON b.id = p.unitasetid\n  LEFT JOIN \"SIMAPO\".unit_aset ua ON ua.id = p.unitasetid\n  LEFT JOIN \"SIMAPO\".barang b2 ON b2.id = ua.barangid\n  WHERE p.id = '{{ ($json.body.id).toString().replace(/'/g, \"''\") }}'\n),\np_upd AS (\n  UPDATE \"SIMAPO\".peminjaman \n  SET status = '{{ ($json.body.status).toString().replace(/'/g, \"''\") }}', updatedat = NOW() \n  WHERE id = '{{ ($json.body.id).toString().replace(/'/g, \"''\") }}' \n  RETURNING id, status, unitasetid\n),\nb_upd AS (\n  UPDATE \"SIMAPO\".barang b\n  SET stok_saat_ini = b.stok_saat_ini + \n      CASE \n          WHEN p_old.status = 'MENUNGGU' AND p_upd.status IN ('DIPINJAM', 'SELESAI') THEN -1\n          WHEN (p_old.status = 'DIPINJAM' OR p_old.status = 'MENUNGGU') AND p_upd.status IN ('DIKEMBALIKAN', 'KEMBALI') THEN 1\n          ELSE 0\n      END\n  FROM p_old, p_upd, barang_resolve\n  WHERE b.id = barang_resolve.barang_id\n),\nua_upd AS (\n  UPDATE \"SIMAPO\".unit_aset ua\n  SET statuspinjam = CASE\n      WHEN p_upd.status IN ('DIPINJAM', 'SELESAI') THEN true\n      WHEN p_upd.status IN ('DIKEMBALIKAN', 'KEMBALI') THEN false\n      ELSE ua.statuspinjam\n    END\n  FROM p_upd\n  WHERE ua.id = p_upd.unitasetid\n)\nSELECT id, status FROM p_upd;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        2320
+      ],
+      "id": "75e7cce9-afbf-4daf-b115-d135f4047045",
+      "name": "PG Admin Pinjam Action",
+      "credentials": {
+        "postgres": {
+          "id": "vYOiyrTftLtD3zzd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        2320
+      ],
+      "id": "8e0d6eab-bb9d-4bc6-ba9b-3e5cd15877b3",
+      "name": "Res Admin Pinjam Action"
+    }
+  ],
+  "connections": {
+    "WH Ajukan Pinjam": {
+      "main": [
+        [
+          {
+            "node": "Validate Pinjam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Pinjam": {
+      "main": [
+        [
+          {
+            "node": "PG Insert Pinjaman",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Insert Pinjaman": {
+      "main": [
+        [
+          {
+            "node": "Res Ajukan Pinjam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Riwayat Pinjam": {
+      "main": [
+        [
+          {
+            "node": "PG Riwayat Pinjam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Riwayat Pinjam": {
+      "main": [
+        [
+          {
+            "node": "Agg Pinjam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Pinjam": {
+      "main": [
+        [
+          {
+            "node": "Res Riwayat Pinjam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Admin Pinjam List": {
+      "main": [
+        [
+          {
+            "node": "PG Admin Pinjam List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Admin Pinjam List": {
+      "main": [
+        [
+          {
+            "node": "Agg Admin Pinjam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg Admin Pinjam": {
+      "main": [
+        [
+          {
+            "node": "Res Admin Pinjam List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WH Admin Pinjam Action": {
+      "main": [
+        [
+          {
+            "node": "PG Admin Pinjam Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Admin Pinjam Action": {
+      "main": [
+        [
+          {
+            "node": "Res Admin Pinjam Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "65aaaa1b-999b-4956-9874-e23d69e3d1bf",
+  "activeVersionId": "65aaaa1b-999b-4956-9874-e23d69e3d1bf",
+  "versionCounter": 85,
+  "triggerCount": 4,
+  "shared": [
+    {
+      "updatedAt": "2026-05-12T15:01:55.160Z",
+      "createdAt": "2026-05-12T15:01:55.160Z",
+      "role": "workflow:owner",
+      "workflowId": "bAMQvq4bhstMJkmF",
+      "projectId": "ZE0tgWH81scm4zQD",
+      "project": {
+        "updatedAt": "2026-03-12T15:42:44.257Z",
+        "createdAt": "2026-03-12T15:19:34.808Z",
+        "id": "ZE0tgWH81scm4zQD",
+        "name": "Achmad Aqil Susanto <ahmadagilsusanto@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-19T10:21:46.000Z",
+    "createdAt": "2026-07-19T10:21:45.937Z",
+    "versionId": "65aaaa1b-999b-4956-9874-e23d69e3d1bf",
+    "workflowId": "bAMQvq4bhstMJkmF",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "simapo-pinjam",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          160,
+          1408
+        ],
+        "id": "0881c613-92d6-4035-b199-c62031980442",
+        "name": "WH Ajukan Pinjam",
+        "webhookId": "simapo-pinjam"
+      },
+      {
+        "parameters": {
+          "jsCode": "const b = $input.item.json.body || $input.item.json;\nconst q = $input.item.json.query || {};\nconst nip = b.nip || $input.item.json.headers?.['x-nip'] || '';\nif (!nip) throw new Error('NIP tidak ditemukan');\nif (!b.unitasetid) throw new Error('Barang belum dipilih');\nif (!b.tujuanpeminjaman) throw new Error('Tujuan kosong');\nreturn [{ json: { \n  userid: nip, \n  unitasetid: b.unitasetid, \n  tujuanpeminjaman: b.tujuanpeminjaman, \n  tanggalmulai: b.tanggalmulai, \n  tanggalselesai: b.tanggalselesai, \n  nomorpeminjaman: 'PMJ-' + Date.now(),\n  instansi_id: b.instansi_id || q.instansi_id || 'bapperida'\n} }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          400,
+          1408
+        ],
+        "id": "69c5420b-f44d-4d5c-8975-6334f21229c4",
+        "name": "Validate Pinjam"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO \"SIMAPO\".peminjaman (id, nomorpeminjaman, userid, unitasetid, tujuanpeminjaman, tanggalmulai, tanggalselesai, status, createdat, updatedat, instansi_id) VALUES (gen_random_uuid(), '{{ ($json.nomorpeminjaman).toString().replace(/'/g, \"''\") }}', '{{ ($json.userid).toString().replace(/'/g, \"''\") }}', '{{ ($json.unitasetid).toString().replace(/'/g, \"''\") }}', '{{ ($json.tujuanpeminjaman).toString().replace(/'/g, \"''\") }}', '{{ ($json.tanggalmulai).toString().replace(/'/g, \"''\") }}', '{{ ($json.tanggalselesai).toString().replace(/'/g, \"''\") }}', 'MENUNGGU', NOW(), NOW(), '{{ ($json.instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}') RETURNING id, status;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          640,
+          1408
+        ],
+        "id": "eb94a65e-9e5a-44ac-a642-0de3721f9ac8",
+        "name": "PG Insert Pinjaman",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          880,
+          1408
+        ],
+        "id": "635f1c7c-8b79-452a-aa4e-82a71e7889c7",
+        "name": "Res Ajukan Pinjam"
+      },
+      {
+        "parameters": {
+          "path": "simapo-pinjam-list",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          160,
+          1712
+        ],
+        "id": "8b7ea04f-c929-44e5-892b-2ce79513538a",
+        "name": "WH Riwayat Pinjam",
+        "webhookId": "simapo-pinjam-list"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\nSELECT p.id, COALESCE(b.nama, b2.nama) AS nama_barang, COALESCE(b.kodebarang, ua.nomorinventaris) AS kodebarang, p.tujuanpeminjaman, TO_CHAR(p.tanggalmulai,'YYYY-MM-DD') as tanggalmulai, TO_CHAR(p.tanggalselesai,'YYYY-MM-DD') as tanggalselesai, p.status, TO_CHAR(p.createdat,'YYYY-MM-DD') AS createdat FROM \"SIMAPO\".peminjaman p LEFT JOIN \"SIMAPO\".barang b ON b.id = p.unitasetid LEFT JOIN \"SIMAPO\".unit_aset ua ON ua.id = p.unitasetid LEFT JOIN \"SIMAPO\".barang b2 ON b2.id = ua.barangid WHERE p.userid = '{{ ($json.query.nip).toString().replace(/'/g, \"''\") }}' ORDER BY p.createdat DESC LIMIT 30\n) t;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          400,
+          1712
+        ],
+        "id": "6f4fa545-ed7b-447c-8931-ef846ea50463",
+        "name": "PG Riwayat Pinjam",
+        "alwaysOutputData": true,
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "return [{ json: { data: $input.all()[0].json.items || [] } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          640,
+          1712
+        ],
+        "id": "76ea7760-185d-410f-9dd6-155b89227cdf",
+        "name": "Agg Pinjam"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          880,
+          1712
+        ],
+        "id": "e21e81f9-68e7-4b94-af33-fe52f78797af",
+        "name": "Res Riwayat Pinjam"
+      },
+      {
+        "parameters": {
+          "path": "simapo-admin-pinjam-list",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          160,
+          2016
+        ],
+        "id": "9651e0f1-84a1-4e1c-8e34-aa90cc9ecf36",
+        "name": "WH Admin Pinjam List",
+        "webhookId": "simapo-admin-pinjam-list"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COALESCE(json_agg(t.*), '[]'::json) as items FROM (\nSELECT p.id, p.userid, COALESCE(u.\"username\", p.userid) AS nama_peminjam, COALESCE(b.nama, b2.nama) AS nama_barang, COALESCE(b.kodebarang, ua.nomorinventaris) AS kodebarang, p.tujuanpeminjaman, TO_CHAR(p.tanggalmulai,'YYYY-MM-DD') as tanggalmulai, TO_CHAR(p.tanggalselesai,'YYYY-MM-DD') as tanggalselesai, p.status, TO_CHAR(p.createdat,'YYYY-MM-DD') AS createdat FROM \"SIMAPO\".peminjaman p LEFT JOIN \"SIMAPO\".barang b ON b.id = p.unitasetid LEFT JOIN \"SIMAPO\".unit_aset ua ON ua.id = p.unitasetid LEFT JOIN \"SIMAPO\".barang b2 ON b2.id = ua.barangid LEFT JOIN public.user_list u ON u.\"NIP\" = p.userid WHERE p.instansi_id = '{{ ($json.query.instansi_id || 'bapperida').toString().replace(/'/g, \"''\") }}' ORDER BY CASE p.status WHEN 'MENUNGGU' THEN 0 WHEN 'DIPINJAM' THEN 1 ELSE 2 END, p.createdat DESC LIMIT 100\n) t;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          400,
+          2016
+        ],
+        "id": "c72b2181-b1b0-42c0-8c4c-bd5102b70e22",
+        "name": "PG Admin Pinjam List",
+        "alwaysOutputData": true,
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "return [{ json: { data: $input.all()[0].json.items || [] } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          640,
+          2016
+        ],
+        "id": "dcfad919-0c02-49c4-bea4-bf139104f389",
+        "name": "Agg Admin Pinjam"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          880,
+          2016
+        ],
+        "id": "075998f4-599c-4818-ab3f-a0fe3c81509b",
+        "name": "Res Admin Pinjam List"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "simapo-admin-pinjam-action",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          160,
+          2320
+        ],
+        "id": "aba17725-8a2b-4b6a-9db1-4cedc7f2220b",
+        "name": "WH Admin Pinjam Action",
+        "webhookId": "simapo-admin-pinjam-action"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "WITH p_old AS (\n  SELECT id, unitasetid, status FROM \"SIMAPO\".peminjaman WHERE id = '{{ ($json.body.id).toString().replace(/'/g, \"''\") }}'\n),\nbarang_resolve AS (\n  SELECT COALESCE(b.id, b2.id) AS barang_id\n  FROM \"SIMAPO\".peminjaman p\n  LEFT JOIN \"SIMAPO\".barang b ON b.id = p.unitasetid\n  LEFT JOIN \"SIMAPO\".unit_aset ua ON ua.id = p.unitasetid\n  LEFT JOIN \"SIMAPO\".barang b2 ON b2.id = ua.barangid\n  WHERE p.id = '{{ ($json.body.id).toString().replace(/'/g, \"''\") }}'\n),\np_upd AS (\n  UPDATE \"SIMAPO\".peminjaman \n  SET status = '{{ ($json.body.status).toString().replace(/'/g, \"''\") }}', updatedat = NOW() \n  WHERE id = '{{ ($json.body.id).toString().replace(/'/g, \"''\") }}' \n  RETURNING id, status, unitasetid\n),\nb_upd AS (\n  UPDATE \"SIMAPO\".barang b\n  SET stok_saat_ini = b.stok_saat_ini + \n      CASE \n          WHEN p_old.status = 'MENUNGGU' AND p_upd.status IN ('DIPINJAM', 'SELESAI') THEN -1\n          WHEN (p_old.status = 'DIPINJAM' OR p_old.status = 'MENUNGGU') AND p_upd.status IN ('DIKEMBALIKAN', 'KEMBALI') THEN 1\n          ELSE 0\n      END\n  FROM p_old, p_upd, barang_resolve\n  WHERE b.id = barang_resolve.barang_id\n),\nua_upd AS (\n  UPDATE \"SIMAPO\".unit_aset ua\n  SET statuspinjam = CASE\n      WHEN p_upd.status IN ('DIPINJAM', 'SELESAI') THEN true\n      WHEN p_upd.status IN ('DIKEMBALIKAN', 'KEMBALI') THEN false\n      ELSE ua.statuspinjam\n    END\n  FROM p_upd\n  WHERE ua.id = p_upd.unitasetid\n)\nSELECT id, status FROM p_upd;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          400,
+          2320
+        ],
+        "id": "75e7cce9-afbf-4daf-b115-d135f4047045",
+        "name": "PG Admin Pinjam Action",
+        "credentials": {
+          "postgres": {
+            "id": "vYOiyrTftLtD3zzd",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          640,
+          2320
+        ],
+        "id": "8e0d6eab-bb9d-4bc6-ba9b-3e5cd15877b3",
+        "name": "Res Admin Pinjam Action"
+      }
+    ],
+    "connections": {
+      "WH Ajukan Pinjam": {
+        "main": [
+          [
+            {
+              "node": "Validate Pinjam",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate Pinjam": {
+        "main": [
+          [
+            {
+              "node": "PG Insert Pinjaman",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Insert Pinjaman": {
+        "main": [
+          [
+            {
+              "node": "Res Ajukan Pinjam",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WH Riwayat Pinjam": {
+        "main": [
+          [
+            {
+              "node": "PG Riwayat Pinjam",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Riwayat Pinjam": {
+        "main": [
+          [
+            {
+              "node": "Agg Pinjam",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Agg Pinjam": {
+        "main": [
+          [
+            {
+              "node": "Res Riwayat Pinjam",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WH Admin Pinjam List": {
+        "main": [
+          [
+            {
+              "node": "PG Admin Pinjam List",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Admin Pinjam List": {
+        "main": [
+          [
+            {
+              "node": "Agg Admin Pinjam",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Agg Admin Pinjam": {
+        "main": [
+          [
+            {
+              "node": "Res Admin Pinjam List",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WH Admin Pinjam Action": {
+        "main": [
+          [
+            {
+              "node": "PG Admin Pinjam Action",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PG Admin Pinjam Action": {
+        "main": [
+          [
+            {
+              "node": "Res Admin Pinjam Action",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Achmad Aqil Susanto",
+    "name": "Version 65aaaa1b",
+    "description": "",
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-07-19T10:21:46.864Z",
+        "id": 1397,
+        "workflowId": "bAMQvq4bhstMJkmF",
+        "versionId": "65aaaa1b-999b-4956-9874-e23d69e3d1bf",
+        "event": "activated",
+        "userId": "8e7c4060-036b-4b53-b013-d2f85c69021e"
+      }
+    ]
+  }
+}
