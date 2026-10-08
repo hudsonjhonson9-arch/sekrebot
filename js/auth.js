@@ -164,7 +164,9 @@
                     let failReason = "Wajah tidak cocok. Silakan coba lagi.";
 
                     if (camResult && camResult.descriptor) {
-                       let refDescRaw = user.face_histogram || user.face_descriptor || user.descriptor || user.histogram || null;
+                       // '[]'/'null'/'' = stored-empty (sama dgn guard hasFace di atas) → anggap null
+                       const descriptorOrEmpty = (v) => (v && v !== '[]' && v !== 'null') ? v : null;
+                       let refDescRaw = descriptorOrEmpty(user.face_histogram) || descriptorOrEmpty(user.face_descriptor) || descriptorOrEmpty(user.descriptor) || descriptorOrEmpty(user.histogram) || null;
 
                        // AUTO-GENERATE: Jika database tidak mengirim descriptor tapi ada foto base64
                        if (!refDescRaw && (user.foto_base64 || user.face_photo) && typeof getDescriptorFromDataUrl === 'function') {

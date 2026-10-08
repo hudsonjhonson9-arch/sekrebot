@@ -156,7 +156,7 @@ test('login NIP valid menerbitkan sesi 192 hex dan baris user', async () => {
   const seen = [];
   const query = async (sql, params) => {
     seen.push({ sql: String(sql), params });
-    if (/user_list/i.test(sql)) return userListRows(sql, { id: '9', NIP: '200206302025061002', role: 'SUPERADMIN', instansi_id: 'bapperida', username: 'Achmad' });
+    if (/user_list/i.test(sql)) return userListRows(sql, { id: '9', NIP: '200206302025061002', role: 'SUPERADMIN', instansi_id: 'bapperida', username: 'Achmad', face_histogram: '[0.1,0.2]', face_photo: 'data:image/jpeg;base64,AAA' });
     if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'd'.repeat(192) }] };
     return { rows: [] };
   };
@@ -167,6 +167,12 @@ test('login NIP valid menerbitkan sesi 192 hex dan baris user', async () => {
   assert.match(out.body.session_token, /^[0-9a-f]{192}$/);
   assert.equal(out.body.user.nip, '200206302025061002');
   assert.equal(out.body.user.nama, 'Achmad');
+  // Kontrak full-row: kolom biometrik harus ikut dikirim ke client.
+  // Kalau USERS_BY_NIP_SQL di-narrow (mis. SELECT id,nip,role), fallback
+  // regenerasi descriptor di js/auth.js mati → login terkunci. Test ini gagal.
+  assert.ok('face_histogram' in out.body.user, 'kontrak full-row: face_histogram wajib ada');
+  assert.ok('face_photo' in out.body.user, 'kontrak full-row: face_photo wajib ada');
+  assert.equal(out.body.user.face_histogram, '[0.1,0.2]');
   const ins = seen.find((s) => /INSERT INTO auth_sessions/i.test(s.sql));
   assert.ok(ins.params.includes('SUPERADMIN'), 'role harus dari baris DB');
   assert.ok(ins.params.includes('bapperida'), 'instansi harus dari baris DB');
@@ -224,8 +230,13 @@ test('login mengabaikan role/instansi yang disuntik di body', async () => {
   assert.ok(!ins.params.includes('SUPERADMIN'), 'role body harus diabaikan');
 });
 
-test('login tidak membaca init_data Telegram (pure NIP)', async () => {
+test('login tidak membaca init_data Telegram (pure NIP)', async (t) => {
+  const prevToken = process.env.TELEGRAM_BOT_TOKEN;
   process.env.TELEGRAM_BOT_TOKEN = 'x'.repeat(30);
+  t.after(() => {
+    if (prevToken === undefined) delete process.env.TELEGRAM_BOT_TOKEN;
+    else process.env.TELEGRAM_BOT_TOKEN = prevToken;
+  });
   const { createAuthSessionRouter } = await import('./auth-session.js');
   const r = createAuthSessionRouter({ query: async () => ({ rows: [] }) });
   // Tanpa init_data pun harus tetap 404 (NIP tak dikenal), bukan 401.
