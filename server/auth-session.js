@@ -18,7 +18,7 @@ const DEACTIVATE_SQL = `UPDATE auth_sessions SET is_active = false WHERE session
 // NIP tidak unik di user_list: ambil SEMUA baris, lalu tolak yang ambigu
 // (singleSessionRow). Memilih baris pertama = menerbitkan sesi identitas salah.
 const USERS_BY_NIP_SQL = `
-  SELECT * FROM user_list WHERE "NIP" = $1`;
+  SELECT *, "NIP" AS nip, username AS nama FROM user_list WHERE "NIP" = $1`;
 
 const TOKEN_RE = /^[0-9a-f]{192}$/;
 

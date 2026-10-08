@@ -136,12 +136,27 @@ test('logout menolak token dengan bentuk salah', async () => {
 
 // ── Login NIP (web, non-Telegram, tanpa password) ──
 
+// public.user_list mengembalikan kolom apa adanya: "NIP" (huruf besar) dan
+// username — TIDAK ada nip/nama. Alias di SELECT hanya muncul di hasil kalau
+// SQL-nya meminta, jadi mock meniru perilaku DB itu apa adanya.
+function userListRows(sql, ...rows) {
+  const nip = /"NIP"\s+AS\s+nip/i.test(sql);
+  const nama = /username\s+AS\s+nama/i.test(sql);
+  return {
+    rows: rows.map((r) => ({
+      ...r,
+      ...(nip ? { nip: r.NIP } : {}),
+      ...(nama ? { nama: r.username } : {}),
+    })),
+  };
+}
+
 test('login NIP valid menerbitkan sesi 192 hex dan baris user', async () => {
   const { createAuthSessionRouter } = await import('./auth-session.js');
   const seen = [];
   const query = async (sql, params) => {
     seen.push({ sql: String(sql), params });
-    if (/user_list/i.test(sql)) return { rows: [{ id: '9', nip: '200206302025061002', role: 'SUPERADMIN', instansi_id: 'bapperida', nama: 'Achmad' }] };
+    if (/user_list/i.test(sql)) return userListRows(sql, { id: '9', NIP: '200206302025061002', role: 'SUPERADMIN', instansi_id: 'bapperida', username: 'Achmad' });
     if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'd'.repeat(192) }] };
     return { rows: [] };
   };
@@ -170,7 +185,7 @@ test('login NIP ambigu ditolak 409, bukan memilih baris pertama', async () => {
   let dbTouched = 0;
   const r = createAuthSessionRouter({
     query: async (sql) => {
-      if (/user_list/i.test(String(sql))) { dbTouched++; return { rows: [{ id: '1', nip: 'X' }, { id: '2', nip: 'X' }] }; }
+      if (/user_list/i.test(String(sql))) { dbTouched++; return userListRows(String(sql), { id: '1', NIP: 'X' }, { id: '2', NIP: 'X' }); }
       dbTouched++;
       return { rows: [] };
     },
@@ -197,7 +212,7 @@ test('login mengabaikan role/instansi yang disuntik di body', async () => {
   const seen = [];
   const query = async (sql, params) => {
     seen.push({ sql: String(sql), params });
-    if (/user_list/i.test(sql)) return { rows: [{ id: '7', nip: 'NIP1', role: 'USER', instansi_id: 'bapperida' }] };
+    if (/user_list/i.test(sql)) return userListRows(sql, { id: '7', NIP: 'NIP1', role: 'USER', instansi_id: 'bapperida' });
     if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'e'.repeat(192) }] };
     return { rows: [] };
   };
