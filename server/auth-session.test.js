@@ -133,3 +133,87 @@ test('logout menolak token dengan bentuk salah', async () => {
   }
   assert.equal(called, 0, 'SQL tidak boleh dijalankan untuk token tidak valid');
 });
+
+// ── Login NIP (web, non-Telegram, tanpa password) ──
+
+test('login NIP valid menerbitkan sesi 192 hex dan baris user', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const seen = [];
+  const query = async (sql, params) => {
+    seen.push({ sql: String(sql), params });
+    if (/user_list/i.test(sql)) return { rows: [{ id: '9', nip: '200206302025061002', role: 'SUPERADMIN', instansi_id: 'bapperida', nama: 'Achmad' }] };
+    if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'd'.repeat(192) }] };
+    return { rows: [] };
+  };
+  const r = createAuthSessionRouter({ query });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '200206302025061002' });
+  assert.equal(out.status, 200);
+  assert.equal(out.body.ok, true);
+  assert.match(out.body.session_token, /^[0-9a-f]{192}$/);
+  assert.equal(out.body.user.nip, '200206302025061002');
+  assert.equal(out.body.user.nama, 'Achmad');
+  const ins = seen.find((s) => /INSERT INTO auth_sessions/i.test(s.sql));
+  assert.ok(ins.params.includes('SUPERADMIN'), 'role harus dari baris DB');
+  assert.ok(ins.params.includes('bapperida'), 'instansi harus dari baris DB');
+});
+
+test('login NIP tidak terdaftar ditolak 404', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({ query: async () => ({ rows: [] }) });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '00000' });
+  assert.equal(out.status, 404);
+  assert.equal(out.body.ok, false);
+});
+
+test('login NIP ambigu ditolak 409, bukan memilih baris pertama', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  let dbTouched = 0;
+  const r = createAuthSessionRouter({
+    query: async (sql) => {
+      if (/user_list/i.test(String(sql))) { dbTouched++; return { rows: [{ id: '1', nip: 'X' }, { id: '2', nip: 'X' }] }; }
+      dbTouched++;
+      return { rows: [] };
+    },
+  });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: 'X' });
+  assert.equal(out.status, 409);
+  const onlyLookup = dbTouched === 1;
+  assert.ok(onlyLookup, 'baris ambigu harus berhenti di lookup, tidak boleh INSERT');
+});
+
+test('login tanpa NIP ditolak 400 tanpa menyentuh DB', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  let called = 0;
+  const r = createAuthSessionRouter({ query: async () => { called++; return { rows: [] }; } });
+  for (const nip of [undefined, '', '   ']) {
+    const out = await drive(r, 'POST', '/api/auth/login', { nip });
+    assert.equal(out.status, 400, `nip ${JSON.stringify(nip)} harus 400`);
+  }
+  assert.equal(called, 0, 'DB tidak boleh disentuh untuk input kosong');
+});
+
+test('login mengabaikan role/instansi yang disuntik di body', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const seen = [];
+  const query = async (sql, params) => {
+    seen.push({ sql: String(sql), params });
+    if (/user_list/i.test(sql)) return { rows: [{ id: '7', nip: 'NIP1', role: 'USER', instansi_id: 'bapperida' }] };
+    if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'e'.repeat(192) }] };
+    return { rows: [] };
+  };
+  const r = createAuthSessionRouter({ query });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: 'NIP1', role: 'SUPERADMIN', instansi_id: 'lain' });
+  assert.equal(out.status, 200);
+  const ins = seen.find((s) => /INSERT INTO auth_sessions/i.test(s.sql));
+  assert.ok(ins.params.includes('USER'), 'role dari body tidak boleh dipakai');
+  assert.ok(!ins.params.includes('SUPERADMIN'), 'role body harus diabaikan');
+});
+
+test('login tidak membaca init_data Telegram (pure NIP)', async () => {
+  process.env.TELEGRAM_BOT_TOKEN = 'x'.repeat(30);
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({ query: async () => ({ rows: [] }) });
+  // Tanpa init_data pun harus tetap 404 (NIP tak dikenal), bukan 401.
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '99999' });
+  assert.equal(out.status, 404);
+});
