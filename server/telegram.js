@@ -16,8 +16,12 @@ export function verifyInitData(initData, botToken, { maxAgeSeconds = 86400 } = {
   const hash = params.get('hash');
   if (!hash || !/^[0-9a-f]{64}$/i.test(hash)) return { ok: false, reason: 'malformed' };
 
+  // HMAC data-check-string = semua field KECUALI hash. Field `signature`
+  // (Ed25519, Bot API 7.2+) TETAP ikut: Telegram memasukkan seluruh field
+  // selain hash saat menghitung HMAC. `signature` baru di-EXCLUDE untuk
+  // skema validasi pihak ketiga (Ed25519), bukan di sini.
   const dataCheckString = [...params.entries()]
-    .filter(([k]) => k !== 'hash' && k !== 'signature')
+    .filter(([k]) => k !== 'hash')
     .map(([k, v]) => `${k}=${v}`)
     .sort()
     .join('\n');

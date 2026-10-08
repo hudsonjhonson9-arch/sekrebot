@@ -21,6 +21,21 @@ function sign(payloadPairs) {
   return `${new URLSearchParams(payloadPairs).toString()}&hash=${hmac}`;
 }
 
+// Meniru initData bot modern (Bot API 7.2+): menyertakan field `signature`
+// (Ed25519). Telegram menghitung HMAC hash atas SEMUA field selain hash,
+// jadi `signature` tetap ikut di data-check-string HMAC.
+function signWithSignature(payloadPairs) {
+  const sig = 'test-only-ed25519-signature-field-aaaa-bbbb-cccc-dddd';
+  const dataCheckString = Object.entries({ ...payloadPairs, signature: sig })
+    .map(([k, v]) => `${k}=${v}`)
+    .sort()
+    .join('\n');
+  const secret = crypto.createHash('sha256').update(BOT).digest();
+  const hmac = crypto.createHmac('sha256', secret).update(dataCheckString).digest('hex');
+  const qs = new URLSearchParams({ ...payloadPairs, signature: sig }).toString();
+  return `${qs}&hash=${hmac}`;
+}
+
 function goodPairs(over = {}) {
   return {
     auth_date: String(Math.floor(Date.now() / 1000)),
@@ -34,6 +49,21 @@ test('initData valid menghasilkan user', () => {
   const r = verifyInitData(sign(goodPairs()), BOT, { maxAgeSeconds: 86400 });
   assert.equal(r.ok, true);
   assert.equal(r.user.id, USER_ID);
+});
+
+test('initData modern dengan field signature (Bot API 7.2+) tetap diterima', () => {
+  // Hash dihitung atas SEMUA field (termasuk signature), cocok dengan verifier.
+  const r = verifyInitData(signWithSignature(goodPairs()), BOT, { maxAgeSeconds: 86400 });
+  assert.equal(r.ok, true);
+  assert.equal(r.user.id, USER_ID);
+});
+
+test('initData dengan signature tapi hash salah tetap ditolak', () => {
+  let bad = signWithSignature(goodPairs());
+  bad = bad.replace(/hash=.*/, 'hash=' + '0'.repeat(64));
+  const r = verifyInitData(bad, BOT, { maxAgeSeconds: 86400 });
+  assert.equal(r.ok, false);
+  assert.equal(r.reason, 'bad_signature');
 });
 
 test('hash ditolak', () => {

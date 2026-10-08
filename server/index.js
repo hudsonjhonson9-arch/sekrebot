@@ -66,10 +66,19 @@ export function createApp() {
 
   // ABSEN_ROLES, bukan MEDIA_ROLES: presence absen boleh dipakai role apa pun
   // yang bisa absen, dan verifyInitData di-inject supaya test tidak butuh bot token.
+  // verifyInitData fail-closed TANPA token: tanpa TELEGRAM_BOT_TOKEN, seluruh
+  // initData Telegram ditolak dan tiap /api/auth/session dan /api/absen balas 401.
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken) {
+    console.warn(
+      '[startup] TELEGRAM_BOT_TOKEN TIDAK di-set — semua sesi Telegram dan absen akan balas 401. ' +
+        'Set env ini (di Coolify > "Environmental Variables") lalu redeploy.'
+    );
+  }
   app.use(
     '/api/absen',
     requireRole(ABSEN_ROLES),
-    createAbsenRouter({ query, verifyInitData, botToken: process.env.TELEGRAM_BOT_TOKEN })
+    createAbsenRouter({ query, verifyInitData, botToken })
   );
 
   // Log absen manual: admin mencatat/mengoreksi log pegawai yang tidak bisa absen
