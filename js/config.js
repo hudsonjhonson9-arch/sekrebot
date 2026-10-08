@@ -106,6 +106,7 @@ const API_BASE = '';
 // endpoint n8n yang masih berjalan tidak ikut menerima bearer yang tak dikenal.
 let _nativeToken = null;
 let _deviceToken = null;
+let _authExpiredShown = false;
 try {
   _nativeToken = localStorage.getItem('_native_token');
   _deviceToken = localStorage.getItem('_device_token');
@@ -201,6 +202,7 @@ function setSession(token, data) {
   window._session.role = (data.role || 'USER').toUpperCase();
   window._session.instansi_id = data.instansi_id || '';
   window._session.isLoggedIn = true;
+  _authExpiredShown = false;
   try {
     localStorage.setItem('_sess_token', token);
     localStorage.setItem('_sess_nip', data.nip || '');
@@ -235,6 +237,7 @@ function clearSession() {
 // supaya nativeFetch memakainya, dan di localStorage supaya bertahan reload.
 function setNativeToken(token) {
   _nativeToken = token;
+  _authExpiredShown = false;
   try { localStorage.setItem('_native_token', token); } catch { /* mode privat */ }
 }
 
@@ -426,6 +429,20 @@ const HDR = {
 // Endpoint native (/api/*) memakai satu origin lewat API_BASE.
 // tanpa failover SERVER_1/SERVER_2, tanpa injeksi nip/instansi ke query string
 // (server membaca body dan session), dan bearer-nya token native.
+// Sesi native kedaluwarsa (TTL 12 jam) -> 401. Tak ada refresh token di server,
+// jadi bersihkan token basi supaya ensureNativeSession menerbitkan ulang dari
+// init_data Telegram; pengguna web/NIP tak punya init_data -> tampilkan layar login.
+function _handleAuthExpired() {
+  _nativeToken = null;
+  try { localStorage.removeItem('_native_token'); } catch { /* mode privat */ }
+  try { clearSession(); } catch { /* belum terdefinisi saat boot */ }
+  const hasTg = !!(window.tg?.initData || window.Telegram?.WebApp?.initData);
+  if (hasTg || _authExpiredShown) return;
+  _authExpiredShown = true;
+  const overlay = document.getElementById('authOverlay');
+  if (overlay) overlay.style.display = 'flex';
+}
+
 async function nativeFetch(path, opts = {}) {
   const token = await ensureNativeSession();
   if (!token) throw new Error('Sesi native tidak tersedia: login Telegram atau token perangkat.');
@@ -433,12 +450,14 @@ async function nativeFetch(path, opts = {}) {
   const ctrl = new AbortController();
   const tid = setTimeout(() => ctrl.abort(), 15000);
   try {
-    return await fetch(API_BASE + path, {
+    const res = await fetch(API_BASE + path, {
       method: opts.method || 'GET',
       body: opts.body,
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       signal: ctrl.signal,
     });
+    if (res.status === 401) _handleAuthExpired();
+    return res;
   } finally {
     clearTimeout(tid);
   }

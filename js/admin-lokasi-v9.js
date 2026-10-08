@@ -369,13 +369,10 @@ document.addEventListener('click', function(e) {
     }
     async function hapusLokasi(id, nama) {
       if (!confirm(`Hapus lokasi "${nama}"?`)) return;
-      try { 
-        await apiPost(P.lokasiDel, { 
-          id, 
-          ditambahkan_oleh: MY_ID,
-          nip: localStorage.getItem('MY_NIP') || ''
-        }); 
-        loadLokasiAdmin(); 
+      try {
+        const res = await apiFetch(`${P.lokasiDel}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+        if (!res.ok) throw 0;
+        loadLokasiAdmin();
       }
       catch { alert('Gagal menghapus. Coba lagi.'); }
     }
