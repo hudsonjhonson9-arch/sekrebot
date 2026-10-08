@@ -1,398 +1,171 @@
-﻿### Task 1: Generator `build-aset-data-workflow.mjs` + JSON lokal
+### Task 1: Endpoint `POST /api/auth/login` (server)
 
 **Files:**
-- Create: `scripts/build-aset-data-workflow.mjs`
-- Create: `n8n/SIMAPO - Aset Data.json` (generated)
+- Modify: `server/auth-session.js` (tambah 1 konstanta SQL + 1 route; sisanya tidak disentuh)
+- Test: `server/auth-session.test.js` (tambah 6 test case, `drive()` sudah ada)
 
 **Interfaces:**
-- Consumes: `n8n/SIMAPO - BAST.json` (referensi `typeVersion` webhook/code/postgres/respond + `credentials.postgres`), env `N8N_TOKEN` (hanya untuk `--deploy`, Task 2).
-- Produces: file JSON workflow dengan tepat 7 webhook: `simapo-aset-massal` (POST), `simapo-aset-kib` (POST), `simapo-aset-summary` (GET), `simapo-pengaturan-get` (GET), `simapo-pengaturan-set` (POST), `simapo-ttd-get` (GET), `simapo-aset-kosongkan` (POST) — masing-masing diawali node `Gate <path>` yang menyalin verbatim `jsCode` gate dari BAST. Kontrak respons: semua membalas `{data: ...}`.
+- Produces: `POST /api/auth/login` body `{nip}` → `200 {ok, session_token, user}`; error `400/404/409 {ok:false, message}`.
+- Konsumsi oleh Task 2 (frontend `P.webLogin`).
 
-- [ ] **Step 1: Tulis generator (kode lengkap)**
+- [ ] **Step 1: Tulis test yang gagal dulu**
 
-Buat `scripts/build-aset-data-workflow.mjs`:
+Tambahkan di bagian akhir `server/auth-session.test.js` (setelah test `logout menolak token dengan bentuk salah`):
 
 ```js
-#!/usr/bin/env node
-/* Generator workflow "SIMAPO - Aset Data" → n8n/SIMAPO - Aset Data.json
-   node scripts/build-aset-data-workflow.mjs            → tulis JSON lokal
-   node scripts/build-aset-data-workflow.mjs --deploy   → tulis + create/update + activate (butuh N8N_TOKEN)
-*/
-import { randomUUID } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+// ── Login NIP (web, non-Telegram, tanpa password) ──
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const OUT = join(ROOT, 'n8n', 'SIMAPO - Aset Data.json');
-const NAME = 'SIMAPO - Aset Data';
-const BASE = 'https://mindcloud.my.id';
-const PG_KEYS = ['sekda_nama', 'sekda_nip', 'sekda_jabatan', 'sekda_alamat', 'p1_id', 'p1_jabatan', 'p1_alamat'];
+test('login NIP valid menerbitkan sesi 192 hex dan baris user', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const seen = [];
+  const query = async (sql, params) => {
+    seen.push({ sql: String(sql), params });
+    if (/user_list/i.test(sql)) return { rows: [{ id: '9', nip: '200206302025061002', role: 'SUPERADMIN', instansi_id: 'bapperida', nama: 'Achmad' }] };
+    if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'd'.repeat(192) }] };
+    return { rows: [] };
+  };
+  const r = createAuthSessionRouter({ query });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '200206302025061002' });
+  assert.equal(out.status, 200);
+  assert.equal(out.body.ok, true);
+  assert.match(out.body.session_token, /^[0-9a-f]{192}$/);
+  assert.equal(out.body.user.nip, '200206302025061002');
+  assert.equal(out.body.user.nama, 'Achmad');
+  const ins = seen.find((s) => /INSERT INTO auth_sessions/i.test(s.sql));
+  assert.ok(ins.params.includes('SUPERADMIN'), 'role harus dari baris DB');
+  assert.ok(ins.params.includes('bapperida'), 'instansi harus dari baris DB');
+});
 
-// ── referensi dari workflow BAST yang sudah terbukti jalan ──────────────
-const BAST = JSON.parse(readFileSync(join(ROOT, 'n8n', 'SIMAPO - BAST.json'), 'utf8'));
-const refOf = (type) => BAST.nodes.find(n => n.type === type);
-const refWh = refOf('n8n-nodes-base.webhook');
-const refCode = refOf('n8n-nodes-base.code');
-const refPg = refOf('n8n-nodes-base.postgres');
-const refRes = refOf('n8n-nodes-base.respondToWebhook');
-const GATE_JS = BAST.nodes
-  .find(n => n.type === 'n8n-nodes-base.code' && n.parameters.jsCode.includes('x-bast-key'))
-  .parameters.jsCode;
+test('login NIP tidak terdaftar ditolak 404', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({ query: async () => ({ rows: [] }) });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '00000' });
+  assert.equal(out.status, 404);
+  assert.equal(out.body.ok, false);
+});
 
-// ── builder ─────────────────────────────────────────────────────────────
-const nodes = [];
-const connections = {};
-let cx = 0, cy = 0;
+test('login NIP ambigu ditolak 409, bukan memilih baris pertama', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  let dbTouched = 0;
+  const r = createAuthSessionRouter({
+    query: async (sql) => {
+      if (/user_list/i.test(String(sql))) { dbTouched++; return { rows: [{ id: '1', nip: 'X' }, { id: '2', nip: 'X' }] }; }
+      dbTouched++;
+      return { rows: [] };
+    },
+  });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: 'X' });
+  assert.equal(out.status, 409);
+  const onlyLookup = dbTouched === 1;
+  assert.ok(onlyLookup, 'baris ambigu harus berhenti di lookup, tidak boleh INSERT');
+});
 
-function add(name, type, parameters, extra = {}) {
-  const node = { parameters, id: randomUUID(), name, type, typeVersion: extra.typeVersion, position: [120 + cx, cy] };
-  if (extra.creds) node.credentials = extra.creds;
-  nodes.push(node);
-  cx += 230;
-  return name;
-}
-function link(from, to) { connections[from] = { main: [[{ node: to, type: 'main', index: 0 }]] }; }
-function newChain() { cx = 0; }
-function endChain() { cy += 240; }
-
-const wh = (p, method) => {
-  add(`WH ${p}`, 'n8n-nodes-base.webhook', {
-    path: p,
-    ...(method ? { httpMethod: method } : {}),
-    responseMode: 'responseNode',
-    options: { allowedOrigins: '*' },
-  }, { typeVersion: refWh.typeVersion });
-  // webhookId WAJIB di level node (bukan parameters) — tanpa ini n8n tidak
-  // mendaftarkan production webhook saat activate (aktif=true tapi 404)
-  nodes.at(-1).webhookId = p;
-  return `WH ${p}`;
-};
-
-const gate = (p) => add(`Gate ${p}`, 'n8n-nodes-base.code', { jsCode: GATE_JS }, { typeVersion: refCode.typeVersion });
-const code = (n, jsCode) => add(n, 'n8n-nodes-base.code', { jsCode }, { typeVersion: refCode.typeVersion });
-const pg = (n, query) => {
-  add(n, 'n8n-nodes-base.postgres',
-    { operation: 'executeQuery', query, options: {} },
-    { typeVersion: refPg.typeVersion, creds: refPg.credentials });
-  nodes.at(-1).alwaysOutputData = true;
-  return n;
-};
-const res = (n) => add(n, 'n8n-nodes-base.respondToWebhook', {
-  respondWith: 'text',
-  responseBody: '={{ JSON.stringify($json) }}',
-  options: { responseHeaders: { entries: [{ name: 'Content-Type', value: 'application/json' }] } },
-}, { typeVersion: refRes.typeVersion });
-
-// instansi dari query (apiFetch selalu menyisipkan instansi_id), fallback bapperida
-const INST_EXPR = "{{ (($input.item.json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}";
-
-// instansi untuk node PG kosongkan setelah PG Kosongkan Anak — input node itu sudah
-// baris hasil query (bukan payload webhook), jadi rujuk node WH-nya secara eksplisit
-const INST_EXPR_KOSONG = "{{ (($('WH simapo-aset-kosongkan').first().json.query || {}).instansi_id || \"bapperida\").toString().replace(/'/g, \"''\") }}";
-
-const AGG_OK = `return [{ json: { data: { ok: true } } }];`;
-
-// Semua Agg: $input.all()[0] = ITEM ({json:...}), bukan json — wajib `.json`
-const AGG_UPSERT = `const j = (($input.all()[0] || {}).json) || {};
-return [{ json: { data: {
-  total: Number(j.total || 0),
-  barang_baru: Number(j.barang_baru || 0),
-  unit_baru: Number(j.unit_baru || 0),
-  barang_ids: j.barang_ids || []
-} } }];`;
-
-const AGG_SUMMARY = `const j = (($input.all()[0] || {}).json) || {};
-return [{ json: { data: {
-  total_unit: Number(j.total_unit || 0),
-  total_nilai: Number(j.total_nilai || 0),
-  pemegang: Number(j.pemegang || 0),
-  ruangan: Number(j.ruangan || 0),
-  per_kategori: j.per_kategori || []
-} } }];`;
-
-const AGG_PENG_GET = `return [{ json: { data: ((($input.all()[0] || {}).json) || {}).data || {} } }];`;
-const AGG_TTD = `return [{ json: { data: { signature: ((($input.all()[0] || {}).json) || {}).signature || null } } }];`;
-
-// ── Code: upsert massal/KIB (idempoten, tanpa unique constraint) ────────
-const UPSERT_JS = String.raw`const b = $input.item.json.body || {};
-const rows = Array.isArray(b.rows) ? b.rows : [];
-if (!rows.length) throw new Error('rows kosong');
-const esc = s => String(s == null ? '' : s).replace(/'/g, "''");
-const q = $input.item.json.query || {};
-const inst = String(b.instansi_id || q.instansi_id || 'bapperida');
-const seq = new Map();
-const vals = [];
-for (const r of rows) {
-  const kode = String(r.kodebarang || '').trim();
-  const nama = String(r.nama || '').trim();
-  if (!kode || !nama) continue;
-  const n = (seq.get(kode) || 0) + 1;
-  seq.set(kode, n);
-  const nomor = r.nomorinventaris ? String(r.nomorinventaris) : kode + '-' + String(n).padStart(3, '0');
-  vals.push(
-    "('" + esc(kode) + "','" + esc(nama) + "'," + Math.max(0, Number(r.hargasatuan) || 0) +
-    ',' + (r.kategoriid ? "'" + esc(r.kategoriid) + "'" : 'NULL') +
-    ",'" + esc(r.kondisi || 'Baik') + "'" +
-    ",NULLIF('" + esc(r.merk_type || '') + "','')" +
-    ",NULLIF('" + esc(r.model_jenis || '') + "','')" +
-    ",NULLIF('" + esc(r.warna || '') + "','')" +
-    ",NULLIF('" + esc(r.tahun_pembuatan || '') + "','')" +
-    ",NULLIF('" + esc(r.roda || '') + "','')" +
-    ",NULLIF('" + esc(r.keterangan || '') + "','')" +
-    ",'" + esc(nomor) + "')"
-  );
-}
-if (!vals.length) throw new Error('tidak ada baris valid (kodebarang & nama wajib)');
-const L = [];
-L.push('WITH src AS (');
-L.push('  SELECT * FROM (VALUES');
-L.push('    ' + vals.join(',\n    '));
-L.push('  ) AS v(kode, nama, harga, kategoriid, kondisi, merk, model, warna, tahun, roda, keterangan, nomor)');
-L.push('),');
-L.push('ins_barang AS (');
-L.push('  INSERT INTO "SIMAPO".barang (id, kodebarang, nama, jenisbarang, satuan, stok_saat_ini, minimumstok, hargasatuan, kategoriid, isactive, createdat, updatedat, instansi_id)');
-L.push("  SELECT DISTINCT ON (src.kode) md5('" + esc(inst) + ":' || src.kode), src.kode, src.nama, 'Aset Tetap', 'unit', 1, 0, src.harga, src.kategoriid, true, NOW(), NOW(), '" + esc(inst) + "'");
-L.push('  FROM src');
-L.push("  WHERE NOT EXISTS (SELECT 1 FROM \"SIMAPO\".barang b WHERE b.kodebarang = src.kode AND b.instansi_id = '" + esc(inst) + "')");
-L.push('  RETURNING id, kodebarang');
-L.push('),');
-L.push('all_barang AS (');
-L.push('  SELECT id, kodebarang FROM ins_barang');
-L.push('  UNION ALL');
-L.push('  SELECT b.id, b.kodebarang FROM "SIMAPO".barang b');
-L.push('  JOIN src ON b.kodebarang = src.kode AND b.instansi_id = \'' + esc(inst) + '\'');
-L.push('  WHERE NOT EXISTS (SELECT 1 FROM ins_barang ib WHERE ib.kodebarang = b.kodebarang)');
-L.push('),');
-L.push('ins_unit AS (');
-L.push('  INSERT INTO "SIMAPO".unit_aset (id, barangid, nomorinventaris, kondisi, statuspinjam, qrcode, merk_type, model_jenis, warna, tahun_pembuatan, roda, keterangan, instansi_id, updatedat)');
-L.push("  SELECT gen_random_uuid(), ab.id, src.nomor, src.kondisi, false,");
-L.push("         'https://mindcloud.my.id/?qr=SIMAPO-' || gen_random_uuid(),");
-L.push("         src.merk, src.model, src.warna, src.tahun, src.roda, src.keterangan, '" + esc(inst) + "', NOW()");
-L.push('  FROM src');
-L.push('  JOIN all_barang ab ON ab.kodebarang = src.kode');
-  L.push("  WHERE NOT EXISTS (SELECT 1 FROM \"SIMAPO\".unit_aset ua WHERE ua.nomorinventaris = src.nomor AND ua.instansi_id = '" + esc(inst) + "')");
-L.push('  RETURNING id');
-L.push(')');
-L.push('SELECT (SELECT count(*) FROM src) AS total,');
-L.push('       (SELECT count(*) FROM ins_barang) AS barang_baru,');
-L.push('       (SELECT count(*) FROM ins_unit) AS unit_baru,');
-L.push("       (SELECT COALESCE(json_agg(id), '[]'::json) FROM ins_barang) AS barang_ids;");
-return [{ json: { sql: L.join('\n') } }];`;
-
-// ── Code: simpan pengaturan ─────────────────────────────────────────────
-const SET_JS = `const b = $input.item.json.body || {};
-const q = $input.item.json.query || {};
-const inst = String(q.instansi_id || 'bapperida');
-const esc = s => String(s == null ? '' : s).replace(/'/g, "''");
-const KEYS = ${JSON.stringify(PG_KEYS)};
-const pairs = [];
-for (const k of KEYS) {
-  if (b[k] !== undefined) pairs.push("('" + k + "', '" + esc(b[k]) + "', '" + esc(inst) + "')");
-}
-if (!pairs.length) throw new Error('tidak ada field untuk disimpan');
-const sql = 'INSERT INTO public.pengaturan (key, value, instansi_id) VALUES ' + pairs.join(', ') +
-  ' ON CONFLICT (key, instansi_id) DO UPDATE SET value = EXCLUDED.value RETURNING key;';
-return [{ json: { sql } }];`;
-
-// ── SQL kosongkan anak per instansi ─────────────────────────────────────
-// Semua child FK NO ACTION dihapus dalam SATU statement (dicek di akhir
-// statement); unit_aset/barang dihapus terpisah oleh node PG sesudahnya.
-// arg e = ekspresi runtime berisi instansi yang sudah di-escape; ${e}
-// di-resolve n8n saat eksekusi, bukan saat build.
-const SQL_KIDS = (e) => `WITH d1 AS (DELETE FROM "SIMAPO".riwayat_pemeliharaan
-     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
- d2 AS (DELETE FROM "SIMAPO".detail_distribusi_aset
-     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
- d3 AS (DELETE FROM "SIMAPO".jadwal_maintenance
-     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
- d4 AS (DELETE FROM "SIMAPO".peminjaman
-     WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}') RETURNING 1),
- d5 AS (DELETE FROM "SIMAPO".detail_opname
-     WHERE barangid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
- d6 AS (DELETE FROM "SIMAPO".detail_request
-     WHERE barangid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
- d7 AS (DELETE FROM "SIMAPO".detail_pemeliharaan
-     WHERE barangid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}')
-        OR riwayatid IN (SELECT id FROM "SIMAPO".riwayat_pemeliharaan
-                         WHERE unitasetid IN (SELECT id FROM "SIMAPO".unit_aset WHERE instansi_id = '${e}')) RETURNING 1),
- d8 AS (DELETE FROM "SIMAPO".mutasi_barang
-     WHERE barangkeluarid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}')
-        OR barangmasukid IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
- d9 AS (DELETE FROM "SIMAPO".detail_penerimaan
-     WHERE barang_id IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1),
- d10 AS (DELETE FROM "SIMAPO".pemeliharaan
-     WHERE barang_id IN (SELECT id FROM "SIMAPO".barang WHERE instansi_id = '${e}') RETURNING 1)
-SELECT (SELECT count(*) FROM d1) + (SELECT count(*) FROM d2) + (SELECT count(*) FROM d3)
-     + (SELECT count(*) FROM d4) + (SELECT count(*) FROM d5) + (SELECT count(*) FROM d6)
-     + (SELECT count(*) FROM d7) + (SELECT count(*) FROM d8) + (SELECT count(*) FROM d9)
-     + (SELECT count(*) FROM d10) AS rows_dihapus;`;
-
-// ── Code: guard konfirmasi kosongkan ────────────────────────────────────
-const CONFIRM_JS = `const b = $input.item.json.body || {};
-if (String(b.confirm || '') !== 'HAPUS') throw new Error('Konfirmasi salah: ketik HAPUS');
-const q = $input.item.json.query || {};
-const inst = String(q.instansi_id || 'bapperida');
-const esc = s => String(s == null ? '' : s).replace(/'/g, "''");
-const i = esc(inst);
-const sql = \`${SQL_KIDS('${i}')}\`;
-return [{ json: { sql } }];`;
-
-// ── SQL statis ──────────────────────────────────────────────────────────
-const SQL_SUMMARY = `SELECT
-  (SELECT COUNT(*) FROM "SIMAPO".unit_aset ua
-     JOIN "SIMAPO".barang b ON b.id = ua.barangid AND b.isactive = true
-    WHERE b.instansi_id = '${INST_EXPR}') AS total_unit,
-  (SELECT COALESCE(SUM(COALESCE(NULLIF(ua.nilaiperolehan, 0), b.hargasatuan)), 0)
-     FROM "SIMAPO".unit_aset ua
-     JOIN "SIMAPO".barang b ON b.id = ua.barangid AND b.isactive = true
-    WHERE b.instansi_id = '${INST_EXPR}') AS total_nilai,
-  (SELECT COUNT(DISTINCT ua.pegawai_id) FROM "SIMAPO".unit_aset ua
-     JOIN "SIMAPO".barang b ON b.id = ua.barangid AND b.isactive = true
-    WHERE b.instansi_id = '${INST_EXPR}' AND ua.pegawai_id IS NOT NULL) AS pemegang,
-  (SELECT COUNT(DISTINCT ua.ruangan_id) FROM "SIMAPO".unit_aset ua
-     JOIN "SIMAPO".barang b ON b.id = ua.barangid AND b.isactive = true
-    WHERE b.instansi_id = '${INST_EXPR}' AND ua.ruangan_id IS NOT NULL) AS ruangan,
-  (SELECT COALESCE(json_agg(t ORDER BY t.jumlah DESC), '[]'::json) FROM (
-     SELECT COALESCE(k.nama, 'Tanpa Kategori') AS kategori, COUNT(*) AS jumlah
-       FROM "SIMAPO".unit_aset ua
-       JOIN "SIMAPO".barang b ON b.id = ua.barangid AND b.isactive = true
-       LEFT JOIN "SIMAPO".kategori_barang k ON k.id = b.kategoriid
-      WHERE b.instansi_id = '${INST_EXPR}'
-      GROUP BY k.nama
-   ) t) AS per_kategori;`;
-
-const SQL_PENG_GET = `SELECT COALESCE(json_object_agg(key, value), '{}'::json) AS data
-FROM public.pengaturan
-WHERE instansi_id = '${INST_EXPR}'
-  AND key IN ('sekda_nama','sekda_nip','sekda_jabatan','sekda_alamat','p1_id','p1_jabatan','p1_alamat');`;
-
-const SQL_TTD = `SELECT signature FROM public.tanda_tangan
-WHERE nip = '{{ (($input.item.json.query || {}).nip || "").toString().replace(/'/g, "''") }}'
-LIMIT 1;`;
-
-// ── 7 rantai ────────────────────────────────────────────────────────────
-function upsertChain(path) {
-  newChain();
-  const w = wh(path, 'POST'), g = gate(path);
-  const c = code(`Code Aset Upsert (${path})`, UPSERT_JS);
-  const p = pg(`PG Aset Upsert (${path})`, '={{ $json.sql }}');
-  const a = code(`Agg Aset Upsert (${path})`, AGG_UPSERT);
-  const r = res(`Res Aset Upsert (${path})`);
-  link(w, g); link(g, c); link(c, p); link(p, a); link(a, r);
-  endChain();
-}
-function readChain(path, query, aggJs) {
-  newChain();
-  const w = wh(path), g = gate(path);
-  const p = pg(`PG ${path}`, query);
-  const a = code(`Agg ${path}`, aggJs);
-  const r = res(`Res ${path}`);
-  link(w, g); link(g, p); link(p, a); link(a, r);
-  endChain();
-}
-
-upsertChain('simapo-aset-massal');
-upsertChain('simapo-aset-kib');
-
-readChain('simapo-aset-summary', SQL_SUMMARY, AGG_SUMMARY);
-readChain('simapo-pengaturan-get', SQL_PENG_GET, AGG_PENG_GET);
-
-{ // simapo-pengaturan-set (POST)
-  newChain();
-  const w = wh('simapo-pengaturan-set', 'POST'), g = gate('simapo-pengaturan-set');
-  const c = code('Code Pengaturan Set', SET_JS);
-  const p = pg('PG Pengaturan Set', '={{ $json.sql }}');
-  const a = code('Agg Pengaturan Set', AGG_OK);
-  const r = res('Res Pengaturan Set');
-  link(w, g); link(g, c); link(c, p); link(p, a); link(a, r);
-  endChain();
-}
-
-readChain('simapo-ttd-get', SQL_TTD, AGG_TTD);
-
-{ // simapo-aset-kosongkan (POST): guard → anak → unit → barang (per instansi)
-  newChain();
-  const w = wh('simapo-aset-kosongkan', 'POST'), g = gate('simapo-aset-kosongkan');
-  const c = code('Code Konfirmasi Kosongkan', CONFIRM_JS);
-  const p1 = pg('PG Kosongkan Anak', '={{ $json.sql }}');
-  const p2 = pg('PG Kosongkan Unit', `DELETE FROM "SIMAPO".unit_aset WHERE instansi_id = '${INST_EXPR_KOSONG}';`);
-  const p3 = pg('PG Kosongkan Barang', `DELETE FROM "SIMAPO".barang WHERE instansi_id = '${INST_EXPR_KOSONG}';`);
-  const a = code('Agg Kosongkan', AGG_OK);
-  const r = res('Res Kosongkan');
-  link(w, g); link(g, c); link(c, p1); link(p1, p2); link(p2, p3); link(p3, a); link(a, r);
-  endChain();
-}
-
-const wf = {
-  name: NAME,
-  nodes,
-  connections,
-  settings: { executionOrder: 'v1', binaryMode: 'separate' },
-  staticData: null,
-  pinData: {},
-  meta: { templateCredsSetupCompleted: true },
-};
-writeFileSync(OUT, JSON.stringify(wf, null, 2) + '\n');
-console.log(`OK: ${nodes.length} nodes, ${Object.keys(connections).length} links → ${OUT}`);
-
-// ── deploy (Task 2): create/update + activate ───────────────────────────
-async function deploy() {
-  const token = process.env.N8N_TOKEN;
-  if (!token) { console.error('N8N_TOKEN belum di-set'); process.exit(1); }
-  const hdr = { 'X-N8N-API-KEY': token, 'content-type': 'application/json' };
-  const list = await (await fetch(BASE + '/api/v1/workflows?limit=200', { headers: hdr })).json();
-  const found = (list.data || []).find(x => x.name === NAME);
-  let id;
-  if (found) {
-    id = found.id;
-    const live = await (await fetch(`${BASE}/api/v1/workflows/${id}`, { headers: hdr })).json();
-    const idByName = new Map((live.nodes || []).map(n => [n.name, n.id]));
-    const outNodes = wf.nodes.map(n => (idByName.has(n.name) ? { ...n, id: idByName.get(n.name) } : n));
-    const body = { name: wf.name, nodes: outNodes, connections: wf.connections, settings: wf.settings };
-    let put = await fetch(`${BASE}/api/v1/workflows/${id}`, { method: 'PUT', headers: hdr, body: JSON.stringify(body) });
-    for (const st of [{ executionOrder: 'v1', binaryMode: 'separate' }, { executionOrder: 'v1' }, {}]) {
-      if (put.ok) break;
-      put = await fetch(`${BASE}/api/v1/workflows/${id}`, { method: 'PUT', headers: hdr, body: JSON.stringify({ ...body, settings: st }) });
-    }
-    if (!put.ok) { console.error('PUT gagal', put.status, await put.text()); process.exit(1); }
-    console.log(`updated ${id}`);
-  } else {
-    let post = await fetch(BASE + '/api/v1/workflows', { method: 'POST', headers: hdr, body: JSON.stringify({ name: wf.name, nodes: wf.nodes, connections: wf.connections, settings: wf.settings }) });
-    // API menolak key settings tertentu (binaryMode) — fallback sama dengan jalur PUT
-    for (const st of [{ executionOrder: 'v1' }, {}]) {
-      if (post.ok) break;
-      post = await fetch(BASE + '/api/v1/workflows', { method: 'POST', headers: hdr, body: JSON.stringify({ name: wf.name, nodes: wf.nodes, connections: wf.connections, settings: st }) });
-    }
-    if (!post.ok) { console.error('POST gagal', post.status, await post.text()); process.exit(1); }
-    id = (await post.json()).id;
-    console.log(`created ${id}`);
+test('login tanpa NIP ditolak 400 tanpa menyentuh DB', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  let called = 0;
+  const r = createAuthSessionRouter({ query: async () => { called++; return { rows: [] }; } });
+  for (const nip of [undefined, '', '   ']) {
+    const out = await drive(r, 'POST', '/api/auth/login', { nip });
+    assert.equal(out.status, 400, `nip ${JSON.stringify(nip)} harus 400`);
   }
-  const act = await fetch(`${BASE}/api/v1/workflows/${id}/activate`, { method: 'POST', headers: hdr });
-  console.log(`activate: HTTP ${act.status}`);
-}
-if (process.argv.includes('--deploy')) await deploy();
+  assert.equal(called, 0, 'DB tidak boleh disentuh untuk input kosong');
+});
+
+test('login mengabaikan role/instansi yang disuntik di body', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const seen = [];
+  const query = async (sql, params) => {
+    seen.push({ sql: String(sql), params });
+    if (/user_list/i.test(sql)) return { rows: [{ id: '7', nip: 'NIP1', role: 'USER', instansi_id: 'bapperida' }] };
+    if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'e'.repeat(192) }] };
+    return { rows: [] };
+  };
+  const r = createAuthSessionRouter({ query });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: 'NIP1', role: 'SUPERADMIN', instansi_id: 'lain' });
+  assert.equal(out.status, 200);
+  const ins = seen.find((s) => /INSERT INTO auth_sessions/i.test(s.sql));
+  assert.ok(ins.params.includes('USER'), 'role dari body tidak boleh dipakai');
+  assert.ok(!ins.params.includes('SUPERADMIN'), 'role body harus diabaikan');
+});
+
+test('login tidak membaca init_data Telegram (pure NIP)', async () => {
+  process.env.TELEGRAM_BOT_TOKEN = 'x'.repeat(30);
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({ query: async () => ({ rows: [] }) });
+  // Tanpa init_data pun harus tetap 404 (NIP tak dikenal), bukan 401.
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '99999' });
+  assert.equal(out.status, 404);
+});
 ```
 
-- [ ] **Step 2: Jalankan generator**
+- [ ] **Step 2: Jalankan test, pastikan gagal**
 
-Run: `node scripts/build-aset-data-workflow.mjs` (workdir `D:\Code\absensi_refactored_v6`)
-Expected: `OK: 41 nodes, 34 links → ...\n8n\SIMAPO - Aset Data.json` (angka nodes/links tepat 41/34; jika beda, hitung ulang rantai: 6+6+5+5+6+5+8=41, links = nodes − 7 rantai = 34).
+Run: `node --test server/auth-session.test.js`
+Expected: FAIL — `route not found` (route `/api/auth/login` belum ada).
 
-- [ ] **Step 3: Validasi struktural JSON**
+- [ ] **Step 3: Implementasi minimal**
 
-Run:
-```powershell
-node -e "const w=require('./n8n/SIMAPO - Aset Data.json'); const paths=w.nodes.filter(n=>n.type==='n8n-nodes-base.webhook').map(n=>n.parameters.path); const gates=w.nodes.filter(n=>n.name.startsWith('Gate')).length; const pg=w.nodes.filter(n=>n.type==='n8n-nodes-base.postgres'); console.log('webhooks',paths.length,'gates',gates,'pg',pg.length); console.log(paths.join('\n')); if(paths.length!==7||gates!==7||pg.length!==9) process.exit(1); if(pg.some(n=>!n.credentials||!n.credentials.postgres)) process.exit(2); console.log('VALID');"
+Di `server/auth-session.js`, tambahkan konstanta SQL setelah `DEACTIVATE_SQL` (baris ~15):
+
+```js
+// NIP tidak unik di user_list: ambil SEMUA baris, lalu tolak yang ambigu
+// (singleSessionRow). Memilih baris pertama = menerbitkan sesi identitas salah.
+const USERS_BY_NIP_SQL = `
+  SELECT * FROM user_list WHERE "NIP" = $1`;
 ```
-Expected: `webhooks 7 gates 7 pg 9` + daftar 7 path + `VALID`. (9 node PG = 2 upsert + summary + peng-get + peng-set + ttd + 3 kosongkan.)
 
-- [ ] **Step 4: Commit**
+Di dalam `createAuthSessionRouter`, tambahkan route setelah `router.post('/api/auth/session', ...)` (sebelum `router.post('/api/auth/logout')`), dan tambahkan import `singleSessionRow`:
 
-```powershell
-git add scripts/build-aset-data-workflow.mjs "n8n/SIMAPO - Aset Data.json"
-git commit -m "feat(aset): generator workflow SIMAPO Aset Data (7 endpoint bergate)"
+```js
+import { singleSessionRow } from './auth.js';
 ```
-Expected: commit sukses, 2 file masuk.
+
+```js
+  // Login web non-Telegram: NIP saja, tanpa password (keputusan pengguna).
+  // ponytail: NIP-only berarti siapa pun yang tahu NIP orang lain bisa mengambil
+  // sesinya — celah yang sudah ada sejak alur lama juga NIP-only. Mitigasi yang
+  // berjalan: face-verify sesuai toggle instansi di sisi klien, otorisasi tetap
+  // dari sesi, NIP ambigu ditolak. Upgrade path kalau perlu lebih: rate-limit,
+  // wajib face-verify untuk web, atau PIN/OTP per pegawai.
+  router.post('/api/auth/login', async (req, res) => {
+    const nip = String(req.body?.nip || '').trim();
+    if (!nip) return res.status(400).json({ ok: false, message: 'NIP wajib diisi.' });
+
+    const { rows } = await query(USERS_BY_NIP_SQL, [nip]);
+    const user = singleSessionRow(rows);
+    if (!user) {
+      return res.status(rows.length ? 409 : 404).json({
+        ok: false,
+        message: rows.length ? 'NIP ambigu di user_list' : 'NIP tidak terdaftar.',
+      });
+    }
+
+    const token = crypto.randomBytes(96).toString('hex');
+    const ins = await query(INSERT_SESSION_SQL, [token, user.nip, user.id, user.role, user.instansi_id]);
+    if (!ins.rows.length) return res.status(500).json({ ok: false, message: 'Gagal membuat sesi.' });
+
+    return res.status(200).json({ ok: true, session_token: ins.rows[0].session_token, user });
+  });
+```
+
+Catatan: `singleSessionRow` sudah di-export dari `./auth.js` (baris 92), dipakai juga oleh `auth-device.js`.
+
+- [ ] **Step 4: Jalankan test, pastikan hijau**
+
+Run: `node --test server/auth-session.test.js`
+Expected: PASS — semua test (lama + 6 baru) hijau.
+
+- [ ] **Step 5: Jalankan seluruh test server**
+
+Run: `node --test server/`
+Expected: semua test hijau (tidak ada regresi di `index.test.js`, `auth.test.js`, dsb.).
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add server/auth-session.js server/auth-session.test.js
+git commit -m "feat: POST /api/auth/login - sesi native dari NIP tanpa password"
+```
 
 ---
+

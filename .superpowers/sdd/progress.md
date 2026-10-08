@@ -61,3 +61,35 @@ Terverifikasi langsung ke DB/diff: blok generator & test byte-identical dengan p
 - Review juga menemukan false-success PRE-EXISTING di `isApiSuccess` fallback (js\api.js:101): 200 + body non-JSON → `return httpOk` = true. Di luar scope Plan 1; catat sebagai follow-up (fix murah: `return false` di fallback).
 - Chrome remote-debugging permission sudah tidak aktif → verifikasi browser untuk 2 commit terakhir tidak diulang; guard ini identik logikanya dengan versi yang sudah PASS di browser (Task 4/5), `node --check` + load order + grep satu-satunya literal jadi bukti statis.
 - Follow-up tersisa: (a) interlock `ALLOW_DESTRUCTIVE` di test kalau suatu saat ada panggilan `confirm='HAPUS'`; (b) 4 konstanta P.* tanpa konsumen UI / path test terduplikasi; (c) false-success non-JSON di js\api.js:101; (d) rapikan skema cache-buster (`2` vs tanggal).
+
+# SDD Progress - Plan 2 (2026-10-08-login-web-nontelegram-implementation.md)
+
+Task 1: complete (commits ee9cdb3 + fd2db70, BASE 2789426, review approved after 1 fix round)
+- Critical fix: USERS_BY_NIP_SQL kini SELECT * + ` `NIP` AS nip, username AS nama ` (skema asli tak punya kolom nip/nama); mock test diubah ke bentuk row asli
+- Keputusan user: login response TETAP full row (biometrik ikut) demi face-verify auth.js; threat model NIP-only diterima
+- Minor roll-up:
+  - tak ada test yang guard kolom full-row (face_histogram/face_photo) di response login -> regresi narrowing lolos
+  - task-1-report.md bagian pre-fix basi (SQL lama +84 vs +99)
+  - auth-session.test.js tanpa trailing newline
+  - test terakhir set TELEGRAM_BOT_TOKEN tanpa restore (brief-mandated, urutan terakhir)
+  - ` node --test server/ ` tak discover file di box ini -> pakai node --test 'server/*.test.js'
+
+Task 2: complete (commit ff59ff6, BASE fd2db70, review approved, no issues)
+- Catatan: cache-bumper ?v=20261008a di kedua index.html (controller-injected, di luar teks plan, disetujui reviewer)
+
+Task 3: complete (commit 8e6ad08, BASE ff59ff6, review approved, no Critical/Important)
+- Minor: sessionToken tanpa existence check di auth.js:64 (brief-mandated, hardening only)
+- Reviewer ⚠️ localStorage read-side: controller verifikasi = key sama persis dengan blok lama, tak ada gap
+
+Task 4: complete (verifikasi E2E Chrome produksi, commit 8e6ad08)
+- Login NIP 200206302025061002: POST /api/auth/login 200, overlay hilang, token 192-hex, 40+ /api/* semua 200 termasuk user-list?format=full
+- Bearer: Bearer <192-hex> (len 199) di wajah API call, 200
+- Error path: NIP 000000 -> alert 'NIP tidak terdaftar.', token 0, overlay tetap
+- Task 5: push origin+sekrebot bfc9be7..8e6ad08, redeploy Coolify selesai 12:18:57 UTC, probe health/root 200
+
+Task 5: complete (push bfc9be7..8e6ad08 origin+sekrebot, redeploy user 12:18 UTC, probe / & /api/health 200, login re-verified)
+
+Final whole-branch review: Needs fixes -> 1 Important (N1: face_histogram '[]' truthy blok photo-regen fallback). Fix a1f29a2: guard descriptorOrEmpty, cache-buster auth.js?v=20261008b, test kontrak full-row, env restore, trailing newline. Pushed 2 remote.
+Minor roll-up: N2 cancel/fail tinggalkan _native_token 12h (ledger), N3 async route tanpa try/catch (konvensi saudara, fix saat sentuh file), N4 report task-4/5 basi (ditulis ulang).
+MENUNGGU: redeploy Coolify (a1f29a2) + smoke test.
+

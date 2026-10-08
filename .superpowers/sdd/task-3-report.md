@@ -1,86 +1,68 @@
-# Task 3 Report — Smoke test `scripts/test-aset-data.mjs`
+# Task 3 Report — Frontend: alur login pakai `/api/auth/login` (auth.js)
 
-**Status: DONE_WITH_CONCERNS** (2 brief-assertion test bugs fixed; 3 orphan `unit_aset` rows instead of the 1 the brief allows — side effect of 2 diagnostic runs)
+**Status:** DONE
+**Commit:** `8e6ad08` — feat: login web pakai /api/auth/login, token native asli
 
-## Files
-- Created: `scripts/test-aset-data.mjs` (committed, only file in commit)
+## What changed
 
-## What each test does and asserts
+### 1. `js/auth.js` (and synced `www/js/auth.js`)
 
-| # | Test | Assertion |
-|---|------|-----------|
-| 1 | `summary` tanpa `x-bast-key` | raw `fetch` tanpa header → ditolak = `!r.ok \|\| json === null`. Kontrak gate Task 2: **200 + body kosong**. FAIL jika gate balas payload data (gate terbuka). |
-| 2 | `summary` bentuk data | GET dengan key → `ok` + `data.total_unit` number + `data.total_nilai` number + `data.per_kategori` array. FAIL jika shape berubah/endpoint error. |
-| 3 | pengaturan roundtrip | GET (bentuk objek) → POST set `p1_jabatan='SMOKE-P1-JABATAN'` → GET lagi nilai persis sama → POST restore nilai `old` (pra-test). Assert restore ok; nilai sebelum test = `''`. |
-| 4 | massal insert → idempoten → cleanup | POST 1 baris `SMOKE-TEST-<ts>` → `barang_baru===1 && unit_baru===1` + `barang_ids` diambil → POST ulang kode sama → `barang_baru===0 && unit_baru===0` → loop `simapo-admin-master-delete` per id → `cleaned` (ids>0 dan semua ok). |
-| 5 | kosongkan guard | POST `{"confirm":"salah"}` → ditolak (200 body kosong / non-ok, tanpa payload). **Happy path `confirm=HAPUS` tidak pernah dijalankan.** |
-| 6 | ttd-get | Hanya jika env `TTD_NIP` di-set → signature string non-kosong. Tanpa env: `SKIP`. (Run ini: SKIP.) |
+Replaced the entire login validation + fake-token region (old lines 50–119, from `const res = await apiGet(\`${P.userList}?nip=${nip}\`);` through the end of old `finalizeLogin` ending `location.reload();\n};`) with the brief's new block, transcribed verbatim:
 
-Keluaran: `SEMUA PASS` + exit 0.
+- One `POST` to `API_BASE + P.webLogin` with `{ nip }` body; non-OK response throws `loginBody?.message || 'Login gagal. Coba lagi.'`.
+- `user = loginBody.user` (must have `.id`), `sessionToken = loginBody.session_token`, `userNip`, `targetId = String(user.id)`.
+- `setNativeToken(sessionToken)` called immediately after login (line 70) — BEFORE the face-toggle `apiGet` call, so media endpoints aren't 401.
+- Face-toggle check, `hasFace` computation, and `finalizeLogin` kept identical in shape to the brief's new block.
+- `finalizeLogin` now: `setNativeToken(sessionToken)` → `setSession(sessionToken, {...})` → localStorage writes → `location.reload()`. **No fabricated `usr_<id>_<ts>` token anywhere in the login path.**
 
-## Test bug diagnosis (diagnosis → fix di file test, endpoint TIDAK diubah)
+Everything after the replaced block (the `if (isFaceEnabled && typeof openCamOverlay === 'function')` face-verify flow) is untouched — it references `user`, `userNip`, `targetId`, `hasFace`, `finalizeLogin`, `isFaceEnabled`, all provided by the new block.
 
-Brief menulis dua assert `!r.ok` (asumsi non-2xx). Endpoint live mengembalikan **status 200 + body kosong** saat reject — persis kontrak "gate reject = 200+empty body" yang terverifikasi di Task 2 (diulang dengan probe: `summary` tanpa key → `200 bodylen=0`; `kosongkan confirm=salah` → `200 bodylen=0`). Jadi **test bug, bukan endpoint bug**. Perbaikan minimal:
+Register branch untouched (still uses `apiGet(P.userList)` + `usr_` regToken — out of scope per brief).
 
-- Test 1: parse JSON lokal (fetch tanpa key — `call()` tidak bisa dipakai karena selalu menyisipkan header `x-bast-key`); assert `!r.ok || j === null`.
-- Test 5: assert `!r.ok || r.j === null` dengan extra `status + body`.
+### 2. Cache-buster bump (controller-resolved ambiguity)
 
-Iterasi: run awal 2 FAIL (assert `!r.ok`) → perbaikan → run ke-2 1 FAIL (regresi karaku: `call()` kirim key, gate lolos, data balik) → fetch liar dipulihkan → run ke-3 **semua PASS**.
+- `index.html:3126` → `<script src="js/auth.js?v=20261008a"></script>` (was `?v=20260706c`)
+- `www/index.html:3126` → same bump.
 
-## Full test run output (pristine, final)
+## Verification (commands + output)
 
-```
-$ node scripts/test-aset-data.mjs
-PASS  summary tolak tanpa x-bast-key — status 200, body (kosong)
-PASS  summary bentuk data — {"total_unit":2,"total_nilai":17000000,"pemegang":0,"ruangan":0,"per_kategori":[{"kategori":"Komputer & Laptop","jumlah":1},{"kategori":"Peralatan Audio Visual","jumlah":1}]}
-PASS  pengaturan-get bentuk objek — {"data":{"p1_jabatan":""}}
-PASS  pengaturan-set ok — status 200
-PASS  pengaturan roundtrip — {"data":{"p1_jabatan":"SMOKE-P1-JABATAN"}}
-PASS  pengaturan restore — kembali ke ''
-PASS  massal insert baru — {"total":1,"barang_baru":1,"unit_baru":1,"barang_ids":["070296e67e23fc02b0218d562937cc8e"]}
-PASS  massal idempoten (ulang = 0 baru) — {"total":1,"barang_baru":0,"unit_baru":0,"barang_ids":[]}
-PASS  cleanup via master-delete — 1 baris
-PASS  kosongkan tolak konfirmasi salah — status 200, body (kosong)
-SKIP  ttd-get (set env TTD_NIP=<nip dengan tanda tangan> untuk test ini)
+1. **Step 2 — leftover old-reference scan:**
+   ```
+   Select-String -Path js\auth.js -Pattern 'rawData|res\.rows|res\.data|P\.userList\?nip'
+   ```
+   Output: exactly one line —
+   ```
+   82   const rawFT = faceRes.rows?.length ? faceRes.rows[0] : (faceRes?.data ?? {});
+   ```
+   This is `faceRes.rows`/`faceRes?.data` (substring match on `res\.rows`/`res\.data`) and is **verbatim from the brief's own new block** (face-toggle parsing). Not a leftover: no `rawData`, no bare `res` response parsing, no `P.userList?nip` in the login branch (register's `${P.userList}?nip=` doesn't match the pattern `P\.userList\?nip` because of the `}` separator, and is out of scope anyway).
 
-SEMUA PASS
-$ echo $LASTEXITCODE
-0
-```
-(10 PASS + 1 SKIP; run sebelumnya: run#1 2 FAIL, run#2 1 FAIL — keduanya bug assert, sebagian dicatat di bagian diagnosis.)
+2. **Step 3 — syntax:** `node --check js/auth.js` → no output, exit 0 (SYNTAX OK).
 
-## Cleanup verification (Step 3, read-only MCP)
+3. **Step 4 — sync:** `Copy-Item js\auth.js www\js\auth.js -Force`; hash compare:
+   `SYNC OK C5269EA04AA06863DF9E6E79BAEAC33459E5474551CB4FC76830CBF3BF11BA90` (re-verified after commit: identical).
 
-```sql
-select count(*) from "SIMAPO".barang where kodebarang like 'SMOKE-TEST-%' and isactive = true
--- hasil: 0  ✓
-```
+4. **npm test:** `322 tests / 322 pass / 0 fail / 0 skipped` — all green (no JS frontend tests exist; nothing broke).
 
-State lanjutan:
+5. **Commit:** `git add js/auth.js www/js/auth.js index.html www/index.html` then commit → `8e6ad08 feat: login web pakai /api/auth/login, token native asli` (4 files changed, 48 insertions, 54 deletions). Only those 4 files staged; `.superpowers/*` scratch changes left uncommitted.
 
-| Object | Sebelum | Sesudah |
-|---|---|---|
-| `SIMAPO.barang` SMOKE-TEST (aktif) | 0 | **0** ✓ (3 rows soft-deleted, `isactive=false`) |
-| `SIMAPO.unit_aset` total / aktif-join-barang | 2 aktif | 19 total, **2 aktif** ✓ (summary live tetap `total_unit=2, total_nilai=17000000`) |
-| `public.pengaturan` `p1_jabatan` (bapperida) | hilang (GET → `{}`) | `''` — nilai ter-restore persis sebelum test ✓ |
+## Files changed
 
-## Self-review
+- `js/auth.js` — login flow rewritten (48+/54− across both copies)
+- `www/js/auth.js` — synced copy (byte-identical)
+- `index.html` — auth.js cache-buster `?v=20261008a`
+- `www/index.html` — same bump
 
-- **Assert perilaku nyata?** Ya — gate ditutup, shape response, nilai roundtrip persis, idempotensi (0 baru), cleanup status, guard kosongkan. Semua FAIL kalau logika endpoint rusak.
-- **Secret?** `KEY` = nilai gate **publik** dari `js/config.js` `BAST_API_KEY` (disebut publik di plan Task 2; sudah dipakai pola sama di `scripts/import-bast-data.js`). `N8N_TOKEN` tidak dipakai/ditulis. Tidak ada secret lain di file.
-- **Output pristine?** Ya — `PASS/FAIL/SKIP` per baris, `SEMUA PASS`, exit 0.
-- **Happy path `kosongkan`?** Tidak pernah dieksekusi ✓.
-- **Commit scope:** hanya `scripts/test-aset-data.mjs` ✓.
+## Self-review checklist
+
+- [x] No leftover `rawData` / bare `res` response parsing in login path.
+- [x] No `P.userList?nip=` in login branch (register's usage left untouched, per scope).
+- [x] No fabricated `usr_` token in login path — only remaining `usr_` is register branch line 317 (out of scope) and Telegram `tg_` auto-login in `_checkIdentityOnLoad` (unchanged, per constraints).
+- [x] `finalizeLogin` stores the **server-issued** `session_token` via both `setNativeToken()` and `setSession()`.
+- [x] `setNativeToken` called before face-toggle/media calls (line 70), and again in `finalizeLogin` (line 104).
+- [x] `www/js/auth.js` byte-identical to `js/auth.js`; both `index.html` files bumped.
+- [x] `node --check` clean; `npm test` 322/322 green.
 
 ## Concerns
 
-1. **3 baris orphan `unit_aset`** (bukan 1 seperti yang brief izinkan) — 3× run massal (1 pass + 2 diagnosis). Semua terfilter dari summary (`b.isactive=true`); tidak berpengaruh ke tampilan/laporan. Bersihkan butuh tulis DB di luar webhook yang tersedia → dibiarkan, terdokumentasi.
-2. **`public.pengaturan` kini berisi 10 baris** (9 baris `face_*`/`kontrol_absen` pre-existing — konteks "0 rows" tampak usang; test hanya menyentuh `p1_jabatan`, nilainya kembali `''`). Efek samping "1 baris pengaturan nilainya kembali semula" = sesuai brief.
-3. Dua assert brief diganti (dijelaskan di atas) — kalau reviewer menganggap brief sacrosanct, diff test = 2 blok assert saja.
-
-## Fix round 4 (review Important)
-
-- **Apa yang berubah:** assert Test 5 (`scripts/test-aset-data.mjs:91`) dari `r.status !== 0 && (!r.ok || r.j === null)` - menerima 404/500 sebagai "guard reject" (false PASS kalau route mati/salah rute) - menjadi `r.status === 200 && r.j === null` = kontrak persis sesuai komentar blok (`tolak = 200 body kosong`). Komentar blok, baris `say(...)`, test 1/2/4, ttd, helper, dan output tidak disentuh.
-- **Plan mirror:** baris identik di `docs/superpowers/plans/2026-09-30-aset-backend-pengaturan.md` Task 3 (plan == test, mengikuti invariant commit c7d7371).
-- **Validasi:** `node --check scripts/test-aset-data.mjs` OK; extract code block Task 3 plan vs file byte-identical (4479 B); mojibake 0; briefs 1-5 regenerate (1/2/4/5 byte-identical, 3 ikut berubah). Test TIDAK dijalankan (endpoint live - bukti sebelumnya sudah 200+empty; patch ini hardening run berikutnya).
-- **Commit:** `8bcf547 test(aset): harden guard assert - wajib 200+body kosong (review Task 3)` - tepat 2 file.
+- The brief's Step-2 verification pattern (`res\.rows|res\.data`) over-matches `faceRes.rows` — the brief's own replacement code contains that line. Match is benign; noted above so a re-run isn't mistaken for a failure.
+- Telegram auto-login (`tg_...` fake token in `_checkIdentityOnLoad`) and register's `usr_...` token remain by design (out of scope; constraints forbid touching `/api/auth/session` Telegram flow).

@@ -1,142 +1,131 @@
-﻿### Task 3: Smoke test `scripts/test-aset-data.mjs` + jalankan
+### Task 3: Frontend — alur login pakai `/api/auth/login` (auth.js)
 
 **Files:**
-- Create: `scripts/test-aset-data.mjs`
+- Modify: `js/auth.js` — `handleAuthAction('login')`, khususnya: blok validasi `apiGet(P.userList)` (baris 50-71), penambahan `setNativeToken` sebelum face-toggle (baris 73), dan `finalizeLogin` (baris 106-119).
+- Modify: `www/js/auth.js` (sync)
 
 **Interfaces:**
-- Consumes: endpoint hasil Task 2; `simapo-admin-master-delete` (POST `{id}`, soft delete `isactive=false`, webhook tanpa gate — terverifikasi di `n8n/SIMAPO Katalog & Master Barang.json`).
-- Produces: exit code 0 = semua pass; baris test massal dibersihkan (soft-delete), pengaturan dikembalikan ke nilai sebelum test. Efek samping yang diterima: 1 baris `unit_aset` orphan (barang-nya isactive=false) — tidak dihitung summary karena filter `b.isactive = true`, dan 1 baris `pengaturan` yang nilainya kembali semula.
+- Konsumsi: `P.webLogin` dan `setNativeToken` (Task 2).
+- Produksi: `window.MY_ID`, `_sess_*`, `_native_token` terisi dari respons server; alur face-verify tidak berubah (masih memanggil `openCamOverlay`).
 
-- [ ] **Step 1: Tulis script (kode lengkap)**
+- [ ] **Step 1: Ganti blok validasi NIP + token palsu**
 
-Buat `scripts/test-aset-data.mjs`:
+Di `js/auth.js`, GANTI keseluruhan blok dari `const res = await apiGet(\`${P.userList}?nip=${nip}\`);` (baris 50) sampai akhir `finalizeLogin` (baris 119) dengan kode berikut.
+
+Blok LAMA yang dihapus dimulai persis dengan:
 
 ```js
-#!/usr/bin/env node
-/* Smoke test endpoint SIMAPO - Aset Data. Aman diulang:
-   - pengaturan di-restore ke nilai sebelum test,
-   - baris test massal dihapus via simapo-admin-master-delete (soft delete),
-   - kosongkan HANYA diuji guard-nya (tidak pernah hapus data).
-   Env opsional: N8N_BASE, TTD_NIP (nip yang sudah punya tanda tangan).
-*/
-const BASE = process.env.N8N_BASE || 'https://mindcloud.my.id';
-const KEY = 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u';
-const HDR = { 'content-type': 'application/json', 'x-bast-key': KEY };
-let fails = 0;
-const say = (name, cond, extra = '') => {
-  console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${extra ? ' — ' + extra : ''}`);
-  if (!cond) fails++;
-};
-async function call(method, path, body) {
-  const opt = { method, headers: HDR };
-  if (body) opt.body = JSON.stringify(body);
-  try {
-    const r = await fetch(BASE + path, opt);
-    let j = null;
-    try { j = await r.json(); } catch (_) {}
-    return { status: r.status, ok: r.ok, j };
-  } catch (e) {
-    return { status: 0, ok: false, j: null, err: e.message };
-  }
-}
-
-const P = {
-  massal: '/webhook/simapo-aset-massal',
-  summary: '/webhook/simapo-aset-summary',
-  pgGet: '/webhook/simapo-pengaturan-get',
-  pgSet: '/webhook/simapo-pengaturan-set',
-  ttd: '/webhook/simapo-ttd-get',
-  kosong: '/webhook/simapo-aset-kosongkan',
-  masterDel: '/webhook/simapo-admin-master-delete',
-};
-
-// 1. tanpa x-bast-key harus ditolak (kontrak gate: 200 + body kosong, tanpa data)
-{
-  const r = await fetch(BASE + P.summary);
-  let j = null;
-  try { j = await r.json(); } catch (_) {}
-  say('summary tolak tanpa x-bast-key', !r.ok || j === null,
-    `status ${r.status}, body ${j === null ? '(kosong)' : JSON.stringify(j)}`);
-}
-
-// 2. summary terbaca + bentuk data
-{
-  const r = await call('GET', P.summary);
-  const d = r.j && r.j.data;
-  say('summary bentuk data',
-    r.ok && d && typeof d.total_unit === 'number' && typeof d.total_nilai === 'number' && Array.isArray(d.per_kategori),
-    JSON.stringify(d));
-}
-
-// 3. pengaturan roundtrip (set → baca → restore)
-{
-  const before = await call('GET', P.pgGet);
-  const old = (before.j && before.j.data && before.j.data.p1_jabatan) || '';
-  say('pengaturan-get bentuk objek', before.ok && before.j && typeof before.j.data === 'object', JSON.stringify(before.j));
-  const set = await call('POST', P.pgSet, { p1_jabatan: 'SMOKE-P1-JABATAN' });
-  say('pengaturan-set ok', set.ok, `status ${set.status}`);
-  const after = await call('GET', P.pgGet);
-  say('pengaturan roundtrip', after.ok && after.j && after.j.data.p1_jabatan === 'SMOKE-P1-JABATAN', JSON.stringify(after.j));
-  const back = await call('POST', P.pgSet, { p1_jabatan: old });
-  say('pengaturan restore', back.ok, `kembali ke '${old}'`);
-}
-
-// 4. massal: insert baru → ulang (idempoten) → cleanup
-const kode = 'SMOKE-TEST-' + Date.now();
-{
-  const a = await call('POST', P.massal, { rows: [{ kodebarang: kode, nama: 'Smoke Test Aset', hargasatuan: 1 }] });
-  const d = a.j && a.j.data;
-  say('massal insert baru', a.ok && d && d.barang_baru === 1 && d.unit_baru === 1, JSON.stringify(d));
-  const ids = (d && d.barang_ids) || [];
-  const b = await call('POST', P.massal, { rows: [{ kodebarang: kode, nama: 'Smoke Test Aset', hargasatuan: 1 }] });
-  const d2 = b.j && b.j.data;
-  say('massal idempoten (ulang = 0 baru)', b.ok && d2 && d2.barang_baru === 0 && d2.unit_baru === 0, JSON.stringify(d2));
-  let cleaned = ids.length > 0;
-  for (const id of ids) {
-    const c = await call('POST', P.masterDel, { id });
-    if (!c.ok) cleaned = false;
-  }
-  say('cleanup via master-delete', cleaned, `${ids.length} baris`);
-}
-
-// 5. kosongkan: guard konfirmasi (TIDAK test happy-path) — tolak = 200 body kosong
-{
-  const r = await call('POST', P.kosong, { confirm: 'salah' });
-  const tolak = r.status === 200 && r.j === null;
-  say('kosongkan tolak konfirmasi salah', tolak,
-    `status ${r.status}, body ${r.j === null ? '(kosong)' : JSON.stringify(r.j)}`);
-}
-
-// 6. ttd-get (opsional)
-if (process.env.TTD_NIP) {
-  const r = await call('GET', `${P.ttd}?nip=${encodeURIComponent(process.env.TTD_NIP)}`);
-  say('ttd-get signature terbaca', r.ok && r.j && r.j.data && typeof r.j.data.signature === 'string' && r.j.data.signature.length > 0, JSON.stringify(r.j));
-} else {
-  console.log('SKIP  ttd-get (set env TTD_NIP=<nip dengan tanda tangan> untuk test ini)');
-}
-
-console.log(fails ? `\n${fails} GAGAL` : '\nSEMUA PASS');
-process.exit(fails ? 1 : 0);
+          const res = await apiGet(`${P.userList}?nip=${nip}`);
 ```
 
-- [ ] **Step 2: Jalankan**
+dan berakhir dengan (baris 118-119):
 
-Run: `node scripts/test-aset-data.mjs`
-Expected: semua baris `PASS` (ttd-get boleh `SKIP`), diakhiri `SEMUA PASS`, exit code 0.
-
-- [ ] **Step 3: Verifikasi DB untuk baris massal (read-only MCP)**
-
-```sql
-select count(*) from "SIMAPO".barang where kodebarang like 'SMOKE-TEST-%' and isactive = true
+```js
+            location.reload();
+          };
 ```
-Expected: `0` (sudah soft-delete oleh cleanup). Kalau > 0, jalankan ulang cleanup manual via `simapo-admin-master-delete`.
 
-- [ ] **Step 4: Commit**
+Blok BARU:
 
+```js
+          // Login NIP (web, non-Telegram): satu panggilan menerbitkan sesi native
+          // dan mengembalikan baris user; tidak lagi butuh /api/user-list (yang
+          // berada di balik requireRole dan tak terjangkau sebelum punya token).
+          const loginRes = await fetch(API_BASE + P.webLogin, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nip }),
+          });
+          const loginBody = await loginRes.json().catch(() => ({}));
+          if (!loginRes.ok) throw new Error(loginBody?.message || 'Login gagal. Coba lagi.');
+
+          const user = loginBody.user;
+          if (!user || !user.id) throw new Error('Data pegawai tidak lengkap. Hubungi admin.');
+
+          const sessionToken = loginBody.session_token;
+          const userNip = String(user.nip || '').trim();
+          const targetId = String(user.id);
+
+          // Token native harus siap SEBELUM panggilan face-toggle/face lain agar
+          // tidak 401 (endpoints media dibalik requireRole).
+          setNativeToken(sessionToken);
+
+          // ── FACE VERIFICATION LOGIN (PASSWORDLESS) ──
+          // Check per-instansi face toggle from pengaturan table
+          let isFaceEnabled = false;
+          try {
+            const userInstansi = (user.instansi_id || user.Instansi_Id || '').trim();
+            console.log('[FaceToggle] userInstansi:', userInstansi);
+            if (userInstansi) {
+              const faceRes = await apiGet(P.faceToggle, { instansi_id: userInstansi });
+              console.log('[FaceToggle] faceRes:', faceRes);
+              if (faceRes.ok) {
+                const rawFT = faceRes.rows?.length ? faceRes.rows[0] : (faceRes?.data ?? {});
+                const d = Array.isArray(rawFT) ? rawFT[0] : rawFT;
+                console.log('[FaceToggle] parsed:', d);
+                isFaceEnabled = d?.enabled === true || d?.enabled === '1' || d?.enabled === 1 || d?.value === '1';
+                console.log('[FaceToggle] isFaceEnabled:', isFaceEnabled);
+              } else {
+                console.warn('[FaceToggle] API not ok:', faceRes.status);
+              }
+            } else {
+              console.warn('[FaceToggle] instansi_id empty on user');
+            }
+          } catch (e) {
+            console.warn('[FaceToggle] error:', e);
+          }
+          // Ponytail: API error/timeout → safe default = OFF, no face required
+
+          const hasFace = !!(user.face_histogram && user.face_histogram !== '[]' && user.face_histogram !== '')
+            || !!(user.face_photo && user.face_photo !== '' && user.face_photo !== 'null')
+            || !!(user.foto_base64 && user.foto_base64 !== '')
+            || !!(user.descriptor && user.descriptor !== '[]');
+
+          const finalizeLogin = async () => {
+            setNativeToken(sessionToken);
+            setSession(sessionToken, { nip: userNip, role: user.role || 'USER', instansi_id: user.instansi_id || '' });
+            window.MY_ID = targetId;
+            localStorage.setItem(STORAGE_KEYS.USER_ID, window.MY_ID);
+            localStorage.setItem('MY_NIP', userNip);
+            localStorage.setItem('MY_ROLE', String(user.role || 'USER').toUpperCase());
+            localStorage.setItem('MY_NAME', String(user.nama || 'User'));
+            localStorage.setItem(STORAGE_KEYS.USER_OBJ, JSON.stringify(user));
+            const finalInst = (user.instansi_id || user.Instansi_Id || '').trim();
+            if (finalInst) localStorage.setItem('MY_INSTANSI', finalInst);
+            else localStorage.removeItem('MY_INSTANSI');
+            location.reload();
+          };
+```
+
+Setelah blok ini, sisa fungsi (blok `if (isFaceEnabled && typeof openCamOverlay === 'function')` sampai akhir) tetap SAMA — hanya memastikan tidak ada referensi `rawData`/`res`/`userList` yang tersisa. Blok itu sudah memakai `user`, `userNip`, `targetId`, `hasFace`, `finalizeLogin`, `isFaceEnabled` — semuanya ada di definisi baru.
+
+- [ ] **Step 2: Verifikasi tidak ada sisa referensi lama**
+
+Run (PowerShell):
 ```powershell
-git add scripts/test-aset-data.mjs
-git commit -m "test(aset): smoke test endpoint aset data (roundtrip, idempoten, guard)"
+Select-String -Path js\auth.js -Pattern 'rawData|res\.rows|res\.data|P\.userList\?nip' | Select-Object LineNumber, Line
 ```
-Expected: commit sukses.
+Expected: tidak ada baris yang match (blok `P.userList` hanya mungkin tersisa di cabang **register** — itu di luar scope dan boleh ada; cabang register memakai `cek.rows` dari `apiGet(P.userList)` — string persis `cek = await apiGet`). Kalau `Select-String` menemukan `P.userList?nip=${nip}` di dalam cabang login, ulangi Step 1 (blok lama belum terganti sempurna).
 
----
+Catatan: pemakaian `P.userList` di **cabang register** (`const cek = await apiGet(\`${P.userList}?nip=${payload.nip}\`);`) sengaja dibiarkan — di luar scope.
+
+- [ ] **Step 3: Cek syntax**
+
+Run: `node --check js/auth.js`
+Expected: tidak ada output error.
+
+- [ ] **Step 4: Sync ke www/**
+
+Run (PowerShell):
+```powershell
+Copy-Item js\auth.js www\js\auth.js -Force
+```
+Expected: tidak ada output error.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add js/auth.js www/js/auth.js
+git commit -m "feat: login web pakai /api/auth/login, token native asli"
+```
+
