@@ -47,28 +47,27 @@
           if (!nip) throw new Error('Silakan masukkan NIP');
           if (nip.length < 3) throw new Error('ID / NIP minimal terdiri dari 3 karakter');
 
-          const res = await apiGet(`${P.userList}?nip=${nip}`);
-          if (!res.ok) throw new Error('Server tidak merespons. Coba lagi.');
+          // Login NIP (web, non-Telegram): satu panggilan menerbitkan sesi native
+          // dan mengembalikan baris user; tidak lagi butuh /api/user-list (yang
+          // berada di balik requireRole dan tak terjangkau sebelum punya token).
+          const loginRes = await fetch(API_BASE + P.webLogin, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nip }),
+          });
+          const loginBody = await loginRes.json().catch(() => ({}));
+          if (!loginRes.ok) throw new Error(loginBody?.message || 'Login gagal. Coba lagi.');
 
-          // Tangani berbagai format response n8n:
-          // - Array of objects: res.rows = [{id, nip, ...}]
-          // - Single object: res.data = {single: true, id, nip, ...}
-          const rawData = res.data;
-          let user = null;
-          if (res.rows && res.rows.length) {
-            user = res.rows.find(u => String(u.nip || '').trim() === nip)
-                || res.rows[0];
-          } else if (rawData && !Array.isArray(rawData)) {
-            // Single-object response (n8n versi lama)
-            if (rawData.single || rawData.id || rawData.nip) user = rawData;
-          }
+          const user = loginBody.user;
+          if (!user || !user.id) throw new Error('Data pegawai tidak lengkap. Hubungi admin.');
 
-          if (!user || user.error || !user.id) throw new Error('NIP tidak terdaftar. Silakan daftar baru.');
+          const sessionToken = loginBody.session_token;
+          const userNip = String(user.nip || '').trim();
+          const targetId = String(user.id);
 
-          // Verifikasi akhir untuk memastikan NIP benar
-          if (String(user.nip || '').trim() !== nip) {
-            throw new Error('Hasil pencarian NIP tidak cocok. Hubungi admin.');
-          }
+          // Token native harus siap SEBELUM panggilan face-toggle/face lain agar
+          // tidak 401 (endpoints media dibalik requireRole).
+          setNativeToken(sessionToken);
 
           // ── FACE VERIFICATION LOGIN (PASSWORDLESS) ──
           // Check per-instansi face toggle from pengaturan table
@@ -96,16 +95,14 @@
           }
           // Ponytail: API error/timeout → safe default = OFF, no face required
 
-          const hasFace = !!(user.face_histogram && user.face_histogram !== '[]' && user.face_histogram !== '[]' && user.face_histogram !== '')
+          const hasFace = !!(user.face_histogram && user.face_histogram !== '[]' && user.face_histogram !== '')
             || !!(user.face_photo && user.face_photo !== '' && user.face_photo !== 'null')
             || !!(user.foto_base64 && user.foto_base64 !== '')
             || !!(user.descriptor && user.descriptor !== '[]');
-          const userNip = String(user.nip || '').trim();
-          const targetId = String(user.telegram_id || user.id);
-          
+
           const finalizeLogin = async () => {
-            const token = 'usr_' + targetId + '_' + Date.now();
-            setSession(token, { nip: userNip, role: user.role || 'USER', instansi_id: user.instansi_id || '' });
+            setNativeToken(sessionToken);
+            setSession(sessionToken, { nip: userNip, role: user.role || 'USER', instansi_id: user.instansi_id || '' });
             window.MY_ID = targetId;
             localStorage.setItem(STORAGE_KEYS.USER_ID, window.MY_ID);
             localStorage.setItem('MY_NIP', userNip);
