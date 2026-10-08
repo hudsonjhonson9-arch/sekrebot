@@ -1,0 +1,861 @@
+﻿8e6ad08 feat: login web pakai /api/auth/login, token native asli
+ff59ff6 feat: P.webLogin + setNativeToken untuk sesi web
+fd2db70 fix: alias NIP/username di /api/auth/login agar cocok skema user_list
+ee9cdb3 feat: POST /api/auth/login - sesi native dari NIP tanpa password
+ .superpowers/sdd/task-1-report.md | 208 ++++++++++++++++++++------------------
+ index.html                        |   4 +-
+ js/auth.js                        |  49 +++++----
+ js/config.js                      |   8 ++
+ server/auth-session.js            |  32 ++++++
+ server/auth-session.test.js       |  99 ++++++++++++++++++
+ www/index.html                    |   4 +-
+ www/js/auth.js                    |  49 +++++----
+ www/js/config.js                  |   8 ++
+ 9 files changed, 304 insertions(+), 157 deletions(-)
+diff --git a/.superpowers/sdd/task-1-report.md b/.superpowers/sdd/task-1-report.md
+index f87ce47..059970d 100644
+--- a/.superpowers/sdd/task-1-report.md
++++ b/.superpowers/sdd/task-1-report.md
+@@ -1,141 +1,147 @@
+-# Task 1 Report ΓÇö Generator `build-aset-data-workflow.mjs` + JSON lokal
++# Task 1 Report ΓÇö `POST /api/auth/login` (server)
+ 
+-**Status:** DONE
+-**Commit:** `7f0dedb` ΓÇö feat(aset): generator workflow SIMAPO Aset Data (7 endpoint bergate)
++**Status:** DONE_WITH_CONCERNS (1 minor tooling concern, see below)
++**Commit:** `ee9cdb3` ΓÇö feat: POST /api/auth/login - sesi native dari NIP tanpa password (branch `main`)
+ 
+-## What I implemented
++## What was implemented
+ 
+-- **`scripts/build-aset-data-workflow.mjs`** (318 lines): the generator from the brief, transcribed byte-for-byte. To guarantee faithful transcription of the 319-line code block (multi-byte chars, `String.raw`, backslash escapes), I extracted the fenced ```js block directly from `task-1-brief.md` via a throwaway helper script in the temp dir instead of retyping it. Verified with `node --check` (SYNTAX OK).
+-- **`n8n/SIMAPO - Aset Data.json`** (1111 lines): generated output, produced by running the generator (no `--deploy`, per task instructions ΓÇö Task 2 owns deployment).
++Exactly the brief, nothing more:
+ 
+-Reference assumptions pre-verified against `n8n/SIMAPO - BAST.json` (untouched):
+-- typeVersions present: webhook 2, code 2, postgres 2.6, respondToWebhook 1.1
+-- Gate node with `x-bast-key` in `jsCode` found (235 chars) ΓåÆ copied verbatim into all 7 Gate nodes
+-- `credentials.postgres` (`vYOiyrTftLtD3zzd` / Postgres account) inherited by all 9 PG nodes
++- `server/auth-session.js`:
++  - `import { singleSessionRow } from './auth.js'`
++  - `USERS_BY_NIP_SQL` (`SELECT * FROM user_list WHERE "NIP" = $1`) added after `DEACTIVATE_SQL`
++  - `POST /api/auth/login` route inside `createAuthSessionRouter`, between `/api/auth/session` and `/api/auth/logout`:
++    - empty/whitespace NIP ΓåÆ `400`, no DB call
++    - 0 rows ΓåÆ `404`; >1 rows ΓåÆ `409` (via `singleSessionRow`, never picks first row)
++    - token = `crypto.randomBytes(96).toString('hex')` (192 hex), inserted via existing `INSERT_SESSION_SQL` with role/instansi from the DB row only
++    - `200 {ok, session_token, user}` with full DB row (incl. `nama`)
++- `server/auth-session.test.js`: the 6 tests from the brief appended verbatim after `logout menolak token dengan bentuk salah`, using the existing `drive()` helper.
+ 
+-## Commands run + exact output
++No changes to `/api/auth/session`, device tokens, or any file outside the two task files. No rate limiting / extra routes (not in brief; ponytail comment documents the known NIP-only tradeoff and upgrade path).
+ 
+-Generator (Step 2):
+-```
+-$ node scripts/build-aset-data-workflow.mjs
+-OK: 41 nodes, 34 links ├óΓÇáΓÇÖ D:\Code\absensi_refactored_v6\n8n\SIMAPO - Aset Data.json
+-```
+-(41/34 exactly as the brief predicts: 6+6+5+5+6+5+8=41, links = 41ΓêÆ7 = 34.)
++## TDD evidence
++
++### RED
++
++Command: `node --test server/auth-session.test.js` (after adding tests, before implementation)
+ 
+-Structural validation (Step 3, verbatim from brief):
+ ```
+-$ node -e "const w=require('./n8n/SIMAPO - Aset Data.json'); ..."
+-webhooks 7 gates 7 pg 9
+-simapo-aset-massal
+-simapo-aset-kib
+-simapo-aset-summary
+-simapo-pengaturan-get
+-simapo-pengaturan-set
+-simapo-ttd-get
+-simapo-aset-kosongkan
+-VALID
++# tests 13
++# pass 7
++# fail 6
++...
++not ok 8 - login NIP valid menerbitkan sesi 192 hex dan baris user
++  error: 'route not found'
++not ok 9 - login NIP tidak terdaftar ditolak 404
++  error: 'route not found'
++not ok 10 - login NIP ambigu ditolak 409, bukan memilih baris pertama
++  error: 'route not found'
++not ok 11 - login tanpa NIP ditolak 400 tanpa menyentuh DB
++  error: 'route not found'
++not ok 12 - login mengabaikan role/instansi yang disuntik di body
++  error: 'route not found'
++not ok 13 - login tidak membaca init_data Telegram (pure NIP)
++  error: 'route not found'
+ ```
+ 
+-Extra self-review check (temp script, not committed):
++Expected failure: route `/api/auth/login` did not exist yet (`drive()` throws `route not found`), all 7 pre-existing tests still green.
++
++### GREEN
++
++Command: `node --test server/auth-session.test.js` (after implementation)
++
+ ```
+-$ node C:\...\check-aset.cjs
+-wh/resp/gate/link/agg checks done; tails=7 aggs=7
+-ALL EXTRA CHECKS PASS
++1..13
++# tests 13
++# pass 13
++# fail 0
++# cancelled 0
++# skipped 0
++# todo 0
+ ```
+-Checks covered: each webhook ΓåÆ its `Gate <path>` with `responseMode: responseNode`; correct methods (POST: massal/kib/pengaturan-set/kosongkan; GET: summary/pengaturan-get/ttd-get); all 7 gate `jsCode` byte-identical to BAST's; all 7 respond nodes use `={{ JSON.stringify($json) }}` + `Content-Type: application/json`; 34 links with no dangling targets; 7 tail nodes all respond nodes; all 7 Agg nodes wrap `data:`; all 9 PG nodes `operation: executeQuery` with `credentials.postgres`.
+ 
+-Commit (Step 4):
++All 7 old + 6 new tests pass.
++
++## Full suite
++
++Command: `node --test 'server/*.test.js'`
++
+ ```
+-$ git add scripts/build-aset-data-workflow.mjs "n8n/SIMAPO - Aset Data.json"
+-$ git commit -m "feat(aset): generator workflow SIMAPO Aset Data (7 endpoint bergate)"
+-[master 7f0dedb] feat(aset): generator workflow SIMAPO Aset Data (7 endpoint bergate)
+- 2 files changed, 1429 insertions(+)
++1..252
++# tests 252
++# pass 252
++# fail 0
++# cancelled 0
++# skipped 0
++# todo 0
++# duration_ms 1327.625
+ ```
+ 
++No regressions (`index.test.js`, `auth.test.js`, `media.test.js`, etc. all green). The `# [media/face] ... Error: pool habis` lines are pre-existing expected-diagnostic output inside passing tests.
++
+ ## Files changed
+ 
+-- `scripts/build-aset-data-workflow.mjs` (new)
+-- `n8n/SIMAPO - Aset Data.json` (new, generated)
+-- `n8n/SIMAPO - BAST.json` ΓÇö **not modified** (git confirms only the 2 files in the commit)
++- `server/auth-session.js` (+32): import, SQL constant, route
++- `server/auth-session.test.js` (+84): 6 tests
+ 
+-## Self-review findings
++## Self-review
+ 
+-- Completeness: all 7 endpoints present, each chain starts WH ΓåÆ Gate, response contract `{data: ...}` via Agg + `JSON.stringify($json)`.
+-- Quality: brief's validation passes (7/7/9 + VALID); deeper structural checks pass.
+-- Discipline: exactly 2 files committed, no extra features, no reference-file edits, no `--deploy` run.
+-- Testing: all validation commands from the brief ran green.
++- Completeness vs brief: tests and implementation transcribed verbatim from the brief; verified against `global-constraints.md` (400/404/409, role from DB row, 192-hex token, route inside `createAuthSessionRouter`, reuses `singleSessionRow`/`INSERT_SESSION_SQL`/`drive()`).
++- YAGNI: no rate limiting, no extra abstractions, no files touched outside the task.
++- Test output pristine: focused 13/13, full 252/252, zero failures.
++- Diff reviewed (`git diff`): only intended additions; `/api/auth/session` untouched.
++- Not committed: `.superpowers/sdd/task-1-brief.md` (modified) and `.superpowers/sdd/global-constraints.md` (untracked) ΓÇö pre-existing orchestrator files, not part of this task.
+ 
+ ## Concerns
+ 
+-1. **Mojibake in the brief, carried over verbatim.** The brief file itself contains double-encoded chars (`├óΓÇáΓÇÖ` for `ΓåÆ`, `├óΓÇ¥Γé¼` for `ΓöÇΓöÇ`) ΓÇö in comments and the `console.log` arrow only. Expected output in the brief shows the same mojibake, so transcription is byte-faithful; cosmetic only, no functional impact. Can be cleaned up globally later if desired.
+-2. Git printed the usual Windows `LF will be replaced by CRLF` warning on add (repo has `core.autocrlf` behavior); harmless, JSON parses fine.
++1. **`node --test server/` does not discover files on this machine** (Windows, Node v22.22.0): it reports a single `ok 1 - server` entry in ~250ms without running any test file. The equivalent working command is `node --test 'server/*.test.js'`, which ran all 12 test files (252 tests). The brief's Step 5 command should be replaced with the glob form; full-suite result above was obtained with the glob form. (Possibly a Node-on-Windows directory-discovery quirk; not investigated further.)
++2. NIP-only login means anyone knowing a NIP can obtain that person's session ΓÇö accepted product decision (global constraints), documented in the route's `ponytail:` comment with mitigation/upgrade path.
+ 
+ ## Fix round 1
+ 
+-**Status:** DONE
+-**Commit:** `87a5ab3` ΓÇö fix(aset): skop instansi idempotensi unit_aset, kosongkan per instansi, bersihkan mojibake (3 files: plan, generator, JSON)
++Critical review finding: `USERS_BY_NIP_SQL` was `SELECT * FROM user_list WHERE "NIP" = $1`, but `public.user_list` has columns `NIP` (uppercase) and `username` ΓÇö no `nip`, no `nama`. node-postgres returns field names verbatim, so `user.nip` at the `INSERT_SESSION_SQL` call was `undefined` (violates `auth_sessions.nip` NOT NULL ΓåÆ every valid login threw; async Express 4 handler has no try/catch ΓåÆ unhandled rejection), and the `{ok, session_token, user}` response contract could never deliver `user.nip`/`user.nama`. Existing tests were green only because their mocks fabricated lowercase `nip`/`nama` keys.
+ 
+-4 temuan review dieksekusi, plan diubah dulu (requirements source), lalu kode dicocokkan:
++**What changed**
+ 
+-1. **Idempotensi `unit_aset` kini per-instansi** ΓÇö predicate `WHERE NOT EXISTS (... ua.nomorinventaris = src.nomor)` ditambah `AND ua.instansi_id = '<inst>'` (pola identik dengan predicate barang), instansi di-escape runtime via `esc(inst)` seperti SET_JS.
+-2. **Kosongkan per-instansi** (semua 12 baris FK, diverifikasi dari DB live: 12 FK, semua `NO ACTION`, satu-satunya cucu = `detail_pemeliharaan.riwayatid` ΓåÆ sudah dicakup klausul khusus):
+-   - `SQL_KIDS` kini fungsi `(e) => ...` ΓÇö 10 CTE anak dalam SATU statement, setiap subquery `instansi_id = '${e}'` (di-resolve n8n saat eksekusi); `detail_pemeliharaan` skop `barangid OR riwayatid`; `mutasi_barang` skop `barangkeluarid OR barangmasukid`; agregat `rows_dihapus` dipertahankan.
+-   - `CONFIRM_JS`: guard `HAPUS` dipertahankan, lalu baca `inst` dari `$input.item.json.query` (Gate = passthrough `return $input.all()` ΓåÆ query utuh), escape `'`, bangun SQL ΓåÆ `return [{ json: { sql } }]`.
+-   - `PG Kosongkan Anak` ΓåÆ `={{ $json.sql }}` (pola `PG Aset Upsert`); `PG Kosongkan Unit`/`Barang` ΓåÆ `DELETE ... WHERE instansi_id = '<INST_EXPR_KOSONG>'`.
+-   - **Rekonsiliasi:** `$input.item.json.query` TIDAK bisa dipakai di p2/p3 ΓÇö input mereka baris hasil p1 (`{rows_dihapus}`), bukan payload webhook ΓåÆ akan jatuh ke fallback bapperida senyap. Solusi: konstanta baru `INST_EXPR_KOSONG` merujuk `$('WH simapo-aset-kosongkan').first().json.query` (sintaks `$('...')` dalam query PG terbukti di workflow produksi repo: `tugas_lembur_wf.json`, dll). Urutan tetap anak ΓåÆ unit ΓåÆ barang (check FK NO ACTION per statement).
+-3. **`const INST = 'bapperida'` dihapus** ΓÇö diverifikasi tidak dipakai di mana pun.
+-4. **Mojibake 13 baris diperbaiki** (`├óΓÇáΓÇÖ`ΓåÆ`ΓåÆ`, `├óΓÇ¥Γé¼`ΓåÆ`ΓöÇ`): baris 2,3,4,18,29,89,155,170,175,223,263,286,288. Plan file bersih (0 mojibake).
++- `server/auth-session.test.js` ΓÇö covering test file. Login-route `user_list` mocks rewritten to the REAL row shape (`nip`ΓåÆ`NIP`, `nama`ΓåÆ`username`, `id`/`role`/`instansi_id` kept) via a small `userListRows(sql, ...rows)` helper that mimics the real DB: alias columns appear in the result only when the SQL text requests them (`"NIP" AS nip`, `username AS nama`). Assertions stay on the response contract (`out.body.user.nip`, `out.body.user.nama`). Session-route mocks (`EMPLOYEE_SQL` already aliases `"NIP" AS nip`) untouched.
++- `server/auth-session.js` ΓÇö `USERS_BY_NIP_SQL` only: `SELECT *, "NIP" AS nip, username AS nama FROM user_list WHERE "NIP" = $1`. Full row kept (frontend face-verify reads `user.face_histogram`/`user.face_photo` from the login response); no other line touched.
+ 
+-Teks plan ikut diamandemen bila bertabrakan: blok kode Task 1 (kini byte-equal dengan `.mjs`), snippet Zona Bahaya ("seluruh data aset **instansi ini**"), dan baris spec Task 5 (scope per-instansi). Teks smoke test Task 3 tidak bertabrakan (guard tetap diuji tanpa data dihapus) ΓåÆ tidak diubah.
+-
+-### Validasi
++**Commands run**
+ 
+ ```
+-node --check scripts/build-aset-data-workflow.mjs     ΓåÆ SYNTAX OK
+-mojibake grep (├ó|├â|∩┐╜) di .mjs                          ΓåÆ 0 hits
+-plan ```js block vs .mjs (byte-equal)                 ΓåÆ identical
+-node scripts/build-aset-data-workflow.mjs              ΓåÆ OK: 41 nodes, 34 links
+-structural: 41 nodes / 34 links / pg 9 / gates 7 / wh 7 / resp 7 / 7 paths / creds ok
+-p1: "={{ $json.sql }}"
+-p2/p3: DELETE ... WHERE instansi_id = '{{ $('WH simapo-aset-kosongkan').first().json.query ... }}'
+-git status (tracked)                                   ΓåÆ exactly 3 files
+-commit                                                 ΓåÆ [master 87a5ab3] 3 files changed
++node --test server/auth-session.test.js          # focused (RED, then GREEN)
++node --test 'server/*.test.js'                   # full suite (GREEN)
+ ```
+ 
+-Dry-run CONFIRM_JS (sandbox `$input`, tanpa DB): guard melempar `Konfirmasi salah: ketik HAPUS`; default ΓåÆ `bapperida`; `dpmpt's` ΓåÆ `dpmpt''s`; `${i}` semua resolve; satu statement; 10 tabel anak; hanya tabel anak jadi target DELETE; setiap DELETE ber-skop instansi.
+-
+-EXPLAIN (plan-only, tanpa eksekusi) terhadap SQL anak ter-scope `bapperida` di DB live ΓåÆ parse OK, semua kolom/table valid, filter `instansi_id = 'bapperida'` terpasang di tiap CTE.
+-
+-### Concerns
+-
+-1. Regenerasi mengubah semua UUID node di JSON lokal (generator tidak menstabilkan id) ΓÇö berdampak lokal saja; deploy (Task 2) memetakan node by name.
+-2. Tidak ada DELETE yang dieksekusi kapan pun selama fix ini; MCP tetap read-only.
+-
+-## Fix round 2 (alwaysOutputData)
+-
+-**Status:** DONE
+-**Commit:** `84ddd33` ΓÇö fix(aset): alwaysOutputData pada node PG agar ttd-get balas null saat TTD kosong (3 files: generator, plan, JSON)
++**RED (mocks updated, SQL not yet fixed)**
+ 
+-Akar masalah: n8n Postgres node typeVersion 2.6 mengembalikan `[]` untuk SELECT 0 baris (tanpa `alwaysOutputData`), sehingga Agg + Respond node pada rantai `simapo-ttd-get` tidak pernah dieksekusi saat `responseMode: 'responseNode'` ΓåÆ webhook menggantung, padahal brief mensyaratkan `{"data":{"signature":null}}` untuk NIP tanpa baris `tanda_tangan`.
+-
+-Perubahan (exact scope, 3 file): helper `pg()` di `scripts/build-aset-data-workflow.mjs` kini mengeset `alwaysOutputData: true` pada setiap node PG yang dibangunnya (`nodes.at(-1).alwaysOutputData = true` setelah `add(...)`); blok kode `pg` di plan Task 1 (`docs/superpowers/plans/2026-09-30-aset-backend-pengaturan.md`) diamandemen byte-equal dengan `.mjs`. Tidak ada properti node lain yang diubah; `readChain` tidak berubah; tanpa `--deploy`, tanpa DB write, tanpa N8N_TOKEN.
++```
++not ok 8 - login NIP valid menerbitkan sesi 192 hex dan baris user
++  failureType: 'testCodeFailure'
++  error: |-
++    Expected values to be strictly equal:
++    + actual - expected
++    + undefined
++    - '200206302025061002'
++  operator: 'strictEqual'
++# tests 13
++# pass 12
++# fail 1
++```
+ 
+-### Validasi
++**GREEN (alias fix applied)**
+ 
+ ```
+-node --check scripts/build-aset-data-workflow.mjs     ΓåÆ SYNTAX OK (node v22.22.0)
+-node scripts/build-aset-data-workflow.mjs             ΓåÆ OK: 41 nodes, 34 links
+-JSON parse + struktur                                 ΓåÆ 41 nodes / 34 links / pg 9
+-alwaysOutputData pada node PG                         ΓåÆ 9/9 true (pgMissingFlag=0)
+-node non-PG dengan properti alwaysOutputData          ΓåÆ 0 (tidak ada properti node lain berubah)
+-blok `pg` plan vs .mjs (byte-equal)                   ΓåÆ identical, 1 occurrence di tiap file
+-git diff JSON: 9 baris +alwaysOutputData, 18 baris koma (`}`ΓåÆ`},`), 82 baris UUID (regen) ΓåÆ tidak ada perubahan lain
+-mojibake grep (├ó|├â|∩┐╜) di .mjs                         ΓåÆ 0 hits (plan juga 0)
+-git status (tracked)                                  ΓåÆ exactly 3 files
+-commit                                                ΓåÆ [master 84ddd33] 3 files changed
++# tests 13
++# pass 13
++# fail 0
+ ```
+ 
+-### Concerns
++**Full suite**
+ 
+-1. Regenerasi kembali mengubah semua 41 UUID node di JSON lokal (sama seperti fix round 1) ΓÇö berdampak lokal saja; deploy (Task 2) memetakan node by name.
+-2. Fix ini menyangkut semua node PG (9), bukan hanya `simapo-ttd-get` ΓÇö pola yang sama dengan `n8n/AbsensiBot V.5.1.json`; tidak ada efek samping karena `alwaysOutputData` hanya menjamin output kosong berupa `[]`/item kosong, bukan mengubah baris yang ada.
++```
++# tests 252
++# pass 252
++# fail 0
++# cancelled 0
++```
+diff --git a/index.html b/index.html
+index f1d5ac5..79a0b9c 100644
+--- a/index.html
++++ b/index.html
+@@ -3062,21 +3062,21 @@
+   <!-- 8. Splash Screen -->
+   <div id="appSplash" style="z-index: 99999;">
+     <div class="splash-logo">≡ƒÅ¢∩╕Å</div>
+     <div class="splash-title">Sistem HADIR</div>
+     <div class="splash-sub">Memuat profil dan data pegawai...</div>
+     <div class="splash-bar"><div class="splash-progress"></div></div>
+   </div>
+ 
+   <!-- ΓòÉΓòÉΓòÉΓòÉ APP SCRIPTS (urutan load penting) ΓòÉΓòÉΓòÉΓòÉ -->
+   <!-- 1. Config & constants ΓÇö harus pertama -->
+-  <script src="js/config.js?v=20260720b"></script>
++  <script src="js/config.js?v=20261008a"></script>
+   <script src="js/constants.js?v=20260706a"></script>
+ 
+   <!-- 2. State global & Telegram init -->
+   <script src="js/state.js"></script>
+ 
+   <!-- 3. Error handling & DOM helpers ΓÇö dipakai semua modul -->
+   <script src="js/errors.js"></script>
+   <script src="js/dom.js"></script>
+   <script src="js/api.js"></script>
+ 
+@@ -3116,21 +3116,21 @@
+   <script src="js/desktop.js?v=9992"></script>
+   <script src="js/signature.js"></script>
+   <script src="js/meja.js"></script>
+   <script src="js/rekap-pdf.js"></script>
+   <script src="js/tugas_lembur.js?v=20260706a"></script>
+   <script src="js/simapo.js"></script>
+ 
+   <!-- 7. Runtime & entry point -->
+   <script src="js/offline.js"></script>
+   <script src="js/meja-handler.js?v=20260706a"></script>
+-  <script src="js/auth.js?v=20260706c"></script>
++  <script src="js/auth.js?v=20261008a"></script>
+   <script src="js/app.js"></script>
+ 
+   <!-- 8. Service Worker Registration -->
+   <script>
+     if ('serviceWorker' in navigator) {
+       window.addEventListener('load', () => {
+         navigator.serviceWorker.register('./service-worker.js')
+           .then(reg => console.log('[SW] Registered:', reg.scope))
+           .catch(err => console.warn('[SW] Registration failed:', err));
+       });
+diff --git a/js/auth.js b/js/auth.js
+index 5ca1775..d0ba260 100644
+--- a/js/auth.js
++++ b/js/auth.js
+@@ -40,42 +40,41 @@
+ 
+       btn.disabled = true;
+       btn.innerHTML = '<span class="spin-sm"></span> Memproses...';
+ 
+       try {
+         if (mode === 'login') {
+           const nip = $('loginNip').value.trim().replace(/\s/g, '');
+           if (!nip) throw new Error('Silakan masukkan NIP');
+           if (nip.length < 3) throw new Error('ID / NIP minimal terdiri dari 3 karakter');
+ 
+-          const res = await apiGet(`${P.userList}?nip=${nip}`);
+-          if (!res.ok) throw new Error('Server tidak merespons. Coba lagi.');
+-
+-          // Tangani berbagai format response n8n:
+-          // - Array of objects: res.rows = [{id, nip, ...}]
+-          // - Single object: res.data = {single: true, id, nip, ...}
+-          const rawData = res.data;
+-          let user = null;
+-          if (res.rows && res.rows.length) {
+-            user = res.rows.find(u => String(u.nip || '').trim() === nip)
+-                || res.rows[0];
+-          } else if (rawData && !Array.isArray(rawData)) {
+-            // Single-object response (n8n versi lama)
+-            if (rawData.single || rawData.id || rawData.nip) user = rawData;
+-          }
++          // Login NIP (web, non-Telegram): satu panggilan menerbitkan sesi native
++          // dan mengembalikan baris user; tidak lagi butuh /api/user-list (yang
++          // berada di balik requireRole dan tak terjangkau sebelum punya token).
++          const loginRes = await fetch(API_BASE + P.webLogin, {
++            method: 'POST',
++            headers: { 'Content-Type': 'application/json' },
++            body: JSON.stringify({ nip }),
++          });
++          const loginBody = await loginRes.json().catch(() => ({}));
++          if (!loginRes.ok) throw new Error(loginBody?.message || 'Login gagal. Coba lagi.');
+ 
+-          if (!user || user.error || !user.id) throw new Error('NIP tidak terdaftar. Silakan daftar baru.');
++          const user = loginBody.user;
++          if (!user || !user.id) throw new Error('Data pegawai tidak lengkap. Hubungi admin.');
+ 
+-          // Verifikasi akhir untuk memastikan NIP benar
+-          if (String(user.nip || '').trim() !== nip) {
+-            throw new Error('Hasil pencarian NIP tidak cocok. Hubungi admin.');
+-          }
++          const sessionToken = loginBody.session_token;
++          const userNip = String(user.nip || '').trim();
++          const targetId = String(user.id);
++
++          // Token native harus siap SEBELUM panggilan face-toggle/face lain agar
++          // tidak 401 (endpoints media dibalik requireRole).
++          setNativeToken(sessionToken);
+ 
+           // ΓöÇΓöÇ FACE VERIFICATION LOGIN (PASSWORDLESS) ΓöÇΓöÇ
+           // Check per-instansi face toggle from pengaturan table
+           let isFaceEnabled = false;
+           try {
+             const userInstansi = (user.instansi_id || user.Instansi_Id || '').trim();
+             console.log('[FaceToggle] userInstansi:', userInstansi);
+             if (userInstansi) {
+               const faceRes = await apiGet(P.faceToggle, { instansi_id: userInstansi });
+               console.log('[FaceToggle] faceRes:', faceRes);
+@@ -89,30 +88,28 @@
+                 console.warn('[FaceToggle] API not ok:', faceRes.status);
+               }
+             } else {
+               console.warn('[FaceToggle] instansi_id empty on user');
+             }
+           } catch (e) {
+             console.warn('[FaceToggle] error:', e);
+           }
+           // Ponytail: API error/timeout ΓåÆ safe default = OFF, no face required
+ 
+-          const hasFace = !!(user.face_histogram && user.face_histogram !== '[]' && user.face_histogram !== '[]' && user.face_histogram !== '')
++          const hasFace = !!(user.face_histogram && user.face_histogram !== '[]' && user.face_histogram !== '')
+             || !!(user.face_photo && user.face_photo !== '' && user.face_photo !== 'null')
+             || !!(user.foto_base64 && user.foto_base64 !== '')
+             || !!(user.descriptor && user.descriptor !== '[]');
+-          const userNip = String(user.nip || '').trim();
+-          const targetId = String(user.telegram_id || user.id);
+-          
++
+           const finalizeLogin = async () => {
+-            const token = 'usr_' + targetId + '_' + Date.now();
+-            setSession(token, { nip: userNip, role: user.role || 'USER', instansi_id: user.instansi_id || '' });
++            setNativeToken(sessionToken);
++            setSession(sessionToken, { nip: userNip, role: user.role || 'USER', instansi_id: user.instansi_id || '' });
+             window.MY_ID = targetId;
+             localStorage.setItem(STORAGE_KEYS.USER_ID, window.MY_ID);
+             localStorage.setItem('MY_NIP', userNip);
+             localStorage.setItem('MY_ROLE', String(user.role || 'USER').toUpperCase());
+             localStorage.setItem('MY_NAME', String(user.nama || 'User'));
+             localStorage.setItem(STORAGE_KEYS.USER_OBJ, JSON.stringify(user));
+             const finalInst = (user.instansi_id || user.Instansi_Id || '').trim();
+             if (finalInst) localStorage.setItem('MY_INSTANSI', finalInst);
+             else localStorage.removeItem('MY_INSTANSI');
+             location.reload();
+diff --git a/js/config.js b/js/config.js
+index 170af90..d9bcbb5 100644
+--- a/js/config.js
++++ b/js/config.js
+@@ -224,33 +224,41 @@ function clearSession() {
+   window._session.instansi_id = '';
+   window._session.isLoggedIn = false;
+   try {
+     localStorage.removeItem('_sess_token');
+     localStorage.removeItem('_sess_nip');
+     localStorage.removeItem('_sess_role');
+     localStorage.removeItem('_sess_inst');
+   } catch (_) {}
+ }
+ 
++// Sesi web/NIP: token 192 hex dari /api/auth/login disimpan sebagai _native_token
++// supaya nativeFetch memakainya, dan di localStorage supaya bertahan reload.
++function setNativeToken(token) {
++  _nativeToken = token;
++  try { localStorage.setItem('_native_token', token); } catch { /* mode privat */ }
++}
++
+ function _getSessionRole() {
+   return window._session.isLoggedIn ? window._session.role : (localStorage.getItem('MY_ROLE') || 'USER');
+ }
+ 
+ function _isSuperAdmin() {
+   if (window._session.isLoggedIn) return window._session.role.includes('SUPER');
+   // Fallback for backward compat during migration
+   return (localStorage.getItem('MY_ROLE') || '').toLowerCase().includes('super');
+ }
+ 
+ /* ΓòÉΓòÉΓòÉΓòÉ ENDPOINT PATHS ΓòÉΓòÉΓòÉΓòÉ */
+ const P = {
+   sessionLogin: '/api/auth/session',
++  webLogin: '/api/auth/login',
+   instansiList: '/api/instansi-list',
+   instansiUpdate: '/api/instansi-update',
+   bidangList: '/api/bidang-list',
+   absen: '/api/absen',
+   ket: '/api/keterangan',
+   log: '/api/log',
+   rekap: '/api/rekap-absen',
+   userList: '/api/user-list',
+   updateStatus: '/api/update-status',
+   lokasiList: '/api/lokasi-list',
+diff --git a/server/auth-session.js b/server/auth-session.js
+index 829ac14..4e3df7b 100644
+--- a/server/auth-session.js
++++ b/server/auth-session.js
+@@ -1,26 +1,32 @@
+ import express from 'express';
+ import crypto from 'node:crypto';
+ import { verifyInitData } from './telegram.js';
+ import { query as realQuery } from './db.js';
++import { singleSessionRow } from './auth.js';
+ 
+ const EMPLOYEE_SQL = `
+   SELECT id::text AS id, "NIP" AS nip, role, instansi_id
+   FROM user_list WHERE id::text = $1 LIMIT 1`;
+ 
+ const INSERT_SESSION_SQL = `
+   INSERT INTO auth_sessions (session_token, nip, user_id, role, instansi_id, created_at, expires_at, last_used_at, is_active)
+   VALUES ($1,$2,$3,$4,$5, now(), now() + interval '12 hours', now(), true)
+   RETURNING session_token`;
+ 
+ const DEACTIVATE_SQL = `UPDATE auth_sessions SET is_active = false WHERE session_token = $1`;
+ 
++// NIP tidak unik di user_list: ambil SEMUA baris, lalu tolak yang ambigu
++// (singleSessionRow). Memilih baris pertama = menerbitkan sesi identitas salah.
++const USERS_BY_NIP_SQL = `
++  SELECT *, "NIP" AS nip, username AS nama FROM user_list WHERE "NIP" = $1`;
++
+ const TOKEN_RE = /^[0-9a-f]{192}$/;
+ 
+ export function createAuthSessionRouter({ query = realQuery } = {}) {
+   const router = express.Router();
+ 
+   router.post('/api/auth/session', async (req, res) => {
+     const auth = verifyInitData(req.body?.init_data, process.env.TELEGRAM_BOT_TOKEN, { maxAgeSeconds: 86400 });
+     if (!auth.ok) return res.status(401).json({ ok: false, message: 'Bukti identitas tidak valid.' });
+ 
+     // Identitas diambil dari init_data yang sudah diverifikasi, bukan body.nip.
+@@ -29,20 +35,46 @@ export function createAuthSessionRouter({ query = realQuery } = {}) {
+     const employee = (await query(EMPLOYEE_SQL, [String(auth.user.id)])).rows[0];
+     if (!employee) return res.status(404).json({ ok: false, message: 'Pegawai tidak dikenal.' });
+ 
+     const token = crypto.randomBytes(96).toString('hex');
+     const { rows } = await query(INSERT_SESSION_SQL, [token, employee.nip, employee.id, employee.role, employee.instansi_id]);
+     if (!rows.length) return res.status(500).json({ ok: false, message: 'Gagal membuat sesi.' });
+ 
+     return res.status(200).json({ ok: true, session_token: rows[0].session_token });
+   });
+ 
++  // Login web non-Telegram: NIP saja, tanpa password (keputusan pengguna).
++  // ponytail: NIP-only berarti siapa pun yang tahu NIP orang lain bisa mengambil
++  // sesinya ΓÇö celah yang sudah ada sejak alur lama juga NIP-only. Mitigasi yang
++  // berjalan: face-verify sesuai toggle instansi di sisi klien, otorisasi tetap
++  // dari sesi, NIP ambigu ditolak. Upgrade path kalau perlu lebih: rate-limit,
++  // wajib face-verify untuk web, atau PIN/OTP per pegawai.
++  router.post('/api/auth/login', async (req, res) => {
++    const nip = String(req.body?.nip || '').trim();
++    if (!nip) return res.status(400).json({ ok: false, message: 'NIP wajib diisi.' });
++
++    const { rows } = await query(USERS_BY_NIP_SQL, [nip]);
++    const user = singleSessionRow(rows);
++    if (!user) {
++      return res.status(rows.length ? 409 : 404).json({
++        ok: false,
++        message: rows.length ? 'NIP ambigu di user_list' : 'NIP tidak terdaftar.',
++      });
++    }
++
++    const token = crypto.randomBytes(96).toString('hex');
++    const ins = await query(INSERT_SESSION_SQL, [token, user.nip, user.id, user.role, user.instansi_id]);
++    if (!ins.rows.length) return res.status(500).json({ ok: false, message: 'Gagal membuat sesi.' });
++
++    return res.status(200).json({ ok: true, session_token: ins.rows[0].session_token, user });
++  });
++
+   router.post('/api/auth/logout', async (req, res) => {
+     const token = req.body?.session_token;
+     if (typeof token !== 'string' || !TOKEN_RE.test(token)) {
+       return res.status(400).json({ ok: false, message: 'session_token tidak valid.' });
+     }
+     await query(DEACTIVATE_SQL, [token]);
+     return res.status(200).json({ ok: true });
+   });
+ 
+   return router;
+diff --git a/server/auth-session.test.js b/server/auth-session.test.js
+index f59a400..980d529 100644
+--- a/server/auth-session.test.js
++++ b/server/auth-session.test.js
+@@ -125,11 +125,110 @@ test('logout menolak token dengan bentuk salah', async () => {
+   process.env.TELEGRAM_BOT_TOKEN = BOT;
+   const { createAuthSessionRouter } = await import('./auth-session.js');
+   let called = 0;
+   const query = async () => { called++; return { rows: [] }; };
+   const r = createAuthSessionRouter({ query });
+   for (const bad of [undefined, '', 'pendek', 'C'.repeat(192), 'g'.repeat(192)]) {
+     const out = await drive(r, 'POST', '/api/auth/logout', { session_token: bad });
+     assert.equal(out.status, 400, `token ${String(bad).slice(0, 8)} harus ditolak`);
+   }
+   assert.equal(called, 0, 'SQL tidak boleh dijalankan untuk token tidak valid');
++});
++
++// ΓöÇΓöÇ Login NIP (web, non-Telegram, tanpa password) ΓöÇΓöÇ
++
++// public.user_list mengembalikan kolom apa adanya: "NIP" (huruf besar) dan
++// username ΓÇö TIDAK ada nip/nama. Alias di SELECT hanya muncul di hasil kalau
++// SQL-nya meminta, jadi mock meniru perilaku DB itu apa adanya.
++function userListRows(sql, ...rows) {
++  const nip = /"NIP"\s+AS\s+nip/i.test(sql);
++  const nama = /username\s+AS\s+nama/i.test(sql);
++  return {
++    rows: rows.map((r) => ({
++      ...r,
++      ...(nip ? { nip: r.NIP } : {}),
++      ...(nama ? { nama: r.username } : {}),
++    })),
++  };
++}
++
++test('login NIP valid menerbitkan sesi 192 hex dan baris user', async () => {
++  const { createAuthSessionRouter } = await import('./auth-session.js');
++  const seen = [];
++  const query = async (sql, params) => {
++    seen.push({ sql: String(sql), params });
++    if (/user_list/i.test(sql)) return userListRows(sql, { id: '9', NIP: '200206302025061002', role: 'SUPERADMIN', instansi_id: 'bapperida', username: 'Achmad' });
++    if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'd'.repeat(192) }] };
++    return { rows: [] };
++  };
++  const r = createAuthSessionRouter({ query });
++  const out = await drive(r, 'POST', '/api/auth/login', { nip: '200206302025061002' });
++  assert.equal(out.status, 200);
++  assert.equal(out.body.ok, true);
++  assert.match(out.body.session_token, /^[0-9a-f]{192}$/);
++  assert.equal(out.body.user.nip, '200206302025061002');
++  assert.equal(out.body.user.nama, 'Achmad');
++  const ins = seen.find((s) => /INSERT INTO auth_sessions/i.test(s.sql));
++  assert.ok(ins.params.includes('SUPERADMIN'), 'role harus dari baris DB');
++  assert.ok(ins.params.includes('bapperida'), 'instansi harus dari baris DB');
++});
++
++test('login NIP tidak terdaftar ditolak 404', async () => {
++  const { createAuthSessionRouter } = await import('./auth-session.js');
++  const r = createAuthSessionRouter({ query: async () => ({ rows: [] }) });
++  const out = await drive(r, 'POST', '/api/auth/login', { nip: '00000' });
++  assert.equal(out.status, 404);
++  assert.equal(out.body.ok, false);
++});
++
++test('login NIP ambigu ditolak 409, bukan memilih baris pertama', async () => {
++  const { createAuthSessionRouter } = await import('./auth-session.js');
++  let dbTouched = 0;
++  const r = createAuthSessionRouter({
++    query: async (sql) => {
++      if (/user_list/i.test(String(sql))) { dbTouched++; return userListRows(String(sql), { id: '1', NIP: 'X' }, { id: '2', NIP: 'X' }); }
++      dbTouched++;
++      return { rows: [] };
++    },
++  });
++  const out = await drive(r, 'POST', '/api/auth/login', { nip: 'X' });
++  assert.equal(out.status, 409);
++  const onlyLookup = dbTouched === 1;
++  assert.ok(onlyLookup, 'baris ambigu harus berhenti di lookup, tidak boleh INSERT');
++});
++
++test('login tanpa NIP ditolak 400 tanpa menyentuh DB', async () => {
++  const { createAuthSessionRouter } = await import('./auth-session.js');
++  let called = 0;
++  const r = createAuthSessionRouter({ query: async () => { called++; return { rows: [] }; } });
++  for (const nip of [undefined, '', '   ']) {
++    const out = await drive(r, 'POST', '/api/auth/login', { nip });
++    assert.equal(out.status, 400, `nip ${JSON.stringify(nip)} harus 400`);
++  }
++  assert.equal(called, 0, 'DB tidak boleh disentuh untuk input kosong');
++});
++
++test('login mengabaikan role/instansi yang disuntik di body', async () => {
++  const { createAuthSessionRouter } = await import('./auth-session.js');
++  const seen = [];
++  const query = async (sql, params) => {
++    seen.push({ sql: String(sql), params });
++    if (/user_list/i.test(sql)) return userListRows(sql, { id: '7', NIP: 'NIP1', role: 'USER', instansi_id: 'bapperida' });
++    if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'e'.repeat(192) }] };
++    return { rows: [] };
++  };
++  const r = createAuthSessionRouter({ query });
++  const out = await drive(r, 'POST', '/api/auth/login', { nip: 'NIP1', role: 'SUPERADMIN', instansi_id: 'lain' });
++  assert.equal(out.status, 200);
++  const ins = seen.find((s) => /INSERT INTO auth_sessions/i.test(s.sql));
++  assert.ok(ins.params.includes('USER'), 'role dari body tidak boleh dipakai');
++  assert.ok(!ins.params.includes('SUPERADMIN'), 'role body harus diabaikan');
++});
++
++test('login tidak membaca init_data Telegram (pure NIP)', async () => {
++  process.env.TELEGRAM_BOT_TOKEN = 'x'.repeat(30);
++  const { createAuthSessionRouter } = await import('./auth-session.js');
++  const r = createAuthSessionRouter({ query: async () => ({ rows: [] }) });
++  // Tanpa init_data pun harus tetap 404 (NIP tak dikenal), bukan 401.
++  const out = await drive(r, 'POST', '/api/auth/login', { nip: '99999' });
++  assert.equal(out.status, 404);
+ });
+\ No newline at end of file
+diff --git a/www/index.html b/www/index.html
+index f1d5ac5..79a0b9c 100644
+--- a/www/index.html
++++ b/www/index.html
+@@ -3062,21 +3062,21 @@
+   <!-- 8. Splash Screen -->
+   <div id="appSplash" style="z-index: 99999;">
+     <div class="splash-logo">≡ƒÅ¢∩╕Å</div>
+     <div class="splash-title">Sistem HADIR</div>
+     <div class="splash-sub">Memuat profil dan data pegawai...</div>
+     <div class="splash-bar"><div class="splash-progress"></div></div>
+   </div>
+ 
+   <!-- ΓòÉΓòÉΓòÉΓòÉ APP SCRIPTS (urutan load penting) ΓòÉΓòÉΓòÉΓòÉ -->
+   <!-- 1. Config & constants ΓÇö harus pertama -->
+-  <script src="js/config.js?v=20260720b"></script>
++  <script src="js/config.js?v=20261008a"></script>
+   <script src="js/constants.js?v=20260706a"></script>
+ 
+   <!-- 2. State global & Telegram init -->
+   <script src="js/state.js"></script>
+ 
+   <!-- 3. Error handling & DOM helpers ΓÇö dipakai semua modul -->
+   <script src="js/errors.js"></script>
+   <script src="js/dom.js"></script>
+   <script src="js/api.js"></script>
+ 
+@@ -3116,21 +3116,21 @@
+   <script src="js/desktop.js?v=9992"></script>
+   <script src="js/signature.js"></script>
+   <script src="js/meja.js"></script>
+   <script src="js/rekap-pdf.js"></script>
+   <script src="js/tugas_lembur.js?v=20260706a"></script>
+   <script src="js/simapo.js"></script>
+ 
+   <!-- 7. Runtime & entry point -->
+   <script src="js/offline.js"></script>
+   <script src="js/meja-handler.js?v=20260706a"></script>
+-  <script src="js/auth.js?v=20260706c"></script>
++  <script src="js/auth.js?v=20261008a"></script>
+   <script src="js/app.js"></script>
+ 
+   <!-- 8. Service Worker Registration -->
+   <script>
+     if ('serviceWorker' in navigator) {
+       window.addEventListener('load', () => {
+         navigator.serviceWorker.register('./service-worker.js')
+           .then(reg => console.log('[SW] Registered:', reg.scope))
+           .catch(err => console.warn('[SW] Registration failed:', err));
+       });
+diff --git a/www/js/auth.js b/www/js/auth.js
+index 5ca1775..d0ba260 100644
+--- a/www/js/auth.js
++++ b/www/js/auth.js
+@@ -40,42 +40,41 @@
+ 
+       btn.disabled = true;
+       btn.innerHTML = '<span class="spin-sm"></span> Memproses...';
+ 
+       try {
+         if (mode === 'login') {
+           const nip = $('loginNip').value.trim().replace(/\s/g, '');
+           if (!nip) throw new Error('Silakan masukkan NIP');
+           if (nip.length < 3) throw new Error('ID / NIP minimal terdiri dari 3 karakter');
+ 
+-          const res = await apiGet(`${P.userList}?nip=${nip}`);
+-          if (!res.ok) throw new Error('Server tidak merespons. Coba lagi.');
+-
+-          // Tangani berbagai format response n8n:
+-          // - Array of objects: res.rows = [{id, nip, ...}]
+-          // - Single object: res.data = {single: true, id, nip, ...}
+-          const rawData = res.data;
+-          let user = null;
+-          if (res.rows && res.rows.length) {
+-            user = res.rows.find(u => String(u.nip || '').trim() === nip)
+-                || res.rows[0];
+-          } else if (rawData && !Array.isArray(rawData)) {
+-            // Single-object response (n8n versi lama)
+-            if (rawData.single || rawData.id || rawData.nip) user = rawData;
+-          }
++          // Login NIP (web, non-Telegram): satu panggilan menerbitkan sesi native
++          // dan mengembalikan baris user; tidak lagi butuh /api/user-list (yang
++          // berada di balik requireRole dan tak terjangkau sebelum punya token).
++          const loginRes = await fetch(API_BASE + P.webLogin, {
++            method: 'POST',
++            headers: { 'Content-Type': 'application/json' },
++            body: JSON.stringify({ nip }),
++          });
++          const loginBody = await loginRes.json().catch(() => ({}));
++          if (!loginRes.ok) throw new Error(loginBody?.message || 'Login gagal. Coba lagi.');
+ 
+-          if (!user || user.error || !user.id) throw new Error('NIP tidak terdaftar. Silakan daftar baru.');
++          const user = loginBody.user;
++          if (!user || !user.id) throw new Error('Data pegawai tidak lengkap. Hubungi admin.');
+ 
+-          // Verifikasi akhir untuk memastikan NIP benar
+-          if (String(user.nip || '').trim() !== nip) {
+-            throw new Error('Hasil pencarian NIP tidak cocok. Hubungi admin.');
+-          }
++          const sessionToken = loginBody.session_token;
++          const userNip = String(user.nip || '').trim();
++          const targetId = String(user.id);
++
++          // Token native harus siap SEBELUM panggilan face-toggle/face lain agar
++          // tidak 401 (endpoints media dibalik requireRole).
++          setNativeToken(sessionToken);
+ 
+           // ΓöÇΓöÇ FACE VERIFICATION LOGIN (PASSWORDLESS) ΓöÇΓöÇ
+           // Check per-instansi face toggle from pengaturan table
+           let isFaceEnabled = false;
+           try {
+             const userInstansi = (user.instansi_id || user.Instansi_Id || '').trim();
+             console.log('[FaceToggle] userInstansi:', userInstansi);
+             if (userInstansi) {
+               const faceRes = await apiGet(P.faceToggle, { instansi_id: userInstansi });
+               console.log('[FaceToggle] faceRes:', faceRes);
+@@ -89,30 +88,28 @@
+                 console.warn('[FaceToggle] API not ok:', faceRes.status);
+               }
+             } else {
+               console.warn('[FaceToggle] instansi_id empty on user');
+             }
+           } catch (e) {
+             console.warn('[FaceToggle] error:', e);
+           }
+           // Ponytail: API error/timeout ΓåÆ safe default = OFF, no face required
+ 
+-          const hasFace = !!(user.face_histogram && user.face_histogram !== '[]' && user.face_histogram !== '[]' && user.face_histogram !== '')
++          const hasFace = !!(user.face_histogram && user.face_histogram !== '[]' && user.face_histogram !== '')
+             || !!(user.face_photo && user.face_photo !== '' && user.face_photo !== 'null')
+             || !!(user.foto_base64 && user.foto_base64 !== '')
+             || !!(user.descriptor && user.descriptor !== '[]');
+-          const userNip = String(user.nip || '').trim();
+-          const targetId = String(user.telegram_id || user.id);
+-          
++
+           const finalizeLogin = async () => {
+-            const token = 'usr_' + targetId + '_' + Date.now();
+-            setSession(token, { nip: userNip, role: user.role || 'USER', instansi_id: user.instansi_id || '' });
++            setNativeToken(sessionToken);
++            setSession(sessionToken, { nip: userNip, role: user.role || 'USER', instansi_id: user.instansi_id || '' });
+             window.MY_ID = targetId;
+             localStorage.setItem(STORAGE_KEYS.USER_ID, window.MY_ID);
+             localStorage.setItem('MY_NIP', userNip);
+             localStorage.setItem('MY_ROLE', String(user.role || 'USER').toUpperCase());
+             localStorage.setItem('MY_NAME', String(user.nama || 'User'));
+             localStorage.setItem(STORAGE_KEYS.USER_OBJ, JSON.stringify(user));
+             const finalInst = (user.instansi_id || user.Instansi_Id || '').trim();
+             if (finalInst) localStorage.setItem('MY_INSTANSI', finalInst);
+             else localStorage.removeItem('MY_INSTANSI');
+             location.reload();
+diff --git a/www/js/config.js b/www/js/config.js
+index 170af90..d9bcbb5 100644
+--- a/www/js/config.js
++++ b/www/js/config.js
+@@ -224,33 +224,41 @@ function clearSession() {
+   window._session.instansi_id = '';
+   window._session.isLoggedIn = false;
+   try {
+     localStorage.removeItem('_sess_token');
+     localStorage.removeItem('_sess_nip');
+     localStorage.removeItem('_sess_role');
+     localStorage.removeItem('_sess_inst');
+   } catch (_) {}
+ }
+ 
++// Sesi web/NIP: token 192 hex dari /api/auth/login disimpan sebagai _native_token
++// supaya nativeFetch memakainya, dan di localStorage supaya bertahan reload.
++function setNativeToken(token) {
++  _nativeToken = token;
++  try { localStorage.setItem('_native_token', token); } catch { /* mode privat */ }
++}
++
+ function _getSessionRole() {
+   return window._session.isLoggedIn ? window._session.role : (localStorage.getItem('MY_ROLE') || 'USER');
+ }
+ 
+ function _isSuperAdmin() {
+   if (window._session.isLoggedIn) return window._session.role.includes('SUPER');
+   // Fallback for backward compat during migration
+   return (localStorage.getItem('MY_ROLE') || '').toLowerCase().includes('super');
+ }
+ 
+ /* ΓòÉΓòÉΓòÉΓòÉ ENDPOINT PATHS ΓòÉΓòÉΓòÉΓòÉ */
+ const P = {
+   sessionLogin: '/api/auth/session',
++  webLogin: '/api/auth/login',
+   instansiList: '/api/instansi-list',
+   instansiUpdate: '/api/instansi-update',
+   bidangList: '/api/bidang-list',
+   absen: '/api/absen',
+   ket: '/api/keterangan',
+   log: '/api/log',
+   rekap: '/api/rekap-absen',
+   userList: '/api/user-list',
+   updateStatus: '/api/update-status',
+   lokasiList: '/api/lokasi-list',
