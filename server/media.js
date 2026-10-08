@@ -424,7 +424,10 @@ export function createMediaRouter({ query, gasUpsert }) {
       if (!req.user) return fail(res, 403, 'Forbidden');
 
       const rows = (await query(SIGNATURE_LIST_SQL, scopeParams(req.user))).rows;
-      return ok(res, { rows });
+      // Kontrak client: rekap-pdf.js, tugas_lembur.js, signature.js mem-parse
+      // `data` array (parseApiResponse / sd.data). Tanpa ini sigMap kosong dan
+      // tanda tangan tidak pernah digambar di PDF rekap.
+      return ok(res, { data: rows, rows });
     } catch (e) {
       console.error('[media/signatures] tak tertangani', e);
       return fail(res, 503, 'Layanan sedang tidak tersedia');

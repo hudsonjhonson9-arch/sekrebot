@@ -1289,3 +1289,21 @@ for (const [label, path] of [
     assert.equal(res.status, 503);
   });
 }
+
+// Kontrak client: rekap-pdf.js:147, tugas_lembur.js:1089, dan signature.js:407
+// semuanya mem-parse body endpoint ini dengan parseApiResponse() / `sd.data`.
+// Body tanpa `data` array -> sigMap kosong -> tanda tangan TIDAK PERNAH digambar
+// di PDF rekap (kabanSig null, blok addImage dilewati diam-diam).
+test('GET /api/media/signatures membawa data[] selain rows (kontrak parseApiResponse)', async () => {
+  const h = harness({
+    query: async () => ({ rows: [{ nip: ME.nip, signature: PNG }] }),
+  });
+  const res = await get(h, '/api/media/signatures');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.ok, true);
+  assert.ok(Array.isArray(res.body.data), 'body.data harus array');
+  assert.equal(res.body.data[0].nip, ME.nip);
+  assert.equal(res.body.data[0].signature, PNG);
+  assert.ok(Array.isArray(res.body.rows), 'rows tetap dipertahankan untuk konsumen lama');
+  assert.equal(res.body.rows[0].nip, ME.nip);
+});
