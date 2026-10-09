@@ -96,6 +96,9 @@ function bastRodaText(roda) {
 function bastFindPegawai(nip) {
   return (window._bastData.pegawai || []).find(p => String(p.id) === String(nip)) || null;
 }
+function bastFindPenandatangan(nip) {
+  return (window._bastData.penandatangan || []).find(p => String(p.id) === String(nip)) || null;
+}
 function bastFindAset(id) {
   return (window._bastData.aset || []).find(a => String(a.id) === String(id)) || null;
 }
@@ -260,7 +263,7 @@ function bastBuildTags() {
   const peId = window._bastSel.pe;
   const ttdId = window._bastSel.ttd || document.getElementById('bastTtdSel')?.value;
   const pe = bastFindPegawai(peId);
-  const ttd = bastFindPegawai(ttdId);
+  const ttd = bastFindPenandatangan(ttdId) || bastFindPegawai(ttdId);
   if (!pe) { showToast('Pilih pegawai (Pihak Kedua) terlebih dahulu.', 'error'); return null; }
   if (!ttd) { showToast('Pilih penandatangan (Pihak Pertama).', 'error'); return null; }
 
@@ -353,7 +356,7 @@ async function bastSavePayload(built) {
   const peId = window._bastSel.pe;
   const ttdId = window._bastSel.ttd || document.getElementById('bastTtdSel')?.value;
   const pe = bastFindPegawai(peId);
-  const ttd = bastFindPegawai(ttdId);
+  const ttd = bastFindPenandatangan(ttdId) || bastFindPegawai(ttdId);
   const inst = (typeof getScopedInstansiId === 'function' ? getScopedInstansiId() : '') || 'bapperida';
   return {
     id: null,
