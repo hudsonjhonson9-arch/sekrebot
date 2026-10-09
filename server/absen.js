@@ -69,7 +69,13 @@ export function createAbsenRouter({ query, verifyInitData, botToken, now = () =>
       // membuktikan siapa yang login di sisi kita. Keduanya harus cocok, kalau tidak
       // siapa pun bisa absen atas nama orang lain hanya dengan menebak request_id.
       const init = String(body.init_data || '');
-      if (req.authKind !== 'device') {
+      // Absen web/NIP atau Capacitor tidak punya init_data Telegram; frontend
+      // menandainya lewat source 'telegram_x_fallback' dan identitas datang dari
+      // sesi (token 192-hex terbit lewat /api/auth/login). Fail-closed: selama
+      // init_data ada TETAP diverifikasi (absen Telegram), fallback hanya berlaku
+      // saat init_data kosong.
+      const webFallback = !init && body.source === 'telegram_x_fallback';
+      if (req.authKind !== 'device' && !webFallback) {
         const init1 = await verifyInitData(init, botToken);
         if (!init1?.ok) {
           return res.status(401).json({ ok: false, message: 'init_data tidak valid', reason: init1?.reason || 'unknown' });

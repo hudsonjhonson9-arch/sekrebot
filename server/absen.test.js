@@ -188,6 +188,32 @@ test('init_data milik user lain ditolak 403', async () => {
   assert.equal(inserts(h.sql).length, 0, 'impersonasi tidak boleh menulis log');
 });
 
+test('absen web/NIP (source telegram_x_fallback tanpa init_data) diterima dari sesi valid', async () => {
+  const h = harness();
+  // verify dipaksa gagal: kalau fallback tetap memanggil verifier, request ini
+  // harusnya 401. Harus 200 = bukti jalur fallback TIDAK memverifikasi init_data.
+  const r = await post(h, {
+    ...GOOD_BODY,
+    init_data: '',
+    source: 'telegram_x_fallback',
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.validasi.is_valid, true);
+  assert.equal(inserts(h.sql).length, 1);
+});
+
+test('absen source telegram_x_fallback TAPI init_data diisi tetap diverifikasi', async () => {
+  const h = harness({ verify: async () => ({ ok: true, user: { id: 777 } }) });
+  const r = await post(h, { ...GOOD_BODY, source: 'telegram_x_fallback' });
+  assert.equal(r.status, 403, 'init_data hadir berarti jalur Telegram, bukan fallback web');
+});
+
+test('absen tanpa init_data dan tanpa source fallback ditolak 401', async () => {
+  const h = harness();
+  const r = await post(h, { ...GOOD_BODY, init_data: '' });
+  assert.equal(r.status, 401);
+});
+
 test('pegawai tidak ditemukan ditolak 403', async () => {
   stub.pegawai = [];
   const h = harness();
