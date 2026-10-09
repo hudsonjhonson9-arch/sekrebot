@@ -86,6 +86,35 @@
         }
       }
 
+      // Fallback server-side: kalau cache rekap untuk hari itu belum pernah
+      // dimuat (userListOrder kosong / _raw*Log tidak ada), tanya langsung ke
+      // /api/log. Log sudah ada (pegawai+tanggal+jenis) = mode EDIT (📝 update),
+      // bukan tambah baru (➕) — supaya judul dan tombol tidak salah tampil.
+      if (!existingId && uid && date) {
+        try {
+          const { ok, rows } = await apiGet(P.log, { user_id: uid, tanggal: date });
+          if (ok && rows?.length) {
+            const d = String(date).slice(0, 10);
+            const dayRows = rows.filter(l => String(l.Tanggal || l.tanggal || '').slice(0, 10) === d);
+            const hJ = String(hintJenis || '').toUpperCase();
+            let target = null;
+            if (hJ) {
+              target = dayRows.find(l => {
+                const j = String(l['Jenis Absen'] || l.jenis_absen || l.Jenis || '').toUpperCase();
+                if (hJ.includes('MASUK')) return j.includes('MASUK');
+                if (hJ.includes('PULANG')) return j.includes('PULANG');
+                return !j.includes('MASUK') && !j.includes('PULANG');
+              });
+            }
+            if (!target && dayRows.length) {
+              // Tanpa hint: ambil catatan paling baru hari itu (ID_Log terbesar).
+              target = [...dayRows].sort((a, b) => Number(getLogId(b)) - Number(getLogId(a)))[0];
+            }
+            if (target) existingId = getLogId(target);
+          }
+        } catch (e) { console.warn('[LogEditor] Cari log existing gagal', e); }
+      }
+
       $('editLogId').value = existingId;
       $('inLogPegawai').value = uid;
       $('inLogTanggal').value = date || fmtD(nowWITA());
