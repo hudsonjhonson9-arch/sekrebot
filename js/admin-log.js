@@ -39,9 +39,6 @@
       const modal = $('logModal');
       if (!modal) return;
 
-      // Load pegawai list for dropdown if first time
-      await loadLogPegawaiList();
-
       // Find the existing ID from various sources
       let existingId = log ? getLogId(log) : '';
 
@@ -86,10 +83,38 @@
         }
       }
 
+      const applyMode = () => {
+        $('editLogId').value = existingId;
+        if (existingId) {
+          dom.setText('logModalTitle', 'UPDATE LOG ABSEN');
+          dom.setText('logModalIcon', '📝');
+          dom.setText('btnSaveLogTxt', 'Perbarui Log');
+        } else {
+          dom.setText('logModalTitle', 'TAMBAH LOG MANUAL');
+          dom.setText('logModalIcon', '➕');
+          dom.setText('btnSaveLogTxt', 'Simpan Log');
+        }
+      };
+
+      $('inLogPegawai').value = uid;
+      $('inLogTanggal').value = date || fmtD(nowWITA());
+      $('inLogJam').value = log ? ((log.Jam || log.jam || '').substring(0, 5)) : '';
+      $('inLogJenis').value = log ? (log['Jenis Absen'] || log.jenis_absen || log.Jenis || 'MASUK') : (hintJenis || 'MASUK');
+      $('inLogKet').value = log ? (log.Ket || log.ket || log.keterangan || '') : '';
+      dom.hide('logFormResult');
+      applyMode();
+
+      // Tampilkan modal sekarang juga — JANGAN blokir di network.
+      modal.style.display = 'flex';
+
+      // Isi dropdown pegawai async (jangan await: fetch user-list + data
+      // biometrik inilah sumber "lama bukanya" modal).
+      loadLogPegawaiList();
+
       // Fallback server-side: kalau cache rekap untuk hari itu belum pernah
-      // dimuat (userListOrder kosong / _raw*Log tidak ada), tanya langsung ke
-      // /api/log. Log sudah ada (pegawai+tanggal+jenis) = mode EDIT (📝 update),
-      // bukan tambah baru (➕) — supaya judul dan tombol tidak salah tampil.
+      // dimuat (userListOrder kosong / _raw*Log tidak ada), tanya /api/log
+      // SETELAH modal tampil, lalu update mode kalau ketemu. Log sudah ada
+      // (pegawai+tanggal+jenis) = mode EDIT (📝), bukan tambah baru (➕).
       if (!existingId && uid && date) {
         try {
           const { ok, rows } = await apiGet(P.log, { user_id: uid, tanggal: date });
@@ -110,31 +135,10 @@
               // Tanpa hint: ambil catatan paling baru hari itu (ID_Log terbesar).
               target = [...dayRows].sort((a, b) => Number(getLogId(b)) - Number(getLogId(a)))[0];
             }
-            if (target) existingId = getLogId(target);
+            if (target) { existingId = getLogId(target); applyMode(); }
           }
         } catch (e) { console.warn('[LogEditor] Cari log existing gagal', e); }
       }
-
-      $('editLogId').value = existingId;
-      $('inLogPegawai').value = uid;
-      $('inLogTanggal').value = date || fmtD(nowWITA());
-      $('inLogJam').value = log ? ((log.Jam || log.jam || '').substring(0, 5)) : '';
-      $('inLogJenis').value = log ? (log['Jenis Absen'] || log.jenis_absen || log.Jenis || 'MASUK') : (hintJenis || 'MASUK');
-      $('inLogKet').value = log ? (log.Ket || log.ket || log.keterangan || '') : '';
-      dom.hide('logFormResult');
-
-      const isActualEdit = !!existingId;
-      if (isActualEdit) {
-        dom.setText('logModalTitle', 'UPDATE LOG ABSEN');
-        dom.setText('logModalIcon', '📝');
-        dom.setText('btnSaveLogTxt', 'Perbarui Log');
-      } else {
-        dom.setText('logModalTitle', 'TAMBAH LOG MANUAL');
-        dom.setText('logModalIcon', '➕');
-        dom.setText('btnSaveLogTxt', 'Simpan Log');
-      }
-
-      modal.style.display = 'flex';
     }
 
     function closeLogEditor() {
