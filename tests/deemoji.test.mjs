@@ -33,7 +33,7 @@ test('setiap ikon fas yang dipakai js/ dan index.html ada di runeicons.css', () 
   }
   const missing = [...used].filter(i => !css.includes('.fas.' + i + ' '));
   assert.deepEqual(missing, [], 'ikon hilang dari css/lib/runeicons.css');
-  const broken = [...css.matchAll(/url\(([^)]+)\)/g)].map(m => m[1])
+  const broken = [...css.matchAll(/url\(([^)]+)\)/g)].map(m => m[1].split('?')[0])
     .filter(u => !fs.existsSync(path.resolve(path.join(ROOT, 'css/lib'), u)));
   assert.deepEqual(broken, [], 'file SVG mask tidak ada');
 });

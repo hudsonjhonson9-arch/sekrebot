@@ -5,6 +5,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { createHash } from 'node:crypto';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const force = process.argv.includes('--force');
@@ -40,7 +41,10 @@ const lines = [
   '  font-style: normal; overflow: hidden; }',
 ];
 for (const [fa, ri] of Object.entries(map)) {
-  const url = ri === null ? `../../icons/custom/fa-${fa}.svg` : `../../icons/ri/${ri}.svg`;
+  const file = ri === null ? `icons/custom/fa-${fa}.svg` : `icons/ri/${ri}.svg`;
+  // ponytail: hash isi file → bust cache CDN (max-age 7 hari), URL berubah hanya saat SVG berubah
+  const v = createHash('sha1').update(readFileSync(join(root, file))).digest('hex').slice(0, 8);
+  const url = `../../${file}?v=${v}`;
   lines.push(
     `.fas.fa-${fa} { background: currentColor;` +
       ` -webkit-mask: url(${url}) center / contain no-repeat;` +
