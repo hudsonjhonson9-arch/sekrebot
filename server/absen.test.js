@@ -5,7 +5,7 @@ import { requireRole, ABSEN_ROLES } from './auth.js';
 
 // Import di atas file, bukan di dalam harness(): harness() dipanggil sinkron di
 // setiap test, jadi import harus selesai sebelum test pertama jalan.
-const { createAbsenRouter } = await import('./absen.js');
+const { createAbsenRouter, formatAbsenMessage } = await import('./absen.js');
 const { evaluateGates } = await import('./absen-validate.js');
 
 // Token 192 hex asli: isSessionToken() menolak bentuk lain sebelum DB disentuh.
@@ -72,8 +72,9 @@ const GOOD_BODY = {
   horizontal_accuracy: 5,
 };
 
-function harness({ auth = true, query, verify, at = NOW, session = SESSION } = {}) {
+function harness({ auth = true, query, verify, at = NOW, session = SESSION, notifyAbsen } = {}) {
   const sql = [];
+  const notifyCalls = [];
   const app = express();
   app.use(express.json({ limit: '256kb' }));
   if (auth) {
@@ -89,11 +90,14 @@ function harness({ auth = true, query, verify, at = NOW, session = SESSION } = {
       return initData === GOOD_BODY.init_data ? { ok: true, user: { id: 42 } } : { ok: false, reason: 'bad_signature' };
     },
     botToken: 'test-bot-token',
+    // Spy default: test tidak boleh menembak api.telegram.org. Fungsi capture
+    // dipanggil sinkron saat router memanggil notify, jadi tak perlu di-await.
+    notifyAbsen: notifyAbsen || (async (msg) => { notifyCalls.push(msg); }),
     // Fungsi, bukan Date: router mengambil waktu sekali per request supaya tanggal
     // dan jam tidak bisa berbeda bila request melewati tengah malam.
     now: () => at,
   }));
-  return { app, sql };
+  return { app, sql, notifyCalls };
 }
 
 async function post(h, body, { auth = true } = {}) {
@@ -387,4 +391,54 @@ test('evaluateGates: baris tanggal lain tidak ikut terhitung', () => {
 test('evaluateGates: baris milik ID lain tidak ikut terhitung', () => {
   const rows = [{ ID: '999', Tanggal: TANGGAL, Jam: '07:10', 'Jenis Absen': 'MASUK' }];
   assert.equal(evaluateGates(basis(rows)), null);
+});
+
+// --- konfirmasi Telegram setelah absen ----------------------------------------
+
+test('formatAbsenMessage: memuat nama, NIP, lokasi, tanggal, jam, jenis', () => {
+  const text = formatAbsenMessage({
+    nama: 'Budi', nip: '123', jenisAbsen: 'MASUK', namaLokasi: 'KANTOR',
+    tanggal: TANGGAL, jam: JAM, jamMasuk: '07:15', jamPulang: '14:30',
+  });
+  assert.match(text, /KONFIRMASI ABSENSI BERHASIL/);
+  assert.match(text, /Budi/);
+  assert.match(text, /123/);
+  assert.match(text, /KANTOR/);
+  assert.match(text, /2026-10-05/);
+  assert.match(text, /07:10 WITA/);
+  assert.match(text, /Masuk Tepat Waktu/);
+});
+
+test('formatAbsenMessage: terlambat menghitung selisih dari batas masuk', () => {
+  const text = formatAbsenMessage({ jenisAbsen: 'DI LUAR JAM MASUK', jam: '08:25', jamMasuk: '08:00', jamPulang: '14:30' });
+  assert.match(text, /TERLAMBAT/);
+  assert.match(text, /Terlambat 25 menit/);
+});
+
+test('absen sukses mengirim konfirmasi ke chat id pegawai (user_list.id)', async () => {
+  const h = harness();
+  const r = await post(h, GOOD_BODY);
+
+  assert.equal(r.status, 200);
+  assert.equal(h.notifyCalls.length, 1);
+  assert.equal(h.notifyCalls[0].chatId, SESSION.id);
+  assert.match(h.notifyCalls[0].text, /KONFIRMASI ABSENSI BERHASIL/);
+});
+
+test('kegagalan kirim Telegram (id error) tidak menggagalkan absen', async () => {
+  // chat id tanpa chat / bot diblokir -> sendMessage melempar; absen sudah
+  // tercatat dan tetap harus 200.
+  const h = harness({ notifyAbsen: async () => { throw new Error('chat not found'); } });
+  const r = await post(h, GOOD_BODY);
+
+  assert.equal(r.status, 200);
+  assert.equal(r.body.validasi.is_valid, true);
+});
+
+test('absen yang ditolak gate tidak mengirim konfirmasi', async () => {
+  stub.log = [{ ID: SESSION.id, Tanggal: TANGGAL, Jam: '07:10', 'Jenis Absen': 'MASUK' }];
+  const h = harness();
+  await post(h, GOOD_BODY);
+
+  assert.equal(h.notifyCalls.length, 0);
 });

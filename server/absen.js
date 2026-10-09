@@ -55,8 +55,71 @@ function clientIp(req) {
 const tolak = (kode, keterangan) =>
   ({ validasi: { is_valid: false, kode_tolak: kode, keterangan } });
 
-export function createAbsenRouter({ query, verifyInitData, botToken, now = () => new Date() }) {
+// ── Konfirmasi absen ke Telegram ──
+// Format mempertahankan teks node n8n "Format Konfirmasi Absen" (V5.2), tapi
+// dibangun dari data yang sudah divalidasi native (jenis absen + batas jam
+// efektif yang benar-benar dipakai validasi), bukan dari body klien.
+const JENIS_DISPLAY = {
+  'DI LUAR JAM MASUK': '⏰ TERLAMBAT',
+  'DI LUAR JAM PULANG': '⚠️ Pulang Lebih Awal',
+  'PULANG LUAR': '🏃 Pulang dari Lapangan',
+  MASUK: '✅ Masuk Tepat Waktu',
+  PULANG: '🔵 Pulang Tepat Waktu',
+  KONTROL: '🛡️ Kontrol Kehadiran',
+};
+
+function parseHHMM(s) {
+  const m = String(s || '').match(/(\d{1,2}):(\d{2})/);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
+export function formatAbsenMessage({
+  nama = '—', nip = '—', jenisAbsen = '', namaLokasi = '—',
+  tanggal = '—', jam = '—', jamMasuk = '', jamPulang = '',
+} = {}) {
+  const jenis = String(jenisAbsen || '');
+  const jenisDisplay = JENIS_DISPLAY[jenis] || jenis || '—';
+  const menit = parseHHMM(jam);
+  let infoWaktu = '';
+  const mMasuk = parseHHMM(jamMasuk);
+  const mPulang = parseHHMM(jamPulang);
+  if (jenis === 'DI LUAR JAM MASUK' && menit !== null && mMasuk !== null) {
+    const t = menit - mMasuk;
+    const j = Math.floor(t / 60); const m = t % 60;
+    infoWaktu = j > 0 ? `\n⏰ Terlambat ${j} jam ${m} menit` : `\n⏰ Terlambat ${m} menit`;
+  } else if (jenis === 'DI LUAR JAM PULANG' && menit !== null && mPulang !== null) {
+    const c = mPulang - menit;
+    const j = Math.floor(c / 60); const m = c % 60;
+    infoWaktu = j > 0 ? `\n⚠️ Pulang lebih awal ${j} jam ${m} menit` : `\n⚠️ Pulang lebih awal ${m} menit`;
+  }
+  return `✅ *KONFIRMASI ABSENSI BERHASIL*\n`
+    + `Halo, *${nama}*!\n\n`
+    + `📌 *Jenis* : ${jenisDisplay}${infoWaktu}\n`
+    + `👤 *NIP*   : ${nip}\n`
+    + `📍 *Lokasi*: ${namaLokasi}\n`
+    + `📅 *Tgl*   : ${tanggal}\n`
+    + `🕒 *Waktu* : ${jam} WITA\n`
+    + `⏳ Batas: Masuk ≤${jamMasuk} | Pulang ≥${jamPulang}\n\n`
+    + `Terima kasih, selamat melanjutkan aktivitas!`;
+}
+
+async function sendTelegramMessage({ botToken, chatId, text }) {
+  const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown', disable_web_page_preview: true }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) throw new Error(d.description || `Telegram HTTP ${r.status}`);
+  return d;
+}
+
+export function createAbsenRouter({ query, verifyInitData, botToken, notifyAbsen, now = () => new Date() }) {
   const router = express.Router();
+  // notifyAbsen bisa di-inject (test memakai spy, bukan jaringan). Default: kirim
+  // ke Telegram memakai botToken; tanpa token, notifikasi dimatikan.
+  const notify = notifyAbsen
+    || (botToken ? ({ chatId, text }) => sendTelegramMessage({ botToken, chatId, text }) : null);
 
   router.post('/', async (req, res) => {
     // Seluruh handler di dalam try: Express 4 tidak meneruskan rejected promise
@@ -179,6 +242,25 @@ export function createAbsenRouter({ query, verifyInitData, botToken, now = () =>
       // 0 baris = request_id bentrok karena request paralel lain yang menang.
       // Tetap sukses: pemanggilnya akan melihat record yang sama.
       const saved = ins.rows[0];
+      // Fire-and-forget: notifikasi tak boleh menahan respons absen (nginx 30s)
+      // maupun menggagalkan absen yang sudah tercatat. chatId = user_list.id,
+      // yang di jalur Telegram sudah dipastikan sama dengan id Telegram pegawai
+      // (cek init_data di atas). Kalau id itu tidak punya chat / bot diblokir,
+      // Telegram membalas error -> di-skip, absen tetap 200.
+      if (saved && notify) {
+        const text = formatAbsenMessage({
+          nama: employee.username || '—',
+          nip: employee.nip || '—',
+          jenisAbsen: v.jenisAbsen,
+          namaLokasi: saved.Lokasi || v.namaLokasi || '—',
+          tanggal: serverTime.tanggal,
+          jam: serverTime.jam.slice(0, 5),
+          jamMasuk: settings.jamMasuk,
+          jamPulang: settings.jamPulang,
+        });
+        notify({ chatId: String(employee.id), text })
+          .catch((e) => console.error('[absen] notif Telegram dilewati:', e?.message || e));
+      }
       return res.json({
         validasi: {
           is_valid: true,
