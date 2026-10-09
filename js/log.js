@@ -250,14 +250,14 @@
           ${periodeNama ? `<div style="font-size:8px;font-weight:700;color:#a78bfa;margin-top:2px"><i class="fas fa-moon"></i> ${periodeNama}</div>` : ''}
           ${isLibur ? `<div style="font-size:8px;font-weight:700;color:${isLiburNasional ? '#f87171' : 'var(--muted)'};margin-top:2px;background:${isLiburNasional ? 'rgba(239,68,68,.10)' : 'rgba(255,255,255,.05)'};border:1px solid ${isLiburNasional ? 'rgba(239,68,68,.25)' : 'rgba(255,255,255,.1)'};border-radius:5px;padding:1px 6px;display:inline-block">${isLiburNasional ? '<i class="fas fa-glass-cheers"></i>' : '<i class="fas fa-calendar"></i>'} ${namaLibur}</div>` : ''}
         </div>
-        <div style="font-size:16px">${masukIcon}</div>
+        <div style="font-size:16px;color:${masukColor}">${masukIcon}</div>
       </div>
 
       ${isKet ? `
       <!-- ── KETERANGAN: satu kotak penuh ── -->
       <div style="margin:0 10px 8px;background:${masukBg};border:1px solid ${masukColor}44;border-radius:10px;padding:10px 12px">
         <div style="display:flex;align-items:center;gap:10px">
-          <div style="font-size:22px;line-height:1">${masukIcon}</div>
+          <div style="font-size:22px;line-height:1;color:${masukColor}">${masukIcon}</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:12px;font-weight:800;color:${masukColor}">${masukLabel}</div>
             <div style="font-size:8px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">${ketJenis || 'Keterangan'}</div>

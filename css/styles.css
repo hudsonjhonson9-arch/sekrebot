@@ -6862,3 +6862,7 @@ html.light-theme .btn-pagination-all:hover {
   color: #2c2417;
   text-decoration-color: rgba(44, 36, 23, 0.5);
 }
+
+/* Warna brand ikon file (mask pakai currentColor → cukup set color) */
+.fas.fa-file-pdf { color: #dc2626; }
+.fas.fa-file-excel { color: #16a34a; }

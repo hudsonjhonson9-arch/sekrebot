@@ -768,7 +768,7 @@ function renderRekap(pg) {
           </div>
           <!-- Badge status utama -->
           <div style="flex-shrink:0;text-align:right">
-            <div style="font-size:16px">${masukIcon}</div>
+            <div style="font-size:16px;color:${masukColor}">${masukIcon}</div>
             <div style="font-size:9px;font-weight:700;color:${masukColor};margin-top:2px;white-space:nowrap">${masukLabel}</div>
           </div>
         </div>
@@ -783,7 +783,7 @@ function renderRekap(pg) {
                       title="Edit Log Keterangan"><i class="fas fa-edit"></i></button>
             ` : ''}
             <div style="display:flex;align-items:center;gap:10px">
-              <div style="font-size:32px;line-height:1">${masukIcon}</div>
+              <div style="font-size:32px;line-height:1;color:${masukColor}">${masukIcon}</div>
               <div style="flex:1;min-width:0">
                 <div style="font-size:14px;font-weight:800;color:${masukColor}">${masukLabel}</div>
                 <div style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.4;white-space:pre-wrap;">${escapeHtml((p._rawKetLog?.Ket || p._rawKetLog?.ket || 'Keterangan').trim())}</div>
@@ -1037,7 +1037,7 @@ function renderRekap(pg) {
             </div>
             <div class="hero-metric-box">
               <div class="hero-val" style="color:${dColor}">${dPct}%</div>
-              <div class="hero-lbl">${dIcon} ${dLabel}</div>
+              <div class="hero-lbl" style="color:${dColor}">${dIcon} ${dLabel}</div>
             </div>
           </div>
 
