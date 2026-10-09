@@ -18,7 +18,7 @@ function dateRange(start, end) {
 }
 function toMinutes(v) { const m=/^(\d{1,2}):(\d{2})/.exec(String(v||'')); return m ? Number(m[1])*60+Number(m[2]) : null; }
 
-export function createAttendanceDataRouter({ query, withTransaction }) {
+export function createAttendanceDataRouter({ query, withTransaction, notify }) {
   const router = express.Router();
 
   // KETERANGAN / IZIN
@@ -65,6 +65,7 @@ export function createAttendanceDataRouter({ query, withTransaction }) {
       const driveLink=String(b.drive_link||'');
       const result=await query(`INSERT INTO ket_temp ("ID_Ket","ID_Pegawai","Nama","NIP","Tanggal","tgl_mulai","tgl_selesai","Jam","Jenis Absen","Ket","Status",${driveLink?'"drive_link",':''}"request_id","instansi_id") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,${driveLink?'$12,':''}$${driveLink?13:12},$${driveLink?14:13}) RETURNING *`, driveLink?[idKet,emp.id,emp.username||'—',emp.nip||'',tglRange,start,end,jam,jenis,ket,status,driveLink,requestId,emp.instansi_id]:[idKet,emp.id,emp.username||'—',emp.nip||'',tglRange,start,end,jam,jenis,ket,status,requestId,emp.instansi_id]);
       if(status==='DISETUJUI') await applyApprovedKeterangan(query,{row:result.rows[0],dates,jenis,emp,requestId,ket,jam});
+      if(notify){const arg={jenis,emp,ket,tglRange,durasi,driveLink,instansi_id:emp.instansi_id};(status==='DISETUJUI'?notify({kind:'auto',...arg}):notify({kind:'admin_pending',...arg})).catch(e=>console.error('[keterangan/notify]',e));}
       return ok(res,{message:status==='PENDING'?'Pengajuan berhasil dikirim dan menunggu persetujuan.':'Keterangan berhasil dicatat.',data:result.rows[0]});
     }catch(e){ console.error('[keterangan/add]',e); return fail(res,500,'Gagal menyimpan keterangan.'); }
   });
@@ -79,7 +80,7 @@ export function createAttendanceDataRouter({ query, withTransaction }) {
 
   router.post('/keterangan/approve', async(req,res)=>{
     if(!roleIsAdmin(req))return fail(res,403,'Forbidden');
-    try{const b=req.body||{};const id=String(b.id_ket||'').replace(/_\d{2}$/,'');const action=String(b.action||'').toUpperCase();const jenis=String(b.jenis||'').toUpperCase();if(!id||!['APPROVE','REJECT'].includes(action)||!jenis)return fail(res,400,'id_ket, action, dan jenis wajib diisi.');const row=(await query(`SELECT * FROM ket_temp WHERE "ID_Ket"=$1 LIMIT 1`,[id])).rows[0];if(!row)return fail(res,404,'Data tidak ditemukan di ket_temp.');if(!sameInstansi(req.user,row.instansi_id))return fail(res,403,'Forbidden');const dates=dateRange(row.tgl_mulai,row.tgl_selesai||row.tgl_mulai);const newStatus=action==='APPROVE'?'DISETUJUI':'DITOLAK';await withTransaction(async client=>{await client.query(`UPDATE ket_temp SET "Status"=$1,"Jenis Absen"=$2 WHERE "ID_Ket"=$3`,[newStatus,action==='APPROVE'?jenis:`${jenis} DITOLAK`,id]);if(action==='APPROVE'){await applyApprovedKeterangan(client,{row,dates,jenis,emp:{id:String(row.ID_Pegawai),username:row.Nama,nip:row.NIP,instansi_id:row.instansi_id},requestId:row.request_id,ket:row.Ket,jam:row.Jam});}});return ok(res,{message:action==='APPROVE'?'Keterangan disetujui.':'Keterangan ditolak.'});}catch(e){console.error('[keterangan/approve]',e);return fail(res,500,'Gagal memproses persetujuan.');}}
+    try{const b=req.body||{};const id=String(b.id_ket||'').replace(/_\d{2}$/,'');const action=String(b.action||'').toUpperCase();const jenis=String(b.jenis||'').toUpperCase();if(!id||!['APPROVE','REJECT'].includes(action)||!jenis)return fail(res,400,'id_ket, action, dan jenis wajib diisi.');const row=(await query(`SELECT * FROM ket_temp WHERE "ID_Ket"=$1 LIMIT 1`,[id])).rows[0];if(!row)return fail(res,404,'Data tidak ditemukan di ket_temp.');if(!sameInstansi(req.user,row.instansi_id))return fail(res,403,'Forbidden');const dates=dateRange(row.tgl_mulai,row.tgl_selesai||row.tgl_mulai);const newStatus=action==='APPROVE'?'DISETUJUI':'DITOLAK';await withTransaction(async client=>{await client.query(`UPDATE ket_temp SET "Status"=$1,"Jenis Absen"=$2 WHERE "ID_Ket"=$3`,[newStatus,action==='APPROVE'?jenis:`${jenis} DITOLAK`,id]);if(action==='APPROVE'){await applyApprovedKeterangan(client,{row,dates,jenis,emp:{id:String(row.ID_Pegawai),username:row.Nama,nip:row.NIP,instansi_id:row.instansi_id},requestId:row.request_id,ket:row.Ket,jam:row.Jam});}});if(notify)notify({kind:'approve',action,jenis,nama:row.Nama,nip:row.NIP,ket:row.Ket,tglRange:row.Tanggal||(row.tgl_mulai===row.tgl_selesai?row.tgl_mulai:`${row.tgl_mulai} s.d. ${row.tgl_selesai}`),instansi_id:row.instansi_id}).catch(e=>console.error('[keterangan/notify]',e));return ok(res,{message:action==='APPROVE'?'Keterangan disetujui.':'Keterangan ditolak.'});}catch(e){console.error('[keterangan/approve]',e);return fail(res,500,'Gagal memproses persetujuan.');}}
   );
 
   // DOKUMEN PEGAWAI

@@ -347,12 +347,12 @@ async function loadRekap() {
     renderRekap(pegawai);
   } catch (e) {
     console.warn('loadRekap error:', e);
-    $('pegawaiList').innerHTML = `<div class="empty-state"><div class="empty-icon">🔌</div><div class="empty-text">Gagal memuat rekap</div><div class="empty-sub">Pastikan webhook n8n aktif</div></div>`;
+    $('pegawaiList').innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-plug"></i></div><div class="empty-text">Gagal memuat rekap</div><div class="empty-sub">Pastikan webhook n8n aktif</div></div>`;
   } finally {
     btn.disabled = false;
     if (dlBtn) dlBtn.disabled = false;
     if (pdfBtn) pdfBtn.disabled = false;
-    const s = $('rekapRefIcon'); if (s) s.outerHTML = '<span id="rekapRefIcon">🔄</span>';
+    const s = $('rekapRefIcon'); if (s) s.outerHTML = '<span id="rekapRefIcon"><i class="fas fa-sync"></i></span>';
   }
 }
 
@@ -603,7 +603,7 @@ function resetRekapStats() { ['rsMasuk', 'rsPulang', 'rsPulangLuar', 'rsLuar', '
 function renderRekap(pg) {
   const el = $('pegawaiList');
   if (!pg?.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">Belum ada data pegawai</div><div class="empty-sub">Coba pilih rentang tanggal lain</div></div>`;
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-users"></i></div><div class="empty-text">Belum ada data pegawai</div><div class="empty-sub">Coba pilih rentang tanggal lain</div></div>`;
     return;
   }
 
@@ -619,7 +619,7 @@ function renderRekap(pg) {
   }
 
   if (!filteredPg.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">Tidak ada pegawai di bidang ini</div><div class="empty-sub">Coba pilih bidang lain atau tampilkan semua</div></div>`;
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-search"></i></div><div class="empty-text">Tidak ada pegawai di bidang ini</div><div class="empty-sub">Coba pilih bidang lain atau tampilkan semua</div></div>`;
     return;
   }
 
@@ -706,23 +706,23 @@ function renderRekap(pg) {
 
       // Label & warna jam masuk
       let masukLabel = '', masukColor = '', masukBg = '', masukIcon = '';
-      if (izin > 0) { masukLabel = 'Izin'; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.12)'; masukIcon = '🙏'; }
-      else if (sakit > 0) { masukLabel = 'Sakit'; masukColor = 'var(--danger)'; masukBg = 'rgba(239,68,68,.12)'; masukIcon = '🤒'; }
-      else if (tugas > 0) { masukLabel = 'Tugas'; masukColor = '#8b5cf6'; masukBg = 'rgba(139,92,246,.12)'; masukIcon = '💼'; }
-      else if (p.tubel > 0) { masukLabel = 'Tubel'; masukColor = '#6366f1'; masukBg = 'rgba(99,102,241,.12)'; masukIcon = '🎓'; }
-      else if (p.cuti > 0) { masukLabel = 'Cuti'; masukColor = '#14b8a6'; masukBg = 'rgba(20,184,166,.12)'; masukIcon = '🏖️'; }
-      else if (!rawMasuk) { masukLabel = 'TB'; masukColor = 'var(--muted)'; masukBg = 'rgba(255,255,255,.04)'; masukIcon = '❌'; }
-      else if (terlambatMnt > 0) { masukLabel = `Terlambat ${terlambatMnt}m`; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.08)'; masukIcon = '⏰'; }
-      else { masukLabel = 'Tepat Waktu'; masukColor = 'var(--success)'; masukBg = 'rgba(34,197,94,.08)'; masukIcon = '✅'; }
+      if (izin > 0) { masukLabel = 'Izin'; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.12)'; masukIcon = '<i class="fas fa-praying-hands"></i>'; }
+      else if (sakit > 0) { masukLabel = 'Sakit'; masukColor = 'var(--danger)'; masukBg = 'rgba(239,68,68,.12)'; masukIcon = '<i class="fas fa-thermometer-half"></i>'; }
+      else if (tugas > 0) { masukLabel = 'Tugas'; masukColor = '#8b5cf6'; masukBg = 'rgba(139,92,246,.12)'; masukIcon = '<i class="fas fa-briefcase"></i>'; }
+      else if (p.tubel > 0) { masukLabel = 'Tubel'; masukColor = '#6366f1'; masukBg = 'rgba(99,102,241,.12)'; masukIcon = '<i class="fas fa-graduation-cap"></i>'; }
+      else if (p.cuti > 0) { masukLabel = 'Cuti'; masukColor = '#14b8a6'; masukBg = 'rgba(20,184,166,.12)'; masukIcon = '<i class="fas fa-umbrella-beach"></i>'; }
+      else if (!rawMasuk) { masukLabel = 'TB'; masukColor = 'var(--muted)'; masukBg = 'rgba(255,255,255,.04)'; masukIcon = '<i class="fas fa-times"></i>'; }
+      else if (terlambatMnt > 0) { masukLabel = `Terlambat ${terlambatMnt}m`; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.08)'; masukIcon = '<i class="fas fa-clock"></i>'; }
+      else { masukLabel = 'Tepat Waktu'; masukColor = 'var(--success)'; masukBg = 'rgba(34,197,94,.08)'; masukIcon = '<i class="fas fa-check"></i>'; }
 
       // Label & warna jam pulang
       let pulangLabel = '', pulangColor = '', pulangIcon = '';
       if (izin > 0 || sakit > 0 || tugas > 0 || p.tubel > 0 || p.cuti > 0) { pulangLabel = '—'; pulangColor = 'var(--muted)'; pulangIcon = '—'; }
-      else if (!rawPulang && !rawMasuk) { pulangLabel = 'Belum'; pulangColor = 'var(--muted)'; pulangIcon = '⏳'; }
-      else if (!rawPulang) { pulangLabel = 'Belum Absen'; pulangColor = 'var(--warning)'; pulangIcon = '⏳'; }
-      else if (cepatMnt > 0) { pulangLabel = `Cepat ${cepatMnt}m`; pulangColor = '#f97316'; pulangIcon = '🏃'; }
-      else if (pulangLuar > 0) { pulangLabel = 'Lapangan'; pulangColor = '#f59e0b'; pulangIcon = '🏃'; }
-      else { pulangLabel = 'Tepat'; pulangColor = 'var(--info)'; pulangIcon = '🔵'; }
+      else if (!rawPulang && !rawMasuk) { pulangLabel = 'Belum'; pulangColor = 'var(--muted)'; pulangIcon = '<i class="fas fa-hourglass-half"></i>'; }
+      else if (!rawPulang) { pulangLabel = 'Belum Absen'; pulangColor = 'var(--warning)'; pulangIcon = '<i class="fas fa-hourglass-half"></i>'; }
+      else if (cepatMnt > 0) { pulangLabel = `Cepat ${cepatMnt}m`; pulangColor = '#f97316'; pulangIcon = '<i class="fas fa-running"></i>'; }
+      else if (pulangLuar > 0) { pulangLabel = 'Lapangan'; pulangColor = '#f59e0b'; pulangIcon = '<i class="fas fa-running"></i>'; }
+      else { pulangLabel = 'Tepat'; pulangColor = 'var(--info)'; pulangIcon = '<i class="fas fa-circle"></i>'; }
 
       // Kehadiran overall status untuk warna border card
       const isHadir = (masuk + lambatCount) > 0 || !!p._rawMasukLog || !!p._rawPulangLog;
@@ -763,8 +763,8 @@ function renderRekap(pg) {
           <div style="flex:1;min-width:0">
             <div class="pegawai-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nama}</div>
             ${jabatanStr}
-            <div class="pegawai-jabatan" style="margin-top:2px">${isMagang ? 'ID' : 'NIP'}: ${nip} ${!isMagang ? `· ${p.pangkat || '—'} ` : ''}· ⏳ ${parseFloat(p.jamHadir || 0).toFixed(1)} Jam</div>
-            ${periodeHarianNama ? `<div style="font-size:8px;font-weight:700;color:#a78bfa;margin-top:2px">🌙 ${periodeHarianNama}</div>` : ''}
+            <div class="pegawai-jabatan" style="margin-top:2px">${isMagang ? 'ID' : 'NIP'}: ${nip} ${!isMagang ? `· ${p.pangkat || '—'} ` : ''}· <i class="fas fa-hourglass-half"></i> ${parseFloat(p.jamHadir || 0).toFixed(1)} Jam</div>
+            ${periodeHarianNama ? `<div style="font-size:8px;font-weight:700;color:#a78bfa;margin-top:2px"><i class="fas fa-moon"></i> ${periodeHarianNama}</div>` : ''}
           </div>
           <!-- Badge status utama -->
           <div style="flex-shrink:0;text-align:right">
@@ -780,7 +780,7 @@ function renderRekap(pg) {
               <button onclick="event.stopPropagation(); openLogEditor('${p.id}', '${_dari}', ${JSON.stringify(p._rawKetLog).replace(/"/g, '&quot;')})" 
                       style="position:absolute; top:0; right:0; bottom:0; width:30px; background:rgba(255,255,255,0.05); border:none; border-left:1px solid ${masukColor}22; color:${masukColor}; cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; transition: all 0.2s;"
                       onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"
-                      title="Edit Log Keterangan">✏️</button>
+                      title="Edit Log Keterangan"><i class="fas fa-edit"></i></button>
             ` : ''}
             <div style="display:flex;align-items:center;gap:10px">
               <div style="font-size:32px;line-height:1">${masukIcon}</div>
@@ -799,14 +799,14 @@ function renderRekap(pg) {
               <button onclick="event.stopPropagation(); openLogEditor('${p.id}', '${_dari}', ${JSON.stringify(p._rawMasukLog || p._rawKetLog).replace(/"/g, '&quot;')})" 
                       style="position:absolute; top:0; right:0; bottom:0; width:30px; background:rgba(255,255,255,0.05); border:none; border-left:1px solid ${masukColor}22; color:${masukColor}; cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; transition: all 0.2s;"
                       onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"
-                      title="Edit Log Masuk">✏️</button>
+                      title="Edit Log Masuk"><i class="fas fa-edit"></i></button>
             ` : `
               <button onclick="event.stopPropagation(); openLogEditor('${p.id}', '${_dari}', null, 'MASUK')" 
                       style="position:absolute; top:0; right:0; bottom:0; width:30px; background:rgba(255,255,255,0.05); border:none; border-left:1px solid ${masukColor}22; color:var(--muted); cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; transition: all 0.2s;"
                       onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"
-                      title="Tambah Log Manual">➕</button>
+                      title="Tambah Log Manual"><i class="fas fa-plus"></i></button>
             `) : ''}
-            <div style="font-size:8px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">🟢 Jam Masuk</div>
+            <div style="font-size:8px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px"><i class="fas fa-circle"></i> Jam Masuk</div>
             ${rawMasuk
           ? `<div style="font-size:20px;font-family:'JetBrains Mono',monospace;font-weight:800;color:${masukColor};line-height:1">${rawMasuk.slice(0, 5)}</div>
                    <div style="font-size:9px;color:${masukColor};font-weight:700;margin-top:3px">${masukLabel}</div>`
@@ -822,14 +822,14 @@ function renderRekap(pg) {
               <button onclick="event.stopPropagation(); openLogEditor('${p.id}', '${_dari}', ${JSON.stringify(p._rawPulangLog || p._rawKetLog).replace(/"/g, '&quot;')})" 
                       style="position:absolute; top:0; right:0; bottom:0; width:30px; background:rgba(255,255,255,0.05); border:none; border-left:1px solid ${pulangColor}22; color:${pulangColor}; cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; transition: all 0.2s;"
                       onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"
-                      title="Edit Log Pulang">✏️</button>
+                      title="Edit Log Pulang"><i class="fas fa-edit"></i></button>
             ` : `
               <button onclick="event.stopPropagation(); openLogEditor('${p.id}', '${_dari}', null, 'PULANG')" 
                       style="position:absolute; top:0; right:0; bottom:0; width:30px; background:rgba(255,255,255,0.05); border:none; border-left:1px solid ${pulangColor}22; color:var(--muted); cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; transition: all 0.2s;"
                       onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"
-                      title="Tambah Log Manual">➕</button>
+                      title="Tambah Log Manual"><i class="fas fa-plus"></i></button>
             `) : ''}
-            <div style="font-size:8px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">🔵 Jam Pulang</div>
+            <div style="font-size:8px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px"><i class="fas fa-circle"></i> Jam Pulang</div>
             ${rawPulang
           ? `<div style="font-size:20px;font-family:'JetBrains Mono',monospace;font-weight:800;color:${pulangColor};line-height:1">${rawPulang.slice(0, 5)}</div>
                    <div style="font-size:9px;color:${pulangColor};font-weight:700;margin-top:3px">${pulangIcon} ${pulangLabel}</div>`
@@ -850,21 +850,21 @@ function renderRekap(pg) {
           if (mAll === 0) return '';
           const h = Math.floor(mAll / 60), m = mAll % 60;
           const fmt = h > 0 ? `${h}j ${m}m` : `${m}m`;
-          return `<span class="pbar-item" style="background:rgba(245,158,11,.15);color:var(--warning);font-weight:800">⚠️ Akumulasi Jam: ${fmt}</span>`;
+          return `<span class="pbar-item" style="background:rgba(245,158,11,.15);color:var(--warning);font-weight:800"><i class="fas fa-exclamation-triangle"></i> Akumulasi Jam: ${fmt}</span>`;
         })()}
-          ${masuk > 0 ? `<span class="pbar-item pb-masuk"     >✅ Masuk</span>` : ''}
-          ${lambatCount > 0 ? `<span class="pbar-item pb-luar-masuk">⏰ Terlambat: ${lambatCount}×</span>` : ''}
-          ${pulang > 0 ? `<span class="pbar-item pb-pulang"    >🔵 Pulang</span>` : ''}
-          ${cepatCount > 0 ? `<span class="pbar-item pb-luar-pulang">🏃 Pulang Cepat: ${cepatCount}×</span>` : ''}
-          ${pulangLuar > 0 ? `<span class="pbar-item" style="background:rgba(245,158,11,.15);color:#f59e0b">🏃 Lapangan</span>` : ''}
-          ${izin > 0 ? `<span class="pbar-item pb-izin"      >🙏 Izin</span>` : ''}
-          ${sakit > 0 ? `<span class="pbar-item pb-sakit"     >🤒 Sakit</span>` : ''}
-          ${tugas > 0 ? `<span class="pbar-item pb-tugas"     >💼 Tugas/DL</span>` : ''}
-          ${p.tubel > 0 ? `<span class="pbar-item pb-tubel"     >🎓 Tubel</span>` : ''}
-          ${p.cuti > 0 ? `<span class="pbar-item pb-cuti"      >🏖️ Cuti</span>` : ''}
-          ${isAlpa ? `<span class="pbar-item" style="background:rgba(239,68,68,.15);color:var(--danger)">❌ TB</span>` : ''}
-          ${terlambatMnt > 0 ? `<span class="pbar-item pb-total-akk" style="font-family:'JetBrains Mono',monospace">⏱ +${terlambatMnt}m</span>` : ''}
-          ${cepatMnt > 0 ? `<span class="pbar-item pb-luar-pulang" style="font-family:'JetBrains Mono',monospace">🏃 -${cepatMnt}m</span>` : ''}
+          ${masuk > 0 ? `<span class="pbar-item pb-masuk"     ><i class="fas fa-check"></i> Masuk</span>` : ''}
+          ${lambatCount > 0 ? `<span class="pbar-item pb-luar-masuk"><i class="fas fa-clock"></i> Terlambat: ${lambatCount}×</span>` : ''}
+          ${pulang > 0 ? `<span class="pbar-item pb-pulang"    ><i class="fas fa-circle"></i> Pulang</span>` : ''}
+          ${cepatCount > 0 ? `<span class="pbar-item pb-luar-pulang"><i class="fas fa-running"></i> Pulang Cepat: ${cepatCount}×</span>` : ''}
+          ${pulangLuar > 0 ? `<span class="pbar-item" style="background:rgba(245,158,11,.15);color:#f59e0b"><i class="fas fa-running"></i> Lapangan</span>` : ''}
+          ${izin > 0 ? `<span class="pbar-item pb-izin"      ><i class="fas fa-praying-hands"></i> Izin</span>` : ''}
+          ${sakit > 0 ? `<span class="pbar-item pb-sakit"     ><i class="fas fa-thermometer-half"></i> Sakit</span>` : ''}
+          ${tugas > 0 ? `<span class="pbar-item pb-tugas"     ><i class="fas fa-briefcase"></i> Tugas/DL</span>` : ''}
+          ${p.tubel > 0 ? `<span class="pbar-item pb-tubel"     ><i class="fas fa-graduation-cap"></i> Tubel</span>` : ''}
+          ${p.cuti > 0 ? `<span class="pbar-item pb-cuti"      ><i class="fas fa-umbrella-beach"></i> Cuti</span>` : ''}
+          ${isAlpa ? `<span class="pbar-item" style="background:rgba(239,68,68,.15);color:var(--danger)"><i class="fas fa-times"></i> TB</span>` : ''}
+          ${terlambatMnt > 0 ? `<span class="pbar-item pb-total-akk" style="font-family:'JetBrains Mono',monospace"><i class="fas fa-stopwatch"></i> +${terlambatMnt}m</span>` : ''}
+          ${cepatMnt > 0 ? `<span class="pbar-item pb-luar-pulang" style="font-family:'JetBrains Mono',monospace"><i class="fas fa-running"></i> -${cepatMnt}m</span>` : ''}
         </div>
 
         <!-- ── LOKASI DETAIL ── -->
@@ -895,22 +895,22 @@ function renderRekap(pg) {
           const pins = [];
           if (m && m.lat && m.lng) {
             pins.push({ lat: m.lat, lng: m.lng, color: '#10b981', label: 'M' });
-            html += `<div style="margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;"><div style="color:var(--success);font-weight:700;font-size:11px;">🟢 Masuk</div><a href="https://www.google.com/maps?q=${m.lat},${m.lng}" target="_blank" onclick="event.stopPropagation()" style="font-size:8px;font-weight:700;color:#60a5fa;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);border-radius:5px;padding:3px 8px;text-decoration:none;">🗺 Buka Map ↗</a></div>`;
-            if (m.loc) html += `<div style="font-size:9px;opacity:0.75;margin-bottom:8px;">📍 ${m.loc}</div>`;
+            html += `<div style="margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;"><div style="color:var(--success);font-weight:700;font-size:11px;"><i class="fas fa-circle"></i> Masuk</div><a href="https://www.google.com/maps?q=${m.lat},${m.lng}" target="_blank" onclick="event.stopPropagation()" style="font-size:8px;font-weight:700;color:#60a5fa;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);border-radius:5px;padding:3px 8px;text-decoration:none;"><i class="fas fa-map"></i> Buka Map ↗</a></div>`;
+            if (m.loc) html += `<div style="font-size:9px;opacity:0.75;margin-bottom:8px;"><i class="fas fa-map-marker-alt"></i> ${m.loc}</div>`;
           } else if (m) {
-            html += renderLocText('🟢 Masuk', 'var(--success)', m.loc);
+            html += renderLocText('<i class="fas fa-circle"></i> Masuk', 'var(--success)', m.loc);
           }
 
           if (pu && pu.lat && pu.lng) {
             pins.push({ lat: pu.lat, lng: pu.lng, color: '#3b82f6', label: 'P' });
-            html += `<div style="margin-bottom:4px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;"><div style="color:var(--info);font-weight:700;font-size:11px;">🔵 Pulang</div><a href="https://www.google.com/maps?q=${pu.lat},${pu.lng}" target="_blank" onclick="event.stopPropagation()" style="font-size:8px;font-weight:700;color:#60a5fa;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);border-radius:5px;padding:3px 8px;text-decoration:none;">🗺 Buka Map ↗</a></div>`;
-            if (pu.loc) html += `<div style="font-size:9px;opacity:0.75;margin-bottom:8px;">📍 ${pu.loc}</div>`;
+            html += `<div style="margin-bottom:4px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;"><div style="color:var(--info);font-weight:700;font-size:11px;"><i class="fas fa-circle"></i> Pulang</div><a href="https://www.google.com/maps?q=${pu.lat},${pu.lng}" target="_blank" onclick="event.stopPropagation()" style="font-size:8px;font-weight:700;color:#60a5fa;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);border-radius:5px;padding:3px 8px;text-decoration:none;"><i class="fas fa-map"></i> Buka Map ↗</a></div>`;
+            if (pu.loc) html += `<div style="font-size:9px;opacity:0.75;margin-bottom:8px;"><i class="fas fa-map-marker-alt"></i> ${pu.loc}</div>`;
           } else if (pu) {
-            html += renderLocText('🔵 Pulang', 'var(--info)', pu.loc);
+            html += renderLocText('<i class="fas fa-circle"></i> Pulang', 'var(--info)', pu.loc);
           }
 
           if (k) {
-            html += renderLocText('📝 Ket', masukColor, k.loc);
+            html += renderLocText('<i class="fas fa-edit"></i> Ket', masukColor, k.loc);
           }
 
           if (pins.length > 0) {
@@ -921,7 +921,7 @@ function renderRekap(pg) {
             html += `
                 <div style="margin-top:12px;display:flex;justify-content:center;">
                   <a href="${linkUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:9px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:5px;padding:4px 10px;text-decoration:none;">
-                    📍 Buka Rute di Google Maps
+                    <i class="fas fa-map-marker-alt"></i> Buka Rute di Google Maps
                   </a>
                 </div>
                 <div class="rekap-map-container" style="width:100%;height:160px;border-radius:10px;margin-top:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.2);"></div>
@@ -944,17 +944,17 @@ function renderRekap(pg) {
 
           if (mAllTotal_Local === 0 && (!p.all_izin && !p.all_sakit && !p.all_tugas && !p.all_alpa)) return '';
           return '<div class="akk-all-row" style="margin-top:8px">'
-            + '<span class="akk-all-label">📈 Akumulasi Keseluruhan (All-Time)</span>'
-            + (mT > 0 ? '<span class="akk-badge akk-lambat">⏰ Lambat: ' + aLambat + '</span>' : '')
-            + (mC > 0 ? '<span class="akk-badge akk-cepat">🏃 Cepat: ' + aCepat + '</span>' : '')
-            + (p.all_alpa > 0 ? '<span class="akk-badge" style="background:rgba(239,68,68,.12);color:var(--danger)">❌ TB: ' + toHHMM(p.all_alpa * 450) + '</span>' : '')
+            + '<span class="akk-all-label"><i class="fas fa-chart-line"></i> Akumulasi Keseluruhan (All-Time)</span>'
+            + (mT > 0 ? '<span class="akk-badge akk-lambat"><i class="fas fa-clock"></i> Lambat: ' + aLambat + '</span>' : '')
+            + (mC > 0 ? '<span class="akk-badge akk-cepat"><i class="fas fa-running"></i> Cepat: ' + aCepat + '</span>' : '')
+            + (p.all_alpa > 0 ? '<span class="akk-badge" style="background:rgba(239,68,68,.12);color:var(--danger)"><i class="fas fa-times"></i> TB: ' + toHHMM(p.all_alpa * 450) + '</span>' : '')
             + (mAllTotal_Local > 0 ? '<span class="akk-badge akk-total">Σ Total: ' + aTotal + '</span>' : '')
-            + (p.all_izin > 0 ? '<span class="akk-badge" style="background:rgba(245,158,11,.1);color:var(--warning)">🙏 ' + p.all_izin + '×</span>' : '')
-            + (p.all_sakit > 0 ? '<span class="akk-badge" style="background:rgba(239,68,68,.1);color:var(--danger)">🤒 ' + p.all_sakit + '×</span>' : '')
-            + (p.all_tugas > 0 ? '<span class="akk-badge" style="background:rgba(139,92,246,.1);color:#a78bfa">💼 ' + p.all_tugas + '×</span>' : '')
-            + (p.all_tubel > 0 ? '<span class="akk-badge" style="background:rgba(99,102,241,.1);color:#818cf8">🎓 ' + p.all_tubel + '×</span>' : '')
-            + (p.all_cuti > 0 ? '<span class="akk-badge" style="background:rgba(20,184,166,.1);color:#2dd4bf">🏖️ ' + p.all_cuti + '×</span>' : '')
-            + (p.all_alpa > 0 ? '<span class="akk-badge" style="background:rgba(239,68,68,.1);color:var(--danger)">❌ TB All: ' + p.all_alpa + '×</span>' : '')
+            + (p.all_izin > 0 ? '<span class="akk-badge" style="background:rgba(245,158,11,.1);color:var(--warning)"><i class="fas fa-praying-hands"></i> ' + p.all_izin + '×</span>' : '')
+            + (p.all_sakit > 0 ? '<span class="akk-badge" style="background:rgba(239,68,68,.1);color:var(--danger)"><i class="fas fa-thermometer-half"></i> ' + p.all_sakit + '×</span>' : '')
+            + (p.all_tugas > 0 ? '<span class="akk-badge" style="background:rgba(139,92,246,.1);color:#a78bfa"><i class="fas fa-briefcase"></i> ' + p.all_tugas + '×</span>' : '')
+            + (p.all_tubel > 0 ? '<span class="akk-badge" style="background:rgba(99,102,241,.1);color:#818cf8"><i class="fas fa-graduation-cap"></i> ' + p.all_tubel + '×</span>' : '')
+            + (p.all_cuti > 0 ? '<span class="akk-badge" style="background:rgba(20,184,166,.1);color:#2dd4bf"><i class="fas fa-umbrella-beach"></i> ' + p.all_cuti + '×</span>' : '')
+            + (p.all_alpa > 0 ? '<span class="akk-badge" style="background:rgba(239,68,68,.1);color:var(--danger)"><i class="fas fa-times"></i> TB All: ' + p.all_alpa + '×</span>' : '')
             + '</div>';
         })()}
       </div>`;
@@ -986,7 +986,7 @@ function renderRekap(pg) {
     }
 
     const dAllPct = p.disiplinAllPct ?? null;
-    const dIcon = dLevel === 4 ? '🌟' : dLevel === 3 ? '👍' : dLevel === 2 ? '⚠️' : '🔴';
+    const dIcon = dLevel === 4 ? '<i class="fas fa-star"></i>' : dLevel === 3 ? '<i class="fas fa-thumbs-up"></i>' : dLevel === 2 ? '<i class="fas fa-exclamation-triangle"></i>' : '<i class="fas fa-circle"></i>';
     const dColor = dLevel === 4 ? 'var(--success)' : dLevel === 3 ? 'var(--info)' : dLevel === 2 ? 'var(--warning)' : 'var(--danger)';
 
     // ── Kehadiran vs hari kerja ──
@@ -1002,17 +1002,17 @@ function renderRekap(pg) {
     // ── All-Time Footer ──
     const allTimeFooter = mAllTotal > 0 || p.all_alpa > 0 ? `
           <div class="rekap-footer-all">
-            <span class="all-time-title">📈 Ringkasan Seluruh Waktu</span>
+            <span class="all-time-title"><i class="fas fa-chart-line"></i> Ringkasan Seluruh Waktu</span>
             <div class="all-time-badges">
-              ${mT > 0 ? `<span class="badge-all">⏰ Lambat: ${toHHMM(mT)}</span>` : ''}
-              ${mC > 0 ? `<span class="badge-all">🏃 Cepat: ${toHHMM(mC)}</span>` : ''}
-              ${p.all_alpa > 0 ? `<span class="badge-all" style="color:var(--danger)">❌ TB: ${p.all_alpa}×</span>` : ''}
-              ${dAllPct !== null ? `<span class="badge-all">🎯 Disiplin: ${dAllPct}%</span>` : ''}
-              ${p.all_izin > 0 ? `<span class="badge-all">🙏 Izin: ${p.all_izin}</span>` : ''}
-              ${p.all_sakit > 0 ? `<span class="badge-all">🤒 Sakit: ${p.all_sakit}</span>` : ''}
-              ${p.all_tugas > 0 ? `<span class="badge-all">💼 Tugas: ${p.all_tugas}</span>` : ''}
-              ${p.all_tubel > 0 ? `<span class="badge-all">🎓 Tubel: ${p.all_tubel}</span>` : ''}
-              ${p.all_cuti > 0 ? `<span class="badge-all">🏖️ Cuti: ${p.all_cuti}</span>` : ''}
+              ${mT > 0 ? `<span class="badge-all"><i class="fas fa-clock"></i> Lambat: ${toHHMM(mT)}</span>` : ''}
+              ${mC > 0 ? `<span class="badge-all"><i class="fas fa-running"></i> Cepat: ${toHHMM(mC)}</span>` : ''}
+              ${p.all_alpa > 0 ? `<span class="badge-all" style="color:var(--danger)"><i class="fas fa-times"></i> TB: ${p.all_alpa}×</span>` : ''}
+              ${dAllPct !== null ? `<span class="badge-all"><i class="fas fa-bullseye"></i> Disiplin: ${dAllPct}%</span>` : ''}
+              ${p.all_izin > 0 ? `<span class="badge-all"><i class="fas fa-praying-hands"></i> Izin: ${p.all_izin}</span>` : ''}
+              ${p.all_sakit > 0 ? `<span class="badge-all"><i class="fas fa-thermometer-half"></i> Sakit: ${p.all_sakit}</span>` : ''}
+              ${p.all_tugas > 0 ? `<span class="badge-all"><i class="fas fa-briefcase"></i> Tugas: ${p.all_tugas}</span>` : ''}
+              ${p.all_tubel > 0 ? `<span class="badge-all"><i class="fas fa-graduation-cap"></i> Tubel: ${p.all_tubel}</span>` : ''}
+              ${p.all_cuti > 0 ? `<span class="badge-all"><i class="fas fa-umbrella-beach"></i> Cuti: ${p.all_cuti}</span>` : ''}
             </div>
           </div>
         ` : '';
@@ -1025,7 +1025,7 @@ function renderRekap(pg) {
             <div style="flex:1;min-width:0">
               <div class="pegawai-name">${nama}</div>
               ${jabatanStr}
-              <div class="pegawai-jabatan">${isMagang ? 'ID' : 'NIP'}: ${nip} ${!isMagang ? `· ${p.pangkat || '—'} ` : ''}· ${totalEntries} catatan · ⏳ ${parseFloat(p.jamHadir || 0).toFixed(1)} Jam</div>
+              <div class="pegawai-jabatan">${isMagang ? 'ID' : 'NIP'}: ${nip} ${!isMagang ? `· ${p.pangkat || '—'} ` : ''}· ${totalEntries} catatan · <i class="fas fa-hourglass-half"></i> ${parseFloat(p.jamHadir || 0).toFixed(1)} Jam</div>
             </div>
           </div>
 
@@ -1096,7 +1096,7 @@ async function downloadRekap() {
   const dari = $('rekapDari').value;
   const sampai = $('rekapSampai').value;
   if (!lastRekapPegawai.length) {
-    showRekapToast('fail', '⚠️ Belum ada data. Muat rekap terlebih dahulu.');
+    showRekapToast('fail', '<i class="fas fa-exclamation-triangle"></i> Belum ada data. Muat rekap terlebih dahulu.');
     return;
   }
 
@@ -1198,7 +1198,7 @@ async function downloadRekap() {
     const filename = `Rekap_HADIR_${isHarian ? dari : dari + '_sd_' + sampai}.xlsx`;
     XLSX.writeFile(wb, filename);
 
-    showRekapToast('success', `✅ Excel berhasil diunduh: ${filename}`);
+    showRekapToast('success', `<i class="fas fa-check"></i> Excel berhasil diunduh: ${filename}`);
 
     try {
       const instId = getScopedInstansiId();
@@ -1218,7 +1218,7 @@ async function downloadRekap() {
 
   } catch (e) {
     console.error('Download Excel Error:', e);
-    showRekapToast('fail', '❌ Gagal membuat Excel: ' + e.message);
+    showRekapToast('fail', '<i class="fas fa-times"></i> Gagal membuat Excel: ' + e.message);
   } finally {
     btn.disabled = false;
     btn.innerHTML = originalHtml;
@@ -1258,7 +1258,7 @@ window.toggleRekapMap = function (cardEl, pins) {
 };
 
 // ==========================================
-// 🏛️ SUPERADMIN: MULTI-AGENCY REKAP SCOPING
+// <i class="fas fa-landmark"></i> SUPERADMIN: MULTI-AGENCY REKAP SCOPING
 // ==========================================
 function initSuperadminRekapScoping() {
   const isSA = typeof _isSuperAdmin === 'function' && _isSuperAdmin();

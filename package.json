@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "node server/index.js",
-    "test": "node --test server/*.test.js tests/gas-media.test.js tests/aset-emoji.test.mjs tests/aset-kategori-dropdown.test.mjs tests/aset-kondisi.test.mjs tests/aset-markup.test.mjs tests/aset-nav.test.mjs tests/aset-router.test.mjs tests/aset-screens.test.mjs tests/workflow-mutasi.test.mjs",
+    "test": "node --test server/*.test.js tests/gas-media.test.js tests/aset-emoji.test.mjs tests/aset-kategori-dropdown.test.mjs tests/aset-kondisi.test.mjs tests/aset-markup.test.mjs tests/aset-nav.test.mjs tests/aset-router.test.mjs tests/aset-screens.test.mjs tests/workflow-mutasi.test.mjs tests/drive-img-url.test.js tests/deemoji.test.mjs",
     "test:live": "node --test tests/n8n-face.test.mjs tests/pks.test.mjs"
   },
   "dependencies": {

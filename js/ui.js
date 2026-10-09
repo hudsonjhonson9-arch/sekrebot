@@ -72,12 +72,12 @@
       }
 
       if (cached && cached.blob) {
-        if (statusEl) { statusEl.textContent = '✅ Tersedia (Offline Ready)'; statusEl.style.color = 'var(--success)'; }
+        if (statusEl) { statusEl.innerHTML = '<i class="fas fa-check"></i> Tersedia (Offline Ready)'; statusEl.style.color = 'var(--success)'; }
         if (btnEl) btnEl.style.display = 'none';
         if ($('btnClearHumanJs')) dom.show('btnClearHumanJs', 'flex');
         return true;
       } else {
-        if (statusEl) { statusEl.textContent = '❌ Belum Didownload'; statusEl.style.color = 'var(--warning)'; }
+        if (statusEl) { statusEl.innerHTML = '<i class="fas fa-times"></i> Belum Didownload'; statusEl.style.color = 'var(--warning)'; }
         if (btnEl) btnEl.style.display = 'flex';
         if ($('btnClearHumanJs')) dom.hide('btnClearHumanJs');
         return false;
@@ -94,7 +94,7 @@
 
     async function downloadHumanJsOffline() {
       const btn = $('btnDownloadHumanJs');
-      if (btn) { btn.innerHTML = '⏳ Mendownload... (0%)'; btn.disabled = true; }
+      if (btn) { btn.innerHTML = '<i class="fas fa-hourglass-half"></i> Mendownload... (0%)'; btn.disabled = true; }
       try {
         const response = await fetch(HUMAN_CDN);
         if (!response.ok) throw new Error('Response tidak OK');
@@ -115,17 +115,17 @@
             chunks.push(value);
             loaded += value.length;
             const progress = Math.round((loaded / total) * 100);
-            if (btn) btn.innerHTML = `⏳ Mendownload... (${progress}%)`;
+            if (btn) btn.innerHTML = `<i class="fas fa-hourglass-half"></i> Mendownload... (${progress}%)`;
           }
           const blob = new Blob(chunks, { type: 'application/javascript' });
           await idb.set('master_data', { key: 'human_script', blob: blob });
         }
 
-        alert('✅ Human.js berhasil didownload dan disimpan ke penyimpanan lokal perangkat!');
+        alert(' Human.js berhasil didownload dan disimpan ke penyimpanan lokal perangkat!');
         await checkHumanJsCache();
       } catch (err) {
-        alert('❌ Gagal mendownload Human.js: ' + err.message);
-        if (btn) { btn.innerHTML = '📥 Coba Lagi Download (Offline)'; btn.disabled = false; }
+        alert(' Gagal mendownload Human.js: ' + err.message);
+        if (btn) { btn.innerHTML = '<i class="fas fa-download"></i> Coba Lagi Download (Offline)'; btn.disabled = false; }
       }
     }
 
@@ -432,10 +432,10 @@
       const jmStr = _jamHari.masuk, jpStr = _jamHari.pulang;
 
       let jenis = '', batas = '';
-      if (tot <= _jamMasukHari) { jenis = `🟢 Waktu Absen Masuk${_jamHari.nama ? ' 🌙 ' + _jamHari.nama : ''}`; batas = `Masuk ≤ ${jmStr}` }
-      else if (tot >= _jamPulangHari) { jenis = '🔵 Waktu Absen Pulang'; batas = `Pulang ≥ ${jpStr}` }
-      else if (tot < 720) { jenis = '🔴 Di luar jam masuk'; batas = 'Terlambat' }
-      else { jenis = '🟡 Belum Waktunya Pulang'; batas = `Pulang ≥ ${jpStr}` }
+      if (tot <= _jamMasukHari) { jenis = `<i class="fas fa-circle"></i> Waktu Absen Masuk${_jamHari.nama ? ' <i class="fas fa-moon"></i> ' + _jamHari.nama : ''}`; batas = `Masuk ≤ ${jmStr}` }
+      else if (tot >= _jamPulangHari) { jenis = '<i class="fas fa-circle"></i> Waktu Absen Pulang'; batas = `Pulang ≥ ${jpStr}` }
+      else if (tot < 720) { jenis = '<i class="fas fa-circle"></i> Di luar jam masuk'; batas = 'Terlambat' }
+      else { jenis = '<i class="fas fa-circle"></i> Belum Waktunya Pulang'; batas = `Pulang ≥ ${jpStr}` }
       
       if (elJenis) elJenis.textContent = jenis;
       if (elBatas) elBatas.textContent = batas;

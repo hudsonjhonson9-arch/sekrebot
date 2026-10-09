@@ -225,7 +225,7 @@
     }
     @keyframes spin { from {transform:rotate(0deg)} to {transform:rotate(360deg)} }
 
-    /* 🖥️ DESKTOP OPTIMIZED LAYOUT 🖥️ */
+    /* <i class="fas fa-desktop"></i> DESKTOP OPTIMIZED LAYOUT <i class="fas fa-desktop"></i> */
     @media (min-width: 1024px) {
       .absen-layout-wrapper {
         display: grid;
@@ -307,13 +307,13 @@
 </head>
 
 <body>
-  <div id="offlineBanner" class="offline-banner">⚠️ ANDA SEDANG OFFLINE (MODE OFFLINE)</div>
+  <div id="offlineBanner" class="offline-banner"><i class="fas fa-exclamation-triangle"></i> ANDA SEDANG OFFLINE (MODE OFFLINE)</div>
 
   <div class="app">
     <!-- Header -->
     <div class="header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
       <div style="display: flex; align-items: center; gap: 12px;">
-        <div class="logo-wrap" id="headerLogoWrap">🏛️</div>
+        <div class="logo-wrap" id="headerLogoWrap"><i class="fas fa-landmark"></i></div>
         <div>
           <div class="org-name" id="headerOrgName">Sekretariat</div>
           <div class="org-sub" id="headerOrgSub">BAPPERIDA Sumba Barat</div>
@@ -418,21 +418,21 @@
               <div class="clock-badge">
                 <div class="dot"></div><span id="jenisAbsen">Menghitung...</span>
               </div>
-              <div class="clock-loc-badge unknown" id="clockLocBadge">📍 Mendeteksi lokasi...</div>
+              <div class="clock-loc-badge unknown" id="clockLocBadge"><i class="fas fa-map-marker-alt"></i> Mendeteksi lokasi...</div>
               <div id="batasAbsenWrap"
                 style="margin-top:6px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.35);border-radius:10px;padding:6px 10px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box">
-                <span style="font-size:14px">⏰</span><span id="batasAbsen"
+                <span style="font-size:14px"><i class="fas fa-clock"></i></span><span id="batasAbsen"
                   style="font-size:13px;font-weight:800;color:var(--gold);letter-spacing:-.3px;flex:1">—</span>
               </div>
             </div>
             <div class="clock-weather" id="clockWeatherWidget">
-              <div class="clock-weather-icon" id="weatherIcon">🌤️</div>
+              <div class="clock-weather-icon" id="weatherIcon"><i class="fas fa-cloud-sun"></i></div>
               <div class="clock-weather-temp" id="weatherTemp">—°C</div>
               <div class="clock-weather-cond" id="weatherCond">—</div>
               <div class="clock-weather-tags">
-                <span class="clock-weather-tag" id="weatherHumid">💧 —%</span>
-                <span class="clock-weather-tag" id="weatherWind">💨 — km/h</span>
-                <span class="clock-weather-tag" id="weatherFeel">🌡️ Terasa —°C</span>
+                <span class="clock-weather-tag" id="weatherHumid"><i class="fas fa-tint"></i> —%</span>
+                <span class="clock-weather-tag" id="weatherWind"><i class="fas fa-wind"></i> — km/h</span>
+                <span class="clock-weather-tag" id="weatherFeel"><i class="fas fa-thermometer-half"></i> Terasa —°C</span>
               </div>
             </div>
           </div>
@@ -450,7 +450,7 @@
             </div>
 
             <div class="card" style="margin:0; margin-bottom:12px">
-              <div class="card-title">📍 Lokasi Terdeteksi</div>
+              <div class="card-title"><i class="fas fa-map-marker-alt"></i> Lokasi Terdeteksi</div>
               <div id="lokasiList">
                 <div class="lokasi-item">
                   <div class="lokasi-dot"></div>
@@ -463,8 +463,8 @@
           <!-- GPS Card (Desktop Optimized) -->
           <div class="gps-card" id="gpsCard" style="margin:0">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px">
-               <div class="card-title" style="margin:0">🛰️ Data GPS Satelit</div>
-               <div id="gpsNet" style="font-size:10px; color:var(--info); font-weight:700">📶 Checking...</div>
+               <div class="card-title" style="margin:0"><i class="fas fa-satellite"></i> Data GPS Satelit</div>
+               <div id="gpsNet" style="font-size:10px; color:var(--info); font-weight:700"><i class="fas fa-signal"></i> Checking...</div>
             </div>
             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:10px">
               <div class="gps-row-box">
@@ -499,8 +499,8 @@
           <!-- Today's Log Card (Prominent Position) -->
           <div class="today-card" id="todayCard" style="margin:0">
             <div class="card-title">
-              <span>📋 Log Absen Hari Ini</span>
-              <button class="btn-sm-admin" onclick="loadTodayHistory()">🔄</button>
+              <span><i class="fas fa-clipboard-list"></i> Log Absen Hari Ini</span>
+              <button class="btn-sm-admin" onclick="loadTodayHistory()"><i class="fas fa-sync"></i></button>
             </div>
             <div id="todayList" style="margin-top:10px">
               <div class="shimmer" style="height:32px;border-radius:8px;margin-bottom:5px"></div>
@@ -511,7 +511,7 @@
           <!-- Result Card (Now below log) -->
           <div class="result-card" id="resultCard" style="margin-top:15px; display:none; position:relative">
             <button onclick="hideResult()" style="position:absolute; top:8px; right:10px; background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:5px"><i class="fas fa-times"></i></button>
-            <div class="r-icon" id="rIcon">✅</div>
+            <div class="r-icon" id="rIcon"><i class="fas fa-check"></i></div>
             <div style="flex:1">
               <div class="r-title" id="rTitle">—</div>
               <div class="r-msg" id="rMsg">—</div>
@@ -524,7 +524,7 @@
           <div class="absen-actions-container" style="flex-direction:column; gap:15px">
             <!-- Action TOP: WiFi & IP Info -->
             <div class="wifi-bar checking" id="wifiBar" style="width:100%; margin:0; min-height:60px">
-              <span class="wifi-icon" id="wifiIcon">🔄</span>
+              <span class="wifi-icon" id="wifiIcon"><i class="fas fa-sync"></i></span>
               <div class="wifi-info">
                 <div class="wifi-status" id="wifiStatus">Memeriksa jaringan...</div>
                 <div class="wifi-detail" id="wifiDetail">Mengambil informasi koneksi</div>
@@ -533,7 +533,7 @@
             
             <!-- Action MIDDLE: Absen Button -->
             <button class="btn-primary" id="btnAbsen" onclick="handleAbsen()" style="width:100%; margin:0; height:60px">
-              <div class="btn-inner"><span>📍</span><span id="btnText">Kirim Lokasi &amp; Absen</span></div>
+              <div class="btn-inner"><span><i class="fas fa-map-marker-alt"></i></span><span id="btnText">Kirim Lokasi &amp; Absen</span></div>
             </button>
 
             <!-- Action BOTTOM: Permission Button -->
@@ -546,21 +546,21 @@
 
           <!-- Pulang Luar Form -->
           <div class="pulang-luar-form" id="pulangLuarForm" style="margin-top:15px">
-            <div class="pulang-luar-note">⚠️ Khusus pegawai di lapangan yang tidak sempat kembali ke kantor</div>
+            <div class="pulang-luar-note"><i class="fas fa-exclamation-triangle"></i> Khusus pegawai di lapangan yang tidak sempat kembali ke kantor</div>
             <div class="form-group" style="margin-bottom:10px">
-              <label class="form-label">📝 Keterangan Lokasi Lapangan</label>
+              <label class="form-label"><i class="fas fa-edit"></i> Keterangan Lokasi Lapangan</label>
               <textarea class="form-textarea" id="ketPulangLuar" placeholder="Sebutkan kegiatan/tujuan lapangan Anda..." style="min-height:70px"></textarea>
             </div>
             <button class="btn-pulang-luar" id="btnPulangLuar" onclick="handlePulangLuar()" style="width:100%; margin:0">
-              <div class="btn-inner"><span>🏃</span><span id="btnPulangLuarText">Pulang dari Lapangan</span></div>
+              <div class="btn-inner"><span><i class="fas fa-running"></i></span><span id="btnPulangLuarText">Pulang dari Lapangan</span></div>
             </button>
           </div>
 
     <!-- Kontrol Kehadiran (Jam Jaga) -->
     <div class="kontrol-section" id="kontrolSection" style="display:none; margin-top:15px; padding:14px; border-radius:16px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12)">
-      <div style="font-size:11px; color:var(--gold); font-weight:800; letter-spacing:1px; margin-bottom:8px">🛡️ JAM JAGA | KONTROL KEHADIRAN</div>
+      <div style="font-size:11px; color:var(--gold); font-weight:800; letter-spacing:1px; margin-bottom:8px"><i class="fas fa-shield-alt"></i> JAM JAGA | KONTROL KEHADIRAN</div>
       <div id="kontrolTimes" style="margin-bottom:8px"></div>
-      <button class="btn-secondary-outline" onclick="handleKontrol('')" style="width:100%; height:45px; border-radius:14px; border:1px solid rgba(255,215,0,0.35); color:var(--gold); font-weight:700; font-size:12px; cursor:pointer">✅ Tandai Kontrol Kehadiran</button>
+      <button class="btn-secondary-outline" onclick="handleKontrol('')" style="width:100%; height:45px; border-radius:14px; border:1px solid rgba(255,215,0,0.35); color:var(--gold); font-weight:700; font-size:12px; cursor:pointer"><i class="fas fa-check"></i> Tandai Kontrol Kehadiran</button>
     </div>
 
         </div> <!-- /.absen-main-content -->
@@ -593,13 +593,13 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-title">📝 Jenis Keterangan</div>
+        <div class="card-title"><i class="fas fa-edit"></i> Jenis Keterangan</div>
         <div class="jenis-grid">
-          <button class="jenis-pill active" onclick="selectJenis('IZIN', this)">🙏 Izin</button>
-          <button class="jenis-pill" onclick="selectJenis('SAKIT',this)">🤒 Sakit</button>
-          <button class="jenis-pill" onclick="selectJenis('TUGAS',this)">💼 Tugas</button>
-          <button class="jenis-pill" onclick="selectJenis('TUBEL',this)">🎓 Tubel</button>
-          <button class="jenis-pill" onclick="selectJenis('CUTI',this)">🏖️ Cuti</button>
+          <button class="jenis-pill active" onclick="selectJenis('IZIN', this)"><i class="fas fa-praying-hands"></i> Izin</button>
+          <button class="jenis-pill" onclick="selectJenis('SAKIT',this)"><i class="fas fa-thermometer-half"></i> Sakit</button>
+          <button class="jenis-pill" onclick="selectJenis('TUGAS',this)"><i class="fas fa-briefcase"></i> Tugas</button>
+          <button class="jenis-pill" onclick="selectJenis('TUBEL',this)"><i class="fas fa-graduation-cap"></i> Tubel</button>
+          <button class="jenis-pill" onclick="selectJenis('CUTI',this)"><i class="fas fa-umbrella-beach"></i> Cuti</button>
         </div>
 
         <!-- Izin Jam UI -->
@@ -607,17 +607,17 @@
           <div id="labelIzinJam" onclick="toggleIzinJam()"
             style="cursor:pointer; padding:10px; background:var(--gold-dim); border-radius:10px; border:1px dashed var(--gold); display:flex; align-items:center; justify-content:center; gap:8px; font-size:11px; font-weight:700; color:var(--gold);">
             <input type="checkbox" id="checkIzinJam" style="display:none;" />
-            <span id="izinJamIcon">⏰</span> <span id="izinJamText">KETERANGAN PER JAM</span>
+            <span id="izinJamIcon"><i class="fas fa-clock"></i></span> <span id="izinJamText">KETERANGAN PER JAM</span>
           </div>
           <div id="rowIzinJam" style="display:none; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
-            <div><label class="form-label">🕒 JAM MULAI</label><input type="time" class="form-input" id="inJamMulai"
+            <div><label class="form-label"><i class="fas fa-clock"></i> JAM MULAI</label><input type="time" class="form-input" id="inJamMulai"
                 style="font-family:'JetBrains Mono',monospace;" /></div>
-            <div><label class="form-label">🕒 JAM SELESAI</label><input type="time" class="form-input" id="inJamSelesai"
+            <div><label class="form-label"><i class="fas fa-clock"></i> JAM SELESAI</label><input type="time" class="form-input" id="inJamSelesai"
                 style="font-family:'JetBrains Mono',monospace;" /></div>
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">📅 Rentang Tanggal</label>
+          <label class="form-label"><i class="fas fa-calendar"></i> Rentang Tanggal</label>
           <div style="position:relative;">
             <input type="text" id="ketDateRangePicker" class="form-input" placeholder="Ketuk untuk memilih tanggal..." readonly
               style="cursor:pointer; padding-right:40px; font-weight:600;">
@@ -632,43 +632,43 @@
             style="font-size:11px;color:var(--gold);font-weight:600;padding:6px 10px;background:var(--gold-dim);border-radius:8px;text-align:center"
             id="durText">—</div>
         </div>
-        <div class="form-group"><label class="form-label">📝 Keterangan</label><textarea class="form-textarea"
+        <div class="form-group"><label class="form-label"><i class="fas fa-edit"></i> Keterangan</label><textarea class="form-textarea"
             id="ketText" placeholder="Tuliskan keterangan lengkap..."></textarea></div>
         <div class="form-group">
-          <label class="form-label">📸 Bukti (Foto/Dokumen)</label>
+          <label class="form-label"><i class="fas fa-camera"></i> Bukti (Foto/Dokumen)</label>
           <input type="file" id="inputGaleri" accept="image/*,.pdf" style="display:none"
             onchange="handleBukti(event,'galeri')" />
           <div class="bukti-btn-row">
             <button type="button" class="bukti-btn" id="btnKamera" onclick="ambilFotoKeterangan()">
-              <span class="bukti-btn-icon">📷</span>
+              <span class="bukti-btn-icon"><i class="fas fa-camera"></i></span>
               <span id="lblKamera">Ambil Foto</span>
             </button>
             <button type="button" class="bukti-btn" id="btnGaleri" onclick="$('inputGaleri').click()">
-              <span class="bukti-btn-icon">📂</span>
+              <span class="bukti-btn-icon"><i class="fas fa-folder-open"></i></span>
               <span id="lblGaleri">Pilih File</span>
             </button>
           </div>
           <div class="file-preview-outer" id="buktiPreview">
             <img id="buktiImg" src="" alt="preview" />
-            <button type="button" class="file-clear" onclick="clearBukti()" title="Hapus">✕</button>
-            <div class="file-info-row"><span>✅</span><span id="buktiNamaText">—</span></div>
+            <button type="button" class="file-clear" onclick="clearBukti()" title="Hapus"><i class="fas fa-times"></i></button>
+            <div class="file-info-row"><span><i class="fas fa-check"></i></span><span id="buktiNamaText">—</span></div>
           </div>
         </div>
       </div>
       <div class="result-card" id="ketResult" style="display:none">
-        <div class="r-icon" id="ketRIcon">✅</div>
+        <div class="r-icon" id="ketRIcon"><i class="fas fa-check"></i></div>
         <div class="r-title" id="ketRTitle">—</div>
         <div class="r-msg" id="ketRMsg">—</div>
       </div>
       <button class="btn-primary" id="btnKet" onclick="handleKet()">
-        <div class="btn-inner"><span>📤</span><span id="btnKetText">Kirim Keterangan</span></div>
+        <div class="btn-inner"><span><i class="fas fa-upload"></i></span><span id="btnKetText">Kirim Keterangan</span></div>
       </button>
 
       <!-- ── Riwayat Pengajuan Keterangan ── -->
       <div class="ket-list-wrap">
         <div class="ket-list-title">
-          <span>📋 Riwayat Pengajuan Saya</span>
-          <button class="btn-sm-admin" onclick="loadKetStatus()" id="btnRefreshKet">🔄</button>
+          <span><i class="fas fa-clipboard-list"></i> Riwayat Pengajuan Saya</span>
+          <button class="btn-sm-admin" onclick="loadKetStatus()" id="btnRefreshKet"><i class="fas fa-sync"></i></button>
         </div>
         <div id="ketStatusList">
           <div class="shimmer" style="height:60px;border-radius:12px"></div>
@@ -683,38 +683,38 @@
     <!-- ══ MODAL EDIT KETERANGAN ══ -->
     <div class="ket-modal-overlay" id="ketEditOverlay" onclick="closeKetModal(event)">
       <div class="ket-modal">
-        <div class="ket-modal-title">✏️ Edit Keterangan <button class="ket-modal-close"
-            onclick="closeKetModalDirect()">✕</button></div>
+        <div class="ket-modal-title"><i class="fas fa-edit"></i> Edit Keterangan <button class="ket-modal-close"
+            onclick="closeKetModalDirect()"><i class="fas fa-times"></i></button></div>
         <input type="hidden" id="editKetRowNum" />
         <input type="hidden" id="editKetOrigTglMulai" />
         <div class="form-group" style="margin-bottom:10px">
           <label class="form-label">Jenis</label>
           <div class="jenis-grid">
-            <button class="jenis-pill active" id="editJenisPill_IZIN" onclick="setEditJenis('IZIN',this)">🙏
+            <button class="jenis-pill active" id="editJenisPill_IZIN" onclick="setEditJenis('IZIN',this)"><i class="fas fa-praying-hands"></i>
               Keterangan</button>
-            <button class="jenis-pill" id="editJenisPill_SAKIT" onclick="setEditJenis('SAKIT',this)">🤒 Sakit</button>
-            <button class="jenis-pill" id="editJenisPill_TUGAS" onclick="setEditJenis('TUGAS',this)">💼 Tugas</button>
+            <button class="jenis-pill" id="editJenisPill_SAKIT" onclick="setEditJenis('SAKIT',this)"><i class="fas fa-thermometer-half"></i> Sakit</button>
+            <button class="jenis-pill" id="editJenisPill_TUGAS" onclick="setEditJenis('TUGAS',this)"><i class="fas fa-briefcase"></i> Tugas</button>
           </div>
         </div>
         <div class="form-group" style="margin-bottom:10px">
-          <label class="form-label">📅 Tanggal Mulai</label>
+          <label class="form-label"><i class="fas fa-calendar"></i> Tanggal Mulai</label>
           <input type="date" class="form-input" id="editTglMulai" />
         </div>
         <div class="form-group" style="margin-bottom:10px">
-          <label class="form-label">📅 Tanggal Selesai</label>
+          <label class="form-label"><i class="fas fa-calendar"></i> Tanggal Selesai</label>
           <input type="date" class="form-input" id="editTglSelesai" />
         </div>
         <div class="form-group" style="margin-bottom:14px">
-          <label class="form-label">📝 Keterangan</label>
+          <label class="form-label"><i class="fas fa-edit"></i> Keterangan</label>
           <textarea class="form-textarea" id="editKetText" placeholder="Tuliskan keterangan..."></textarea>
         </div>
         <div class="result-card" id="editKetResult" style="display:none">
-          <div class="r-icon" id="editKetRIcon">✅</div>
+          <div class="r-icon" id="editKetRIcon"><i class="fas fa-check"></i></div>
           <div class="r-title" id="editKetRTitle">—</div>
           <div class="r-msg" id="editKetRMsg">—</div>
         </div>
         <button class="btn-primary" id="btnSimpanEdit" onclick="handleKetEdit()">
-          <div class="btn-inner"><span>💾</span><span>Simpan Perubahan</span></div>
+          <div class="btn-inner"><span><i class="fas fa-save"></i></span><span>Simpan Perubahan</span></div>
         </button>
       </div>
     </div>
@@ -730,13 +730,13 @@
             <div class="profil-nama" id="profilNama">—</div>
             <button onclick="loadUserProfile(true)"
               style="background:none; border:none; color:var(--gold); font-size:16px; cursor:pointer; padding:5px; opacity:0.8"
-              title="Segarkan Data Profil">🔄</button>
+              title="Segarkan Data Profil"><i class="fas fa-sync"></i></button>
           </div>
           <div class="profil-jabatan" id="profilJabatan">—</div>
           <div class="profil-nip" id="profilNip">NIP —</div>
           <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap">
-            <span class="profil-badge aktif-badge" id="profilStatusBadge">⚙️ MEMUAT</span>
-            <span class="profil-badge tg-badge" id="profilTgBadge">🔗 —</span>
+            <span class="profil-badge aktif-badge" id="profilStatusBadge"><i class="fas fa-cog"></i> MEMUAT</span>
+            <span class="profil-badge tg-badge" id="profilTgBadge"><i class="fas fa-link"></i> —</span>
           </div>
         </div>
       </div>
@@ -749,14 +749,14 @@
 
 
       <!-- ══ FACE RECOGNITION ══ -->
-      <div class="profil-section-title">🧠 Face Recognition</div>
+      <div class="profil-section-title"><i class="fas fa-brain"></i> Face Recognition</div>
       <div
         style="background:var(--card-bg);border:1px solid rgba(201,168,76,.25);border-radius:14px;padding:12px 14px;margin-bottom:12px">
         <div style="display:flex;align-items:center;gap:10px">
           <div id="profilFaceThumbWrap"
             style="width:52px;height:52px;border-radius:10px;background:rgba(255,255,255,.05);border:2px solid rgba(201,168,76,.3);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:22px">
             <img id="profilFaceThumb" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover">
-            <span id="profilFaceEmpty">👤</span>
+            <span id="profilFaceEmpty"><i class="fas fa-user"></i></span>
           </div>
           <div style="flex:1;min-width:0">
             <div id="profilFaceStatus" style="font-size:11px;font-weight:800;color:var(--muted)">Belum ada data wajah
@@ -766,22 +766,22 @@
           </div>
           <button onclick="registerFaceFromPreview()"
             style="background:linear-gradient(135deg,rgba(201,168,76,.2),rgba(201,168,76,.08));border:1px solid rgba(201,168,76,.4);color:var(--gold);border-radius:10px;padding:7px 12px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap"
-            id="btnProfilRegFace">📷 Daftarkan</button>
+            id="btnProfilRegFace"><i class="fas fa-camera"></i> Daftarkan</button>
         </div>
         <div id="profilFaceNote"
           style="font-size:9px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)">
-          💡 Data wajah disimpan di server. Setiap absen, sistem akan mencocokkan wajah secara otomatis.
+          <i class="fas fa-lightbulb"></i> Data wajah disimpan di server. Setiap absen, sistem akan mencocokkan wajah secara otomatis.
         </div>
       </div>
 
       <!-- ══ TANDA TANGAN DIGITAL ══ -->
-      <div class="profil-section-title">✍️ Tanda Tangan Digital</div>
+      <div class="profil-section-title"><i class="fas fa-pen"></i> Tanda Tangan Digital</div>
       <div class="profil-sig-card">
         <div class="profil-sig-row">
           <div class="profil-sig-thumb" id="profilSigThumb">
             <img id="profilSigImg" src="" alt=""
               style="display:none;width:100%;height:100%;object-fit:contain;background:#fff">
-            <span id="profilSigEmpty">✍️</span>
+            <span id="profilSigEmpty"><i class="fas fa-pen"></i></span>
           </div>
           <div style="flex:1;min-width:0">
             <div id="profilSigStatus" style="font-size:11px;font-weight:800;color:var(--muted)">Belum ada tanda tangan
@@ -791,18 +791,18 @@
           </div>
           <button onclick="openSignaturePad(MY_ID)"
             style="background:linear-gradient(135deg,rgba(201,168,76,.2),rgba(201,168,76,.08));border:1px solid rgba(201,168,76,.4);color:var(--gold);border-radius:10px;padding:7px 12px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap"
-            id="btnProfilSig">✏️ Buat</button>
+            id="btnProfilSig"><i class="fas fa-edit"></i> Buat</button>
         </div>
         <div
           style="font-size:9px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)">
-          💡 Tanda tangan disimpan sebagai PNG transparan dan disisipkan ke rekap absen PDF sesuai urutan pegawai.
+           Tanda tangan disimpan sebagai PNG transparan dan disisipkan ke rekap absen PDF sesuai urutan pegawai.
         </div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div class="profil-section-title" style="margin-bottom:0">📁 Dokumen Kepegawaian</div>
+        <div class="profil-section-title" style="margin-bottom:0"><i class="fas fa-folder"></i> Dokumen Kepegawaian</div>
         <div style="display:flex;gap:6px">
-          <button class="btn-sm-admin" onclick="openDokumenModal()" title="Tambah dokumen">➕</button>
-          <button class="btn-sm-admin" onclick="loadDokumen()">🔄</button>
+          <button class="btn-sm-admin" onclick="openDokumenModal()" title="Tambah dokumen"><i class="fas fa-plus"></i></button>
+          <button class="btn-sm-admin" onclick="loadDokumen()"><i class="fas fa-sync"></i></button>
         </div>
       </div>
       <!-- Modal tambah dokumen -->
@@ -810,13 +810,13 @@
         onclick="if(event.target===this)closeDokumenModal()">
         <div class="dok-modal">
           <div class="dok-modal-title">
-            <span>📎 Tambah Dokumen</span>
-            <button class="dok-modal-close" onclick="closeDokumenModal()">✕</button>
+            <span><i class="fas fa-paperclip"></i> Tambah Dokumen</span>
+            <button class="dok-modal-close" onclick="closeDokumenModal()"><i class="fas fa-times"></i></button>
           </div>
           <!-- Tab: Upload File vs Paste Link -->
           <div class="dok-tabs">
-            <button class="dok-tab active" id="dokTabUpload" onclick="switchDokTab('upload')">📤 Upload File</button>
-            <button class="dok-tab" id="dokTabLink" onclick="switchDokTab('link')">🔗 Paste Link Drive</button>
+            <button class="dok-tab active" id="dokTabUpload" onclick="switchDokTab('upload')"><i class="fas fa-upload"></i> Upload File</button>
+            <button class="dok-tab" id="dokTabLink" onclick="switchDokTab('link')"><i class="fas fa-link"></i> Paste Link Drive</button>
           </div>
           <!-- Upload file -->
           <div id="dokPanelUpload">
@@ -827,19 +827,19 @@
             <div class="dok-field">
               <label>Jenis</label>
               <select class="dok-input dok-select" id="dokJenis">
-                <option value="DOKUMEN">📄 Dokumen Umum</option>
-                <option value="SK">📜 SK / Surat Keputusan</option>
-                <option value="IJAZAH">🎓 Ijazah</option>
-                <option value="SERTIFIKAT">🏅 Sertifikat</option>
-                <option value="SKP">📊 SKP</option>
-                <option value="KTP">🪪 KTP</option>
-                <option value="FOTO">🖼️ Foto</option>
+                <option value="DOKUMEN">Dokumen Umum</option>
+                <option value="SK">SK / Surat Keputusan</option>
+                <option value="IJAZAH">Ijazah</option>
+                <option value="SERTIFIKAT">Sertifikat</option>
+                <option value="SKP">SKP</option>
+                <option value="KTP">KTP</option>
+                <option value="FOTO">Foto</option>
               </select>
             </div>
             <div class="dok-field">
               <label>File (PDF / Gambar, maks 5MB)</label>
               <label class="dok-file-label" for="dokFileInput">
-                <span>📂</span><span id="dokFileHint">Pilih file...</span>
+                <span><i class="fas fa-folder-open"></i></span><span id="dokFileHint">Pilih file...</span>
               </label>
               <input type="file" id="dokFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none"
                 onchange="onDokFileChange(event)">
@@ -858,13 +858,13 @@
             <div class="dok-field">
               <label>Jenis</label>
               <select class="dok-input dok-select" id="dokJenis2">
-                <option value="DOKUMEN">📄 Dokumen Umum</option>
-                <option value="SK">📜 SK / Surat Keputusan</option>
-                <option value="IJAZAH">🎓 Ijazah</option>
-                <option value="SERTIFIKAT">🏅 Sertifikat</option>
-                <option value="SKP">📊 SKP</option>
-                <option value="KTP">🪪 KTP</option>
-                <option value="FOTO">🖼️ Foto</option>
+                <option value="DOKUMEN">Dokumen Umum</option>
+                <option value="SK">SK / Surat Keputusan</option>
+                <option value="IJAZAH">Ijazah</option>
+                <option value="SERTIFIKAT">Sertifikat</option>
+                <option value="SKP">SKP</option>
+                <option value="KTP">KTP</option>
+                <option value="FOTO">Foto</option>
               </select>
             </div>
             <div class="dok-field">
@@ -873,7 +873,7 @@
             </div>
           </div>
           <button class="btn-admin" id="btnSimpanDok" onclick="submitDokumen()"
-            style="margin-top:10px;padding:11px;font-size:12px">💾 Simpan Dokumen</button>
+            style="margin-top:10px;padding:11px;font-size:12px"><i class="fas fa-save"></i> Simpan Dokumen</button>
           <div id="dokModalMsg" style="font-size:10px;text-align:center;margin-top:8px;display:none"></div>
         </div>
       </div>
@@ -884,27 +884,27 @@
 
       <!-- ══ RIWAYAT ABSEN ══ -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0 8px">
-        <div class="profil-section-title" style="margin-bottom:0">📋 Riwayat Absen</div>
+        <div class="profil-section-title" style="margin-bottom:0"><i class="fas fa-clipboard-list"></i> Riwayat Absen</div>
         <button class="btn-refresh" id="btnRefresh" onclick="loadLog()" style="font-size:9px;padding:4px 9px"><span
-            id="rIcon2">🔄</span></button>
+            id="rIcon2"><i class="fas fa-sync"></i></span></button>
       </div>
       <div class="filter-bar">
         <button class="filter-chip active" onclick="filterLog('SEMUA',this)">Semua</button>
-        <button class="filter-chip" onclick="filterLog('HADIR', this)">✅ Hadir</button>
-        <button class="filter-chip" onclick="filterLog('IZIN',  this)">🙏 Izin</button>
-        <button class="filter-chip" onclick="filterLog('SAKIT', this)">🤒 Sakit</button>
-        <button class="filter-chip" onclick="filterLog('TUGAS', this)">💼 Tugas</button>
-        <button class="filter-chip" onclick="filterLog('TUBEL', this)">🎓 Tubel</button>
-        <button class="filter-chip" onclick="filterLog('CUTI', this)">🏖️ Cuti</button>
-        <button class="filter-chip" onclick="filterLog('PULANG LUAR', this)">🏃 Lapangan</button>
-        <button class="filter-chip" onclick="filterLog('TANPA BERITA',  this)">❌ TB</button>
-        <button class="filter-chip" onclick="filterLog('LIBUR', this)">🎉 Libur</button>
+        <button class="filter-chip" onclick="filterLog('HADIR', this)"><i class="fas fa-check"></i> Hadir</button>
+        <button class="filter-chip" onclick="filterLog('IZIN',  this)"><i class="fas fa-praying-hands"></i> Izin</button>
+        <button class="filter-chip" onclick="filterLog('SAKIT', this)"><i class="fas fa-thermometer-half"></i> Sakit</button>
+        <button class="filter-chip" onclick="filterLog('TUGAS', this)"><i class="fas fa-briefcase"></i> Tugas</button>
+        <button class="filter-chip" onclick="filterLog('TUBEL', this)"><i class="fas fa-graduation-cap"></i> Tubel</button>
+        <button class="filter-chip" onclick="filterLog('CUTI', this)"><i class="fas fa-umbrella-beach"></i> Cuti</button>
+        <button class="filter-chip" onclick="filterLog('PULANG LUAR', this)"><i class="fas fa-running"></i> Lapangan</button>
+        <button class="filter-chip" onclick="filterLog('TANPA BERITA',  this)"><i class="fas fa-times"></i> TB</button>
+        <button class="filter-chip" onclick="filterLog('LIBUR', this)"><i class="fas fa-glass-cheers"></i> Libur</button>
       </div>
       <!-- ══ AKUMULASI WAKTU ══ -->
       <div id="akumulasiBox" style="display:none;margin-bottom:10px">
         <div
           style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">
-          ⏱️ Akumulasi Waktu</div>
+          <i class="fas fa-stopwatch"></i> Akumulasi Waktu</div>
 
         <!-- Baris 1: Hadir / Terlambat / Pulang Cepat -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:5px">
@@ -912,19 +912,19 @@
             style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:8px 5px;text-align:center">
             <div id="akHadir"
               style="font-size:20px;font-weight:800;color:var(--success);font-family:'JetBrains Mono',monospace">—</div>
-            <div style="font-size:8px;color:var(--muted);margin-top:2px">✅ Hari Hadir</div>
+            <div style="font-size:8px;color:var(--muted);margin-top:2px"><i class="fas fa-check"></i> Hari Hadir</div>
           </div>
           <div
             style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:8px 5px;text-align:center">
             <div id="akTerlambat"
               style="font-size:20px;font-weight:800;color:var(--warning);font-family:'JetBrains Mono',monospace">—</div>
-            <div style="font-size:8px;color:var(--muted);margin-top:2px">⏰ Hari Terlambat</div>
+            <div style="font-size:8px;color:var(--muted);margin-top:2px"><i class="fas fa-clock"></i> Hari Terlambat</div>
           </div>
           <div
             style="background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.25);border-radius:10px;padding:8px 5px;text-align:center">
             <div id="akCepat"
               style="font-size:20px;font-weight:800;color:#f97316;font-family:'JetBrains Mono',monospace">—</div>
-            <div style="font-size:8px;color:var(--muted);margin-top:2px">🏃 Pulang Cepat</div>
+            <div style="font-size:8px;color:var(--muted);margin-top:2px"><i class="fas fa-running"></i> Pulang Cepat</div>
           </div>
         </div>
 
@@ -946,7 +946,7 @@
             style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.18);border-radius:10px;padding:8px 5px;text-align:center">
             <div id="akEfisiensi"
               style="font-size:13px;font-weight:800;color:var(--info);font-family:'JetBrains Mono',monospace">—</div>
-            <div style="font-size:8px;color:var(--muted);margin-top:2px">📊 Disiplin</div>
+            <div style="font-size:8px;color:var(--muted);margin-top:2px"><i class="fas fa-chart-bar"></i> Disiplin</div>
           </div>
         </div>
 
@@ -968,7 +968,7 @@
             style="background:rgba(139,92,246,.05);border:1px solid rgba(139,92,246,.15);border-radius:10px;padding:8px 5px;text-align:center">
             <div id="akTotalKerja"
               style="font-size:13px;font-weight:800;color:#8b5cf6;font-family:'JetBrains Mono',monospace">—</div>
-            <div style="font-size:8px;color:var(--muted);margin-top:2px">⏳ Total Kerja</div>
+            <div style="font-size:8px;color:var(--muted);margin-top:2px"><i class="fas fa-hourglass-half"></i> Total Kerja</div>
           </div>
         </div>
       </div>
@@ -995,7 +995,7 @@
       <div id="logoutSection" style="margin-top:20px; display:none; padding: 0 10px 20px;">
         <button onclick="handleLogout()"
           style="width:100%; padding:14px; background:rgba(255, 60, 60, 0.1); border:1px solid rgba(255, 60, 60, 0.3); border-radius:12px; color:#ff6060; font-weight:700; cursor:pointer; font-size:13px; font-family:inherit; transition: all 0.3s;">
-          <span style="font-size: 16px; margin-right: 6px;">🚪</span> Keluar dari Akun ini
+          <span style="font-size: 16px; margin-right: 6px;"><i class="fas fa-door-open"></i></span> Keluar dari Akun ini
         </button>
       </div>
     </div>
@@ -1003,11 +1003,11 @@
     <!-- ══ TAB REKAP ══ -->
     <div class="panel" id="panel-rekap">
       <div class="rekap-header">
-        <div class="rekap-title">📊 Rekap Pegawai</div>
+        <div class="rekap-title"><i class="fas fa-chart-bar"></i> Rekap Pegawai</div>
         <div class="rekap-toolbar">
           <button class="btn-refresh" id="btnRekapRefresh" onclick="loadRekap()"
             style="background: var(--admin); color: white; border: none; font-weight: 800; padding: 6px 16px; border-radius: 9px; box-shadow: 0 2px 10px rgba(124, 58, 237, 0.25);">
-            <span id="rekapRefIcon" style="margin-right: 4px">🔄</span> Muat
+            <span id="rekapRefIcon" style="margin-right: 4px"><i class="fas fa-sync"></i></span> Muat
           </button>
         </div>
       </div>
@@ -1020,7 +1020,7 @@
         style="box-shadow: 0 4px 20px rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05); background: linear-gradient(145deg, var(--card-bg), rgba(255,255,255,0.02));">
 
         <!-- Unified Flatpickr Range Picker for Rekap -->
-        <div class="date-range-label" style="margin-bottom:8px">📅 Pilih Rentang Tanggal</div>
+        <div class="date-range-label" style="margin-bottom:8px"><i class="fas fa-calendar"></i> Pilih Rentang Tanggal</div>
         <div style="position:relative;">
           <input type="text" id="rekapRangePicker" class="date-range-input" placeholder="Ketuk untuk memilih rentang tanggal..." readonly
             style="width:100%; cursor:pointer; padding-right:40px; box-sizing:border-box;" />
@@ -1041,7 +1041,7 @@
 
         <!-- Filter Instansi (Only visible to Superadmin) -->
         <div id="rekapInstansiSection" style="display: none; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
-          <div class="date-range-label" style="margin-bottom: 4px">🏢 Pilih Instansi (Superadmin)</div>
+          <div class="date-range-label" style="margin-bottom: 4px"><i class="fas fa-building"></i> Pilih Instansi (Superadmin)</div>
           <select id="rekapInstansiSelect" class="date-range-input" style="width: 100%; height: 38px; cursor: pointer"
             onchange="onRekapInstansiChange()">
             <option value="">— Pilih Instansi —</option>
@@ -1050,7 +1050,7 @@
 
         <!-- Filter Role (Only visible to Superadmin/Admin) -->
         <div id="rekapRoleFilterSection" style="display: none; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
-          <div class="date-range-label" style="margin-bottom: 4px">👥 Tampilkan Pegawai/Magang (Admin)</div>
+          <div class="date-range-label" style="margin-bottom: 4px"><i class="fas fa-users"></i> Tampilkan Pegawai/Magang (Admin)</div>
           <select id="rekapRoleFilter" class="date-range-input" style="width: 100%; height: 38px; cursor: pointer" onchange="loadRekap()">
             <option value="pegawai" selected>Hanya Pegawai (NIP/PPPK)</option>
             <option value="magang">Hanya Anak Magang / Lainnya</option>
@@ -1072,64 +1072,64 @@
         <!-- Label seksi -->
         <div
           style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;padding:0 2px">
-          📋 Kehadiran</div>
+          <i class="fas fa-clipboard-list"></i> Kehadiran</div>
         <!-- Baris 1: Masuk · Pulang · Lap. · Luar Jam — 4 kolom -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">
           <div class="rs-card rs-masuk">
             <div class="rs-num" id="rsMasuk">—</div>
-            <div class="rs-ico">✅</div>
+            <div class="rs-ico"><i class="fas fa-check"></i></div>
             <div class="rs-lbl">Masuk</div>
           </div>
           <div class="rs-card rs-pulang">
             <div class="rs-num" id="rsPulang">—</div>
-            <div class="rs-ico">🔵</div>
+            <div class="rs-ico"><i class="fas fa-circle"></i></div>
             <div class="rs-lbl">Pulang</div>
           </div>
           <div class="rs-card rs-lap">
             <div class="rs-num" id="rsPulangLuar">—</div>
-            <div class="rs-ico">🏃</div>
+            <div class="rs-ico"><i class="fas fa-running"></i></div>
             <div class="rs-lbl">Lapangan</div>
           </div>
           <div class="rs-card rs-luar">
             <div class="rs-num" id="rsLuar">—</div>
-            <div class="rs-ico">⚠️</div>
+            <div class="rs-ico"><i class="fas fa-exclamation-triangle"></i></div>
             <div class="rs-lbl">Lambat:</div>
           </div>
         </div>
         <!-- Label seksi -->
         <div
           style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;padding:0 2px">
-          📝 Keterangan</div>
+          <i class="fas fa-edit"></i> Keterangan</div>
         <!-- Baris 2: Izin · Sakit · Tugas · TUBEL · CUTI · TB — 3 kolom x 2 baris -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
           <div class="rs-card rs-izin">
             <div class="rs-num" id="rsIzin">—</div>
-            <div class="rs-ico">🙏</div>
+            <div class="rs-ico"><i class="fas fa-praying-hands"></i></div>
             <div class="rs-lbl">Izin</div>
           </div>
           <div class="rs-card rs-sakit">
             <div class="rs-num" id="rsSakit">—</div>
-            <div class="rs-ico">🤒</div>
+            <div class="rs-ico"><i class="fas fa-thermometer-half"></i></div>
             <div class="rs-lbl">Sakit</div>
           </div>
           <div class="rs-card rs-tugas">
             <div class="rs-num" id="rsTugas">—</div>
-            <div class="rs-ico">💼</div>
+            <div class="rs-ico"><i class="fas fa-briefcase"></i></div>
             <div class="rs-lbl">Tugas</div>
           </div>
           <div class="rs-card rs-tubel">
             <div class="rs-num" id="rsTubel">—</div>
-            <div class="rs-ico">🎓</div>
+            <div class="rs-ico"><i class="fas fa-graduation-cap"></i></div>
             <div class="rs-lbl">Tubel</div>
           </div>
           <div class="rs-card rs-cuti">
             <div class="rs-num" id="rsCuti">—</div>
-            <div class="rs-ico">🏖️</div>
+            <div class="rs-ico"><i class="fas fa-umbrella-beach"></i></div>
             <div class="rs-lbl">Cuti</div>
           </div>
           <div class="rs-card rs-alpa">
             <div class="rs-num" id="rsAlpa">—</div>
-            <div class="rs-ico">❌</div>
+            <div class="rs-ico"><i class="fas fa-times"></i></div>
             <div class="rs-lbl">TB</div>
           </div>
         </div>
@@ -1138,11 +1138,11 @@
       <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:10px;margin-bottom:12px">
         <button class="btn-admin" id="btnDownloadRekap" onclick="downloadRekap()"
           style="margin:0;height:44px;font-size:12px">
-          <div class="btn-inner"><span>📊</span> Excel Rekap</div>
+          <div class="btn-inner"><span><i class="fas fa-chart-bar"></i></span> Excel Rekap</div>
         </button>
         <button class="btn-admin" id="btnDownloadPDF" onclick="generateRekapPDF()"
           style="margin:0;height:44px;font-size:12px">
-          <div class="btn-inner"><span>📄</span> PDF Rekap</div>
+          <div class="btn-inner"><span></span> PDF Rekap</div>
         </button>
       </div>
 
@@ -1167,12 +1167,12 @@
       <input type="file" id="tugasBuktiInput" accept="image/*" capture="camera" style="display:none" onchange="processTugasBukti(this)">
       
       <div class="rekap-header">
-        <div class="rekap-title">📍 Penugasan & Perjalanan Dinas</div>
+        <div class="rekap-title"><i class="fas fa-map-marker-alt"></i> Penugasan & Perjalanan Dinas</div>
       </div>
 
       <!-- Filter Instansi Tugas (Only visible to Superadmin) -->
       <div id="tugasInstansiSection" style="display: none; margin-bottom: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
-        <div class="form-label" style="margin-bottom: 4px; font-weight:800; color:var(--gold);">🏢 Pilih Instansi (Superadmin)</div>
+        <div class="form-label" style="margin-bottom: 4px; font-weight:800; color:var(--gold);"><i class="fas fa-building"></i> Pilih Instansi (Superadmin)</div>
         <select id="tugasInstansiSelect" class="form-input" style="width: 100%; height: 38px; cursor: pointer; background: var(--card); color: var(--white); border: 1px solid var(--border); border-radius: 12px;"
           onchange="onTugasInstansiChange()">
           <option value="">— Pilih Instansi —</option>
@@ -1185,7 +1185,7 @@
           <i class="fas fa-plus-circle" style="margin-right:8px"></i> Buat Penugasan Baru
         </div>
         <div class="form-group">
-          <label class="form-label">👥 Pilih Pegawai</label>
+          <label class="form-label"><i class="fas fa-users"></i> Pilih Pegawai</label>
           <div class="custom-search-dropdown" id="tugasPegawaiContainer">
             <div class="dropdown-trigger" onclick="toggleTugasDropdown()">
               <i class="fas fa-search search-icon"></i>
@@ -1199,7 +1199,7 @@
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">📍 Titik Koordinat Tugas (Opsional - jika kosong, koordinat diambil saat pengerjaan)</label>
+          <label class="form-label"><i class="fas fa-map-marker-alt"></i> Titik Koordinat Tugas (Opsional - jika kosong, koordinat diambil saat pengerjaan)</label>
           <div id="tugasMap" style="height:220px; border-radius:14px; border:1px solid var(--border); margin-bottom:10px; z-index:1"></div>
           <div style="display:flex; gap:8px">
             <input type="text" id="tugasLat" class="form-input" placeholder="Latitude" readonly style="font-family:'JetBrains Mono',monospace">
@@ -1207,36 +1207,36 @@
           </div>
         </div>
         <div class="form-group" id="actingAsGroup" style="display:none">
-          <label class="form-label">👔 Bertindak Sebagai (Pemberi Tugas)</label>
+          <label class="form-label"><i class="fas fa-user-tie"></i> Bertindak Sebagai (Pemberi Tugas)</label>
           <select id="tugasPemberi" class="form-input" style="background:var(--card); color:var(--white); border:1px solid var(--border); border-radius:12px">
              <option value="">-- Gunakan Profil Saya --</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">📜 Nomor Surat Tugas</label>
+          <label class="form-label"><i class="fas fa-scroll"></i> Nomor Surat Tugas</label>
           <input type="text" id="tugasNomorSurat" class="form-input" placeholder="Contoh: 800/123/BAPP-SB/2025">
         </div>
         <div class="form-group">
-          <label class="form-label">📝 Keterangan Tugas</label>
+          <label class="form-label"><i class="fas fa-edit"></i> Keterangan Tugas</label>
           <textarea id="tugasKet" class="form-textarea" placeholder="Tuliskan detail tugas di sini..." style="min-height:80px"></textarea>
         </div>
         <div class="form-group">
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
             <div>
-              <label class="form-label">📅 Tanggal Tugas</label>
+              <label class="form-label"><i class="fas fa-calendar"></i> Tanggal Tugas</label>
               <input type="date" id="tugasTanggal" class="form-input">
             </div>
             <div>
-              <label class="form-label">📏 Radius (Meter)</label>
+              <label class="form-label"><i class="fas fa-ruler"></i> Radius (Meter)</label>
               <input type="number" id="tugasRadius" class="form-input" value="100" placeholder="Contoh: 100">
             </div>
           </div>
         </div>
         <button class="btn-primary" onclick="handleSaveTugas()" id="btnSaveTugas">
-          <div class="btn-inner"><span>💾</span> Simpan Penugasan</div>
+          <div class="btn-inner"><span><i class="fas fa-save"></i></span> Simpan Penugasan</div>
         </button>
         <div class="result-card" id="tugasResult" style="display:none; margin-top:12px">
-          <div class="r-icon" id="tugasRIcon">✅</div>
+          <div class="r-icon" id="tugasRIcon"><i class="fas fa-check"></i></div>
           <div class="r-title" id="tugasRTitle">—</div>
           <div class="r-msg" id="tugasRMsg">—</div>
         </div>
@@ -1258,12 +1258,12 @@
     <!-- ══ TAB LEMBUR ══ -->
     <div class="panel" id="panel-lembur">
       <div class="rekap-header">
-        <div class="rekap-title">🌙 Rekap Lembur</div>
+        <div class="rekap-title"><i class="fas fa-moon"></i> Rekap Lembur</div>
       </div>
 
       <!-- Filter Instansi Lembur (Only visible to Superadmin) -->
       <div id="lemburInstansiSection" style="display: none; margin-bottom: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
-        <div class="form-label" style="margin-bottom: 4px; font-weight:800; color:var(--gold);">🏢 Pilih Instansi (Superadmin)</div>
+        <div class="form-label" style="margin-bottom: 4px; font-weight:800; color:var(--gold);"><i class="fas fa-building"></i> Pilih Instansi (Superadmin)</div>
         <select id="lemburInstansiSelect" class="form-input" style="width: 100%; height: 38px; cursor: pointer; background: var(--card); color: var(--white); border: 1px solid var(--border); border-radius: 12px;"
           onchange="onLemburInstansiChange()">
           <option value="">— Pilih Instansi —</option>
@@ -1271,7 +1271,7 @@
       </div>
       <div class="card glass-card">
         <div class="form-group">
-          <label class="form-label">📅 Pilih Rentang Tanggal Lembur</label>
+          <label class="form-label"><i class="fas fa-calendar"></i> Pilih Rentang Tanggal Lembur</label>
           <div style="position:relative;">
             <input type="text" id="lemburDateSelect" class="form-input" placeholder="Ketuk untuk memilih tanggal..." readonly
               style="background:var(--card-bg); color:var(--white); font-weight:600; cursor:pointer; padding-right:40px;">
@@ -1293,7 +1293,7 @@
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">👥 Pilih Pegawai</label>
+          <label class="form-label"><i class="fas fa-users"></i> Pilih Pegawai</label>
           <div class="custom-search-dropdown" id="lemburPegawaiContainer">
             <div class="dropdown-trigger" onclick="toggleLemburDropdown()">
               <i class="fas fa-search search-icon"></i>
@@ -1305,13 +1305,13 @@
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">📋 Dalam Rangka</label>
+          <label class="form-label"><i class="fas fa-clipboard-list"></i> Dalam Rangka</label>
           <input type="text" id="lemburDalamRangka" class="form-input"
             placeholder="Contoh: Persiapan Musrenbang Tahun 2026..."
             style="font-size:13px;">
         </div>
         <button class="btn-primary" onclick="handleFetchLembur()" id="btnFetchLembur">
-          <div class="btn-inner"><span>📊</span> Tarik Data Lembur</div>
+          <div class="btn-inner"><span><i class="fas fa-chart-bar"></i></span> Tarik Data Lembur</div>
         </button>
       </div>
       
@@ -1517,10 +1517,10 @@
               <div class="form-group">
                 <label class="form-label">Jenis Mutasi</label>
                 <select class="form-input" id="mutasiJenis">
-                  <option value="MASUK"><i class="fas fa-download" aria-hidden="true"></i> Barang Masuk</option>
-                  <option value="KELUAR"><i class="fas fa-upload" aria-hidden="true"></i> Barang Keluar</option>
-                  <option value="TRANSFER"><i class="fas fa-exchange-alt" aria-hidden="true"></i> Transfer Bidang</option>
-                  <option value="RUSAK"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i> Penghapusan/Rusak</option>
+                  <option value="MASUK">Barang Masuk</option>
+                  <option value="KELUAR">Barang Keluar</option>
+                  <option value="TRANSFER">Transfer Bidang</option>
+                  <option value="RUSAK">Penghapusan/Rusak</option>
                 </select>
               </div>
               <div class="form-group">
@@ -1851,14 +1851,14 @@
     <!-- ══ TAB ADMIN (conditional) ══ -->
     <div class="panel" id="panel-admin">
       <div class="admin-header-card" style="margin-bottom:12px">
-        <div class="admin-badge">⚡ AKSES ADMIN</div>
+        <div class="admin-badge"><i class="fas fa-bolt"></i> AKSES ADMIN</div>
         <div class="admin-title">Panel Dashboard Utama</div>
         <div class="admin-sub">Kelola kehadiran, data pegawai, dan konfigurasi sistem</div>
       </div>
 
       <!-- Filter Instansi (Only visible to Superadmin) -->
       <div id="adminInstansiSection" style="display: none; margin-bottom: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 10px 12px;">
-        <div class="date-range-label" style="margin-bottom: 4px; font-weight: 700; color: var(--gold); font-size: 11px;">🏢 Pilih Instansi (Superadmin)</div>
+        <div class="date-range-label" style="margin-bottom: 4px; font-weight: 700; color: var(--gold); font-size: 11px;"><i class="fas fa-building"></i> Pilih Instansi (Superadmin)</div>
         <select id="adminInstansiSelect" class="date-range-input" style="width: 100%; height: 38px; cursor: pointer"
           onchange="onAdminInstansiChange()">
           <option value="">— Pilih Instansi —</option>
@@ -1867,17 +1867,17 @@
 
       <!-- Sub-Navigasi Admin -->
       <div class="admin-nav">
-        <button class="admin-nav-btn active" id="btn-nav-ops" onclick="switchAdminSection('ops')">⚙️ Operasional</button>
-        <button class="admin-nav-btn" id="btn-nav-user" onclick="switchAdminSection('user')">👥 Kepegawaian</button>
-        <button class="admin-nav-btn" id="btn-nav-config" onclick="switchAdminSection('config')">🛠 Konfigurasi</button>
+        <button class="admin-nav-btn active" id="btn-nav-ops" onclick="switchAdminSection('ops')"><i class="fas fa-cog"></i> Operasional</button>
+        <button class="admin-nav-btn" id="btn-nav-user" onclick="switchAdminSection('user')"><i class="fas fa-users"></i> Kepegawaian</button>
+        <button class="admin-nav-btn" id="btn-nav-config" onclick="switchAdminSection('config')"><i class="fas fa-tools"></i> Konfigurasi</button>
       </div>
 
       <div id="admin-section-ops" class="admin-section">
         <!-- ══ KONFIRMASI KETERANGAN ══ -->
         <div class="card">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-size:11px;font-weight:800;color:var(--white)">📋 KONFIRMASI KETERANGAN PEGAWAI</div>
-            <button class="btn-sm-admin" onclick="loadKonfirmasiAdmin()">🔄</button>
+            <div style="font-size:11px;font-weight:800;color:var(--white)"><i class="fas fa-clipboard-list"></i> KONFIRMASI KETERANGAN PEGAWAI</div>
+            <button class="btn-sm-admin" onclick="loadKonfirmasiAdmin()"><i class="fas fa-sync"></i></button>
           </div>
           <div class="radius-note" style="margin-bottom:12px">Persetujuan untuk izin, sakit, atau perjalanan dinas yang
             pending.</div>
@@ -1886,13 +1886,13 @@
             <div class="shimmer" style="height:80px;border-radius:12px;margin-top:8px"></div>
           </div>
           <div class="result-card" id="konfirmasiResult" style="display:none">
-            <div class="r-icon" id="konfirmasiRIcon">✅</div>
+            <div class="r-icon" id="konfirmasiRIcon"><i class="fas fa-check"></i></div>
             <div class="r-title" id="konfirmasiRTitle">—</div>
             <div class="r-msg" id="konfirmasiRMsg">—</div>
           </div>
         </div>
 
-        <!-- 🌟 PRO MAX INPUT KETERANGAN PEGAWAI (ADMIN) 🌟 -->
+        <!-- <i class="fas fa-star"></i> PRO MAX INPUT KETERANGAN PEGAWAI (ADMIN) <i class="fas fa-star"></i> -->
         <div class="card glass-card admin-module-card" id="adminKetCard" style="margin-top:15px; padding:20px; border-radius:24px; border: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); box-shadow: 0 20px 40px rgba(0,0,0,0.4)">
           
           <!-- Header Module -->
@@ -1915,7 +1915,7 @@
             
              <!-- Filter Instansi (Only visible to Superadmin) -->
              <div id="adminKetInstansiSection" style="display: none; margin-bottom: 15px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; box-sizing: border-box;">
-               <div style="font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;">🏢 Pilih Instansi (Superadmin)</div>
+               <div style="font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;"><i class="fas fa-building"></i> Pilih Instansi (Superadmin)</div>
                <select id="adminKetInstansiSelect" class="form-input" style="width: 100%; height: 38px; cursor: pointer; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: var(--white); border-radius: 8px; padding: 0 10px;" onchange="onAdminKetInstansiChange()">
                  <option value="">— Pilih Instansi —</option>
                </select>
@@ -1945,11 +1945,11 @@
               <div class="admin-field-wrap">
                 <label style="display:block; font-size:10px; font-weight:800; color:var(--muted); margin-bottom:6px; text-transform:uppercase">Jenis Keterangan</label>
                 <select id="adminKetJenis" class="admin-select-custom" style="width:100%; height:45px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:var(--white); padding:0 12px; font-size:13px; outline:none; cursor:pointer">
-                  <option value="IZIN">🙏 IZIN</option>
-                  <option value="SAKIT">🤒 SAKIT</option>
-                  <option value="TUGAS">💼 TUGAS</option>
-                  <option value="TUBEL">🎓 TUBEL</option>
-                  <option value="CUTI">🏖️ CUTI</option>
+                  <option value="IZIN">IZIN</option>
+                  <option value="SAKIT">SAKIT</option>
+                  <option value="TUGAS">TUGAS</option>
+                  <option value="TUBEL">TUBEL</option>
+                  <option value="CUTI">CUTI</option>
                 </select>
               </div>
               <!-- Lampiran Bukti -->
@@ -1975,7 +1975,7 @@
             <!-- Preview Section -->
             <div id="adminKetPreviewWrap" style="display:none; padding:15px; background:rgba(0,0,0,0.2); border-radius:16px; border:1px solid rgba(255,255,255,0.05); animation: slideDown 0.3s ease">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px">
-                 <div style="font-size:10px; color:var(--gold); font-weight:900; letter-spacing:1px">🔍 PREVIEW LAMPIRAN</div>
+                 <div style="font-size:10px; color:var(--gold); font-weight:900; letter-spacing:1px"><i class="fas fa-search"></i> PREVIEW LAMPIRAN</div>
                  <button onclick="clearAdminKetFile()" style="background:rgba(239,68,68,0.1); border:none; color:#ef4444; font-size:10px; padding:4px 10px; border-radius:8px; cursor:pointer; font-weight:700">Hapus</button>
               </div>
               <div style="border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.1)">
@@ -2014,7 +2014,7 @@
         </div>
 
         <style>
-          /* 💎 PRO MAX INPUT STYLES 💎 */
+          /* <i class="fas fa-gem"></i> PRO MAX INPUT STYLES <i class="fas fa-gem"></i> */
           .admin-select-custom, .admin-input-premium {
             appearance: none;
             -webkit-appearance: none;
@@ -2112,7 +2112,7 @@
             to { opacity: 1; transform: translateY(0); }
           }
 
-          /* 🔍 SEARCHABLE DROPDOWN STYLES 🔍 */
+          /* <i class="fas fa-search"></i> SEARCHABLE DROPDOWN STYLES <i class="fas fa-search"></i> */
           .custom-search-dropdown {
             position: relative;
             width: 100%;
@@ -2214,8 +2214,8 @@
 
         <!-- ══ MEJA ABSEN (Admin Only) ══ -->
         <div class="meja-absen-card" id="mejaAbsenCard" style="margin-top:12px">
-          <div class="meja-badge">🛡️ Akses Terjamin</div>
-          <div class="meja-title">🖥️ Meja Absen</div>
+          <div class="meja-badge"><i class="fas fa-shield-alt"></i> Akses Terjamin</div>
+          <div class="meja-title"><i class="fas fa-desktop"></i> Meja Absen</div>
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
             <div class="meja-sub" style="margin-bottom:0">Scan wajah pegawai untuk HADIR manual.</div>
             <div id="aiEngineBadge"
@@ -2228,46 +2228,46 @@
               <div class="meja-status-text" id="mejaStatusText">Siap digunakan</div>
               <div class="meja-status-sub" id="mejaStatusSub">Tekan tombol untuk memulai sesi</div>
             </div>
-            <div style="font-size:18px">🖥️</div>
+            <div style="font-size:18px"><i class="fas fa-desktop"></i></div>
           </div>
           <div class="meja-loc-bar" id="mejaLocBar">
-            <span>📍</span> <span class="loc-val" id="mejaLocVal">Lokasi belum diambil</span>
+            <span><i class="fas fa-map-marker-alt"></i></span> <span class="loc-val" id="mejaLocVal">Lokasi belum diambil</span>
             <span id="mejaLocAccuracy" style="font-size:8px;color:var(--muted)"></span>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
             <div
               style="text-align:center;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:10px;padding:8px">
               <div style="font-size:18px;font-weight:800;color:var(--success)" id="mejaCntMasuk">0</div>
-              <div style="font-size:8px;color:var(--muted);font-weight:700">✅ MASUK</div>
+              <div style="font-size:8px;color:var(--muted);font-weight:700"><i class="fas fa-check"></i> MASUK</div>
             </div>
             <div
               style="text-align:center;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.15);border-radius:10px;padding:8px">
               <div style="font-size:18px;font-weight:800;color:var(--info)" id="mejaCntPulang">0</div>
-              <div style="font-size:8px;color:var(--muted);font-weight:700">🔵 PULANG</div>
+              <div style="font-size:8px;color:var(--muted);font-weight:700"><i class="fas fa-circle"></i> PULANG</div>
             </div>
             <div
               style="text-align:center;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:10px;padding:8px">
               <div style="font-size:18px;font-weight:800;color:var(--danger)" id="mejaCntGagal">0</div>
-              <div style="font-size:8px;color:var(--muted);font-weight:700">❌ GAGAL</div>
+              <div style="font-size:8px;color:var(--muted);font-weight:700"><i class="fas fa-times"></i> GAGAL</div>
             </div>
           </div>
           <div class="meja-result-card" id="mejaResultCard"></div>
           <button class="btn-meja-start" id="btnMejaAbsen" onclick="startMejaAbsen()">
-            <span>🖥️</span><span id="btnMejaText">Mulai Meja Absen</span>
+            <span><i class="fas fa-desktop"></i></span><span id="btnMejaText">Mulai Meja Absen</span>
           </button>
-          <button class="btn-meja-stop" id="btnMejaStop" onclick="stopMejaAbsen()" style="display:none">⏹️ Hentikan
+          <button class="btn-meja-stop" id="btnMejaStop" onclick="stopMejaAbsen()" style="display:none"><i class="fas fa-stop"></i> Hentikan
             Sesi</button>
 
-          <!-- 🧠 AI ENGINE SETTINGS ══ -->
+          <!-- <i class="fas fa-brain"></i> AI ENGINE SETTINGS ══ -->
           <div style="margin-top:20px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.1)">
             <div
               style="font-size:10px;font-weight:800;color:var(--white);margin-bottom:10px;display:flex;align-items:center;gap:6px">
-              🧠 PENGATURAN MESIN AI
+              <i class="fas fa-brain"></i> PENGATURAN MESIN AI
             </div>
 
             <!-- Engine terkunci ke Human.js -->
             <div style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.25);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
-              <span style="font-size:18px">🛡️</span>
+              <span style="font-size:18px"><i class="fas fa-shield-alt"></i></span>
               <div>
                 <div style="font-size:11px;font-weight:800;color:var(--gold)">Human Library (Advanced / Anti-Spoof)</div>
                 <div style="font-size:8px;color:var(--muted);margin-top:2px">Liveness detection akurat &middot; Descriptor 1024-dim &middot; Anti-spoofing aktif</div>
@@ -2283,10 +2283,10 @@
                   style="font-size:9px; font-weight:800; color:var(--warning)">Memeriksa...</span>
               </div>
               <button class="btn-admin" id="btnDownloadHumanJs" onclick="downloadHumanJsOffline()"
-                style="width:100%; justify-content:center; height:30px; font-size:10px; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); color:var(--success); border-radius:6px; margin-bottom:6px; display:none;">📥
+                style="width:100%; justify-content:center; height:30px; font-size:10px; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); color:var(--success); border-radius:6px; margin-bottom:6px; display:none;"><i class="fas fa-download"></i>
                 Download Library ke Perangkat (Offline)</button>
               <button class="btn-admin" id="btnClearHumanJs" onclick="clearHumanJsCache()"
-                style="width:100%; justify-content:center; height:30px; font-size:10px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:var(--danger); border-radius:6px; display:none;">🗑️
+                style="width:100%; justify-content:center; height:30px; font-size:10px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:var(--danger); border-radius:6px; display:none;"><i class="fas fa-trash"></i>
                 Hapus File Cache Lokal</button>
             </div>
 
@@ -2300,27 +2300,27 @@
         <div class="card" id="adminFaceRegCard">
           <div class="card-header-admin" style="margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:1px solid var(--border)">
             <div style="font-size:11px; font-weight:800; color:var(--white); display:flex; align-items:center; gap:8px">
-               <span>👥</span> MANAJEMEN PEGAWAI TERPADU
+               <span><i class="fas fa-users"></i></span> MANAJEMEN PEGAWAI TERPADU
             </div>
             <div style="display:flex; gap:8px">
-              <button class="btn-sm-admin" id="btnAdminAddData" onclick="showAddPegawai()">➕ Tambah</button>
-              <button class="btn-sm-admin" onclick="loadPegawaiMgmt()" title="Refresh">🔄</button>
+              <button class="btn-sm-admin" id="btnAdminAddData" onclick="showAddPegawai()"><i class="fas fa-plus"></i> Tambah</button>
+              <button class="btn-sm-admin" onclick="loadPegawaiMgmt()" title="Refresh"><i class="fas fa-sync"></i></button>
             </div>
           </div>
 
           <!-- Dropdown Scoping Instansi untuk Superadmin -->
           <div id="pegawaiInstansiSection" style="display: none; margin-bottom: 15px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; box-sizing: border-box;">
-            <div style="font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;">🏢 Pilih Instansi (Superadmin)</div>
+            <div style="font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;"><i class="fas fa-building"></i> Pilih Instansi (Superadmin)</div>
             <select id="pegawaiInstansiSelect" class="form-input" style="width: 100%; height: 38px; cursor: pointer; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: var(--white); border-radius: 8px; padding: 0 10px;" onchange="onPegawaiInstansiChange()">
               <option value="">— Pilih Instansi —</option>
             </select>
           </div>
 
           <div id="faceSigTabData">
-            <!-- ✍️ FORM MANAJEMEN TERPADU (INLINE) -->
+            <!-- <i class="fas fa-pen"></i> FORM MANAJEMEN TERPADU (INLINE) -->
             <div id="pegawaiForm" style="display:none; background:rgba(201,168,76,0.05); border:1px solid rgba(201,168,76,0.2); border-radius:16px; padding:25px; margin-bottom:30px; border-left: 4px solid var(--gold);">
               <div id="pegawaiFormTitle" style="font-size:14px; font-weight:800; color:var(--gold); margin-bottom:20px; text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:8px">
-                <span>👤</span> <span id="pegawaiFormTitleText">DATABASE KEPEGAWAIAN BAPPERIDA</span>
+                <span><i class="fas fa-user"></i></span> <span id="pegawaiFormTitleText">DATABASE KEPEGAWAIAN BAPPERIDA</span>
               </div>
               <input type="hidden" id="editPegawaiId">
               
@@ -2381,16 +2381,16 @@
               <!-- SEKSI BIOMETRIK & TTD (GABUNGAN) -->
               <div style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.2); border-radius:12px; display:grid; grid-template-columns:1fr 1fr; gap:20px">
                  <div style="text-align:center">
-                    <div style="font-size:10px; color:var(--gold); font-weight:700; margin-bottom:10px">📸 BIOMETRIK WAJAH</div>
+                    <div style="font-size:10px; color:var(--gold); font-weight:700; margin-bottom:10px"><i class="fas fa-camera"></i> BIOMETRIK WAJAH</div>
                     <div id="previewWajahAdmin" style="width:70px; height:70px; border-radius:50%; background:rgba(201,168,76,0.1); margin:0 auto 10px; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; overflow:hidden">
-                       <span style="font-size:24px">👤</span>
+                       <span style="font-size:24px"><i class="fas fa-user"></i></span>
                     </div>
                     <button class="btn-admin" onclick="openFaceCaptureAdmin()" style="font-size:10px; height:30px; width:auto; padding:0 15px; margin:0 auto">Update Wajah</button>
                  </div>
                  <div style="text-align:center">
-                    <div style="font-size:10px; color:var(--gold); font-weight:700; margin-bottom:10px">✍️ TANDA TANGAN</div>
+                    <div style="font-size:10px; color:var(--gold); font-weight:700; margin-bottom:10px"><i class="fas fa-pen"></i> TANDA TANGAN</div>
                     <div id="previewTTDAdmin" style="width:120px; height:70px; border-radius:8px; background:rgba(255,255,255,0.03); margin:0 auto 10px; border:1px dashed var(--border); display:flex; align-items:center; justify-content:center; overflow:hidden">
-                       <span style="font-size:24px">🖋️</span>
+                       <span style="font-size:24px"><i class="fas fa-pen-fancy"></i></span>
                     </div>
                     <button class="btn-admin" onclick="openSignatureAdmin()" style="font-size:10px; height:30px; width:auto; padding:0 15px; margin:0 auto">Update TTD</button>
                  </div>
@@ -2404,26 +2404,26 @@
 
               <div style="display:flex; gap:12px; margin-top:25px">
                 <button class="btn-admin" onclick="savePegawai()" style="flex:2; margin:0; height:48px; font-weight:800; background:var(--gold); color:#000">
-                  <span id="btnSavePegawaiTxt">💾 SIMPAN PERUBAHAN</span>
+                  <span id="btnSavePegawaiTxt"><i class="fas fa-save"></i> SIMPAN PERUBAHAN</span>
                 </button>
                 <button class="btn-admin" onclick="hidePegawaiForm()" style="flex:1; margin:0; height:48px; background:transparent; border:1px solid var(--border)">BATAL</button>
               </div>
             </div>
 
-            <!-- 📋 DAFTAR PEGAWAI -->
+            <!-- <i class="fas fa-clipboard-list"></i> DAFTAR PEGAWAI -->
             <div id="pegawaiMgmtList"></div>
           </div>
         </div>
 
-        <!-- 👑 MANAJEMEN ADMIN ══ -->
+        <!-- <i class="fas fa-crown"></i> MANAJEMEN ADMIN ══ -->
         <div class="card" id="adminMgmtCard" style="margin-top:12px">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--border)">
             <div style="font-size:11px; font-weight:800; color:var(--white); display:flex; align-items:center; gap:8px">
-               <span>👑</span> MANAJEMEN ADMIN & AKSES
+               <span><i class="fas fa-crown"></i></span> MANAJEMEN ADMIN & AKSES
             </div>
             <div style="display:flex; gap:8px">
-               <button class="btn-sm-admin" onclick="toggleAdminForm()" style="background:var(--gold); color:#000; border:none">➕ Tambah</button>
-               <button class="btn-sm-admin" onclick="loadAdminMgmt()">🔄</button>
+               <button class="btn-sm-admin" onclick="toggleAdminForm()" style="background:var(--gold); color:#000; border:none"><i class="fas fa-plus"></i> Tambah</button>
+               <button class="btn-sm-admin" onclick="loadAdminMgmt()"><i class="fas fa-sync"></i></button>
             </div>
           </div>
           
@@ -2457,13 +2457,13 @@
 
       <!-- SECTION: KONFIGURASI -->
       <div id="admin-section-config" class="admin-section" style="display:none">
-        <!-- 🗺️ LOKASI ══ -->
+        <!-- <i class="fas fa-map"></i> LOKASI ══ -->
         <div class="card">
           <div
             style="font-size:11px;font-weight:800;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
-            🗺️ LOKASI PRESENSI</div>
+            <i class="fas fa-map"></i> LOKASI PRESENSI</div>
                     <div id="adminLokasiInstansiSection" style="display: none; margin-bottom: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; box-sizing: border-box;">
-            <div style="font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;">🏢 Pilih Instansi (Superadmin)</div>
+            <div style="font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;"><i class="fas fa-building"></i> Pilih Instansi (Superadmin)</div>
             <select id="adminLokasiInstansiSelect" class="form-input" style="width: 100%; height: 38px; cursor: pointer; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: var(--white); border-radius: 8px; padding: 0 10px;" onchange="if(typeof loadLokasiAdmin === 'function') loadLokasiAdmin()">
               <option value="all">- Semua Instansi -</option>
             </select>
@@ -2477,14 +2477,14 @@
           <input type="text" class="form-input" id="namaLokasi" placeholder="Nama Lokasi..." style="margin-bottom:10px" />
           
           <div id="instansiLokasiContainer" style="margin-bottom:12px; display:none;">
-            <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">🏢 Instansi Akses</div>
+            <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px"><i class="fas fa-building"></i> Instansi Akses</div>
             <div id="instansiCheckGrid" style="display:flex; flex-wrap:wrap; gap:6px;">
               <!-- Checkboxes will be populated by JS -->
             </div>
           </div>
           
           <div style="margin-bottom:12px">
-            <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">📅 Hari Aktif</div>
+            <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px"><i class="fas fa-calendar"></i> Hari Aktif</div>
             <div id="hariCheckGrid" style="display:flex; flex-wrap:wrap; gap:6px;">
               <label class="hari-check-label checked" onclick="toggleHariCheck(this)"><input type="checkbox" value="senin" checked style="display:none">Sen</label>
               <label class="hari-check-label checked" onclick="toggleHariCheck(this)"><input type="checkbox" value="selasa" checked style="display:none">Sel</label>
@@ -2497,32 +2497,32 @@
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
             <div class="form-group" style="margin:0">
-              <label class="form-label" style="font-size:9px">📏 Jarak (Radius)</label>
+              <label class="form-label" style="font-size:9px"><i class="fas fa-ruler"></i> Jarak (Radius)</label>
               <input type="number" class="form-input" id="radiusLokasi" value="100" />
             </div>
             <div class="form-group" style="margin:0">
-              <label class="form-label" style="font-size:9px">🌐 IP Range (Opsional)</label>
+              <label class="form-label" style="font-size:9px"><i class="fas fa-globe"></i> IP Range (Opsional)</label>
               <input type="text" class="form-input" id="ipRangeLokasi" placeholder="36.84.0.0/16" />
             </div>
           </div>
           <div class="result-card" id="adminResult" style="display:none; margin-bottom:12px">
-            <div class="r-icon" id="adminRIcon">✅</div>
+            <div class="r-icon" id="adminRIcon"><i class="fas fa-check"></i></div>
             <div style="flex:1">
               <div class="r-title" id="adminRTitle">—</div>
               <div class="r-msg" id="adminRMsg">—</div>
             </div>
           </div>
-          <button class="btn-admin" id="btnTambahLokasi" onclick="handleTambahLokasi()">📌 Daftarkan Titik</button>
+          <button class="btn-admin" id="btnTambahLokasi" onclick="handleTambahLokasi()"><i class="fas fa-thumbtack"></i> Daftarkan Titik</button>
           <div id="lokasiMgmtList" style="margin-top:12px"></div>
         </div>
 
-        <!-- ⏰ JAM & HARI LIBUR ══ -->
+        <!-- <i class="fas fa-clock"></i> JAM & HARI LIBUR ══ -->
         <div class="card" style="margin-top:12px">
           <div
             style="font-size:11px;font-weight:800;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
-            ⏰ PENGATURAN JAM INSTANSI / GLOBAL</div>
+            <i class="fas fa-clock"></i> PENGATURAN JAM INSTANSI / GLOBAL</div>
           <div id="configInstansiSection" style="display: none; margin-bottom: 15px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; box-sizing: border-box;">
-            <div style="font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;">🏢 Pilih Instansi (Superadmin)</div>
+            <div style="font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;"><i class="fas fa-building"></i> Pilih Instansi (Superadmin)</div>
             <select id="configInstansiSelect" class="form-input" style="width: 100%; height: 38px; cursor: pointer; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: var(--white); border-radius: 8px; padding: 0 10px;" onchange="onConfigInstansiChange()">
               <option value="">— Pilih Instansi —</option>
             </select>
@@ -2531,7 +2531,7 @@
             <input type="time" id="inputJamMasuk" class="form-input" />
             <input type="time" id="inputJamPulang" class="form-input" />
           </div>
-          <button class="btn-admin" onclick="simpanJamAbsen()">💾 Update Jam</button>
+          <button class="btn-admin" onclick="simpanJamAbsen()"><i class="fas fa-save"></i> Update Jam</button>
 
           <div class="divider" style="margin:15px 0"><span>HARI LIBUR</span></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
@@ -2540,12 +2540,12 @@
           </div>
           <input type="text" id="inputNamaLibur" class="form-input" placeholder="Keterangan libur..."
             style="margin-bottom:8px" />
-          <button class="btn-admin" onclick="handleTambahLibur()">➕ Tambah Libur</button>
+          <button class="btn-admin" onclick="handleTambahLibur()"><i class="fas fa-plus"></i> Tambah Libur</button>
           <div id="liburAdminList" style="margin-top:10px"></div>
         </div>
 
         <div class="card" style="margin-top:12px">
-          <div class="card-title">🌙 Periode Jam Khusus</div>
+          <div class="card-title"><i class="fas fa-moon"></i> Periode Jam Khusus</div>
           <div id="periodeAdminList" style="margin-bottom:12px"></div>
 
           <!-- UI TAMBAH PERIODE (FORM) -->
@@ -2585,23 +2585,23 @@
 
             <div style="display:flex; flex-direction:column; gap:8px">
               <button class="btn-admin" id="btnTambahPeriode" onclick="submitTambahPeriode()">
-                <span id="btnTambahPeriodeTxt">💾 Simpan Periode</span>
+                <span id="btnTambahPeriodeTxt"><i class="fas fa-save"></i> Simpan Periode</span>
               </button>
               <button class="btn-admin" onclick="togglePeriodeForm(false)"
                 style="background:transparent; border:none; color:var(--muted); font-size:10px; height:auto; padding:5px">Batal</button>
             </div>
           </div>
 
-          <button class="btn-admin" id="btnShowPeriodeForm" onclick="togglePeriodeForm(true)">➕ Tambah Periode</button>
+          <button class="btn-admin" id="btnShowPeriodeForm" onclick="togglePeriodeForm(true)"><i class="fas fa-plus"></i> Tambah Periode</button>
         </div>
 
         <!-- (AI ENGINE SETTINGS MOVED TO MEJA ABSEN SECTION) -->
 
-        <!-- 📸 FACE RECOGNITION ══ -->
+        <!-- <i class="fas fa-camera"></i> FACE RECOGNITION ══ -->
         <div id="faceToggleCard" class="card" style="margin-top:12px">
           <div
             style="font-size:11px;font-weight:800;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
-            📸 FACE VERIFICATION SWITCH</div>
+            <i class="fas fa-camera"></i> FACE VERIFICATION SWITCH</div>
           <div
             style="display:flex;flex-direction:column;gap:12px;background:rgba(255,255,255,.03);padding:14px;border:1px solid var(--border);border-radius:12px">
             <div style="display:flex;align-items:center;justify-content:space-between">
@@ -2617,18 +2617,18 @@
             </div>
           </div>
           <div id="faceToggleResult" style="display:none; margin-top:12px"></div>
-          <button class="btn-admin" onclick="simpanFaceToggle()" style="margin-top:12px">💾 Terapkan Perubahan</button>
+          <button class="btn-admin" onclick="simpanFaceToggle()" style="margin-top:12px"><i class="fas fa-save"></i> Terapkan Perubahan</button>
         </div>
 
-        <!-- ⚙️ FACE SETTINGS (Admin) ══ -->
+        <!-- <i class="fas fa-cog"></i> FACE SETTINGS (Admin) ══ -->
         <div class="card" style="margin-top:12px">
           <div style="font-size:11px;font-weight:800;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
-            ⚙️ FACE SETTINGS</div>
+            <i class="fas fa-cog"></i> FACE SETTINGS</div>
           <div style="display:flex;flex-direction:column;gap:14px">
             <!-- Liveness Mobile -->
             <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
               <div>
-                <div style="font-size:11px;font-weight:700;color:var(--white)">🛡️ Liveness di Mobile</div>
+                <div style="font-size:11px;font-weight:700;color:var(--white)"><i class="fas fa-shield-alt"></i> Liveness di Mobile</div>
                 <div style="font-size:9px;color:var(--muted)">Aktifkan verifikasi keaslian wajah di perangkat mobile</div>
               </div>
               <div id="fsLivenessSwitch" onclick="toggleFsLiveness()" style="width:52px;height:28px;border-radius:14px;background:#6b7280;position:relative;cursor:pointer;flex-shrink:0">
@@ -2639,7 +2639,7 @@
             <div style="background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                 <div>
-                  <div style="font-size:11px;font-weight:700;color:var(--white)">🎯 Face Threshold (Absen)</div>
+                  <div style="font-size:11px;font-weight:700;color:var(--white)"><i class="fas fa-bullseye"></i> Face Threshold (Absen)</div>
                   <div style="font-size:9px;color:var(--muted)">Semakin tinggi = semakin ketat. Default: 0.55</div>
                 </div>
                 <span id="fsThresholdVal" style="font-size:12px;font-weight:800;color:var(--accent);min-width:36px;text-align:right">0.55</span>
@@ -2650,7 +2650,7 @@
             <div style="background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                 <div>
-                  <div style="font-size:11px;font-weight:700;color:var(--white)">🪑 Face Threshold (Meja)</div>
+                  <div style="font-size:11px;font-weight:700;color:var(--white)"><i class="fas fa-chair"></i> Face Threshold (Meja)</div>
                   <div style="font-size:9px;color:var(--muted)">Lebih toleran untuk jarak kamera. Default: 0.55</div>
                 </div>
                 <span id="fsMejaThresholdVal" style="font-size:12px;font-weight:800;color:var(--accent);min-width:36px;text-align:right">0.55</span>
@@ -2661,7 +2661,7 @@
             <div style="background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                 <div>
-                  <div style="font-size:11px;font-weight:700;color:var(--white)">🛡️ Liveness Score Minimum</div>
+                  <div style="font-size:11px;font-weight:700;color:var(--white)"><i class="fas fa-shield-alt"></i> Liveness Score Minimum</div>
                   <div style="font-size:9px;color:var(--muted)">Ambang deteksi wajah asli vs foto. Default: 0.40</div>
                 </div>
                 <span id="fsLivenessScoreVal" style="font-size:12px;font-weight:800;color:var(--accent);min-width:36px;text-align:right">0.40</span>
@@ -2670,19 +2670,19 @@
             </div>
             <!-- Mandatory NIPs -->
             <div style="background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
-              <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:6px">🔒 Wajib Face (NIP)</div>
+              <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:6px"><i class="fas fa-lock"></i> Wajib Face (NIP)</div>
               <div style="font-size:9px;color:var(--muted);margin-bottom:8px">NIP yang wajib scan wajah meski face toggle OFF. Pisahkan koma.</div>
               <input id="fsMandatoryNips" type="text" placeholder="contoh: 199603202025212001,198501152010012003" style="width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--white);font-size:11px;box-sizing:border-box">
             </div>
           </div>
           <div id="fsResult" style="display:none; margin-top:12px"></div>
-          <button class="btn-admin" onclick="saveFaceSettings()" style="margin-top:12px">💾 Simpan Settings</button>
+          <button class="btn-admin" onclick="saveFaceSettings()" style="margin-top:12px"><i class="fas fa-save"></i> Simpan Settings</button>
         </div>
 
-        <!-- 🛡️ KONTROL KEHADIRAN / JAM JAGA (Admin) ══ -->
+        <!-- <i class="fas fa-shield-alt"></i> KONTROL KEHADIRAN / JAM JAGA (Admin) ══ -->
         <div class="card" style="margin-top:12px">
           <div style="font-size:11px;font-weight:800;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
-            🛡️ KONTROL KEHADIRAN / JAM JAGA</div>
+            <i class="fas fa-shield-alt"></i> KONTROL KEHADIRAN / JAM JAGA</div>
           <div style="display:flex;flex-direction:column;gap:14px">
             <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
               <div>
@@ -2694,35 +2694,35 @@
               </div>
             </div>
             <div style="background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
-              <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:6px">⏱️ Toleransi (menit)</div>
+              <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:6px"><i class="fas fa-stopwatch"></i> Toleransi (menit)</div>
               <div style="font-size:9px;color:var(--muted);margin-bottom:8px">Jeda waktu sebelum/menuju jam jaga yang dianggap valid</div>
               <input id="kkToleransi" type="number" min="0" max="180" value="15" style="width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--white);font-size:11px;box-sizing:border-box">
             </div>
             <div style="background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
-              <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:6px">🏢 Instansi ID</div>
+              <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:6px"><i class="fas fa-building"></i> Instansi ID</div>
               <input id="kkInstansi" type="text" placeholder="bapperida" style="width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--white);font-size:11px;box-sizing:border-box">
             </div>
             <div style="background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
-              <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:6px">🕐 Jam Jaga</div>
+              <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:6px"><i class="fas fa-clock"></i> Jam Jaga</div>
               <div style="font-size:9px;color:var(--muted);margin-bottom:8px">Jam yang wajib dicek kehadirannya</div>
               <div id="kkTimes"></div>
-              <button class="btn-admin" onclick="addKkJam()" style="margin-top:8px;width:100%">➕ Tambah Jam</button>
+              <button class="btn-admin" onclick="addKkJam()" style="margin-top:8px;width:100%"><i class="fas fa-plus"></i> Tambah Jam</button>
             </div>
           </div>
           <div id="kkResult" style="display:none; margin-top:12px">
-            <div class="r-icon" id="kkRIcon">✅</div>
+            <div class="r-icon" id="kkRIcon"><i class="fas fa-check"></i></div>
             <div style="flex:1">
               <div class="r-title" id="kkRTitle">—</div>
               <div class="r-msg" id="kkRMsg">—</div>
             </div>
           </div>
-          <button class="btn-admin" onclick="saveKkAdmin()" style="margin-top:12px">💾 Simpan Kontrol Kehadiran</button>
+          <button class="btn-admin" onclick="saveKkAdmin()" style="margin-top:12px"><i class="fas fa-save"></i> Simpan Kontrol Kehadiran</button>
         </div>
 
-        <!-- 🏛️ SUPERADMIN: DETAIL INSTANSI & HEADER EDITOR ══ -->
+        <!-- <i class="fas fa-landmark"></i> SUPERADMIN: DETAIL INSTANSI & HEADER EDITOR ══ -->
         <div class="card superadmin-section" style="margin-top:12px; display:none;" id="superadminHeaderCard">
           <div style="font-size:11px;font-weight:800;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border); display:flex; align-items:center; gap:6px;">
-            <span>🏛️</span> KELOLA DETAIL INSTANSI & HEADER
+            <span><i class="fas fa-landmark"></i></span> KELOLA DETAIL INSTANSI & HEADER
           </div>
           
           <div style="display:flex; flex-direction:column; gap:12px;">
@@ -2785,7 +2785,7 @@
                 <textarea id="inEditInstansiKontak" class="form-input" oninput="updateInstansiHeaderPreview()" placeholder="Contoh: Telp: (0387) 21111&#10;Email: bapperida@sumbabarabkab.go.id" style="height:65px; resize:vertical; padding:8px 12px; font-family:inherit; line-height:1.4;"></textarea>
               </div>
 
-              <!-- 🖼️ Kop Surat Live Preview -->
+              <!-- <i class="fas fa-image"></i> Kop Surat Live Preview -->
               <div style="margin-top:16px; margin-bottom:16px;">
                 <label style="display:block; font-size:10px; color:var(--muted); font-weight:700; text-transform:uppercase; margin-bottom:8px;">Live Preview Kop Surat</label>
                 <div id="instansiHeaderPreview" style="background:#ffffff; color:#000000; padding:15px; border-radius:8px; border:1px solid #ccc; font-family:'Times New Roman', Times, serif; line-height:1.2; box-shadow:0 4px 10px rgba(0,0,0,0.15); overflow:hidden;">
@@ -2811,16 +2811,16 @@
                 </div>
               </div>
               
-              <button id="btnSaveInstansi" class="btn-admin" onclick="saveInstansiHeader()" style="width:100%; height:40px; margin-top:8px;">💾 Simpan Perubahan</button>
+              <button id="btnSaveInstansi" class="btn-admin" onclick="saveInstansiHeader()" style="width:100%; height:40px; margin-top:8px;"><i class="fas fa-save"></i> Simpan Perubahan</button>
             </div>
           </div>
         </div>
 
-        <!-- 🖥️ MODE DESKTOP ══ -->
+        <!-- <i class="fas fa-desktop"></i> MODE DESKTOP ══ -->
         <div class="card" style="margin-top:12px" id="desktopModeCard">
           <div
             style="font-size:11px;font-weight:800;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
-            🖥️ TAMPILAN MODE DESKTOP</div>
+            <i class="fas fa-desktop"></i> TAMPILAN MODE DESKTOP</div>
           <div
             style="display:flex;flex-direction:column;gap:12px;background:rgba(96,165,250,.04);padding:14px;border:1px solid rgba(96,165,250,.1);border-radius:12px">
             <div style="display:flex;align-items:center;justify-content:space-between">
@@ -2862,7 +2862,7 @@
       </div>
       <div id="formLogin">
         <input type="text" id="loginNip" class="form-input-auth" placeholder="Masukkan NIP / NISN / NIM / ID" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9a-zA-Z]/g, '')">
-        <button id="btnLogin" class="btn-auth" onclick="handleAuthAction('login')">Masuk Sekarang 🚀</button>
+        <button id="btnLogin" class="btn-auth" onclick="handleAuthAction('login')">Masuk Sekarang <i class="fas fa-rocket"></i></button>
       </div>
       <div id="formRegister" style="display:none">
         <input type="text" id="regNama" class="form-input-auth" placeholder="Nama Lengkap">
@@ -2888,7 +2888,7 @@
             <option value="">— Pangkat —</option>
           </select>
         </div>
-        <button id="btnRegister" class="btn-auth" onclick="handleAuthAction('register')">Daftar Akun 📋</button>
+        <button id="btnRegister" class="btn-auth" onclick="handleAuthAction('register')">Daftar Akun <i class="fas fa-clipboard-list"></i></button>
       </div>
       <div class="auth-footer">Sistem HADIR<br>© 2026 Sekretariat Daerah</div>
     </div>
@@ -2898,7 +2898,7 @@
   <div id="faceRequiredModal"
     style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(5,12,30,.97);flex-direction:column;align-items:center;justify-content:center;padding:24px">
     <div style="width:100%;max-width:360px;background:var(--card-bg);border:1px solid rgba(201,168,76,.3);border-radius:20px;padding:24px 20px;text-align:center">
-      <div style="font-size:48px;margin-bottom:12px">🧠</div>
+      <div style="font-size:48px;margin-bottom:12px"><i class="fas fa-brain"></i></div>
       <div style="font-size:16px;font-weight:800;color:var(--white);margin-bottom:8px">Daftarkan Wajah Anda</div>
       <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:20px">
         Sistem HADIR memerlukan data wajah Anda untuk verifikasi identitas.<br>
@@ -2906,7 +2906,7 @@
       </div>
       <div id="faceRequiredStatus" style="font-size:10px;color:var(--muted);margin-bottom:16px;min-height:16px"></div>
       <button onclick="daftarWajahPaksa()" id="btnDaftarWajahPaksa" class="btn-primary" style="width:100%;padding:14px;border-radius:13px;font-size:14px">
-        <span>📷</span><span id="btnDaftarWajahTxt">Daftarkan Wajah Sekarang</span>
+        <span><i class="fas fa-camera"></i></span><span id="btnDaftarWajahTxt">Daftarkan Wajah Sekarang</span>
       </button>
     </div>
   </div>
@@ -2914,13 +2914,13 @@
   <!-- 3. Kamera / Face Scan Overlay (Z-Index HIGHER than other modals) -->
   <div class="cam-overlay hidden" id="camOverlay" style="z-index: 20000;">
     <div class="cam-header">
-      <div class="cam-title" id="camHeaderTitle">📷 Verifikasi Wajah</div>
-      <button class="cam-close" onclick="closeCamByUser()">✕</button>
+      <div class="cam-title" id="camHeaderTitle"><i class="fas fa-camera"></i> Verifikasi Wajah</div>
+      <button class="cam-close" onclick="closeCamByUser()"><i class="fas fa-times"></i></button>
     </div>
     <div class="cam-body">
       <div class="model-loading" id="modelLoading">
         <div style="width:100%;max-width:300px;text-align:center">
-          <div style="font-size:28px;margin-bottom:10px">🧠</div>
+          <div style="font-size:28px;margin-bottom:10px"><i class="fas fa-brain"></i></div>
           <div style="font-size:12px;font-weight:700;color:var(--white);margin-bottom:6px" id="mlTitle">Memuat Model AI</div>
           <div style="width:100%;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;margin-bottom:8px">
             <div id="mlProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--gold),#f59e0b);transition:width .4s ease"></div>
@@ -2933,9 +2933,9 @@
         <canvas id="camCanvas"></canvas>
         <div class="face-guide" id="faceGuideWrap"><div class="face-oval"></div></div>
         <div class="cam-scan-line"></div>
-        <div class="cam-face-badge" id="camFaceBadge" style="display:none">👤 Mendeteksi...</div>
+        <div class="cam-face-badge" id="camFaceBadge" style="display:none"><i class="fas fa-user"></i> Mendeteksi...</div>
         <div id="mejaOverlayResult" style="display:none; position:absolute; inset:0; background:rgba(10,22,40,0.95); z-index:10; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px;">
-          <div id="moIcon" style="font-size:50px; margin-bottom:10px;">✅</div>
+          <div id="moIcon" style="font-size:50px; margin-bottom:10px;"><i class="fas fa-check"></i></div>
           <div id="moNama" style="font-size:18px; font-weight:800; color:var(--gold);">NAMA</div>
           <div id="moStatus" style="font-size:14px; font-weight:700; color:#fff; margin-top:5px; padding:4px 10px; border-radius:6px; background:rgba(255,255,255,0.1);">BERHASIL</div>
           <div id="moDetail" style="font-size:12px; color:rgba(255,255,255,0.6); margin-top:10px;">Mencatat absen...</div>
@@ -2946,7 +2946,7 @@
         <span id="camZoomVal" style="font-size:10px; font-weight:700; color:var(--gold); margin-left:8px">1.0x</span>
       </div>
       <div class="cam-status idle" id="camStatus" style="display:none">
-        <div class="cam-status-icon" id="camStatusIcon">🔍</div>
+        <div class="cam-status-icon" id="camStatusIcon"><i class="fas fa-search"></i></div>
         <div class="cam-status-text">
           <div class="cam-status-title" id="camStatusTitle">Mendeteksi...</div>
           <div class="cam-status-sub" id="camStatusSub">Hadapkan wajah</div>
@@ -2956,38 +2956,38 @@
          <!-- info reg wajah -->
       </div>
       <div id="livenessMini" style="display:none; width:100%; max-width:320px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.3); padding:10px; border-radius:10px; text-align:center; color:var(--gold);">
-        <span id="lsIcon">🔍</span> <span id="lsText">Verifikasi...</span>
+        <span id="lsIcon"><i class="fas fa-search"></i></span> <span id="lsText">Verifikasi...</span>
       </div>
       <div class="cam-preview" id="camPreview"><img id="camPreviewImg" src=""></div>
-      <button class="btn-capture" id="btnCapture" onclick="doCapture()" disabled>📸 Ambil Foto & Lanjutkan</button>
+      <button class="btn-capture" id="btnCapture" onclick="doCapture()" disabled><i class="fas fa-camera"></i> Ambil Foto & Lanjutkan</button>
     </div>
   </div>
 
   <!-- 4. Kamera Bukti Overlay -->
   <div class="cam-overlay hidden" id="buktiOverlay" style="z-index: 20001;">
     <div class="cam-header">
-      <div class="cam-title">📷 Ambil Foto Bukti</div>
-      <button class="cam-close" onclick="closeBuktiOverlay()">✕</button>
+      <div class="cam-title"><i class="fas fa-camera"></i> Ambil Foto Bukti</div>
+      <button class="cam-close" onclick="closeBuktiOverlay()"><i class="fas fa-times"></i></button>
     </div>
     <div class="cam-body">
       <div class="cam-video-wrap" style="display:block">
         <video id="buktiVideo" autoplay playsinline muted></video>
       </div>
       <div class="cam-preview" id="buktiPreviewCam"><img id="buktiPreviewCamImg" src=""></div>
-      <button class="btn-capture" id="btnBuktiCapture" onclick="doBuktiCapture()">📸 Ambil Foto Bukti</button>
+      <button class="btn-capture" id="btnBuktiCapture" onclick="doBuktiCapture()"><i class="fas fa-camera"></i> Ambil Foto Bukti</button>
     </div>
   </div>
 
   <!-- 5. Signature Pad Overlay -->
   <div class="sig-overlay hidden" id="sigOverlay" style="z-index: 10002;">
     <div class="sig-header">
-      <div class="sig-title">✍️ <span id="sigOverlayTitle">Tanda Tangan Digital</span></div>
-      <button class="sig-close" onclick="closeSignaturePad()">✕</button>
+      <div class="sig-title"><i class="fas fa-pen"></i> <span id="sigOverlayTitle">Tanda Tangan Digital</span></div>
+      <button class="sig-close" onclick="closeSignaturePad()"><i class="fas fa-times"></i></button>
     </div>
     <div class="sig-body">
       <div class="sig-mode-tabs">
-        <button class="sig-mode-tab active" id="sigTabDraw" onclick="switchSigMode('draw')">✏️ Gambar</button>
-        <button class="sig-mode-tab" id="sigTabPhoto" onclick="switchSigMode('photo')">📷 Upload</button>
+        <button class="sig-mode-tab active" id="sigTabDraw" onclick="switchSigMode('draw')"><i class="fas fa-edit"></i> Gambar</button>
+        <button class="sig-mode-tab" id="sigTabPhoto" onclick="switchSigMode('photo')"><i class="fas fa-camera"></i> Upload</button>
       </div>
       <div id="sigDrawPanel" style="width:100%;display:flex;flex-direction:column;align-items:center">
         <div class="sig-canvas-wrap" id="sigCanvasWrap">
@@ -3001,8 +3001,8 @@
         <div id="sigUploadPreview" style="display:none"><img id="sigUploadImg" src=""></div>
       </div>
       <div class="sig-actions">
-        <button class="sig-btn-clear" onclick="clearSignaturePad()">🗑 Hapus</button>
-        <button class="sig-btn-save" id="btnSaveSig" onclick="saveSignature()">💾 Simpan</button>
+        <button class="sig-btn-clear" onclick="clearSignaturePad()"><i class="fas fa-trash"></i> Hapus</button>
+        <button class="sig-btn-save" id="btnSaveSig" onclick="saveSignature()"><i class="fas fa-save"></i> Simpan</button>
       </div>
       <div id="sigMsg" style="display:none" class="sig-msg"></div>
     </div>
@@ -3024,8 +3024,8 @@
   <div id="logModal" class="sig-overlay" style="display:none; align-items:center; justify-content:center; padding:20px; z-index:10004;">
     <div class="card" style="width:100%; max-width:380px; background:rgba(15,23,42,0.95); backdrop-filter:blur(20px); border:1px solid var(--border);">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:15px; padding-bottom:10px; border-bottom:1px solid var(--border)">
-        <div style="display:flex; align-items:center; gap:8px"><span id="logModalIcon">➕</span> <div id="logModalTitle" style="font-size:11px; font-weight:800">TAMBAH LOG MANUAL</div></div>
-        <button onclick="closeLogEditor()" style="background:transparent; border:none; color:var(--muted); font-size:18px">✕</button>
+        <div style="display:flex; align-items:center; gap:8px"><span id="logModalIcon"><i class="fas fa-plus"></i></span> <div id="logModalTitle" style="font-size:11px; font-weight:800">TAMBAH LOG MANUAL</div></div>
+        <button onclick="closeLogEditor()" style="background:transparent; border:none; color:var(--muted); font-size:18px"><i class="fas fa-times"></i></button>
       </div>
       <input type="hidden" id="editLogId">
       <div class="form-group"><label class="form-label">Pegawai</label><select id="inLogPegawai" class="form-input"><option value="">— Pilih Pegawai —</option></select></div>
@@ -3049,19 +3049,19 @@
       </div>
       <div class="form-group"><label class="form-label">Keterangan</label><input type="text" id="inLogKet" class="form-input"></div>
       <div class="result-card" id="logFormResult" style="display:none; margin-bottom:12px">
-        <div class="r-icon" id="logFormRIcon">✅</div>
+        <div class="r-icon" id="logFormRIcon"><i class="fas fa-check"></i></div>
         <div class="r-title" id="logFormRTitle">—</div>
         <div class="r-msg" id="logFormRMsg">—</div>
       </div>
       <button class="btn-admin" id="btnSaveLog" onclick="saveLog()" style="margin:0; height:45px">
-        <span id="btnSaveLogTxt">💾 Simpan Log</span>
+        <span id="btnSaveLogTxt"><i class="fas fa-save"></i> Simpan Log</span>
       </button>
     </div>
   </div>
 
   <!-- 8. Splash Screen -->
   <div id="appSplash" style="z-index: 99999;">
-    <div class="splash-logo">🏛️</div>
+    <div class="splash-logo"><i class="fas fa-landmark"></i></div>
     <div class="splash-title">Sistem HADIR</div>
     <div class="splash-sub">Memuat profil dan data pegawai...</div>
     <div class="splash-bar"><div class="splash-progress"></div></div>
@@ -3177,7 +3177,7 @@
         if (t1 - t0 > 100) {
           document.body.innerHTML = `
             <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background:#0b0f19; color:#f8fafc; font-family:'Outfit',sans-serif; text-align:center; padding:20px; box-sizing:border-box;">
-              <div style="font-size:64px; margin-bottom:20px; animation: pulse 2s infinite;">🛡️</div>
+              <div style="font-size:64px; margin-bottom:20px; animation: pulse 2s infinite;"><i class="fas fa-shield-alt"></i></div>
               <h1 style="font-size:24px; font-weight:700; margin-bottom:10px; color:#ef4444;">Sistem Keamanan Aktif</h1>
               <p style="font-size:14px; color:#94a3b8; max-width:400px; line-height:1.6; margin:0 0 20px 0;">Inspeksi kode sumber atau penggunaan Developer Tools tidak diizinkan untuk alasan keamanan data.</p>
               <button onclick="window.location.reload()" style="padding:10px 20px; background:#2563eb; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px; transition:all 0.2s; box-shadow: 0 4px 6px -1px rgba(37,99,235,0.4);">Segarkan Halaman</button>
@@ -3202,14 +3202,14 @@
       <!-- Modal Header -->
       <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.01);">
         <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:20px;">📄</span>
+          <span style="font-size:20px;"><i class="fas fa-file-alt"></i></span>
           <div>
             <h3 style="margin:0; font-size:16px; font-weight:700; color:#fff;">Pratinjau PDF</h3>
             <p style="margin:0; font-size:11px; color:#94a3b8;">Pratinjau sebelum diunduh.</p>
           </div>
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
-          <button id="btnTogglePdfSidebar" onclick="document.getElementById('pdfPreviewSidebar').classList.toggle('show-sidebar')" style="display:none; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer; align-items:center;">⚙️ Pengaturan</button>
+          <button id="btnTogglePdfSidebar" onclick="document.getElementById('pdfPreviewSidebar').classList.toggle('show-sidebar')" style="display:none; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer; align-items:center;"><i class="fas fa-cog"></i> Pengaturan</button>
           <button onclick="closePdfPreviewModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; border-radius:10px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; font-size:16px;">&times;</button>
         </div>
       </div>
@@ -3273,7 +3273,7 @@
 
           <!-- Dynamic Letterhead Overrides -->
           <div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:14px; margin-top:4px;">
-            <span style="font-size:10px; font-weight:800; color:#3b82f6; text-transform:uppercase; display:block; margin-bottom:12px; letter-spacing:0.5px;">✍️ Ubah Kop Secara Bebas</span>
+            <span style="font-size:10px; font-weight:800; color:#3b82f6; text-transform:uppercase; display:block; margin-bottom:12px; letter-spacing:0.5px;"><i class="fas fa-pen"></i> Ubah Kop Secara Bebas</span>
             
             <div style="margin-bottom:10px;">
               <label style="display:block; font-size:9px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Nama Instansi (Judul Kop)</label>
@@ -3317,7 +3317,7 @@
             </div>
           </div>
 
-          <button onclick="refreshPdfPreview()" class="btn-admin" style="margin:8px 0 0 0; width:100%; height:40px; background:#2563eb; color:#fff; font-weight:700; font-size:12px;">🔄 Terapkan & Segarkan</button>
+          <button onclick="refreshPdfPreview()" class="btn-admin" style="margin:8px 0 0 0; width:100%; height:40px; background:#2563eb; color:#fff; font-weight:700; font-size:12px;"><i class="fas fa-sync"></i> Terapkan & Segarkan</button>
           
         </div>
         
@@ -3329,9 +3329,9 @@
           
           <!-- Floating Toolbar untuk Zoom (Khusus Mobile) -->
           <div id="pdfMobileToolbar" style="display:none; position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(15, 23, 42, 0.9); padding:8px 16px; border-radius:30px; gap:16px; align-items:center; box-shadow:0 10px 25px rgba(0,0,0,0.8); z-index:20; border:1px solid rgba(255,255,255,0.1); backdrop-filter:blur(5px);">
-            <button onclick="window.zoomPdf(-0.25)" style="background:rgba(255,255,255,0.1); border:none; color:#fff; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer;">➖</button>
+            <button onclick="window.zoomPdf(-0.25)" style="background:rgba(255,255,255,0.1); border:none; color:#fff; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer;"><i class="fas fa-minus"></i></button>
             <span id="pdfZoomIndicator" style="color:#fff; font-size:14px; font-weight:700; min-width:45px; text-align:center; font-family:monospace;">100%</span>
-            <button onclick="window.zoomPdf(0.25)" style="background:rgba(255,255,255,0.1); border:none; color:#fff; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer;">➕</button>
+            <button onclick="window.zoomPdf(0.25)" style="background:rgba(255,255,255,0.1); border:none; color:#fff; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer;"><i class="fas fa-plus"></i></button>
           </div>
 
           <iframe id="pdfPreviewIframe" style="width:100%; height:100%; border:none; display:block;" src="about:blank"></iframe>
@@ -3345,8 +3345,8 @@
       <!-- Modal Footer Action Buttons -->
       <div style="display:flex; justify-content:flex-end; align-items:center; gap:12px; padding:16px 24px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.01);">
         <button onclick="closePdfPreviewModal()" class="btn-admin" style="margin:0; width:100px; height:38px; background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.08);">Batal</button>
-        <button id="btnPdfModalSendTelegram" onclick="triggerPdfModalSendTelegram()" class="btn-admin" style="margin:0; width:160px; height:38px; background:#eab308; color:#000; font-weight:700;"><span style="margin-right:4px;">📤</span> Kirim ke Telegram</button>
-        <button onclick="triggerPdfModalDownload()" class="btn-admin" style="margin:0; width:160px; height:38px; background:#22c55e; color:#fff; font-weight:700;"><span style="margin-right:4px;">💾</span> Unduh Laporan</button>
+        <button id="btnPdfModalSendTelegram" onclick="triggerPdfModalSendTelegram()" class="btn-admin" style="margin:0; width:160px; height:38px; background:#eab308; color:#000; font-weight:700;"><span style="margin-right:4px;"></span> Kirim ke Telegram</button>
+        <button onclick="triggerPdfModalDownload()" class="btn-admin" style="margin:0; width:160px; height:38px; background:#22c55e; color:#fff; font-weight:700;"><span style="margin-right:4px;"><i class="fas fa-save"></i></span> Unduh Laporan</button>
       </div>
     </div>
   </div>
@@ -3357,7 +3357,7 @@
       <!-- Modal Header -->
       <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.01);">
         <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:20px;">📦</span>
+          <span style="font-size:20px;"><i class="fas fa-box"></i></span>
           <h3 id="smfTitle" style="margin:0; font-size:16px; font-weight:700; color:#fff;">Form Aset</h3>
         </div>
         <button onclick="closeSimapoMasterForm()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; border-radius:10px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; font-size:16px;">&times;</button>
@@ -3420,7 +3420,7 @@
       <!-- Modal Footer -->
       <div style="display:flex; justify-content:flex-end; align-items:center; gap:12px; padding:16px 24px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.01);">
         <button onclick="closeSimapoMasterForm()" class="btn-admin" style="margin:0; width:100px; height:38px; background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.08);">Batal</button>
-        <button onclick="saveSimapoMaster()" class="btn-admin" style="margin:0; width:160px; height:38px; background:#2563eb; color:#fff; font-weight:700; border:none; border-radius:8px; cursor:pointer;">💾 Simpan Aset</button>
+        <button onclick="saveSimapoMaster()" class="btn-admin" style="margin:0; width:160px; height:38px; background:#2563eb; color:#fff; font-weight:700; border:none; border-radius:8px; cursor:pointer;"><i class="fas fa-save"></i> Simpan Aset</button>
       </div>
     </div>
   </div>

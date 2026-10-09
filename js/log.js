@@ -60,7 +60,7 @@
       finally { 
         _isLogLoading = false;
         if (btn) btn.disabled = false; 
-        const s = $('rIcon2'); if (s) s.outerHTML = '<span id="rIcon2">🔄</span>'; 
+        const s = $('rIcon2'); if (s) s.outerHTML = '<span id="rIcon2"><i class="fas fa-sync"></i></span>'; 
       }
     }
     let currentLogLimit = 10;
@@ -86,20 +86,20 @@
 
     function getLC(j) {
       const x = (j || '').toUpperCase().trim();
-      if (x === 'MASUK') return { cls: 'l-masuk', icon: '🟢', lbl: 'MASUK' };
-      if (x === 'PULANG') return { cls: 'l-pulang', icon: '🔵', lbl: 'PULANG' };
-      if (x === 'PULANG LUAR') return { cls: 'l-pulang-luar', icon: '🏃', lbl: 'PULANG LAPANGAN' };
-      if (x.includes('LUAR') && x.includes('MASUK')) return { cls: 'l-luar', icon: '⚠️', lbl: 'LUAR JAM MASUK' };
-      if (x.includes('LUAR') && x.includes('PULANG')) return { cls: 'l-luar', icon: '🏃', lbl: 'PULANG CEPAT' };
-      if (x.includes('LUAR')) return { cls: 'l-luar', icon: '⚠️', lbl: 'DI LUAR JAM' };
-      if (x === 'IZIN') return { cls: 'l-izin', icon: '🙏', lbl: 'KETERANGAN' };
-      if (x === 'SAKIT') return { cls: 'l-sakit', icon: '🤒', lbl: 'SAKIT' };
-      if (x === 'TUGAS') return { cls: 'l-tugas', icon: '💼', lbl: 'TUGAS' };
-      if (x === 'IZIN PENDING') return { cls: 'l-pending', icon: '⏳', lbl: 'IZIN (Menunggu)' };
-      if (x === 'SAKIT PENDING') return { cls: 'l-pending', icon: '⏳', lbl: 'SAKIT (Menunggu)' };
-      if (x === 'TUGAS PENDING') return { cls: 'l-pending', icon: '⏳', lbl: 'TUGAS (Menunggu)' };
-      if (x === 'TANPA BERITA') return { cls: 'l-alpa', icon: '❌', lbl: 'TANPA BERITA' };
-      return { cls: 'l-pulang', icon: '📋', lbl: j || '—' };
+      if (x === 'MASUK') return { cls: 'l-masuk', icon: '<i class="fas fa-circle"></i>', lbl: 'MASUK' };
+      if (x === 'PULANG') return { cls: 'l-pulang', icon: '<i class="fas fa-circle"></i>', lbl: 'PULANG' };
+      if (x === 'PULANG LUAR') return { cls: 'l-pulang-luar', icon: '<i class="fas fa-running"></i>', lbl: 'PULANG LAPANGAN' };
+      if (x.includes('LUAR') && x.includes('MASUK')) return { cls: 'l-luar', icon: '<i class="fas fa-exclamation-triangle"></i>', lbl: 'LUAR JAM MASUK' };
+      if (x.includes('LUAR') && x.includes('PULANG')) return { cls: 'l-luar', icon: '<i class="fas fa-running"></i>', lbl: 'PULANG CEPAT' };
+      if (x.includes('LUAR')) return { cls: 'l-luar', icon: '<i class="fas fa-exclamation-triangle"></i>', lbl: 'DI LUAR JAM' };
+      if (x === 'IZIN') return { cls: 'l-izin', icon: '<i class="fas fa-praying-hands"></i>', lbl: 'KETERANGAN' };
+      if (x === 'SAKIT') return { cls: 'l-sakit', icon: '<i class="fas fa-thermometer-half"></i>', lbl: 'SAKIT' };
+      if (x === 'TUGAS') return { cls: 'l-tugas', icon: '<i class="fas fa-briefcase"></i>', lbl: 'TUGAS' };
+      if (x === 'IZIN PENDING') return { cls: 'l-pending', icon: '<i class="fas fa-hourglass-half"></i>', lbl: 'IZIN (Menunggu)' };
+      if (x === 'SAKIT PENDING') return { cls: 'l-pending', icon: '<i class="fas fa-hourglass-half"></i>', lbl: 'SAKIT (Menunggu)' };
+      if (x === 'TUGAS PENDING') return { cls: 'l-pending', icon: '<i class="fas fa-hourglass-half"></i>', lbl: 'TUGAS (Menunggu)' };
+      if (x === 'TANPA BERITA') return { cls: 'l-alpa', icon: '<i class="fas fa-times"></i>', lbl: 'TANPA BERITA' };
+      return { cls: 'l-pulang', icon: '<i class="fas fa-clipboard-list"></i>', lbl: j || '—' };
     }
     function renderLog(logs, keepLimit = false) {
       if (!keepLimit) {
@@ -109,7 +109,7 @@
         logs = currentRenderedLogs;
       }
       const el = $('logList');
-      if (!logs?.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Belum ada data</div><div class="empty-sub">Data muncul setelah Anda absen</div></div>`; return; }
+      if (!logs?.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-envelope-open-text"></i></div><div class="empty-text">Belum ada data</div><div class="empty-sub">Data muncul setelah Anda absen</div></div>`; return; }
 
       // Group by tanggal
       const byDate = {};
@@ -201,20 +201,20 @@
         const cepatMnt = (mPulang !== null && mPulangBatas !== null && mPulang < mPulangBatas) ? mPulangBatas - mPulang : 0;
 
         let masukLabel, masukColor, masukBg, masukIcon;
-        if (rIzin) { masukLabel = 'Izin'; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.12)'; masukIcon = '🙏'; }
-        else if (rSakit) { masukLabel = 'Sakit'; masukColor = 'var(--danger)'; masukBg = 'rgba(239,68,68,.12)'; masukIcon = '🤒'; }
-        else if (rTugas) { masukLabel = 'Tugas/DL'; masukColor = '#8b5cf6'; masukBg = 'rgba(139,92,246,.12)'; masukIcon = '💼'; }
-        else if (isAlpa) { masukLabel = 'Tanpa Berita'; masukColor = 'var(--danger)'; masukBg = 'rgba(239,68,68,.08)'; masukIcon = '❌'; }
+        if (rIzin) { masukLabel = 'Izin'; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.12)'; masukIcon = '<i class="fas fa-praying-hands"></i>'; }
+        else if (rSakit) { masukLabel = 'Sakit'; masukColor = 'var(--danger)'; masukBg = 'rgba(239,68,68,.12)'; masukIcon = '<i class="fas fa-thermometer-half"></i>'; }
+        else if (rTugas) { masukLabel = 'Tugas/DL'; masukColor = '#8b5cf6'; masukBg = 'rgba(139,92,246,.12)'; masukIcon = '<i class="fas fa-briefcase"></i>'; }
+        else if (isAlpa) { masukLabel = 'Tanpa Berita'; masukColor = 'var(--danger)'; masukBg = 'rgba(239,68,68,.08)'; masukIcon = '<i class="fas fa-times"></i>'; }
         else if (!jamMasuk) { masukLabel = 'Tidak Masuk'; masukColor = 'var(--muted)'; masukBg = 'rgba(255,255,255,.04)'; masukIcon = '—'; }
-        else if (terlambatMnt > 0) { masukLabel = `+${terlambatMnt}m`; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.08)'; masukIcon = '⏰'; }
-        else { masukLabel = 'Tepat Waktu'; masukColor = 'var(--success)'; masukBg = 'rgba(34,197,94,.08)'; masukIcon = '✅'; }
+        else if (terlambatMnt > 0) { masukLabel = `+${terlambatMnt}m`; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.08)'; masukIcon = '<i class="fas fa-clock"></i>'; }
+        else { masukLabel = 'Tepat Waktu'; masukColor = 'var(--success)'; masukBg = 'rgba(34,197,94,.08)'; masukIcon = '<i class="fas fa-check"></i>'; }
 
         let pulangLabel, pulangColor, pulangIcon;
         if (isKet) { pulangLabel = '—'; pulangColor = 'var(--muted)'; pulangIcon = '—'; }
-        else if (!jamPulang) { pulangLabel = 'Belum Absen'; pulangColor = 'var(--warning)'; pulangIcon = '⏳'; }
-        else if (cepatMnt > 0) { pulangLabel = `-${cepatMnt}m`; pulangColor = '#f97316'; pulangIcon = '🏃'; }
-        else if (rPulang && (getField(rPulang, 'Jenis Absen', 'jenis', 'Jenis') || '').toUpperCase() === 'PULANG LUAR') { pulangLabel = 'Lapangan'; pulangColor = '#f59e0b'; pulangIcon = '🏃'; }
-        else { pulangLabel = 'Tepat'; pulangColor = 'var(--info)'; pulangIcon = '🔵'; }
+        else if (!jamPulang) { pulangLabel = 'Belum Absen'; pulangColor = 'var(--warning)'; pulangIcon = '<i class="fas fa-hourglass-half"></i>'; }
+        else if (cepatMnt > 0) { pulangLabel = `-${cepatMnt}m`; pulangColor = '#f97316'; pulangIcon = '<i class="fas fa-running"></i>'; }
+        else if (rPulang && (getField(rPulang, 'Jenis Absen', 'jenis', 'Jenis') || '').toUpperCase() === 'PULANG LUAR') { pulangLabel = 'Lapangan'; pulangColor = '#f59e0b'; pulangIcon = '<i class="fas fa-running"></i>'; }
+        else { pulangLabel = 'Tepat'; pulangColor = 'var(--info)'; pulangIcon = '<i class="fas fa-circle"></i>'; }
 
         const cardBorder = isKet ? 'rgba(139,92,246,.3)'
           : isAlpa ? 'rgba(239,68,68,.3)'
@@ -247,8 +247,8 @@
       <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px 6px">
         <div>
           <div style="font-size:10px;font-weight:800;color:var(--white)">${tglLabel}</div>
-          ${periodeNama ? `<div style="font-size:8px;font-weight:700;color:#a78bfa;margin-top:2px">🌙 ${periodeNama}</div>` : ''}
-          ${isLibur ? `<div style="font-size:8px;font-weight:700;color:${isLiburNasional ? '#f87171' : 'var(--muted)'};margin-top:2px;background:${isLiburNasional ? 'rgba(239,68,68,.10)' : 'rgba(255,255,255,.05)'};border:1px solid ${isLiburNasional ? 'rgba(239,68,68,.25)' : 'rgba(255,255,255,.1)'};border-radius:5px;padding:1px 6px;display:inline-block">${isLiburNasional ? '🎉' : '📅'} ${namaLibur}</div>` : ''}
+          ${periodeNama ? `<div style="font-size:8px;font-weight:700;color:#a78bfa;margin-top:2px"><i class="fas fa-moon"></i> ${periodeNama}</div>` : ''}
+          ${isLibur ? `<div style="font-size:8px;font-weight:700;color:${isLiburNasional ? '#f87171' : 'var(--muted)'};margin-top:2px;background:${isLiburNasional ? 'rgba(239,68,68,.10)' : 'rgba(255,255,255,.05)'};border:1px solid ${isLiburNasional ? 'rgba(239,68,68,.25)' : 'rgba(255,255,255,.1)'};border-radius:5px;padding:1px 6px;display:inline-block">${isLiburNasional ? '<i class="fas fa-glass-cheers"></i>' : '<i class="fas fa-calendar"></i>'} ${namaLibur}</div>` : ''}
         </div>
         <div style="font-size:16px">${masukIcon}</div>
       </div>
@@ -261,7 +261,7 @@
           <div style="flex:1;min-width:0">
             <div style="font-size:12px;font-weight:800;color:${masukColor}">${masukLabel}</div>
             <div style="font-size:8px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">${ketJenis || 'Keterangan'}</div>
-            ${ketTglRange ? `<div style="font-size:8.5px;color:var(--muted);margin-top:4px">📅 ${ketTglRange}</div>` : ''}
+            ${ketTglRange ? `<div style="font-size:8.5px;color:var(--muted);margin-top:4px"><i class="fas fa-calendar"></i> ${ketTglRange}</div>` : ''}
             ${ketTeks ? `<div style="font-size:9px;color:rgba(255,255,255,.75);margin-top:5px;line-height:1.5;background:rgba(0,0,0,.2);border-radius:6px;padding:5px 8px;white-space:pre-wrap">${ketTeks}</div>` : ''}
           </div>
         </div>
@@ -269,13 +269,13 @@
       <!-- ── NORMAL: 2 kotak masuk / pulang ── -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 10px 8px">
         <div style="background:${masukBg};border:1px solid ${masukColor}44;border-radius:9px;padding:7px 9px">
-          <div style="font-size:7.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">🟢 Jam Masuk</div>
+          <div style="font-size:7.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px"><i class="fas fa-circle"></i> Jam Masuk</div>
           <div style="font-size:18px;font-family:'JetBrains Mono',monospace;font-weight:800;color:${masukColor};line-height:1">${jamMasuk ? jamMasuk.slice(0,5) : '—:—'}</div>
           <div style="font-size:9px;color:${masukColor};font-weight:700;margin-top:2px">${masukLabel}</div>
           <div style="font-size:7.5px;color:var(--muted);margin-top:3px;opacity:.7">Batas ≤ ${jmBatas}${periodeNama ? '' : ' (Global)'}</div>
         </div>
         <div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:9px;padding:7px 9px">
-          <div style="font-size:7.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">🔵 Jam Pulang</div>
+          <div style="font-size:7.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px"><i class="fas fa-circle"></i> Jam Pulang</div>
           <div style="font-size:18px;font-family:'JetBrains Mono',monospace;font-weight:800;color:${pulangColor};line-height:1">${jamPulang ? jamPulang.slice(0,5) : '—:—'}</div>
           <div style="font-size:9px;color:${pulangColor};font-weight:700;margin-top:2px">${pulangIcon} ${pulangLabel}</div>
           <div style="font-size:7.5px;color:var(--muted);margin-top:3px;opacity:.7">Batas ≥ ${jpBatas}${periodeNama ? '' : ' (Global)'}</div>
@@ -285,7 +285,7 @@
       <!-- Footer: lokasi + koordinat maps -->
       <div style="padding:0 10px 9px;display:flex;flex-direction:column;gap:4px">
         <div style="font-size:9px;color:var(--muted);display:flex;align-items:center;gap:5px">
-          <span>📍</span>
+          <span><i class="fas fa-map-marker-alt"></i></span>
           <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${lokasi}</span>
         </div>
         ${_hasGps ? `<div style="display:flex;gap:5px;flex-wrap:wrap">
@@ -311,7 +311,7 @@
             <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 15px 0 25px;">
               <button class="btn-pagination" onclick="window.loadMoreLogs()">
                 <span>Lihat 10 Lagi</span>
-                <span style="font-size: 14px;">⬇️</span>
+                <span style="font-size: 14px;"><i class="fas fa-arrow-down"></i></span>
               </button>
               
               <button class="btn-pagination-all" onclick="window.loadAllLogs()">
@@ -323,7 +323,7 @@
          html += `
             <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 15px 0 25px;">
               <button class="btn-pagination-all" onclick="window.collapseLogs()">
-                <span style="font-size: 14px; margin-right:4px;">⬆️</span> Sembunyikan (Tampilkan 10 Saja)
+                <span style="font-size: 14px; margin-right:4px;"><i class="fas fa-arrow-up"></i></span> Sembunyikan (Tampilkan 10 Saja)
               </button>
             </div>
          `;

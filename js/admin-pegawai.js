@@ -15,7 +15,7 @@
         window._pegawaiCache = users;
 
         if (!users.length) {
-          el.innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-icon" style="font-size:40px">👥</div><div class="empty-text">Belum ada data pegawai</div></div>`;
+          el.innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-icon" style="font-size:40px"><i class="fas fa-users"></i></div><div class="empty-text">Belum ada data pegawai</div></div>`;
           return;
         }
 
@@ -72,7 +72,7 @@
               <td style="padding:12px; color:var(--muted)">${pnk}</td>
               <td style="padding:12px">
                 <div style="font-size:9px; color:var(--muted)">ID: ${uid}</div>
-                <div style="color:var(--gold)">📱 ${hp}</div>
+                <div style="color:var(--gold)"><i class="fas fa-mobile-alt"></i> ${hp}</div>
               </td>
               <td style="padding:12px; text-align:center">
                 <span style="padding:3px 8px; border-radius:20px; font-size:8px; font-weight:800; background:${isAktif ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'}; color:${isAktif ? '#4ade80' : '#f87171'}; border:1px solid ${isAktif ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}">
@@ -81,8 +81,8 @@
               </td>
               <td style="padding:12px; text-align:center">
                 <div style="display:flex; gap:6px; justify-content:center">
-                  <button onclick="editPegawai('${escapeHtml(nip)}', event)" class="btn-sm-admin" style="background:rgba(96,165,250,0.1); color:#60a5fa; border-color:rgba(96,165,250,0.2)">✍️ Edit</button>
-                  <button onclick="deletePegawai('${escapeHtml(uid)}', '${escapeHtml(nama)}', '${escapeHtml(nip)}')" class="btn-sm-admin" style="background:rgba(239,68,68,0.1); color:#f87171; border-color:rgba(239,68,68,0.2)">🗑</button>
+                  <button onclick="editPegawai('${escapeHtml(nip)}', event)" class="btn-sm-admin" style="background:rgba(96,165,250,0.1); color:#60a5fa; border-color:rgba(96,165,250,0.2)"><i class="fas fa-pen"></i> Edit</button>
+                  <button onclick="deletePegawai('${escapeHtml(uid)}', '${escapeHtml(nama)}', '${escapeHtml(nip)}')" class="btn-sm-admin" style="background:rgba(239,68,68,0.1); color:#f87171; border-color:rgba(239,68,68,0.2)"><i class="fas fa-trash"></i></button>
                 </div>
               </td>
             </tr>
@@ -93,14 +93,14 @@
         el.innerHTML = html;
         
       } catch (e) {
-        el.innerHTML = `<div class="empty-state" style="padding:20px">🔌 Gagal: ${escapeHtml(e.message)}</div>`;
+        el.innerHTML = `<div class="empty-state" style="padding:20px"><i class="fas fa-plug"></i> Gagal: ${escapeHtml(e.message)}</div>`;
       }
     }
 
     function showAddPegawai() {
       const f = $('pegawaiForm');
       if (!f) return;
-      dom.setText('pegawaiFormTitle', '➕ TAMBAH PEGAWAI BARU');
+      dom.setHTML('pegawaiFormTitle', '<i class="fas fa-plus"></i> TAMBAH PEGAWAI BARU');
       $('editPegawaiId').value = '';
       $('inPegawaiId').value = '';
       dom.setDisabled('inPegawaiId', false);
@@ -112,8 +112,8 @@
       $('inPegawaiStatus').value = 'AKTIF';
       $('inPegawaiJamMasuk').value = '';
       $('inPegawaiJamPulang').value = '';
-      $('previewWajahAdmin').innerHTML = '<span>👤</span>';
-      $('previewTTDAdmin').innerHTML = '<span>🖋️</span>';
+      $('previewWajahAdmin').innerHTML = '<span><i class="fas fa-user"></i></span>';
+      $('previewTTDAdmin').innerHTML = '<span><i class="fas fa-pen-fancy"></i></span>';
       dom.hide('pegawaiFormResult');
       f.style.display = 'block';
       f.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -158,7 +158,7 @@
 
         const uid = String(p.id || p.ID || '');
 
-        dom.setText('pegawaiFormTitle', '✍️ EDIT DATA PEGAWAI TERPADU');
+        dom.setHTML('pegawaiFormTitle', '<i class="fas fa-pen"></i> EDIT DATA PEGAWAI TERPADU');
         $('editPegawaiId').value = uid;
         $('inPegawaiId').value = uid;
         dom.setDisabled('inPegawaiId', true); 
@@ -172,10 +172,11 @@
         const faceSrc = p.face_photo || p.Face_Photo || p.foto_base64 || '';
         const previewEl = $('previewWajahAdmin');
         if (previewEl) {
-          if (faceSrc && faceSrc.length > 100) {
-            previewEl.innerHTML = `<img src="${escapeHtml(faceSrc)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; background:var(--bg-card)">`;
+          const faceUrl = typeof driveImgUrl === 'function' ? driveImgUrl(faceSrc, 200) : faceSrc;
+          if (faceUrl) {
+            previewEl.innerHTML = `<img src="${escapeHtml(faceUrl)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; background:var(--bg-card)">`;
           } else {
-            previewEl.innerHTML = '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); border-radius:50%; font-size:24px; opacity:0.5">👤</div>';
+            previewEl.innerHTML = '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); border-radius:50%; font-size:24px; opacity:0.5"><i class="fas fa-user"></i></div>';
           }
         }
 
@@ -185,13 +186,14 @@
            // Gunakan format full atau endpoint signature-get
            const sRes = await apiGet(P.signatureGet, { nip: p.nip || p.NIP });
            const sigData = (sRes.data?.signature || sRes.rows?.[0]?.signature || '');
-            if (sigData && sigData.length > 50) {
-               $('previewTTDAdmin').innerHTML = `<img src="${escapeHtml(sigData)}" style="width:100%; height:100%; object-fit:contain; filter:brightness(1.8) contrast(1.2)">`;
+           const sigUrl = typeof driveImgUrl === 'function' ? driveImgUrl(sigData, 400) : sigData;
+            if (sigUrl) {
+               $('previewTTDAdmin').innerHTML = `<img src="${escapeHtml(sigUrl)}" style="width:100%; height:100%; object-fit:contain; filter:brightness(1.8) contrast(1.2)">`;
            } else {
-              $('previewTTDAdmin').innerHTML = '<span style="font-size:24px; opacity:0.5">🖋️</span>';
+              $('previewTTDAdmin').innerHTML = '<span style="font-size:24px; opacity:0.5"><i class="fas fa-pen-fancy"></i></span>';
            }
         } catch(e) { 
-           $('previewTTDAdmin').innerHTML = '<span style="font-size:24px; opacity:0.5">🖋️</span>'; 
+           $('previewTTDAdmin').innerHTML = '<span style="font-size:24px; opacity:0.5"><i class="fas fa-pen-fancy"></i></span>'; 
         }
 
         // Tipe & Pangkat
@@ -212,7 +214,7 @@
         setTimeout(() => $('inPegawaiNama').focus(), 600);
         
       } catch (e) { 
-        alert('❌ Gagal: ' + e.message);
+        alert(' Gagal: ' + e.message);
       } finally {
         if (btn && btn.tagName === 'BUTTON') {
           btn.innerHTML = originalInner;
@@ -242,12 +244,12 @@
       }
 
       if (!id || !nama) {
-        showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'warning', '⚠️', 'Data Kurang', 'Nama wajib diisi.');
+        showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Data Kurang', 'Nama wajib diisi.');
         dom.show('pegawaiFormResult');
         return;
       }
 
-      dom.setText('btnSavePegawaiTxt', '💾 Menyimpan...');
+      dom.setHTML('btnSavePegawaiTxt', '<i class="fas fa-save"></i> Menyimpan...');
       try {
         const path = isEdit ? P.userEdit : P.userAdd;
         const mainPayload = { 
@@ -269,7 +271,7 @@
         const { ok: saveOk, data: d } = await apiPost(path, mainPayload);
 
         if (!saveOk || (d && d.ok === false)) {
-          showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'fail', '❌', 'Gagal', (d && d.message) || 'Gagal menyimpan.');
+          showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal', (d && d.message) || 'Gagal menyimpan.');
           dom.show('pegawaiFormResult');
         } else {
           // Sync Admin Role
@@ -278,15 +280,15 @@
             try { await apiPost(P.adminAdd, { telegram_id: Number(id), nip, nama, role: cleanRole, ditambahkan_oleh: Number(MY_ID) }); } catch (err) {}
           }
 
-          showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'success', '✅', 'Berhasil', 'Data pegawai telah disimpan.');
+          showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'success', '<i class="fas fa-check"></i>', 'Berhasil', 'Data pegawai telah disimpan.');
           dom.show('pegawaiFormResult');
           setTimeout(() => { hidePegawaiForm(); loadPegawaiMgmt(); }, 1500);
         }
       } catch (e) {
-        showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'fail', '🔌', 'Error', e.message);
+        showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'fail', '<i class="fas fa-plug"></i>', 'Error', e.message);
         dom.show('pegawaiFormResult');
       }
-      dom.setText('btnSavePegawaiTxt', isEdit ? '💾 SIMPAN PERUBAHAN' : '💾 SIMPAN DATA');
+      dom.setHTML('btnSavePegawaiTxt', isEdit ? '<i class="fas fa-save"></i> SIMPAN PERUBAHAN' : '<i class="fas fa-save"></i> SIMPAN DATA');
     }
 
     /* ════ UNIFIED BIOMETRIC HANDLERS ════ */

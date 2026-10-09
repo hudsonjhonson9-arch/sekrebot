@@ -122,3 +122,60 @@ test('USER: endpoint tulis master ditolak', async () => {
     assert.equal(res.status, 403, `${method} ${p} harus 403 untuk USER`);
   }
 });
+
+// Bug "Gagal menghapus" = DELETE 0 baris (404) saat SUPERADMIN menghapus lokasi
+// yang instansi_id-nya bukan miliknya (mis. filter instansi lain di UI). Otorisasi
+// harus lewat sameInstansi (SUPERADMIN bypass), bukan instansi_id pemanggil.
+test('lokasi-delete: SUPERADMIN boleh menghapus lokasi instansi lain', async () => {
+  const SUPER = { id: '1', nip: '1', role: 'SUPERADMIN', instansi_id: '' };
+  const ran = [];
+  const q = async (text) => {
+    ran.push(text);
+    if (/SELECT instansi_id FROM lokasiabsen/.test(text)) return { rows: [{ instansi_id: 'bapperida2' }] };
+    if (/DELETE FROM lokasiabsen/.test(text)) return { rows: [{ id: 9, instansi_id: 'bapperida2' }] };
+    return { rows: [] };
+  };
+  const h = harness({ session: SUPER, query: q });
+  const res = await req(h, 'DELETE', '/api/lokasi-delete?id=9');
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.ok, true);
+  assert.ok(ran.some((t) => /DELETE FROM lokasiabsen/.test(t)), 'DELETE benar-benar dijalankan');
+});
+
+test('lokasi-delete: non-superadmin ditolak menghapus instansi lain, DELETE tidak jalan', async () => {
+  const ran = [];
+  const q = async (text) => {
+    ran.push(text);
+    if (/SELECT instansi_id FROM lokasiabsen/.test(text)) return { rows: [{ instansi_id: 'instansi_lain' }] };
+    return { rows: [] };
+  };
+  const h = harness({ session: ADMIN, query: q });
+  const res = await req(h, 'DELETE', '/api/lokasi-delete?id=9');
+  assert.equal(res.status, 403);
+  assert.equal(ran.some((t) => /DELETE FROM lokasiabsen/.test(t)), false, 'tidak boleh menghapus');
+});
+
+test('lokasi-delete: baris instansi "all" tetap bisa dihapus admin biasa', async () => {
+  const q = async (text) => {
+    if (/SELECT instansi_id FROM lokasiabsen/.test(text)) return { rows: [{ instansi_id: 'all' }] };
+    if (/DELETE FROM lokasiabsen/.test(text)) return { rows: [{ id: 9, instansi_id: 'all' }] };
+    return { rows: [] };
+  };
+  const h = harness({ session: ADMIN, query: q });
+  const res = await req(h, 'DELETE', '/api/lokasi-delete?id=9');
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+});
+
+test('lokasi-update: tidak menimpa instansi_id bila body tidak mengirimnya', async () => {
+  let updated = null;
+  const q = async (text, params) => {
+    if (/SELECT instansi_id FROM lokasiabsen/.test(text)) return { rows: [{ instansi_id: 'bapperida2' }] };
+    if (/UPDATE lokasiabsen/.test(text)) { updated = params; return { rows: [{ id: 9 }] }; }
+    return { rows: [] };
+  };
+  const SUPER = { id: '1', nip: '1', role: 'SUPERADMIN', instansi_id: '' };
+  const h = harness({ session: SUPER, query: q });
+  const res = await req(h, 'POST', '/api/lokasi-update', { id: '9', nama_lokasi: 'X', hari: 'senin', radius: 30 });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(updated[4], 'bapperida2', 'instansi_id lama dipertahankan');
+});

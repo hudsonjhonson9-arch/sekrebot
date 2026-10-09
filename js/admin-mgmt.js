@@ -46,7 +46,7 @@ async function loadAdminMgmt() {
     });
 
     if (!admins.length) {
-      el.innerHTML = `<div class="empty-state" style="padding:12px"><div class="empty-icon">👥</div><div class="empty-text">Belum ada admin/pimpinan terdaftar</div></div>`;
+      el.innerHTML = `<div class="empty-state" style="padding:12px"><div class="empty-icon"><i class="fas fa-users"></i></div><div class="empty-text">Belum ada admin/pimpinan terdaftar</div></div>`;
       return;
     }
 
@@ -92,20 +92,20 @@ async function loadAdminMgmt() {
           else if (role.includes('kabid') || role.includes('irban')) role = 'pimpinan_3';
           
           let roleLabel = 'ADMIN';
-          let icon = '🛡️';
+          let icon = '<i class="fas fa-shield-alt"></i>';
           let color = '#3b82f6';
 
-          if (role.includes('super')) { roleLabel = 'SUPER ADMIN'; icon = '👑'; color = 'var(--gold)'; }
+          if (role.includes('super')) { roleLabel = 'SUPER ADMIN'; icon = '<i class="fas fa-crown"></i>'; color = 'var(--gold)'; }
           else if (role === 'pimpinan_1') { 
             roleLabel = u.jabatan || u.Jabatan || 'KEPALA'; 
-            icon = '🏛️'; color = '#ef4444'; 
+            icon = '<i class="fas fa-landmark"></i>'; color = '#ef4444'; 
           }
-          else if (role === 'pimpinan_2') { roleLabel = 'SEKRETARIS'; icon = '📝'; color = '#10b981'; }
+          else if (role === 'pimpinan_2') { roleLabel = 'SEKRETARIS'; icon = '<i class="fas fa-edit"></i>'; color = '#10b981'; }
           else if (role === 'pimpinan_3') { 
             roleLabel = (u.role || u.Role || 'KABID').toUpperCase(); 
-            icon = '👔'; color = '#f59e0b'; 
+            icon = '<i class="fas fa-user-tie"></i>'; color = '#f59e0b'; 
           }
-          else if (role === 'irban') { roleLabel = 'IRBAN'; icon = '🔍'; color = '#8b5cf6'; }
+          else if (role === 'irban') { roleLabel = 'IRBAN'; icon = '<i class="fas fa-search"></i>'; color = '#8b5cf6'; }
 
           return `
             <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; ${index !== admins.length - 1 ? 'border-bottom:1px solid rgba(255,255,255,0.05)' : ''}; background:${isMe ? 'rgba(201,168,76,0.05)' : 'transparent'}">
@@ -131,7 +131,7 @@ async function loadAdminMgmt() {
       </div>
     `;
   } catch (e) {
-    el.innerHTML = `<div class="empty-state" style="padding:12px"><div class="empty-icon">🔌</div><div class="empty-text">Gagal memuat daftar manajemen: ${escapeHtml(e.message)}</div></div>`;
+    el.innerHTML = `<div class="empty-state" style="padding:12px"><div class="empty-icon"><i class="fas fa-plug"></i></div><div class="empty-text">Gagal memuat daftar manajemen: ${escapeHtml(e.message)}</div></div>`;
   }
 }
 
@@ -152,7 +152,7 @@ async function tambahAdmin() {
   const role = roleInput?.value || 'admin';
 
   if (!tgId && !nip) {
-    _showAdminMgmtResult('warning', '⚠️', 'Data Kurang', 'Masukkan Telegram ID atau NIP pegawai.');
+    _showAdminMgmtResult('warning', '', 'Data Kurang', 'Masukkan Telegram ID atau NIP pegawai.');
     return;
   }
 
@@ -167,7 +167,7 @@ async function tambahAdmin() {
     });
 
     if (!ok || data?.ok === false) {
-      _showAdminMgmtResult('warning', '⚠️', 'Gagal', (data && data.message) || 'Gagal mengubah hak akses.');
+      _showAdminMgmtResult('warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal', (data && data.message) || 'Gagal mengubah hak akses.');
       return;
     }
 
@@ -182,17 +182,17 @@ async function tambahAdmin() {
        if (typeof checkTugasLemburAccess === 'function') checkTugasLemburAccess();
     }
 
-    _showAdminMgmtResult('success', '✅', 'Berhasil', `Hak akses ${role.toUpperCase()} telah diberikan.`);
+    _showAdminMgmtResult('success', '<i class="fas fa-check"></i>', 'Berhasil', `Hak akses ${role.toUpperCase()} telah diberikan.`);
     loadAdminMgmt();
   } catch (e) {
-    _showAdminMgmtResult('fail', '🔌', 'Gagal', 'Server tidak merespons.');
+    _showAdminMgmtResult('fail', '<i class="fas fa-plug"></i>', 'Gagal', 'Server tidak merespons.');
   }
 }
 
 async function hapusAdmin(tgId, nama, nip) {
   if (!requireAdmin()) return;
   if (tgId == MY_ID) {
-    _showAdminMgmtResult('warning', '⚠️', 'Tidak Bisa', 'Anda tidak bisa mencabut hak akses Anda sendiri.');
+    _showAdminMgmtResult('warning', '<i class="fas fa-exclamation-triangle"></i>', 'Tidak Bisa', 'Anda tidak bisa mencabut hak akses Anda sendiri.');
     return;
   }
   if (!confirm(`Cabut hak akses manajemen dari ${nama}?`)) return;
@@ -206,7 +206,7 @@ async function hapusAdmin(tgId, nama, nip) {
     });
 
     if (!ok || data?.ok === false) {
-      _showAdminMgmtResult('warning', '⚠️', 'Gagal', data?.message || 'Gagal mencabut hak akses.');
+      _showAdminMgmtResult('warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal', data?.message || 'Gagal mencabut hak akses.');
       return;
     }
 
@@ -217,10 +217,10 @@ async function hapusAdmin(tgId, nama, nip) {
        if (typeof checkTugasLemburAccess === 'function') checkTugasLemburAccess();
     }
 
-    _showAdminMgmtResult('success', '✅', 'Berhasil', `Hak akses ${nama} telah dicabut.`);
+    _showAdminMgmtResult('success', '<i class="fas fa-check"></i>', 'Berhasil', `Hak akses ${nama} telah dicabut.`);
     loadAdminMgmt();
   } catch (e) {
-    _showAdminMgmtResult('fail', '🔌', 'Gagal', 'Server tidak merespons.');
+    _showAdminMgmtResult('fail', '<i class="fas fa-plug"></i>', 'Gagal', 'Server tidak merespons.');
   }
 }
 
@@ -361,15 +361,15 @@ async function simpanJamAbsen() {
   const mMasuk = toMenitStr(inM.value);
   const mPulang = toMenitStr(inP.value);
   if (mMasuk === null || mPulang === null) {
-    showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'warning', '⚠️', 'Input Tidak Valid', 'Pastikan format jam benar (HH:MM).');
+    showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Input Tidak Valid', 'Pastikan format jam benar (HH:MM).');
     return;
   }
   if (mMasuk >= mPulang) {
-    showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'warning', '⚠️', 'Jam Tidak Logis', 'Jam masuk harus lebih kecil dari jam pulang.');
+    showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Jam Tidak Logis', 'Jam masuk harus lebih kecil dari jam pulang.');
     return;
   }
   const btn = $('btnSimpanJam');
-  if (btn) { btn.disabled = true; dom.setText('btnJamText', '💾 Menyimpan...'); }
+  if (btn) { btn.disabled = true; dom.setHTML('btnJamText', '<i class="fas fa-save"></i> Menyimpan...'); }
   try {
     const configSelect = $('configInstansiSelect');
     const instId = (configSelect && configSelect.value) || getScopedInstansiId() || 'bapperida';
@@ -388,10 +388,10 @@ async function simpanJamAbsen() {
     try { localStorage.setItem('jam_absen_bapperida', JSON.stringify({ masuk: inM.value, pulang: inP.value })); } catch (_) { }
     updateClock();
     updateJamPreview();
-    showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'success', '✅', 'Jam Tersimpan!',
+    showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'success', '<i class="fas fa-check"></i>', 'Jam Tersimpan!',
       `Masuk ≤ ${inM.value} · Pulang ≥ ${inP.value}\nBerlaku langsung untuk semua pengguna.`);
   } catch {
-    showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'warning', '⚠️', 'Gagal Menyimpan',
+    showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal Menyimpan',
       'Simpan lokal berhasil, tapi gagal ke server. Pastikan webhook jam-absen aktif di n8n.');
     JAM_MASUK_MENIT = mMasuk;
     JAM_PULANG_MENIT = mPulang;

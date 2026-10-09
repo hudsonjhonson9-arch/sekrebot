@@ -87,11 +87,11 @@
         $('editLogId').value = existingId;
         if (existingId) {
           dom.setText('logModalTitle', 'UPDATE LOG ABSEN');
-          dom.setText('logModalIcon', '📝');
+          dom.setHTML('logModalIcon', '<i class="fas fa-edit"></i>');
           dom.setText('btnSaveLogTxt', 'Perbarui Log');
         } else {
           dom.setText('logModalTitle', 'TAMBAH LOG MANUAL');
-          dom.setText('logModalIcon', '➕');
+          dom.setHTML('logModalIcon', '<i class="fas fa-plus"></i>');
           dom.setText('btnSaveLogTxt', 'Simpan Log');
         }
       };
@@ -114,7 +114,7 @@
       // Fallback server-side: kalau cache rekap untuk hari itu belum pernah
       // dimuat (userListOrder kosong / _raw*Log tidak ada), tanya /api/log
       // SETELAH modal tampil, lalu update mode kalau ketemu. Log sudah ada
-      // (pegawai+tanggal+jenis) = mode EDIT (📝), bukan tambah baru (➕).
+      // (pegawai+tanggal+jenis) = mode EDIT (<i class="fas fa-edit"></i>), bukan tambah baru (<i class="fas fa-plus"></i>).
       if (!existingId && uid && date) {
         try {
           const { ok, rows } = await apiGet(P.log, { user_id: uid, tanggal: date });
@@ -218,7 +218,7 @@
       const isEdit = !!editId;
 
       if (!uid || !tgl || !jamRaw) {
-        showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'warning', '⚠️', 'Data Kurang', 'Pegawai, Tanggal, dan Jam wajib diisi.');
+        showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Data Kurang', 'Pegawai, Tanggal, dan Jam wajib diisi.');
         return;
       }
 
@@ -252,16 +252,16 @@
         const d = res?.data ?? {};
 
         if (!res.ok || d.ok === false) {
-          showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'fail', '❌', 'Gagal', d.message || 'Gagal menyimpan log.');
+          showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal', d.message || 'Gagal menyimpan log.');
         } else {
-          showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'success', '✅', 'Berhasil', isEdit ? 'Log absen diperbarui.' : 'Log absen manual ditambahkan.');
+          showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'success', '<i class="fas fa-check"></i>', 'Berhasil', isEdit ? 'Log absen diperbarui.' : 'Log absen manual ditambahkan.');
           setTimeout(() => {
             closeLogEditor();
             loadRekap(); // Refresh rekap after change
           }, 2000);
         }
       } catch (e) {
-        showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'fail', '🔌', 'Koneksi Error', 'Server tidak merespons.');
+        showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'fail', '<i class="fas fa-plug"></i>', 'Koneksi Error', 'Server tidak merespons.');
       } finally {
         _isLogSubmitting = false; // Reset Lock
         setBtnL('btnSaveLog', false, 'Simpan Log');

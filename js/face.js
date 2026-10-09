@@ -103,7 +103,7 @@
         const res = await _detectWithTimeout(input, 8000);
         return (res && res.face && res.face.length > 0) ? res.face[0].embedding : null;
       } catch (e) {
-        if (e.message === 'AI_TIMEOUT') setCamStatus('warn', '⚠️', 'AI Terlalu Lambat', '...');
+        if (e.message === 'AI_TIMEOUT') setCamStatus('warn', '<i class="fas fa-exclamation-triangle"></i>', 'AI Terlalu Lambat', '...');
         return null;
       } finally {
         _isDetecting = prevDetectState;
@@ -212,26 +212,26 @@
         let descriptorToSave = descriptor ? Array.from(descriptor) : null;
 
         if (!descriptorToSave && dataUrl) {
-          setCamStatus('ok', '🔍', 'Verifikasi data wajah...', 'Sedang mencocokkan AI');
+          setCamStatus('ok', '<i class="fas fa-search"></i>', 'Verifikasi data wajah...', 'Sedang mencocokkan AI');
           const desc = await getDescriptorFromDataUrl(dataUrl);
           if (desc) descriptorToSave = Array.from(desc);
         }
 
         if (!descriptorToSave) {
-          setCamStatus('bad', '❌', 'Wajah Tidak Jelas', 'Pastikan wajah menghadap lurus ke kamera');
+          setCamStatus('bad', '<i class="fas fa-times"></i>', 'Wajah Tidak Jelas', 'Pastikan wajah menghadap lurus ke kamera');
           return false;
         }
 
-        setCamStatus('ok', '📡', 'Mengirim...', 'Menyimpan ke server');
+        setCamStatus('ok', '<i class="fas fa-satellite-dish"></i>', 'Mengirim...', 'Menyimpan ke server');
         const ok = await syncFaceToServer(uid, dataUrl, descriptorToSave, tgUser.first_name, savedAt);
         if (ok) {
           updateProfilFaceUI();
         } else {
-          setCamStatus('bad', '❌', 'Gagal Simpan', window._lastAiError || 'Server tidak merespons');
+          setCamStatus('bad', '<i class="fas fa-times"></i>', 'Gagal Simpan', window._lastAiError || 'Server tidak merespons');
         }
         return ok;
       } catch (err) { 
-        setCamStatus('bad', '❌', 'Error', err.message);
+        setCamStatus('bad', '<i class="fas fa-times"></i>', 'Error', err.message);
         return false; 
       }
     }
@@ -364,23 +364,23 @@
           const score = Math.round(sim * 100);
           const threshold = typeof FS_FACE_THRESHOLD !== 'undefined' ? FS_FACE_THRESHOLD : FACE_THRESHOLD;
           let label, cls;
-          if (sim >= threshold) { label = `✅ Cocok ${score}%`; cls = 'face-match-ok'; }
-          else if (sim >= threshold - 0.1) { label = `⚠️ Mirip ${score}%`; cls = 'face-match-warn'; }
-          else { label = `❌ Tidak Cocok ${score}%`; cls = 'face-match-warn'; }
+          if (sim >= threshold) { label = `<i class="fas fa-check"></i> Cocok ${score}%`; cls = 'face-match-ok'; }
+          else if (sim >= threshold - 0.1) { label = `<i class="fas fa-exclamation-triangle"></i> Mirip ${score}%`; cls = 'face-match-warn'; }
+          else { label = `<i class="fas fa-times"></i> Tidak Cocok ${score}%`; cls = 'face-match-warn'; }
           return { score, label, cls, similarity: sim, capturedDescriptor: capturedDescArr };
         }
 
         // Dimensi tidak cocok (descriptor lama format face-api 128-dim)
         return {
           score: 0,
-          label: `⚠️ Data wajah lama — silakan daftarkan ulang`,
+          label: `<i class="fas fa-exclamation-triangle"></i> Data wajah lama — silakan daftarkan ulang`,
           cls: 'face-match-warn',
           capturedDescriptor: capturedDescArr,
           needsUpdate: true
         };
       }
 
-      return { score: 0, label: '⚠️ Gagal ekstrak wajah', cls: 'face-match-warn', capturedDescriptor: capturedDescArr };
+      return { score: 0, label: '<i class="fas fa-exclamation-triangle"></i> Gagal ekstrak wajah', cls: 'face-match-warn', capturedDescriptor: capturedDescArr };
     }
 
     function updateFaceRegUI() {
@@ -405,14 +405,14 @@
         const tgl = isNaN(d) ? '—' : `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
 
         if (status) {
-          status.textContent = isHuman ? '🛡️ Data Wajah Human Aktif' : (hasDescriptor ? '⚠️ Format Lama — Perlu Daftar Ulang' : '❌ Belum Ada Data Wajah');
+          status.innerHTML = isHuman ? '<i class="fas fa-shield-alt"></i> Data Wajah Human Aktif' : (hasDescriptor ? '<i class="fas fa-exclamation-triangle"></i> Format Lama — Perlu Daftar Ulang' : '<i class="fas fa-times"></i> Belum Ada Data Wajah');
           status.style.color = isHuman ? 'var(--success)' : (hasDescriptor ? 'var(--warning)' : 'var(--danger)');
         }
         if (sub) {
           sub.textContent = isHuman ? `Didaftarkan: ${tgl} · Face AI Human aktif` : `Daftarkan ulang wajah agar kompatibel dengan Face AI terbaru`;
         }
         if (btn) {
-          btn.textContent = hasDescriptor ? '🔄 Perbarui' : '📷 Daftarkan Ulang';
+          btn.innerHTML = hasDescriptor ? '<i class="fas fa-sync"></i> Perbarui' : '<i class="fas fa-camera"></i> Daftarkan Ulang';
         }
       } else {
         if (thumb) thumb.style.display = 'none';
@@ -425,7 +425,7 @@
           sub.textContent = 'Daftarkan wajah untuk pengenalan AI otomatis';
         }
         if (btn) {
-          btn.textContent = '📷 Daftarkan';
+          btn.innerHTML = '<i class="fas fa-camera"></i> Daftarkan';
         }
       }
     }
@@ -439,12 +439,12 @@
           if (ok) {
             updateFaceRegUI();
             updateProfilFaceUI();
-            setCamStatus('ok', '🧠', 'Data Wajah AI Tersimpan!', 'Wajah Anda berhasil didaftarkan dengan Face AI');
+            setCamStatus('ok', '<i class="fas fa-brain"></i>', 'Data Wajah AI Tersimpan!', 'Wajah Anda berhasil didaftarkan dengan Face AI');
             // Biarkan tombol Ambil Foto berubah jadi Selesai atau Tutup
             const btn = $('btnCapture');
             if (btn) {
               btn.disabled = false;
-              btn.innerHTML = '✅ Selesai';
+              btn.innerHTML = '<i class="fas fa-check"></i> Selesai';
               btn.onclick = () => closeCamOverlay(false);
             }
           } else {
@@ -452,7 +452,7 @@
             const btn = $('btnCapture');
             if (btn) {
               btn.disabled = false;
-              btn.innerHTML = '📸 Coba Lagi';
+              btn.innerHTML = '<i class="fas fa-camera"></i> Coba Lagi';
               btn.onclick = () => doCapture();
             }
           }
@@ -482,19 +482,19 @@
         }
         const d = new Date(ref.savedAt);
         const tgl = isNaN(d) ? '—' : `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
-        status.textContent = isHuman ? '🛡️ Face AI: Human' : (hasDescriptor ? '⚠️ Format Lama — Perlu Daftar Ulang' : '❌ Belum Ada Data Wajah');
+        status.innerHTML = isHuman ? '<i class="fas fa-shield-alt"></i> Face AI: Human' : (hasDescriptor ? '<i class="fas fa-exclamation-triangle"></i> Format Lama — Perlu Daftar Ulang' : '<i class="fas fa-times"></i> Belum Ada Data Wajah');
         status.style.color = isHuman ? 'var(--success)' : (hasDescriptor ? 'var(--warning)' : 'var(--danger)');
         if (sub) sub.textContent = isHuman
           ? `Didaftarkan: ${tgl} · Face AI Advanced aktif`
           : `Daftarkan ulang wajah agar kompatibel dengan Face AI terbaru`;
-        if (btn) btn.textContent = hasDescriptor ? '🔄 Perbarui' : '📷 Daftarkan Ulang';
+        if (btn) btn.innerHTML = hasDescriptor ? '<i class="fas fa-sync"></i> Perbarui' : '<i class="fas fa-camera"></i> Daftarkan Ulang';
       } else {
         if (thumb) thumb.style.display = 'none';
         if (empty) empty.style.display = 'flex';
         status.textContent = 'Belum ada data wajah';
         status.style.color = 'var(--muted)';
         if (sub) sub.textContent = 'Daftarkan wajah Anda untuk pengenalan AI otomatis saat absen';
-        if (btn) btn.textContent = '📷 Daftarkan';
+        if (btn) btn.innerHTML = '<i class="fas fa-camera"></i> Daftarkan';
       }
     }
 
@@ -849,7 +849,7 @@
         overlay.style.pointerEvents = 'auto';
       }
       $('modelLoading').style.display = 'block';
-      if ($('mlTitle')) $('mlTitle').textContent = _modelsReady ? '📷 Membuka Kamera...' : 'Memuat Model AI Deteksi Wajah'; // Dynamic title
+      if ($('mlTitle')) $('mlTitle').innerHTML = _modelsReady ? '<i class="fas fa-camera"></i> Membuka Kamera...' : 'Memuat Model AI Deteksi Wajah'; // Dynamic title
       if ($('mlHint')) $('mlHint').textContent = _modelsReady ? 'Mengaktifkan sensor perangkat, harap tunggu...' : 'Harap tunggu sebentar...';
       $('camVideoWrap').style.display = 'none';
       $('camStatus').style.display = 'none';
@@ -861,7 +861,7 @@
       if (btnCap) {
         btnCap.style.display = isMeja ? 'none' : 'flex';
         btnCap.disabled = true;
-        btnCap.innerHTML = '📸 Ambil Foto & Lanjutkan';
+        btnCap.innerHTML = '<i class="fas fa-camera"></i> Ambil Foto & Lanjutkan';
       }
 
       const livenessUI = $('livenessMini');
@@ -875,7 +875,7 @@
       // Catatan: untuk isRegister, judul sudah di-set oleh caller (misal adminCaptureFaceFor)
       const titleEl = $('camHeaderTitle');
       if (titleEl) {
-        if (!onDone?.isRegister && !isMeja) titleEl.textContent = '📷 Verifikasi Wajah';
+        if (!onDone?.isRegister && !isMeja) titleEl.innerHTML = '<i class="fas fa-camera"></i> Verifikasi Wajah';
         // isRegister & isMeja: biarkan judul yang sudah diset caller
       }
 
@@ -960,7 +960,7 @@
       } else {
         const ready = await loadAIModels();
         if (!ready) {
-          setCamStatus('warn', '⚠️', 'AI Gagal Dimuat', 'Gunakan tombol manual untuk ambil foto');
+          setCamStatus('warn', '<i class="fas fa-exclamation-triangle"></i>', 'AI Gagal Dimuat', 'Gunakan tombol manual untuk ambil foto');
           if (btnCap) btnCap.disabled = false;
         }
         $('modelLoading').style.display = 'none';
@@ -1025,7 +1025,7 @@
 
       // Kembalikan judul & panduan wajah untuk sesi berikutnya
       const titleEl = $('camHeaderTitle');
-      if (titleEl) titleEl.textContent = '📷 Verifikasi Wajah';
+      if (titleEl) titleEl.innerHTML = '<i class="fas fa-camera"></i> Verifikasi Wajah';
       const faceGuideEl = $('faceGuideWrap');
       if (faceGuideEl) faceGuideEl.style.display = 'flex';
 
@@ -1058,7 +1058,7 @@
       const btnCap = $('btnBuktiCapture');
       if (btnCap) {
         btnCap.disabled = true;
-        btnCap.innerHTML = '📸 Ambil Foto Bukti';
+        btnCap.innerHTML = '<i class="fas fa-camera"></i> Ambil Foto Bukti';
       }
 
       try {
@@ -1232,10 +1232,10 @@
 
           if (!detection) {
             wrap.className = 'cam-video-wrap face-bad';
-            setCamStatus('bad', '😶', 'Wajah Belum Terlihat', 'Hadapkan wajah ke kamera');
+            setCamStatus('bad', '<i class="fas fa-meh-blank"></i>', 'Wajah Belum Terlihat', 'Hadapkan wajah ke kamera');
             _livenessState.faceOk = false;
             if (window._isMejaMode) {
-              _getLsIcon().textContent = '😐';
+              _getLsIcon().innerHTML = '<i class="fas fa-meh-blank"></i>';
               _getLsText().textContent = 'Menunggu Wajah...';
               _getLsText().style.color = 'var(--muted)';
               _matchSessionToken++; // Batalkan semua match result yang sedang berjalan
@@ -1250,16 +1250,16 @@
             _isLive = detection._isHumanLive;
 
             if (_isLive) {
-                setCamStatus('ok', '🛡️', 'Liveness Approved', window._isMejaMode ? 'Mencocokkan Identitas...' : 'Posisikan wajah & Tekan tombol');
+                setCamStatus('ok', '<i class="fas fa-shield-alt"></i>', 'Liveness Approved', window._isMejaMode ? 'Mencocokkan Identitas...' : 'Posisikan wajah & Tekan tombol');
               if (window._isMejaMode) {
-                _getLsIcon().textContent = '🛡️';
+                _getLsIcon().innerHTML = '<i class="fas fa-shield-alt"></i>';
                 _getLsText().textContent = 'Wajah Terverifikasi Asli';
                 _getLsText().style.color = 'var(--success)';
               }
             } else {
-              setCamStatus('ok', '⏳', 'Verifikasi Keaslian...', 'Mohon tetap diam sejenak');
+              setCamStatus('ok', '<i class="fas fa-hourglass-half"></i>', 'Verifikasi Keaslian...', 'Mohon tetap diam sejenak');
               if (window._isMejaMode) {
-                _getLsIcon().textContent = '🔍';
+                _getLsIcon().innerHTML = '<i class="fas fa-search"></i>';
                 _getLsText().textContent = `Mengecek Keaslian Wajah... (Score: ${window._lastHumanScore || '0.00'})`;
                 _getLsText().style.color = 'var(--gold)';
               }
@@ -1293,7 +1293,7 @@
 
                     // Update UI with identified person
                     if (_getLsText()) {
-                      _getLsIcon().textContent = '✅';
+                      _getLsIcon().innerHTML = '<i class="fas fa-check"></i>';
                       _getLsText().textContent = `ID Ditemukan: ${nama} (${score}%)`;
                       _getLsText().style.color = '#4ade80';
                     }
@@ -1321,7 +1321,7 @@
                     // Reset UI jika tidak ada match
                     if (_isLive) {
                       const isDataLoading = !_allFaceDescriptors || _allFaceDescriptors.length === 0;
-                      _getLsIcon().textContent = isDataLoading ? '⏳' : '🔍';
+                      _getLsIcon().innerHTML = isDataLoading ? '<i class="fas fa-hourglass-half"></i>' : '<i class="fas fa-search"></i>';
                       _getLsText().textContent = isDataLoading ? 'Memuat Database Wajah...' : 'Mencari Identitas di Database...';
                       _getLsText().style.color = 'var(--gold)';
                     }
@@ -1389,7 +1389,7 @@
       console.log('[AI] --- Starting Capture & Finalization ---');
 
       // Update UI Segera
-      setCamStatus('ok', '📸', 'Memproses Foto...', 'Harap tunggu');
+      setCamStatus('ok', '<i class="fas fa-camera"></i>', 'Memproses Foto...', 'Harap tunggu');
       const btnCap = $('btnCapture');
       if (btnCap) {
         btnCap.disabled = true;
@@ -1438,7 +1438,7 @@
 
         if (!descriptor) {
           _forceResetAiState(true);
-          setCamStatus('bad', '⚠️', 'Gagal Ekstraksi', 'Wajah tidak terdeteksi jelas');
+          setCamStatus('bad', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal Ekstraksi', 'Wajah tidak terdeteksi jelas');
           if (!window._isMejaMode) startDetectLoop();
           return;
         }
@@ -1482,12 +1482,12 @@
       } catch (e) {
         console.error('[AI] Fatal Capture Error:', e);
         _forceResetAiState(true);
-        setCamStatus('bad', '❌', 'Gagal Memproses', e.message || 'Silakan coba lagi');
+        setCamStatus('bad', '<i class="fas fa-times"></i>', 'Gagal Memproses', e.message || 'Silakan coba lagi');
         // Aktifkan kembali tombol agar user bisa coba lagi
         const btn = $('btnCapture');
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = '📸 Coba Lagi';
+          btn.innerHTML = '<i class="fas fa-camera"></i> Coba Lagi';
         }
       }
     }
@@ -1500,7 +1500,7 @@
       await doCapture();
     }
 
-    /* ── Tutup overlay manual oleh pengguna (tombol ✕) ── */
+    /* ── Tutup overlay manual oleh pengguna (tombol <i class="fas fa-times"></i>) ── */
     function closeCamByUser() {
       closeCamOverlay(true); // true = user yang menutup → panggil onCancel
     }
@@ -1509,18 +1509,18 @@
       // Fallback jika model gagal muat atau isSimple mode
       $('btnCapture').disabled = false;
       if (isSimpleMode) {
-        setCamStatus('ok', '📷', 'Kamera Siap', 'Posisikan dokumen/bukti secara jelas lalu tekan Ambil Foto');
+        setCamStatus('ok', '<i class="fas fa-camera"></i>', 'Kamera Siap', 'Posisikan dokumen/bukti secara jelas lalu tekan Ambil Foto');
       } else {
-        setCamStatus('warn', '📷', 'Kamera Siap', 'Model AI tidak tersedia — foto manual');
+        setCamStatus('warn', '<i class="fas fa-camera"></i>', 'Kamera Siap', 'Model AI tidak tersedia — foto manual');
       }
     }
 
     /* ── Helper UI ── */
     function setCamStatus(type, icon, title, sub) {
-      if (!_isLoopEnabled && type === 'ok' && icon !== '📸' && icon !== '✅' && icon !== '❌') return;
+      if (!_isLoopEnabled && type === 'ok' && icon !== '<i class="fas fa-camera"></i>' && icon !== '<i class="fas fa-check"></i>' && icon !== '<i class="fas fa-times"></i>') return;
       const el = $('camStatus'); if (!el) return;
       el.className = `cam-status ${type}`;
-      $('camStatusIcon').textContent = icon;
+      $('camStatusIcon').innerHTML = icon;
       $('camStatusTitle').textContent = title;
       $('camStatusSub').textContent = sub;
     }

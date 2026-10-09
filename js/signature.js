@@ -159,7 +159,7 @@
       const file = e.target.files?.[0];
       if (!file) return;
       if (file.size > 5 * 1024 * 1024) {
-        _showSigMsg('⚠️ Ukuran file terlalu besar (maks 5MB)', 'warn'); return;
+        _showSigMsg('<i class="fas fa-exclamation-triangle"></i> Ukuran file terlalu besar (maks 5MB)', 'warn'); return;
       }
       const reader = new FileReader();
       reader.onload = ev => {
@@ -239,7 +239,7 @@
 
       if (_sigMode === 'draw') {
         if (!_sigHasContent) {
-          _showSigMsg('⚠️ Tulis tanda tangan Anda terlebih dahulu', 'warn'); return;
+          _showSigMsg('<i class="fas fa-exclamation-triangle"></i> Tulis tanda tangan Anda terlebih dahulu', 'warn'); return;
         }
         const canvas = $('sigCanvas');
         // Render dengan background putih untuk PNG bersih
@@ -259,7 +259,7 @@
         dataUrl = tmpC.toDataURL('image/png', 0.92);
       } else {
         if (!_sigPhotoData) {
-          _showSigMsg('⚠️ Pilih foto tanda tangan terlebih dahulu', 'warn'); return;
+          _showSigMsg('<i class="fas fa-exclamation-triangle"></i> Pilih foto tanda tangan terlebih dahulu', 'warn'); return;
         }
         dataUrl = _sigPhotoData;
       }
@@ -292,7 +292,7 @@
           _sigCache[nip] = savedSig;
           try { localStorage.setItem(`sig_${nip}`, savedSig); } catch (_) { }
 
-          _showSigMsg('✅ Tanda tangan berhasil disimpan!', 'ok');
+          _showSigMsg('<i class="fas fa-check"></i> Tanda tangan berhasil disimpan!', 'ok');
           // Update UI profil
           if (nip === localStorage.getItem('MY_NIP')) updateProfilSigUI(savedSig);
           if (typeof _sigCallback === 'function') _sigCallback(savedSig);
@@ -306,7 +306,7 @@
         _sigCache[nip] = dataUrl;
         try { localStorage.setItem(`sig_${nip}`, dataUrl); } catch (_) { }
         if (nip === localStorage.getItem('MY_NIP')) updateProfilSigUI(dataUrl);
-        _showSigMsg('⚠️ Tersimpan lokal (server tidak merespons)', 'warn');
+        _showSigMsg('<i class="fas fa-exclamation-triangle"></i> Tersimpan lokal (server tidak merespons)', 'warn');
         setTimeout(() => closeSignaturePad(), 1800);
       } finally {
         if (btn) btn.disabled = false;
@@ -345,17 +345,17 @@
           img.style.display = 'block';
         }
         if (empty) empty.style.display = 'none';
-        status.textContent = '✅ Tanda Tangan Tersimpan';
+        status.innerHTML = '<i class="fas fa-check"></i> Tanda Tangan Tersimpan';
         status.style.color = 'var(--success)';
         if (sub) sub.textContent = 'Tanda tangan akan disisipkan pada rekap absen PDF';
-        if (btn) btn.textContent = '🔄 Perbarui';
+        if (btn) btn.innerHTML = '<i class="fas fa-sync"></i> Perbarui';
       } else {
         if (img) img.style.display = 'none';
         if (empty) empty.style.display = 'flex';
         status.textContent = 'Belum ada tanda tangan';
         status.style.color = 'var(--muted)';
         if (sub) sub.textContent = 'Daftarkan tanda tangan untuk rekap absen & PDF';
-        if (btn) btn.textContent = '✏️ Buat';
+        if (btn) btn.innerHTML = '<i class="fas fa-edit"></i> Buat';
       }
     }
 
@@ -410,7 +410,7 @@
         }
 
         if (!users.length) {
-          el.innerHTML = `<div class="empty-state" style="padding:12px"><div class="empty-icon">👥</div><div class="empty-text">Tidak ada data pegawai</div></div>`;
+          el.innerHTML = `<div class="empty-state" style="padding:12px"><div class="empty-icon"><i class="fas fa-users"></i></div><div class="empty-text">Tidak ada data pegawai</div></div>`;
           return;
         }
 
@@ -434,7 +434,7 @@
             : (driveIdMatch ? `https://drive.google.com/thumbnail?id=${driveIdMatch[1]}&sz=w200` : rawSig);
 
           return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;margin-bottom:5px">
-        <div style="font-size:16px">${hasSig ? '✅' : '⬜'}</div>
+        <div style="font-size:16px">${hasSig ? '<i class="fas fa-check"></i>' : '<i class="fas fa-square"></i>'}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nama}</div>
           <div style="font-size:9px;color:var(--muted);margin-top:1px">${hasSig ? `Didaftarkan: ${tgl || '—'}` : 'Belum ada tanda tangan'}</div>
@@ -446,7 +446,7 @@
       </div>`;
         }).join('');
       } catch (e) {
-        el.innerHTML = `<div class="empty-state" style="padding:12px"><div class="empty-icon">🔌</div><div class="empty-text">Gagal memuat</div></div>`;
+        el.innerHTML = `<div class="empty-state" style="padding:12px"><div class="empty-icon"><i class="fas fa-plug"></i></div><div class="empty-text">Gagal memuat</div></div>`;
       }
     }
 
@@ -461,7 +461,7 @@
         badge.style.display = 'none';
       } else {
         badge.style.display = 'block';
-        badge.textContent = label || `👤 ${faceCount} wajah`;
+        badge.innerHTML = label || `<i class="fas fa-user"></i> ${faceCount} wajah`;
       }
     }
 

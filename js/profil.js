@@ -127,7 +127,7 @@
         const logoUrl = (instData?.logo_url || '').trim();
         const defaultLogo = 'https://raw.githubusercontent.com/hudsonjhonson9-arch/sekrebot/main/Lambang_Kabupaten_Sumba_Barat.png';
         const finalLogo = logoUrl || defaultLogo;
-        logoWrap.innerHTML = `<img src="${finalLogo}" alt="${instName}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;" onerror="this.parentElement.innerHTML='🏛️'">`;
+        logoWrap.innerHTML = `<img src="${finalLogo}" alt="${instName}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;" onerror="this.parentElement.innerHTML='<i class="fas fa-landmark"></i>'">`;
       }
     }
     window.applyInstansiBranding = applyInstansiBranding;
@@ -144,7 +144,7 @@
       applyInstansiBranding(p.instansi_id);
       // ── Badge status (baca dari data, bukan hardcode) ──
       const st = (p.status || 'AKTIF').toUpperCase();
-      const stEmoji = st === 'AKTIF' ? '✅' : st === 'SAKIT' ? '🤒' : st === 'IZIN' ? '🙏' : st === 'TUGAS' ? '💼' : st === 'NONAKTIF' ? '🚫' : '⚙️';
+      const stEmoji = st === 'AKTIF' ? '<i class="fas fa-check"></i>' : st === 'SAKIT' ? '<i class="fas fa-thermometer-half"></i>' : st === 'IZIN' ? '<i class="fas fa-praying-hands"></i>' : st === 'TUGAS' ? '<i class="fas fa-briefcase"></i>' : st === 'NONAKTIF' ? '<i class="fas fa-ban"></i>' : '<i class="fas fa-cog"></i>';
       const stCls = st === 'AKTIF' ? 's-aktif' : st === 'NONAKTIF' ? 's-nonaktif' : 's-ket';
       const b = $('userBadge'); if (b) { b.textContent = `${stEmoji} ${st}`; b.className = `sbadge ${stCls}`; }
       // ── Isi kartu profil besar ──
@@ -153,7 +153,7 @@
       setT('profilJabatan', p.jabatan || '—');
       setT('profilNip', `NIP: ${p.nip || '—'}`);
       const tb = $('profilTgBadge');
-      if (tb) tb.textContent = `🔗 @${window.tgUser?.username || 'Telegram'}`;
+      if (tb) tb.textContent = ` @${window.tgUser?.username || 'Telegram'}`;
       // ── Badge profil besar (dinamis) ──
       const pb = $('profilStatusBadge');
       if (pb) { pb.textContent = `${stEmoji} ${st}`; pb.className = `profil-badge ${stCls === 's-aktif' ? 'aktif-badge' : stCls === 's-nonaktif' ? 'nonaktif-badge' : 'ket-status-badge'}`; }
@@ -204,12 +204,12 @@
       setT('userJabatan', '—'); setT('ketJabatan', '—');
       setT('userMeta', `@${window.tgUser?.username || '—'} · ID: ${window.MY_ID || '—'}`);
       setT('ketMeta', `@${window.tgUser?.username || '—'} · ID: ${window.MY_ID || '—'}`);
-      const b = $('userBadge'); if (b) { b.textContent = '⚙️ —'; b.className = 'sbadge'; }
+      const b = $('userBadge'); if (b) { b.innerHTML = '<i class="fas fa-cog"></i> —'; b.className = 'sbadge'; }
       const al = $('profilAvatarLg'); if (al) al.textContent = i;
       setT('profilNama', n);
       setT('profilJabatan', '—');
       setT('profilNip', 'NIP —');
-      const tb = $('profilTgBadge'); if (tb) tb.textContent = `🔗 @${window.tgUser?.username || '—'}`;
+      const tb = $('profilTgBadge'); if (tb) tb.innerHTML = `<i class="fas fa-link"></i> @${window.tgUser?.username || '—'}`;
     }
 
     /* ════ PENGINGAT KENAIKAN PANGKAT & BERKALA ════ */
@@ -235,24 +235,24 @@
 
       if (bPangkat !== null) {
         if (bPangkat <= 0)
-          reminders.push({ cls: 'reminder-warn', icon: '🎖️', title: 'Kenaikan Pangkat Sudah Jatuh Tempo!', sub: `Segera ajukan kenaikan pangkat. Tanggal: ${tglPangkat}` });
+          reminders.push({ cls: 'reminder-warn', icon: '<i class="fas fa-medal"></i>', title: 'Kenaikan Pangkat Sudah Jatuh Tempo!', sub: `Segera ajukan kenaikan pangkat. Tanggal: ${tglPangkat}` });
         else if (bPangkat <= 3)
-          reminders.push({ cls: 'reminder-warn', icon: '⚠️', title: `Kenaikan Pangkat ${bPangkat} bulan lagi`, sub: `Segera siapkan berkas. Tanggal: ${tglPangkat}` });
+          reminders.push({ cls: 'reminder-warn', icon: '<i class="fas fa-exclamation-triangle"></i>', title: `Kenaikan Pangkat ${bPangkat} bulan lagi`, sub: `Segera siapkan berkas. Tanggal: ${tglPangkat}` });
         else if (bPangkat <= 6)
-          reminders.push({ cls: 'reminder-info', icon: '📋', title: `Kenaikan Pangkat ${bPangkat} bulan lagi`, sub: `Tanggal kenaikan: ${tglPangkat}` });
+          reminders.push({ cls: 'reminder-info', icon: '<i class="fas fa-clipboard-list"></i>', title: `Kenaikan Pangkat ${bPangkat} bulan lagi`, sub: `Tanggal kenaikan: ${tglPangkat}` });
         else
-          reminders.push({ cls: 'reminder-ok', icon: '✅', title: `Pangkat aman — ${bPangkat} bulan lagi`, sub: `Tanggal kenaikan: ${tglPangkat}` });
+          reminders.push({ cls: 'reminder-ok', icon: '<i class="fas fa-check"></i>', title: `Pangkat aman — ${bPangkat} bulan lagi`, sub: `Tanggal kenaikan: ${tglPangkat}` });
       }
 
       if (bBerkala !== null) {
         if (bBerkala <= 0)
-          reminders.push({ cls: 'reminder-warn', icon: '💰', title: 'Kenaikan Berkala Sudah Jatuh Tempo!', sub: `Segera ajukan kenaikan berkala. Tanggal: ${tglBerkala}` });
+          reminders.push({ cls: 'reminder-warn', icon: '<i class="fas fa-money-bill"></i>', title: 'Kenaikan Berkala Sudah Jatuh Tempo!', sub: `Segera ajukan kenaikan berkala. Tanggal: ${tglBerkala}` });
         else if (bBerkala <= 3)
-          reminders.push({ cls: 'reminder-warn', icon: '⚠️', title: `Kenaikan Berkala ${bBerkala} bulan lagi`, sub: `Segera siapkan berkas. Tanggal: ${tglBerkala}` });
+          reminders.push({ cls: 'reminder-warn', icon: '<i class="fas fa-exclamation-triangle"></i>', title: `Kenaikan Berkala ${bBerkala} bulan lagi`, sub: `Segera siapkan berkas. Tanggal: ${tglBerkala}` });
         else if (bBerkala <= 6)
-          reminders.push({ cls: 'reminder-info', icon: '📋', title: `Kenaikan Berkala ${bBerkala} bulan lagi`, sub: `Tanggal kenaikan: ${tglBerkala}` });
+          reminders.push({ cls: 'reminder-info', icon: '<i class="fas fa-clipboard-list"></i>', title: `Kenaikan Berkala ${bBerkala} bulan lagi`, sub: `Tanggal kenaikan: ${tglBerkala}` });
         else
-          reminders.push({ cls: 'reminder-ok', icon: '✅', title: `Berkala aman — ${bBerkala} bulan lagi`, sub: `Tanggal kenaikan: ${tglBerkala}` });
+          reminders.push({ cls: 'reminder-ok', icon: '<i class="fas fa-check"></i>', title: `Berkala aman — ${bBerkala} bulan lagi`, sub: `Tanggal kenaikan: ${tglBerkala}` });
       }
 
       if (!reminders.length) {
@@ -260,7 +260,7 @@
         return;
       }
       sec.innerHTML = `
-    <div class="profil-section-title">🔔 Pengingat Kepegawaian</div>
+    <div class="profil-section-title"><i class="fas fa-bell"></i> Pengingat Kepegawaian</div>
     ${reminders.map(r => `
       <div class="reminder-card ${r.cls}">
         <div class="reminder-icon">${r.icon}</div>
@@ -305,7 +305,7 @@
         } else if (!dokumenLoaded) throw 0;
       } catch {
         if (!dokumenLoaded) {
-          el.innerHTML = `<div class="dokumen-empty">🔌 Gagal memuat dokumen.<br><span style="font-size:9px">Pastikan webhook dokumen aktif di n8n.</span></div>`;
+          el.innerHTML = `<div class="dokumen-empty"><i class="fas fa-plug"></i> Gagal memuat dokumen.<br><span style="font-size:9px">Pastikan webhook dokumen aktif di n8n.</span></div>`;
         }
       }
     }
@@ -315,12 +315,12 @@
      */
     function _renderDokumenList(docs, el) {
       if (!docs.length) {
-        el.innerHTML = `<div class="dokumen-empty">📭 Belum ada dokumen tersimpan.<br><span style="font-size:9px;color:var(--muted)">Hubungi admin untuk menambahkan dokumen.</span></div>`;
+        el.innerHTML = `<div class="dokumen-empty"><i class="fas fa-envelope-open-text"></i> Belum ada dokumen tersimpan.<br><span style="font-size:9px;color:var(--muted)">Hubungi admin untuk menambahkan dokumen.</span></div>`;
         return;
       }
       const JENIS_ICON = {
-        'SK': '📜', 'SKEP': '📜', 'IJAZAH': '🎓', 'SERTIFIKAT': '🏅',
-        'SKP': '📊', 'FOTO': '🖼️', 'KTP': '🪪', 'DEFAULT': '📄'
+        'SK': '<i class="fas fa-scroll"></i>', 'SKEP': '<i class="fas fa-scroll"></i>', 'IJAZAH': '<i class="fas fa-graduation-cap"></i>', 'SERTIFIKAT': '<i class="fas fa-medal"></i>',
+        'SKP': '<i class="fas fa-chart-bar"></i>', 'FOTO': '<i class="fas fa-image"></i>', 'KTP': '<i class="fas fa-id-card"></i>', 'DEFAULT': '<i class="fas fa-file-alt"></i>'
       };
       if (!window._dokCache) window._dokCache = {};
       
@@ -400,7 +400,7 @@
       const f = e.target.files[0]; if (!f) return;
       if (f.size > 5 * 1024 * 1024) { alert('File terlalu besar (maks 5MB)'); e.target.value = ''; return; }
       _dokFile = f;
-      $('dokFileName').textContent = '📎 ' + f.name;
+      $('dokFileName').innerHTML = '<i class="fas fa-paperclip"></i> ' + f.name;
       dom.show('dokFileName', 'block');
       if (!$('dokNama').value) $('dokNama').value = f.name.replace(/\.[^.]+$/, '');
     }
@@ -408,13 +408,13 @@
       const btn = $('btnSimpanDok');
       const msg = $('dokModalMsg');
       const showMsg = (t, c) => { msg.style.display = 'block'; msg.style.color = c || 'var(--muted)'; msg.textContent = t; };
-      btn.disabled = true; btn.textContent = '⏳ Menyimpan...';
+      btn.disabled = true; btn.innerHTML = '<i class="fas fa-hourglass-half"></i> Menyimpan...';
       try {
         let payload;
         if (_dokTab === 'upload') {
           const nama = $('dokNama').value.trim();
-          if (!nama) { showMsg('⚠️ Nama dokumen wajib diisi', '#f59e0b'); btn.disabled = false; btn.textContent = '💾 Simpan Dokumen'; return; }
-          if (!_dokFile) { showMsg('⚠️ Pilih file terlebih dahulu', '#f59e0b'); btn.disabled = false; btn.textContent = '💾 Simpan Dokumen'; return; }
+          if (!nama) { showMsg('<i class="fas fa-exclamation-triangle"></i> Nama dokumen wajib diisi', '#f59e0b'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Simpan Dokumen'; return; }
+          if (!_dokFile) { showMsg('<i class="fas fa-exclamation-triangle"></i> Pilih file terlebih dahulu', '#f59e0b'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Simpan Dokumen'; return; }
           // Show progress bar
           const prog = $('dokProgress'); prog.style.display = 'block';
           $('dokProgressFill').style.width = '30%';
@@ -438,7 +438,7 @@
         } else {
           const nama = $('dokNama2').value.trim();
           const link = $('dokLink').value.trim();
-          if (!nama || !link) { showMsg('⚠️ Nama & link wajib diisi', '#f59e0b'); btn.disabled = false; btn.textContent = '💾 Simpan Dokumen'; return; }
+          if (!nama || !link) { showMsg('<i class="fas fa-exclamation-triangle"></i> Nama & link wajib diisi', '#f59e0b'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Simpan Dokumen'; return; }
           payload = { 
             user_id: MY_ID, 
             nip: localStorage.getItem('MY_NIP') || '',
@@ -451,16 +451,16 @@
         const { ok: docOk, data: d } = await apiPost(P.dokumenAdd, payload);
         if (d.ok) {
           $('dokProgressFill').style.width = '100%';
-          showMsg('✅ Dokumen berhasil disimpan!', '#4ade80');
+          showMsg('<i class="fas fa-check"></i> Dokumen berhasil disimpan!', '#4ade80');
           dokumenLoaded = false;
           setTimeout(() => { closeDokumenModal(); loadDokumen(); }, 1200);
         } else {
-          showMsg('❌ ' + (d.message || 'Gagal menyimpan'), '#ef4444');
+          showMsg('<i class="fas fa-times"></i> ' + (d.message || 'Gagal menyimpan'), '#ef4444');
         }
       } catch (e) {
-        showMsg('❌ Koneksi gagal. Coba lagi.', '#ef4444');
+        showMsg('<i class="fas fa-times"></i> Koneksi gagal. Coba lagi.', '#ef4444');
       }
-      btn.disabled = false; btn.textContent = '💾 Simpan Dokumen';
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Simpan Dokumen';
     }
     async function hapusDokumen(id, nama) {
       if (!confirm(`Hapus dokumen "${nama}"?
@@ -473,8 +473,8 @@ File di Google Drive juga akan dihapus.`)) return;
         });
         const d = res?.data ?? {};
         if (d.ok) { dokumenLoaded = false; loadDokumen(); }
-        else alert('❌ ' + (d.message || 'Gagal menghapus'));
-      } catch { alert('❌ Koneksi gagal'); }
+        else alert(' ' + (d.message || 'Gagal menghapus'));
+      } catch { alert(' Koneksi gagal'); }
     }
 
     function setT(id, v) { const e = $(id); if (e) e.textContent = v; }
@@ -524,7 +524,7 @@ File di Google Drive juga akan dihapus.`)) return;
         if (cleanLink && !['', '-', '#', 'null'].includes(cleanLink)) {
           window.open(cleanLink, '_blank', 'noopener');
         } else {
-          alert('❌ File tidak ditemukan atau link tidak tersedia.');
+          alert(' File tidak ditemukan atau link tidak tersedia.');
         }
         return;
       }
@@ -554,7 +554,7 @@ File di Google Drive juga akan dihapus.`)) return;
         // Revoke URL setelah beberapa saat untuk hemat memori
         setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
       } catch (err) {
-        alert('❌ Gagal memproses data file. Format tidak didukung.');
+        alert(' Gagal memproses data file. Format tidak didukung.');
       }
     }
     window._openDokumen = _openDokumen; // Expose ke onclick HTML

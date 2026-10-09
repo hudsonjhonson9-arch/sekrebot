@@ -225,7 +225,7 @@
       if (data.length === 0) {
         listEl.innerHTML = `
           <div class="empty-state" style="padding:40px 20px">
-            <div style="font-size:40px; margin-bottom:15px">📋</div>
+            <div style="font-size:40px; margin-bottom:15px"><i class="fas fa-clipboard-list"></i></div>
             <div style="font-weight:800; color:var(--white); font-size:14px">Belum Ada Perjalanan Dinas</div>
             <div style="color:var(--muted); font-size:11px; margin-top:5px">Perjalanan dinas yang diberikan atasan akan muncul di sini</div>
           </div>
@@ -243,10 +243,10 @@
       console.error('[TugasLembur] Load Error:', e);
       listEl.innerHTML = `
         <div class="empty-state">
-          <div style="font-size:30px; margin-bottom:10px">⚠️</div>
+          <div style="font-size:30px; margin-bottom:10px"><i class="fas fa-exclamation-triangle"></i></div>
           <div style="font-weight:700">Gagal memuat tugas</div>
           <div style="font-size:10px; color:var(--muted); margin:5px 0 10px">${e.message}</div>
-          <button onclick="loadMyAssignments()" class="btn-sm" style="background:rgba(255,255,255,0.1); border-radius:10px; padding:8px 15px; border:1px solid rgba(255,255,255,0.2); color:var(--white); cursor:pointer">🔄 Coba Lagi</button>
+          <button onclick="loadMyAssignments()" class="btn-sm" style="background:rgba(255,255,255,0.1); border-radius:10px; padding:8px 15px; border:1px solid rgba(255,255,255,0.2); color:var(--white); cursor:pointer"><i class="fas fa-sync"></i> Coba Lagi</button>
         </div>
       `;
     }
@@ -307,7 +307,7 @@
     if (status === 'AKTIF') {
       actionBtn = `
         <button onclick='handleKerjakanTugas(${JSON.stringify(r)})' class="btn-sm" style="background:linear-gradient(135deg, var(--gold) 0%, #d4af37 100%); color:#000; border:none; padding:8px 16px; border-radius:10px; font-size:11px; font-weight:800; cursor:pointer; box-shadow: 0 4px 15px rgba(212,175,55,0.3); transition:all 0.3s ease">
-          🚀 Kerjakan Tugas
+          <i class="fas fa-rocket"></i> Kerjakan Tugas
         </button>
       `;
     } else {
@@ -335,7 +335,7 @@
                 </div>
               </div>
               <button type="button" onclick="viewMyTugasBuktiById('${r.id}')" class="btn-sm" style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.3); padding:6px 12px; border-radius:8px; cursor:pointer; font-weight:700">
-                📄 Buka PDF
+                 Buka PDF
               </button>
             </div>
           `;
@@ -353,7 +353,7 @@
       } else {
         buktiTag = `
           <div style="margin-top:15px; border-radius:12px; padding:12px; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.15); display:flex; align-items:center; gap:10px">
-            <span style="font-size:18px">⚠️</span>
+            <span style="font-size:18px"><i class="fas fa-exclamation-triangle"></i></span>
             <div>
               <div style="font-size:11px; font-weight:700; color:#f87171">Bukti Rusak / Tidak Dikenali</div>
               <div style="font-size:9px; color:var(--muted)">Format data bukti tidak valid</div>
@@ -433,7 +433,7 @@
       `,
       icon: 'info',
       showCancelButton: true,
-      confirmButtonText: '📍 Cek Lokasi & Foto',
+      confirmButtonText: '<i class="fas fa-map-marker-alt"></i> Cek Lokasi & Foto',
       cancelButtonText: 'Batal'
     }).then((res) => {
       if (res.isConfirmed) {
@@ -460,7 +460,7 @@
           }
 
           if (!insideRadius) {
-            Swal.fire('❌ Gagal', `Anda berada ${Math.round(dist)}m dari titik perjalanan dinas. Jarak maksimal adalah ${r.radius}m.`, 'error');
+            Swal.fire(' Gagal', `Anda berada ${Math.round(dist)}m dari titik perjalanan dinas. Jarak maksimal adalah ${r.radius}m.`, 'error');
           } else {
             // 2. Trigger File Input
             Swal.close();
@@ -469,7 +469,7 @@
             $('tugasBuktiInput').click();
           }
         }, (err) => {
-          Swal.fire('❌ Gagal', 'Gagal mendapatkan lokasi: ' + err.message, 'error');
+          Swal.fire(' Gagal', 'Gagal mendapatkan lokasi: ' + err.message, 'error');
         }, { enableHighAccuracy: true });
       }
     });
@@ -510,7 +510,7 @@
       const sizeBytes = atob(b64).length;
       if (sizeBytes > 5 * 1024 * 1024) {
         Swal.fire({
-          title: '❌ File Terlalu Besar',
+          title: '<i class="fas fa-times"></i> File Terlalu Besar',
           text: `Ukuran file (${(sizeBytes / 1024 / 1024).toFixed(2)} MB) melebihi batas maksimal 5 MB.`,
           icon: 'error',
           confirmButtonColor: '#3085d6'
@@ -543,7 +543,7 @@
         await idb.set('offline_queue', offlineData);
         
         Swal.fire({
-          title: '📴 Disimpan Offline',
+          title: '<i class="fas fa-mobile-alt"></i> Disimpan Offline',
           text: 'Penyelesaian Perjalanan Dinas disimpan sementara di perangkat Anda karena tidak ada koneksi internet. Data akan disinkronisasikan otomatis saat terhubung internet.',
           icon: 'warning',
           confirmButtonText: 'OK'
@@ -567,14 +567,14 @@
       });
 
       if (updateRes.ok) {
-        Swal.fire('✅ Berhasil', 'Tugas telah diselesaikan!', 'success');
+        Swal.fire(' Berhasil', 'Tugas telah diselesaikan!', 'success');
         loadMyAssignments();
       } else {
         throw new Error(updateRes.data?.message || 'Gagal memperbarui status tugas');
       }
 
     } catch (e) {
-      Swal.fire('❌ Gagal', e.message, 'error');
+      Swal.fire(' Gagal', e.message, 'error');
     } finally {
       input.value = '';
     }
@@ -591,7 +591,7 @@
     const el = $('tugasOptionsList');
     const pemberiEl = $('tugasPemberi');
     if (!el) return;
-    el.innerHTML = '<div style="padding:10px; text-align:center; font-size:11px; color:var(--muted)">⏳ Memuat...</div>';
+    el.innerHTML = '<div style="padding:10px; text-align:center; font-size:11px; color:var(--muted)"><i class="fas fa-hourglass-half"></i> Memuat...</div>';
     
     try {
       // Use format=full to get ALL employees (including Kabid/Manager)
@@ -631,7 +631,7 @@
           managers.map(m => `<option value="${m.nip}|${m.nama}">${m.nama} (${m.role.toUpperCase()})</option>`).join('');
       }
     } catch (e) {
-      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--danger)">❌ Gagal memuat pegawai</div>';
+      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--danger)"><i class="fas fa-times"></i> Gagal memuat pegawai</div>';
     }
   }
 
@@ -639,7 +639,7 @@
     const el = $('tugasOptionsList');
     if (!el) return;
     if (list.length === 0) {
-      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--muted)">🔍 Tidak ditemukan</div>';
+      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--muted)"><i class="fas fa-search"></i> Tidak ditemukan</div>';
       return;
     }
     el.innerHTML = list.map(u => {
@@ -649,7 +649,7 @@
           <div style="display:flex; align-items:center; justify-content:space-between; width:100%">
             <div>
               <span class="item-name">${u.nama}</span>
-              <span class="item-nip">🪪 ${u.nip || '—'}</span>
+              <span class="item-nip"><i class="fas fa-id-card"></i> ${u.nip || '—'}</span>
             </div>
             ${isSelected ? '<i class="fas fa-check-circle" style="color:var(--success)"></i>' : ''}
           </div>
@@ -770,12 +770,12 @@
     const tgl = $('tugasTanggal').value;
 
     if (_selectedTugasPegawai.length === 0 || !tgl) {
-      alert('⚠️ Harap pilih minimal satu pegawai dan tanggal tugas.');
+      alert(' Harap pilih minimal satu pegawai dan tanggal tugas.');
       return;
     }
 
     // Save for each selected employee
-    setBtnL('btnSaveTugas', true, '⏳ Memproses...');
+    setBtnL('btnSaveTugas', true, '<i class="fas fa-hourglass-half"></i> Memproses...');
     try {
       const pemberiVal = $('tugasPemberi')?.value || '';
       let creatorNama = userProfile?.nama || 'Admin';
@@ -806,7 +806,7 @@
 
       const allOk = results.every(r => r.ok && r.data?.ok !== false);
       if (allOk) {
-        showResult('tugasResult', 'tugasRIcon', 'tugasRTitle', 'tugasRMsg', 'success', '✅', 'Penugasan Berhasil', 
+        showResult('tugasResult', 'tugasRIcon', 'tugasRTitle', 'tugasRMsg', 'success', '<i class="fas fa-check"></i>', 'Penugasan Berhasil', 
           `${_selectedTugasPegawai.length} Pegawai telah ditugaskan pada ${tgl}.`);
         dom.show('tugasResult', 'flex');
         
@@ -818,14 +818,14 @@
         _selectedTugasPegawai = [];
         renderTugasPills();
       } else {
-        showResult('tugasResult', 'tugasRIcon', 'tugasRTitle', 'tugasRMsg', 'fail', '❌', 'Sebagian Gagal', 'Beberapa penugasan gagal disimpan.');
+        showResult('tugasResult', 'tugasRIcon', 'tugasRTitle', 'tugasRMsg', 'fail', '<i class="fas fa-times"></i>', 'Sebagian Gagal', 'Beberapa penugasan gagal disimpan.');
         dom.show('tugasResult', 'flex');
       }
 
     } catch (e) {
-      alert('❌ Terjadi kesalahan koneksi.');
+      alert(' Terjadi kesalahan koneksi.');
     } finally {
-      setBtnL('btnSaveTugas', false, '💾 Simpan Penugasan');
+      setBtnL('btnSaveTugas', false, '<i class="fas fa-save"></i> Simpan Penugasan');
     }
   };
 
@@ -839,7 +839,7 @@
   async function loadLemburPegawai() {
     const el = $('lemburOptionsList');
     if (!el) return;
-    el.innerHTML = '<div style="padding:10px; text-align:center; font-size:11px; color:var(--muted)">⏳ Memuat...</div>';
+    el.innerHTML = '<div style="padding:10px; text-align:center; font-size:11px; color:var(--muted)"><i class="fas fa-hourglass-half"></i> Memuat...</div>';
     
     try {
       const res = await apiGet(P.userList + '?format=full');
@@ -855,7 +855,7 @@
 
       renderLemburPegawaiList(_allPegawaiLembur);
     } catch (e) {
-      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--danger)">❌ Gagal</div>';
+      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--danger)"><i class="fas fa-times"></i> Gagal</div>';
     }
   }
 
@@ -863,7 +863,7 @@
     const el = $('lemburOptionsList');
     if (!el) return;
     if (list.length === 0) {
-      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--muted)">🔍 Tidak ditemukan</div>';
+      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--muted)"><i class="fas fa-search"></i> Tidak ditemukan</div>';
       return;
     }
     el.innerHTML = list.map(u => {
@@ -873,7 +873,7 @@
           <div style="display:flex; align-items:center; justify-content:space-between; width:100%">
             <div>
               <span class="item-name">${u.nama}</span>
-              <span class="item-nip">🪪 ${u.nip || '—'}</span>
+              <span class="item-nip"><i class="fas fa-id-card"></i> ${u.nip || '—'}</span>
             </div>
             ${isSelected ? '<i class="fas fa-check-circle" style="color:var(--success)"></i>' : ''}
           </div>
@@ -1033,7 +1033,7 @@
     const n = datesArr.length;
     const first = datesArr[0].split('-').reverse().join('/');
     const last  = datesArr[n - 1].split('-').reverse().join('/');
-    const label = n === 1 ? `📅 ${first}` : `📅 ${first} — ${last} &nbsp;·&nbsp; <strong>${n} hari kerja</strong>`;
+    const label = n === 1 ? `<i class="fas fa-calendar"></i> ${first}` : `<i class="fas fa-calendar"></i> ${first} — ${last} &nbsp;·&nbsp; <strong>${n} hari kerja</strong>`;
 
     c.innerHTML = `
       <div style="
@@ -1050,7 +1050,7 @@
         gap: 8px;
       ">
         <span>${label}</span>
-        <span style="font-size:10px; opacity:0.7; cursor:pointer;" onclick="window._selectedLemburDates.clear(); renderLemburDates(); renderLemburPills();">✕ Reset</span>
+        <span style="font-size:10px; opacity:0.7; cursor:pointer;" onclick="window._selectedLemburDates.clear(); renderLemburDates(); renderLemburPills();"><i class="fas fa-times"></i> Reset</span>
       </div>
     `;
   }
@@ -1060,7 +1060,7 @@
    */
   window.handleFetchLembur = async function() {
     if (window._selectedLemburDates.size === 0 || _selectedLemburPegawai.length === 0) {
-      alert('⚠️ Harap pilih minimal satu tanggal dan pilih minimal satu pegawai.');
+      alert(' Harap pilih minimal satu tanggal dan pilih minimal satu pegawai.');
       return;
     }
 
@@ -1082,7 +1082,7 @@
 
       if (!resLembur.ok) {
         const msg = getApiErrorMsg(resLembur.data, 'Gagal menarik data dari server.');
-        listEl.innerHTML = `<div class="empty-state">❌ ${escapeHtml(msg)}</div>`;
+        listEl.innerHTML = `<div class="empty-state"><i class="fas fa-times"></i> ${escapeHtml(msg)}</div>`;
         return;
       }
       
@@ -1155,9 +1155,9 @@
       if (!window._currentLiburDates) window._currentLiburDates = new Set();
       
     } catch (e) {
-      listEl.innerHTML = `<div class="empty-state">❌ Terjadi kesalahan jaringan atau server offline.</div>`;
+      listEl.innerHTML = `<div class="empty-state"><i class="fas fa-times"></i> Terjadi kesalahan jaringan atau server offline.</div>`;
     } finally {
-      setBtnL('btnFetchLembur', false, '📊 Tarik Data Lembur');
+      setBtnL('btnFetchLembur', false, '<i class="fas fa-chart-bar"></i> Tarik Data Lembur');
     }
   };
 
@@ -1654,7 +1654,7 @@
     // 7. Store references
     const fileName = `Rekap_Kerja_Lembur_${range.dari}_${range.sampai}.pdf`;
     const pdfBase64 = doc.output('datauristring').split(',')[1];
-    const pdfMsg = `📄 *REKAPITULASI KERJA LEMBUR PDF*\n📅 Periode: ${range.dari} s/d ${range.sampai}\n👤 Peminta: ${window.userProfile?.nama || window.MY_ID}\n🪪 NIP: ${localStorage.getItem('MY_NIP') || '-'}\n\nLaporan lembur telah siap.`;
+    const pdfMsg = ` *REKAPITULASI KERJA LEMBUR PDF*\n Periode: ${range.dari} s/d ${range.sampai}\n Peminta: ${window.userProfile?.nama || window.MY_ID}\n NIP: ${localStorage.getItem('MY_NIP') || '-'}\n\nLaporan lembur telah siap.`;
     const instName = instData?.nama_instansi || (typeof getInstansiName === 'function' ? getInstansiName(instId) : instId.toUpperCase());
 
     window.lastGeneratedDoc = doc;
@@ -1693,7 +1693,7 @@
         }
       } catch (err) {
         console.error("Capacitor download error:", err);
-        alert('❌ Gagal menyimpan PDF: ' + err.message);
+        alert(' Gagal menyimpan PDF: ' + err.message);
       }
     } else {
       doc.save(fileName);
@@ -1709,7 +1709,7 @@
       instansi_id: instId,
       instansi_name: instName
     });
-    alert('✅ Rekap Lembur PDF berhasil dikirim!');
+    alert(' Rekap Lembur PDF berhasil dikirim!');
   };
 
   window.handleExportLemburPDF = async function(options = null) {
@@ -1745,7 +1745,7 @@
     if (!listEl) return;
 
     if (data.length === 0) {
-      listEl.innerHTML = '<div class="empty-state">📭 Tidak ada data absen untuk rentang ini.</div>';
+      listEl.innerHTML = '<div class="empty-state"><i class="fas fa-envelope-open-text"></i> Tidak ada data absen untuk rentang ini.</div>';
       return;
     }
 
@@ -1754,19 +1754,19 @@
     const actionButtons = isArchiveMode ? `
       <div style="display:flex; gap:8px;">
         <button class="btn-sm-admin" onclick="exitLemburArchivePreview()" style="background:#6b7280; color:white; border:none; padding:6px 12px; border-radius:8px; font-size:10px; font-weight:700; cursor:pointer;">
-           ✕ Tutup Preview
+           <i class="fas fa-times"></i> Tutup Preview
         </button>
         <button class="btn-sm-admin" onclick="handleExportLemburPDF()" style="background:var(--success); border:none; color:white; padding:6px 12px; border-radius:8px; font-size:10px; font-weight:700; cursor:pointer;">
-           📄 Cetak Rekap PDF
+            Cetak Rekap PDF
         </button>
       </div>
     ` : `
       <div style="display:flex; gap:8px;">
         <button class="btn-sm-admin" onclick="handleExportLemburPDF()" style="background:var(--success); border:none; color:white; padding:6px 12px; border-radius:8px; font-size:10px; font-weight:700; cursor:pointer;">
-           📄 Cetak Rekap PDF
+            Cetak Rekap PDF
         </button>
         <button id="btnSaveLemburRekap" class="btn-sm-admin" onclick="handleSaveLemburRekap()" style="background:var(--gold); border:none; color:black; padding:6px 12px; border-radius:8px; font-size:10px; font-weight:700; cursor:pointer;">
-           💾 Simpan Rekap
+           <i class="fas fa-save"></i> Simpan Rekap
         </button>
       </div>
     `;
@@ -1774,7 +1774,7 @@
     const header = `
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:15px; margin-top:20px">
         <div style="font-size:12px; font-weight:800; color:var(--white)">
-          ${isArchiveMode ? '📂 PREVIEW ARSIP' : '📋 HASIL PENCARIAN'} (${data.length})
+          ${isArchiveMode ? '<i class="fas fa-folder-open"></i> PREVIEW ARSIP' : '<i class="fas fa-clipboard-list"></i> HASIL PENCARIAN'} (${data.length})
         </div>
         ${actionButtons}
       </div>
@@ -1782,11 +1782,11 @@
 
     // Color palette per status
     const KET_STYLE = {
-      'SAKIT':  { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   icon: '🤒', border: '#ef4444' },
-      'TUGAS':  { color: '#f97316', bg: 'rgba(249,115,22,0.12)',  icon: '💼', border: '#f97316' },
-      'IZIN':   { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  icon: '🙏', border: '#3b82f6' },
-      'CUTI':   { color: '#a855f7', bg: 'rgba(168,85,247,0.12)',  icon: '🏖️', border: '#a855f7' },
-      'TUBEL':  { color: '#ec4899', bg: 'rgba(236,72,153,0.12)',  icon: '🎓', border: '#ec4899' },
+      'SAKIT':  { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   icon: '<i class="fas fa-thermometer-half"></i>', border: '#ef4444' },
+      'TUGAS':  { color: '#f97316', bg: 'rgba(249,115,22,0.12)',  icon: '<i class="fas fa-briefcase"></i>', border: '#f97316' },
+      'IZIN':   { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  icon: '<i class="fas fa-praying-hands"></i>', border: '#3b82f6' },
+      'CUTI':   { color: '#a855f7', bg: 'rgba(168,85,247,0.12)',  icon: '<i class="fas fa-umbrella-beach"></i>', border: '#a855f7' },
+      'TUBEL':  { color: '#ec4899', bg: 'rgba(236,72,153,0.12)',  icon: '<i class="fas fa-graduation-cap"></i>', border: '#ec4899' },
     };
 
     const items = data.map(r => {
@@ -1903,7 +1903,7 @@
       renderMonitoringTasks(data);
     } catch (e) {
       console.error('[TugasLembur] Monitoring Load Error:', e);
-      el.innerHTML = `<div class="empty-state" style="padding:20px; font-size:11px">⚠️ Gagal memuat monitoring: ${escapeHtml(e.message)}</div>`;
+      el.innerHTML = `<div class="empty-state" style="padding:20px; font-size:11px"><i class="fas fa-exclamation-triangle"></i> Gagal memuat monitoring: ${escapeHtml(e.message)}</div>`;
     }
   }
 
@@ -1914,7 +1914,7 @@
     if (data.length === 0) {
       el.innerHTML = `
         <div class="card glass-card" style="padding:20px; text-align:center; opacity:0.7">
-          <div style="font-size:24px; margin-bottom:8px">📡</div>
+          <div style="font-size:24px; margin-bottom:8px"><i class="fas fa-satellite-dish"></i></div>
           <div style="font-size:11px; font-weight:700">Belum ada perjalanan dinas yang Anda instruksikan</div>
           <div style="font-size:9px; color:var(--muted)">Progres perjalanan dinas yang Anda berikan ke staf akan muncul di sini.</div>
         </div>
@@ -1961,14 +1961,14 @@
                 <strong>Ket:</strong> ${t.keterangan || '—'}
               </div>
               <div style="font-size:9px; color:var(--muted); margin-top:8px; display:flex; align-items:center; gap:10px">
-                 <span>📅 ${tglDisplay}</span>
-                 <span>📍 Radius ${t.radius || 100}m</span>
+                 <span><i class="fas fa-calendar"></i> ${tglDisplay}</span>
+                 <span><i class="fas fa-map-marker-alt"></i> Radius ${t.radius || 100}m</span>
               </div>
             </div>
             
             ${t.bukti ? `
               <button onclick="viewTugasBuktiById('${t.id}')" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--white); padding:6px 12px; border-radius:10px; font-size:10px; font-weight:700; cursor:pointer">
-                📷 BUKTI
+                <i class="fas fa-camera"></i> BUKTI
               </button>
             ` : ''}
           </div>
@@ -2253,7 +2253,7 @@
 
     sectionEl.innerHTML = `
       <div style="font-size:12px; font-weight:800; color:var(--white); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
-        📂 ARSIP REKAP LEMBUR
+        <i class="fas fa-folder-open"></i> ARSIP REKAP LEMBUR
       </div>
       <div class="shimmer-wrapper">
         <div class="shimmer sh-line" style="width:100%; height:80px; border-radius:15px; margin-bottom:10px"></div>
@@ -2272,10 +2272,10 @@
       console.error('[LemburArchive] load error:', e);
       sectionEl.innerHTML = `
         <div style="font-size:12px; font-weight:800; color:var(--white); margin-bottom:10px;">
-          📂 ARSIP REKAP LEMBUR
+          <i class="fas fa-folder-open"></i> ARSIP REKAP LEMBUR
         </div>
         <div class="empty-state" style="padding:15px; text-align:center; font-size:11px; color:var(--muted)">
-          ⚠️ Gagal memuat arsip dari server.<br>
+          <i class="fas fa-exclamation-triangle"></i> Gagal memuat arsip dari server.<br>
           <span style="font-size:9px">Pastikan webhook lembur-archive-list aktif.</span>
         </div>
       `;
@@ -2289,10 +2289,10 @@
     if (list.length === 0) {
       sectionEl.innerHTML = `
         <div style="font-size:12px; font-weight:800; color:var(--white); margin-bottom:10px;">
-          📂 ARSIP REKAP LEMBUR
+          <i class="fas fa-folder-open"></i> ARSIP REKAP LEMBUR
         </div>
         <div class="card glass-card" style="padding:20px; text-align:center; color:var(--muted); font-size:12px">
-          📭 Belum ada rekap lembur yang diarsipkan.
+          <i class="fas fa-envelope-open-text"></i> Belum ada rekap lembur yang diarsipkan.
         </div>
       `;
       return;
@@ -2300,7 +2300,7 @@
 
     const header = `
       <div style="font-size:12px; font-weight:800; color:var(--white); margin-bottom:12px;">
-        📂 ARSIP REKAP LEMBUR (${list.length})
+        <i class="fas fa-folder-open"></i> ARSIP REKAP LEMBUR (${list.length})
       </div>
     `;
 
@@ -2329,7 +2329,7 @@
         <div class="card glass-card" style="margin-bottom:12px; padding:15px; border-left:4px solid var(--gold); display:flex; justify-content:space-between; align-items:center;">
           <div style="flex:1; min-width:0; padding-right:12px; cursor:pointer;" onclick="viewLemburArchive(${item.id})">
             <div style="font-size:13px; font-weight:800; color:var(--white); margin-bottom:2px;">
-              📂 ${title}
+              <i class="fas fa-folder-open"></i> ${title}
             </div>
             <div style="font-size:11px; color:var(--gold); font-weight:700; margin-bottom:4px;">
               ${nomorSurat}
@@ -2343,10 +2343,10 @@
           </div>
           <div style="display:flex; gap:8px;">
             <button class="btn-sm-admin" onclick="viewLemburArchive(${item.id})" style="background:var(--primary); color:white; border:none; padding:6px 10px; border-radius:6px; font-size:10px; cursor:pointer; font-weight:700;">
-              👁️ Lihat
+              <i class="fas fa-eye"></i> Lihat
             </button>
             <button class="btn-sm-admin" onclick="deleteLemburArchive(${item.id}, '${title.replace(/'/g, "\\'")}')" style="background:#ef4444; color:white; border:none; padding:6px 10px; border-radius:6px; font-size:10px; cursor:pointer; font-weight:700;">
-              🗑️ Hapus
+              <i class="fas fa-trash"></i> Hapus
             </button>
           </div>
         </div>
@@ -2360,7 +2360,7 @@
     const data = window._currentLemburData;
     const range = window._currentLemburRange;
     if (!data || data.length === 0) {
-      Swal.fire('⚠️ Peringatan', 'Tidak ada data lembur untuk disimpan.', 'warning');
+      Swal.fire(' Peringatan', 'Tidak ada data lembur untuk disimpan.', 'warning');
       return;
     }
 
@@ -2371,7 +2371,7 @@
       inputLabel: 'Masukkan Nomor Surat Lembur',
       inputPlaceholder: 'Contoh: 800/123/BAP-SB/2026...',
       showCancelButton: true,
-      confirmButtonText: '💾 Simpan',
+      confirmButtonText: '<i class="fas fa-save"></i> Simpan',
       cancelButtonText: 'Batal',
       inputValidator: (value) => {
         if (!value.trim()) {
@@ -2417,13 +2417,13 @@
         throw new Error(getApiErrorMsg(res.data, 'Gagal menyimpan ke database.'));
       }
 
-      Swal.fire('✅ Berhasil', 'Rekap lembur berhasil diarsipkan!', 'success');
+      Swal.fire(' Berhasil', 'Rekap lembur berhasil diarsipkan!', 'success');
       
       // Reload archive list
       loadLemburArchive();
     } catch (e) {
       console.error('[LemburSave] error:', e);
-      Swal.fire('❌ Gagal', e.message || 'Gagal menghubungi server.', 'error');
+      Swal.fire(' Gagal', e.message || 'Gagal menghubungi server.', 'error');
     }
   };
 
@@ -2475,7 +2475,7 @@
       }
     } catch (e) {
       console.error('[LemburArchiveView] error:', e);
-      Swal.fire('❌ Gagal', e.message || 'Gagal memuat detail arsip.', 'error');
+      Swal.fire(' Gagal', e.message || 'Gagal memuat detail arsip.', 'error');
     }
   };
 
@@ -2495,7 +2495,7 @@
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: '🗑️ Hapus',
+      confirmButtonText: '<i class="fas fa-trash"></i> Hapus',
       cancelButtonText: 'Batal'
     });
 
@@ -2515,7 +2515,7 @@
         throw new Error(getApiErrorMsg(res.data, 'Gagal menghapus arsip.'));
       }
 
-      Swal.fire('✅ Terhapus', 'Arsip rekap lembur berhasil dihapus.', 'success');
+      Swal.fire(' Terhapus', 'Arsip rekap lembur berhasil dihapus.', 'success');
       
       // If we are currently previewing the deleted archive, exit preview
       if (window._currentLemburArchiveId === id) {
@@ -2526,7 +2526,7 @@
       loadLemburArchive();
     } catch (e) {
       console.error('[LemburArchiveDelete] error:', e);
-      Swal.fire('❌ Gagal', e.message || 'Gagal menghubungi server.', 'error');
+      Swal.fire(' Gagal', e.message || 'Gagal menghubungi server.', 'error');
     }
   };
 

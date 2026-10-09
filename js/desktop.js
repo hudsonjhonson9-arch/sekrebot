@@ -39,7 +39,7 @@
         if (!listEl2) return;
 
         if (!users.length) {
-          listEl.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon">👥</div><div class="empty-text">Tidak ada pegawai</div></div>`;
+          listEl.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon"><i class="fas fa-users"></i></div><div class="empty-text">Tidak ada pegawai</div></div>`;
           return;
         }
 
@@ -55,9 +55,9 @@
           if (hasFace) {
             const faceModel = u.face_model || null;
             if (faceModel === 'human') {
-              engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(201,168,76,0.2);color:var(--gold);border-radius:4px;margin-left:4px;border:1px solid rgba(201,168,76,0.3);display:inline-block">🛡️ Human</span>';
+              engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(201,168,76,0.2);color:var(--gold);border-radius:4px;margin-left:4px;border:1px solid rgba(201,168,76,0.3);display:inline-block"><i class="fas fa-shield-alt"></i> Human</span>';
             } else if (faceModel === 'faceapi') {
-              engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(96,165,250,0.2);color:#60a5fa;border-radius:4px;margin-left:4px;border:1px solid rgba(96,165,250,0.3);display:inline-block">🤖 API</span>';
+              engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(96,165,250,0.2);color:#60a5fa;border-radius:4px;margin-left:4px;border:1px solid rgba(96,165,250,0.3);display:inline-block"><i class="fas fa-robot"></i> API</span>';
             } else {
               // Fallback to check length if face_histogram is available in 'u'
               const histD = u.face_histogram || u.descriptor;
@@ -65,8 +65,8 @@
                 try {
                   const arr = typeof histD === 'string' ? JSON.parse(histD) : histD;
                   const dLen = Array.isArray(arr) ? arr.length : 0;
-                  if (dLen >= 512) engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(201,168,76,0.2);color:var(--gold);border-radius:4px;margin-left:4px;border:1px solid rgba(201,168,76,0.3);display:inline-block">🛡️ Human</span>';
-                  else if (dLen === 128) engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(96,165,250,0.2);color:#60a5fa;border-radius:4px;margin-left:4px;border:1px solid rgba(96,165,250,0.3);display:inline-block">🤖 API</span>';
+                  if (dLen >= 512) engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(201,168,76,0.2);color:var(--gold);border-radius:4px;margin-left:4px;border:1px solid rgba(201,168,76,0.3);display:inline-block"><i class="fas fa-shield-alt"></i> Human</span>';
+                  else if (dLen === 128) engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(96,165,250,0.2);color:#60a5fa;border-radius:4px;margin-left:4px;border:1px solid rgba(96,165,250,0.3);display:inline-block"><i class="fas fa-robot"></i> API</span>';
                 } catch (e) { }
               }
             }
@@ -79,18 +79,18 @@
             <div class="face-adm-item" style="padding:15px; border-radius:20px; display:flex; align-items:center; background:rgba(255,255,255,0.03); border:1px solid var(--border); margin-bottom:10px">
               <div class="face-adm-thumb" id="thumb-${uid}" style="width:64px; height:64px; border-radius:18px; flex-shrink:0; overflow:hidden; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); cursor:pointer" onclick="adminLoadSinglePhoto('${uid}')">
                 ${facePhoto ? `<img src="${facePhoto}" style="width:100%;height:100%;object-fit:cover">` : 
-                (hasFace ? '<span style="font-size:10px;color:var(--gold);font-weight:700">LIHAT</span>' : '<span style="opacity:0.3;font-size:32px">👤</span>')}
+                (hasFace ? '<span style="font-size:10px;color:var(--gold);font-weight:700">LIHAT</span>' : '<span style="opacity:0.3;font-size:32px"><i class="fas fa-user"></i></span>')}
               </div>
               <div class="face-adm-info" style="flex:1; margin-left:14px; min-width:0">
                 <div class="face-adm-name" style="font-size:14px; font-weight:800; color:#fff; word-break:break-word; line-height:1.3; margin-bottom:4px">${nama}</div>
                 <div class="face-adm-status" style="font-size:10px; color:rgba(255,255,255,0.5)">
-                  <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">📷 Wajah: ${faceS}${engineBadge} <span style="margin:0 4px">·</span> ✍️ TTD: ${sigS}</div>
+                  <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px"><i class="fas fa-camera"></i> Wajah: ${faceS}${engineBadge} <span style="margin:0 4px">·</span> <i class="fas fa-pen"></i> TTD: ${sigS}</div>
                   <div style="opacity:0.6; font-size:9px; margin-top:4px">ID: ${uid} &nbsp;·&nbsp; ${u.nip || u.NIP || '—'} &nbsp;·&nbsp; ${u.jabatan || u.Jabatan || '—'}</div>
                 </div>
               </div>
               <div class="face-adm-btns" style="display:flex; flex-direction:column; gap:6px; margin-left:12px">
-                <button class="face-adm-btn" onclick="adminCaptureFaceFor('${uid}','${nama.replace(/'/g, "&#39;")}')" style="min-width:75px">📷 Wajah</button>
-                <button class="face-adm-btn" onclick="adminCaptureSignatureFor('${u.nip || uid}','${nama.replace(/'/g, "&#39;")}')" style="min-width:75px">✍️ TTD</button>
+                <button class="face-adm-btn" onclick="adminCaptureFaceFor('${uid}','${nama.replace(/'/g, "&#39;")}')" style="min-width:75px"><i class="fas fa-camera"></i> Wajah</button>
+                <button class="face-adm-btn" onclick="adminCaptureSignatureFor('${u.nip || uid}','${nama.replace(/'/g, "&#39;")}')" style="min-width:75px"><i class="fas fa-pen"></i> TTD</button>
               </div>
             </div>`;
         }).join('');
@@ -104,12 +104,12 @@
         if (galleryEl) {
           galleryEl.innerHTML = `
             <div class="empty-state" style="grid-column:1/-1;padding:16px">
-              <div class="empty-icon">🔌</div>
+              <div class="empty-icon"><i class="fas fa-plug"></i></div>
               <div class="empty-text">Gagal memuat galeri wajah</div>
               <div class="empty-sub" style="margin-bottom:12px">${errMsg}</div>
               <button onclick="loadAdminFaceReg()"
                 style="padding:8px 18px;border-radius:10px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.4);color:var(--gold);font-size:11px;font-weight:700;cursor:pointer">
-                🔄 Coba Lagi
+                <i class="fas fa-sync"></i> Coba Lagi
               </button>
             </div>`;
         }
@@ -137,7 +137,7 @@
           container.innerHTML = `<img src="${d.face_photo}" style="width:100%;height:100%;object-fit:cover;animation:fadeIn .3s">`;
           container.onclick = null; // Sudah dimuat
         } else {
-           container.innerHTML = '<span style="opacity:0.3;font-size:32px">👤</span>';
+           container.innerHTML = '<span style="opacity:0.3;font-size:32px"><i class="fas fa-user"></i></span>';
         }
       } catch (e) {
         container.innerHTML = original;
@@ -151,7 +151,7 @@
 
       // Ubah judul kamera
       const title = $('camHeaderTitle');
-      if (title) title.textContent = `📷 Daftar Wajah: ${nama}`;
+      if (title) title.innerHTML = `<i class="fas fa-camera"></i> Daftar Wajah: ${nama}`;
 
       openCamOverlay({
         isRegister: true,
@@ -167,7 +167,7 @@
         },
         onCancel: () => {
           const title = $('camTitle');
-          if (title) title.textContent = '📸 Verifikasi Wajah';
+          if (title) title.innerHTML = '<i class="fas fa-camera"></i> Verifikasi Wajah';
         }
       });
     }
@@ -176,7 +176,7 @@
       const selectEl = $('selectPegawaiFaceReg');
       if (!selectEl || !selectEl.value) {
         showResult('adminFaceRegResult', 'adminFaceRegRIcon', 'adminFaceRegRTitle', 'adminFaceRegRMsg',
-          'warning', '⚠️', 'Pilih Pegawai', 'Pilih nama pegawai terlebih dahulu sebelum membuka kamera.');
+          'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Pilih Pegawai', 'Pilih nama pegawai terlebih dahulu sebelum membuka kamera.');
         dom.show('adminFaceRegResult', 'flex');
         return;
       }
@@ -192,7 +192,7 @@
 
         // Safety check: Face MUST be detected
         if (!descriptor) {
-          alert("⚠️ Wajah tidak terdeteksi dengan jelas. Harap posisikan wajah lurus ke kamera dan ambil foto lagi.");
+          alert(" Wajah tidak terdeteksi dengan jelas. Harap posisikan wajah lurus ke kamera dan ambil foto lagi.");
           return false;
         }
         const descriptorArray = Array.from(descriptor);
@@ -201,7 +201,7 @@
 
         showResult('adminFaceRegResult', 'adminFaceRegRIcon', 'adminFaceRegRTitle', 'adminFaceRegRMsg',
           ok ? 'success' : 'warning',
-          ok ? '✅' : '⚠️',
+          ok ? '<i class="fas fa-check"></i>' : '<i class="fas fa-exclamation-triangle"></i>',
           ok ? 'Wajah Tersimpan!' : 'Gagal Simpan',
           ok ? `Wajah ${nama} berhasil didaftarkan.` : 'Terjadi kesalahan saat menyimpan di server.');
         dom.show('adminFaceRegResult', 'flex');
@@ -210,7 +210,7 @@
       } catch (e) {
         console.error('Registration error:', e);
         showResult('adminFaceRegResult', 'adminFaceRegRIcon', 'adminFaceRegRTitle', 'adminFaceRegRMsg',
-          'warning', '🔌', 'Koneksi Gagal', 'Gagal menghubungi server pendaftaran wajah.');
+          'warning', '<i class="fas fa-plug"></i>', 'Koneksi Gagal', 'Gagal menghubungi server pendaftaran wajah.');
         dom.show('adminFaceRegResult', 'flex');
         return false;
       }
@@ -226,14 +226,14 @@
       const searchInput = $('adminKetSearchInput');
       if (!el) return;
       
-      el.innerHTML = '<div style="padding:15px; text-align:center; font-size:11px; color:var(--muted)">⏳ Memuat daftar pegawai...</div>';
+      el.innerHTML = '<div style="padding:15px; text-align:center; font-size:11px; color:var(--muted)"><i class="fas fa-hourglass-half"></i> Memuat daftar pegawai...</div>';
       
       try {
         const res = await apiGet(P.userList + '?format=full');
         const rows = res.ok ? ((res.rows?.length ?? 0) ? res.rows : parseApiResponse(res.data)) : [];
         
         if (!rows.length) {
-          el.innerHTML = '<div style="padding:15px; text-align:center; font-size:11px; color:var(--muted)">⚠️ Tidak ada data pegawai</div>';
+          el.innerHTML = '<div style="padding:15px; text-align:center; font-size:11px; color:var(--muted)"><i class="fas fa-exclamation-triangle"></i> Tidak ada data pegawai</div>';
           return;
         }
 
@@ -259,7 +259,7 @@
         }
 
       } catch (e) {
-        el.innerHTML = '<div style="padding:15px; text-align:center; font-size:11px; color:var(--danger)">❌ Gagal memuat data</div>';
+        el.innerHTML = '<div style="padding:15px; text-align:center; font-size:11px; color:var(--danger)"><i class="fas fa-times"></i> Gagal memuat data</div>';
       }
     }
 
@@ -268,14 +268,14 @@
       if (!el) return;
       
       if (list.length === 0) {
-        el.innerHTML = '<div style="padding:15px; text-align:center; font-size:11px; color:var(--muted)">🔍 Tidak ada hasil yang cocok</div>';
+        el.innerHTML = '<div style="padding:15px; text-align:center; font-size:11px; color:var(--muted)"><i class="fas fa-search"></i> Tidak ada hasil yang cocok</div>';
         return;
       }
 
       el.innerHTML = list.map(u => `
         <div class="dropdown-item" onclick="selectAdminKetPegawai('${u.id}', '${u.nama.replace(/'/g, "\\'")}', '${u.nip}')">
           <span class="item-name">${u.nama}</span>
-          <span class="item-nip">🪪 ${u.nip || '—'}</span>
+          <span class="item-nip"><i class="fas fa-id-card"></i> ${u.nip || '—'}</span>
         </div>
       `).join('');
     }
@@ -346,7 +346,7 @@
       if (f.size > 5 * 1024 * 1024) { alert('File terlalu besar (maks 5MB)'); el.value = ''; return; }
       
       const label = $('adminKetFileName');
-      if (label) label.textContent = '⏳ Memproses...';
+      if (label) label.innerHTML = '<i class="fas fa-hourglass-half"></i> Memproses...';
 
       const reader = new FileReader();
       reader.onload = async (e) => {
@@ -398,7 +398,7 @@
       const resEl = $('adminKetResult');
 
       if (!sel || !sel.value || !jns || !msg || !tgl1.value) {
-        showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'warning', '⚠️', 'Data Belum Lengkap', 'Pilih pegawai, jenis, tgl mulai, dan alasan.');
+        showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Data Belum Lengkap', 'Pilih pegawai, jenis, tgl mulai, dan alasan.');
         if (resEl) { resEl.style.display = 'block'; resEl.className = 'premium-toast r-warning'; }
         return;
       }
@@ -412,12 +412,12 @@
       const adaBukti = !!_adminKetFileBase64;
       
       if (jns.value === 'TUGAS' && !adaBukti) {
-        showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'warning', '📎', 'Bukti Wajib', 'Surat Tugas / Dinas Luar wajib menyertakan lampiran bukti.');
+        showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'warning', '<i class="fas fa-paperclip"></i>', 'Bukti Wajib', 'Surat Tugas / Dinas Luar wajib menyertakan lampiran bukti.');
         if (resEl) { resEl.style.display = 'block'; resEl.className = 'premium-toast r-warning'; }
         return;
       }
       if (jns.value === 'SAKIT' && durasi > 1 && !adaBukti) {
-        showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'warning', '📎', 'Bukti Wajib', `Izin Sakit > 1 hari (${durasi} hari) wajib menyertakan lampiran bukti.`);
+        showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'warning', '<i class="fas fa-paperclip"></i>', 'Bukti Wajib', `Izin Sakit > 1 hari (${durasi} hari) wajib menyertakan lampiran bukti.`);
         if (resEl) { resEl.style.display = 'block'; resEl.className = 'premium-toast r-warning'; }
         return;
       }
@@ -450,7 +450,7 @@
       try {
         const { ok, data } = await apiPost(P.keteranganAdd, payload);
         if (ok && data?.ok !== false) {
-          showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'success', '✅', 'Berhasil Disimpan', `Keterangan ${jns.value} untuk ${payload.user.nama} telah masuk ke sistem.`);
+          showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'success', '<i class="fas fa-check"></i>', 'Berhasil Disimpan', `Keterangan ${jns.value} untuk ${payload.user.nama} telah masuk ke sistem.`);
           if (resEl) { resEl.style.display = 'block'; resEl.className = 'premium-toast r-success'; }
           
           // Reset Form dengan Delay agar user sempat lihat status sukses
@@ -462,11 +462,11 @@
 
           if (typeof loadKonfirmasiAdmin === 'function') loadKonfirmasiAdmin();
         } else {
-          showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'fail', '❌', 'Gagal Simpan', data?.message || 'Permintaan ditolak oleh server.');
+          showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal Simpan', data?.message || 'Permintaan ditolak oleh server.');
           if (resEl) { resEl.style.display = 'block'; resEl.className = 'premium-toast r-fail'; }
         }
       } catch (e) {
-        showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'fail', '🔌', 'Koneksi Bermasalah', 'Gagal menghubungi server. Periksa jaringan Anda.');
+        showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'fail', '<i class="fas fa-plug"></i>', 'Koneksi Bermasalah', 'Gagal menghubungi server. Periksa jaringan Anda.');
         if (resEl) { resEl.style.display = 'block'; resEl.className = 'premium-toast r-fail'; }
       } finally {
         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px"></i> SIMPAN KETERANGAN'; }

@@ -4,23 +4,23 @@
     // Default bawaan dipakai jika server belum disetup
     let SERAGAM_OPTIONS = [
       {
-        id: '1', warna: 'coklat_khaki', label: 'Coklat / Khaki (Seragam ASN)', emoji: '🟤', preview: '#c8a96e',
+        id: '1', warna: 'coklat_khaki', label: 'Coklat / Khaki (Seragam ASN)', emoji: '<i class="fas fa-circle"></i>', preview: '#c8a96e',
         hMin: 15, hMax: 65, sMin: 15, sMax: 75, lMin: 20, lMax: 75
       },
       {
-        id: '2', warna: 'putih', label: 'Kemeja Putih', emoji: '⬜', preview: '#f0f0f0',
+        id: '2', warna: 'putih', label: 'Kemeja Putih', emoji: '<i class="fas fa-square"></i>', preview: '#f0f0f0',
         hMin: 0, hMax: 360, sMin: 0, sMax: 20, lMin: 68, lMax: 100
       },
       {
-        id: '3', warna: 'tenun_sumba', label: 'Kain Tenun Sumba', emoji: '🎨', preview: 'linear-gradient(135deg,#e53935,#f39c12,#27ae60,#2980b9)',
+        id: '3', warna: 'tenun_sumba', label: 'Kain Tenun Sumba', emoji: '<i class="fas fa-palette"></i>', preview: 'linear-gradient(135deg,#e53935,#f39c12,#27ae60,#2980b9)',
         hMin: null, hMax: null, sMin: null, sMax: null, lMin: null, lMax: null
       },
       {
-        id: '4', warna: 'bebas', label: 'Baju Bebas', emoji: '👕', preview: 'linear-gradient(135deg,#667eea,#764ba2)',
+        id: '4', warna: 'bebas', label: 'Baju Bebas', emoji: '<i class="fas fa-tshirt"></i>', preview: 'linear-gradient(135deg,#667eea,#764ba2)',
         hMin: null, hMax: null, sMin: null, sMax: null, lMin: null, lMax: null
       },
       {
-        id: '0', warna: null, label: 'Libur (Tidak Cek)', emoji: '🏠', preview: '#1a2540',
+        id: '0', warna: null, label: 'Libur (Tidak Cek)', emoji: '<i class="fas fa-home"></i>', preview: '#1a2540',
         hMin: null, hMax: null, sMin: null, sMax: null, lMin: null, lMax: null
       },
     ];
@@ -80,9 +80,9 @@
         <div style="font-size:8.5px;color:var(--muted);font-family:'JetBrains Mono',monospace">${o.warna} · ${hslInfo}</div>
       </div>
       <button onclick="editSeragamType('${o.id}','${o.warna}','${o.label.replace(/'/g, '&#39;')}','${o.emoji}',${o.hMin ?? 'null'},${o.hMax ?? 'null'},${o.sMin ?? 'null'},${o.sMax ?? 'null'},${o.lMin ?? 'null'},${o.lMax ?? 'null'})"
-        style="padding:4px 8px;border-radius:7px;border:1px solid rgba(201,168,76,.3);background:rgba(201,168,76,.1);color:var(--gold);font-size:9px;font-weight:700;cursor:pointer">✏️</button>
+        style="padding:4px 8px;border-radius:7px;border:1px solid rgba(201,168,76,.3);background:rgba(201,168,76,.1);color:var(--gold);font-size:9px;font-weight:700;cursor:pointer"><i class="fas fa-edit"></i></button>
       <button onclick="deleteSeragamType('${o.id}','${o.warna}','${o.label.replace(/'/g, '&#39;')}')"
-        style="padding:4px 8px;border-radius:7px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:var(--danger);font-size:9px;font-weight:700;cursor:pointer">🗑️</button>
+        style="padding:4px 8px;border-radius:7px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:var(--danger);font-size:9px;font-weight:700;cursor:pointer"><i class="fas fa-trash"></i></button>
     </div>`;
       }).join('');
     }
@@ -114,7 +114,7 @@
     }
 
     function resetSeragamTypeForm() {
-      dom.setText('seragamTypeFormTitle', '➕ Tambah Jenis Seragam');
+      dom.setHTML('seragamTypeFormTitle', '<i class="fas fa-plus"></i> Tambah Jenis Seragam');
       $('seragamTypeEditId').value = '';
       $('inputSeragamLabel').value = '';
       $('inputSeragamWarna').value = '';
@@ -128,7 +128,7 @@
     }
 
     function editSeragamType(id, warna, label, emoji, hMin, hMax, sMin, sMax, lMin, lMax) {
-      dom.setText('seragamTypeFormTitle', '✏️ Edit Jenis Seragam');
+      dom.setHTML('seragamTypeFormTitle', '<i class="fas fa-edit"></i> Edit Jenis Seragam');
       $('seragamTypeEditId').value = id;
       $('inputSeragamLabel').value = label;
       $('inputSeragamWarna').value = warna;
@@ -159,13 +159,13 @@
       dom.hide('seragamTypeResult');
 
       if (!label || !warna || !emoji) {
-        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '⚠️', 'Lengkapi Form', 'Label, kode warna, dan emoji wajib diisi.');
+        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Lengkapi Form', 'Label, kode warna, dan emoji wajib diisi.');
         dom.show('seragamTypeResult', 'flex'); return;
       }
       // Validasi: jika sebagian HSL diisi, semua harus diisi
       const hslFilled = [hMin, hMax, sMin, sMax, lMin, lMax].filter(v => v !== null);
       if (hslFilled.length > 0 && hslFilled.length < 6) {
-        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '⚠️', 'HSL Tidak Lengkap', 'Isi semua 6 nilai HSL, atau kosongkan semua (baju bebas).');
+        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'HSL Tidak Lengkap', 'Isi semua 6 nilai HSL, atau kosongkan semua (baju bebas).');
         dom.show('seragamTypeResult', 'flex'); return;
       }
 
@@ -175,7 +175,7 @@
         const payload = { id: editId || warna, warna, label, emoji, hMin, hMax, sMin, sMax, lMin, lMax, diubah_oleh: MY_ID };
         const { ok: postOk, data: res } = await apiPost(P.seragamTypeAdd, payload);
         if (!postOk) throw new Error(`HTTP ${200}`);
-        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'success', '✅',
+        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'success', '<i class="fas fa-check"></i>',
           editId ? 'Seragam Diperbarui!' : 'Seragam Ditambahkan!',
           `${emoji} ${label} berhasil ${editId ? 'diperbarui' : 'ditambahkan'}.`);
         dom.show('seragamTypeResult', 'flex');
@@ -183,7 +183,7 @@
         _seragamTypeRawCache = null; // invalidasi cache agar reload dari server
         await loadSeragamTypeAdmin();
       } catch (e) {
-        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '⚠️', 'Gagal ke Server',
+        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal ke Server',
           'Pastikan webhook seragam-type-add aktif di n8n.\n' + e.message);
         dom.show('seragamTypeResult', 'flex');
       } finally {
@@ -196,12 +196,12 @@
       try {
         const { ok, data: res } = await apiPost(P.seragamTypeDel, { id, warna, diubah_oleh: MY_ID });
         if (!ok) throw new Error('Hapus seragam gagal');
-        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'success', '✅', 'Dihapus!', `${label} berhasil dihapus.`);
+        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'success', '<i class="fas fa-check"></i>', 'Dihapus!', `${label} berhasil dihapus.`);
         dom.show('seragamTypeResult', 'flex');
         _seragamTypeRawCache = null; // invalidasi cache
         await loadSeragamTypeAdmin();
       } catch (e) {
-        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '⚠️', 'Gagal',
+        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal',
           'Pastikan webhook seragam-type-delete aktif di n8n.\n' + e.message);
         dom.show('seragamTypeResult', 'flex');
       }
@@ -229,7 +229,7 @@
 
       // Baris hari libur info
       html += `<div style="display:flex;gap:6px;align-items:center;padding:8px 10px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.08);border-radius:10px;margin-bottom:4px">
-    <span style="font-size:14px">🏠</span>
+    <span style="font-size:14px"><i class="fas fa-home"></i></span>
     <div>
       <div style="font-size:10px;font-weight:700;color:var(--muted)">Minggu & Sabtu</div>
       <div style="font-size:9px;color:rgba(255,255,255,.3)">Hari libur — tidak ada pemeriksaan seragam</div>
@@ -259,7 +259,7 @@
           <div style="font-size:8.5px;color:var(--muted);font-family:'JetBrains Mono',monospace">${hslInfo}</div>
         </div>
       </div>
-      <div style="font-size:9px;color:var(--muted);margin-bottom:6px;font-weight:600">📅 AKTIF PADA HARI:</div>
+      <div style="font-size:9px;color:var(--muted);margin-bottom:6px;font-weight:600"><i class="fas fa-calendar"></i> AKTIF PADA HARI:</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
         ${HARI_KERJA.map(h => {
           const aktif = aktifIdxSet.has(h.idx);
@@ -313,7 +313,7 @@
      */
         async function simpanSeragamAdmin() {
       const btn = $('btnSimpanSeragam');
-      if (btn) { btn.disabled = true; dom.setText('btnSeragamText', '💾 Menyimpan...'); }
+      if (btn) { btn.disabled = true; dom.setHTML('btnSeragamText', '<i class="fas fa-save"></i> Menyimpan...'); }
       try {
         const rows = Object.keys(JADWAL_SERAGAM).map(k => {
           const d = JADWAL_SERAGAM[k];
@@ -329,10 +329,10 @@
         });
         const { ok, data: res } = await apiPost(P.seragamSave, { rows, diubah_oleh: MY_ID, timestamp: Math.floor(Date.now() / 1000) });
         if (!ok) throw new Error('Simpan seragam gagal');
-        showResult('seragamResult', 'seragamRIcon', 'seragamRTitle', 'seragamRMsg', 'success', '✅', 'Seragam Tersimpan!',
+        showResult('seragamResult', 'seragamRIcon', 'seragamRTitle', 'seragamRMsg', 'success', '<i class="fas fa-check"></i>', 'Seragam Tersimpan!',
           'Jadwal seragam disimpan ke Google Sheets dan berlaku untuk semua pegawai.');
       } catch (e) {
-        showResult('seragamResult', 'seragamRIcon', 'seragamRTitle', 'seragamRMsg', 'warning', '⚠️', 'Gagal ke Server',
+        showResult('seragamResult', 'seragamRIcon', 'seragamRTitle', 'seragamRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal ke Server',
           'Pastikan workflow n8n seragam-save aktif.\n' + e.message);
       } finally {
         if (btn) { setTimeout(() => { btn.disabled = false; dom.setText('btnSeragamText', 'Simpan Pengaturan Seragam'); }, 2500); }
@@ -359,7 +359,7 @@
         lMax: r.lMax !== '' && r.lMax !== null && r.lMax !== undefined ? Number(r.lMax) : null,
       }));
       if (!SERAGAM_OPTIONS.find(o => o.warna === null)) {
-        SERAGAM_OPTIONS.push({ id: '0', warna: null, label: 'Libur (Tidak Cek)', emoji: '🏠', preview: '#1a2540', hMin: null, hMax: null, sMin: null, sMax: null, lMin: null, lMax: null });
+        SERAGAM_OPTIONS.push({ id: '0', warna: null, label: 'Libur (Tidak Cek)', emoji: '<i class="fas fa-home"></i>', preview: '#1a2540', hMin: null, hMax: null, sMin: null, sMax: null, lMin: null, lMax: null });
       }
     }
 

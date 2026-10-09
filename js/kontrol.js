@@ -51,7 +51,7 @@
       const times = Array.isArray(cfg.times) ? cfg.times.filter(t => t.aktif !== false) : [];
       wrap.innerHTML = times.length
         ? times.map(t =>
-            `<button style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:var(--white);border-radius:12px;padding:10px 14px;margin:4px;font-size:13px;cursor:pointer" onclick="handleKontrol('${t.jam || ''}')">🛡️ ${t.jam || 'Jaga'}</button>`)
+            `<button style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:var(--white);border-radius:12px;padding:10px 14px;margin:4px;font-size:13px;cursor:pointer" onclick="handleKontrol('${t.jam || ''}')"><i class="fas fa-shield-alt"></i> ${t.jam || 'Jaga'}</button>`)
             .join('')
         : '<div style="color:var(--muted);font-size:12px">Belum ada jam jaga dikonfigurasi.</div>';
     }

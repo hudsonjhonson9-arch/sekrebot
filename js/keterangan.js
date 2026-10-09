@@ -12,7 +12,7 @@
         box.style.background = 'var(--gold)';
         box.style.color = 'var(--bg)';
         box.style.borderStyle = 'solid';
-        $('izinJamIcon').textContent = '✅';
+        $('izinJamIcon').innerHTML = '<i class="fas fa-check"></i>';
         // Set default jam jika kosong
         if (!$('inJamMulai').value) $('inJamMulai').value = '08:00';
         if (!$('inJamSelesai').value) $('inJamSelesai').value = '10:00';
@@ -21,7 +21,7 @@
         box.style.background = 'var(--gold-dim)';
         box.style.color = 'var(--gold)';
         box.style.borderStyle = 'dashed';
-        $('izinJamIcon').textContent = '⏰';
+        $('izinJamIcon').innerHTML = '<i class="fas fa-clock"></i>';
       }
     }
 
@@ -40,7 +40,7 @@
           if ($('rowIzinJam')) dom.hide('rowIzinJam');
           const box = $('labelIzinJam');
           if (box) { box.style.background = 'var(--gold-dim)'; box.style.color = 'var(--gold)'; box.style.borderStyle = 'dashed'; }
-          if ($('izinJamIcon')) $('izinJamIcon').textContent = '⏰';
+          if ($('izinJamIcon')) $('izinJamIcon').innerHTML = '<i class="fas fa-clock"></i>';
         }
       }
     }
@@ -73,7 +73,7 @@
       const a = $('tglMulai').value, b = $('tglSelesai').value;
       if (!a || !b) return;
       const d = Math.round((new Date(b) - new Date(a)) / 86400000) + 1;
-      if (d > 0) { dom.show('durLabel', 'block'); $('durText').textContent = `📅 Durasi: ${d} hari`; }
+      if (d > 0) { dom.show('durLabel', 'block'); $('durText').innerHTML = `<i class="fas fa-calendar"></i> Durasi: ${d} hari`; }
     }
 
     function handleBukti(e, src) {
@@ -81,7 +81,7 @@
       if (!f) return;
       fileOrigName = f.name; fileMime = f.type;
       const lbl = src === 'kamera' ? $('lblKamera') : $('lblGaleri');
-      lbl.textContent = '⏳ Memproses...';
+      lbl.innerHTML = '<i class="fas fa-hourglass-half"></i> Memproses...';
       
       const processFile = async () => {
         try {
@@ -102,7 +102,7 @@
           const sizeBytes = atob(b64).length;
           if (sizeBytes > 5 * 1024 * 1024) {
             Swal.fire({
-              title: '❌ File Terlalu Besar',
+              title: '<i class="fas fa-times"></i> File Terlalu Besar',
               text: `Ukuran file (${(sizeBytes / 1024 / 1024).toFixed(2)} MB) melebihi batas maksimal 5 MB.`,
               icon: 'error',
               confirmButtonColor: '#3085d6'
@@ -126,7 +126,7 @@
           lbl.textContent = (f.name.length > 12 ? f.name.substring(0, 10) + '…' : f.name) + ` (${sizeMB}MB)`;
         } catch (err) {
           console.error(err);
-          Swal.fire('❌ Gagal', 'Gagal memproses file bukti.', 'error');
+          Swal.fire(' Gagal', 'Gagal memproses file bukti.', 'error');
           clearBukti();
         }
       };
@@ -159,7 +159,7 @@
 
             if (sizeBytes > 5 * 1024 * 1024) {
               Swal.fire({
-                title: '❌ File Terlalu Besar',
+                title: '<i class="fas fa-times"></i> File Terlalu Besar',
                 text: `Ukuran foto (${(sizeBytes / 1024 / 1024).toFixed(2)} MB) melebihi batas maksimal 5 MB.`,
                 icon: 'error',
                 confirmButtonColor: '#3085d6'
@@ -185,7 +185,7 @@
             $('lblKamera').textContent = `Foto Tersimpan (${sizeMB}MB)`;
           } catch (err) {
             console.error(err);
-            Swal.fire('❌ Gagal', 'Gagal memproses foto kamera.', 'error');
+            Swal.fire(' Gagal', 'Gagal memproses foto kamera.', 'error');
             clearBukti();
           }
         },
@@ -202,17 +202,17 @@
         async function handleKet() {
       if ($('btnKet').disabled || _isKetSubmitting) return;
       const tm = $('tglMulai').value, ts = $('tglSelesai').value, k = $('ketText').value.trim();
-      if (!tm || !ts) { showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '⚠️', 'Lengkapi Form', 'Tanggal wajib diisi.'); return; }
-      if (!k) { showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '⚠️', 'Keterangan Kosong', 'Tuliskan alasan terlebih dahulu.'); return; }
+      if (!tm || !ts) { showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Lengkapi Form', 'Tanggal wajib diisi.'); return; }
+      if (!k) { showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Keterangan Kosong', 'Tuliskan alasan terlebih dahulu.'); return; }
       // ── Validasi bukti wajib (frontend guard — backend juga validasi) ──
       if (selectedJenis === 'TUGAS' && !fileBase64) {
-        showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '📎', 'Bukti Wajib',
+        showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '<i class="fas fa-paperclip"></i>', 'Bukti Wajib',
           'Surat Tugas / Dinas Luar wajib menyertakan bukti (foto surat tugas / dokumen).'); return;
       }
       if (selectedJenis === 'SAKIT' && tm && ts) {
         const _d = Math.round((new Date(ts) - new Date(tm)) / 864e5) + 1;
         if (_d > 1 && !fileBase64) {
-          showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '📎', 'Bukti Wajib',
+          showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '<i class="fas fa-paperclip"></i>', 'Bukti Wajib',
             `Izin Sakit lebih dari 1 hari (${_d} hari) wajib menyertakan bukti (surat dokter / keterangan sakit).`); return;
         }
       }
@@ -222,7 +222,7 @@
         const _jH = typeof getJamForTanggal === 'function' ? getJamForTanggal(fmtD(now)) : null;
         const jMasukMenit = _jH ? toMenitStr(_jH.masuk) : JAM_MASUK_MENIT;
         if (jMasukMenit !== null && totMenit > jMasukMenit) {
-          showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '⏰', 'Lewat Batas Waktu',
+          showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '<i class="fas fa-clock"></i>', 'Lewat Batas Waktu',
             `Pengajuan keterangan hanya bisa dikirim sebelum jam masuk (${toHHMM(jMasukMenit)} WITA). Silakan hubungi admin untuk pengajuan manual.`); return;
         }
       }
@@ -254,9 +254,9 @@
         };
         await idb.set('offline_queue', offlineData);
 
-        showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '📴', 'Tersimpan Sementara Karena Offline',
+        showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '<i class="fas fa-mobile-alt"></i>', 'Tersimpan Sementara Karena Offline',
           `Pengajuan ${selectedJenis} Anda tersimpan di perangkat. Sistem akan mengirim otomatis saat koneksi internet kembali.`);
-        setBtnL('btnKet', false, '✅ Tersimpan Offline');
+        setBtnL('btnKet', false, '<i class="fas fa-check"></i> Tersimpan Offline');
         dom.setDisabled('btnKet', true);
         ketStatusLoaded = false;
         setTimeout(() => resetKetForm(), 3200);
@@ -268,20 +268,20 @@
         let d = {}; try { d = res } catch (_) { }
         // Tampilkan pesan sesuai jenis & status dari server
         if (d.ok === false) {
-          showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '⚠️', 'Gagal Mengajukan', d.message || 'Terjadi kesalahan.');
-          setBtnL('btnKet', false, '📤 Kirim Keterangan');
+          showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal Mengajukan', d.message || 'Terjadi kesalahan.');
+          setBtnL('btnKet', false, '<i class="fas fa-upload"></i> Kirim Keterangan');
           return;
         }
         const isAutoApprove = ['SAKIT', 'TUGAS'].includes(selectedJenis);
         if (isAutoApprove) {
           const label = selectedJenis === 'TUGAS' ? 'Surat Tugas / DL' : 'Izin Sakit';
-          showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'success', '✅', `${label} Tercatat Otomatis`,
+          showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'success', '<i class="fas fa-check"></i>', `${label} Tercatat Otomatis`,
             `Keterangan ${selectedJenis} Anda telah disetujui otomatis, tercatat di sistem, dan akan disiarkan kepada seluruh pegawai.`);
-          setBtnL('btnKet', false, '✅ Tercatat & Disetujui');
+          setBtnL('btnKet', false, '<i class="fas fa-check"></i> Tercatat & Disetujui');
         } else {
-          showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '⏳', 'IZIN Menunggu Konfirmasi Admin',
+          showResult('ketResult', 'ketRIcon', 'ketRTitle', 'ketRMsg', 'warning', '<i class="fas fa-hourglass-half"></i>', 'IZIN Menunggu Konfirmasi Admin',
             'Pengajuan IZIN Anda telah dikirim. Setelah admin menyetujui, informasi akan disiarkan kepada seluruh pegawai.');
-          setBtnL('btnKet', false, '⏳ Menunggu Persetujuan Admin');
+          setBtnL('btnKet', false, '<i class="fas fa-hourglass-half"></i> Menunggu Persetujuan Admin');
         }
         dom.setDisabled('btnKet', true);
         logLoaded = false;
@@ -290,7 +290,7 @@
         setTimeout(() => resetKetForm(), 3200);
       } catch {
         handleAbsenError(new AbsenError('Semua server tidak merespons.', ERROR_CODES.NETWORK_ERROR));
-        setBtnL('btnKet', false, '📤 Kirim Keterangan');
+        setBtnL('btnKet', false, '<i class="fas fa-upload"></i> Kirim Keterangan');
       } finally {
         _isKetSubmitting = false;
       }
@@ -312,11 +312,11 @@
         box.style.background = 'var(--gold-dim)';
         box.style.color = 'var(--gold)';
         box.style.borderStyle = 'dashed';
-        $('izinJamIcon').textContent = '⏰';
+        $('izinJamIcon').innerHTML = '<i class="fas fa-clock"></i>';
       }
       clearBukti();
       dom.setDisabled('btnKet', false);
-      setBtnL('btnKet', false, '📤 Kirim Keterangan');
+      setBtnL('btnKet', false, '<i class="fas fa-upload"></i> Kirim Keterangan');
       $('ketResult').classList.remove('show');
     }
 
@@ -339,7 +339,7 @@
         ketStatusLoaded = true;
         renderKetStatusList(rows);
       } catch {
-        el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:16px">Gagal memuat. Tekan 🔄 untuk coba lagi.</div>';
+        el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:16px">Gagal memuat. Tekan <i class="fas fa-sync"></i> untuk coba lagi.</div>';
       } finally { if (btn) btn.disabled = false; }
     }
 
@@ -349,7 +349,7 @@
         el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:16px">Belum ada pengajuan keterangan.</div>';
         return;
       }
-      const JENIS_EMOJI = { 'IZIN': '🙏', 'SAKIT': '🤒', 'TUGAS': '💼' };
+      const JENIS_EMOJI = { 'IZIN': '<i class="fas fa-praying-hands"></i>', 'SAKIT': '<i class="fas fa-thermometer-half"></i>', 'TUGAS': '<i class="fas fa-briefcase"></i>' };
       el.innerHTML = rows.slice(0, 20).map((r, i) => {
         // Schema baru Supabase: id_ket, user_id, nama, nip, tanggal, jam, jenis, keterangan, status
         const jenis = (r.jenis || r['Jenis Absen'] || r.jenis_absen || '').trim().toUpperCase()
@@ -358,20 +358,20 @@
         const isPending = status === 'PENDING' || (!status && (r.jenis || '').toUpperCase().includes('PENDING'));
         const isApproved = status === 'DISETUJUI' || status === 'APPROVED';
         const isRejected = status === 'DITOLAK' || status === 'REJECTED';
-        const emoji = JENIS_EMOJI[jenis] || '📝';
+        const emoji = JENIS_EMOJI[jenis] || '<i class="fas fa-edit"></i>';
         const badgeClass = isPending ? 'ket-badge-pending' : isApproved ? 'ket-badge-approved' : 'ket-badge-rejected';
-        const badgeLabel = isPending ? '⏳ PENDING' : isApproved ? '✅ DISETUJUI' : '❌ DITOLAK';
+        const badgeLabel = isPending ? '<i class="fas fa-hourglass-half"></i> PENDING' : isApproved ? '<i class="fas fa-check"></i> DISETUJUI' : '<i class="fas fa-times"></i> DITOLAK';
         const tgl = r.tanggal || r.Tanggal || '—';
         const ket = (r.keterangan || r.Ket || r.ket || '').replace(/\|.*$/, '').trim();
         const idKet = r.id_ket || r.ID_Ket || r.row_number || i;
         const actions = isPending ? `<div class="ket-action-row">
-      <button class="ket-btn-edit" onclick="openKetEdit(${i})">✏️ Edit</button>
-      <button class="ket-btn-del"  onclick="confirmKetDelete(${i})">🗑️ Hapus</button>
+      <button class="ket-btn-edit" onclick="openKetEdit(${i})"><i class="fas fa-edit"></i> Edit</button>
+      <button class="ket-btn-del"  onclick="confirmKetDelete(${i})"><i class="fas fa-trash"></i> Hapus</button>
     </div>` : '';
         return `<div class="ket-item">
       <div class="ket-item-left">
         <div class="ket-item-jenis">${emoji} ${jenis || '—'}</div>
-        <div class="ket-item-tgl">📅 ${tgl}</div>
+        <div class="ket-item-tgl"><i class="fas fa-calendar"></i> ${tgl}</div>
         <div class="ket-item-ket">${ket || '—'}</div>
       </div>
       <div class="ket-item-right">
@@ -424,7 +424,7 @@
 
     async function handleKetEdit() {
       const tm = $('editTglMulai').value, ts = $('editTglSelesai').value, k = $('editKetText').value.trim();
-      if (!tm || !ts || !k) { showResult('editKetResult', 'editKetRIcon', 'editKetRTitle', 'editKetRMsg', 'warning', '⚠️', 'Lengkapi Form', 'Semua field wajib diisi.'); dom.show('editKetResult', 'flex'); return; }
+      if (!tm || !ts || !k) { showResult('editKetResult', 'editKetRIcon', 'editKetRTitle', 'editKetRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Lengkapi Form', 'Semua field wajib diisi.'); dom.show('editKetResult', 'flex'); return; }
       const idKet = $('editKetRowNum').value;  // id_ket dari schema baru
       const origTgl = $('editKetOrigTglMulai').value;
       setBtnL('btnSimpanEdit', true, 'Menyimpan...');
@@ -438,18 +438,18 @@
           });
         const d = res?.data ?? {};
         if (res.ok && d.ok !== false) {
-          showResult('editKetResult', 'editKetRIcon', 'editKetRTitle', 'editKetRMsg', 'success', '✅', 'Berhasil', 'Keterangan berhasil diperbarui.');
+          showResult('editKetResult', 'editKetRIcon', 'editKetRTitle', 'editKetRMsg', 'success', '<i class="fas fa-check"></i>', 'Berhasil', 'Keterangan berhasil diperbarui.');
           dom.show('editKetResult', 'flex');
           setTimeout(() => { closeKetModalDirect(); loadKetStatus(); }, 1200);
         } else {
-          showResult('editKetResult', 'editKetRIcon', 'editKetRTitle', 'editKetRMsg', 'fail', '❌', 'Gagal', d.message || 'Terjadi kesalahan.');
+          showResult('editKetResult', 'editKetRIcon', 'editKetRTitle', 'editKetRMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal', d.message || 'Terjadi kesalahan.');
           dom.show('editKetResult', 'flex');
         }
       } catch {
         handleAbsenError(new AbsenError('Server tidak merespons.', ERROR_CODES.NETWORK_ERROR));
         dom.show('editKetResult', 'flex');
       }
-      setBtnL('btnSimpanEdit', false, '💾 Simpan Perubahan');
+      setBtnL('btnSimpanEdit', false, '<i class="fas fa-save"></i> Simpan Perubahan');
     }
 
     async function confirmKetDelete(idx) {
@@ -494,16 +494,16 @@
         });
 
         if (!rows || rows.length === 0) {
-          el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:16px">✅ Tidak ada pengajuan yang menunggu konfirmasi.</div>';
+          el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:16px"><i class="fas fa-check"></i> Tidak ada pengajuan yang menunggu konfirmasi.</div>';
           return;
         }
-        const EMOJI = { 'IZIN': '🙏', 'SAKIT': '🤒', 'TUGAS': '💼' };
+        const EMOJI = { 'IZIN': '<i class="fas fa-praying-hands"></i>', 'SAKIT': '<i class="fas fa-thermometer-half"></i>', 'TUGAS': '<i class="fas fa-briefcase"></i>' };
         el.innerHTML = rows.map((r, i) => {
           // id_ket = ID_Ket baris pertama pengajuan ini (sudah digrouping oleh n8n)
           const idKet = r.id_ket || r.ID_Ket || '';
           if (!idKet) return ''; // skip jika tidak ada id_ket
           const jenis = (r.jenis || r['Jenis Absen'] || r.jenis_absen || '').trim().toUpperCase();
-          const em = EMOJI[jenis] || '📝';
+          const em = EMOJI[jenis] || '<i class="fas fa-edit"></i>';
           const nama = r.nama || r.Nama || '—';
           const nip = r.nip || r.NIP || '—';
           // Tampilkan range tanggal jika multi-hari
@@ -516,16 +516,16 @@
           const nipEsc = String(nip).replace(/'/g, "\\'");
           return `<div class="konfirm-item" id="konfirm-${idKet}">
         <div class="konfirm-nama">${em} ${nama} <span style="font-size:9px;color:var(--muted);font-weight:400">(IZIN)</span></div>
-        <div class="konfirm-detail">🪪 ${nip} · 📅 ${tglLabel}<br>📝 ${ket || '—'}</div>
+        <div class="konfirm-detail"><i class="fas fa-id-card"></i> ${nip} · <i class="fas fa-calendar"></i> ${tglLabel}<br><i class="fas fa-edit"></i> ${ket || '—'}</div>
         <div style="font-size:8px;color:var(--muted);font-family:monospace;margin:3px 0 6px;opacity:.6">${idKet}</div>
         <div class="konfirm-actions">
-          <button class="konfirm-btn-ok" onclick="handleKonfirmasi('${idKetEsc}','APPROVE','${jenis}','${tglMulai}','${nipEsc}')">✅ Setujui</button>
-          <button class="konfirm-btn-no" onclick="handleKonfirmasi('${idKetEsc}','REJECT','${jenis}','${tglMulai}','${nipEsc}')">❌ Tolak</button>
+          <button class="konfirm-btn-ok" onclick="handleKonfirmasi('${idKetEsc}','APPROVE','${jenis}','${tglMulai}','${nipEsc}')"><i class="fas fa-check"></i> Setujui</button>
+          <button class="konfirm-btn-no" onclick="handleKonfirmasi('${idKetEsc}','REJECT','${jenis}','${tglMulai}','${nipEsc}')"><i class="fas fa-times"></i> Tolak</button>
         </div>
       </div>`;
         }).filter(Boolean).join('');
       } catch {
-        el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:16px">Gagal memuat. Tekan 🔄 untuk coba lagi.</div>';
+        el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:16px">Gagal memuat. Tekan <i class="fas fa-sync"></i> untuk coba lagi.</div>';
       }
     }
 
@@ -545,7 +545,7 @@
           if (konfirm) {
             showResult('konfirmasiResult', 'konfirmasiRIcon', 'konfirmasiRTitle', 'konfirmasiRMsg',
               action === 'APPROVE' ? 'success' : 'warning',
-              action === 'APPROVE' ? '✅' : '❌',
+              action === 'APPROVE' ? '<i class="fas fa-check"></i>' : '<i class="fas fa-times"></i>',
               action === 'APPROVE' ? 'Disetujui' : 'Ditolak',
               `Keterangan ${jenis} tgl ${tanggal} telah ${action === 'APPROVE' ? 'disetujui' : 'ditolak'}.`);
             konfirm.style.display = 'flex';

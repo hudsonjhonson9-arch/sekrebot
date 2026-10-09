@@ -10,6 +10,8 @@ import { createSimapoRouter } from './simapo.js';
 import { createSimapoNativeExtraRouter } from './simapo-native-extra.js';
 import { verifyInitData } from './telegram.js';
 import { createAttendanceDataRouter } from './attendance-data.js';
+import { createKeteranganNotify, telegramSender, wahaSender } from './keterangan-notify.js';
+import { createScheduler } from './scheduler.js';
 import { createOvertimeRouter } from './overtime.js';
 import { createNotifyRouter } from './notify.js';
 import { createCoreAdminRouter } from './core-admin.js';
@@ -49,7 +51,23 @@ export function createApp() {
 
   // Fase 2: keterangan/dokumen/rekap. Fase 3: penugasan/lembur. Dipasang
   // setelah /api/auth agar catch-all /api middleware tidak memblokir penerbitan sesi.
-  app.use('/api', requireRole(ABSEN_ROLES), createAttendanceDataRouter({ query, withTransaction }));
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const sendTelegram = botToken ? telegramSender(botToken) : null;
+  const wahaCfg = process.env.WAHA_URL
+    ? { url: process.env.WAHA_URL, apiKey: process.env.WAHA_API_KEY, session: process.env.WAHA_SESSION }
+    : null;
+  const notifyKeterangan = createKeteranganNotify({
+    query,
+    sendTelegram,
+    sendWA: wahaCfg
+      ? wahaSender({ ...wahaCfg, chatId: process.env.WAHA_KET_GROUP || '6281239788212-1551250724@g.us' })
+      : null,
+  });
+  // Jadwal cron pengganti workflow n8n "Notif Absensi". Hanya di-start saat server
+  // jadi entrypoint (blok isMain), tidak saat test meng-import createApp. Notif absen
+  // lewat Telegram; WhatsApp hanya untuk keterangan (lihat notifyKeterangan di atas).
+  app.locals.scheduler = createScheduler({ query, sendTelegram });
+  app.use('/api', requireRole(ABSEN_ROLES), createAttendanceDataRouter({ query, withTransaction, notify: notifyKeterangan }));
   app.use('/api', requireRole(ABSEN_ROLES), createOvertimeRouter({ query }));
   app.use('/api', requireRole(ABSEN_ROLES), createNotifyRouter());
   // Fase 1: seluruh master/core absensi dipindahkan dari webhook n8n ke Express.
@@ -72,7 +90,6 @@ export function createApp() {
   // yang bisa absen, dan verifyInitData di-inject supaya test tidak butuh bot token.
   // verifyInitData fail-closed TANPA token: tanpa TELEGRAM_BOT_TOKEN, seluruh
   // initData Telegram ditolak dan tiap /api/auth/session dan /api/absen balas 401.
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) {
     console.warn(
       '[startup] TELEGRAM_BOT_TOKEN TIDAK di-set — semua sesi Telegram dan absen akan balas 401. ' +
@@ -107,11 +124,15 @@ export function createApp() {
 const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop());
 if (isMain) {
   const port = Number(process.env.PORT || 8081);
-  const server = createApp().listen(port, () => console.log(`[media] listening on :${port}`));
+  const app = createApp();
+  const server = app.listen(port, () => console.log(`[media] listening on :${port}`));
+  // Pengganti cron n8n. Matikan dengan SCHEDULER=off (mis. saat debugging).
+  if (process.env.SCHEDULER !== 'off') app.locals.scheduler.start();
   for (const sig of ['SIGINT', 'SIGTERM']) {
     process.on(sig, () => {
       // N-1: response yang sudah started tapi belum ended menahan callback server.close(),
       // jadi jangan bergantung pada callback itu — drop koneksi, lalu keluar tanpa syarat.
+      app.locals.scheduler.stop();
       server.close();
       server.closeAllConnections?.();
       closePool().finally(() => process.exit(0));

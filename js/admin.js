@@ -169,7 +169,7 @@
       const mulai = $('inputTglLiburMulai').value;
       let selesai = $('inputTglLiburSelesai').value || mulai;
       const nama = $('inputNamaLibur').value.trim();
-      if (!mulai) { showResult('liburResult', 'liburRIcon', 'liburRTitle', 'liburRMsg', 'warning', '⚠️', 'Pilih Tanggal', 'Tanggal mulai libur wajib dipilih.'); dom.show('liburResult', 'flex'); return; }
+      if (!mulai) { showResult('liburResult', 'liburRIcon', 'liburRTitle', 'liburRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Pilih Tanggal', 'Tanggal mulai libur wajib dipilih.'); dom.show('liburResult', 'flex'); return; }
       if (selesai < mulai) selesai = mulai;
       // Hitung semua tanggal dalam range
       const dates = [];
@@ -191,15 +191,15 @@
       }
       if (ok > 0) {
         const msg = dates.length > 1 ? `${ok} tanggal berhasil ditambahkan${fail ? `, ${fail} gagal` : ''}.` : `${mulai} — ${nama || 'Hari Libur'} ditambahkan.`;
-        showResult('liburResult', 'liburRIcon', 'liburRTitle', 'liburRMsg', 'success', '✅', 'Berhasil', msg);
+        showResult('liburResult', 'liburRIcon', 'liburRTitle', 'liburRMsg', 'success', '<i class="fas fa-check"></i>', 'Berhasil', msg);
         $('inputTglLiburMulai').value = ''; $('inputTglLiburSelesai').value = ''; $('inputNamaLibur').value = '';
         if ($('liburDurasiInfo')) dom.hide('liburDurasiInfo');
         liburLoaded = true; loadLiburAdmin();
       } else {
-        showResult('liburResult', 'liburRIcon', 'liburRTitle', 'liburRMsg', 'fail', '❌', 'Gagal', 'Semua tanggal gagal disimpan. Coba lagi.');
+        showResult('liburResult', 'liburRIcon', 'liburRTitle', 'liburRMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal', 'Semua tanggal gagal disimpan. Coba lagi.');
       }
       dom.show('liburResult', 'flex');
-      setBtnL('btnTambahLibur', false, '➕ Tambah Hari Libur');
+      setBtnL('btnTambahLibur', false, '<i class="fas fa-plus"></i> Tambah Hari Libur');
     }
 
     // Admin: load daftar libur — tampilan lebih baik
@@ -250,16 +250,16 @@
             <span class="libur-item-day" style="color:${isWeekend ? 'var(--danger)' : 'var(--muted)'}">${hari}</span>
             <span class="libur-item-nama">${nm}</span>
           </div>
-          <button class="libur-del-btn" onclick="hapusLibur('${tgl}',${rn})" title="Hapus">🗑️</button>
+          <button class="libur-del-btn" onclick="hapusLibur('${tgl}',${rn})" title="Hapus"><i class="fas fa-trash"></i></button>
         </div>`;
           }).join('');
           return `<div style="margin-bottom:12px">
-        <div class="libur-month-header"><span>📅 ${label}</span><span class="libur-badge">${items.length} hari</span></div>
+        <div class="libur-month-header"><span><i class="fas fa-calendar"></i> ${label}</span><span class="libur-badge">${items.length} hari</span></div>
         <div style="display:flex;flex-direction:column;gap:5px">${itemsHtml}</div>
       </div>`;
         }).join('');
       } catch {
-        el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:12px">Gagal memuat. Tekan 🔄 untuk coba lagi.</div>';
+        el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:12px">Gagal memuat. Tekan <i class="fas fa-sync"></i> untuk coba lagi.</div>';
       }
     }
 
@@ -299,16 +299,16 @@
     async function handleTambahLokasi() {
       const nama = $('namaLokasi').value.trim(), radius = parseInt($('radiusLokasi').value) || 100;
       const ipRange = ($('ipRangeLokasi')?.value || '').split(',').map(s => s.trim()).filter(Boolean).join(',');
-      if (!selectedPin) { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'warning', '⚠️', 'Pilih Lokasi', 'Tap pada peta untuk menentukan titik lokasi.'); return; }
-      if (!nama) { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'warning', '⚠️', 'Nama Kosong', 'Masukkan nama lokasi terlebih dahulu.'); return; }
+      if (!selectedPin) { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Pilih Lokasi', 'Tap pada peta untuk menentukan titik lokasi.'); return; }
+      if (!nama) { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Nama Kosong', 'Masukkan nama lokasi terlebih dahulu.'); return; }
       const hariChecked = Array.from(document.querySelectorAll('#hariCheckGrid input:checked')).map(el => el.value);
-      if (!hariChecked.length) { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'warning', '⚠️', 'Pilih Hari', 'Pilih minimal satu hari aktif.'); return; }
+      if (!hariChecked.length) { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Pilih Hari', 'Pilih minimal satu hari aktif.'); return; }
       const hariStr = hariChecked.join(',');
       setBtnL('btnTambahLokasi', true, 'Menyimpan...');
       try {
         await apiFetch(P.lokasiAdd, { method: 'POST', body: JSON.stringify({ nama_lokasi: nama, latitude: selectedPin.lat, longitude: selectedPin.lng, radius, hari: hariStr, ip_range: ipRange, ditambahkan_oleh: MY_ID, timestamp: Math.floor(Date.now() / 1000) }) });
-        const ipInfo = ipRange ? `\n🌐 IP Range: ${ipRange}` : '';
-        showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'success', '📌', 'Lokasi Tersimpan!', `${nama}\nHari aktif: ${hariStr}\nLat: ${selectedPin.lat.toFixed(6)}, Lng: ${selectedPin.lng.toFixed(6)}${ipInfo}`);
+        const ipInfo = ipRange ? `\n<i class="fas fa-globe"></i> IP Range: ${ipRange}` : '';
+        showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'success', '<i class="fas fa-thumbtack"></i>', 'Lokasi Tersimpan!', `${nama}\nHari aktif: ${hariStr}\nLat: ${selectedPin.lat.toFixed(6)}, Lng: ${selectedPin.lng.toFixed(6)}${ipInfo}`);
         setBtnL('btnTambahLokasi', false, 'Simpan Lokasi ke Database');
         $('namaLokasi').value = ''; if ($('ipRangeLokasi')) $('ipRangeLokasi').value = ''; selectedPin = null;
         if (adminMarker) { adminMap.removeLayer(adminMarker); adminMarker = null; }
@@ -320,7 +320,7 @@
           l.querySelector('input').checked = def;
         });
         loadLokasiAdmin();
-      } catch { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'fail', '🔌', 'Gagal Menyimpan', 'Server tidak merespons.'); setBtnL('btnTambahLokasi', false, 'Simpan Lokasi ke Database'); }
+      } catch { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'fail', '<i class="fas fa-plug"></i>', 'Gagal Menyimpan', 'Server tidak merespons.'); setBtnL('btnTambahLokasi', false, 'Simpan Lokasi ke Database'); }
     }
     async function loadLokasiAdmin() {
       const el = $('lokasiMgmtList');
@@ -330,7 +330,7 @@
         const res = await apiFetch(P.lokasiList, { method: 'GET' }); if (!res.ok) throw 0;
         const json = await res.json(); list = Array.isArray(json) ? json : (json.data || []);
         if (!list.length) {
-          el.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon">📭</div><div class="empty-text">Belum ada lokasi tersimpan</div></div>`;
+          el.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon"><i class="fas fa-envelope-open-text"></i></div><div class="empty-text">Belum ada lokasi tersimpan</div></div>`;
         } else {
           if (adminMap) {
             // Clear existing markers/circles before re-adding
@@ -386,17 +386,17 @@
               : 'background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.3)';
             return `<div id="lokasi-item-${id}" style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:13px;margin-bottom:8px;overflow:hidden">
           <div style="display:flex;align-items:center;gap:9px;padding:10px 12px 9px">
-            <div style="width:30px;height:30px;border-radius:8px;background:var(--gold-dim);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">📍</div>
+            <div style="width:30px;height:30px;border-radius:8px;background:var(--gold-dim);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0"><i class="fas fa-map-marker-alt"></i></div>
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:700;color:var(--white)">${l.nama_lokasi || l.nama || '—'}</div>
               <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:1px">${lat}, ${lng}</div>
             </div>
-            <button class="btn-del" onclick="hapusLokasi('${id}','${namaEsc}')">🗑</button>
+            <button class="btn-del" onclick="hapusLokasi('${id}','${namaEsc}')"><i class="fas fa-trash"></i></button>
           </div>
           <div style="height:1px;background:rgba(255,255,255,.05);margin:0 12px"></div>
           <div style="padding:9px 12px 8px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
-              <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em">📅 Hari Aktif</span>
+              <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em"><i class="fas fa-calendar"></i> Hari Aktif</span>
               <span id="hariCountBadge-${id}" style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;${badgeStyle}">${hariCount > 0 ? hariCount + ' hari' : 'Nonaktif'}</span>
             </div>
             <div class="jadwal-hari-toggles">${hariToggles}</div>
@@ -404,14 +404,14 @@
           <div style="height:1px;background:rgba(255,255,255,.05);margin:0 12px"></div>
           <div style="padding:9px 12px 9px;display:flex;flex-direction:column;gap:7px">
             <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;width:48px;flex-shrink:0">📏 Radius</span>
+              <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;width:48px;flex-shrink:0"><i class="fas fa-ruler"></i> Radius</span>
               <input type="number" id="radius-input-${id}" value="${radius}" min="10" max="5000"
                 style="width:74px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:4px 8px;color:var(--white);font-family:'JetBrains Mono',monospace;font-size:11px;outline:none;transition:border-color .2s"
                 onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"/>
               <span style="font-size:10px;color:var(--muted)">meter</span>
             </div>
             <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;width:48px;flex-shrink:0">🌐 IP</span>
+              <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;width:48px;flex-shrink:0"><i class="fas fa-globe"></i> IP</span>
               <input type="text" id="ip-input-${id}" value="${ipVal}" placeholder="cth: 36.84.0.0/16"
                 style="flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:4px 8px;color:var(--white);font-family:'JetBrains Mono',monospace;font-size:10px;outline:none;transition:border-color .2s"
                 onfocus="this.style.borderColor='rgba(34,197,94,.6)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"/>
@@ -421,14 +421,14 @@
           <div style="padding:8px 12px 10px">
             <button onclick="simpanLokasiItem('${id}','${namaEsc}',${idx})" id="btnSimpanLokasi-${id}"
               style="width:100%;padding:8px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--gold),#9b6e1a);color:var(--navy);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
-              <span>💾</span><span id="btnSimpanLokasiTxt-${id}">Simpan Perubahan</span>
+              <span><i class="fas fa-save"></i></span><span id="btnSimpanLokasiTxt-${id}">Simpan Perubahan</span>
             </button>
             <div id="simpanLokasiResult-${id}" style="display:none;margin-top:6px;padding:6px 10px;border-radius:8px;font-size:10px;font-weight:700;text-align:center"></div>
           </div>
         </div>`;
           }).join('');
         }
-      } catch { el.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon">🔌</div><div class="empty-text">Gagal memuat</div></div>`; }
+      } catch { el.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon"><i class="fas fa-plug"></i></div><div class="empty-text">Gagal memuat</div></div>`; }
       renderJadwalAdmin();
     }
     async function hapusLokasi(id, nama) {
@@ -459,10 +459,10 @@
         Object.keys(LOK_DEF).forEach(k => delete LOK_DEF[k]);
         jadwalLokData.forEach(l => { (l.hari || []).forEach(h => { if (!LOK_DEF[h]) LOK_DEF[h] = []; if (!LOK_DEF[h].includes(l.nama)) LOK_DEF[h].push(l.nama); }); });
         updateClock();
-        if (resEl) { resEl.style.cssText = 'display:block;margin-top:6px;padding:6px 10px;border-radius:8px;font-size:10px;font-weight:700;text-align:center;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:var(--success)'; resEl.textContent = '✅ Tersimpan!'; }
+        if (resEl) { resEl.style.cssText = 'display:block;margin-top:6px;padding:6px 10px;border-radius:8px;font-size:10px;font-weight:700;text-align:center;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:var(--success)'; resEl.innerHTML = '<i class="fas fa-check"></i> Tersimpan!'; }
         setTimeout(() => { if (resEl) resEl.style.display = 'none'; }, 2500);
       } catch (_) {
-        if (resEl) { resEl.style.cssText = 'display:block;margin-top:6px;padding:6px 10px;border-radius:8px;font-size:10px;font-weight:700;text-align:center;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--danger)'; resEl.textContent = '🔌 Gagal menyimpan.'; }
+        if (resEl) { resEl.style.cssText = 'display:block;margin-top:6px;padding:6px 10px;border-radius:8px;font-size:10px;font-weight:700;text-align:center;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--danger)'; resEl.innerHTML = '<i class="fas fa-plug"></i> Gagal menyimpan.'; }
         setTimeout(() => { if (resEl) resEl.style.display = 'none'; }, 3000);
       } finally {
         if (btn) { btn.disabled = false; if (txtEl) txtEl.textContent = 'Simpan Perubahan'; }
@@ -488,7 +488,7 @@
       if (!container) return;
 
       if (!jadwalLokData.length) {
-        container.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon">🗺️</div><div class="empty-text">Belum ada lokasi</div><div class="empty-sub">Tambah lokasi terlebih dahulu</div></div>`;
+        container.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon"><i class="fas fa-map"></i></div><div class="empty-text">Belum ada lokasi</div><div class="empty-sub">Tambah lokasi terlebih dahulu</div></div>`;
         return;
       }
 
@@ -507,11 +507,11 @@
 
         return `<div class="jadwal-lok-card">
       <div class="jadwal-lok-card-header">
-        <div class="jadwal-lok-card-name"><span class="lok-icon">📍</span>${lok.nama}</div>
+        <div class="jadwal-lok-card-name"><span class="lok-icon"><i class="fas fa-map-marker-alt"></i></span>${lok.nama}</div>
         ${badge}
       </div>
       <div class="jadwal-hari-toggles">${toggles}</div>
-      <div class="jadwal-lok-meta">📏 ${lok.radius || 100}m &nbsp;·&nbsp; ${(parseFloat(lok.lat || 0)).toFixed(5)}, ${(parseFloat(lok.lng || 0)).toFixed(5)}</div>
+      <div class="jadwal-lok-meta"><i class="fas fa-ruler"></i> ${lok.radius || 100}m &nbsp;·&nbsp; ${(parseFloat(lok.lat || 0)).toFixed(5)}, ${(parseFloat(lok.lng || 0)).toFixed(5)}</div>
     </div>`;
       }).join('');
     }
@@ -542,10 +542,10 @@
 
     async function simpanJadwal() {
       const btn = $('btnSimpanJadwal');
-      if (btn) { btn.disabled = true; $('btnJadwalText').textContent = '💾 Menyimpan...'; }
+      if (btn) { btn.disabled = true; $('btnJadwalText').innerHTML = '<i class="fas fa-save"></i> Menyimpan...'; }
 
       if (!jadwalLokData.length) {
-        showResult('jadwalResult', 'jadwalRIcon', 'jadwalRTitle', 'jadwalRMsg', 'warning', '⚠️', 'Tidak Ada Lokasi', 'Muat daftar lokasi terlebih dahulu.');
+        showResult('jadwalResult', 'jadwalRIcon', 'jadwalRTitle', 'jadwalRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Tidak Ada Lokasi', 'Muat daftar lokasi terlebih dahulu.');
         if (btn) { btn.disabled = false; $('btnJadwalText').textContent = 'Simpan Jadwal'; }
         return;
       }
@@ -573,9 +573,9 @@
       updateClock();
 
       if (gagal === 0) {
-        showResult('jadwalResult', 'jadwalRIcon', 'jadwalRTitle', 'jadwalRMsg', 'success', '✅', 'Jadwal Tersimpan!', `${berhasil} lokasi berhasil diperbarui.`);
+        showResult('jadwalResult', 'jadwalRIcon', 'jadwalRTitle', 'jadwalRMsg', 'success', '<i class="fas fa-check"></i>', 'Jadwal Tersimpan!', `${berhasil} lokasi berhasil diperbarui.`);
       } else {
-        showResult('jadwalResult', 'jadwalRIcon', 'jadwalRTitle', 'jadwalRMsg', 'warning', '⚠️', 'Sebagian Gagal', `${berhasil} berhasil, ${gagal} gagal.`);
+        showResult('jadwalResult', 'jadwalRIcon', 'jadwalRTitle', 'jadwalRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Sebagian Gagal', `${berhasil} berhasil, ${gagal} gagal.`);
       }
 
       if (btn) { setTimeout(() => { btn.disabled = false; $('btnJadwalText').textContent = 'Simpan Jadwal'; }, 2500); }
@@ -622,23 +622,23 @@
     // Default bawaan dipakai jika server belum disetup
     let SERAGAM_OPTIONS = [
       {
-        id: '1', warna: 'coklat_khaki', label: 'Coklat / Khaki (Seragam ASN)', emoji: '🟤', preview: '#c8a96e',
+        id: '1', warna: 'coklat_khaki', label: 'Coklat / Khaki (Seragam ASN)', emoji: '<i class="fas fa-circle"></i>', preview: '#c8a96e',
         hMin: 15, hMax: 65, sMin: 15, sMax: 75, lMin: 20, lMax: 75
       },
       {
-        id: '2', warna: 'putih', label: 'Kemeja Putih', emoji: '⬜', preview: '#f0f0f0',
+        id: '2', warna: 'putih', label: 'Kemeja Putih', emoji: '<i class="fas fa-square"></i>', preview: '#f0f0f0',
         hMin: 0, hMax: 360, sMin: 0, sMax: 20, lMin: 68, lMax: 100
       },
       {
-        id: '3', warna: 'tenun_sumba', label: 'Kain Tenun Sumba', emoji: '🎨', preview: 'linear-gradient(135deg,#e53935,#f39c12,#27ae60,#2980b9)',
+        id: '3', warna: 'tenun_sumba', label: 'Kain Tenun Sumba', emoji: '<i class="fas fa-palette"></i>', preview: 'linear-gradient(135deg,#e53935,#f39c12,#27ae60,#2980b9)',
         hMin: null, hMax: null, sMin: null, sMax: null, lMin: null, lMax: null
       },
       {
-        id: '4', warna: 'bebas', label: 'Baju Bebas', emoji: '👕', preview: 'linear-gradient(135deg,#667eea,#764ba2)',
+        id: '4', warna: 'bebas', label: 'Baju Bebas', emoji: '<i class="fas fa-tshirt"></i>', preview: 'linear-gradient(135deg,#667eea,#764ba2)',
         hMin: null, hMax: null, sMin: null, sMax: null, lMin: null, lMax: null
       },
       {
-        id: '0', warna: null, label: 'Libur (Tidak Cek)', emoji: '🏠', preview: '#1a2540',
+        id: '0', warna: null, label: 'Libur (Tidak Cek)', emoji: '<i class="fas fa-home"></i>', preview: '#1a2540',
         hMin: null, hMax: null, sMin: null, sMax: null, lMin: null, lMax: null
       },
     ];
@@ -693,9 +693,9 @@
         <div style="font-size:8.5px;color:var(--muted);font-family:'JetBrains Mono',monospace">${o.warna} · ${hslInfo}</div>
       </div>
       <button onclick="editSeragamType('${o.id}','${o.warna}','${o.label.replace(/'/g, '&#39;')}','${o.emoji}',${o.hMin ?? 'null'},${o.hMax ?? 'null'},${o.sMin ?? 'null'},${o.sMax ?? 'null'},${o.lMin ?? 'null'},${o.lMax ?? 'null'})"
-        style="padding:4px 8px;border-radius:7px;border:1px solid rgba(201,168,76,.3);background:rgba(201,168,76,.1);color:var(--gold);font-size:9px;font-weight:700;cursor:pointer">✏️</button>
+        style="padding:4px 8px;border-radius:7px;border:1px solid rgba(201,168,76,.3);background:rgba(201,168,76,.1);color:var(--gold);font-size:9px;font-weight:700;cursor:pointer"><i class="fas fa-edit"></i></button>
       <button onclick="deleteSeragamType('${o.id}','${o.warna}','${o.label.replace(/'/g, '&#39;')}')"
-        style="padding:4px 8px;border-radius:7px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:var(--danger);font-size:9px;font-weight:700;cursor:pointer">🗑️</button>
+        style="padding:4px 8px;border-radius:7px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:var(--danger);font-size:9px;font-weight:700;cursor:pointer"><i class="fas fa-trash"></i></button>
     </div>`;
       }).join('');
     }
@@ -727,7 +727,7 @@
     }
 
     function resetSeragamTypeForm() {
-      $('seragamTypeFormTitle').textContent = '➕ Tambah Jenis Seragam';
+      $('seragamTypeFormTitle').innerHTML = '<i class="fas fa-plus"></i> Tambah Jenis Seragam';
       $('seragamTypeEditId').value = '';
       $('inputSeragamLabel').value = '';
       $('inputSeragamWarna').value = '';
@@ -741,7 +741,7 @@
     }
 
     function editSeragamType(id, warna, label, emoji, hMin, hMax, sMin, sMax, lMin, lMax) {
-      $('seragamTypeFormTitle').textContent = '✏️ Edit Jenis Seragam';
+      $('seragamTypeFormTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Jenis Seragam';
       $('seragamTypeEditId').value = id;
       $('inputSeragamLabel').value = label;
       $('inputSeragamWarna').value = warna;
@@ -768,13 +768,13 @@
       dom.hide('seragamTypeResult');
 
       if (!label || !warna || !emoji) {
-        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '⚠️', 'Lengkapi Form', 'Label, kode warna, dan emoji wajib diisi.');
+        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Lengkapi Form', 'Label, kode warna, dan emoji wajib diisi.');
         dom.show('seragamTypeResult', 'flex'); return;
       }
       // Validasi: jika sebagian HSL diisi, semua harus diisi
       const hslFilled = [hMin, hMax, sMin, sMax, lMin, lMax].filter(v => v !== null);
       if (hslFilled.length > 0 && hslFilled.length < 6) {
-        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '⚠️', 'HSL Tidak Lengkap', 'Isi semua 6 nilai HSL, atau kosongkan semua (baju bebas).');
+        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'HSL Tidak Lengkap', 'Isi semua 6 nilai HSL, atau kosongkan semua (baju bebas).');
         dom.show('seragamTypeResult', 'flex'); return;
       }
 
@@ -784,7 +784,7 @@
         const payload = { id: editId || warna, warna, label, emoji, hMin, hMax, sMin, sMax, lMin, lMax, diubah_oleh: MY_ID };
         const res = await apiFetch(P.seragamTypeAdd, { method: 'POST', body: JSON.stringify(payload) });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'success', '✅',
+        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'success', '<i class="fas fa-check"></i>',
           editId ? 'Seragam Diperbarui!' : 'Seragam Ditambahkan!',
           `${emoji} ${label} berhasil ${editId ? 'diperbarui' : 'ditambahkan'}.`);
         dom.show('seragamTypeResult', 'flex');
@@ -792,7 +792,7 @@
         _seragamTypeRawCache = null; // invalidasi cache agar reload dari server
         await loadSeragamTypeAdmin();
       } catch (e) {
-        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '⚠️', 'Gagal ke Server',
+        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal ke Server',
           'Pastikan webhook seragam-type-add aktif di n8n.\n' + e.message);
         dom.show('seragamTypeResult', 'flex');
       } finally {
@@ -805,12 +805,12 @@
       try {
         const res = await apiFetch(P.seragamTypeDel, { method: 'POST', body: JSON.stringify({ id, warna, diubah_oleh: MY_ID }) });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'success', '✅', 'Dihapus!', `${label} berhasil dihapus.`);
+        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'success', '<i class="fas fa-check"></i>', 'Dihapus!', `${label} berhasil dihapus.`);
         dom.show('seragamTypeResult', 'flex');
         _seragamTypeRawCache = null; // invalidasi cache
         await loadSeragamTypeAdmin();
       } catch (e) {
-        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '⚠️', 'Gagal',
+        showResult('seragamTypeResult', 'seragamTypeRIcon', 'seragamTypeRTitle', 'seragamTypeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal',
           'Pastikan webhook seragam-type-delete aktif di n8n.\n' + e.message);
         dom.show('seragamTypeResult', 'flex');
       }
@@ -838,7 +838,7 @@
 
       // Baris hari libur info
       html += `<div style="display:flex;gap:6px;align-items:center;padding:8px 10px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.08);border-radius:10px;margin-bottom:4px">
-    <span style="font-size:14px">🏠</span>
+    <span style="font-size:14px"><i class="fas fa-home"></i></span>
     <div>
       <div style="font-size:10px;font-weight:700;color:var(--muted)">Minggu & Sabtu</div>
       <div style="font-size:9px;color:rgba(255,255,255,.3)">Hari libur — tidak ada pemeriksaan seragam</div>
@@ -868,7 +868,7 @@
           <div style="font-size:8.5px;color:var(--muted);font-family:'JetBrains Mono',monospace">${hslInfo}</div>
         </div>
       </div>
-      <div style="font-size:9px;color:var(--muted);margin-bottom:6px;font-weight:600">📅 AKTIF PADA HARI:</div>
+      <div style="font-size:9px;color:var(--muted);margin-bottom:6px;font-weight:600"><i class="fas fa-calendar"></i> AKTIF PADA HARI:</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
         ${HARI_KERJA.map(h => {
           const aktif = aktifIdxSet.has(h.idx);
@@ -918,7 +918,7 @@
 
     async function simpanSeragamAdmin() {
       const btn = $('btnSimpanSeragam');
-      if (btn) { btn.disabled = true; $('btnSeragamText').textContent = '💾 Menyimpan...'; }
+      if (btn) { btn.disabled = true; $('btnSeragamText').innerHTML = '<i class="fas fa-save"></i> Menyimpan...'; }
       try {
         const rows = Object.keys(JADWAL_SERAGAM).map(k => {
           const d = JADWAL_SERAGAM[k];
@@ -934,10 +934,10 @@
         });
         const res = await apiFetch(P.seragamSave, { method: 'POST', body: JSON.stringify({ rows, diubah_oleh: MY_ID, timestamp: Math.floor(Date.now() / 1000) }) });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        showResult('seragamResult', 'seragamRIcon', 'seragamRTitle', 'seragamRMsg', 'success', '✅', 'Seragam Tersimpan!',
+        showResult('seragamResult', 'seragamRIcon', 'seragamRTitle', 'seragamRMsg', 'success', '<i class="fas fa-check"></i>', 'Seragam Tersimpan!',
           'Jadwal seragam disimpan ke Google Sheets dan berlaku untuk semua pegawai.');
       } catch (e) {
-        showResult('seragamResult', 'seragamRIcon', 'seragamRTitle', 'seragamRMsg', 'warning', '⚠️', 'Gagal ke Server',
+        showResult('seragamResult', 'seragamRIcon', 'seragamRTitle', 'seragamRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal ke Server',
           'Pastikan workflow n8n seragam-save aktif.\n' + e.message);
       } finally {
         if (btn) { setTimeout(() => { btn.disabled = false; $('btnSeragamText').textContent = 'Simpan Pengaturan Seragam'; }, 2500); }
@@ -964,7 +964,7 @@
         lMax: r.lMax !== '' && r.lMax !== null && r.lMax !== undefined ? Number(r.lMax) : null,
       }));
       if (!SERAGAM_OPTIONS.find(o => o.warna === null)) {
-        SERAGAM_OPTIONS.push({ id: '0', warna: null, label: 'Libur (Tidak Cek)', emoji: '🏠', preview: '#1a2540', hMin: null, hMax: null, sMin: null, sMax: null, lMin: null, lMax: null });
+        SERAGAM_OPTIONS.push({ id: '0', warna: null, label: 'Libur (Tidak Cek)', emoji: '<i class="fas fa-home"></i>', preview: '#1a2540', hMin: null, hMax: null, sMin: null, sMax: null, lMin: null, lMax: null });
       }
     }
 
@@ -1020,7 +1020,7 @@
         const users = (Array.isArray(ud) ? ud : (ud.data || [])).filter(u => (u.id || u.ID));
 
         if (!users.length) {
-          el.innerHTML = `<div class="empty-state" style="padding:15px"><div class="empty-icon">👥</div><div class="empty-text">Belum ada data pegawai</div></div>`;
+          el.innerHTML = `<div class="empty-state" style="padding:15px"><div class="empty-icon"><i class="fas fa-users"></i></div><div class="empty-text">Belum ada data pegawai</div></div>`;
           return;
         }
 
@@ -1042,7 +1042,7 @@
 
           return `<div class="face-adm-item" style="padding:10px 12px; margin-bottom:8px">
             <div class="face-adm-thumb" style="width:36px; height:36px; border-radius:10px; background:rgba(255,184,0,0.1); display:flex; align-items:center; justify-content:center; font-size:16px">
-              ${isAktif ? '👤' : '💤'}
+              ${isAktif ? '<i class="fas fa-user"></i>' : '<i class="fas fa-bed"></i>'}
             </div>
             <div style="flex:1; min-width:0; margin-left:2px">
               <div class="face-adm-name" style="font-size:12px; margin-bottom:1px; color:#fff; display:flex; align-items:center; gap:6px;">
@@ -1052,21 +1052,21 @@
               <div style="font-size:9px; color:rgba(255,255,255,0.4)">ID: ${uid} &nbsp;·&nbsp; ${jab} &nbsp;·&nbsp; ${bid}</div>
             </div>
             <div style="display:flex; gap:6px; margin-left:10px">
-              <button onclick="editPegawai('${escapeHtml(uid)}')" style="background:rgba(96,165,250,0.1); border:1px solid rgba(110,131,236,0.35); color:#60a5fa; width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer">✍️</button>
-              <button onclick="deletePegawai('${escapeHtml(uid)}', '${escapeHtml(nama)}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#f87171; width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer">🗑</button>
+              <button onclick="editPegawai('${escapeHtml(uid)}')" style="background:rgba(96,165,250,0.1); border:1px solid rgba(110,131,236,0.35); color:#60a5fa; width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer"><i class="fas fa-pen"></i></button>
+              <button onclick="deletePegawai('${escapeHtml(uid)}', '${escapeHtml(nama)}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#f87171; width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer"><i class="fas fa-trash"></i></button>
             </div>
           </div>`;
         }).join('');
       } catch (e) {
         console.error('[Fetch Pegawai Error]', e);
-        el.innerHTML = `<div class="empty-state" style="padding:15px"><div class="empty-icon">🔌</div><div class="empty-text">Gagal memuat data pegawai</div><div class="empty-sub">${escapeHtml(e.message || 'Coba lagi beberapa saat')}</div></div>`;
+        el.innerHTML = `<div class="empty-state" style="padding:15px"><div class="empty-icon"><i class="fas fa-plug"></i></div><div class="empty-text">Gagal memuat data pegawai</div><div class="empty-sub">${escapeHtml(e.message || 'Coba lagi beberapa saat')}</div></div>`;
       }
     }
 
     function showAddPegawai() {
       const f = $('pegawaiForm');
       if (!f) return;
-      $('pegawaiFormTitle').textContent = '➕ TAMBAH PEGAWAI BARU';
+      $('pegawaiFormTitle').innerHTML = '<i class="fas fa-plus"></i> TAMBAH PEGAWAI BARU';
       $('editPegawaiId').value = '';
       $('inPegawaiId').value = '';
       dom.setDisabled('inPegawaiId', false);
@@ -1100,7 +1100,7 @@
         const p = res.single ? res : (res.data ? res.data[0] : null);
         if (!p) return;
 
-        $('pegawaiFormTitle').textContent = '✍️ EDIT DATA PEGAWAI';
+        $('pegawaiFormTitle').innerHTML = '<i class="fas fa-pen"></i> EDIT DATA PEGAWAI';
         $('editPegawaiId').value = uid;
         $('inPegawaiId').value = uid;
         dom.setDisabled('inPegawaiId', true); // Telegram ID cannot be changed in edit
@@ -1145,7 +1145,7 @@
       }
 
       if (!id || !nama) {
-        showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'warning', '⚠️', 'Data Kurang', 'Nama wajib diisi.');
+        showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Data Kurang', 'Nama wajib diisi.');
         return;
       }
 
@@ -1161,7 +1161,7 @@
         const d = await res.json().catch(() => ({}));
 
         if (!res.ok || d.ok === false) {
-          showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'fail', '❌', 'Gagal', d.message || 'Gagal menyimpan data pegawai.');
+          showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal', d.message || 'Gagal menyimpan data pegawai.');
         } else {
           // ── SYNC ADMIN LOGIC (Request User) ──
           // Jika role adalah ADMIN atau SUPERADMIN, sync ke webhook admin-add
@@ -1183,13 +1183,13 @@
             }
           }
 
-          showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'success', '✅', 'Berhasil', isEdit ? 'Data pegawai diperbarui.' : 'Pegawai baru ditambahkan.');
+          showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'success', '<i class="fas fa-check"></i>', 'Berhasil', isEdit ? 'Data pegawai diperbarui.' : 'Pegawai baru ditambahkan.');
           setTimeout(hidePegawaiForm, 2500);
           loadPegawaiMgmt();
         }
       } catch (e) {
         console.error('[SavePegawai] Error:', e);
-        showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'fail', '🔌', 'Koneksi Error', `Server tidak merespons: ${e.message}`);
+        showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'fail', '<i class="fas fa-plug"></i>', 'Koneksi Error', `Server tidak merespons: ${e.message}`);
       }
       $('btnSavePegawaiTxt').textContent = 'Simpan Data';
     }
@@ -1293,11 +1293,11 @@
       const isActualEdit = !!existingId;
       if (isActualEdit) {
         $('logModalTitle').textContent = 'UPDATE LOG ABSEN';
-        $('logModalIcon').textContent = '📝';
+        $('logModalIcon').innerHTML = '<i class="fas fa-edit"></i>';
         $('btnSaveLogTxt').textContent = 'Perbarui Log';
       } else {
         $('logModalTitle').textContent = 'TAMBAH LOG MANUAL';
-        $('logModalIcon').textContent = '➕';
+        $('logModalIcon').innerHTML = '<i class="fas fa-plus"></i>';
         $('btnSaveLogTxt').textContent = 'Simpan Log';
       }
 
@@ -1360,7 +1360,7 @@
       const isEdit = !!editId;
 
       if (!uid || !tgl || !jamRaw) {
-        showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'warning', '⚠️', 'Data Kurang', 'Pegawai, Tanggal, dan Jam wajib diisi.');
+        showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Data Kurang', 'Pegawai, Tanggal, dan Jam wajib diisi.');
         return;
       }
 
@@ -1391,16 +1391,16 @@
         const d = await res.json().catch(() => ({}));
 
         if (!res.ok || d.ok === false) {
-          showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'fail', '❌', 'Gagal', d.message || 'Gagal menyimpan log.');
+          showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal', d.message || 'Gagal menyimpan log.');
         } else {
-          showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'success', '✅', 'Berhasil', isEdit ? 'Log absen diperbarui.' : 'Log absen manual ditambahkan.');
+          showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'success', '<i class="fas fa-check"></i>', 'Berhasil', isEdit ? 'Log absen diperbarui.' : 'Log absen manual ditambahkan.');
           setTimeout(() => {
             closeLogEditor();
             loadRekap(); // Refresh rekap after change
           }, 2000);
         }
       } catch (e) {
-        showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'fail', '🔌', 'Koneksi Error', 'Server tidak merespons.');
+        showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'fail', '<i class="fas fa-plug"></i>', 'Koneksi Error', 'Server tidak merespons.');
       } finally {
         setBtnL('btnSaveLog', false, 'Simpan Log');
       }
@@ -1424,7 +1424,7 @@
         }
 
         if (!ids.length) {
-          el.innerHTML = `<div class="empty-state" style="padding:12px"><div class="empty-icon">👥</div><div class="empty-text">Belum ada admin terdaftar</div></div>`;
+          el.innerHTML = `<div class="empty-state" style="padding:12px"><div class="empty-icon"><i class="fas fa-users"></i></div><div class="empty-text">Belum ada admin terdaftar</div></div>`;
           return;
         }
 
@@ -1457,16 +1457,16 @@
           console.log(`[AdminMgmt] ID: ${id}, RawRole: "${rawRole}", IsSuper: ${isSuperAdmin} (isSAId: ${isSAId})`);
 
           return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;margin-bottom:6px">
-        <div style="font-size:18px">${isSuperAdmin ? '👑' : '🛡️'}</div>
+        <div style="font-size:18px">${isSuperAdmin ? '<i class="fas fa-crown"></i>' : '<i class="fas fa-shield-alt"></i>'}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;font-weight:700;color:var(--text)">${nama}${isMe ? ' <span style="color:var(--gold);font-size:9px">(Anda)</span>' : ''}</div>
           <div style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">${id} · ${isSuperAdmin ? 'superadmin' : 'admin'}</div>
         </div>
-        ${!isMe && ids.length > 1 ? `<button onclick="hapusAdmin(${id},'${nama.replace(/'/g, "&#39;")}')" style="padding:3px 10px;border-radius:7px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ef4444;font-size:10px;font-weight:700;cursor:pointer">🗑 Hapus</button>` : ''}
+        ${!isMe && ids.length > 1 ? `<button onclick="hapusAdmin(${id},'${nama.replace(/'/g, "&#39;")}')" style="padding:3px 10px;border-radius:7px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ef4444;font-size:10px;font-weight:700;cursor:pointer"><i class="fas fa-trash"></i> Hapus</button>` : ''}
       </div>`;
         }).join('');
       } catch (e) {
-        el.innerHTML = `<div class="empty-state" style="padding:12px"><div class="empty-icon">🔌</div><div class="empty-text">Gagal memuat daftar admin</div></div>`;
+        el.innerHTML = `<div class="empty-state" style="padding:12px"><div class="empty-icon"><i class="fas fa-plug"></i></div><div class="empty-text">Gagal memuat daftar admin</div></div>`;
       }
     }
 
@@ -1479,11 +1479,11 @@
       const role = roleInput?.value || 'admin';
 
       if (!tgId || tgId < 1) {
-        _showAdminMgmtResult('warning', '⚠️', 'ID Tidak Valid', 'Masukkan Telegram ID yang benar.');
+        _showAdminMgmtResult('warning', '', 'ID Tidak Valid', 'Masukkan Telegram ID yang benar.');
         return;
       }
       if (ADMIN_IDS.includes(tgId)) {
-        _showAdminMgmtResult('warning', '⚠️', 'Sudah Ada', `ID ${tgId} sudah terdaftar sebagai admin.`);
+        _showAdminMgmtResult('warning', '<i class="fas fa-exclamation-triangle"></i>', 'Sudah Ada', `ID ${tgId} sudah terdaftar sebagai admin.`);
         return;
       }
       try {
@@ -1496,27 +1496,27 @@
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) {
-          _showAdminMgmtResult('warning', '⚠️', 'Ditolak', data.message || 'Gagal menambahkan admin.');
+          _showAdminMgmtResult('warning', '<i class="fas fa-exclamation-triangle"></i>', 'Ditolak', data.message || 'Gagal menambahkan admin.');
           return;
         }
         ADMIN_IDS.push(tgId);
         REKAP_CHAT_ID = ADMIN_IDS[0] || MY_ID;
         if (idInput) idInput.value = '';
         if (namaInput) namaInput.value = '';
-        _showAdminMgmtResult('success', '✅', 'Admin Ditambahkan', `${nama || tgId} berhasil ditambahkan sebagai ${role}.`);
+        _showAdminMgmtResult('success', '<i class="fas fa-check"></i>', 'Admin Ditambahkan', `${nama || tgId} berhasil ditambahkan sebagai ${role}.`);
         loadAdminMgmt();
       } catch (e) {
-        _showAdminMgmtResult('fail', '🔌', 'Gagal', 'Server tidak merespons. Coba lagi.');
+        _showAdminMgmtResult('fail', '<i class="fas fa-plug"></i>', 'Gagal', 'Server tidak merespons. Coba lagi.');
       }
     }
 
     async function hapusAdmin(tgId, nama) {
       if (tgId === MY_ID) {
-        _showAdminMgmtResult('warning', '⚠️', 'Tidak Bisa', 'Anda tidak bisa menghapus akun Anda sendiri.');
+        _showAdminMgmtResult('warning', '<i class="fas fa-exclamation-triangle"></i>', 'Tidak Bisa', 'Anda tidak bisa menghapus akun Anda sendiri.');
         return;
       }
       if (ADMIN_IDS.length <= 1) {
-        _showAdminMgmtResult('warning', '⚠️', 'Minimal 1 Admin', 'Harus ada minimal 1 admin yang terdaftar.');
+        _showAdminMgmtResult('warning', '<i class="fas fa-exclamation-triangle"></i>', 'Minimal 1 Admin', 'Harus ada minimal 1 admin yang terdaftar.');
         return;
       }
       if (!confirm(`Hapus ${nama} (${tgId}) dari daftar admin?`)) return;
@@ -1527,16 +1527,16 @@
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) {
-          _showAdminMgmtResult('warning', '⚠️', 'Ditolak', data.message || 'Gagal menghapus admin.');
+          _showAdminMgmtResult('warning', '<i class="fas fa-exclamation-triangle"></i>', 'Ditolak', data.message || 'Gagal menghapus admin.');
           return;
         }
         const idx = ADMIN_IDS.indexOf(tgId);
         if (idx > -1) ADMIN_IDS.splice(idx, 1);
         REKAP_CHAT_ID = ADMIN_IDS[0] || MY_ID;
-        _showAdminMgmtResult('success', '✅', 'Dihapus', `${nama} dihapus dari daftar admin.`);
+        _showAdminMgmtResult('success', '<i class="fas fa-check"></i>', 'Dihapus', `${nama} dihapus dari daftar admin.`);
         loadAdminMgmt();
       } catch (e) {
-        _showAdminMgmtResult('fail', '🔌', 'Gagal', 'Server tidak merespons.');
+        _showAdminMgmtResult('fail', '<i class="fas fa-plug"></i>', 'Gagal', 'Server tidak merespons.');
       }
     }
 
@@ -1647,15 +1647,15 @@
       const mMasuk = toMenitStr(inM.value);
       const mPulang = toMenitStr(inP.value);
       if (mMasuk === null || mPulang === null) {
-        showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'warning', '⚠️', 'Input Tidak Valid', 'Pastikan format jam benar (HH:MM).');
+        showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Input Tidak Valid', 'Pastikan format jam benar (HH:MM).');
         return;
       }
       if (mMasuk >= mPulang) {
-        showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'warning', '⚠️', 'Jam Tidak Logis', 'Jam masuk harus lebih kecil dari jam pulang.');
+        showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Jam Tidak Logis', 'Jam masuk harus lebih kecil dari jam pulang.');
         return;
       }
       const btn = $('btnSimpanJam');
-      if (btn) { btn.disabled = true; $('btnJamText').textContent = '💾 Menyimpan...'; }
+      if (btn) { btn.disabled = true; $('btnJamText').innerHTML = '<i class="fas fa-save"></i> Menyimpan...'; }
       try {
         const configSelect = $('configInstansiSelect');
         const instId = (configSelect && configSelect.value) || getScopedInstansiId() || 'bapperida';
@@ -1676,10 +1676,10 @@
         try { localStorage.setItem('jam_absen_bapperida', JSON.stringify({ masuk: inM.value, pulang: inP.value })); } catch (_) { }
         updateClock();
         updateJamPreview();
-        showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'success', '✅', 'Jam Tersimpan!',
+        showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'success', '<i class="fas fa-check"></i>', 'Jam Tersimpan!',
           `Masuk ≤ ${inM.value} · Pulang ≥ ${inP.value}\nBerlaku langsung untuk semua pengguna.`);
       } catch {
-        showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'warning', '⚠️', 'Gagal Menyimpan',
+        showResult('jamResult', 'jamRIcon', 'jamRTitle', 'jamRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal Menyimpan',
           'Simpan lokal berhasil, tapi gagal ke server. Pastikan webhook jam-absen aktif di n8n.');
         JAM_MASUK_MENIT = mMasuk;
         JAM_PULANG_MENIT = mPulang;
@@ -1710,9 +1710,9 @@
       const fmtD = s => { try { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? s : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
       box.style.display = 'block';
       box.innerHTML =
-        `<b style="color:#a78bfa">🌙 ${nama || '(belum ada nama)'}</b><br>` +
-        `📅 ${dari ? fmtD(dari) : '—'} s.d. ${sampai ? fmtD(sampai) : '—'}<br>` +
-        `🟢 Masuk ≤ ${masuk || '—'} &nbsp;·&nbsp; 🔵 Pulang ≥ ${pulang || '—'}`;
+        `<b style="color:#a78bfa"><i class="fas fa-moon"></i> ${nama || '(belum ada nama)'}</b><br>` +
+        `<i class="fas fa-calendar"></i> ${dari ? fmtD(dari) : '—'} s.d. ${sampai ? fmtD(sampai) : '—'}<br>` +
+        `<i class="fas fa-circle"></i> Masuk ≤ ${masuk || '—'} &nbsp;·&nbsp; <i class="fas fa-circle"></i> Pulang ≥ ${pulang || '—'}`;
     }
     let _faceSigCurrentTab = 'data';
     function switchFaceSigTab(tab) {
@@ -1761,12 +1761,12 @@
     async function loadJamPeriodeAdmin() {
       const list = $('periodeAdminList');
       if (!list) return;
-      list.innerHTML = '<div style="text-align:center;padding:14px;color:var(--muted);font-size:11px">⏳ Memuat...</div>';
+      list.innerHTML = '<div style="text-align:center;padding:14px;color:var(--muted);font-size:11px"><i class="fas fa-hourglass-half"></i> Memuat...</div>';
       try {
         await fetchJamPeriode(); // pakai fungsi yang sudah ada (update jamPeriodeList)
         renderPeriodeAdminList();
       } catch {
-        list.innerHTML = '<div style="text-align:center;padding:14px;color:var(--danger);font-size:11px">❌ Gagal memuat periode</div>';
+        list.innerHTML = '<div style="text-align:center;padding:14px;color:var(--danger);font-size:11px"><i class="fas fa-times"></i> Gagal memuat periode</div>';
       }
     }
 
@@ -1776,8 +1776,8 @@
       if (!tgl) return;
       const hasil = getJamForTanggal(tgl);
       const msg = hasil.nama
-        ? `✅ ${tgl} → PERIODE: "${hasil.nama}"\nMasuk  : ${hasil.masuk}\nPulang : ${hasil.pulang}`
-        : `🔵 ${tgl} → JAM GLOBAL\nMasuk  : ${hasil.masuk}\nPulang : ${hasil.pulang}`;
+        ? `<i class="fas fa-check"></i> ${tgl} → PERIODE: "${hasil.nama}"\nMasuk  : ${hasil.masuk}\nPulang : ${hasil.pulang}`
+        : `<i class="fas fa-circle"></i> ${tgl} → JAM GLOBAL\nMasuk  : ${hasil.masuk}\nPulang : ${hasil.pulang}`;
       alert(msg);
     }
 
@@ -1785,7 +1785,7 @@
       const list = $('periodeAdminList');
       if (!list) return;
       if (!jamPeriodeList.length) {
-        list.innerHTML = '<div style="text-align:center;padding:14px;color:var(--muted);font-size:11px">📭 Belum ada periode khusus</div>';
+        list.innerHTML = '<div style="text-align:center;padding:14px;color:var(--muted);font-size:11px"><i class="fas fa-envelope-open-text"></i> Belum ada periode khusus</div>';
         return;
       }
       const todayStr = fmtD(nowWITA());
@@ -1794,18 +1794,18 @@
         const aktif = todayStr >= p.dari && todayStr <= p.sampai;
         const expired = todayStr > p.sampai;
         const belumMulai = todayStr < p.dari;
-        const statusLabel = aktif ? '● Aktif' : expired ? '✕ Expired' : '○ Belum Mulai';
+        const statusLabel = aktif ? '● Aktif' : expired ? '<i class="fas fa-times"></i> Expired' : '○ Belum Mulai';
         const statusColor = aktif ? '#a78bfa' : expired ? 'var(--danger)' : 'var(--muted)';
         const borderAlpha = aktif ? '.4' : expired ? '.2' : '.15';
         const bgAlpha = aktif ? '.07' : expired ? '.03' : '.04';
         return `<div style="background:rgba(167,139,250,${bgAlpha});border:1px solid rgba(167,139,250,${borderAlpha});border-radius:10px;padding:10px 12px;margin-bottom:7px;position:relative;${expired ? 'opacity:.6' : ''}">
       <div style="position:absolute;top:8px;right:10px;font-size:8px;font-weight:700;color:${statusColor};background:rgba(0,0,0,.2);border-radius:5px;padding:2px 6px">${statusLabel}</div>
       <div style="font-size:11px;font-weight:800;color:var(--white);margin-bottom:4px;padding-right:70px">${p.nama}</div>
-      <div style="font-size:9px;color:var(--muted);margin-bottom:6px">📅 ${fmtTgl(p.dari)} — ${fmtTgl(p.sampai)}</div>
+      <div style="font-size:9px;color:var(--muted);margin-bottom:6px"><i class="fas fa-calendar"></i> ${fmtTgl(p.dari)} — ${fmtTgl(p.sampai)}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <span style="font-size:9px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:6px;padding:2px 8px;color:var(--success)">🟢 Masuk ≤ ${p.masuk}</span>
-        <span style="font-size:9px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.2);border-radius:6px;padding:2px 8px;color:#60a5fa">🔵 Pulang ≥ ${p.pulang}</span>
-        ${expired ? `<button onclick="hapusPeriodeAdmin('${p.id}')" style="font-size:8px;padding:2px 8px;border-radius:6px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:var(--danger);cursor:pointer;font-weight:700;margin-left:auto">🗑️ Hapus</button>` : ''}
+        <span style="font-size:9px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:6px;padding:2px 8px;color:var(--success)"><i class="fas fa-circle"></i> Masuk ≤ ${p.masuk}</span>
+        <span style="font-size:9px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.2);border-radius:6px;padding:2px 8px;color:#60a5fa"><i class="fas fa-circle"></i> Pulang ≥ ${p.pulang}</span>
+        ${expired ? `<button onclick="hapusPeriodeAdmin('${p.id}')" style="font-size:8px;padding:2px 8px;border-radius:6px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:var(--danger);cursor:pointer;font-weight:700;margin-left:auto"><i class="fas fa-trash"></i> Hapus</button>` : ''}
       </div>
     </div>`;
       }).join('');
@@ -1835,16 +1835,16 @@
       const pulang = $('inPeriodePulang')?.value || '';
 
       if (!nama || !dari || !sampai || !masuk || !pulang) {
-        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '⚠️', 'Field Belum Lengkap', 'Isi semua field: nama, tanggal, jam masuk & pulang.');
+        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Field Belum Lengkap', 'Isi semua field: nama, tanggal, jam masuk & pulang.');
         return;
       }
       if (dari > sampai) {
-        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '⚠️', 'Tanggal Tidak Valid', 'Tanggal selesai tidak boleh sebelum tanggal mulai.');
+        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Tanggal Tidak Valid', 'Tanggal selesai tidak boleh sebelum tanggal mulai.');
         return;
       }
       const mM = toMenitStr(masuk), mP = toMenitStr(pulang);
       if (mM === null || mP === null || mM >= mP) {
-        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '⚠️', 'Jam Tidak Valid', 'Jam masuk harus lebih kecil dari jam pulang.');
+        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Jam Tidak Valid', 'Jam masuk harus lebih kecil dari jam pulang.');
         return;
       }
       const btn = $('btnTambahPeriode');
@@ -1860,13 +1860,13 @@
         // Reset form
         ['inPeriodeNama', 'inPeriodeDari', 'inPeriodeSampai', 'inPeriodeMasuk', 'inPeriodePulang'].forEach(id => { const el = $(id); if (el) el.value = ''; });
         dom.hide('periodePreview');
-        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'success', '✅', 'Periode Tersimpan!', `🌙 ${nama} (${dari} s.d. ${sampai}) berhasil ditambahkan.`);
+        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'success', '<i class="fas fa-check"></i>', 'Periode Tersimpan!', `<i class="fas fa-moon"></i> ${nama} (${dari} s.d. ${sampai}) berhasil ditambahkan.`);
         setTimeout(() => togglePeriodeForm(false), 2000);
         await loadJamPeriodeAdmin();
       } catch {
-        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '⚠️', 'Gagal Menyimpan', 'Pastikan webhook jam-periode-add aktif di n8n.');
+        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal Menyimpan', 'Pastikan webhook jam-periode-add aktif di n8n.');
       } finally {
-        if (btn) { btn.disabled = false; $('btnTambahPeriodeTxt').textContent = '💾 Simpan Periode'; }
+        if (btn) { btn.disabled = false; $('btnTambahPeriodeTxt').innerHTML = '<i class="fas fa-save"></i> Simpan Periode'; }
       }
     }
 
@@ -1882,10 +1882,10 @@
       try {
         const res = await apiFetch(P.jamPeriodeDel, { method: 'POST', body: JSON.stringify({ id }) });
         if (!res.ok) throw 0;
-        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'success', '🗑️', 'Periode Dihapus', `"${nama}" berhasil dihapus.`);
+        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'success', '<i class="fas fa-trash"></i>', 'Periode Dihapus', `"${nama}" berhasil dihapus.`);
         await loadJamPeriodeAdmin();
       } catch {
-        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '⚠️', 'Gagal Hapus', 'Pastikan webhook jam-periode-delete aktif di n8n.');
+        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal Hapus', 'Pastikan webhook jam-periode-delete aktif di n8n.');
       }
     }
 
@@ -1904,12 +1904,12 @@
       if (enabled) {
         if (sw) sw.style.background = '#22c55e'; // Green
         if (knob) knob.style.left = '27px';    // Right
-        if (label) label.textContent = '🟢 Face Recognition Aktif';
+        if (label) label.innerHTML = '<i class="fas fa-circle"></i> Face Recognition Aktif';
         if (desc) desc.textContent = 'Pegawai wajib verifikasi wajah saat absen';
       } else {
         if (sw) sw.style.background = '#6b7280'; // Grey (Neutral Inactive)
         if (knob) knob.style.left = '3px';     // Left
-        if (label) label.textContent = '⚪ Face Recognition Nonaktif';
+        if (label) label.innerHTML = '<i class="fas fa-circle"></i> Face Recognition Nonaktif';
         if (desc) desc.textContent = 'Absen tanpa verifikasi wajah (hanya GPS)';
       }
       // Sinkronisasi UI profil dengan status toggle
@@ -1948,7 +1948,7 @@
     async function simpanFaceToggle() {
       const enabled = _faceTogglePending ?? FACE_RECOGNITION_ENABLED;
       const btn = $('btnSimpanFaceToggle');
-      if (btn) { btn.disabled = true; $('btnFaceToggleText').textContent = '💾 Menyimpan...'; }
+      if (btn) { btn.disabled = true; $('btnFaceToggleText').innerHTML = '<i class="fas fa-save"></i> Menyimpan...'; }
       const rc = $('faceToggleResult');
       if (rc) rc.style.display = 'flex';
       try {
@@ -1956,7 +1956,7 @@
         FACE_RECOGNITION_ENABLED = enabled;
         try { localStorage.setItem('face_recognition_bapperida', enabled ? '1' : '0'); } catch (_) { }
         _applyFaceToggleUI(enabled);
-        showResult('faceToggleResult', 'faceToggleRIcon', 'faceToggleRTitle', 'faceToggleRMsg', 'success', '✅',
+        showResult('faceToggleResult', 'faceToggleRIcon', 'faceToggleRTitle', 'faceToggleRMsg', 'success', '<i class="fas fa-check"></i>',
           enabled ? 'Face Recognition Diaktifkan' : 'Face Recognition Dinonaktifkan',
           enabled
             ? 'Semua pegawai wajib verifikasi wajah saat absen.'
@@ -1966,7 +1966,7 @@
         // Simpan lokal saja
         FACE_RECOGNITION_ENABLED = enabled;
         try { localStorage.setItem('face_recognition_bapperida', enabled ? '1' : '0'); } catch (_) { }
-        showResult('faceToggleResult', 'faceToggleRIcon', 'faceToggleRTitle', 'faceToggleRMsg', 'warning', '⚠️', 'Tersimpan Lokal',
+        showResult('faceToggleResult', 'faceToggleRIcon', 'faceToggleRTitle', 'faceToggleRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Tersimpan Lokal',
           'Berhasil disimpan di perangkat ini, tapi gagal ke server. Pastikan webhook face-toggle aktif di n8n.');
       } finally {
         if (btn) { setTimeout(() => { btn.disabled = false; $('btnFaceToggleText').textContent = 'Simpan Pengaturan Face Recognition'; }, 2500); }
@@ -2022,9 +2022,9 @@
       });
       const clb = $('clockLocBadge'); if (!clb) return;
       if (best && bestDist <= (best.radius || 150)) {
-        clb.textContent = '📍 ' + best.nama; clb.className = 'clock-loc-badge';
+        clb.innerHTML = '<i class="fas fa-map-marker-alt"></i> ' + best.nama; clb.className = 'clock-loc-badge';
       } else {
-        clb.textContent = '📍 Di luar area kantor'; clb.className = 'clock-loc-badge unknown';
+        clb.innerHTML = '<i class="fas fa-map-marker-alt"></i> Di luar area kantor'; clb.className = 'clock-loc-badge unknown';
       }
     }
 
@@ -2036,7 +2036,7 @@
       if (_permState === 'denied') {
         _locPermDenied = true;
         const clb = $('clockLocBadge');
-        if (clb) { clb.textContent = '📍 Izin lokasi ditolak'; clb.className = 'clock-loc-badge unknown'; }
+        if (clb) { clb.innerHTML = '<i class="fas fa-map-marker-alt"></i> Izin lokasi ditolak'; clb.className = 'clock-loc-badge unknown'; }
         return;
       }
 
@@ -2062,7 +2062,7 @@
           if (err && err.code === 1) {
             _locPermDenied = true;
             _writePermStore({ geolocation: 'denied' });
-            if (clb) { clb.textContent = '📍 Izin lokasi ditolak'; clb.className = 'clock-loc-badge unknown'; }
+            if (clb) { clb.innerHTML = '<i class="fas fa-map-marker-alt"></i> Izin lokasi ditolak'; clb.className = 'clock-loc-badge unknown'; }
           }
           // timeout/unavailable → badge tetap "Mendeteksi", tidak minta lagi
         },
@@ -2200,8 +2200,8 @@
           <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px"></div>
         </div>
         <div style="display:flex;gap:12px;margin-top:6px">
-          <span style="font-size:9px;color:var(--success)">✅ Sudah: ${sudah.length}</span>
-          <span style="font-size:9px;color:var(--danger)">❌ Belum: ${belum.length}</span>
+          <span style="font-size:9px;color:var(--success)"><i class="fas fa-check"></i> Sudah: ${sudah.length}</span>
+          <span style="font-size:9px;color:var(--danger)"><i class="fas fa-times"></i> Belum: ${belum.length}</span>
         </div>
       </div>`;
 
@@ -2212,7 +2212,7 @@
             const uid = getUid(p);
             const nip = getNip(p);
             html += `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;margin-bottom:6px">
-          <div style="width:32px;height:32px;border-radius:8px;background:rgba(239,68,68,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👤</div>
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(239,68,68,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0"><i class="fas fa-user"></i></div>
           <div style="flex:1;min-width:0">
             <div style="font-size:11px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nama}</div>
             <div style="font-size:9px;color:var(--muted)">${nip ? 'NIP: ' + nip + ' · ' : ''}Belum daftar wajah</div>
@@ -2242,16 +2242,16 @@
               try {
                 const arr = typeof histData === 'string' ? JSON.parse(histData) : histData;
                 const dLen = Array.isArray(arr) ? arr.length : 0;
-                if (dLen >= 512) engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(201,168,76,0.2);color:var(--gold);border-radius:4px;margin-left:4px;border:1px solid rgba(201,168,76,0.3)">🛡️ Human</span>';
-                else if (dLen === 128) engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(96,165,250,0.2);color:#60a5fa;border-radius:4px;margin-left:4px;border:1px solid rgba(96,165,250,0.3)">🤖 API</span>';
+                if (dLen >= 512) engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(201,168,76,0.2);color:var(--gold);border-radius:4px;margin-left:4px;border:1px solid rgba(201,168,76,0.3)"><i class="fas fa-shield-alt"></i> Human</span>';
+                else if (dLen === 128) engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(96,165,250,0.2);color:#60a5fa;border-radius:4px;margin-left:4px;border:1px solid rgba(96,165,250,0.3)"><i class="fas fa-robot"></i> API</span>';
               } catch (e) { }
             }
 
             html += `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.2);border-radius:10px;margin-bottom:6px">
           <div style="width:32px;height:32px;border-radius:8px;border:1px solid rgba(34,197,94,.3);overflow:hidden;flex-shrink:0;background:rgba(0,0,0,.3)">
             ${thumb
-                ? `<img src="${thumb}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.parentNode.innerHTML='👤'">`
-                : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:16px">👤</div>`
+                ? `<img src="${thumb}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.parentNode.innerHTML='<i class="fas fa-user"></i>'">`
+                : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:16px"><i class="fas fa-user"></i></div>`
               }
           </div>
           <div style="flex:1;min-width:0">
@@ -2260,7 +2260,7 @@
           </div>
           <button onclick="resetFacePegawai('${uid}','${nama.replace(/'/g, "\'")}')"
             style="font-size:9px;padding:3px 8px;border-radius:6px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:var(--danger);cursor:pointer;flex-shrink:0;font-weight:700">
-            🗑️ Reset
+            <i class="fas fa-trash"></i> Reset
           </button>
         </div>`;
           });
@@ -2291,7 +2291,7 @@
     loadWeather();  // muat cuaca Waikabubak
 
     // ==========================================
-    // 🏛️ SUPERADMIN: MULTI-AGENCY ADMIN SCOPING
+    // <i class="fas fa-landmark"></i> SUPERADMIN: MULTI-AGENCY ADMIN SCOPING
     // ==========================================
     function initSuperadminAdminScoping() {
       const isSA = typeof _isSuperAdmin === 'function' && _isSuperAdmin();

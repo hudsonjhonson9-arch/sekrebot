@@ -49,7 +49,7 @@
       if (state === 'denied') {
         _locPermDenied = true;
         const clb = $('clockLocBadge');
-        if (clb) { clb.textContent = '📍 Izin lokasi ditolak'; clb.className = 'clock-loc-badge unknown'; }
+        if (clb) { clb.innerHTML = '<i class="fas fa-map-marker-alt"></i> Izin lokasi ditolak'; clb.className = 'clock-loc-badge unknown'; }
       } else if (state === 'granted') {
         _locPermDenied = false;
         _updateLocBadgeGPS();
@@ -87,7 +87,7 @@
       if (geoState === 'denied') {
         _locPermDenied = true;
         const clb = $('clockLocBadge');
-        if (clb) { clb.textContent = '📍 Izin lokasi ditolak'; clb.className = 'clock-loc-badge unknown'; }
+        if (clb) { clb.innerHTML = '<i class="fas fa-map-marker-alt"></i> Izin lokasi ditolak'; clb.className = 'clock-loc-badge unknown'; }
       }
       return { geolocation: geoState, camera: camState };
     }
@@ -114,14 +114,14 @@
         networkInfo.checked = true;
         networkInfo.is_kantor = null;
         bar.className = 'wifi-bar unknown';
-        icon.textContent = '📶';
+        icon.innerHTML = '<i class="fas fa-signal"></i>';
         status.textContent = 'Cek Jaringan Dinonaktifkan';
         detail.textContent = 'Semua jaringan diizinkan';
         return networkInfo;
       }
 
       bar.className = 'wifi-bar checking';
-      icon.textContent = '🔄';
+      icon.innerHTML = '<i class="fas fa-sync"></i>';
       status.textContent = 'Memeriksa jaringan...';
       detail.textContent = 'Mengambil IP publik...';
 
@@ -144,11 +144,11 @@
         // Tampilkan IP saja — server yang akan menolak jika tidak sesuai ip_range
         networkInfo.is_kantor = null;
 
-        const connLabel = netType.includes('wifi') ? '📶 WiFi'
-          : netType.includes('cellular') || ['2g', '3g', '4g', '5g'].includes(netType) ? '📱 Data Seluler'
-            : '🔌 Jaringan';
+        const connLabel = netType.includes('wifi') ? '<i class="fas fa-signal"></i> WiFi'
+          : netType.includes('cellular') || ['2g', '3g', '4g', '5g'].includes(netType) ? '<i class="fas fa-mobile-alt"></i> Data Seluler'
+            : '<i class="fas fa-plug"></i> Jaringan';
         bar.className = 'wifi-bar kantor'; // tampil hijau, validasi di server
-        icon.textContent = '📡';
+        icon.innerHTML = '<i class="fas fa-satellite-dish"></i>';
         status.textContent = 'IP Publik Terdeteksi';
         detail.textContent = `${connLabel} · IP: ${ip}`;
         if ($('gpsNet')) $('gpsNet').textContent = `${ip}`;
@@ -157,7 +157,7 @@
         networkInfo.checked = true;
         networkInfo.error = e.message;
         bar.className = 'wifi-bar unknown';
-        icon.textContent = '❓';
+        icon.innerHTML = '<i class="fas fa-question"></i>';
         status.textContent = 'Jaringan Tidak Terdeteksi';
         detail.textContent = 'Tidak dapat memeriksa IP — lanjutkan absen';
       }

@@ -147,10 +147,10 @@ document.addEventListener('click', function(e) {
         async function handleTambahLokasi() {
       const nama = $('namaLokasi').value.trim(), radius = parseInt($('radiusLokasi').value) || 100;
       const ipRange = ($('ipRangeLokasi')?.value || '').split(',').map(s => s.trim()).filter(Boolean).join(',');
-      if (!selectedPin) { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'warning', '⚠️', 'Pilih Lokasi', 'Tap pada peta untuk menentukan titik lokasi.'); return; }
-      if (!nama) { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'warning', '⚠️', 'Nama Kosong', 'Masukkan nama lokasi terlebih dahulu.'); return; }
+      if (!selectedPin) { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Pilih Lokasi', 'Tap pada peta untuk menentukan titik lokasi.'); return; }
+      if (!nama) { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Nama Kosong', 'Masukkan nama lokasi terlebih dahulu.'); return; }
       const hariChecked = Array.from(document.querySelectorAll('#hariCheckGrid input:checked')).map(el => el.value);
-      if (!hariChecked.length) { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'warning', '⚠️', 'Pilih Hari', 'Pilih minimal satu hari aktif.'); return; }
+      if (!hariChecked.length) { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Pilih Hari', 'Pilih minimal satu hari aktif.'); return; }
       const hariStr = hariChecked.join(',');
       setBtnL('btnTambahLokasi', true, 'Menyimpan...');
       
@@ -173,8 +173,8 @@ document.addEventListener('click', function(e) {
           nip: localStorage.getItem('MY_NIP') || '',
           timestamp: Math.floor(Date.now() / 1000) 
         });
-        const ipInfo = ipRange ? `\n🌐 IP Range: ${ipRange}` : '';
-        showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'success', '📌', 'Lokasi Tersimpan!', `${nama}\nHari aktif: ${hariStr}\nLat: ${selectedPin.lat.toFixed(6)}, Lng: ${selectedPin.lng.toFixed(6)}${ipInfo}`);
+        const ipInfo = ipRange ? `\n<i class="fas fa-globe"></i> IP Range: ${ipRange}` : '';
+        showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'success', '<i class="fas fa-thumbtack"></i>', 'Lokasi Tersimpan!', `${nama}\nHari aktif: ${hariStr}\nLat: ${selectedPin.lat.toFixed(6)}, Lng: ${selectedPin.lng.toFixed(6)}${ipInfo}`);
         setBtnL('btnTambahLokasi', false, 'Simpan Lokasi ke Database');
         $('namaLokasi').value = ''; if ($('ipRangeLokasi')) $('ipRangeLokasi').value = ''; selectedPin = null;
         if (adminMarker) { adminMap.removeLayer(adminMarker); adminMarker = null; }
@@ -186,7 +186,7 @@ document.addEventListener('click', function(e) {
           l.querySelector('input').checked = def;
         });
         loadLokasiAdmin();
-      } catch { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'fail', '🔌', 'Gagal Menyimpan', 'Server tidak merespons.'); setBtnL('btnTambahLokasi', false, 'Simpan Lokasi ke Database'); }
+      } catch { showResult('adminResult', 'adminRIcon', 'adminRTitle', 'adminRMsg', 'fail', '<i class="fas fa-plug"></i>', 'Gagal Menyimpan', 'Server tidak merespons.'); setBtnL('btnTambahLokasi', false, 'Simpan Lokasi ke Database'); }
     }
     /**
      * Muat daftar lokasi absen dari server dan render ke tabel + peta.
@@ -202,7 +202,7 @@ document.addEventListener('click', function(e) {
         const params = {}; if (isSuperAdminUser() && $('adminLokasiInstansiSelect') && $('adminLokasiInstansiSelect').value && $('adminLokasiInstansiSelect').value !== 'all') params.instansi_id = $('adminLokasiInstansiSelect').value; const res = await apiGet(P.lokasiList, params); if (!res.ok) throw 0;
         const json = res?.data ?? {}; list = parseApiResponse(json);
         if (!list.length) {
-          el.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon">📭</div><div class="empty-text">Belum ada lokasi tersimpan</div></div>`;
+          el.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon"><i class="fas fa-envelope-open-text"></i></div><div class="empty-text">Belum ada lokasi tersimpan</div></div>`;
         } else {
           if (adminMap) {
             // Clear existing markers/circles before re-adding
@@ -292,17 +292,17 @@ document.addEventListener('click', function(e) {
               : 'background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.3)';
             return `<div id="lokasi-item-${id}" style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:13px;margin-bottom:8px; overflow:visible!important; position:relative; z-index:${1000 - idx};">
           <div style="display:flex;align-items:center;gap:9px;padding:10px 12px 9px">
-            <div style="width:30px;height:30px;border-radius:8px;background:var(--gold-dim);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">📍</div>
+            <div style="width:30px;height:30px;border-radius:8px;background:var(--gold-dim);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0"><i class="fas fa-map-marker-alt"></i></div>
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:700;color:var(--white)">${l.nama_lokasi || l.nama || '—'}</div>
               <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:1px">${lat}, ${lng}</div>
             </div>
-            <button class="btn-del" onclick="hapusLokasi('${id}','${namaEsc}')">🗑</button>
+            <button class="btn-del" onclick="hapusLokasi('${id}','${namaEsc}')"><i class="fas fa-trash"></i></button>
           </div>
           <div style="height:1px;background:rgba(255,255,255,.05);margin:0 12px"></div>
           <div style="padding:9px 12px 8px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
-              <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em">📅 Hari Aktif</span>
+              <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em"><i class="fas fa-calendar"></i> Hari Aktif</span>
               <span id="hariCountBadge-${id}" style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;${badgeStyle}">${hariCount > 0 ? hariCount + ' hari' : 'Nonaktif'}</span>
             </div>
             <div class="jadwal-hari-toggles">${hariToggles}</div>
@@ -310,21 +310,21 @@ document.addEventListener('click', function(e) {
           <div style="height:1px;background:rgba(255,255,255,.05);margin:0 12px"></div>
           <div style="padding:9px 12px 9px;display:flex;flex-direction:column;gap:7px">
             <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;width:48px;flex-shrink:0">📏 Radius</span>
+              <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;width:48px;flex-shrink:0"><i class="fas fa-ruler"></i> Radius</span>
               <input type="number" id="radius-input-${id}" value="${radius}" min="10" max="5000"
                 style="width:74px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:4px 8px;color:var(--white);font-family:'JetBrains Mono',monospace;font-size:11px;outline:none;transition:border-color .2s"
                 onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"/>
               <span style="font-size:10px;color:var(--muted)">meter</span>
             </div>
             <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;width:48px;flex-shrink:0">🌐 IP</span>
+              <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;width:48px;flex-shrink:0"><i class="fas fa-globe"></i> IP</span>
               <input type="text" id="ip-input-${id}" value="${ipVal}" placeholder="cth: 36.84.0.0/16"
                 style="flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:4px 8px;color:var(--white);font-family:'JetBrains Mono',monospace;font-size:10px;outline:none;transition:border-color .2s"
                 onfocus="this.style.borderColor='rgba(34,197,94,.6)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"/>
             </div>
             ${isSuperAdminUser() ? `
             <div style="margin-top:7px">
-              <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">🏢 Instansi Akses</span>
+              <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;"><i class="fas fa-building"></i> Instansi Akses</span>
               <div class="custom-search-dropdown" style="width:100%; margin-top:4px;">
                 <div class="dropdown-trigger" onclick="const list = this.nextElementSibling; document.querySelectorAll('#instansiCheckGrid-list, [id^=instansi-grid-]').forEach(el => { if (el !== list) el.style.display = 'none'; }); list.style.display = (list.style.display === 'none' || !list.style.display) ? 'flex' : 'none';" style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); border-radius:8px; cursor:pointer;">
                   <span class="selected-text" id="text-instansi-${id}" style="font-size:11px; color:var(--white); font-weight:700;">${instansiArr.includes('all') || instansiArr.length === 0 ? 'Semua Instansi' : (instansiArr.length === 1 ? ((window.INSTANSI_LIST && window.INSTANSI_LIST.length > 0 ? window.INSTANSI_LIST : []).find(i => i.id === instansiArr[0])?.nama_instansi || '1 Instansi Terpilih') : instansiArr.length + ' Instansi Terpilih')}</span>
@@ -357,14 +357,14 @@ document.addEventListener('click', function(e) {
           <div style="padding:8px 12px 10px">
             <button onclick="simpanLokasiItem('${id}','${namaEsc}',${idx})" id="btnSimpanLokasi-${id}"
               style="width:100%;padding:8px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--gold),#9b6e1a);color:var(--navy);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
-              <span>💾</span><span id="btnSimpanLokasiTxt-${id}">Simpan Perubahan</span>
+              <span><i class="fas fa-save"></i></span><span id="btnSimpanLokasiTxt-${id}">Simpan Perubahan</span>
             </button>
             <div id="simpanLokasiResult-${id}" style="display:none;margin-top:6px;padding:6px 10px;border-radius:8px;font-size:10px;font-weight:700;text-align:center"></div>
           </div>
         </div>`;
           }).join('');
         }
-      } catch { el.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon">🔌</div><div class="empty-text">Gagal memuat</div></div>`; }
+      } catch { el.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon"><i class="fas fa-plug"></i></div><div class="empty-text">Gagal memuat</div></div>`; }
       renderJadwalAdmin();
     }
     async function hapusLokasi(id, nama) {
@@ -433,10 +433,10 @@ document.addEventListener('click', function(e) {
         Object.keys(LOK_DEF).forEach(k => delete LOK_DEF[k]);
         jadwalLokData.forEach(l => { (l.hari || []).forEach(h => { if (!LOK_DEF[h]) LOK_DEF[h] = []; if (!LOK_DEF[h].includes(l.nama)) LOK_DEF[h].push(l.nama); }); });
         updateClock();
-        if (resEl) { resEl.style.cssText = 'display:block;margin-top:6px;padding:6px 10px;border-radius:8px;font-size:10px;font-weight:700;text-align:center;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:var(--success)'; resEl.textContent = '✅ Tersimpan!'; }
+        if (resEl) { resEl.style.cssText = 'display:block;margin-top:6px;padding:6px 10px;border-radius:8px;font-size:10px;font-weight:700;text-align:center;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:var(--success)'; resEl.innerHTML = '<i class="fas fa-check"></i> Tersimpan!'; }
         setTimeout(() => { if (resEl) resEl.style.display = 'none'; }, 2500);
       } catch (_) {
-        if (resEl) { resEl.style.cssText = 'display:block;margin-top:6px;padding:6px 10px;border-radius:8px;font-size:10px;font-weight:700;text-align:center;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--danger)'; resEl.textContent = '🔌 Gagal menyimpan.'; }
+        if (resEl) { resEl.style.cssText = 'display:block;margin-top:6px;padding:6px 10px;border-radius:8px;font-size:10px;font-weight:700;text-align:center;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--danger)'; resEl.innerHTML = '<i class="fas fa-plug"></i> Gagal menyimpan.'; }
         setTimeout(() => { if (resEl) resEl.style.display = 'none'; }, 3000);
       } finally {
         if (btn) { btn.disabled = false; if (txtEl) txtEl.textContent = 'Simpan Perubahan'; }
@@ -462,7 +462,7 @@ document.addEventListener('click', function(e) {
       if (!container) return;
 
       if (!jadwalLokData.length) {
-        container.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon">🗺️</div><div class="empty-text">Belum ada lokasi</div><div class="empty-sub">Tambah lokasi terlebih dahulu</div></div>`;
+        container.innerHTML = `<div class="empty-state" style="padding:16px"><div class="empty-icon"><i class="fas fa-map"></i></div><div class="empty-text">Belum ada lokasi</div><div class="empty-sub">Tambah lokasi terlebih dahulu</div></div>`;
         return;
       }
 
@@ -481,11 +481,11 @@ document.addEventListener('click', function(e) {
 
         return `<div class="jadwal-lok-card">
       <div class="jadwal-lok-card-header">
-        <div class="jadwal-lok-card-name"><span class="lok-icon">📍</span>${lok.nama}</div>
+        <div class="jadwal-lok-card-name"><span class="lok-icon"><i class="fas fa-map-marker-alt"></i></span>${lok.nama}</div>
         ${badge}
       </div>
       <div class="jadwal-hari-toggles">${toggles}</div>
-      <div class="jadwal-lok-meta">📏 ${lok.radius || 100}m &nbsp;·&nbsp; ${(parseFloat(lok.lat || 0)).toFixed(5)}, ${(parseFloat(lok.lng || 0)).toFixed(5)}</div>
+      <div class="jadwal-lok-meta"><i class="fas fa-ruler"></i> ${lok.radius || 100}m &nbsp;·&nbsp; ${(parseFloat(lok.lat || 0)).toFixed(5)}, ${(parseFloat(lok.lng || 0)).toFixed(5)}</div>
     </div>`;
       }).join('');
     }
@@ -520,10 +520,10 @@ document.addEventListener('click', function(e) {
      */
         async function simpanJadwal() {
       const btn = $('btnSimpanJadwal');
-      if (btn) { btn.disabled = true; dom.setText('btnJadwalText', '💾 Menyimpan...'); }
+      if (btn) { btn.disabled = true; dom.setHTML('btnJadwalText', '<i class="fas fa-save"></i> Menyimpan...'); }
 
       if (!jadwalLokData.length) {
-        showResult('jadwalResult', 'jadwalRIcon', 'jadwalRTitle', 'jadwalRMsg', 'warning', '⚠️', 'Tidak Ada Lokasi', 'Muat daftar lokasi terlebih dahulu.');
+        showResult('jadwalResult', 'jadwalRIcon', 'jadwalRTitle', 'jadwalRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Tidak Ada Lokasi', 'Muat daftar lokasi terlebih dahulu.');
         if (btn) { btn.disabled = false; dom.setText('btnJadwalText', 'Simpan Jadwal'); }
         return;
       }
@@ -552,9 +552,9 @@ document.addEventListener('click', function(e) {
       updateClock();
 
       if (gagal === 0) {
-        showResult('jadwalResult', 'jadwalRIcon', 'jadwalRTitle', 'jadwalRMsg', 'success', '✅', 'Jadwal Tersimpan!', `${berhasil} lokasi berhasil diperbarui.`);
+        showResult('jadwalResult', 'jadwalRIcon', 'jadwalRTitle', 'jadwalRMsg', 'success', '<i class="fas fa-check"></i>', 'Jadwal Tersimpan!', `${berhasil} lokasi berhasil diperbarui.`);
       } else {
-        showResult('jadwalResult', 'jadwalRIcon', 'jadwalRTitle', 'jadwalRMsg', 'warning', '⚠️', 'Sebagian Gagal', `${berhasil} berhasil, ${gagal} gagal.`);
+        showResult('jadwalResult', 'jadwalRIcon', 'jadwalRTitle', 'jadwalRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Sebagian Gagal', `${berhasil} berhasil, ${gagal} gagal.`);
       }
 
       if (btn) { setTimeout(() => { btn.disabled = false; dom.setText('btnJadwalText', 'Simpan Jadwal'); }, 2500); }

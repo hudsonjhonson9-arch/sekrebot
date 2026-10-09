@@ -83,7 +83,7 @@
     async function generateRekapPDF(options = null) {
       // 1. Validasi Awal
       if (!lastRekapPegawai || lastRekapPegawai.length === 0) {
-        showRekapToast('fail', '⚠️ Muat rekap terlebih dahulu');
+        showRekapToast('fail', '<i class="fas fa-exclamation-triangle"></i> Muat rekap terlebih dahulu');
         return;
       }
 
@@ -529,7 +529,7 @@
         // 6. Simpan & Kirim references
         const fileName = `Rekap_HADIR_${dari}_${sampai}.pdf`;
         const pdfBase64 = doc.output('datauristring').split(',')[1];
-        const pdfMsg = `📄 *REKAP HADIR PDF*\n📅 Periode: ${tanggalLabel}\n👤 Peminta: ${window.userProfile?.nama || window.MY_ID}\n🪪 NIP: ${localStorage.getItem('MY_NIP') || '-'}\n\nLaporan telah siap.`;
+        const pdfMsg = ` *REKAP HADIR PDF*\n Periode: ${tanggalLabel}\n Peminta: ${window.userProfile?.nama || window.MY_ID}\n NIP: ${localStorage.getItem('MY_NIP') || '-'}\n\nLaporan telah siap.`;
         const instName = instData?.nama_instansi || (typeof getInstansiName === 'function' ? getInstansiName(instId) : instId.toUpperCase());
 
         window.lastGeneratedDoc = doc;
@@ -565,14 +565,14 @@
                   dialogTitle: 'Buka atau Simpan PDF'
                 });
               } else {
-                showRekapToast('success', '✅ PDF disimpan di: ' + writeResult.uri);
+                showRekapToast('success', ' PDF disimpan di: ' + writeResult.uri);
               }
             } else {
               throw new Error("Plugin Filesystem tidak tersedia");
             }
           } catch (err) {
             console.error("Capacitor download error:", err);
-            showRekapToast('fail', '❌ Gagal menyimpan PDF: ' + err.message);
+            showRekapToast('fail', ' Gagal menyimpan PDF: ' + err.message);
           }
         } else {
           doc.save(fileName);
@@ -588,11 +588,11 @@
           instansi_id: instId,
           instansi_name: instName
         });
-        showRekapToast('success', '✅ Rekap PDF berhasil dikirim!');
+        showRekapToast('success', ' Rekap PDF berhasil dikirim!');
 
       } catch (e) {
         console.error('PDF Generation Error:', e);
-        showRekapToast('fail', '❌ Gagal membuat PDF: ' + (e.message || 'Error tidak diketahui'));
+        showRekapToast('fail', ' Gagal membuat PDF: ' + (e.message || 'Error tidak diketahui'));
       } finally {
         if (btn && !cfg.previewOnly) {
           btn.disabled = false;
@@ -638,7 +638,7 @@
             </style>
           </head>
           <body>
-            <div class="alert-mobile">ℹ️ <b>Pratinjau HTML</b><br>Tampilan di bawah adalah ringkasan dokumen. Silakan unduh PDF untuk melihat format resmi (A4/F4).</div>
+            <div class="alert-mobile">ℹ <b>Pratinjau HTML</b><br>Tampilan di bawah adalah ringkasan dokumen. Silakan unduh PDF untuk melihat format resmi (A4/F4).</div>
             <div class="kop">
               ${logoUrl ? `<img src="${logoUrl}" />` : ''}
               <div class="kop-text">
@@ -1003,14 +1003,14 @@
             console.warn("Pratinjau PDF gagal dirender di browser ini.");
           }
         } else if (iframe) {
-          iframe.srcdoc = '<div style="padding:20px;color:red;font-family:sans-serif">⚠️ PDF gagal di-generate. Coba tutup dan buka kembali modal ini.</div>';
+          iframe.srcdoc = '<div style="padding:20px;color:red;font-family:sans-serif"> PDF gagal di-generate. Coba tutup dan buka kembali modal ini.</div>';
         }
       } catch (err) {
         console.error("Gagal refresh preview PDF:", err);
         const iframe = $('pdfPreviewIframe');
         if (iframe) {
           iframe.srcdoc = `<div style="padding:20px;color:#c00;font-family:sans-serif;font-size:14px">
-            <b>❌ Error:</b> ${err.message || err}
+            <b><i class="fas fa-times"></i> Error:</b> ${err.message || err}
           </div>`;
         }
       } finally {
@@ -1096,7 +1096,7 @@
           instansi_name: window.lastGeneratedInstName
         });
 
-        showRekapToast('success', '✅ Rekap PDF berhasil dikirim!');
+        showRekapToast('success', ' Rekap PDF berhasil dikirim!');
         closePdfPreviewModal();
       } catch (e) {
         console.error("Kirim Telegram error:", e);

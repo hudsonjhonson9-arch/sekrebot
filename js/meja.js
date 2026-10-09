@@ -21,7 +21,7 @@
       const txt = $('mejaStatusText');
       const stxt = $('mejaStatusSub');
       if (dot) { dot.className = 'meja-status-dot' + (mode === 'active' ? ' active' : mode === 'processing' ? ' processing' : ''); }
-      if (ico) ico.textContent = icon;
+      if (ico) ico.innerHTML = icon;
       if (txt) txt.textContent = text;
       if (stxt) stxt.textContent = sub || '';
     }
@@ -79,14 +79,14 @@
       window._aiEngine = 'human'; // Force Human-AI for matching accuracy
       _isMejaAbsen = true;
 
-      _setMejaStatus('processing', '⏳', 'Memuat Database & GPS...', 'Membuka kamera');
+      _setMejaStatus('processing', '<i class="fas fa-hourglass-half"></i>', 'Memuat Database & GPS...', 'Membuka kamera');
 
       // 1. LANGSUNG BUKA KAMERA (Non-Blocking)
       // Kamera butuh waktu 1-3 detik untuk menyala di HP, jadi kita lakukan paralel dengan fetch data
       openCamOverlay('meja');
       if ($('btnCapture')) $('btnCapture').style.display = 'none'; // Sembunyikan tombol capture
       if ($('livenessMini')) $('livenessMini').style.display = 'block'; // Tampilkan instruksi kedip
-      if ($('camHeaderTitle')) $('camHeaderTitle').textContent = '🖥️ Menyiapkan Meja Absen...';
+      if ($('camHeaderTitle')) $('camHeaderTitle').innerHTML = '<i class="fas fa-desktop"></i> Menyiapkan Meja Absen...';
 
       // 2. FETCH GPS DAN DATA WAJAH (Try Cache First)
       const loadData = async () => {
@@ -105,7 +105,7 @@
           console.log(`[Meja] Memuat ${cached.data.length} wajah dari cache lokal...`);
           _allFaceDescriptors = cached.data;
           if (cached.userMap) window._mejaUserMap = cached.userMap;
-          _setMejaStatus('active', '🔍', `Siap Scan (${_allFaceDescriptors.length} Pegawai - Cache)`, 'Menjalankan Kamera...');
+          _setMejaStatus('active', '<i class="fas fa-search"></i>', `Siap Scan (${_allFaceDescriptors.length} Pegawai - Cache)`, 'Menjalankan Kamera...');
         }
       } catch (e) { console.warn('[Meja] Gagal baca cache:', e); }
 
@@ -132,13 +132,13 @@
           if (descs.length > 0) {
             _allFaceDescriptors = descs;
             window._mejaUserMap = userMap;
-            _setMejaStatus('active', '🔍', `Siap Scan (${descs.length} Pegawai)`, 'Menjalankan Kamera...');
+            _setMejaStatus('active', '<i class="fas fa-search"></i>', `Siap Scan (${descs.length} Pegawai)`, 'Menjalankan Kamera...');
             // Cache ke IDB supaya startup berikutnya lebih cepat
             await idb.set('master_data', { key: 'all_face_descriptors', data: descs, userMap, updated: Date.now() });
             console.log(`[Meja] Loaded ${descs.length} face descriptors from userList`);
           } else {
             console.warn('[Meja] Tidak ada face descriptor ditemukan di userList');
-            _setMejaStatus('active', '⚠️', 'Database Wajah Kosong', 'Daftarkan wajah pegawai terlebih dahulu');
+            _setMejaStatus('active', '<i class="fas fa-exclamation-triangle"></i>', 'Database Wajah Kosong', 'Daftarkan wajah pegawai terlebih dahulu');
           }
         }
       } catch (e) { console.warn('[Meja] Gagal fetch face descriptors:', e); }
@@ -159,7 +159,7 @@
 
       closeCamOverlay(false); // Mematikan kamera & stream (programmatic, bukan oleh user)
 
-      _setMejaStatus('idle', '🖥️', 'Sesi Dihentikan', 'Counter tersimpan di atas');
+      _setMejaStatus('idle', '<i class="fas fa-desktop"></i>', 'Sesi Dihentikan', 'Counter tersimpan di atas');
       const btnStart = $('btnMejaAbsen');
       const btnStop = $('btnMejaStop');
       if (btnStart) { btnStart.style.display = 'flex'; btnStart.disabled = false; $('btnMejaText').textContent = 'Mulai Meja Absen'; }
