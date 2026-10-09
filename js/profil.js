@@ -144,7 +144,7 @@
       applyInstansiBranding(p.instansi_id);
       // ── Badge status (baca dari data, bukan hardcode) ──
       const st = (p.status || 'AKTIF').toUpperCase();
-      const stEmoji = st === 'AKTIF' ? '<i class="fas fa-check"></i>' : st === 'SAKIT' ? '<i class="fas fa-thermometer-half"></i>' : st === 'IZIN' ? '<i class="fas fa-praying-hands"></i>' : st === 'TUGAS' ? '<i class="fas fa-briefcase"></i>' : st === 'NONAKTIF' ? '<i class="fas fa-ban"></i>' : '<i class="fas fa-cog"></i>';
+      const stEmoji = st === 'AKTIF' ? '<i class="fas fa-check"></i>' : st === 'SAKIT' ? '<i class="fas fa-user-sick"></i>' : st === 'IZIN' ? '<i class="fas fa-file-signature"></i>' : st === 'TUGAS' ? '<i class="fas fa-briefcase"></i>' : st === 'NONAKTIF' ? '<i class="fas fa-ban"></i>' : '<i class="fas fa-cog"></i>';
       const stCls = st === 'AKTIF' ? 's-aktif' : st === 'NONAKTIF' ? 's-nonaktif' : 's-ket';
       const b = $('userBadge'); if (b) { b.innerHTML = `${stEmoji} ${escapeHtml(st)}`; b.className = `sbadge ${stCls}`; }
       // ── Isi kartu profil besar ──

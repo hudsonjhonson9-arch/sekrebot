@@ -1782,9 +1782,9 @@
 
     // Color palette per status
     const KET_STYLE = {
-      'SAKIT':  { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   icon: '<i class="fas fa-thermometer-half"></i>', border: '#ef4444' },
+      'SAKIT':  { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   icon: '<i class="fas fa-user-sick"></i>', border: '#ef4444' },
       'TUGAS':  { color: '#f97316', bg: 'rgba(249,115,22,0.12)',  icon: '<i class="fas fa-briefcase"></i>', border: '#f97316' },
-      'IZIN':   { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  icon: '<i class="fas fa-praying-hands"></i>', border: '#3b82f6' },
+      'IZIN':   { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  icon: '<i class="fas fa-file-signature"></i>', border: '#3b82f6' },
       'CUTI':   { color: '#a855f7', bg: 'rgba(168,85,247,0.12)',  icon: '<i class="fas fa-umbrella-beach"></i>', border: '#a855f7' },
       'TUBEL':  { color: '#ec4899', bg: 'rgba(236,72,153,0.12)',  icon: '<i class="fas fa-graduation-cap"></i>', border: '#ec4899' },
     };

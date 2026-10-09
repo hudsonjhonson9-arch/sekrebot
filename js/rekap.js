@@ -706,8 +706,8 @@ function renderRekap(pg) {
 
       // Label & warna jam masuk
       let masukLabel = '', masukColor = '', masukBg = '', masukIcon = '';
-      if (izin > 0) { masukLabel = 'Izin'; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.12)'; masukIcon = '<i class="fas fa-praying-hands"></i>'; }
-      else if (sakit > 0) { masukLabel = 'Sakit'; masukColor = 'var(--danger)'; masukBg = 'rgba(239,68,68,.12)'; masukIcon = '<i class="fas fa-thermometer-half"></i>'; }
+      if (izin > 0) { masukLabel = 'Izin'; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.12)'; masukIcon = '<i class="fas fa-file-signature"></i>'; }
+      else if (sakit > 0) { masukLabel = 'Sakit'; masukColor = 'var(--danger)'; masukBg = 'rgba(239,68,68,.12)'; masukIcon = '<i class="fas fa-user-sick"></i>'; }
       else if (tugas > 0) { masukLabel = 'Tugas'; masukColor = '#8b5cf6'; masukBg = 'rgba(139,92,246,.12)'; masukIcon = '<i class="fas fa-briefcase"></i>'; }
       else if (p.tubel > 0) { masukLabel = 'Tubel'; masukColor = '#6366f1'; masukBg = 'rgba(99,102,241,.12)'; masukIcon = '<i class="fas fa-graduation-cap"></i>'; }
       else if (p.cuti > 0) { masukLabel = 'Cuti'; masukColor = '#14b8a6'; masukBg = 'rgba(20,184,166,.12)'; masukIcon = '<i class="fas fa-umbrella-beach"></i>'; }
@@ -857,8 +857,8 @@ function renderRekap(pg) {
           ${pulang > 0 ? `<span class="pbar-item pb-pulang"    ><i class="fas fa-circle"></i> Pulang</span>` : ''}
           ${cepatCount > 0 ? `<span class="pbar-item pb-luar-pulang"><i class="fas fa-running"></i> Pulang Cepat: ${cepatCount}×</span>` : ''}
           ${pulangLuar > 0 ? `<span class="pbar-item" style="background:rgba(245,158,11,.15);color:#f59e0b"><i class="fas fa-running"></i> Lapangan</span>` : ''}
-          ${izin > 0 ? `<span class="pbar-item pb-izin"      ><i class="fas fa-praying-hands"></i> Izin</span>` : ''}
-          ${sakit > 0 ? `<span class="pbar-item pb-sakit"     ><i class="fas fa-thermometer-half"></i> Sakit</span>` : ''}
+          ${izin > 0 ? `<span class="pbar-item pb-izin"      ><i class="fas fa-file-signature"></i> Izin</span>` : ''}
+          ${sakit > 0 ? `<span class="pbar-item pb-sakit"     ><i class="fas fa-user-sick"></i> Sakit</span>` : ''}
           ${tugas > 0 ? `<span class="pbar-item pb-tugas"     ><i class="fas fa-briefcase"></i> Tugas/DL</span>` : ''}
           ${p.tubel > 0 ? `<span class="pbar-item pb-tubel"     ><i class="fas fa-graduation-cap"></i> Tubel</span>` : ''}
           ${p.cuti > 0 ? `<span class="pbar-item pb-cuti"      ><i class="fas fa-umbrella-beach"></i> Cuti</span>` : ''}
@@ -949,8 +949,8 @@ function renderRekap(pg) {
             + (mC > 0 ? '<span class="akk-badge akk-cepat"><i class="fas fa-running"></i> Cepat: ' + aCepat + '</span>' : '')
             + (p.all_alpa > 0 ? '<span class="akk-badge" style="background:rgba(239,68,68,.12);color:var(--danger)"><i class="fas fa-times"></i> TB: ' + toHHMM(p.all_alpa * 450) + '</span>' : '')
             + (mAllTotal_Local > 0 ? '<span class="akk-badge akk-total">Σ Total: ' + aTotal + '</span>' : '')
-            + (p.all_izin > 0 ? '<span class="akk-badge" style="background:rgba(245,158,11,.1);color:var(--warning)"><i class="fas fa-praying-hands"></i> ' + p.all_izin + '×</span>' : '')
-            + (p.all_sakit > 0 ? '<span class="akk-badge" style="background:rgba(239,68,68,.1);color:var(--danger)"><i class="fas fa-thermometer-half"></i> ' + p.all_sakit + '×</span>' : '')
+            + (p.all_izin > 0 ? '<span class="akk-badge" style="background:rgba(245,158,11,.1);color:var(--warning)"><i class="fas fa-file-signature"></i> ' + p.all_izin + '×</span>' : '')
+            + (p.all_sakit > 0 ? '<span class="akk-badge" style="background:rgba(239,68,68,.1);color:var(--danger)"><i class="fas fa-user-sick"></i> ' + p.all_sakit + '×</span>' : '')
             + (p.all_tugas > 0 ? '<span class="akk-badge" style="background:rgba(139,92,246,.1);color:#a78bfa"><i class="fas fa-briefcase"></i> ' + p.all_tugas + '×</span>' : '')
             + (p.all_tubel > 0 ? '<span class="akk-badge" style="background:rgba(99,102,241,.1);color:#818cf8"><i class="fas fa-graduation-cap"></i> ' + p.all_tubel + '×</span>' : '')
             + (p.all_cuti > 0 ? '<span class="akk-badge" style="background:rgba(20,184,166,.1);color:#2dd4bf"><i class="fas fa-umbrella-beach"></i> ' + p.all_cuti + '×</span>' : '')
@@ -1008,8 +1008,8 @@ function renderRekap(pg) {
               ${mC > 0 ? `<span class="badge-all"><i class="fas fa-running"></i> Cepat: ${toHHMM(mC)}</span>` : ''}
               ${p.all_alpa > 0 ? `<span class="badge-all" style="color:var(--danger)"><i class="fas fa-times"></i> TB: ${p.all_alpa}×</span>` : ''}
               ${dAllPct !== null ? `<span class="badge-all"><i class="fas fa-bullseye"></i> Disiplin: ${dAllPct}%</span>` : ''}
-              ${p.all_izin > 0 ? `<span class="badge-all"><i class="fas fa-praying-hands"></i> Izin: ${p.all_izin}</span>` : ''}
-              ${p.all_sakit > 0 ? `<span class="badge-all"><i class="fas fa-thermometer-half"></i> Sakit: ${p.all_sakit}</span>` : ''}
+              ${p.all_izin > 0 ? `<span class="badge-all"><i class="fas fa-file-signature"></i> Izin: ${p.all_izin}</span>` : ''}
+              ${p.all_sakit > 0 ? `<span class="badge-all"><i class="fas fa-user-sick"></i> Sakit: ${p.all_sakit}</span>` : ''}
               ${p.all_tugas > 0 ? `<span class="badge-all"><i class="fas fa-briefcase"></i> Tugas: ${p.all_tugas}</span>` : ''}
               ${p.all_tubel > 0 ? `<span class="badge-all"><i class="fas fa-graduation-cap"></i> Tubel: ${p.all_tubel}</span>` : ''}
               ${p.all_cuti > 0 ? `<span class="badge-all"><i class="fas fa-umbrella-beach"></i> Cuti: ${p.all_cuti}</span>` : ''}

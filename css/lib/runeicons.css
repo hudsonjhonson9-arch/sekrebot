@@ -92,7 +92,6 @@
 .fas.fa-plug { background: currentColor; -webkit-mask: url(../../icons/custom/fa-plug.svg) center / contain no-repeat; mask: url(../../icons/custom/fa-plug.svg) center / contain no-repeat; }
 .fas.fa-plus { background: currentColor; -webkit-mask: url(../../icons/ri/indicators-plus.svg) center / contain no-repeat; mask: url(../../icons/ri/indicators-plus.svg) center / contain no-repeat; }
 .fas.fa-plus-circle { background: currentColor; -webkit-mask: url(../../icons/ri/indicators-plus.svg) center / contain no-repeat; mask: url(../../icons/ri/indicators-plus.svg) center / contain no-repeat; }
-.fas.fa-praying-hands { background: currentColor; -webkit-mask: url(../../icons/ri/senses-hand.svg) center / contain no-repeat; mask: url(../../icons/ri/senses-hand.svg) center / contain no-repeat; }
 .fas.fa-question { background: currentColor; -webkit-mask: url(../../icons/ri/indicators-circle-question-mark.svg) center / contain no-repeat; mask: url(../../icons/ri/indicators-circle-question-mark.svg) center / contain no-repeat; }
 .fas.fa-receipt { background: currentColor; -webkit-mask: url(../../icons/ri/money-receipt.svg) center / contain no-repeat; mask: url(../../icons/ri/money-receipt.svg) center / contain no-repeat; }
 .fas.fa-robot { background: currentColor; -webkit-mask: url(../../icons/custom/fa-robot.svg) center / contain no-repeat; mask: url(../../icons/custom/fa-robot.svg) center / contain no-repeat; }
@@ -136,6 +135,7 @@
 .fas.fa-user { background: currentColor; -webkit-mask: url(../../icons/custom/fa-user.svg) center / contain no-repeat; mask: url(../../icons/custom/fa-user.svg) center / contain no-repeat; }
 .fas.fa-user-clock { background: currentColor; -webkit-mask: url(../../icons/custom/fa-user-clock.svg) center / contain no-repeat; mask: url(../../icons/custom/fa-user-clock.svg) center / contain no-repeat; }
 .fas.fa-user-shield { background: currentColor; -webkit-mask: url(../../icons/ri/identity-shield.svg) center / contain no-repeat; mask: url(../../icons/ri/identity-shield.svg) center / contain no-repeat; }
+.fas.fa-user-sick { background: currentColor; -webkit-mask: url(../../icons/custom/fa-user-sick.svg) center / contain no-repeat; mask: url(../../icons/custom/fa-user-sick.svg) center / contain no-repeat; }
 .fas.fa-user-tie { background: currentColor; -webkit-mask: url(../../icons/ri/messaging-contact.svg) center / contain no-repeat; mask: url(../../icons/ri/messaging-contact.svg) center / contain no-repeat; }
 .fas.fa-users { background: currentColor; -webkit-mask: url(../../icons/ri/identity-users.svg) center / contain no-repeat; mask: url(../../icons/ri/identity-users.svg) center / contain no-repeat; }
 .fas.fa-wind { background: currentColor; -webkit-mask: url(../../icons/ri/nature-wind.svg) center / contain no-repeat; mask: url(../../icons/ri/nature-wind.svg) center / contain no-repeat; }

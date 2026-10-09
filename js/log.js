@@ -92,8 +92,8 @@
       if (x.includes('LUAR') && x.includes('MASUK')) return { cls: 'l-luar', icon: '<i class="fas fa-exclamation-triangle"></i>', lbl: 'LUAR JAM MASUK' };
       if (x.includes('LUAR') && x.includes('PULANG')) return { cls: 'l-luar', icon: '<i class="fas fa-running"></i>', lbl: 'PULANG CEPAT' };
       if (x.includes('LUAR')) return { cls: 'l-luar', icon: '<i class="fas fa-exclamation-triangle"></i>', lbl: 'DI LUAR JAM' };
-      if (x === 'IZIN') return { cls: 'l-izin', icon: '<i class="fas fa-praying-hands"></i>', lbl: 'KETERANGAN' };
-      if (x === 'SAKIT') return { cls: 'l-sakit', icon: '<i class="fas fa-thermometer-half"></i>', lbl: 'SAKIT' };
+      if (x === 'IZIN') return { cls: 'l-izin', icon: '<i class="fas fa-file-signature"></i>', lbl: 'KETERANGAN' };
+      if (x === 'SAKIT') return { cls: 'l-sakit', icon: '<i class="fas fa-user-sick"></i>', lbl: 'SAKIT' };
       if (x === 'TUGAS') return { cls: 'l-tugas', icon: '<i class="fas fa-briefcase"></i>', lbl: 'TUGAS' };
       if (x === 'IZIN PENDING') return { cls: 'l-pending', icon: '<i class="fas fa-hourglass-half"></i>', lbl: 'IZIN (Menunggu)' };
       if (x === 'SAKIT PENDING') return { cls: 'l-pending', icon: '<i class="fas fa-hourglass-half"></i>', lbl: 'SAKIT (Menunggu)' };
@@ -201,8 +201,8 @@
         const cepatMnt = (mPulang !== null && mPulangBatas !== null && mPulang < mPulangBatas) ? mPulangBatas - mPulang : 0;
 
         let masukLabel, masukColor, masukBg, masukIcon;
-        if (rIzin) { masukLabel = 'Izin'; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.12)'; masukIcon = '<i class="fas fa-praying-hands"></i>'; }
-        else if (rSakit) { masukLabel = 'Sakit'; masukColor = 'var(--danger)'; masukBg = 'rgba(239,68,68,.12)'; masukIcon = '<i class="fas fa-thermometer-half"></i>'; }
+        if (rIzin) { masukLabel = 'Izin'; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.12)'; masukIcon = '<i class="fas fa-file-signature"></i>'; }
+        else if (rSakit) { masukLabel = 'Sakit'; masukColor = 'var(--danger)'; masukBg = 'rgba(239,68,68,.12)'; masukIcon = '<i class="fas fa-user-sick"></i>'; }
         else if (rTugas) { masukLabel = 'Tugas/DL'; masukColor = '#8b5cf6'; masukBg = 'rgba(139,92,246,.12)'; masukIcon = '<i class="fas fa-briefcase"></i>'; }
         else if (isAlpa) { masukLabel = 'Tanpa Berita'; masukColor = 'var(--danger)'; masukBg = 'rgba(239,68,68,.08)'; masukIcon = '<i class="fas fa-times"></i>'; }
         else if (!jamMasuk) { masukLabel = 'Tidak Masuk'; masukColor = 'var(--muted)'; masukBg = 'rgba(255,255,255,.04)'; masukIcon = '—'; }

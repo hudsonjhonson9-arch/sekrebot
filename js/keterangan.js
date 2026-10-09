@@ -349,7 +349,7 @@
         el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:16px">Belum ada pengajuan keterangan.</div>';
         return;
       }
-      const JENIS_EMOJI = { 'IZIN': '<i class="fas fa-praying-hands"></i>', 'SAKIT': '<i class="fas fa-thermometer-half"></i>', 'TUGAS': '<i class="fas fa-briefcase"></i>' };
+      const JENIS_EMOJI = { 'IZIN': '<i class="fas fa-file-signature"></i>', 'SAKIT': '<i class="fas fa-user-sick"></i>', 'TUGAS': '<i class="fas fa-briefcase"></i>' };
       el.innerHTML = rows.slice(0, 20).map((r, i) => {
         // Schema baru Supabase: id_ket, user_id, nama, nip, tanggal, jam, jenis, keterangan, status
         const jenis = (r.jenis || r['Jenis Absen'] || r.jenis_absen || '').trim().toUpperCase()
@@ -497,7 +497,7 @@
           el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:16px"><i class="fas fa-check"></i> Tidak ada pengajuan yang menunggu konfirmasi.</div>';
           return;
         }
-        const EMOJI = { 'IZIN': '<i class="fas fa-praying-hands"></i>', 'SAKIT': '<i class="fas fa-thermometer-half"></i>', 'TUGAS': '<i class="fas fa-briefcase"></i>' };
+        const EMOJI = { 'IZIN': '<i class="fas fa-file-signature"></i>', 'SAKIT': '<i class="fas fa-user-sick"></i>', 'TUGAS': '<i class="fas fa-briefcase"></i>' };
         el.innerHTML = rows.map((r, i) => {
           // id_ket = ID_Ket baris pertama pengajuan ini (sudah digrouping oleh n8n)
           const idKet = r.id_ket || r.ID_Ket || '';

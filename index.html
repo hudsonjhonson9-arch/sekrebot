@@ -58,12 +58,12 @@
   <link rel="stylesheet" href="css/lib/leaflet.min.css" />
 
   <!-- App Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=7" />
+  <link rel="stylesheet" href="css/styles.css?v=8" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1b2a">
-  <link rel="stylesheet" href="css/lib/runeicons.css" />
+  <link rel="stylesheet" href="css/lib/runeicons.css?v=2" />
   <style>
     /* ════ DOKUMEN CARDS (MODERN UI) ════ */
     .log-list {
@@ -595,8 +595,8 @@
       <div class="card">
         <div class="card-title"><i class="fas fa-edit"></i> Jenis Keterangan</div>
         <div class="jenis-grid">
-          <button class="jenis-pill active" onclick="selectJenis('IZIN', this)"><i class="fas fa-praying-hands"></i> Izin</button>
-          <button class="jenis-pill" onclick="selectJenis('SAKIT',this)"><i class="fas fa-thermometer-half"></i> Sakit</button>
+          <button class="jenis-pill active" onclick="selectJenis('IZIN', this)"><i class="fas fa-file-signature"></i> Izin</button>
+          <button class="jenis-pill" onclick="selectJenis('SAKIT',this)"><i class="fas fa-user-sick"></i> Sakit</button>
           <button class="jenis-pill" onclick="selectJenis('TUGAS',this)"><i class="fas fa-briefcase"></i> Tugas</button>
           <button class="jenis-pill" onclick="selectJenis('TUBEL',this)"><i class="fas fa-graduation-cap"></i> Tubel</button>
           <button class="jenis-pill" onclick="selectJenis('CUTI',this)"><i class="fas fa-umbrella-beach"></i> Cuti</button>
@@ -690,9 +690,9 @@
         <div class="form-group" style="margin-bottom:10px">
           <label class="form-label">Jenis</label>
           <div class="jenis-grid">
-            <button class="jenis-pill active" id="editJenisPill_IZIN" onclick="setEditJenis('IZIN',this)"><i class="fas fa-praying-hands"></i>
+            <button class="jenis-pill active" id="editJenisPill_IZIN" onclick="setEditJenis('IZIN',this)"><i class="fas fa-file-signature"></i>
               Keterangan</button>
-            <button class="jenis-pill" id="editJenisPill_SAKIT" onclick="setEditJenis('SAKIT',this)"><i class="fas fa-thermometer-half"></i> Sakit</button>
+            <button class="jenis-pill" id="editJenisPill_SAKIT" onclick="setEditJenis('SAKIT',this)"><i class="fas fa-user-sick"></i> Sakit</button>
             <button class="jenis-pill" id="editJenisPill_TUGAS" onclick="setEditJenis('TUGAS',this)"><i class="fas fa-briefcase"></i> Tugas</button>
           </div>
         </div>
@@ -891,8 +891,8 @@
       <div class="filter-bar">
         <button class="filter-chip active" onclick="filterLog('SEMUA',this)">Semua</button>
         <button class="filter-chip" onclick="filterLog('HADIR', this)"><i class="fas fa-check"></i> Hadir</button>
-        <button class="filter-chip" onclick="filterLog('IZIN',  this)"><i class="fas fa-praying-hands"></i> Izin</button>
-        <button class="filter-chip" onclick="filterLog('SAKIT', this)"><i class="fas fa-thermometer-half"></i> Sakit</button>
+        <button class="filter-chip" onclick="filterLog('IZIN',  this)"><i class="fas fa-file-signature"></i> Izin</button>
+        <button class="filter-chip" onclick="filterLog('SAKIT', this)"><i class="fas fa-user-sick"></i> Sakit</button>
         <button class="filter-chip" onclick="filterLog('TUGAS', this)"><i class="fas fa-briefcase"></i> Tugas</button>
         <button class="filter-chip" onclick="filterLog('TUBEL', this)"><i class="fas fa-graduation-cap"></i> Tubel</button>
         <button class="filter-chip" onclick="filterLog('CUTI', this)"><i class="fas fa-umbrella-beach"></i> Cuti</button>
@@ -1104,12 +1104,12 @@
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
           <div class="rs-card rs-izin">
             <div class="rs-num" id="rsIzin">—</div>
-            <div class="rs-ico"><i class="fas fa-praying-hands"></i></div>
+            <div class="rs-ico"><i class="fas fa-file-signature"></i></div>
             <div class="rs-lbl">Izin</div>
           </div>
           <div class="rs-card rs-sakit">
             <div class="rs-num" id="rsSakit">—</div>
-            <div class="rs-ico"><i class="fas fa-thermometer-half"></i></div>
+            <div class="rs-ico"><i class="fas fa-user-sick"></i></div>
             <div class="rs-lbl">Sakit</div>
           </div>
           <div class="rs-card rs-tugas">

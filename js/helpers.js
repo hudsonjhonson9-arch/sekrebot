@@ -54,8 +54,8 @@
       if (j.includes('LUAR') && j.includes('MASUK')) return { cls: 'tb-luar', icon: '<i class="fas fa-exclamation-triangle"></i>', lbl: 'LUAR JAM MASUK' };
       if (j.includes('LUAR') && j.includes('PULANG')) return { cls: 'tb-luar', icon: '<i class="fas fa-running"></i>', lbl: 'PULANG CEPAT' };
       if (j.includes('LUAR')) return { cls: 'tb-luar', icon: '<i class="fas fa-exclamation-triangle"></i>', lbl: 'DI LUAR JAM' };
-      if (j === 'IZIN') return { cls: 'tb-izin', icon: '<i class="fas fa-praying-hands"></i>', lbl: 'KETERANGAN' };
-      if (j === 'SAKIT') return { cls: 'tb-sakit', icon: '<i class="fas fa-thermometer-half"></i>', lbl: 'SAKIT' };
+      if (j === 'IZIN') return { cls: 'tb-izin', icon: '<i class="fas fa-file-signature"></i>', lbl: 'KETERANGAN' };
+      if (j === 'SAKIT') return { cls: 'tb-sakit', icon: '<i class="fas fa-user-sick"></i>', lbl: 'SAKIT' };
       if (j === 'TUGAS') return { cls: 'tb-tugas', icon: '<i class="fas fa-briefcase"></i>', lbl: 'TUGAS' };
       return { cls: 'tb-luar', icon: '<i class="fas fa-clipboard-list"></i>', lbl: jenis || '—' };
     }
