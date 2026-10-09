@@ -23,6 +23,7 @@ const PEGAWAI = {
 
 function harness(query) {
   const app = express();
+  app.use(express.json({ limit: '256kb' }));
   app.use('/api', requireRole(ABSEN_ROLES, { lookup: async () => ({ ...ADMIN }) }));
   app.use('/api', createAttendanceDataRouter({
     query: async (text, params) => query(text, params),
@@ -37,6 +38,21 @@ async function get(app, path) {
   try {
     const res = await fetch(`http://127.0.0.1:${port}${path}`, {
       headers: { authorization: `Bearer ${TOKEN}` },
+    });
+    return { status: res.status, body: await res.json() };
+  } finally {
+    await new Promise((r) => server.close(r));
+  }
+}
+
+async function post(app, path, body) {
+  const server = await new Promise((r) => { const s = app.listen(0, () => r(s)); });
+  const port = server.address().port;
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}${path}`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify(body),
     });
     return { status: res.status, body: await res.json() };
   } finally {
@@ -71,4 +87,39 @@ test('rekap-absen menyertakan field nama per pegawai (kontrak js/rekap.js)', asy
   assert.equal(p.username, 'Charles Hermana Weru, S.Sos', 'username tetap ikut untuk konsumen lama');
   assert.equal(p.nip, PEGAWAI.NIP);
   assert.equal(p.jabatan, PEGAWAI.Jabatan);
+});
+
+test('keterangan admin panel: target adalah pegawai terpilih (user.id), bukan admin', async () => {
+  const sqls = [];
+  const q = async (text, params) => {
+    sqls.push({ text, params });
+    if (/FROM user_list/i.test(text)) {
+      const pid = params ? String(params[0]) : '';
+      const row = String(pid) === String(PEGAWAI.id) ? { ...PEGAWAI } : { ...ADMIN };
+      // SQL memakai alias "NIP" AS nip, jadi baris hasil query kolomnya lowercase.
+      if (row.NIP) row.nip = row.NIP;
+      return { rows: [row] };
+    }
+    if (/INSERT INTO ket_temp/i.test(text)) {
+      const fresh = { ...params };
+      return { rows: [fresh] };
+    }
+    if (/FROM ket_temp/i.test(text)) return { rows: [] };
+    return { rows: [] };
+  };
+  const r = await post(harness(q), '/api/keterangan', {
+    source: 'admin_panel',
+    user: { id: PEGAWAI.id, nama: PEGAWAI.username, nip: PEGAWAI.NIP },
+    jenis: 'IZIN',
+    keterangan: 'Acara keluarga',
+    tgl_mulai: '2026-10-10',
+    tgl_selesai: '2026-10-10',
+  });
+assert.equal(r.status, 200);
+  const ins = sqls.find((s) => /INSERT INTO ket_temp/i.test(s.text));
+  assert.ok(ins, 'harus ada INSERT ket_temp');
+  assert.equal(String(ins.params[1]), String(PEGAWAI.id), 'ID_Pegawai = pegawai terpilih');
+  assert.notEqual(String(ins.params[1]), String(ADMIN.id), 'BUKAN id admin');
+  assert.equal(ins.params[2], PEGAWAI.username, 'Nama = pegawai terpilih');
+  assert.equal(ins.params[3], PEGAWAI.NIP, 'NIP = pegawai terpilih');
 });

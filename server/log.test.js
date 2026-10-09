@@ -37,11 +37,12 @@ const PEGAWAI = {
   instansi_id: 'bapperida',
 };
 
-const state = { insert: [], update: [], pegawai: [], insertRows: 1, updateRows: 1 };
+const state = { insert: [], update: [], pegawai: [], insertRows: 1, updateRows: 1, existingLogs: [] };
 
 function defaultQuery(text) {
   if (/INSERT INTO/i.test(text)) return { rows: Array.from({ length: state.insertRows }, (_, i) => ({ ID_Log: i + 1 })) };
   if (/UPDATE /i.test(text)) return { rows: Array.from({ length: state.updateRows }, (_, i) => ({ ID_Log: 900 + i })) };
+  if (/SELECT "ID_Log" FROM "Log_Absen"/.test(text)) return { rows: state.existingLogs };
   if (/FROM "user_list"/i.test(text)) return { rows: state.pegawai };
   return { rows: [] };
 }
@@ -184,11 +185,18 @@ test('add: request_id duplikat tetap sukses (idempoten)', async () => {
   assert.equal(r.body.ok, true);
 });
 
-test('edit: ID_Log wajib', async () => {
+test('edit: tanpa ID_Log dan tanpa pegawai -> 400 (data tidak lengkap)', async () => {
   reset();
   const h = harness();
-  const r = await post(h, '/api/log/edit', { ...BODY, ID_Log: '' });
+  const r = await post(h, '/api/log/edit', { ...BODY, ID_Log: '', telegram_id: '' });
   assert.equal(r.status, 400);
+});
+
+test('edit: ID_Log eksplisit tetap jalan (non-SUPERADMIN)', async () => {
+  reset();
+  const h = harness();
+  const r = await post(h, '/api/log/edit', { ...BODY, ID_Log: '10355' });
+  assert.equal(r.status, 200);
 });
 
 test('edit: subjek tidak bisa diganti (kolom ID tidak di-set)', async () => {
@@ -262,4 +270,54 @@ test('GET: admin boleh menembak user_id tertentu', async () => {
   const q = h.sql.find((s) => /FROM "Log_Absen"/.test(s.text));
   assert.ok(q);
   assert.equal(q.params[0], '777', 'admin boleh query id lain');
+});
+
+// ── Upsert: "kalau sudah ada log, berarti edit" ─────────────────────────────
+function resetUpsert() {
+  reset();
+  state.pegawai = [{ ...PEGAWAI }];
+  state.existingLogs = [];
+  state.updateRows = 1;
+}
+
+test('add: log sudah ada (pegawai+tanggal+jenis) -> diupdate, bukan duplikat', async () => {
+  resetUpsert();
+  state.existingLogs = [{ ID_Log: '10355' }];
+  const h = harness();
+  const r = await post(h, '/api/log/add', BODY);
+  assert.equal(r.status, 200);
+  assert.equal(r.body.message, 'Log absen diperbarui.');
+  assert.equal(r.body.updated, true);
+  const upd = h.sql.find((s) => /UPDATE "Log_Absen"/.test(s.text));
+  assert.ok(upd, 'harus UPDATE, bukan INSERT');
+  assert.ok(upd.params.includes('10355'), `target ID_Log lama: ${JSON.stringify(upd.params)}`);
+  assert.ok(!h.sql.some((s) => /INSERT INTO/i.test(s.text)), 'tidak boleh insert duplikat');
+});
+
+test('add: belum ada log -> tetap insert (tidak ada regresi)', async () => {
+  resetUpsert();
+  const h = harness();
+  const r = await post(h, '/api/log/add', BODY);
+  assert.equal(r.status, 200);
+  assert.equal(r.body.message, 'Log berhasil disimpan.');
+  assert.ok(h.sql.some((s) => /INSERT INTO/i.test(s.text)), 'harus ada INSERT');
+});
+
+test('edit: tanpa ID_Log, dicari lewat (pegawai+tanggal+jenis)', async () => {
+  resetUpsert();
+  state.existingLogs = [{ ID_Log: '10355' }];
+  const h = harness();
+  const r = await post(h, '/api/log/edit', { ...BODY, ID_Log: '' });
+  assert.equal(r.status, 200);
+  const upd = h.sql.find((s) => /UPDATE "Log_Absen"/.test(s.text));
+  assert.ok(upd, 'harus UPDATE dengan ID hasil resolve');
+  assert.ok(upd.params.includes('10355'), 'ID Log hasil resolve dipakai');
+});
+
+test('edit: tanpa ID_Log dan tidak ada log yang cocok -> 404', async () => {
+  resetUpsert();
+  const h = harness();
+  const r = await post(h, '/api/log/edit', { ...BODY, ID_Log: '' });
+  assert.equal(r.status, 404);
+  assert.equal(r.body.message, 'Log tidak ditemukan.');
 });

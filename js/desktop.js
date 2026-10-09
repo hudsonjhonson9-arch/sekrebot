@@ -423,6 +423,7 @@
       }
 
       const payload = {
+        user_id: sel.value,
         nip: opt.dataset.nip,
         request_id: `admin_ket_${opt.dataset.nip}_${Date.now()}`,
         user: {

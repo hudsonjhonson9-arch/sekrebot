@@ -39,7 +39,10 @@ export function createAttendanceDataRouter({ query, withTransaction }) {
   router.post('/keterangan', async (req,res) => {
     try {
       const b=req.body||{}; const isAdmin=roleIsAdmin(req) && b.source==='admin_panel';
-      const targetId=isAdmin && b.user_id ? String(b.user_id) : String(req.user.id);
+      // Admin panel mengirim target di `user.id` (kontrak lama webhook n8n);
+      // terima juga `user_id` sebagai kanonik. Tanpa keduanya, target = diri sendiri.
+      const requestedId=String(b.user_id||b.user?.id||'').trim();
+      const targetId=isAdmin && requestedId ? requestedId : String(req.user.id);
       const emp=(await query(`SELECT id::text AS id, username, "NIP" AS nip, "Jabatan" AS jabatan, "Status" AS status, instansi_id FROM user_list WHERE id::text=$1 LIMIT 1`,[targetId])).rows[0];
       if(!emp) return fail(res,404,'Anda tidak terdaftar dalam sistem. Hubungi admin.');
       if(!sameInstansi(req.user,emp.instansi_id)) return fail(res,403,'Forbidden');
