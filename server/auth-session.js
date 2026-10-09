@@ -27,7 +27,11 @@ export function createAuthSessionRouter({ query = realQuery } = {}) {
 
   router.post('/api/auth/session', async (req, res) => {
     const auth = verifyInitData(req.body?.init_data, process.env.TELEGRAM_BOT_TOKEN, { maxAgeSeconds: 86400 });
-    if (!auth.ok) return res.status(401).json({ ok: false, message: 'Bukti identitas tidak valid.' });
+    if (!auth.ok) {
+      // reason = missing | malformed | bad_signature | expired | no_user, dipakai
+      // untuk diagnosis cepat tanpa menggali log.
+      return res.status(401).json({ ok: false, message: 'Bukti identitas tidak valid.', reason: auth.reason });
+    }
 
     // Identitas diambil dari init_data yang sudah diverifikasi, bukan body.nip.
     // NIP tidak unik di user_list, jadi membiarkannya memilih baris pegawai berarti

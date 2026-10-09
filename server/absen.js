@@ -72,7 +72,7 @@ export function createAbsenRouter({ query, verifyInitData, botToken, now = () =>
       if (req.authKind !== 'device') {
         const init1 = await verifyInitData(init, botToken);
         if (!init1?.ok) {
-          return res.status(401).json({ ok: false, message: 'init_data tidak valid' });
+          return res.status(401).json({ ok: false, message: 'init_data tidak valid', reason: init1?.reason || 'unknown' });
         }
         if (String(init1.user?.id ?? '') !== String(user.id ?? '')) {
           return res.status(403).json({ ok: false, message: 'init_data tidak sesuai dengan sesi login' });
