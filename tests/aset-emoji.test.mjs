@@ -34,15 +34,15 @@ for (const file of JS) {
   });
 }
 
-test('setiap ikon Font Awesome yang dipakai Aset benar-benar ada di bundle lokal', () => {
-  const css = fs.readFileSync(path.join(ROOT, 'css/lib/font-awesome.min.css'), 'utf8');
+test('setiap ikon Font Awesome yang dipakai Aset benar-benar ada di runeicons.css', () => {
+  const css = fs.readFileSync(path.join(ROOT, 'css/lib/runeicons.css'), 'utf8');
   const used = new Set();
   for (const src of [asetRange(), ...JS.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8'))]) {
     // tangkap nama kelas lengkap (fa-xxx) supaya bisa dicek langsung ke bundle
-    for (const m of src.matchAll(/class="fas (fa-[a-z0-9-]+)"/g)) used.add(m[1]);
+    for (const m of src.matchAll(/class="[^"]*?\b(fa-[a-z0-9-]+)/g)) used.add(m[1]);
   }
-  const missing = [...used].filter(i => !css.includes('.' + i + ':before') && !css.includes('.' + i + '::before'));
-  assert.deepEqual(missing, [], 'ikon hilang dari css/lib/font-awesome.min.css');
+  const missing = [...used].filter(i => !css.includes('.fas.' + i + ' '));
+  assert.deepEqual(missing, [], 'ikon hilang dari css/lib/runeicons.css');
   assert.ok(used.size > 0, 'harus ada minimal satu ikon terpakai, kalau nol test ini tidak berarti');
 });
 

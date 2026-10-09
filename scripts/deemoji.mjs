@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const CSS = path.join(ROOT, 'css', 'lib', 'font-awesome.min.css');
+const CSS = path.join(ROOT, 'css', 'lib', 'runeicons.css');
 const DRY = process.argv.includes('--dry');
 const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').split('=')[1] || '';
 
@@ -49,7 +49,7 @@ const IS_EMOJI = new RegExp(EMOJI_ANY.source, 'u');
 
 // validasi bundle: pastikan tiap kelas ada, kalau tidak fallback 'circle'
 const css = fs.existsSync(CSS) ? fs.readFileSync(CSS, 'utf8') : '';
-const hasClass = c => css.includes('.fa-' + c + ':before') || css.includes('.fa-' + c + '::before');
+const hasClass = c => css.includes('.fas.fa-' + c + ' ');
 const MISSING = new Set();
 const cls = c => { if (!c) return null; if (hasClass(c)) return c; MISSING.add(c); return 'circle'; };
 const icon = c => `<i class="fas fa-${c}"></i>`;

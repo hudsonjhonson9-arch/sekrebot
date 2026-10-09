@@ -146,7 +146,7 @@
       const st = (p.status || 'AKTIF').toUpperCase();
       const stEmoji = st === 'AKTIF' ? '<i class="fas fa-check"></i>' : st === 'SAKIT' ? '<i class="fas fa-thermometer-half"></i>' : st === 'IZIN' ? '<i class="fas fa-praying-hands"></i>' : st === 'TUGAS' ? '<i class="fas fa-briefcase"></i>' : st === 'NONAKTIF' ? '<i class="fas fa-ban"></i>' : '<i class="fas fa-cog"></i>';
       const stCls = st === 'AKTIF' ? 's-aktif' : st === 'NONAKTIF' ? 's-nonaktif' : 's-ket';
-      const b = $('userBadge'); if (b) { b.textContent = `${stEmoji} ${st}`; b.className = `sbadge ${stCls}`; }
+      const b = $('userBadge'); if (b) { b.innerHTML = `${stEmoji} ${escapeHtml(st)}`; b.className = `sbadge ${stCls}`; }
       // ── Isi kartu profil besar ──
       const al = $('profilAvatarLg'); if (al) al.textContent = i;
       setT('profilNama', n);
@@ -156,7 +156,7 @@
       if (tb) tb.textContent = ` @${window.tgUser?.username || 'Telegram'}`;
       // ── Badge profil besar (dinamis) ──
       const pb = $('profilStatusBadge');
-      if (pb) { pb.textContent = `${stEmoji} ${st}`; pb.className = `profil-badge ${stCls === 's-aktif' ? 'aktif-badge' : stCls === 's-nonaktif' ? 'nonaktif-badge' : 'ket-status-badge'}`; }
+      if (pb) { pb.innerHTML = `${stEmoji} ${escapeHtml(st)}`; pb.className = `profil-badge ${stCls === 's-aktif' ? 'aktif-badge' : stCls === 's-nonaktif' ? 'nonaktif-badge' : 'ket-status-badge'}`; }
 
       // Update global role map for current user
       if (MY_ID && p.role) {

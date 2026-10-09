@@ -38,14 +38,14 @@ test('semua entri punya label, ikon, dan load berupa pasangan [fn, ...args]', ()
   }
 });
 
-test('semua ikon benar-benar ada di bundle FontAwesome lokal', () => {
-  const css = fs.readFileSync(path.join(ROOT, 'css/lib/font-awesome.min.css'), 'utf8');
+test('semua ikon benar-benar ada di runeicons.css', () => {
+  const css = fs.readFileSync(path.join(ROOT, 'css/lib/runeicons.css'), 'utf8');
   for (const s of SCREENS) {
-    assert.ok(css.includes('.' + s.icon + ':before') || css.includes('.' + s.icon + '::before'),
-      `${s.key}: ikon ${s.icon} tidak ada di font-awesome.min.css`);
+    assert.ok(css.includes('.fas.' + s.icon + ' '),
+      `${s.key}: ikon ${s.icon} tidak ada di runeicons.css`);
   }
   for (const needed of ['fa-exclamation-triangle', 'fa-arrow-left']) {
-    assert.ok(css.includes('.' + needed + ':before') || css.includes('.' + needed + '::before'),
+    assert.ok(css.includes('.fas.' + needed + ' '),
       `ikon pendukung ${needed} tidak ada`);
   }
 });

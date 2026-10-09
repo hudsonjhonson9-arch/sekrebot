@@ -150,7 +150,7 @@
         bar.className = 'wifi-bar kantor'; // tampil hijau, validasi di server
         icon.innerHTML = '<i class="fas fa-satellite-dish"></i>';
         status.textContent = 'IP Publik Terdeteksi';
-        detail.textContent = `${connLabel} · IP: ${ip}`;
+        detail.innerHTML = `${connLabel} · IP: ${escapeHtml(ip)}`;
         if ($('gpsNet')) $('gpsNet').textContent = `${ip}`;
 
       } catch (e) {

@@ -25,17 +25,40 @@ test('tidak ada emoji tersisa di js/ dan index.html', () => {
   assert.deepEqual(hits, [], 'emoji harus diganti ikon Font Awesome (scripts/deemoji.mjs)');
 });
 
-test('setiap ikon fas yang dipakai js/ dan index.html ada di bundle lokal', () => {
-  const css = fs.readFileSync(path.join(ROOT, 'css/lib/font-awesome.min.css'), 'utf8');
+test('setiap ikon fas yang dipakai js/ dan index.html ada di runeicons.css', () => {
+  const css = fs.readFileSync(path.join(ROOT, 'css/lib/runeicons.css'), 'utf8');
   const used = new Set();
   for (const rel of targets()) {
-    for (const m of fs.readFileSync(path.join(ROOT, rel), 'utf8').matchAll(/class="fas (fa-[a-z0-9-]+)"/g)) used.add(m[1]);
+    for (const m of fs.readFileSync(path.join(ROOT, rel), 'utf8').matchAll(/class="[^"]*?\b(fa-[a-z0-9-]+)/g)) used.add(m[1]);
   }
-  const missing = [...used].filter(i => !css.includes('.' + i + ':before') && !css.includes('.' + i + '::before'));
-  assert.deepEqual(missing, [], 'ikon hilang dari css/lib/font-awesome.min.css');
+  const missing = [...used].filter(i => !css.includes('.fas.' + i + ' '));
+  assert.deepEqual(missing, [], 'ikon hilang dari css/lib/runeicons.css');
+  const broken = [...css.matchAll(/url\(([^)]+)\)/g)].map(m => m[1])
+    .filter(u => !fs.existsSync(path.resolve(path.join(ROOT, 'css/lib'), u)));
+  assert.deepEqual(broken, [], 'file SVG mask tidak ada');
 });
 
 // Ikon tak ter-render bila ditulis lewat textContent/setText atau di dalam <option>.
+// Varian berbasis-variabel: literal ikon disimpan di variabel lalu dikirim ke sink
+// lewat baris lain — line-scoped test di bawah tidak melihatnya.
+test('tidak ada ikon fas dialirkan lewat variabel ke sink teks (textContent / setText)', () => {
+  const bad = [];
+  for (const rel of targets()) {
+    const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    const vars = new Set();
+    for (const m of src.matchAll(/\b(?:const|let|var)\s+(\w+)\s*=\s*[^;\n]*<i class="fas/g)) vars.add(m[1]);
+    if (!vars.size) continue;
+    src.split(/\r?\n/).forEach((l, i) => {
+      if (!/(\.textContent\s*=|dom\.setText\s*\()/.test(l)) return;
+      const rhs = l.replace(/(\.textContent\s*=|dom\.setText\s*\()/, '');
+      for (const v of vars) if (new RegExp('\\b' + v + '\\b').test(rhs)) {
+        bad.push(rel + ':' + (i + 1) + ': ' + l.trim().slice(0, 90)); break;
+      }
+    });
+  }
+  assert.deepEqual(bad, []);
+});
+
 test('tidak ada ikon fas di sink teks (textContent / dom.setText / <option>)', () => {
   const bad = [];
   for (const rel of targets()) {

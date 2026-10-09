@@ -188,7 +188,7 @@
            const sigData = (sRes.data?.signature || sRes.rows?.[0]?.signature || '');
            const sigUrl = typeof driveImgUrl === 'function' ? driveImgUrl(sigData, 400) : sigData;
             if (sigUrl) {
-               $('previewTTDAdmin').innerHTML = `<img src="${escapeHtml(sigUrl)}" style="width:100%; height:100%; object-fit:contain; filter:brightness(1.8) contrast(1.2)">`;
+               $('previewTTDAdmin').innerHTML = `<img src="${escapeHtml(sigUrl)}" style="width:100%; height:100%; object-fit:contain; background:#fff">`;
            } else {
               $('previewTTDAdmin').innerHTML = '<span style="font-size:24px; opacity:0.5"><i class="fas fa-pen-fancy"></i></span>';
            }
@@ -318,7 +318,7 @@
       if (typeof openSignaturePad === 'function') {
         openSignaturePad(nip, (newSig) => {
           if (newSig) {
-            $('previewTTDAdmin').innerHTML = `<img src="${newSig}" style="width:100%; height:100%; object-fit:contain; filter:brightness(1.8) contrast(1.2)">`;
+            $('previewTTDAdmin').innerHTML = `<img src="${newSig}" style="width:100%; height:100%; object-fit:contain; background:#fff">`;
           }
         });
       } else {

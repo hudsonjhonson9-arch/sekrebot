@@ -1,7 +1,7 @@
 // Service Worker — Absensi Digital
 // Caching strategy: Network First, offline fallback ke cache
 
-const CACHE_NAME = 'absensi-digital-v7';
+const CACHE_NAME = 'absensi-digital-v8';
 const OFFLINE_ASSETS = [
   './',
   // index.html EXCLUDED — always fetch fresh so cache busters update
@@ -11,24 +11,13 @@ const OFFLINE_ASSETS = [
   // Local CSS Libraries
   './css/lib/flatpickr-dark.css',
   './css/lib/leaflet.min.css',
-  './css/lib/font-awesome.min.css',
+  './css/lib/runeicons.css',
   
   // Leaflet images
   './css/lib/images/marker-icon.png',
   './css/lib/images/marker-icon-2x.png',
   './css/lib/images/marker-shadow.png',
   
-  // FontAwesome Webfonts
-  './css/webfonts/fa-solid-900.woff2',
-  './css/webfonts/fa-solid-900.woff',
-  './css/webfonts/fa-solid-900.ttf',
-  './css/webfonts/fa-regular-400.woff2',
-  './css/webfonts/fa-regular-400.woff',
-  './css/webfonts/fa-regular-400.ttf',
-  './css/webfonts/fa-brands-400.woff2',
-  './css/webfonts/fa-brands-400.woff',
-  './css/webfonts/fa-brands-400.ttf',
-
   // Local JS Libraries
   './js/lib/telegram-web-app.js',
   './js/lib/xlsx.full.min.js',
@@ -115,4 +104,4 @@ self.addEventListener('fetch', (e) => {
       .catch(() => caches.match(e.request).then(cached => cached || new Response('Offline', { status: 503 })))
   );
 });
-// Update 2026-07-04_v3
+// Update 2026-10-09_v4
