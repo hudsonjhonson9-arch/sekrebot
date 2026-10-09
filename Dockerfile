@@ -30,6 +30,9 @@ COPY index.html manifest.json service-worker.js /usr/share/nginx/html/
 COPY public/favicon.svg public/icons.svg /usr/share/nginx/html/
 COPY js/ /usr/share/nginx/html/js/
 COPY css/ /usr/share/nginx/html/css/
+# Ikon RuneIcons: mask SVG dipakai css/lib/runeicons.css lewat url(../../icons/...).
+# Tanpa baris ini semua ikon 404 dan <i class="fas"> kosong total.
+COPY icons/ /usr/share/nginx/html/icons/
 
 # Konfigurasi nginx: listen 80, proxy /api ke 127.0.0.1:3000.
 COPY nginx.conf /etc/nginx/nginx.conf
