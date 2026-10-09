@@ -243,3 +243,31 @@ test('login tidak membaca init_data Telegram (pure NIP)', async (t) => {
   const out = await drive(r, 'POST', '/api/auth/login', { nip: '99999' });
   assert.equal(out.status, 404);
 });
+
+// ── Error DB tidak boleh menjatuhkan proses ──
+// Sebelumnya tak ada try/catch: query yang melempar jadi unhandled rejection →
+// Node exit → SEMUA rute 502 termasuk /api/health. Kontrak baru: balas 500.
+
+test('login: error DB dibalas 500, bukan melempar', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({ query: async () => { throw new Error('could not write init file'); } });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '200206302025061002' });
+  assert.equal(out.status, 500);
+  assert.equal(out.body.ok, false);
+});
+
+test('session: error DB dibalas 500, bukan melempar', async () => {
+  process.env.TELEGRAM_BOT_TOKEN = BOT;
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({ query: async () => { throw new Error('down'); } });
+  const out = await drive(r, 'POST', '/api/auth/session', { init_data: signInitData(TG_ID) });
+  assert.equal(out.status, 500);
+  assert.equal(out.body.ok, false);
+});
+
+test('logout: error DB dibalas 500, bukan melempar', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({ query: async () => { throw new Error('down'); } });
+  const out = await drive(r, 'POST', '/api/auth/logout', { session_token: 'c'.repeat(192) });
+  assert.equal(out.status, 500);
+});
