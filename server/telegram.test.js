@@ -36,6 +36,20 @@ function signWithSignature(payloadPairs) {
   return `${qs}&hash=${hmac}`;
 }
 
+// Skema secret key yang ditulis docs saat ini: HMAC_SHA256(key="WebAppData",
+// msg=bot_token). Varian include-signature dan exclude-signature dua-duanya
+// harus diterima verifier.
+function signWebAppData(payloadPairs, { withSignature = false } = {}) {
+  const pairs = withSignature ? { ...payloadPairs, signature: 'ed-25519-field' } : { ...payloadPairs };
+  const dataCheckString = Object.entries(pairs)
+    .map(([k, v]) => `${k}=${v}`)
+    .sort()
+    .join('\n');
+  const secret = crypto.createHmac('sha256', 'WebAppData').update(BOT).digest();
+  const hmac = crypto.createHmac('sha256', secret).update(dataCheckString).digest('hex');
+  return `${new URLSearchParams(pairs).toString()}&hash=${hmac}`;
+}
+
 function goodPairs(over = {}) {
   return {
     auth_date: String(Math.floor(Date.now() / 1000)),
@@ -54,6 +68,18 @@ test('initData valid menghasilkan user', () => {
 test('initData modern dengan field signature (Bot API 7.2+) tetap diterima', () => {
   // Hash dihitung atas SEMUA field (termasuk signature), cocok dengan verifier.
   const r = verifyInitData(signWithSignature(goodPairs()), BOT, { maxAgeSeconds: 86400 });
+  assert.equal(r.ok, true);
+  assert.equal(r.user.id, USER_ID);
+});
+
+test('skema secret key WebAppData (docs saat ini) diterima', () => {
+  const r = verifyInitData(signWebAppData(goodPairs()), BOT, { maxAgeSeconds: 86400 });
+  assert.equal(r.ok, true);
+  assert.equal(r.user.id, USER_ID);
+});
+
+test('skema WebAppData dengan signature di data-check-string diterima', () => {
+  const r = verifyInitData(signWebAppData(goodPairs(), { withSignature: true }), BOT, { maxAgeSeconds: 86400 });
   assert.equal(r.ok, true);
   assert.equal(r.user.id, USER_ID);
 });

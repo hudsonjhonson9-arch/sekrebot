@@ -168,6 +168,7 @@ async function ensureNativeSession() {
   // lewat /api/auth/devices. Token hanya disimpan di perangkat, bukan di source.
   if (_deviceToken && /^dv_[0-9a-f]{64}$/.test(_deviceToken)) return _deviceToken;
   const initData = window.tg?.initData || window.Telegram?.WebApp?.initData || '';
+  console.info('[Native] init_data Telegram, panjang:', initData.length);
   if (!initData) {
     console.warn('[Native] Tidak ada init_data Telegram. Endpoint /api/* akan 401.');
     console.warn('[Native] Halaman ini dibuka di luar Mini App, atau_user_list belum punya id yang cocok.');

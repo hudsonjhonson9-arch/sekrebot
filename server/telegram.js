@@ -2,6 +2,15 @@ import crypto from 'node:crypto';
 
 // Verifikasi initData Telegram Mini App (HMAC-SHA256).
 // docs: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
+//
+// Dua ketidakpastian historis di resolusi di sini dengan menerima SEMUA kombinasi
+// yang pernah/sedang dipakai Telegram (karena tidak ada satu pun yang lemah, dan
+// kombinasi yang salah = penolakan total terhadap klien yang sah):
+//   1. Secret key: `SHA256(bot_token)` (skema lama) vs `HMAC_SHA256(key="WebAppData",
+//      msg=bot_token)` (skema yang ditulis docs saat ini).
+//   2. data-check-string: field `signature` (Ed25519, Bot API 7.2+) ikut vs dikecualikan.
+// Set VERIFY_DEBUG=1 untuk melihat skema mana yang cocok per request di log server,
+// lalu boleh di-persempit ke satu jalur.
 export function verifyInitData(initData, botToken, { maxAgeSeconds = 86400 } = {}) {
   if (typeof initData !== 'string' || !initData.trim()) return { ok: false, reason: 'missing' };
   if (!botToken) return { ok: false, reason: 'bad_signature' };
@@ -16,19 +25,30 @@ export function verifyInitData(initData, botToken, { maxAgeSeconds = 86400 } = {
   const hash = params.get('hash');
   if (!hash || !/^[0-9a-f]{64}$/i.test(hash)) return { ok: false, reason: 'malformed' };
 
-  // HMAC data-check-string = semua field KECUALI hash. Field `signature`
-  // (Ed25519, Bot API 7.2+) TETAP ikut: Telegram memasukkan seluruh field
-  // selain hash saat menghitung HMAC. `signature` baru di-EXCLUDE untuk
-  // skema validasi pihak ketiga (Ed25519), bukan di sini.
-  const dataCheckString = [...params.entries()]
-    .filter(([k]) => k !== 'hash')
+  const entries = [...params.entries()].filter(([k]) => k !== 'hash');
+  const includeSig = entries.map(([k, v]) => `${k}=${v}`).sort().join('\n');
+  const excludeSig = entries
+    .filter(([k]) => k !== 'signature')
     .map(([k, v]) => `${k}=${v}`)
     .sort()
     .join('\n');
 
-  const secret = crypto.createHash('sha256').update(botToken).digest();
-  const expected = crypto.createHmac('sha256', secret).update(dataCheckString).digest('hex');
-  if (expected !== hash.toLowerCase()) return { ok: false, reason: 'bad_signature' };
+  const shaSecret = crypto.createHash('sha256').update(botToken).digest();
+  const webappSecret = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
+
+  const candidates = [
+    { name: 'sha256+signature', secret: shaSecret, check: includeSig },
+    { name: 'sha256-sans-signature', secret: shaSecret, check: excludeSig },
+    { name: 'webappdata+signature', secret: webappSecret, check: includeSig },
+    { name: 'webappdata-sans-signature', secret: webappSecret, check: excludeSig },
+  ];
+
+  const lowered = hash.toLowerCase();
+  const matched = candidates.find(
+    (c) => crypto.createHmac('sha256', c.secret).update(c.check).digest('hex') === lowered
+  );
+  if (!matched) return { ok: false, reason: 'bad_signature' };
+  if (process.env.VERIFY_DEBUG) console.log('[verifyInitData] matched:', matched.name);
 
   if (maxAgeSeconds > 0) {
     const authDate = Number(params.get('auth_date'));
