@@ -6329,6 +6329,15 @@ html.light-theme .auth-card {
   border-color: rgba(138, 105, 20, 0.2);
   box-shadow: 0 4px 20px rgba(138, 105, 20, 0.04);
 }
+html.light-theme .aset-card {
+  background: rgba(255, 253, 249, 0.9);
+  border-color: rgba(138, 105, 20, 0.2);
+  box-shadow: 0 4px 20px rgba(138, 105, 20, 0.04);
+}
+html.light-theme .aset-card:hover {
+  background: rgba(201, 168, 76, 0.12);
+  border-color: rgba(201, 168, 76, 0.45);
+}
 html.light-theme .clock-left {
   border-right-color: rgba(138, 105, 20, 0.12);
 }
