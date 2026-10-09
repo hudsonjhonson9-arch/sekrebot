@@ -1,5 +1,5 @@
 import express from 'express';
-import { sameInstansi } from './auth.js';
+import { MEDIA_ROLES, sameInstansi } from './auth.js';
 
 // ── SQL ──
 // Canonical n8n ("Supabase Log-Insert" / "Log-Update") menyisipkan nilai client
@@ -57,10 +57,17 @@ export function createLogRouter({ query }) {
   router.get('/', async (req, res) => {
     try {
       const q = req.query || {};
-      const params = []; const where = [];
-      const subject = String(q.user_id || q.id || '').trim();
-      if (subject) { params.push(subject); where.push(`"ID"::text=$${params.length}`); }
-      if (q.nip) { params.push(String(q.nip)); where.push(`"NIP"=$${params.length}`); }
+      let params = []; const where = [];
+      const media = MEDIA_ROLES.has(String(req.user?.role || '').toUpperCase());
+      if (media) {
+        const subject = String(q.user_id || q.id || '').trim();
+        if (subject) { params.push(subject); where.push(`"ID"::text=$${params.length}`); }
+        if (q.nip) { params.push(String(q.nip)); where.push(`"NIP"=$${params.length}`); }
+      } else {
+        // Pegawai biasa hanya boleh melihat catatan miliknya sendiri, apa pun
+        // user_id/nip yang dikirim — riwayat orang lain adalah wewenang media.
+        params.push(req.user.id); where.push(`"ID"::text=$${params.length}`);
+      }
       if (q.tanggal) { params.push(String(q.tanggal).slice(0,10)); where.push(`"Tanggal"=$${params.length}`); }
       if (q.dari && q.sampai) { params.push(String(q.dari).slice(0,10), String(q.sampai).slice(0,10)); where.push(`"Tanggal">=$${params.length-1} AND "Tanggal"<=$${params.length}`); }
       if (req.user.role !== 'SUPERADMIN') { params.push(req.user.instansi_id); where.push(`instansi_id=$${params.length}`); }
@@ -72,6 +79,9 @@ export function createLogRouter({ query }) {
 
   router.post('/add', async (req, res) => {
     try {
+      if (!MEDIA_ROLES.has(String(req.user?.role || '').toUpperCase())) {
+        return res.status(403).json({ ok: false, message: 'Forbidden' });
+      }
       const v = pickLog(req.body || {});
       if (!v.subjectId || !v.tanggal || !v.jam || !v.jenis) {
         return res.status(400).json({ ok: false, message: PESAN_TIDAK_LENGKAP });
@@ -99,6 +109,9 @@ export function createLogRouter({ query }) {
 
   router.post('/edit', async (req, res) => {
     try {
+      if (!MEDIA_ROLES.has(String(req.user?.role || '').toUpperCase())) {
+        return res.status(403).json({ ok: false, message: 'Forbidden' });
+      }
       const v = pickLog(req.body || {});
       if (!v.logId || !v.tanggal || !v.jam || !v.jenis) {
         return res.status(400).json({ ok: false, message: PESAN_TIDAK_LENGKAP });

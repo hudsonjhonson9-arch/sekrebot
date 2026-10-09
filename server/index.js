@@ -54,7 +54,11 @@ export function createApp() {
   app.use('/api', requireRole(ABSEN_ROLES), createNotifyRouter());
   // Fase 1: seluruh master/core absensi dipindahkan dari webhook n8n ke Express.
   app.use('/api', requireRole(ABSEN_ROLES), createCoreUserRouter({ query }));
-  app.use('/api', requireRole(MEDIA_ROLES), createCoreAdminRouter({ query }));
+  // Di-mount ABSEN_ROLES, bukan MEDIA_ROLES: pegawai biasa butuh baca profil,
+  // jam, periode, lokasi, dan kontrol instansinya sendiri. Endpoint tulis dan
+  // daftar lintas-instansi (instansi-list, admin-list) tetap ditolak untuk
+  // non-media oleh requireMedia di dalam core-admin.js.
+  app.use('/api', requireRole(ABSEN_ROLES), createCoreAdminRouter({ query }));
 
   // Pairing perangkat Meja hanya SUPERADMIN: yang menerbitkan token perangkat adalah
   // sesi Telegram, bukan InitData Meja. Kalau endpoint ini dibiarkan terbuka, siapa pun
@@ -81,10 +85,10 @@ export function createApp() {
     createAbsenRouter({ query, verifyInitData, botToken })
   );
 
-  // Log absen manual: admin mencatat/mengoreksi log pegawai yang tidak bisa absen
-  // sendiri (kena acara, lupa tombol). MEDIA_ROLES, sama seperti media: wewenang
-  // pemanggil berasal dari sesi, bukan dari body.admin_id kiriman browser.
-  app.use('/api/log', requireRole(MEDIA_ROLES), createLogRouter({ query }));
+  // Log absen: pegawai biasa membaca RIWAYATNYA SENDIRI (GET, dipaksa user_id
+  // sendiri untuk non-media), sedangkan mencatat/mengoreksi manual tetap khusus
+  // admin (gate requireMedia di dalam log.js).
+  app.use('/api/log', requireRole(ABSEN_ROLES), createLogRouter({ query }));
 
   // SIMAPO (penerimaan barang, pemeliharaan, BKU). requireRole MEDIA_ROLES: di n8n
   // webhook ini `authentication: none`, jadi endpoint tulisnya terbuka publik tanpa
