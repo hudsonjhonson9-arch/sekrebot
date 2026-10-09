@@ -1,6 +1,7 @@
 /* ════ ABSENSI BAPPERIDA - STYLES ════ */
     :root {
       --navy: #0a1628;
+      --on-gold: #0a1628;
       --gold: #c9a84c;
       --gold-dim: rgba(201, 168, 76, .15);
       --white: #f0f4ff;
@@ -646,7 +647,7 @@
       justify-content: center;
       font-size: 16px;
       font-weight: 800;
-      color: var(--navy);
+      color: var(--on-gold);
       flex-shrink: 0
     }
 
@@ -949,7 +950,7 @@
 
     .auth-tab.active {
       background: var(--gold);
-      color: var(--navy);
+      color: var(--on-gold);
     }
 
     .form-input-auth {
@@ -980,7 +981,7 @@
     .btn-auth {
       width: 100%;
       background: var(--gold);
-      color: var(--navy);
+      color: var(--on-gold);
       border: none;
       border-radius: 12px;
       padding: 14px;
@@ -1514,7 +1515,7 @@
       border-radius: 13px;
       background: linear-gradient(135deg, var(--gold), #9b6e1a);
       border: none;
-      color: var(--navy);
+      color: var(--on-gold);
       font-size: 13px;
       font-weight: 800;
       cursor: pointer;
@@ -1803,7 +1804,7 @@
       border: none;
       border-radius: 13px;
       background: linear-gradient(135deg, var(--gold) 0%, #a07828 100%);
-      color: var(--navy);
+      color: var(--on-gold);
       font-family: inherit;
       font-size: 14px;
       font-weight: 800;
@@ -1959,7 +1960,7 @@
       height: 15px;
       border-radius: 50%;
       border: 2px solid rgba(10, 22, 40, .3);
-      border-top-color: var(--navy);
+      border-top-color: var(--on-gold);
       animation: spin .7s linear infinite;
       display: inline-block
     }
@@ -2909,7 +2910,7 @@
       justify-content: center;
       font-size: 24px;
       font-weight: 800;
-      color: var(--navy);
+      color: var(--on-gold);
       flex-shrink: 0
     }
 
@@ -3790,7 +3791,7 @@
       justify-content: center;
       font-size: 13px;
       font-weight: 800;
-      color: var(--navy);
+      color: var(--on-gold);
       flex-shrink: 0
     }
 
@@ -4846,7 +4847,7 @@
       border-radius: 12px;
       background: linear-gradient(135deg, var(--gold), #b8860b);
       border: none;
-      color: var(--navy);
+      color: var(--on-gold);
       font-size: 13px;
       font-weight: 800;
       cursor: pointer;
@@ -5232,7 +5233,7 @@
       border-radius: 10px;
       background: linear-gradient(135deg, var(--gold), #9b6e1a);
       border: none;
-      color: var(--navy);
+      color: var(--on-gold);
       font-size: 12px;
       font-weight: 800;
       cursor: pointer;
