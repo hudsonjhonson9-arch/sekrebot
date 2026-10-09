@@ -437,7 +437,7 @@
       else if (tot < 720) { jenis = '<i class="fas fa-circle"></i> Di luar jam masuk'; batas = 'Terlambat' }
       else { jenis = '<i class="fas fa-circle"></i> Belum Waktunya Pulang'; batas = `Pulang ≥ ${jpStr}` }
       
-      if (elJenis) elJenis.textContent = jenis;
+      if (elJenis) elJenis.innerHTML = jenis;
       if (elBatas) elBatas.textContent = batas;
       
       const isJamPulang = tot >= _jamPulangHari;

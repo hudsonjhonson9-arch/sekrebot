@@ -45,14 +45,17 @@ test('tidak ada ikon fas dialirkan lewat variabel ke sink teks (textContent / se
   const bad = [];
   for (const rel of targets()) {
     const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
-    const vars = new Set();
-    for (const m of src.matchAll(/\b(?:const|let|var)\s+(\w+)\s*=\s*[^;\n]*<i class="fas/g)) vars.add(m[1]);
-    if (!vars.size) continue;
+    // Kotor: identifier yang pernah di-assignment string JS berisi <i class="fas.
+    // Wajib diawali ' atau ` — " setelah = adalah atribut HTML (style=/class=/value=), bukan JS.
+    const tainted = (id) => new RegExp('(?:^|[^.\\w])' + id + '\\s*=\\s*[\'`][^;\\n]*<i class="fas').test(src);
     src.split(/\r?\n/).forEach((l, i) => {
-      if (!/(\.textContent\s*=|dom\.setText\s*\()/.test(l)) return;
-      const rhs = l.replace(/(\.textContent\s*=|dom\.setText\s*\()/, '');
-      for (const v of vars) if (new RegExp('\\b' + v + '\\b').test(rhs)) {
-        bad.push(rel + ':' + (i + 1) + ': ' + l.trim().slice(0, 90)); break;
+      // Nilai yang masuk sink (bukan prefix baris), dipotong di ; pertama.
+      const m = l.match(/\.textContent\s*=\s*([^;]+)/) || l.match(/dom\.setText\s*\(\s*[^,)]+,\s*([^)]+)/);
+      if (!m) return;
+      const val = m[1];
+      if (/<i class="fas/.test(val)) { bad.push(rel + ':' + (i + 1) + ': ' + l.trim().slice(0, 90)); return; }
+      for (const id of val.matchAll(/\b([A-Za-z_$][\w$]*)\b/g)) {
+        if (tainted(id[1])) { bad.push(rel + ':' + (i + 1) + ': ' + l.trim().slice(0, 90)); break; }
       }
     });
   }
