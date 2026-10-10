@@ -217,6 +217,7 @@
       const T = getAllTabs();
       if (!T.includes(tab)) tab = 'absen';
 
+      if (tab === 'arsip' && currentTab !== 'arsip') window._arsipPrevTab = currentTab;
       localStorage.setItem('absen_last_tab', tab);
       window.scrollTo(0, 0);
       document.querySelectorAll('.nav-item').forEach((t) => {
@@ -224,6 +225,8 @@
       });
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       const el = $('panel-' + tab); if (el) el.classList.add('active');
+      // Arsip tampil full-screen di mobile (header + bottom nav disembunyikan)
+      document.body.classList.toggle('arsip-fs', tab === 'arsip');
 
       if (tab === 'absen') {
         updateClock(); // refresh notif & batas jam periode segera

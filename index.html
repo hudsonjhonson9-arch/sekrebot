@@ -58,7 +58,7 @@
   <link rel="stylesheet" href="css/lib/leaflet.min.css" />
 
   <!-- App Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=13" />
+  <link rel="stylesheet" href="css/styles.css?v=14" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -413,8 +413,9 @@
 
 
     <!-- ══ TAB ARSIP ══ -->
-    <div class="panel" id="panel-arsip">
-      <iframe id="arsipFrame" class="arsip-frame" title="Arsip Digital" loading="lazy"></iframe>
+<div class="panel" id="panel-arsip">
+<button class="arsip-back" onclick="switchTab(window._arsipPrevTab || 'absen')"><i class="fas fa-arrow-left" aria-hidden="true"></i> Kembali</button>
+<iframe id="arsipFrame" class="arsip-frame" title="Arsip Digital" loading="lazy"></iframe>
     </div>
 
     <!-- ══ TAB ABSEN ══ -->
@@ -3107,7 +3108,7 @@
   <script src="js/api.js"></script>
 
   <!-- 4. Core utilities -->
-  <script src="js/ui.js?v=20261010a"></script>
+  <script src="js/ui.js?v=20261010b"></script>
   <script src="js/helpers.js?v=20260706a"></script>
   <script src="js/network.js"></script>
 

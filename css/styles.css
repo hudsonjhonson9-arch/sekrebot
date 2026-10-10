@@ -6881,6 +6881,41 @@ html.light-theme .btn-pagination-all:hover {
   background: var(--card-bg);
 }
 
+/* Tombol kembali (hanya mobile: nav absensi disembunyikan saat arsip full-screen) */
+.arsip-back {
+  display: none;
+  position: fixed;
+  left: 12px;
+  bottom: calc(14px + var(--tg-safe-area-inset-bottom, 0px));
+  z-index: 1200;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  color: var(--white);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+}
+@media (max-width: 767px) {
+  body.arsip-fs .header,
+  body.arsip-fs .bottom-nav { display: none !important; }
+  body.arsip-fs .app { padding-bottom: 0 !important; }
+  body.arsip-fs #panel-arsip { padding: 0; overflow: hidden; }
+  body.arsip-fs .arsip-frame {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+  body.arsip-fs .arsip-back { display: flex; }
+}
+
 
 /* WS4: token tema arsip (peta-ekonomi src/theme.js) */
 :root {
