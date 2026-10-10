@@ -10,7 +10,7 @@
       --danger: #F87171;
       --warning: #FBBF24;
       --info: #60A5FA;
-      --card-bg: rgba(30, 41, 59, .85);
+      --card-bg: #1E293B;
       --border: #334155;
       --admin: #a78bfa;
       --admin-dim: rgba(167, 139, 250, .15);
@@ -78,7 +78,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 16px 12px; /* Restored horizontal padding */
+      padding: 12px 14px; /* Restored horizontal padding */
       border-bottom: 1px solid var(--border);
       margin-bottom: 10px;
     }
@@ -120,17 +120,17 @@
       transform: translateX(-50%);
       width: 100%;
       max-width: 480px; 
-      background: rgba(15, 23, 42, 0.95);
-      backdrop-filter: blur(30px);
-      -webkit-backdrop-filter: blur(30px);
-      border-top: 1px solid rgba(59, 130, 246, 0.1);
+      background: var(--card-bg);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border-top: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
       padding: 8px 8px calc(10px + var(--tg-safe-area-inset-bottom, 0px));
       z-index: 1000;
-      box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.7);
-      border-radius: 28px 28px 0 0;
+      box-shadow: 0 -1px 3px rgba(0, 0, 0, .35);
+      border-radius: 0;
     }
 
     .nav-item {
@@ -356,11 +356,11 @@
       bottom: 100px;
       right: 20px;
       width: 200px;
-      background: rgba(30, 41, 59, 0.95);
+      background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 20px;
       padding: 10px;
-      box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+      box-shadow: var(--shadow-lg);
       display: flex;
       flex-direction: column;
       gap: 5px;
@@ -602,11 +602,11 @@
     .card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 18px;
+      border-radius: 14px;
       padding: 16px;
       margin-bottom: 12px;
-      backdrop-filter: blur(15px);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      backdrop-filter: none;
+      box-shadow: var(--shadow-md);
     }
 
     .card-title {
@@ -627,14 +627,14 @@
     .user-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 18px;
+      border-radius: 14px;
       padding: 16px;
       margin-bottom: 12px;
-      backdrop-filter: blur(15px);
+      backdrop-filter: none;
       display: flex;
       align-items: center;
       gap: 14px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      box-shadow: var(--shadow-md);
     }
 
     .avatar {
@@ -2640,7 +2640,7 @@
     .date-range-card {
       background: linear-gradient(145deg, var(--card-bg), rgba(255, 255, 255, 0.01));
       border: 1px solid var(--border);
-      border-radius: 18px;
+      border-radius: 14px;
       padding: 18px;
       margin-bottom: 15px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
@@ -6879,4 +6879,18 @@ html.light-theme .btn-pagination-all:hover {
   border: 0;
   display: block;
   background: var(--card-bg);
+}
+
+
+/* WS4: token tema arsip (peta-ekonomi src/theme.js) */
+:root {
+  --radius: 10px; --radius-lg: 14px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.3);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,.4), 0 2px 4px -2px rgba(0,0,0,.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.4), 0 4px 6px -4px rgba(0,0,0,.3);
+}
+html.light-theme {
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,.07), 0 2px 4px -2px rgba(0,0,0,.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.08), 0 4px 6px -4px rgba(0,0,0,.04);
 }
