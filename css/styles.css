@@ -6881,12 +6881,13 @@ html.light-theme .btn-pagination-all:hover {
   background: var(--card-bg);
 }
 
-/* Tombol kembali (hanya mobile: nav absensi disembunyikan saat arsip full-screen) */
+/* Tombol kembali (hanya mobile: nav absensi disembunyikan saat arsip full-screen).
+   Diangkat di atas bottom-nav arsip sendiri (BottomNav.jsx: bar ~58px + safe-area). */
 .arsip-back {
   display: none;
   position: fixed;
   left: 12px;
-  bottom: calc(14px + var(--tg-safe-area-inset-bottom, 0px));
+  bottom: calc(74px + var(--tg-safe-area-inset-bottom, 0px));
   z-index: 1200;
   align-items: center;
   gap: 6px;
