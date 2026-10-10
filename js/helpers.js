@@ -21,8 +21,9 @@
       if (_todayLoading) return;
       _todayLoading = true;
       const el = $('todayList');
-      if (!el) return;
-      el.innerHTML = `<div class="shimmer" style="height:32px;border-radius:8px;margin-bottom:5px"></div>
+      // Kartu "Log Absen Hari Ini" dihapus dari UI. Fetch & logika (_todayRows,
+      // status tombol absen) tetap jalan; hanya render DOM yang dilewati.
+      if (el) el.innerHTML = `<div class="shimmer" style="height:32px;border-radius:8px;margin-bottom:5px"></div>
                   <div class="shimmer" style="height:32px;border-radius:8px"></div>`;
       try {
         const todayStr = fmtD(nowWITA());
@@ -64,7 +65,7 @@
       // Simpan ke global untuk dipakai cek masuk di pulang luar
       window._todayRows = rows;
       if (!rows.length) {
-        el.innerHTML = `<div class="today-empty"><i class="fas fa-envelope-open-text"></i> Belum ada absen hari ini</div>`;
+        if (el) el.innerHTML = `<div class="today-empty"><i class="fas fa-envelope-open-text"></i> Belum ada absen hari ini</div>`;
         // Pastikan tombol aktif jika belum absen sama sekali
         const btn = $('btnAbsen');
         if (btn && !btn.dataset.manualDisabled) {
@@ -74,7 +75,7 @@
         return;
       }
 
-      el.innerHTML = rows.map(r => {
+      if (el) el.innerHTML = rows.map(r => {
         const jenis = getField(r, 'Jenis Absen', 'jenis', 'Jenis') || '';
         const jam = getField(r, 'Jam', 'jam') || '—';
         const lokasi = getField(r, 'Lokasi', 'lokasi') || '—';

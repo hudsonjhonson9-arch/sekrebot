@@ -571,7 +571,14 @@ async function loadWeekHistory() {
   el.innerHTML = `<div class="week-loading"><i class="fas fa-sync fa-spin"></i> Memuat…</div>`;
   try {
     const uid = (typeof waitForMyId === 'function') ? await waitForMyId() : (window.MY_ID || '');
-    const { ok: logOk, rows } = await apiGet(P.log, { user_id: uid || '', dari, sampai });
+    // ponytail: sesi native bisa belum terbit saat boot; satu kali coba ulang
+    // supaya kartu minggu tidak perlu di-refresh manual oleh user.
+    let res = await apiGet(P.log, { user_id: uid || '', dari, sampai });
+    if (!res.ok) {
+      await new Promise(r => setTimeout(r, 1500));
+      res = await apiGet(P.log, { user_id: uid || '', dari, sampai });
+    }
+    const { ok: logOk, rows } = res;
     if (!logOk) throw new Error('gagal');
     _weekByDate = {};
     (rows || []).forEach(r => {

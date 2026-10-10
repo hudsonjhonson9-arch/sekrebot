@@ -58,12 +58,12 @@
   <link rel="stylesheet" href="css/lib/leaflet.min.css" />
 
   <!-- App Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=15" />
+  <link rel="stylesheet" href="css/styles.css?v=16" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0F172A">
-  <link rel="stylesheet" href="css/lib/runeicons.css?v=5" />
+  <link rel="stylesheet" href="css/lib/runeicons.css?v=6" />
   <style>
     /* ════ DOKUMEN CARDS (MODERN UI) ════ */
     .log-list {
@@ -463,16 +463,6 @@
               </div>
               <div class="sbadge s-loading" id="userBadge">MEMUAT</div>
             </div>
-
-            <div class="card" style="margin:0; margin-bottom:12px">
-              <div class="card-title"><i class="fas fa-map-marker-alt"></i> Lokasi Terdeteksi</div>
-              <div id="lokasiList">
-                <div class="lokasi-item">
-                  <div class="lokasi-dot"></div>
-                  <div class="shimmer" style="width:110px;height:12px"></div>
-                </div>
-              </div>
-            </div>
           </div>
 
           <!-- GPS Card (Desktop Optimized) -->
@@ -511,18 +501,6 @@
             <span class="gps-track-interval">Setiap 5 menit</span>
           </div>
 
-          <!-- Today's Log Card (Prominent Position) -->
-          <div class="today-card" id="todayCard" style="margin:0">
-            <div class="card-title">
-              <span><i class="fas fa-clipboard-list"></i> Log Absen Hari Ini</span>
-              <button class="btn-sm-admin" onclick="loadTodayHistory()"><i class="fas fa-sync"></i></button>
-            </div>
-            <div id="todayList" style="margin-top:10px">
-              <div class="shimmer" style="height:32px;border-radius:8px;margin-bottom:5px"></div>
-              <div class="shimmer" style="height:32px;border-radius:8px"></div>
-            </div>
-          </div>
-
           <!-- Riwayat Kehadiran Minggu Ini -->
           <div class="week-card" id="weekCard">
             <div class="card-title">
@@ -533,6 +511,15 @@
               <div class="week-loading"><i class="fas fa-sync fa-spin"></i> Memuat…</div>
             </div>
             <div class="week-detail" id="weekDetail">Ketuk salah satu hari untuk melihat detail.</div>
+            <div class="week-lokasi">
+              <div class="week-lokasi-title"><i class="fas fa-map-marker-alt"></i> Lokasi Terdeteksi</div>
+              <div id="lokasiList">
+                <div class="lokasi-item">
+                  <div class="lokasi-dot"></div>
+                  <div class="shimmer" style="width:110px;height:12px"></div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Result Card (Now below log) -->
@@ -3088,7 +3075,7 @@
 
   <!-- 8. Splash Screen -->
   <div id="appSplash" style="z-index: 99999;">
-    <div class="splash-logo"><i class="fas fa-landmark"></i></div>
+    <div class="splash-logo"><img src="icons/logo-splash.svg?v=20261011a" alt="" width="80" height="80"></div>
     <div class="splash-title">Sistem HADIR</div>
     <div class="splash-sub">Memuat profil dan data pegawai...</div>
     <div class="splash-bar"><div class="splash-progress"></div></div>
@@ -3096,7 +3083,7 @@
 
   <!-- ════ APP SCRIPTS (urutan load penting) ════ -->
   <!-- 1. Config & constants — harus pertama -->
-  <script src="js/config.js?v=20261010a"></script>
+  <script src="js/config.js?v=20261011a"></script>
   <script src="js/constants.js?v=20260706a"></script>
 
   <!-- 2. State global & Telegram init -->
@@ -3109,16 +3096,16 @@
 
   <!-- 4. Core utilities -->
   <script src="js/ui.js?v=20261010b"></script>
-  <script src="js/helpers.js?v=20260706a"></script>
+  <script src="js/helpers.js?v=20261011a"></script>
   <script src="js/network.js"></script>
 
   <!-- 4. Feature modules -->
-  <script src="js/profil.js"></script>
+  <script src="js/profil.js?v=20261011a"></script>
   <script src="js/face.js?v=20260706a"></script>
   <script src="js/absen.js?v=20260706a"></script>
 <script src="js/kontrol.js?v=20260811c"></script>
   <script src="js/keterangan.js"></script>
-  <script src="js/log.js?v=20261010b"></script>
+  <script src="js/log.js?v=20261011a"></script>
   <script src="js/rekap.js?v=20261009a"></script>
 
   <!-- 5. Admin modules (split by section) -->

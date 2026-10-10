@@ -170,12 +170,30 @@ window._session = {
 // Sesi native: tukar init_data Telegram jadi bearer 192 hex milik Express.
 // Tidak ada kredensial yang di-hardcode di sini; init_data sudah ditandatangani
 // Telegram lalu diverifikasi ulang di server lewat HMAC bot token.
+let _nativeSessionPromise = null;
 async function ensureNativeSession() {
   if (_nativeToken) return _nativeToken;
   // Meja Absen/perangkat bersama memakai token dv_ yang diterbitkan SUPERADMIN
   // lewat /api/auth/devices. Token hanya disimpan di perangkat, bukan di source.
   if (_deviceToken && /^dv_[0-9a-f]{64}$/.test(_deviceToken)) return _deviceToken;
-  const initData = window.tg?.initData || window.Telegram?.WebApp?.initData || '';
+  // ponytail: initApp memanggil banyak endpoint secara paralel. Tanpa janji
+  // bersama, tiap request menerbitkan sesi sendiri dan satu 401 menghapus token
+  // milik request lain lewat _handleAuthExpired → data kosong sampai user
+  // me-refresh (baru ada token di localStorage). Dibungkus satu promise.
+  if (!_nativeSessionPromise) {
+    _nativeSessionPromise = _mintNativeSession().finally(() => { _nativeSessionPromise = null; });
+  }
+  return _nativeSessionPromise;
+}
+
+async function _mintNativeSession() {
+  // ponytail: Telegram WebApp kadang baru siap setelah skrip utama jalan. Tunggu
+  // sebentar sebelum menyerah, supaya load pertama tidak berakhir 401.
+  let initData = window.tg?.initData || window.Telegram?.WebApp?.initData || '';
+  for (let i = 0; i < 10 && !initData; i++) {
+    await new Promise(r => setTimeout(r, 200));
+    initData = window.tg?.initData || window.Telegram?.WebApp?.initData || '';
+  }
   console.info('[Native] init_data Telegram, panjang:', initData.length);
   if (!initData) {
     console.warn('[Native] Tidak ada init_data Telegram. Endpoint /api/* akan 401.');
@@ -443,6 +461,7 @@ const HDR = {
 // init_data Telegram; pengguna web/NIP tak punya init_data -> tampilkan layar login.
 function _handleAuthExpired() {
   _nativeToken = null;
+  _nativeSessionPromise = null;
   try { localStorage.removeItem('_native_token'); } catch { /* mode privat */ }
   try { clearSession(); } catch { /* belum terdefinisi saat boot */ }
   const hasTg = !!(window.tg?.initData || window.Telegram?.WebApp?.initData);

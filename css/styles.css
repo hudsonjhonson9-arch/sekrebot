@@ -6928,6 +6928,8 @@ html.light-theme .btn-pagination-all:hover {
 
 /* ════ Riwayat Kehadiran Minggu Ini ════ */
 .week-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px; margin-top:15px; }
+.week-lokasi { margin-top:12px; padding-top:10px; border-top:1px dashed var(--border); }
+.week-lokasi-title { display:flex; align-items:center; gap:6px; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
 .week-strip { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:10px; }
 .week-day { display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 2px; border:1px solid var(--border); border-radius:var(--radius); background:rgba(127,127,127,.07); color:var(--white); cursor:pointer; font-family:inherit; transition:transform .15s ease, border-color .15s ease; animation:weekPop .35s ease both; }
 .week-day:hover { transform:translateY(-2px); border-color:var(--gold); }
