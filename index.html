@@ -52,23 +52,23 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Lexend:wght@400;500;600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="css/lib/leaflet.min.css" />
 
   <!-- App Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=9" />
+  <link rel="stylesheet" href="css/styles.css?v=10" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0d1b2a">
+  <meta name="theme-color" content="#0F172A">
   <link rel="stylesheet" href="css/lib/runeicons.css?v=4" />
   <style>
     /* ════ DOKUMEN CARDS (MODERN UI) ════ */
     .log-list {
       background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(201, 168, 76, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.2);
       border-radius: 14px;
       margin-bottom: 12px;
       overflow: hidden;
@@ -79,7 +79,7 @@
       display: flex;
       align-items: stretch;
       background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(201, 168, 76, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.2);
       border-radius: 14px;
       margin-bottom: 12px;
       overflow: hidden;
@@ -90,7 +90,7 @@
 
     #dokumenList .dok-card:hover {
       background: rgba(255, 255, 255, 0.06);
-      border-color: #c9a84c;
+      border-color: #3B82F6;
       transform: translateY(-2px);
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     }
@@ -122,7 +122,7 @@
 
     #dokumenList .dok-icon-wrapper.dok-pdf { background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.25); color: #f87171; }
     #dokumenList .dok-icon-wrapper.dok-img { background: rgba(96, 165, 250, 0.12); border-color: rgba(96, 165, 250, 0.25); color: #60a5fa; }
-    #dokumenList .dok-icon-wrapper.dok-other { background: rgba(201, 168, 76, 0.12); border-color: rgba(201, 168, 76, 0.25); color: #c9a84c; }
+    #dokumenList .dok-icon-wrapper.dok-other { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.25); color: #3B82F6; }
 
     #dokumenList .dok-main-icon { font-size: 20px; line-height: 1; }
     #dokumenList .dok-type-tag {
@@ -145,7 +145,7 @@
     #dokumenList .dok-title {
       font-size: 14px;
       font-weight: 700;
-      color: #f0f4ff;
+      color: #F1F5F9;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -157,12 +157,12 @@
       align-items: center;
       gap: 6px;
       font-size: 11px;
-      color: #7a90b8;
+      color: #94A3B8;
     }
 
     #dokumenList .dok-tag {
       font-weight: 700;
-      color: #c9a84c;
+      color: #3B82F6;
       font-size: 10px;
       text-transform: uppercase;
     }
@@ -171,14 +171,14 @@
       width: 3px;
       height: 3px;
       border-radius: 50%;
-      background: #7a90b8;
+      background: #94A3B8;
       opacity: 0.4;
     }
 
     #dokumenList .dok-date { font-weight: 500; }
 
     #dokumenList .dok-action-view {
-      color: #7a90b8;
+      color: #94A3B8;
       font-size: 14px;
       padding: 0 4px;
       opacity: 0.4;
@@ -186,7 +186,7 @@
     }
 
     #dokumenList .dok-card:hover .dok-action-view {
-      color: #c9a84c;
+      color: #3B82F6;
       opacity: 1;
       transform: scale(1.1);
     }
@@ -200,7 +200,7 @@
     #dokumenList .dok-btn-del {
       background: transparent;
       border: none;
-      color: #7a90b8;
+      color: #94A3B8;
       padding: 0 16px;
       cursor: pointer;
       font-size: 14px;
@@ -420,7 +420,7 @@
               </div>
               <div class="clock-loc-badge unknown" id="clockLocBadge"><i class="fas fa-map-marker-alt"></i> Mendeteksi lokasi...</div>
               <div id="batasAbsenWrap"
-                style="margin-top:6px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.35);border-radius:10px;padding:6px 10px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box">
+                style="margin-top:6px;background:var(--gold-dim);border:1px solid rgba(59,130,246,.35);border-radius:10px;padding:6px 10px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box">
                 <span style="font-size:14px"><i class="fas fa-clock"></i></span><span id="batasAbsen"
                   style="font-size:13px;font-weight:800;color:var(--gold);letter-spacing:-.3px;flex:1">—</span>
               </div>
@@ -751,10 +751,10 @@
       <!-- ══ FACE RECOGNITION ══ -->
       <div class="profil-section-title"><i class="fas fa-brain"></i> Face Recognition</div>
       <div
-        style="background:var(--card-bg);border:1px solid rgba(201,168,76,.25);border-radius:14px;padding:12px 14px;margin-bottom:12px">
+        style="background:var(--card-bg);border:1px solid rgba(59,130,246,.25);border-radius:14px;padding:12px 14px;margin-bottom:12px">
         <div style="display:flex;align-items:center;gap:10px">
           <div id="profilFaceThumbWrap"
-            style="width:52px;height:52px;border-radius:10px;background:rgba(255,255,255,.05);border:2px solid rgba(201,168,76,.3);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:22px">
+            style="width:52px;height:52px;border-radius:10px;background:rgba(255,255,255,.05);border:2px solid rgba(59,130,246,.3);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:22px">
             <img id="profilFaceThumb" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover">
             <span id="profilFaceEmpty"><i class="fas fa-user"></i></span>
           </div>
@@ -765,7 +765,7 @@
               pengenalan otomatis saat absen</div>
           </div>
           <button onclick="registerFaceFromPreview()"
-            style="background:linear-gradient(135deg,rgba(201,168,76,.2),rgba(201,168,76,.08));border:1px solid rgba(201,168,76,.4);color:var(--gold);border-radius:10px;padding:7px 12px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap"
+            style="background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(59,130,246,.08));border:1px solid rgba(59,130,246,.4);color:var(--gold);border-radius:10px;padding:7px 12px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap"
             id="btnProfilRegFace"><i class="fas fa-camera"></i> Daftarkan</button>
         </div>
         <div id="profilFaceNote"
@@ -790,7 +790,7 @@
               rekap absen &amp; PDF</div>
           </div>
           <button onclick="openSignaturePad(MY_ID)"
-            style="background:linear-gradient(135deg,rgba(201,168,76,.2),rgba(201,168,76,.08));border:1px solid rgba(201,168,76,.4);color:var(--gold);border-radius:10px;padding:7px 12px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap"
+            style="background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(59,130,246,.08));border:1px solid rgba(59,130,246,.4);color:var(--gold);border-radius:10px;padding:7px 12px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap"
             id="btnProfilSig"><i class="fas fa-edit"></i> Buat</button>
         </div>
         <div
@@ -1439,7 +1439,7 @@
 /* ── ASET: grid fitur (4 / 3 / 2) + kontainer layar ── */
 .aset-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
 .aset-card{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:104px;padding:16px 10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;color:var(--white);cursor:pointer;font-family:inherit;transition:border-color .18s,background .18s,transform .18s}
-.aset-card:hover{background:rgba(201,168,76,0.10);border-color:rgba(201,168,76,0.45);transform:translateY(-2px)}
+.aset-card:hover{background:rgba(59,130,246,0.10);border-color:rgba(59,130,246,0.45);transform:translateY(-2px)}
 .aset-card:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .aset-card i{font-size:26px;color:var(--gold);line-height:1}
 .aset-card-label{font-size:12px;font-weight:700;text-align:center;line-height:1.35}
@@ -1463,7 +1463,7 @@
               <button onclick="filterSAPinjam('',this)" class="sa-filter-btn"><i class="fas fa-search" aria-hidden="true"></i> Semua</button>
               <button onclick="adminQRKembaliScan()" class="sa-filter-btn" style="border-color:rgba(100,180,255,0.3);color:#64b4ff;"><i class="fas fa-camera" aria-hidden="true"></i> Scan QR Kembali</button>
             </div>
-            <style>.sa-filter-btn{padding:4px 10px;font-size:11px;font-weight:700;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;transition:all .2s;font-family:inherit;}.sa-filter-btn.active{background:rgba(201,168,76,0.15);color:var(--gold);border-color:rgba(201,168,76,0.4);}</style>
+            <style>.sa-filter-btn{padding:4px 10px;font-size:11px;font-weight:700;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;transition:all .2s;font-family:inherit;}.sa-filter-btn.active{background:rgba(59,130,246,0.15);color:var(--gold);border-color:rgba(59,130,246,0.4);}</style>
             <div id="adminSimapoPinjamList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
           </div>
           <!-- Kartu Barang Sedang Dipinjam -->
@@ -1713,7 +1713,7 @@
             </div>
             <style>
               .pks-level-btn{padding:6px 14px;font-size:12px;font-weight:700;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;transition:all .2s;font-family:inherit;}
-              .pks-level-btn.active{background:rgba(201,168,76,0.15);color:var(--gold);border-color:rgba(201,168,76,0.4);}
+              .pks-level-btn.active{background:rgba(59,130,246,0.15);color:var(--gold);border-color:rgba(59,130,246,0.4);}
               .pks-level-btn:hover{color:var(--white);background:rgba(255,255,255,0.08);}
             </style>
             <button class="btn-primary" onclick="showPKSForm()" style="width:100%;margin-bottom:12px;background:rgba(255,255,255,0.04);border:1px dashed var(--gold);color:var(--gold);">
@@ -2045,7 +2045,7 @@
           .admin-select-custom:focus, .admin-input-premium:focus {
             border-color: var(--gold) !important;
             background: rgba(255, 255, 255, 0.1) !important;
-            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15), inset 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15), inset 0 2px 4px rgba(0,0,0,0.1);
             outline: none;
             transform: translateY(-1px);
           }
@@ -2158,7 +2158,7 @@
           }
           .custom-search-dropdown.open .dropdown-trigger {
             border-color: var(--gold);
-            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
           }
 
           .dropdown-list-wrap {
@@ -2266,7 +2266,7 @@
             </div>
 
             <!-- Engine terkunci ke Human.js -->
-            <div style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.25);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
+            <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
               <span style="font-size:18px"><i class="fas fa-shield-alt"></i></span>
               <div>
                 <div style="font-size:11px;font-weight:800;color:var(--gold)">Human Library (Advanced / Anti-Spoof)</div>
@@ -2318,7 +2318,7 @@
 
           <div id="faceSigTabData">
             <!-- <i class="fas fa-pen"></i> FORM MANAJEMEN TERPADU (INLINE) -->
-            <div id="pegawaiForm" style="display:none; background:rgba(201,168,76,0.05); border:1px solid rgba(201,168,76,0.2); border-radius:16px; padding:25px; margin-bottom:30px; border-left: 4px solid var(--gold);">
+            <div id="pegawaiForm" style="display:none; background:rgba(59,130,246,0.05); border:1px solid rgba(59,130,246,0.2); border-radius:16px; padding:25px; margin-bottom:30px; border-left: 4px solid var(--gold);">
               <div id="pegawaiFormTitle" style="font-size:14px; font-weight:800; color:var(--gold); margin-bottom:20px; text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:8px">
                 <span><i class="fas fa-user"></i></span> <span id="pegawaiFormTitleText">DATABASE KEPEGAWAIAN BAPPERIDA</span>
               </div>
@@ -2382,7 +2382,7 @@
               <div style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.2); border-radius:12px; display:grid; grid-template-columns:1fr 1fr; gap:20px">
                  <div style="text-align:center">
                     <div style="font-size:10px; color:var(--gold); font-weight:700; margin-bottom:10px"><i class="fas fa-camera"></i> BIOMETRIK WAJAH</div>
-                    <div id="previewWajahAdmin" style="width:70px; height:70px; border-radius:50%; background:rgba(201,168,76,0.1); margin:0 auto 10px; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; overflow:hidden">
+                    <div id="previewWajahAdmin" style="width:70px; height:70px; border-radius:50%; background:rgba(59,130,246,0.1); margin:0 auto 10px; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; overflow:hidden">
                        <span style="font-size:24px"><i class="fas fa-user"></i></span>
                     </div>
                     <button class="btn-admin" onclick="openFaceCaptureAdmin()" style="font-size:10px; height:30px; width:auto; padding:0 15px; margin:0 auto">Update Wajah</button>
@@ -2430,7 +2430,7 @@
           <div id="adminMgmtList" style="margin-bottom:0"></div>
 
           <!-- FORM TAMBAH (Hidden by default) -->
-          <div id="adminAddForm" style="display:none; margin-top:15px; background:rgba(201,168,76,.05); border:1px solid rgba(201,168,76,.15); border-radius:12px; padding:15px; animation: slideDown 0.3s ease">
+          <div id="adminAddForm" style="display:none; margin-top:15px; background:rgba(59,130,246,.05); border:1px solid rgba(59,130,246,.15); border-radius:12px; padding:15px; animation: slideDown 0.3s ease">
             <div style="font-size:10px; font-weight:800; color:var(--gold); margin-bottom:12px">TAMBAH HAK AKSES BARU</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px">
               <div class="form-group" style="margin:0"><label class="form-label" style="font-size:9px">NIP / ID Pegawai</label><input id="inputAdminNip" type="text" class="form-input" placeholder="NIP / NISN / ID..." /></div>
@@ -2896,8 +2896,8 @@
 
   <!-- 2. Modal Paksa Daftar Wajah -->
   <div id="faceRequiredModal"
-    style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(5,12,30,.97);flex-direction:column;align-items:center;justify-content:center;padding:24px">
-    <div style="width:100%;max-width:360px;background:var(--card-bg);border:1px solid rgba(201,168,76,.3);border-radius:20px;padding:24px 20px;text-align:center">
+    style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.97);flex-direction:column;align-items:center;justify-content:center;padding:24px">
+    <div style="width:100%;max-width:360px;background:var(--card-bg);border:1px solid rgba(59,130,246,.3);border-radius:20px;padding:24px 20px;text-align:center">
       <div style="font-size:48px;margin-bottom:12px"><i class="fas fa-brain"></i></div>
       <div style="font-size:16px;font-weight:800;color:var(--white);margin-bottom:8px">Daftarkan Wajah Anda</div>
       <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:20px">
@@ -2934,7 +2934,7 @@
         <div class="face-guide" id="faceGuideWrap"><div class="face-oval"></div></div>
         <div class="cam-scan-line"></div>
         <div class="cam-face-badge" id="camFaceBadge" style="display:none"><i class="fas fa-user"></i> Mendeteksi...</div>
-        <div id="mejaOverlayResult" style="display:none; position:absolute; inset:0; background:rgba(10,22,40,0.95); z-index:10; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px;">
+        <div id="mejaOverlayResult" style="display:none; position:absolute; inset:0; background:rgba(15,23,42,0.95); z-index:10; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px;">
           <div id="moIcon" style="font-size:50px; margin-bottom:10px;"><i class="fas fa-check"></i></div>
           <div id="moNama" style="font-size:18px; font-weight:800; color:var(--gold);">NAMA</div>
           <div id="moStatus" style="font-size:14px; font-weight:700; color:#fff; margin-top:5px; padding:4px 10px; border-radius:6px; background:rgba(255,255,255,0.1);">BERHASIL</div>
@@ -2955,7 +2955,7 @@
       <div id="faceRegCard" style="display:none;width:100%;max-width:320px;margin-top:10px">
          <!-- info reg wajah -->
       </div>
-      <div id="livenessMini" style="display:none; width:100%; max-width:320px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.3); padding:10px; border-radius:10px; text-align:center; color:var(--gold);">
+      <div id="livenessMini" style="display:none; width:100%; max-width:320px; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); padding:10px; border-radius:10px; text-align:center; color:var(--gold);">
         <span id="lsIcon"><i class="fas fa-search"></i></span> <span id="lsText">Verifikasi...</span>
       </div>
       <div class="cam-preview" id="camPreview"><img id="camPreviewImg" src=""></div>
@@ -3009,8 +3009,8 @@
   </div>
 
   <!-- 6. Modal Konfirmasi Absen -->
-  <div id="absenConfirmModal" style="display:none;position:fixed;inset:0;z-index:10003;background:rgba(5,12,30,.85);backdrop-filter:blur(6px);align-items:flex-end;justify-content:center;padding-bottom:24px">
-    <div style="width:100%;max-width:420px;background:var(--card-bg);border:1px solid rgba(201,168,76,.3);border-radius:20px;padding:20px;">
+  <div id="absenConfirmModal" style="display:none;position:fixed;inset:0;z-index:10003;background:rgba(15,23,42,.85);backdrop-filter:blur(6px);align-items:flex-end;justify-content:center;padding-bottom:24px">
+    <div style="width:100%;max-width:420px;background:var(--card-bg);border:1px solid rgba(59,130,246,.3);border-radius:20px;padding:20px;">
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-align:center;margin-bottom:16px">KONFIRMASI ABSEN</div>
       <div id="absenConfirmContent" style="margin-bottom:18px"></div>
       <div style="display:flex;gap:10px">
@@ -3198,7 +3198,7 @@
 
   <!-- ══ MODAL SETTINGS & PREVIEW PDF REKAP ══ -->
   <div id="pdfPreviewModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:999999; background:rgba(11, 15, 25, 0.85); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:20px; box-sizing:border-box;">
-    <div style="background:#111827; border:1px solid rgba(255, 255, 255, 0.08); border-radius:20px; width:95%; max-width:1200px; height:90%; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0, 0, 0, 0.5); overflow:hidden; color:#f8fafc; font-family:'Outfit', sans-serif;">
+    <div style="background:#0F172A; border:1px solid rgba(255, 255, 255, 0.08); border-radius:20px; width:95%; max-width:1200px; height:90%; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0, 0, 0, 0.5); overflow:hidden; color:#f8fafc; font-family:'Outfit', sans-serif;">
       <!-- Modal Header -->
       <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.01);">
         <div style="display:flex; align-items:center; gap:10px;">
@@ -3353,7 +3353,7 @@
 
   <!-- ══ MODAL FORM SIMAPO MASTER ══ -->
   <div id="modalSimapoMaster" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:999999; background:rgba(11, 15, 25, 0.85); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:20px; box-sizing:border-box;">
-    <div style="background:#111827; border:1px solid rgba(255, 255, 255, 0.08); border-radius:20px; width:100%; max-width:500px; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0, 0, 0, 0.5); overflow:hidden; color:#f8fafc; font-family:'Outfit', sans-serif;">
+    <div style="background:#0F172A; border:1px solid rgba(255, 255, 255, 0.08); border-radius:20px; width:100%; max-width:500px; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0, 0, 0, 0.5); overflow:hidden; color:#f8fafc; font-family:'Outfit', sans-serif;">
       <!-- Modal Header -->
       <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.01);">
         <div style="display:flex; align-items:center; gap:10px;">
