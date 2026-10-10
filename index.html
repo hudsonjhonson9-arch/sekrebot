@@ -58,7 +58,7 @@
   <link rel="stylesheet" href="css/lib/leaflet.min.css" />
 
   <!-- App Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=12" />
+  <link rel="stylesheet" href="css/styles.css?v=13" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -360,14 +360,15 @@
         <i class="fas fa-boxes"></i>
         <span>Aset</span>
       </button>
+      <button class="nav-item desktop-only" id="nav-arsip-desk" onclick="switchTab('arsip', true)" data-tab="arsip">
+        <i class="fas fa-box-archive"></i>
+        <span>Arsip</span>
+      </button>
       <button class="nav-item desktop-only admin-only" id="nav-admin-desk" onclick="switchTab('admin', true)" data-tab="admin">
         <i class="fas fa-user-shield"></i>
         <span>Panel Admin</span>
       </button>
-      <button class="nav-item desktop-only admin-only" id="nav-arsip-desk" onclick="switchTab('arsip', true)" data-tab="arsip">
-        <i class="fas fa-box-archive"></i>
-        <span>Arsip</span>
-      </button>
+
 
       <!-- Theme Toggle (Desktop Only) -->
       <button class="nav-item desktop-only theme-toggle-desk" id="themeToggleBtnDesk" onclick="toggleTheme()" style="margin-top: auto !important;">
@@ -398,14 +399,14 @@
           <i class="fas fa-boxes"></i>
           <span>Aset</span>
         </button>
+        <button class="more-item" id="more-arsip" onclick="switchTab('arsip', true)">
+          <i class="fas fa-box-archive"></i>
+          <span>Arsip</span>
+        </button>
         <div id="adminMoreSeparator" style="height:1px; background:var(--border); margin:5px 0; display:none"></div>
         <button class="more-item admin-only" id="more-admin" onclick="switchTab('admin', true)">
           <i class="fas fa-user-shield"></i>
           <span>Panel Admin</span>
-        </button>
-        <button class="more-item admin-only" id="more-arsip" onclick="switchTab('arsip', true)">
-          <i class="fas fa-box-archive"></i>
-          <span>Arsip</span>
         </button>
       </div>
     </div>
@@ -519,6 +520,18 @@
               <div class="shimmer" style="height:32px;border-radius:8px;margin-bottom:5px"></div>
               <div class="shimmer" style="height:32px;border-radius:8px"></div>
             </div>
+          </div>
+
+          <!-- Riwayat Kehadiran Minggu Ini -->
+          <div class="week-card" id="weekCard">
+            <div class="card-title">
+              <span><i class="fas fa-calendar-alt"></i> Riwayat Kehadiran Minggu Ini</span>
+              <button class="btn-sm-admin" onclick="loadWeekHistory()" title="Muat ulang"><i class="fas fa-sync"></i></button>
+            </div>
+            <div class="week-strip" id="weekStrip">
+              <div class="week-loading"><i class="fas fa-sync fa-spin"></i> Memuat…</div>
+            </div>
+            <div class="week-detail" id="weekDetail">Ketuk salah satu hari untuk melihat detail.</div>
           </div>
 
           <!-- Result Card (Now below log) -->
@@ -3104,7 +3117,7 @@
   <script src="js/absen.js?v=20260706a"></script>
 <script src="js/kontrol.js?v=20260811c"></script>
   <script src="js/keterangan.js"></script>
-  <script src="js/log.js?v=20261009a"></script>
+  <script src="js/log.js?v=20261010b"></script>
   <script src="js/rekap.js?v=20261009a"></script>
 
   <!-- 5. Admin modules (split by section) -->

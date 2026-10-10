@@ -19,6 +19,7 @@
         await Promise.allSettled([
           loadUserProfile(),
           loadTodayHistory(),
+          typeof loadWeekHistory === 'function' ? loadWeekHistory() : Promise.resolve(),
           fetchJamPeriode(),
           typeof loadKontrolConfig === 'function' ? loadKontrolConfig() : Promise.resolve(),
           typeof loadKkAdmin === 'function' ? loadKkAdmin() : Promise.resolve()

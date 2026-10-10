@@ -483,3 +483,103 @@
       });
       renderLog(filtered);
     }
+
+/* ════ RIWAYAT KEHADIRAN MINGGU INI (widget menu utama) ════ */
+// ponytail: 7 sel Senin–Minggu dari /api/log?dari&sampai, tanpa endpoint baru.
+const _WEEK_NAMA = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+const _WEEK_FULL = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+const _WEEK_BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+let _weekRange = [];   // Date[] Senin..Minggu
+let _weekByDate = {};  // 'YYYY-MM-DD' -> rows[]
+
+function _menit(jam) { const m = String(jam || '').match(/^(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : 0; }
+
+function _weekDates() {
+  const n = nowWITA();
+  const back = (n.getDay() + 6) % 7;               // hari sejak Senin
+  const mon = new Date(n); mon.setDate(n.getDate() - back);
+  const out = [];
+  for (let i = 0; i < 7; i++) { const d = new Date(mon); d.setDate(mon.getDate() + i); out.push(d); }
+  return out;
+}
+
+// Ringkas 1 hari → { key, icon, label, det, ket }
+function _weekDayStatus(dStr, isToday, isFuture) {
+  const rows = _weekByDate[dStr] || [];
+  const jenis = r => String(getField(r, 'Jenis Absen', 'jenis', 'Jenis') || '').toUpperCase().trim();
+  const rMasuk  = rows.find(r => jenis(r) === 'MASUK');
+  const rPulang = rows.find(r => jenis(r).includes('PULANG'));
+  const ketRow  = rows.find(r => ['IZIN', 'SAKIT', 'TUGAS', 'TUBEL', 'CUTI', 'TANPA BERITA'].includes(jenis(r)));
+  const jk = ketRow ? jenis(ketRow) : '';
+  const ket = ketRow ? getField(ketRow, 'Keterangan', 'ket', 'Keterangan Absen') : '';
+  const masuk = rMasuk ? String(getField(rMasuk, 'Jam', 'jam') || '').slice(0, 5) : '';
+  const pulang = rPulang ? String(getField(rPulang, 'Jam', 'jam') || '').slice(0, 5) : '';
+  let det = masuk ? `Masuk ${masuk}` : '';
+  if (pulang) det += (det ? ' • ' : '') + `Pulang ${pulang}`;
+
+  if (jk === 'IZIN')  return { key: 'izin',  icon: 'fa-file-signature', label: 'Izin',  ket };
+  if (jk === 'SAKIT') return { key: 'sakit', icon: 'fa-user-sick',      label: 'Sakit', ket };
+  if (jk === 'TUGAS') return { key: 'tugas', icon: 'fa-briefcase',      label: 'Tugas/DL', ket };
+  if (jk === 'TUBEL') return { key: 'tugas', icon: 'fa-graduation-cap', label: 'Tubel', ket };
+  if (jk === 'CUTI')  return { key: 'cuti',  icon: 'fa-umbrella-beach', label: 'Cuti',  ket };
+  if (jk === 'TANPA BERITA') return { key: 'alpha', icon: 'fa-circle-xmark', label: 'Tanpa Berita', det, ket };
+
+  if (masuk) {
+    let batas = '08:00';
+    try { const j = getJamForTanggal(dStr); if (j && j.masuk) batas = String(j.masuk).slice(0, 5); } catch (_) { }
+    const telat = _menit(masuk) > _menit(batas);
+    return telat
+      ? { key: 'telat', icon: 'fa-clock', label: `Telat ${_menit(masuk) - _menit(batas)}m`, det: `Masuk ${masuk} • Batas ${batas}` }
+      : { key: 'hadir', icon: 'fa-circle-check', label: 'Hadir', det: det + (pulang ? '' : ' • belum pulang') };
+  }
+  if (isFuture) return { key: 'future', icon: 'fa-hourglass-half', label: 'Akan datang', det: '' };
+  if (hariLiburSet.has(dStr)) return { key: 'libur', icon: 'fa-mug-hot', label: 'Libur', det: '' };
+  if (isToday) return { key: 'empty', icon: 'fa-ellipsis', label: 'Belum absen', det: '' };
+  return { key: 'alpha', icon: 'fa-circle-xmark', label: 'Tanpa keterangan', det: '' };
+}
+
+function renderWeekHistory() {
+  const el = $('weekStrip'); if (!el) return;
+  const todayStr = fmtD(nowWITA());
+  el.innerHTML = _weekRange.map((d, i) => {
+    const dStr = fmtD(d);
+    const isToday = dStr === todayStr, isFuture = dStr > todayStr;
+    const st = _weekDayStatus(dStr, isToday, isFuture);
+    const cls = `week-day w-${st.key}${isToday ? ' is-today' : ''}`;
+    return `<button class="${cls}" style="animation-delay:${i * 55}ms" onclick="showWeekDetail(${i})" title="${st.label}">`
+      + `<span class="week-day-name">${_WEEK_NAMA[i]}</span>`
+      + `<span class="week-day-icon"><i class="fas ${st.icon}"></i></span>`
+      + `<span class="week-day-date">${d.getDate()}</span></button>`;
+  }).join('');
+}
+
+function showWeekDetail(i) {
+  const det = $('weekDetail'); if (!det || !_weekRange[i]) return;
+  const d = _weekRange[i], dStr = fmtD(d), todayStr = fmtD(nowWITA());
+  const st = _weekDayStatus(dStr, dStr === todayStr, dStr > todayStr);
+  let txt = `<b>${_WEEK_FULL[i]}, ${d.getDate()} ${_WEEK_BULAN[d.getMonth()]} ${d.getFullYear()}</b> — <span class="w-${st.key}">${st.label}</span>`;
+  if (st.det) txt += ` · ${st.det}`;
+  if (st.ket) txt += ` · ${st.ket}`;
+  det.style.opacity = '0';
+  setTimeout(() => { det.innerHTML = txt; det.style.opacity = '1'; }, 120);
+}
+
+async function loadWeekHistory() {
+  const el = $('weekStrip'); if (!el) return;
+  _weekRange = _weekDates();
+  const dari = fmtD(_weekRange[0]), sampai = fmtD(_weekRange[6]);
+  el.innerHTML = `<div class="week-loading"><i class="fas fa-sync fa-spin"></i> Memuat…</div>`;
+  try {
+    const uid = (typeof waitForMyId === 'function') ? await waitForMyId() : (window.MY_ID || '');
+    const { ok: logOk, rows } = await apiGet(P.log, { user_id: uid || '', dari, sampai });
+    if (!logOk) throw new Error('gagal');
+    _weekByDate = {};
+    (rows || []).forEach(r => {
+      const t = String(getField(r, 'Tanggal', 'tanggal') || '').slice(0, 10);
+      if (t) (_weekByDate[t] = _weekByDate[t] || []).push(r);
+    });
+    renderWeekHistory();
+  } catch (e) {
+    el.innerHTML = `<div class="week-loading"><i class="fas fa-plug"></i> Gagal memuat riwayat minggu ini.</div>`;
+  }
+}
