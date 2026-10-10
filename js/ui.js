@@ -180,6 +180,8 @@
       if (IS_ADMIN) tabs.push('admin');
       // Always allow checking, visibility is handled via checkTugasLemburAccess
       tabs.push('tugas', 'lembur', 'simapo');
+      // Arsip: selalu terdaftar; tombolnya .admin-only (disembunyikan applyAdminVisibility).
+      tabs.push('arsip');
       return tabs;
     }
     /**
@@ -294,6 +296,15 @@
         if (typeof populateSimapoInstansiSelect === 'function') populateSimapoInstansiSelect();
         // Sidebar Aset = grid fitur, bukan langsung Katalog
         if (typeof switchSimapoSection === 'function') switchSimapoSection('grid');
+      }
+
+      if (tab === 'arsip') {
+        // Lazy-load: set src sekali saja, agar iframe tidak memuat arsip di startup.
+        const frame = $('arsipFrame');
+        if (frame && !frame.src) {
+          const url = window.AppConfig?.ARCHIVE_URL || 'https://arsipdigital.mindcloud.my.id';
+          frame.src = url;
+        }
       }
 
       // Re-apply role based visibility on every switch to ensure consistency

@@ -30,8 +30,25 @@ function dbError(res) {
   return res.status(500).json({ ok: false, message: 'Gagal mengakses database.' });
 }
 
-export function createAuthSessionRouter({ query = realQuery } = {}) {
+// SSO ke arsip: absensi menerbitkan cookie arsip_session (HMAC dari ARSIP_SESSION_SECRET
+// = SESSION_SECRET peta-ekonomi) supaya iframe arsipdigital.mindcloud.my.id tidak minta
+// login lagi. Default no-op supaya test/router lama tetap jalan tanpa secret/env.
+const NOOP_SSO = { pasangArsipCookie() {}, lepasArsipCookie() {} };
+
+export function createAuthSessionRouter({ query = realQuery, arsipSso } = {}) {
   const router = express.Router();
+  const arsip = arsipSso || NOOP_SSO;
+
+  // Fail-open: kegagalan set/clear cookie arsip TIDAK boleh menjatuhkan login/logout
+  // absensi sendiri. Bila secret belum diatur, util balik `false` tanpa efek samping.
+  const setCookieArsip = (res, nip) => {
+    try { arsip.pasangArsipCookie(res, nip, { secret: process.env.ARSIP_SESSION_SECRET }); }
+    catch (e) { console.warn('[arsip-sso] gagal set cookie:', e.message); }
+  };
+  const clearCookieArsip = (res) => {
+    try { arsip.lepasArsipCookie(res); }
+    catch (e) { console.warn('[arsip-sso] gagal clear cookie:', e.message); }
+  };
 
   router.post('/api/auth/session', async (req, res) => {
     try {
@@ -52,6 +69,7 @@ export function createAuthSessionRouter({ query = realQuery } = {}) {
       const { rows } = await query(INSERT_SESSION_SQL, [token, employee.nip, employee.id, employee.role, employee.instansi_id]);
       if (!rows.length) return res.status(500).json({ ok: false, message: 'Gagal membuat sesi.' });
 
+      setCookieArsip(res, employee.nip);
       return res.status(200).json({ ok: true, session_token: rows[0].session_token });
     } catch {
       return dbError(res);
@@ -82,6 +100,7 @@ export function createAuthSessionRouter({ query = realQuery } = {}) {
       const ins = await query(INSERT_SESSION_SQL, [token, user.nip, user.id, user.role, user.instansi_id]);
       if (!ins.rows.length) return res.status(500).json({ ok: false, message: 'Gagal membuat sesi.' });
 
+      setCookieArsip(res, user.nip);
       return res.status(200).json({ ok: true, session_token: ins.rows[0].session_token, user });
     } catch {
       return dbError(res);
@@ -95,6 +114,7 @@ export function createAuthSessionRouter({ query = realQuery } = {}) {
         return res.status(400).json({ ok: false, message: 'session_token tidak valid.' });
       }
       await query(DEACTIVATE_SQL, [token]);
+      clearCookieArsip(res);
       return res.status(200).json({ ok: true });
     } catch {
       return dbError(res);

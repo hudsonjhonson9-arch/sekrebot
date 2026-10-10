@@ -124,6 +124,14 @@ const BAST_API_KEY = 'ogsbIpBCCzi3yndE85JkxFmPJeECw_5u';
 const BAST_API_HEADER = 'x-bast-key';
 // ponytail: sentinel gate/guard n8n (200 + body kosong) — dipakai apiFetch DI sini dan dicek di bastSubmit, jangan disalin jadi string lain.
 const EMPTY_N8N_RESPONSE = 'Empty N8n Response';
+
+/* ════ ARSIP (SSO iframe, admin-only) ════ */
+// Aplikasi arsip (peta-ekonomi) di subdomain yang sama, dibuka dalam iframe tab
+// "Arsip". Login absensi sudah menerbitkan cookie arsip_session (Domain=.mindcloud.my.id)
+// lewat /api/auth/login, jadi iframe tidak meminta login ulang.
+const ARCHIVE_URL = 'https://arsipdigital.mindcloud.my.id';
+window.AppConfig = Object.assign(window.AppConfig || {}, { ARCHIVE_URL });
+
 let ADMIN_NIPS = [];
 let MANDATORY_FACE_NIPS = [];
 window._adminRoleMap = {};

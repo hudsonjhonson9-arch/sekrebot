@@ -23,11 +23,32 @@ async function drive(router, method, url, body = {}) {
   const req = { method, url, headers: { authorization: 'Bearer x' }, body, ip: '10.0.0.1' };
   let status = 200;
   let payload = null;
+  const setCookies = [];
   const res = {
     statusCode: 200,
     status(c) { status = c; return this; },
     json(p) { payload = p; return this; },
     set() { return this; },
+    cookie(name, val, opts) {
+      const attrs = [];
+      if (opts) {
+        if (opts.domain) attrs.push(`Domain=${opts.domain}`);
+        if (opts.path) attrs.push(`Path=${opts.path}`);
+        if (opts.maxAge != null) attrs.push(`Max-Age=${Math.floor(opts.maxAge / 1000)}`);
+        if (opts.httpOnly) attrs.push('HttpOnly');
+        if (opts.secure) attrs.push('Secure');
+        if (opts.sameSite) attrs.push(`SameSite=${opts.sameSite}`);
+      }
+      setCookies.push([`${name}=${val}`, ...attrs].join('; '));
+      return this;
+    },
+    clearCookie(name, opts) {
+      const attrs = [];
+      if (opts?.domain) attrs.push(`Domain=${opts.domain}`);
+      if (opts?.path) attrs.push(`Path=${opts.path}`);
+      setCookies.push([`${name}=`, ...attrs, 'Expires=Thu, 01 Jan 1970 00:00:00 GMT', 'Max-Age=0'].join('; '));
+      return this;
+    },
     end() { return this; },
   };
   const layer = router.stack.find((l) => l.route?.path && l.route.methods[method.toLowerCase()] && url.startsWith(l.route.path));
@@ -36,7 +57,7 @@ async function drive(router, method, url, body = {}) {
   let i = 0;
   const next = async (e) => { if (e) throw e; const h = handlers[i++]; if (h) await h.handle(req, res, next); };
   await next();
-  return { status, body: payload };
+  return { status, body: payload, setCookies };
 }
 
 test('role dari body diabaikan, selalu dari user_list', async () => {
@@ -270,4 +291,59 @@ test('logout: error DB dibalas 500, bukan melempar', async () => {
   const r = createAuthSessionRouter({ query: async () => { throw new Error('down'); } });
   const out = await drive(r, 'POST', '/api/auth/logout', { session_token: 'c'.repeat(192) });
   assert.equal(out.status, 500);
+});
+
+// ── SSO cookie arsip (injeksi util asli + secret dummy) ──
+
+test('login NIP sukses menerbitkan cookie arsip_session', async () => {
+  process.env.ARSIP_SESSION_SECRET = 'arsip-secret-16-chars-ok';
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const { pasangArsipCookie, lepasArsipCookie } = await import('./arsip-sso.js');
+  const r = createAuthSessionRouter({
+    query: async (sql) => {
+      if (/user_list/i.test(sql)) return userListRows(sql, { id: '9', NIP: '12345', role: 'USER', instansi_id: 'bapperida' });
+      if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'd'.repeat(192) }] };
+      return { rows: [] };
+    },
+    arsipSso: { pasangArsipCookie, lepasArsipCookie },
+  });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '12345' });
+  assert.equal(out.status, 200);
+  const set = out.setCookies.find((h) => /^arsip_session=/.test(h));
+  assert.ok(set, 'wajib ada header arsip_session');
+  assert.match(set, /Domain=\.mindcloud\.my\.id/);
+  assert.match(set, /HttpOnly/);
+  assert.match(set, /Path=\//);
+});
+
+test('login sukses TANPA secret arsip tidak set cookie (fail-open)', async () => {
+  delete process.env.ARSIP_SESSION_SECRET;
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const { pasangArsipCookie, lepasArsipCookie } = await import('./arsip-sso.js');
+  const r = createAuthSessionRouter({
+    query: async (sql) => {
+      if (/user_list/i.test(sql)) return userListRows(sql, { id: '9', NIP: '12345', role: 'USER', instansi_id: 'bapperida' });
+      if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'd'.repeat(192) }] };
+      return { rows: [] };
+    },
+    arsipSso: { pasangArsipCookie, lepasArsipCookie },
+  });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '12345' });
+  assert.equal(out.status, 200, 'login tetap sukses meski secret arsip kosong');
+  assert.ok(!out.setCookies.some((h) => /^arsip_session=/.test(h)));
+});
+
+test('logout membersihkan cookie arsip', async () => {
+  process.env.ARSIP_SESSION_SECRET = 'arsip-secret-16-chars-ok';
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const { pasangArsipCookie, lepasArsipCookie } = await import('./arsip-sso.js');
+  const r = createAuthSessionRouter({
+    query: async () => ({ rows: [] }),
+    arsipSso: { pasangArsipCookie, lepasArsipCookie },
+  });
+  const out = await drive(r, 'POST', '/api/auth/logout', { session_token: 'c'.repeat(192) });
+  assert.equal(out.status, 200);
+  const cleared = out.setCookies.find((h) => /^arsip_session=;/.test(h));
+  assert.ok(cleared, 'clearCookie harus mengosongkan arsip_session');
+  assert.match(cleared, /Max-Age=0/);
 });

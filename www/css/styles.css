@@ -6855,3 +6855,15 @@ html.light-theme .btn-pagination-all:hover {
   color: #0F172A;
   text-decoration-color: rgba(44, 36, 23, 0.5);
 }
+
+/* ════ TAB ARSIP (SSO iframe arsipdigital.mindcloud.my.id) ════ */
+/* Panel arsip tanpa padding supaya iframe mengisi penuh area konten. */
+#panel-arsip.active { padding: 0; }
+.arsip-frame {
+  width: 100%;
+  height: calc(100vh - 140px);
+  min-height: 480px;
+  border: 0;
+  display: block;
+  background: var(--card-bg);
+}

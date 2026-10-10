@@ -4,6 +4,7 @@ import { gasUpsert } from './gas.js';
 import { createMediaRouter } from './media.js';
 import { createAbsenRouter } from './absen.js';
 import { createAuthSessionRouter } from './auth-session.js';
+import { pasangArsipCookie, lepasArsipCookie, bersihkanSecret } from './arsip-sso.js';
 import { createAuthDeviceRouter } from './auth-device.js';
 import { createLogRouter } from './log.js';
 import { createSimapoRouter } from './simapo.js';
@@ -47,7 +48,11 @@ export function createApp() {
   // Tanpa requireRole: endpoint ini yang menerbitkan sesi, jadi tidak mungkin
   // dijaga oleh pemeriksa sesi. Keamanannya datang dari verifikasi init_data Telegram,
   // bukan dari bearer token.
-  app.use(createAuthSessionRouter({ query }));
+  // arsipSso: bila ARSIP_SESSION_SECRET ada, sekalian terbitkan cookie SSO arsip.
+  if (!bersihkanSecret(process.env.ARSIP_SESSION_SECRET)) {
+    console.warn('[arsip-sso] ARSIP_SESSION_SECRET belum diatur/pendek (min 16); cookie arsip tidak diterbitkan.');
+  }
+  app.use(createAuthSessionRouter({ query, arsipSso: { pasangArsipCookie, lepasArsipCookie } }));
 
   // Fase 2: keterangan/dokumen/rekap. Fase 3: penugasan/lembur. Dipasang
   // setelah /api/auth agar catch-all /api middleware tidak memblokir penerbitan sesi.
