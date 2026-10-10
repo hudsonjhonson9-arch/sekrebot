@@ -116,5 +116,54 @@ export function createSimapoNativeExtraRouter({ query, withTransaction }) {
   r.get('/ttd-get',async(req,res)=>{try{const {rows}=await query(`SELECT signature FROM public.tanda_tangan WHERE nip=$1 LIMIT 1`,[S(req.query.nip)||S(req.user?.nip)]);return json(res,{signature:rows[0]?.signature||null});}catch{return res.status(500).json({ok:false,message:'Gagal memuat tanda tangan.'});}});
   r.post('/aset-kosongkan',async(req,res)=>{if(S(req.body?.confirm)!=='HAPUS')return res.status(400).json({ok:false,message:'Konfirmasi salah: ketik HAPUS'});try{const n=await withTransaction(async c=>{const inst=instOf(req,req.body.instansi_id);await c.query(`DELETE FROM "SIMAPO".riwayat_pemeliharaan WHERE unitasetid IN(SELECT ua.id FROM "SIMAPO".unit_aset ua JOIN "SIMAPO".barang b ON b.id=ua.barangid WHERE b.instansi_id=$1)`,[inst]);await c.query(`DELETE FROM "SIMAPO".unit_aset ua USING "SIMAPO".barang b WHERE ua.barangid=b.id AND b.instansi_id=$1`,[inst]);const x=await c.query(`DELETE FROM "SIMAPO".barang WHERE instansi_id=$1`,[inst]);return x.rowCount});return res.json({ok:true,data:{deleted:n}});}catch{return res.status(500).json({ok:false,message:'Gagal mengosongkan aset.'});}});
 
+  // Impor penuh dari aset-bapperida (SQLite aset.db). Satu endpoint, satu transaksi:
+  // menambah kolom baru, upsert ruangan/kategori, kosongkan aset lama, lalu isi ulang
+  // barang+unit_aset untuk SELURUH kolom aset.db, plus QR tiap unit.
+  // Pegawai TIDAK dibuat: user_list.id = telegram id (tak ada di aset.db) dan tanpa
+  // default sequence di produksi. Pegawai hanya DICOCOKKAN ke user_list lewat NIP.
+  r.post('/import-bapperida',async(req,res)=>{
+    const b=req.body||{};
+    if(S(b.confirm)!=='IMPORT-BAPPERIDA')return res.status(400).json({ok:false,message:'Konfirmasi salah: kirim confirm=IMPORT-BAPPERIDA'});
+    const pegawai=Array.isArray(b.pegawai)?b.pegawai:[],ruangan=Array.isArray(b.ruangan)?b.ruangan:[],aset=Array.isArray(b.aset)?b.aset:[];
+    if(!pegawai.length&&!ruangan.length&&!aset.length)return res.status(400).json({ok:false,message:'payload kosong.'});
+    const inst=instOf(req,b.instansi_id);
+    try {
+      const origin=process.env.APP_ORIGIN||`${req.protocol}://${req.get('host')}`;
+      const out=await withTransaction(async c=>{
+        // 1. kolom baru unit_aset (idempotent). DDL transaksional di Postgres.
+        await c.query(`ALTER TABLE "SIMAPO".unit_aset ADD COLUMN IF NOT EXISTS no_register TEXT,ADD COLUMN IF NOT EXISTS bahan TEXT,ADD COLUMN IF NOT EXISTS asal_usul TEXT,ADD COLUMN IF NOT EXISTS masa_manfaat TEXT,ADD COLUMN IF NOT EXISTS ukuran TEXT,ADD COLUMN IF NOT EXISTS kib TEXT,ADD COLUMN IF NOT EXISTS sumber TEXT,ADD COLUMN IF NOT EXISTS keterangan TEXT`);
+
+        // 2. ruangan -> map id lama (aset.db) ke uuid SIMAPO
+        const ruanganMap=new Map();
+        for(const x of ruangan){const kode=S(x.kode),nama=S(x.nama)||kode;if(!kode&&!nama)continue;const z=await c.query(`INSERT INTO "SIMAPO".ruangan(kode,nama,keterangan,instansi_id) VALUES($1,$2,$3,$4) ON CONFLICT(kode,instansi_id) DO UPDATE SET nama=EXCLUDED.nama,keterangan=EXCLUDED.keterangan RETURNING id`,[kode,nama,S(x.keterangan),inst]);if(x.id!=null)ruanganMap.set(String(x.id),z.rows[0].id);}
+
+        // 3. pegawai -> cocokkan ke user_list by NIP (JANGAN insert)
+        const nips=pegawai.map(x=>S(x.nip)).filter(Boolean),pegawaiMap=new Map();
+        if(nips.length){const z=await c.query(`SELECT id::text id,"NIP" nip FROM public.user_list WHERE "NIP"=ANY($1)`,[nips]);const byNip=new Map(z.rows.map(r=>[S(r.nip),r.id]));for(const x of pegawai){const n=S(x.nip);if(n&&byNip.has(n)&&x.id!=null)pegawaiMap.set(String(x.id),byNip.get(n));}}
+        const pegawai_dilewati=pegawai.filter(x=>x.id==null||!pegawaiMap.has(String(x.id))).length;
+
+        // 4. kategori_barang -> upsert by nama, map nama ke id
+        const kategoriMap=new Map();
+        for(const nama of [...new Set(aset.map(x=>S(x.kategori)).filter(Boolean))]){const f=await c.query(`SELECT id FROM "SIMAPO".kategori_barang WHERE nama=$1 AND instansi_id=$2 LIMIT 1`,[nama,inst]);let kid=f.rows[0]?.id;if(!kid){const z=await c.query(`INSERT INTO "SIMAPO".kategori_barang(id,nama,deskripsi,createdat,instansi_id) VALUES(gen_random_uuid()::text,$1,'',NOW(),$2) RETURNING id`,[nama,inst]);kid=z.rows[0]?.id;}if(kid)kategoriMap.set(nama,kid);}
+
+        // 5. kosongkan aset lama (urutan: riwayat -> unit -> barang)
+        await c.query(`DELETE FROM "SIMAPO".riwayat_pemeliharaan WHERE unitasetid IN(SELECT ua.id FROM "SIMAPO".unit_aset ua JOIN "SIMAPO".barang b ON b.id=ua.barangid WHERE b.instansi_id=$1)`,[inst]);
+        await c.query(`DELETE FROM "SIMAPO".unit_aset ua USING "SIMAPO".barang b WHERE ua.barangid=b.id AND b.instansi_id=$1`,[inst]);
+        await c.query(`DELETE FROM "SIMAPO".barang WHERE instansi_id=$1`,[inst]);
+
+        // 6. barang (grup per kode+nama) + unit_aset tiap baris
+        const barangMap=new Map();let barang_baru=0,unit_baru=0;
+        for(const x of aset){const kode=S(x.kode_barang),nama=S(x.nama)||kode;if(!kode&&!nama)continue;const key=`${kode}\u0000${nama}`;let bid=barangMap.get(key);
+          if(!bid){const z=await c.query(`INSERT INTO "SIMAPO".barang(id,kodebarang,nama,jenisbarang,satuan,stok_saat_ini,minimumstok,hargasatuan,kategoriid,isactive,createdat,updatedat,instansi_id) VALUES(gen_random_uuid(),$1,$2,'Aset Tetap','Unit',1,0,$3,$4,true,NOW(),NOW(),$5) RETURNING id`,[kode,nama,N(x.harga),kategoriMap.get(S(x.kategori))||null,inst]);bid=z.rows[0].id;barangMap.set(key,bid);barang_baru++;}
+          const inv=S(x.no_register)||`${kode}-${String(unit_baru+1).padStart(3,'0')}`;
+          const z=await c.query(`INSERT INTO "SIMAPO".unit_aset(id,barangid,nomorinventaris,kondisi,statuspinjam,tahunperolehan,nilaiperolehan,pegawai_id,ruangan_id,no_polisi,no_rangka,no_mesin,roda,merk_type,model_jenis,warna,tahun_pembuatan,no_register,bahan,asal_usul,masa_manfaat,ukuran,kib,sumber,keterangan,updatedat) VALUES(gen_random_uuid(),$1,$2,$3,false,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,NOW()) RETURNING id`,[bid,inv,S(x.kondisi)||'Baik',x.tahun_pembelian?N(x.tahun_pembelian):null,N(x.harga),pegawaiMap.get(String(x.pegawai_id))||null,x.ruangan_id!=null?ruanganMap.get(String(x.ruangan_id))||null:null,S(x.no_polisi),S(x.no_rangka),S(x.no_mesin),S(x.roda),S(x.merk_type),S(x.model_jenis),S(x.warna),S(x.tahun_pembuatan),S(x.no_register),S(x.bahan),S(x.asal_usul),S(x.masa_manfaat),S(x.ukuran),S(x.kib),S(x.sumber),S(x.keterangan)]);
+          await c.query(`UPDATE "SIMAPO".unit_aset SET qrcode=$1 WHERE id=$2`,[`${origin}/?qr=SIMAPO-${z.rows[0].id}`,z.rows[0].id]);unit_baru++;
+        }
+        return {pegawai_dilewati,ruangan:ruanganMap.size,kategori:kategoriMap.size,barang_baru,unit_baru};
+      });
+      return res.json({ok:true,data:out});
+    } catch(e){console.error('[import-bapperida]',e);return res.status(500).json({ok:false,message:'Gagal mengimpor data bapperida.'});}
+  });
+
   return r;
 }

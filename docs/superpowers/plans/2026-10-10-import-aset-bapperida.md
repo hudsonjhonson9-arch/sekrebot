@@ -16,8 +16,13 @@ sebelumnya — angka sebenarnya dicek ulang saat task 1.
 - Route **`POST /api/simapo/import-bapperida`** ditambahkan di `server/simapo-native-extra.js`
   (sudah di-mount `MEDIA_ROLES` di `server/index.js:119`). Seluruh operasi dalam SATU
   `withTransaction` (sudah ada di `server/db.js:35` — dipakai jg oleh `aset-kosongkan`).
-- Semantik direktif tersebut (disetujui user): hapus ganti ruangan + aset; upsert pegawai by
-  NIP (jangan pernah sentuh password/telegram_id/is_admin/role/status); upsert kategori by nama.
+- Semantik direktif tersebut (disetujui user): hapus ganti ruangan + aset; **cocokkan** pegawai
+  ke `public.user_list` lewat NIP (TANPA insert — lihat koreksi di Fase 1.3); upsert kategori by nama.
+- **KOREKSI [dikonfirmasi dari kode]:** `user_list.id` = telegram id (bigint) dan di produksi
+  TIDAK punya default sequence; `"NIP"` hanya ber-index NON-unique (`server/auth.js:72`) sehingga
+  `ON CONFLICT ("NIP")` akan GAGAL. Karena aset.db tak punya telegram id, route **tidak boleh**
+  membuat baris user_list — pegawai hanya di-map NIP→id yang sudah ada. Pemegang yang NIP-nya tak
+  ketemu → `pegawai_id = null` (dilaporkan di `pegawai_dilewati`).
 - Script **`scripts/import-aset-bapperida.mjs`** membaca `aset.db`, me-login via
   `${BASE}/api/auth/login` (NIP admin dari env `SIMAPO_NIP`) untuk bearer token, lalu POST payload
   ke route import. Ada `--dry-run` dan guard `IMPORT` internal (pertahanan lapis dua).
@@ -54,7 +59,7 @@ Tambahkan ke `server/simapo-native-extra.test.js` pola harness `stubApp(query, w
    - ada DELETE ke `riwayat_pemeliharaan`, `unit_aset`, `barang` (urutan benar);
    - tiap INSERT `unit_aset` punya param qrcode yang cocok
      `/https:\/\//` dan mengandung `?qr=SIMAPO-`;
-   - INSERT pegawai UPSERT (ada `ON CONFLICT`) dan TIDAK ADA satu `sql` pun mengandung kata `password`.
+   - TIDAK ADA INSERT ke `public.user_list`, dan TIDAK ADA satu `sql` pun mengandung kata `password`.
 4. `withTransaction` stub throw → **500** `{ok:false, message}` tanpa bocor detail error (`DB down`).
 
 **Keluar:** `npm test -- server/simapo-native-extra.test.js` merah pada assertion baris (belum ada route).
@@ -66,8 +71,9 @@ Di `server/simapo-native-extra.js`, export route baru dalam `createSimapoNativeE
 2. `instansi_id = instOf(req, req.body.instansi_id)` (guard yang sudah ada).
 3. Ambil peta ruangan (`SELECT ... FROM "SIMAPO".ruangan WHERE instansi_id=$1`) dan peta kategori.
    Upsert ruangan yang beda (by kode), insert kategori baru yang belum ada (by nama, `INSERT (id,nama,deskripsi,createdat,instansi_id)` — mirror `server/simapo.js:94`).
-4. Upsert pegawai by NIP: `INSERT ... ON CONFLICT (nip) DO UPDATE SET nama=EXCLUDED.nama, instansi_id=EXCLUDED.instansi_id`
-   (kolom nama dgn map berdasar hasil Task 1.1; jangan sentuh kolom lain).
+4. Map pegawai: `SELECT id::text id,"NIP" nip FROM public.user_list WHERE "NIP"=ANY($1)` →
+   map `aset.db.pegawai.id` → `user_list.id`. **JANGAN insert** (id=telegram id, tak ada di aset.db;
+   `ON CONFLICT("NIP")` mustahil karena index non-unique). NIP tak ketemu → `pegawai_id=null`.
 5. Hapus data aset instansi ini — sekuens persis `aset-kosongkan`.
 6. Loop aset: INSERT `barang` + `unit_aset` (SEMUA kolom: no_polisi, no_rangka, no_mesin, roda,
    merk_type, model_jenis, warna, tahun_pembuatan, kondisi, tahun_perolehan, nilai_perolehan,
@@ -134,15 +140,14 @@ untuk nilai saat ini — SELALU BAST-check dulu dengan angka dari data nyata).
 **Keluar:** user menjawab + baseline tercatat.
 
 ### Task 3.2 — Impor penuh (setelah approval)
-`IMPORT=1 node scripts/import-aset-bapperida.mjs` di `D:\Code\absensi_refactored_v6`.
-Catat `summary` respons (aset/ruangan/pegawai/kategori).
+`$env:SIMAPO_NIP='<NIP admin>'; node scripts/import-aset-bapperida.mjs` di `D:\Code\absensi_refactored_v6`.
+Catat `data` respons (`{pegawai_dilewati, ruangan, kategori, barang_baru, unit_baru}`).
 
 **Keluar:** summary sesuai baseline/ekspektasi.
 
 ### Task 3.3 — Verifikasi post-impor
-1. `SELECT count(*), count(qrcode) FILTER (WHERE qrcode LIKE '%?qr=SIMAPO-%'), count(DISTINCT pegawai_id), count(DISTINCT ruangan_id) FROM "SIMAPO".unit_aset ...` → semua aset punya QR, ruangan+nilai terisi.
-2. NIP pegawai yang diupsert tidak kehilangan password: baca-saja cek `password` lama tidak null
-   untuk 1 NIP sampel (via query aman, jangan cetak hash).
+1. `SELECT count(*), count(qrcode) FILTER (WHERE qrcode LIKE '%?qr=SIMAPO-%'), count(DISTINCT pegawai_id), count(DISTINCT ruangan_id) FROM "SIMAPO".unit_aset ...` → semua aset punya QR, ruangan+megang terisi (pegawai sesuai yang NIP-nya ada di user_list).
+2. `user_list` tak tersentuh: jumlah baris sebelum = sesudah (route tak pernah INSERT ke user_list).
 3. Scan smoke: buka `https://absensi.mindcloud.my.id/?qr=SIMAPO-<id sampel>` → katalog menampilkan unit.
 
 **Keluar:** ketiga poin hijau. Jika tidak → rollback tidak ada (transaksi penuh) → laporkan ke user.
