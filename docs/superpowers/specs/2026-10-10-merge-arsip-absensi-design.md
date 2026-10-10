@@ -212,3 +212,6 @@ Cookie `arsip_session` (diteruskan nginx apa adanya) masuk ke upstream; arsip
   `Cookie`). Tidak ada perubahan `server/index.js` yang diperlukan.
 - Host publik arsip dapat di-`proxy_pass` dari dalam container absensi (akses
   HTTPS keluar + DNS + sertifikat valid).
+- **CORS tidak relevan**: halaman (`/arsip/`) dan API (`/arsip/api/...`) sama
+  origin `absensi.mindcloud.my.id` → browser tidak menerapkan CORS. Tidak perlu
+  menambah `CORS_ORIGIN` di arsip maupun perubahan lain untuk ini.
