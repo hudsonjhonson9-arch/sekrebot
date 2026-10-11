@@ -58,7 +58,7 @@
   <link rel="stylesheet" href="css/lib/leaflet.min.css" />
 
   <!-- App Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=18" />
+  <link rel="stylesheet" href="css/styles.css?v=19" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -730,6 +730,30 @@
         <button class="btn-primary" id="btnSimpanEdit" onclick="handleKetEdit()">
           <div class="btn-inner"><span><i class="fas fa-save"></i></span><span>Simpan Perubahan</span></div>
         </button>
+      </div>
+    </div>
+
+    <!-- ══ MODAL KALENDER KEHADIRAN PEGAWAI (klik kartu rekap) ══ -->
+    <div class="ket-modal-overlay" id="rekapKalModal" onclick="if(event.target===this)closeRekapKalender()">
+      <div class="ket-modal" style="max-width:360px;width:100%">
+        <div class="ket-modal-title"><i class="fas fa-calendar-alt"></i> Kalender Kehadiran
+          <button class="ket-modal-close" onclick="closeRekapKalender()"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="rekapKalNama" style="font-weight:800;font-size:13px;margin-bottom:2px">—</div>
+        <div id="rekapKalSub" style="font-size:11px;color:var(--muted);margin-bottom:10px">—</div>
+        <div id="rekapKalPicker" style="display:flex;justify-content:center"></div>
+        <div id="rekapKalDetail" style="margin-top:12px;padding:10px 12px;background:var(--gold-dim);border:1px solid var(--border);border-radius:10px;min-height:44px"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px;font-size:10px;color:var(--muted)">
+          <span><i style="display:inline-block;width:9px;height:9px;border-radius:50%;box-shadow:inset 0 0 0 1.5px rgba(52,211,153,.65);margin-right:4px"></i>Hadir</span>
+          <span><i style="display:inline-block;width:9px;height:9px;border-radius:50%;box-shadow:inset 0 0 0 1.5px rgba(251,191,36,.65);margin-right:4px"></i>Terlambat</span>
+          <span><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:rgba(251,191,36,.35);margin-right:4px"></i>Izin</span>
+          <span><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:rgba(248,113,113,.35);margin-right:4px"></i>Sakit</span>
+          <span><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:rgba(139,92,246,.35);margin-right:4px"></i>Tugas</span>
+          <span><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:rgba(99,102,241,.35);margin-right:4px"></i>Tubel</span>
+          <span><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:rgba(20,184,166,.35);margin-right:4px"></i>Cuti</span>
+          <span><i style="display:inline-block;width:9px;height:9px;border-radius:50%;box-shadow:inset 0 0 0 1.5px rgba(248,113,113,.65);margin-right:4px"></i>Alpa</span>
+          <span><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--muted);opacity:.35;margin-right:4px"></i>Libur</span>
+        </div>
       </div>
     </div>
 
@@ -3137,7 +3161,7 @@
 <script src="js/kontrol.js?v=20260811c"></script>
   <script src="js/keterangan.js"></script>
   <script src="js/log.js?v=20261011c"></script>
-  <script src="js/rekap.js?v=20261011b"></script>
+  <script src="js/rekap.js?v=20261011f"></script>
 
   <!-- 5. Admin modules (split by section) -->
   <script src="js/admin-libur.js"></script>

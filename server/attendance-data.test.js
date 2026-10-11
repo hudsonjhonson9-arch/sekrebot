@@ -127,6 +127,41 @@ test('rekap-absen menyertakan _rawMasukLog/_rawPulangLog/_rawKetLog (kartu âœï¸
   assert.equal(p.nama, PEGAWAI.username, 'kontrak lama tetap terjaga');
 });
 
+test('rekap-absen menyertakan logByDate & ketByDate (kalender per tanggal di js/rekap.js)', async () => {
+  const q = async (text) => {
+    if (/FROM user_list/i.test(text)) {
+      return {
+        rows: [{
+          id: PEGAWAI.id, username: PEGAWAI.username, nama: PEGAWAI.username, nip: PEGAWAI.NIP,
+          jabatan: PEGAWAI.Jabatan, pangkat: PEGAWAI.pangkat, bidang: PEGAWAI.bidang,
+          nomorhp: PEGAWAI.nomorhp, urutan: PEGAWAI.no, status: PEGAWAI.Status,
+        }],
+      };
+    }
+    if (/Log_Absen/i.test(text)) {
+      return {
+        rows: [
+          { ID_Log: 501, ID: PEGAWAI.id, Tanggal: '2026-10-06', Jam: '07:58', 'Jenis Absen': 'MASUK', Ket: '' },
+          { ID_Log: 502, ID: PEGAWAI.id, Tanggal: '2026-10-06', Jam: '16:05', 'Jenis Absen': 'PULANG', Ket: '' },
+          { ID_Log: 504, ID: PEGAWAI.id, Tanggal: '2026-10-07', Jam: '09:00', 'Jenis Absen': 'DL', Ket: '' },
+          { ID_Log: 505, ID: PEGAWAI.id, Tanggal: '2026-10-08', Jam: '09:00', 'Jenis Absen': 'TB', Ket: '' },
+        ],
+      };
+    }
+    return { rows: [] };
+  };
+  const r = await get(harness(q), '/api/rekap-absen?dari=2026-10-06&sampai=2026-10-08&instansi_id=bapperida');
+  assert.equal(r.status, 200);
+  const p = r.body.pegawai[0];
+  assert.ok(p.logByDate, 'logByDate wajib ikut ter-serialize');
+  assert.equal(p.logByDate['2026-10-06'].masuk, 7 * 60 + 58, 'menit masuk per tanggal');
+  assert.equal(p.logByDate['2026-10-06'].pulang, 16 * 60 + 5);
+  assert.ok(p.ketByDate, 'ketByDate wajib ikut ter-serialize');
+  assert.equal(p.ketByDate['2026-10-06'], undefined, 'tanggal tanpa ket tidak diisi');
+  assert.equal(p.ketByDate['2026-10-07'], 'TUGAS', 'DL dinormalkan ke TUGAS (sama dgn counter)');
+  assert.equal(p.ketByDate['2026-10-08'], 'ALPA', 'TB dinormalkan ke ALPA (sama dgn counter)');
+});
+
 test('keterangan admin panel: target adalah pegawai terpilih (user.id), bukan admin', async () => {
   const sqls = [];
   const q = async (text, params) => {

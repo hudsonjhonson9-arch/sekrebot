@@ -8,6 +8,8 @@ let jamPegawaiMap = {};       // { [user_id]: {masuk:'HH:MM', pulang:'HH:MM'} }
 let liburLoaded = false;
 let userListOrder = [];
 let lastRekapPegawai = [];
+let _rekapFilteredPg = []; // snapshot utk onclick kartu rekap → openRekapKalender(idx)
+let _rekapKalFp = null;   // flatpickr modal kalender per pegawai
 
 // Flatpickr instance for rekap range picker
 let _rekapFp = null;
@@ -431,7 +433,7 @@ function computeRekap(rows, allRowsParam = null, userSeed = null, dari = null, s
       hadir_dates: new Set(), excused_dates: new Set(),
       jamMasuk: '-', jamPulang: '-',
       _rawMasukLog: null, _rawPulangLog: null,
-      logByDate: {},
+      logByDate: {}, ketByDate: {},
       // global stats from allRows
       all_menit_terlambat: 0, all_menit_lebih_awal: 0, all_masuk: 0, all_di_luar_masuk: 0,
       all_di_luar_pulang: 0, all_izin: 0, all_sakit: 0, all_tugas: 0, all_tubel: 0, all_cuti: 0, all_alpa: 0
@@ -457,7 +459,7 @@ function computeRekap(rows, allRowsParam = null, userSeed = null, dari = null, s
       menit_terlambat_periode: 0, menit_lebih_awal_periode: 0,
       hadir_dates: new Set(), excused_dates: new Set(),
       jamMasuk: '-', jamPulang: '-',
-      _rawMasukLog: null, _rawPulangLog: null, logByDate: {}
+      _rawMasukLog: null, _rawPulangLog: null, logByDate: {}, ketByDate: {}
     };
 
     if (!tgl || jamMenit === null) return;
@@ -504,6 +506,7 @@ function computeRekap(rows, allRowsParam = null, userSeed = null, dari = null, s
       else if (jenis === 'CUTI') p.cuti++;
       else p.tugas++;
       p.excused_dates.add(tgl);
+      p.ketByDate[tgl] = (jenis === 'DL') ? 'TUGAS' : jenis;
     }
   });
 
@@ -645,6 +648,8 @@ function renderRekap(pg) {
   }
 
   const isMagang = document.getElementById('rekapRoleFilter')?.value === 'magang';
+
+  _rekapFilteredPg = filteredPg;
 
   const isSA = typeof _isSuperAdmin === 'function' && _isSuperAdmin();
   const isAdminRaw = isSA || (window.userProfile?.role?.toLowerCase().includes('admin')) || !!window.IS_ADMIN;
@@ -1019,7 +1024,7 @@ function renderRekap(pg) {
         ` : '';
 
     return `
-        <div class="rekap-card-v2">
+        <div class="rekap-card-v2" style="cursor:pointer" onclick="openRekapKalender(${idx})" title="Klik untuk lihat kalender kehadiran per tanggal">
           <!-- TOP: Profile & Badge -->
           <div class="pegawai-top" style="margin-bottom:12px">
             <div class="pegawai-avatar" style="background:linear-gradient(135deg, var(--gold), #9b6e1a); box-shadow:0 2px 8px rgba(201,168,76,0.3)">${idx + 1}</div>
@@ -1070,6 +1075,85 @@ function renderRekap(pg) {
           ${allTimeFooter}
         </div>`;
   }).join('');
+}
+
+/* ════ KALENDER KEHADIRAN PER PEGAWAI (klik kartu rekap) ════ */
+function openRekapKalender(idx) {
+  const p = _rekapFilteredPg[idx];
+  if (!p || !window.flatpickr) return;
+  const dari = ($('rekapDari')?.value || '').trim();
+  const sampai = ($('rekapSampai')?.value || '').trim();
+  const isMagang = document.getElementById('rekapRoleFilter')?.value === 'magang';
+
+  $('rekapKalNama').textContent = p.nama || '—';
+  $('rekapKalSub').textContent = `${isMagang ? 'ID' : 'NIP'}: ${p.nip || '—'} · ${dari || '…'} s/d ${sampai || '…'}`;
+  const detailEl = $('rekapKalDetail');
+  detailEl.innerHTML = '<div style="color:var(--muted);font-size:11px">Pilih tanggal untuk lihat detail…</div>';
+  $('rekapKalModal').style.display = 'flex';
+
+  if (_rekapKalFp) { try { _rekapKalFp.destroy(); } catch (_) {} _rekapKalFp = null; }
+  const el = $('rekapKalPicker');
+  el.innerHTML = '';
+
+  const logByDate = p.logByDate || {};
+  const ketByDate = p.ketByDate || {};
+  const toMenitLocal = (s) => {
+    const a = String(s || '').replace(/\s*WITA\s*/i, '').trim().split(':').map(Number);
+    return (isNaN(a[0]) || a.length < 2) ? null : a[0] * 60 + (a[1] || 0);
+  };
+  const hhmm = (m) => (m === null || m === undefined) ? '-' : `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
+  const dayInfo = (tgl) => {
+    if (tgl >= '1900-01-01' && dari && (tgl < dari || tgl > sampai)) {
+      const d = new Date(tgl + 'T00:00:00');
+      const libur = d.getDay() === 0 || d.getDay() === 6 || hariLiburSet.has(tgl);
+      return { cls: libur ? 'rk-libur' : '', label: libur ? 'Libur' : 'Di luar periode', log: null };
+    }
+    const ket = ketByDate[tgl];
+    if (ket) return { cls: 'rk-' + ket.toLowerCase(), label: ket.charAt(0) + ket.slice(1).toLowerCase(), log: null };
+    const x = logByDate[tgl];
+    if (x && x.masuk !== undefined) {
+      const jam = (typeof getJamForTanggal === 'function') ? getJamForTanggal(tgl) : null;
+      const jpgw = jamPegawaiMap[String(p.id || '')];
+      const batasStr = jam && jam.nama ? jam.masuk : (jpgw?.masuk || menitToStr(JAM_MASUK_MENIT));
+      const batasM = toMenitLocal(batasStr);
+      const telat = batasM !== null && x.masuk > batasM;
+      return { cls: telat ? 'rk-lambat' : 'rk-hadir', label: telat ? `Terlambat (masuk ${hhmm(x.masuk)} > ${hhmm(batasM)})` : `Hadir (masuk ${hhmm(x.masuk)})`, log: x };
+    }
+    if (hariLiburSet.has(tgl) || [0, 6].includes(new Date(tgl + 'T00:00:00').getDay())) return { cls: 'rk-libur', label: 'Libur', log: null };
+    return { cls: 'rk-alpa', label: 'Tanpa keterangan / alpa', log: null };
+  };
+
+  const showDetail = (tgl) => {
+    const info = dayInfo(tgl);
+    let jamLine = '';
+    if (info.log) {
+      jamLine = `<div class="rk-jam">Masuk ${hhmm(info.log.masuk)} · Pulang ${info.log.pulang !== undefined ? hhmm(info.log.pulang) : '—'}</div>`;
+    }
+    detailEl.innerHTML = `
+      <div class="rk-detail-tgl">${tgl}</div>
+      <div class="rk-detail-status ${info.cls}">${info.label}</div>
+      ${jamLine}`;
+  };
+
+  _rekapKalFp = flatpickr(el, {
+    inline: true,
+    mode: 'single',
+    dateFormat: 'Y-m-d',
+    defaultDate: dari || undefined,
+    onChange: (sel) => { if (sel.length) showDetail(flatpickr.formatDate(sel[0], 'Y-m-d')); },
+    onDayCreate: (_dObj, _dStr, _fp, dayElem) => {
+      const tgl = flatpickr.formatDate(dayElem.dateObj, 'Y-m-d');
+      const info = dayInfo(tgl);
+      if (info.cls) { dayElem.classList.add(info.cls); dayElem.title = info.label; }
+    },
+  });
+}
+
+function closeRekapKalender() {
+  $('rekapKalModal').style.display = 'none';
+  if (_rekapKalFp) { try { _rekapKalFp.destroy(); } catch (_) {} _rekapKalFp = null; }
+  $('rekapKalPicker').innerHTML = '';
 }
 
 /* ════ DOWNLOAD REKAP (Excel) ════ */

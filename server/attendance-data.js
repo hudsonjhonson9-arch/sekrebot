@@ -153,7 +153,7 @@ async function rekapAbsenHandler(req, res, query) {
       masuk: 0, pulang: 0, di_luar_masuk_periode: 0, di_luar_pulang_periode: 0,
       izin: 0, sakit: 0, tugas: 0, tubel: 0, cuti: 0, alpa: 0,
       menit_terlambat_periode: 0, menit_lebih_awal_periode: 0,
-      hadir_dates: new Set(), excused_dates: new Set(), logByDate: {},
+      hadir_dates: new Set(), excused_dates: new Set(), logByDate: {}, ketByDate: {},
       jamMasuk: '-', jamPulang: '-',
       _rawMasukLog: null, _rawPulangLog: null, _rawKetLog: null,
     }]));
@@ -187,6 +187,8 @@ async function rekapAbsenHandler(req, res, query) {
         else p.tugas++;
         p.excused_dates.add(t);
         p._rawKetLog = l;
+        // ponytail: DL→TUGAS & TB/TANPA BERITA→ALPA disamakan dgn hitungan counter atas
+        p.ketByDate[t] = (jenis === 'DL') ? 'TUGAS' : (['TB', 'TANPA BERITA'].includes(jenis) ? 'ALPA' : jenis);
       }
     }
     const pegawai = users.map(u => {
