@@ -456,3 +456,98 @@
       return null;
     }
     window.getInstansiData = getInstansiData;
+
+    /* ════ CUSTOM SEARCHABLE DROPDOWN (generic) ════
+       Select asli disembunyikan (display:none), tetap jadi value source —
+       pemanggil lama baca .value / tulis .innerHTML seperti biasa.
+       List di-rebuild dari opsi select SETIAP dibuka, jadi otomatis sinkron
+       saat loadBidangList / loadRekap menulis ulang isi select.
+       Pick → dispatch Event('change') supaya onchange inline lama tetap jalan.
+       ponytail: tutup via klik luar pakai listener sendiri yang RESTORE label —
+       listener global di simapo-ext.js hanya remove('open') tanpa restore. */
+    function _ddEsc(s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function _ddItemsHtml(selId, q) {
+      const sel = document.getElementById(selId);
+      if (!sel) return '';
+      q = String(q || '').toLowerCase().trim();
+      const cur = String(sel.value == null ? '' : sel.value);
+      let html = '';
+      for (const opt of sel.options) {
+        if (q && opt.text.toLowerCase().indexOf(q) === -1) continue;
+        html += '<div class="dropdown-item' + (String(opt.value) === cur ? ' selected' : '') +
+          '" data-v="' + _ddEsc(opt.value) + '" onclick="window._ddPick(\'' + selId + '\', this)">' +
+          '<span class="item-name">' + _ddEsc(opt.text) + '</span></div>';
+      }
+      return html || '<div class="dropdown-item" style="color:var(--muted)">Tidak ditemukan</div>';
+    }
+    window._ddItemsHtml = _ddItemsHtml;
+
+    function syncSearchDdLabel(selId) {
+      const sel = document.getElementById(selId);
+      const wrap = document.getElementById(selId + 'Dd');
+      if (!sel || !wrap) return;
+      const opt = sel.options[sel.selectedIndex];
+      const input = wrap.querySelector('input');
+      if (input) input.value = opt ? opt.text : '';
+    }
+    window.syncSearchDdLabel = syncSearchDdLabel;
+
+    window._ddOpen = function (selId) {
+      const wrap = document.getElementById(selId + 'Dd');
+      if (!wrap) return;
+      const input = wrap.querySelector('input');
+      // saat buka: kosongkan teks pencarian; label lama dipulihkan saat tutup
+      if (input) input.value = '';
+      wrap.querySelector('.dropdown-list-wrap').innerHTML = _ddItemsHtml(selId, '');
+      wrap.classList.add('open');
+    };
+    window._ddFilter = function (selId, q) {
+      const wrap = document.getElementById(selId + 'Dd');
+      if (!wrap) return;
+      wrap.querySelector('.dropdown-list-wrap').innerHTML = _ddItemsHtml(selId, q);
+      wrap.classList.add('open');
+    };
+    window._ddPick = function (selId, item) {
+      const sel = document.getElementById(selId);
+      const wrap = document.getElementById(selId + 'Dd');
+      if (!sel || !wrap) return;
+      sel.value = item.getAttribute('data-v');
+      wrap.classList.remove('open');
+      syncSearchDdLabel(selId);
+      sel.dispatchEvent(new Event('change')); // aktifkan onchange inline lama
+    };
+
+    function makeSearchDd(selId, opts) {
+      opts = opts || {};
+      const sel = document.getElementById(selId);
+      if (!sel || sel.dataset.ddReady) return;
+      sel.dataset.ddReady = '1';
+      sel.style.display = 'none';
+      const wrap = document.createElement('div');
+      wrap.className = 'custom-search-dropdown';
+      wrap.id = selId + 'Dd';
+      wrap.dataset.ddSel = selId;
+      wrap.innerHTML =
+        '<div class="dropdown-trigger"' + (opts.h ? ' style="height:' + opts.h + 'px"' : '') +
+          ' onclick="window._ddOpen(\'' + selId + '\')">' +
+          '<i class="fas fa-search search-icon" aria-hidden="true"></i>' +
+          '<input type="text" autocomplete="off" placeholder="' + _ddEsc(opts.ph || 'Pilih...') + '" ' +
+            'onfocus="window._ddOpen(\'' + selId + '\')" oninput="window._ddFilter(\'' + selId + '\', this.value)">' +
+          '<i class="fas fa-chevron-down arrow-icon" aria-hidden="true"></i>' +
+        '</div>' +
+        '<div class="dropdown-list-wrap"></div>';
+      sel.parentNode.insertBefore(wrap, sel);
+      syncSearchDdLabel(selId);
+    }
+    window.makeSearchDd = makeSearchDd;
+
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll('.custom-search-dropdown.open').forEach(function (el) {
+        if (!el.contains(e.target)) {
+          el.classList.remove('open');
+          if (el.dataset.ddSel) syncSearchDdLabel(el.dataset.ddSel);
+        }
+      });
+    });

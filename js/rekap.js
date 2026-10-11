@@ -222,6 +222,7 @@ async function loadRekap() {
               if (Array.from(bidangSet).includes(currentBidang)) bSel.value = currentBidang;
               else bSel.value = 'Semua';
             }
+            syncSearchDdLabel('rekapBidang');
           }
         }
       }
@@ -1299,6 +1300,7 @@ function initSuperadminRekapScoping() {
       if (scoped) {
         el.value = scoped;
       }
+      syncSearchDdLabel('rekapInstansiSelect');
     }
   } else {
     sec.style.display = 'none';
@@ -1367,3 +1369,8 @@ function onRekapInstansiChange() {
 }
 window.initSuperadminRekapScoping = initSuperadminRekapScoping;
 window.onRekapInstansiChange = onRekapInstansiChange;
+
+/* ── Filter rekap: dropdown searchable (select tersembunyi = value source) ── */
+makeSearchDd('rekapInstansiSelect', { ph: 'Pilih instansi', h: 38 });
+makeSearchDd('rekapRoleFilter', { ph: 'Pilih role', h: 38 });
+makeSearchDd('rekapBidang', { ph: 'Semua bidang', h: 38 });

@@ -109,7 +109,12 @@
 
       // Isi dropdown pegawai async (jangan await: fetch user-list + data
       // biometrik inilah sumber "lama bukanya" modal).
-      loadLogPegawaiList();
+      // ponytail: value di-set di baris atas SEBELUM opsi terisi = hilang;
+      // set ulang setelah list load + sinkronkan label dropdown.
+      loadLogPegawaiList().then(function () {
+        if (uid) $('inLogPegawai').value = uid;
+        syncSearchDdLabel('inLogPegawai');
+      });
 
       // Fallback server-side: kalau cache rekap untuk hari itu belum pernah
       // dimuat (userListOrder kosong / _raw*Log tidak ada), tanya /api/log
@@ -191,6 +196,9 @@
         });
       } catch (e) { console.error('Load log pegawai failed', e); }
     }
+
+    /* ── Dropdown pegawai di modal log: searchable (select tersembunyi = value source) ── */
+    makeSearchDd('inLogPegawai', { ph: '— Pilih Pegawai —' });
 
     /**
      * Simpan entri log absensi (tambah baru atau update yang sudah ada).
