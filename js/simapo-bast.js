@@ -795,8 +795,74 @@ window.asetPegTambah = async function() {
   const pe = window._asetPegSel.pegawai;
   if (!pe) { showToast('Pilih pegawai terlebih dahulu.', 'error'); return; }
   const peg = bastFindPegawai(pe);
+
+  const units = (window._bastData.aset || []).filter(a => String(a.pegawai_id || '') !== String(pe));
+  const gridRows = units.map(u => `
+    <div class="ap-grid-row" style="display:flex;align-items:center;gap:10px;padding:9px 11px;margin:5px 0;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.02);border-radius:10px;cursor:pointer;transition:border-color .15s;" onclick="this.querySelector('input[type=checkbox]').click();this.querySelector('input[type=checkbox]').dispatchEvent(new Event('change'));this.style.borderColor=this.querySelector('input[type=checkbox').checked?'var(--success)':'';">
+      <input type="checkbox" data-aset-id="${u.id}" style="width:16px;height:16px;flex-shrink:0;accent-color:#22c55e;" onclick="event.stopPropagation()" onchange="window._apUpdateCount()">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:12px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${apEsc(u.nama_barang || '-')}</div>
+        <div style="font-size:10px;color:var(--muted);display:flex;flex-wrap:wrap;gap:3px 8px;margin-top:1px;">
+          <span><i class="fas fa-thumbtack" aria-hidden="true"></i> ${apEsc(u.nomorinventaris || '-')}</span>
+          <span><i class="fas fa-receipt" aria-hidden="true"></i> ${apEsc(u.kondisi || '-')}</span>
+          ${u.pegawai_id ? '<span style="color:var(--warning);"><i class="fas fa-user" aria-hidden="true"></i> ' + apEsc(bastFindPegawai(u.pegawai_id)?.nama || 'Pegawai lain') + '</span>' : '<span style="color:var(--success);"><i class="fas fa-check" aria-hidden="true"></i> Tanpa pemegang</span>'}
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--gold);flex-shrink:0;font-weight:700;">${bastRupiah(u.nilaiperolehan || 0)}</div>
+    </div>`).join('');
+
   const { value: v } = await Swal.fire({
-    title: 'Tambah Unit Aset',
+    title: 'Tambah Unit ke Pegawai',
+    html:
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Untuk: <b>' + apEsc(peg ? peg.nama : pe) + '</b></div>' +
+      '<input id="apSearch" class="form-input" placeholder="Ketik nama / nomor inventaris..." style="width:100%;margin-bottom:8px;font-size:12px;" oninput="window._apFilterGrid(this.value)">' +
+      '<div id="apGrid" style="max-height:320px;overflow-y:auto;">' +
+        (gridRows || '<div style="text-align:center;color:var(--muted);padding:20px;font-size:12px;">Tidak ada unit tersedia.</div>') +
+      '</div>' +
+      '<div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center;">' +
+        '<span style="font-size:11px;color:var(--muted);"><span id="apCount">0</span> dipilih</span>' +
+        '<button type="button" onclick="window.asetPegTambahManual()" style="font-size:10px;color:var(--gold);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;">atau buat unit baru...</button>' +
+      '</div>',
+    showCancelButton: true,
+    confirmButtonText: 'Assign Terpilih',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: 'var(--primary)',
+    focusConfirm: false,
+    preConfirm: () => {
+      const ids = [...document.querySelectorAll('#apGrid input[type=checkbox]:checked')].map(cb => cb.dataset.asetId);
+      if (!ids.length) { showToast('Pilih minimal satu unit.', 'error'); return false; }
+      return { ids };
+    }
+  });
+  if (!v) return;
+
+  for (const id of v.ids) {
+    await window.bastSubmit(P.simapoBastAssign, { aset_id: id, pegawai_id: pe }, { successMsg: '', errorMsg: '' });
+  }
+  showToast(v.ids.length + ' unit berhasil diassign', 'success');
+  window.loadAsetPegawai(true);
+  window.loadAdminBast(true);
+};
+
+window._apUpdateCount = function() {
+  const el = document.getElementById('apCount');
+  if (el) el.textContent = document.querySelectorAll('#apGrid input[type=checkbox]:checked').length;
+};
+
+window._apFilterGrid = function(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('#apGrid .ap-grid-row').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+};
+
+window.asetPegTambahManual = async function() {
+  const pe = window._asetPegSel.pegawai;
+  if (!pe) { showToast('Pilih pegawai terlebih dahulu.', 'error'); return; }
+  const peg = bastFindPegawai(pe);
+  Swal.close();
+  const { value: v } = await Swal.fire({
+    title: 'Buat Unit Baru',
     html:
       '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Untuk: <b>' + apEsc(peg ? peg.nama : pe) + '</b></div>' +
       '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Kode Barang</label>' +
@@ -830,10 +896,8 @@ window.asetPegTambah = async function() {
     showToast('Kode, nama, dan nomor inventaris wajib diisi.', 'error');
     return;
   }
-  // ponytail: bast-import-unit creates barang+unit; then bast-assign sets pegawai
   const ok = await window.bastSubmit(P.simapoBastImportUnit, v, { successMsg: 'Unit ditambahkan', errorMsg: 'Gagal menambah unit' });
   if (!ok) return;
-  // Reload to get the new unit id, then assign pegawai
   await window.loadAsetPegawai(true);
   const newUnit = (window._bastData.aset || []).find(a => String(a.nomorinventaris) === String(v.nomorinventaris));
   if (newUnit) {
