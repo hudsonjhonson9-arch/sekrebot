@@ -798,28 +798,31 @@ window.asetPegTambah = async function() {
 
   const units = (window._bastData.aset || []).filter(a => String(a.pegawai_id || '') !== String(pe));
   const gridRows = units.map(u => `
-    <div class="ap-grid-row" style="display:flex;align-items:center;gap:10px;padding:9px 11px;margin:5px 0;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.02);border-radius:10px;cursor:pointer;transition:border-color .15s;" onclick="this.querySelector('input[type=checkbox]').click();this.querySelector('input[type=checkbox]').dispatchEvent(new Event('change'));this.style.borderColor=this.querySelector('input[type=checkbox').checked?'var(--success)':'';">
-      <input type="checkbox" data-aset-id="${u.id}" style="width:16px;height:16px;flex-shrink:0;accent-color:#22c55e;" onclick="event.stopPropagation()" onchange="window._apUpdateCount()">
-      <div style="flex:1;min-width:0;">
-        <div style="font-weight:700;font-size:12px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${apEsc(u.nama_barang || '-')}</div>
-        <div style="font-size:10px;color:var(--muted);display:flex;flex-wrap:wrap;gap:3px 8px;margin-top:1px;">
-          <span><i class="fas fa-thumbtack" aria-hidden="true"></i> ${apEsc(u.nomorinventaris || '-')}</span>
-          <span><i class="fas fa-receipt" aria-hidden="true"></i> ${apEsc(u.kondisi || '-')}</span>
-          ${u.pegawai_id ? '<span style="color:var(--warning);"><i class="fas fa-user" aria-hidden="true"></i> ' + apEsc(bastFindPegawai(u.pegawai_id)?.nama || 'Pegawai lain') + '</span>' : '<span style="color:var(--success);"><i class="fas fa-check" aria-hidden="true"></i> Tanpa pemegang</span>'}
+    <div class="ap-grid-row" style="display:flex;flex-direction:column;gap:4px;padding:11px 13px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.02);border-radius:12px;cursor:pointer;transition:border-color .15s;" onclick="this.querySelector('input[type=checkbox]').click();this.querySelector('input[type=checkbox]').dispatchEvent(new Event('change'));this.style.borderColor=this.querySelector('input[type=checkbox').checked?'var(--success)':'';">
+      <div style="display:flex;align-items:flex-start;gap:9px;">
+        <input type="checkbox" data-aset-id="${u.id}" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;accent-color:#22c55e;" onclick="event.stopPropagation()" onchange="window._apUpdateCount()">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:13px;color:var(--white);line-height:1.3;">${apEsc(u.nama_barang || '-')}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;">${apEsc(u.nomorinventaris || '-')}</div>
         </div>
       </div>
-      <div style="font-size:10px;color:var(--gold);flex-shrink:0;font-weight:700;">${bastRupiah(u.nilaiperolehan || 0)}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px 8px;font-size:10px;color:var(--muted);padding-left:25px;">
+        <span><i class="fas fa-receipt" aria-hidden="true"></i> ${apEsc(u.kondisi || '-')}</span>
+        ${u.pegawai_id ? '<span style="color:var(--warning);"><i class="fas fa-user" aria-hidden="true"></i> ' + apEsc(bastFindPegawai(u.pegawai_id)?.nama || 'Pegawai lain') + '</span>' : '<span style="color:var(--success);"><i class="fas fa-check" aria-hidden="true"></i> Tanpa pemegang</span>'}
+      </div>
+      <div style="font-size:11px;color:var(--gold);font-weight:700;padding-left:25px;">${bastRupiah(u.nilaiperolehan || 0)}</div>
     </div>`).join('');
 
   const { value: v } = await Swal.fire({
     title: 'Tambah Unit ke Pegawai',
+    width: '720px',
     html:
       '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Untuk: <b>' + apEsc(peg ? peg.nama : pe) + '</b></div>' +
-      '<input id="apSearch" class="form-input" placeholder="Ketik nama / nomor inventaris..." style="width:100%;margin-bottom:8px;font-size:12px;" oninput="window._apFilterGrid(this.value)">' +
-      '<div id="apGrid" style="max-height:320px;overflow-y:auto;">' +
-        (gridRows || '<div style="text-align:center;color:var(--muted);padding:20px;font-size:12px;">Tidak ada unit tersedia.</div>') +
+      '<input id="apSearch" class="form-input" placeholder="Ketik nama / nomor inventaris..." style="width:100%;margin-bottom:10px;font-size:12px;" oninput="window._apFilterGrid(this.value)">' +
+      '<div id="apGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;max-height:420px;overflow-y:auto;padding:2px;">' +
+        (gridRows || '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:20px;font-size:12px;">Tidak ada unit tersedia.</div>') +
       '</div>' +
-      '<div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center;">' +
+      '<div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;">' +
         '<span style="font-size:11px;color:var(--muted);"><span id="apCount">0</span> dipilih</span>' +
         '<button type="button" onclick="window.asetPegTambahManual()" style="font-size:10px;color:var(--gold);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;">atau buat unit baru...</button>' +
       '</div>',
