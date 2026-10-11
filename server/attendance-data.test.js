@@ -160,6 +160,8 @@ test('rekap-absen menyertakan logByDate & ketByDate (kalender per tanggal di js/
   assert.equal(p.ketByDate['2026-10-06'], undefined, 'tanggal tanpa ket tidak diisi');
   assert.equal(p.ketByDate['2026-10-07'], 'TUGAS', 'DL dinormalkan ke TUGAS (sama dgn counter)');
   assert.equal(p.ketByDate['2026-10-08'], 'ALPA', 'TB dinormalkan ke ALPA (sama dgn counter)');
+  assert.equal(p.alpa, 1, '1 baris TB = 1 alpa');
+  assert.equal(p.disiplinPct, 80, '1 alpa = -20%');
 });
 
 test('keterangan admin panel: target adalah pegawai terpilih (user.id), bukan admin', async () => {

@@ -198,8 +198,8 @@ async function rekapAbsenHandler(req, res, query) {
         const x = p.logByDate[t];
         if (x && x.masuk !== undefined && x.pulang !== undefined && x.pulang > x.masuk) hadirMenit += x.pulang - x.masuk;
       }
-      const totalMasuk = p.masuk + p.di_luar_masuk_periode;
-      const disiplin = totalMasuk ? Math.max(0, Math.round(p.masuk / totalMasuk * 100)) : 100;
+      // ponytail: 1 alpa = -20% (sesuai permintaan), tanpa bobot telat
+      const disiplin = Math.max(0, 100 - p.alpa * 20);
       const sah = p.hadir_dates.size + p.tugas + p.sakit + p.tubel + p.cuti;
       const kehadiran = Math.min(100, Math.round(sah / workDays * 100));
       return {

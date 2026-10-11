@@ -550,11 +550,8 @@ function computeRekap(rows, allRowsParam = null, userSeed = null, dari = null, s
       if (!p.hadir_dates.has(t) && !p.excused_dates.has(t)) alpaPeriod++;
     }
     
-    const totalMasukEntries = p.masuk + p.di_luar_masuk_periode;
-    let disiplinPct = 100;
-    if (totalMasukEntries > 0) {
-      disiplinPct = Math.max(0, Math.round(((totalMasukEntries - p.di_luar_masuk_periode) / totalMasukEntries) * 100));
-    }
+    // ponytail: 1 alpa = -20% (selaras server/attendance-data.js)
+    let disiplinPct = Math.max(0, 100 - alpaPeriod * 20);
     
     let disiplinLabel = '', disiplinLevel = 0;
     if (disiplinPct >= 95) { disiplinLabel = 'Sangat Disiplin'; disiplinLevel = 4; }
