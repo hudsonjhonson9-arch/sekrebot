@@ -123,7 +123,9 @@ export const MASTER_LIST_SQL =
      SELECT b.id, b.kodebarang, b.nama, b.jenisbarang, b.satuan, b.spesifikasi, b.foto,
             b.stok_saat_ini, b.minimumstok, b.hargasatuan, b.kategoriid,
             k.nama AS nama_kategori, b.isactive,
-            TO_CHAR(b.createdat, 'YYYY-MM-DD') AS createdat
+            TO_CHAR(b.createdat, 'YYYY-MM-DD') AS createdat,
+            (SELECT MIN(ua.tahunperolehan) FROM "SIMAPO".unit_aset ua WHERE ua.barangid = b.id) AS tahun_mulai,
+            (SELECT MAX(ua.tahunperolehan) FROM "SIMAPO".unit_aset ua WHERE ua.barangid = b.id) AS tahun_selesai
      FROM "SIMAPO".barang b
      LEFT JOIN "SIMAPO".kategori_barang k ON k.id = b.kategoriid
      WHERE b.isactive = true AND b.instansi_id = $1

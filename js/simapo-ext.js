@@ -370,7 +370,7 @@ window.renderAdminSimapoMaster = function(data) {
       <div style="width:44px;height:44px;border-radius:10px;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;"><i class="fas fa-box" aria-hidden="true"></i></div>
       <div style="flex:1;min-width:0;">
         <div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.nama}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${item.kodebarang}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${item.kodebarang}${item.tahun_mulai ? ' · ' + (item.tahun_mulai === item.tahun_selesai ? item.tahun_mulai : item.tahun_mulai + '–' + item.tahun_selesai) : ''}</div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap;">
           <span style="font-size:10px;font-weight:800;color:${stockColor};background:rgba(255,255,255,0.04);border:1px solid currentColor;border-radius:6px;padding:2px 8px;">Stok: ${stok} ${item.satuan || ''}</span>
           <span style="font-size:11px;font-weight:700;color:var(--gold);">${fmt(item.hargasatuan || 0)}</span>
