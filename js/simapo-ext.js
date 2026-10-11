@@ -838,20 +838,31 @@ window.simapoMasterExportExcel = async function() {
   const QR = window.QRCode || qrcode;
   if (typeof QR !== 'function') { showToast('QR library tidak tersedia', 'error'); return; }
 
+  showToast('Memuat unit aset...', 'info');
+  const allUnits = [];
+  for (const item of data) {
+    try {
+      const res = await apiGet(P.simapoUnitList, { barangid: item.id });
+      const units = res.ok ? (res.rows || []) : [];
+      units.forEach(u => allUnits.push({ ...u, nama_barang: item.nama, kodebarang: item.kodebarang }));
+    } catch (e) { /* skip */ }
+  }
+  if (!allUnits.length) { showToast('Tidak ada unit aset.', 'error'); return; }
+
   const origin = window.location.origin + window.location.pathname;
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('Data Master Aset');
+  const ws = wb.addWorksheet('Daftar Aset');
 
-  ws.mergeCells('A1:D1');
-  ws.getCell('A1').value = 'DATA MASTER ASET';
+  ws.mergeCells('A1:E1');
+  ws.getCell('A1').value = 'DAFTAR ASET';
   ws.getCell('A1').font = { bold: true, size: 14 };
   ws.getCell('A1').alignment = { horizontal: 'center' };
-  ws.mergeCells('A2:D2');
+  ws.mergeCells('A2:E2');
   ws.getCell('A2').value = 'Tanggal Export: ' + new Date().toLocaleDateString('id-ID');
   ws.getCell('A2').alignment = { horizontal: 'center' };
 
   const header = ws.getRow(4);
-  ['No', 'Nama Aset', 'Kode Barang', 'QR Code'].forEach((h, i) => {
+  ['No', 'Nama Aset', 'Kode Barang', 'No. Inventaris', 'QR Code'].forEach((h, i) => {
     const c = header.getCell(i + 1);
     c.value = h;
     c.font = { bold: true };
@@ -860,31 +871,34 @@ window.simapoMasterExportExcel = async function() {
     c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
   });
 
-  data.forEach((item, i) => {
+  allUnits.forEach((u, i) => {
     const row = ws.getRow(5 + i);
     row.getCell(1).value = i + 1;
     row.getCell(1).alignment = { horizontal: 'center' };
-    row.getCell(2).value = item.nama || '-';
-    row.getCell(3).value = item.kodebarang || '-';
+    row.getCell(2).value = u.nama_barang || '-';
+    row.getCell(3).value = u.kodebarang || '-';
     row.getCell(3).alignment = { horizontal: 'center' };
-    [1, 2, 3, 4].forEach(ci => {
+    row.getCell(4).value = u.nomorinventaris || '-';
+    row.getCell(4).alignment = { horizontal: 'center' };
+    [1, 2, 3, 4, 5].forEach(ci => {
       row.getCell(ci).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
     });
     row.height = 72;
 
-    const payload = origin + '?qr=SIMAPO-' + item.id;
+    const payload = origin + '?qr=SIMAPO-' + u.id;
     const qr = QR(0, 'M');
     qr.addData(payload);
     qr.make();
     const dataUrl = qr.createDataURL(6, 8);
     const imgId = wb.addImage({ base64: dataUrl.split(',')[1], extension: 'png' });
-    ws.addImage(imgId, { tl: { col: 3.1, row: 4 + i + 0.15 }, ext: { width: 60, height: 60 } });
+    ws.addImage(imgId, { tl: { col: 4.1, row: 4 + i + 0.15 }, ext: { width: 60, height: 60 } });
   });
 
   ws.columns = [
     { key: 'no', width: 6 },
-    { key: 'nama', width: 36 },
+    { key: 'nama', width: 32 },
     { key: 'kode', width: 22 },
+    { key: 'inv', width: 24 },
     { key: 'qr', width: 16 }
   ];
 
@@ -892,10 +906,10 @@ window.simapoMasterExportExcel = async function() {
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = 'Master_Aset_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+  link.download = 'Daftar_Aset_' + new Date().toISOString().slice(0, 10) + '.xlsx';
   link.click();
   URL.revokeObjectURL(link.href);
-  showToast('Excel berhasil diunduh', 'success');
+  showToast('Excel berhasil diunduh (' + allUnits.length + ' unit)', 'success');
 };
 
 window.toggleUnitList = async function(barangId, btnEl) {
