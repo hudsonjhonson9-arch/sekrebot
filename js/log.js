@@ -269,13 +269,13 @@
       <!-- ── NORMAL: 2 kotak masuk / pulang ── -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 10px 8px">
         <div style="background:${masukBg};border:1px solid ${masukColor}44;border-radius:9px;padding:7px 9px">
-          <div style="font-size:7.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px"><i class="fas fa-circle"></i> Jam Masuk</div>
+          <div style="font-size:7.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px"><i class="fas fa-circle" style="color:${masukColor}"></i> Jam Masuk</div>
           <div style="font-size:18px;font-family:'JetBrains Mono',monospace;font-weight:800;color:${masukColor};line-height:1">${jamMasuk ? jamMasuk.slice(0,5) : '—:—'}</div>
           <div style="font-size:9px;color:${masukColor};font-weight:700;margin-top:2px">${masukLabel}</div>
           <div style="font-size:7.5px;color:var(--muted);margin-top:3px;opacity:.7">Batas ≤ ${jmBatas}${periodeNama ? '' : ' (Global)'}</div>
         </div>
         <div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:9px;padding:7px 9px">
-          <div style="font-size:7.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px"><i class="fas fa-circle"></i> Jam Pulang</div>
+          <div style="font-size:7.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px"><i class="fas fa-circle" style="color:${pulangColor}"></i> Jam Pulang</div>
           <div style="font-size:18px;font-family:'JetBrains Mono',monospace;font-weight:800;color:${pulangColor};line-height:1">${jamPulang ? jamPulang.slice(0,5) : '—:—'}</div>
           <div style="font-size:9px;color:${pulangColor};font-weight:700;margin-top:2px">${pulangIcon} ${pulangLabel}</div>
           <div style="font-size:7.5px;color:var(--muted);margin-top:3px;opacity:.7">Batas ≥ ${jpBatas}${periodeNama ? '' : ' (Global)'}</div>

@@ -6365,6 +6365,9 @@ html.light-theme .clock-weather-tag {
 html.light-theme .avatar {
   color: #0F172A;
 }
+html.light-theme .sig-overlay {
+  background: rgba(248, 250, 252, 0.98);
+}
 
 /* 4. Form Controls, Inputs & Select Options — warm white inputs */
 html.light-theme .form-input,
@@ -6387,6 +6390,9 @@ html.light-theme .dok-select {
   background-color: #FFFFFF;
   color: #0F172A;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231D4ED8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
 }
 html.light-theme select.form-input option,
 html.light-theme select.date-range-input option,
