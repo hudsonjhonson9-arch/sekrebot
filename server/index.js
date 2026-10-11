@@ -72,7 +72,7 @@ export function createApp() {
   // jadi entrypoint (blok isMain), tidak saat test meng-import createApp. Notif absen
   // lewat Telegram; WhatsApp hanya untuk keterangan (lihat notifyKeterangan di atas).
   app.locals.scheduler = createScheduler({ query, sendTelegram });
-  app.use('/api', requireRole(ABSEN_ROLES), createAttendanceDataRouter({ query, withTransaction, notify: notifyKeterangan }));
+  app.use('/api', requireRole(ABSEN_ROLES), createAttendanceDataRouter({ query, withTransaction, notify: notifyKeterangan, gasUpsert }));
   app.use('/api', requireRole(ABSEN_ROLES), createOvertimeRouter({ query }));
   app.use('/api', requireRole(ABSEN_ROLES), createNotifyRouter());
   // Fase 1: seluruh master/core absensi dipindahkan dari webhook n8n ke Express.

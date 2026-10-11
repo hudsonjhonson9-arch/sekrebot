@@ -306,7 +306,19 @@
         const frame = $('arsipFrame');
         if (frame && !frame.src) {
           const url = window.AppConfig?.ARCHIVE_URL || 'https://arsipdigital.mindcloud.my.id';
-          frame.src = url;
+          // Webview Telegram: POST /api/auth/session tidak berjalan lagi saat app
+          // dibuka ulang (token sudah ada di localStorage), sehingga cookie
+          // arsip_session tidak pernah diterbitkan di webview itu → iframe 401.
+          // Re-issue cookie dulu dari sesi yang masih berlaku; fail-open, iframe
+          // tetap dimuat walau refresh gagal.
+          let token = null;
+          try { token = localStorage.getItem('_native_token'); } catch { /* mode privat */ }
+          if (token && typeof apiPost === 'function') {
+            apiPost('/api/auth/arsip-cookie', { session_token: token })
+              .finally(() => { frame.src = url; });
+          } else {
+            frame.src = url;
+          }
         }
       }
 

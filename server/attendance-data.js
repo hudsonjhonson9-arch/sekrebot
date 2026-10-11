@@ -18,7 +18,7 @@ function dateRange(start, end) {
 }
 function toMinutes(v) { const m=/^(\d{1,2}):(\d{2})/.exec(String(v||'')); return m ? Number(m[1])*60+Number(m[2]) : null; }
 
-export function createAttendanceDataRouter({ query, withTransaction, notify }) {
+export function createAttendanceDataRouter({ query, withTransaction, notify, gasUpsert }) {
   const router = express.Router();
 
   // KETERANGAN / IZIN
@@ -62,7 +62,20 @@ export function createAttendanceDataRouter({ query, withTransaction, notify }) {
       const status=(jenis==='IZIN')?'PENDING':'DISETUJUI';
       const jam=(b.jam_mulai&&b.jam_selesai)?`${b.jam_mulai} - ${b.jam_selesai}`:new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Makassar',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());
       const tglRange=start===end?start:`${start} s.d. ${end}`;
-      const driveLink=String(b.drive_link||'');
+      // Bukti dari klien berupa base64 (kompres 1280px di js/keterangan.js).
+      // Alur lama n8n mengupload ke Drive lalu menyimpan webViewLink; saat migrasi
+      // ke Express langkah itu hilang sehingga bukti dibuang diam-diam. Upload di
+      // sini memakai gasUpsert yang sama dengan foto wajah/tanda tangan.
+      let driveLink=String(b.drive_link||'');
+      if(!driveLink && b.bukti_base64){
+        if(typeof gasUpsert!=='function') return fail(res,500,'Layanan upload bukti belum siap.');
+        const mime=String(b.bukti_mime||'image/jpeg');
+        const ext=(mime.split('/')[1]||'jpg').split('+')[0];
+        try{
+          const up=await gasUpsert({filename:`bukti-ket-${emp.nip||emp.id}_${start}_${end}_${jenis.toLowerCase()}.${ext}`,mimeType:mime,dataBase64:String(b.bukti_base64)});
+          driveLink=up.url;
+        }catch(e){console.error('[keterangan/bukti] gasUpsert gagal',e);return fail(res,502,'Gagal mengunggah bukti ke Google Drive.');}
+      }
       const result=await query(`INSERT INTO ket_temp ("ID_Ket","ID_Pegawai","Nama","NIP","Tanggal","tgl_mulai","tgl_selesai","Jam","Jenis Absen","Ket","Status",${driveLink?'"drive_link",':''}"request_id","instansi_id") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,${driveLink?'$12,':''}$${driveLink?13:12},$${driveLink?14:13}) RETURNING *`, driveLink?[idKet,emp.id,emp.username||'—',emp.nip||'',tglRange,start,end,jam,jenis,ket,status,driveLink,requestId,emp.instansi_id]:[idKet,emp.id,emp.username||'—',emp.nip||'',tglRange,start,end,jam,jenis,ket,status,requestId,emp.instansi_id]);
       if(status==='DISETUJUI') await applyApprovedKeterangan(query,{row:result.rows[0],dates,jenis,emp,requestId,ket,jam});
       if(notify){const arg={jenis,emp,ket,tglRange,durasi,driveLink,instansi_id:emp.instansi_id};(status==='DISETUJUI'?notify({kind:'auto',...arg}):notify({kind:'admin_pending',...arg})).catch(e=>console.error('[keterangan/notify]',e));}

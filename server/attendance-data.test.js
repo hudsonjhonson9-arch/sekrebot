@@ -21,13 +21,14 @@ const PEGAWAI = {
   Status: 'AKTIF',
 };
 
-function harness(query) {
+function harness(query, deps = {}) {
   const app = express();
   app.use(express.json({ limit: '256kb' }));
   app.use('/api', requireRole(ABSEN_ROLES, { lookup: async () => ({ ...ADMIN }) }));
   app.use('/api', createAttendanceDataRouter({
     query: async (text, params) => query(text, params),
     withTransaction: async () => {},
+    ...deps,
   }));
   return app;
 }
@@ -159,4 +160,64 @@ assert.equal(r.status, 200);
   assert.notEqual(String(ins.params[1]), String(ADMIN.id), 'BUKAN id admin');
   assert.equal(ins.params[2], PEGAWAI.username, 'Nama = pegawai terpilih');
   assert.equal(ins.params[3], PEGAWAI.NIP, 'NIP = pegawai terpilih');
+});
+
+test('keterangan dengan bukti_base64: diupload ke Drive, drive_link masuk INSERT', async () => {
+  const sqls = [];
+  const uploads = [];
+  const q = async (text, params) => {
+    sqls.push({ text, params });
+    if (/FROM user_list/i.test(text)) {
+      const row = { ...PEGAWAI, nip: PEGAWAI.NIP };
+      return { rows: [row] };
+    }
+    if (/INSERT INTO ket_temp/i.test(text)) return { rows: [{ ...params }] };
+    if (/FROM ket_temp/i.test(text)) return { rows: [] };
+    return { rows: [] };
+  };
+  const r = await post(harness(q, {
+    gasUpsert: async (arg) => { uploads.push(arg); return { fileId: 'f123', url: 'https://drive.google.com/file/d/f123/view' }; },
+  }), '/api/keterangan', {
+    source: 'admin_panel',
+    user: { id: PEGAWAI.id },
+    jenis: 'TUGAS',
+    keterangan: 'Dinas luar',
+    tgl_mulai: '2026-10-10',
+    tgl_selesai: '2026-10-10',
+    bukti_base64: 'aGVsbG8=',
+    bukti_mime: 'image/jpeg',
+  });
+  assert.equal(r.status, 200);
+  assert.equal(uploads.length, 1, 'bukti_base64 wajib diupload via gasUpsert');
+  assert.equal(uploads[0].dataBase64, 'aGVsbG8=');
+  assert.equal(uploads[0].mimeType, 'image/jpeg');
+  assert.match(uploads[0].filename, /^bukti-ket-/);
+  const ins = sqls.find((s) => /INSERT INTO ket_temp/i.test(s.text));
+  assert.ok(ins, 'harus ada INSERT ket_temp');
+  const linkIdx = ins.text.indexOf('"drive_link"');
+  assert.ok(linkIdx > -1, 'kolom drive_link wajib ikut INSERT');
+  assert.ok(ins.params.includes('https://drive.google.com/file/d/f123/view'), 'URL hasil upload wajib jadi nilai drive_link');
+});
+
+test('keterangan: gasUpsert gagal → 502, INSERT tidak jalan (bukti tidak hilang diam-diam)', async () => {
+  const sqls = [];
+  const q = async (text, params) => {
+    sqls.push({ text, params });
+    if (/FROM user_list/i.test(text)) return { rows: [{ ...PEGAWAI, nip: PEGAWAI.NIP }] };
+    return { rows: [] };
+  };
+  const r = await post(harness(q, {
+    gasUpsert: async () => { throw new Error('Drive down'); },
+  }), '/api/keterangan', {
+    source: 'admin_panel',
+    user: { id: PEGAWAI.id },
+    jenis: 'TUGAS',
+    keterangan: 'Dinas luar',
+    tgl_mulai: '2026-10-10',
+    tgl_selesai: '2026-10-10',
+    bukti_base64: 'aGVsbG8=',
+    bukti_mime: 'image/jpeg',
+  });
+  assert.equal(r.status, 502);
+  assert.ok(!sqls.some((s) => /INSERT INTO ket_temp/i.test(s.text)), 'upload gagal = keterangan tidak boleh tersimpan tanpa bukti');
 });

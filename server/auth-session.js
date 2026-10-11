@@ -121,5 +121,28 @@ export function createAuthSessionRouter({ query = realQuery, arsipSso } = {}) {
     }
   });
 
+  // Re-issue cookie arsip_session dari sesi absensi yang masih berlaku.
+  // Webview Telegram menyimpan _native_token di localStorage sehingga
+  // POST /api/auth/session tidak berjalan lagi saat app dibuka ulang — cookie
+  // arsip tidak pernah diterbitkan di webview itu dan iframe Arsip 401.
+  // Dipanggil klien tepat sebelum memuat iframe Arsip.
+  router.post('/api/auth/arsip-cookie', async (req, res) => {
+    try {
+      const token = String(req.body?.session_token || '').trim();
+      if (!TOKEN_RE.test(token)) {
+        return res.status(400).json({ ok: false, message: 'session_token tidak valid.' });
+      }
+      const row = (await query(
+        `SELECT nip FROM auth_sessions WHERE session_token=$1 AND is_active AND expires_at > now() LIMIT 1`,
+        [token],
+      )).rows[0];
+      if (!row) return res.status(401).json({ ok: false, message: 'Sesi tidak valid atau kedaluwarsa.' });
+      setCookieArsip(res, row.nip);
+      return res.status(200).json({ ok: true });
+    } catch {
+      return dbError(res);
+    }
+  });
+
   return router;
 }

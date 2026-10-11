@@ -347,3 +347,52 @@ test('logout membersihkan cookie arsip', async () => {
   assert.ok(cleared, 'clearCookie harus mengosongkan arsip_session');
   assert.match(cleared, /Max-Age=0/);
 });
+
+// ── Re-issue cookie arsip (webview Telegram: sesi valid tapi cookie tidak ada) ──
+
+test('arsip-cookie: sesi aktif & belum kedaluwarsa menerbitkan cookie arsip_session', async () => {
+  process.env.ARSIP_SESSION_SECRET = 'arsip-secret-16-chars-ok';
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const { pasangArsipCookie, lepasArsipCookie } = await import('./arsip-sso.js');
+  const seen = [];
+  const r = createAuthSessionRouter({
+    query: async (sql, params) => {
+      seen.push({ sql: String(sql), params });
+      if (/FROM auth_sessions/i.test(sql)) return { rows: [{ nip: '12345' }] };
+      return { rows: [] };
+    },
+    arsipSso: { pasangArsipCookie, lepasArsipCookie },
+  });
+  const out = await drive(r, 'POST', '/api/auth/arsip-cookie', { session_token: 'a'.repeat(192) });
+  assert.equal(out.status, 200);
+  const set = out.setCookies.find((h) => /^arsip_session=/.test(h));
+  assert.ok(set, 'wajib menerbitkan cookie arsip_session');
+  assert.match(set, /Domain=\.mindcloud\.my\.id/);
+  const lookup = seen.find((s) => /FROM auth_sessions/i.test(s.sql));
+  assert.ok(lookup.sql.includes('is_active'), 'lookup wajib cek is_active');
+  assert.ok(/expires_at\s*>\s*now\(\)/i.test(lookup.sql), 'lookup wajib cek belum kedaluwarsa');
+});
+
+test('arsip-cookie: sesi tidak dikenal/kedaluwarsa ditolak 401 tanpa cookie', async () => {
+  process.env.ARSIP_SESSION_SECRET = 'arsip-secret-16-chars-ok';
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const { pasangArsipCookie, lepasArsipCookie } = await import('./arsip-sso.js');
+  const r = createAuthSessionRouter({
+    query: async () => ({ rows: [] }),
+    arsipSso: { pasangArsipCookie, lepasArsipCookie },
+  });
+  const out = await drive(r, 'POST', '/api/auth/arsip-cookie', { session_token: 'a'.repeat(192) });
+  assert.equal(out.status, 401);
+  assert.ok(!out.setCookies.some((h) => /^arsip_session=/.test(h)), 'tidak boleh menerbitkan cookie untuk sesi mati');
+});
+
+test('arsip-cookie: token bentuk salah ditolak 400 tanpa menyentuh DB', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  let called = 0;
+  const r = createAuthSessionRouter({ query: async () => { called++; return { rows: [] }; } });
+  for (const bad of [undefined, '', 'pendek', 'C'.repeat(192)]) {
+    const out = await drive(r, 'POST', '/api/auth/arsip-cookie', { session_token: bad });
+    assert.equal(out.status, 400, `token ${String(bad).slice(0, 8)} harus 400`);
+  }
+  assert.equal(called, 0, 'SQL tidak boleh jalan untuk token tidak valid');
+});
