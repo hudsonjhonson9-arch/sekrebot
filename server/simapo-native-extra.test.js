@@ -228,3 +228,47 @@ test('import-bapperida gagal -> 500 tanpa bocor detail internal', async () => {
   assert.equal(r.body.ok, false);
   assert.ok(!JSON.stringify(r.body).includes('DB down'), 'detail error internal tidak boleh bocor');
 });
+
+// ── bast-assign / unit-list: tahunperolehan untuk form Edit Aset ────────────
+
+test('bast-assign meneruskan tahunperolehan sebagai $13, tanpa menggeser parameter lain', async () => {
+  const calls = [];
+  const query = async (sql, params) => { calls.push({ sql, params }); return { rows: [{ id: 'u-1' }] }; };
+  const { port, close } = await listen(stubApp(query, null));
+  const r = await post(port, '/api/simapo/bast-assign', {
+    aset_id: 'u-1', pegawai_id: '1980', ruangan_id: 'r-1', tahunperolehan: '2019',
+  });
+  await close();
+
+  assert.equal(r.status, 200);
+  assert.equal(r.body.ok, true);
+  assert.ok(/tahunperolehan=COALESCE\(NULLIF\(\$13,''\)::int,tahunperolehan\)/.test(calls[0].sql), 'kolom ikut di-update');
+  assert.equal(calls[0].params[10], 'u-1', 'id unit tetap di $11');
+  assert.equal(calls[0].params[12], '2019', 'tahunperolehan di $13');
+});
+
+test('bast-assign tanpa tahunperolehan mengirim string kosong (COALESCE -> tetap)', async () => {
+  const calls = [];
+  const query = async (sql, params) => { calls.push({ sql, params }); return { rows: [{ id: 'u-1' }] }; };
+  const { port, close } = await listen(stubApp(query, null));
+  const r = await post(port, '/api/simapo/bast-assign', { aset_id: 'u-1' });
+  await close();
+
+  assert.equal(r.status, 200);
+  assert.equal(calls[0].params[12], '', 'tanpa tahun -> string kosong, SQL biarkan kolom lama');
+});
+
+test('unit-list mengembalikan tahunperolehan untuk prefill form', async () => {
+  const sqls = [];
+  const query = async (sql) => {
+    sqls.push(sql);
+    return { rows: [{ items: [{ id: 'u-1', tahunperolehan: 2019, pegawai_id: null, ruangan_id: null }] }] };
+  };
+  const { port, close } = await listen(stubApp(query, null));
+  const r = await req(port, '/api/simapo/unit-list?barangid=b-1');
+  await close();
+
+  assert.equal(r.status, 200);
+  assert.ok(sqls[0].includes('ua.tahunperolehan'), 'SELECT menyertakan tahunperolehan');
+  assert.equal(r.body.data[0].tahunperolehan, 2019);
+});

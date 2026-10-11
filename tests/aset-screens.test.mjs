@@ -10,18 +10,18 @@ new Function('window', src)(win);
 const SCREENS = win.ASET_SCREENS;
 
 const USER_KEYS = ['katalog', 'pinjaman-saya', 'tiket-saya'];
-const ADMIN_KEYS = ['master', 'kat', 'mutasi', 'opname', 'standar-harga', 'bast', 'pinjam',
+const ADMIN_KEYS = ['master', 'kat', 'mutasi', 'opname', 'standar-harga', 'bast', 'ruangan', 'pinjam',
   'tiket', 'penerimaan', 'pemeliharaan', 'bku', 'pks', 'pengaturan'];
 
-test('tepat 16 layar: 3 user + 13 admin', () => {
-  assert.equal(SCREENS.length, 16);
+test('tepat 17 layar: 3 user + 14 admin', () => {
+  assert.equal(SCREENS.length, 17);
   assert.equal(SCREENS.filter(s => s.role === 'user').length, 3);
-  assert.equal(SCREENS.filter(s => s.role === 'admin').length, 13);
+  assert.equal(SCREENS.filter(s => s.role === 'admin').length, 14);
 });
 
 test('key unik dan sesuai daftar yang_DISEPAKATI', () => {
   const keys = SCREENS.map(s => s.key);
-  assert.equal(new Set(keys).size, 16, 'key duplikat');
+  assert.equal(new Set(keys).size, 17, 'key duplikat');
   assert.deepEqual(keys.filter(k => k.endsWith('-saya') || k === 'katalog'), USER_KEYS);
   assert.deepEqual(keys.filter(k => !USER_KEYS.includes(k)), ADMIN_KEYS);
 });

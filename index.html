@@ -1860,6 +1860,19 @@
           </div>
         </div>
 
+        <!-- [TAB] RUANGAN (KIR) -->
+        <div id="aset-sect-ruangan" class="aset-sect">
+          <div class="card glass-card">
+            <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+              <span><i class="fas fa-building" aria-hidden="true"></i> Daftar Ruangan &amp; KIR</span>
+              <button class="btn-sm-admin" onclick="loadAsetRuangan(true)" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
+            </div>
+            <div class="radius-note" style="margin-bottom:12px">Kartu Inventaris Ruangan (KIR) berisi daftar aset yang
+              berada di tiap ruangan. Ruangan dikelola lewat tombol "Set Pemegang" pada layar BAST.</div>
+            <div id="ruanganList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
+          </div>
+        </div>
+
     </div>
 
     <!-- ══ TAB ADMIN (conditional) ══ -->
@@ -3120,10 +3133,10 @@
   <!-- simapo-admin.js dihapus (dikonsolidasi ke simapo-ext.js) -->
   
   
-  <script src="js/aset-screens.js?v=1"></script>
+  <script src="js/aset-screens.js?v=2"></script>
 <script src="js/aset-nav.js?v=1"></script>
-<script src="js/simapo-ext.js?v=999"></script>
-  <script src="js/simapo-bast.js?v=3"></script>
+<script src="js/simapo-ext.js?v=1000"></script>
+  <script src="js/simapo-bast.js?v=5"></script>
 
   <!-- 6. Supplementary features -->
 
@@ -3400,7 +3413,7 @@
           </div>
           <div style="flex:1;">
             <label style="display:block; font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Jenis Aset</label>
-            <select id="smfJenis" class="form-input" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:38px; color:#fff; font-size:12px; padding:0 12px; outline:none; box-sizing:border-box;">
+            <select id="smfJenis" class="form-input" onchange="document.getElementById('smfUnitFields').style.display=this.value==='Aset Tetap'?'block':'none'" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:38px; color:#fff; font-size:12px; padding:0 12px; outline:none; box-sizing:border-box;">
               <option value="Aset Tetap">Aset Tetap</option>
               <option value="Habis Pakai">Habis Pakai</option>
             </select>
@@ -3429,6 +3442,27 @@
         <div>
           <label style="display:block; font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Spesifikasi / Deskripsi</label>
           <textarea id="smfSpesifikasi" class="form-input" placeholder="Spesifikasi teknis, lokasi penyimpanan, dll." style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:80px; color:#fff; font-size:12px; padding:10px 12px; outline:none; resize:vertical; font-family:inherit; box-sizing:border-box;"></textarea>
+        </div>
+        <div id="smfUnitFields" style="display:none; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px;">
+          <label style="display:block; font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:10px; letter-spacing:0.5px;">Data Unit Aset (Unit Pertama)</label>
+          <div style="display:flex; gap:12px;">
+            <div style="width:110px;">
+              <label style="display:block; font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Tahun</label>
+              <input type="number" id="smfTahun" class="form-input" min="1970" max="2100" placeholder="2026" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:38px; color:#fff; font-size:12px; padding:0 12px; outline:none; box-sizing:border-box;" />
+            </div>
+            <div style="flex:1;">
+              <label style="display:block; font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Pegawai Pemegang</label>
+              <select id="smfPegawai" class="form-input" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:38px; color:#fff; font-size:12px; padding:0 12px; outline:none; box-sizing:border-box;">
+                <option value="">— Tanpa Pemegang —</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            <label style="display:block; font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Ruangan</label>
+            <select id="smfRuangan" class="form-input" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:38px; color:#fff; font-size:12px; padding:0 12px; outline:none; box-sizing:border-box;">
+              <option value="">— Tanpa Ruangan —</option>
+            </select>
+          </div>
         </div>
       </div>
       <!-- Modal Footer -->

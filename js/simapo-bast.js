@@ -351,6 +351,92 @@ window.bastPreviewDocx = async function() {
   await window.bastRenderDocx(built.tags, fname);
 };
 
+/* ─── KIR — KARTU INVENTARIS RUANGAN (cetak dari layar Ruangan) ─── */
+window._kirData = { ruangan: [], aset: [] };
+
+window.loadAsetRuangan = async function(force = false) {
+  const el = document.getElementById('ruanganList');
+  if (!el) return;
+  if (force) window.showAdminSimapoShimmer('ruanganList');
+  try {
+    const res = await apiFetch(P.simapoBastList);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    const data = (json && json.data) || {};
+    window._kirData = { ruangan: data.ruangan || [], aset: data.aset || [] };
+  } catch (e) {
+    console.warn('[Ruangan] fetch fail:', e);
+    window.simapoErrorState('ruanganList', 'Gagal memuat data ruangan.');
+    return;
+  }
+  window.renderAsetRuangan();
+};
+
+window.renderAsetRuangan = function() {
+  const el = document.getElementById('ruanganList');
+  if (!el) return;
+  const { ruangan, aset } = window._kirData;
+  if (!ruangan.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px;">Belum ada ruangan. Tambah lewat "Set Pemegang" pada layar BAST.</div>';
+    return;
+  }
+  el.innerHTML = ruangan.map(function(r) {
+    const n = aset.filter(function(a) { return String(a.ruangan_id || '') === String(r.id); }).length;
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;margin-bottom:8px;">' +
+      '<i class="fas fa-building" aria-hidden="true" style="color:var(--muted);"></i>' +
+      '<div style="flex:1;min-width:0;">' +
+      '<div style="font-size:13px;font-weight:600;color:var(--white);">' + String(r.nama || '').replace(/</g, '&lt;') + '</div>' +
+      '<div style="font-size:11px;color:var(--muted);">' + n + ' aset' + (r.kode ? ' · ' + String(r.kode).replace(/</g, '&lt;') : '') + '</div>' +
+      '</div>' +
+      '<button class="btn-sm-admin" onclick="cetakKIR(\'' + String(r.id).replace(/'/g, '') + '\')" style="background:rgba(59,130,246,0.2);white-space:nowrap;"><i class="fas fa-print" aria-hidden="true"></i> Cetak KIR</button>' +
+      '</div>';
+  }).join('');
+};
+
+window.cetakKIR = function(rid) {
+  if (!rid) return;
+  const ruang = (window._kirData.ruangan || []).find(x => String(x.id) === String(rid));
+  const asets = (window._kirData.aset || []).filter(a => String(a.ruangan_id || '') === String(rid));
+  if (!asets.length) { showToast('Tidak ada aset di ruangan ini.', 'error'); return; }
+
+  const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const tgl = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  const rows = asets.map((a, i) =>
+    '<tr><td style="text-align:center;">' + (i + 1) + '</td>' +
+    '<td>' + esc(a.kodebarang) + '</td>' +
+    '<td>' + esc(a.nama_barang) + '</td>' +
+    '<td>' + esc(a.merk_type || a.model_jenis || '-') + '</td>' +
+    '<td style="text-align:center;">' + esc(a.tahun_pembuatan || '-') + '</td>' +
+    '<td style="text-align:right;">' + bastRupiah(a.nilaiperolehan || 0) + '</td>' +
+    '<td style="text-align:center;">' + esc(a.kondisi || '-') + '</td></tr>').join('');
+  const total = asets.reduce((s, a) => s + (Number(a.nilaiperolehan) || 0), 0);
+
+  const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>KIR - ' + esc(ruang && ruang.nama) + '</title>' +
+    '<style>body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:24px;}' +
+    '.kop{text-align:center;margin-bottom:14px;}.kop h1{font-size:15px;margin:0;text-transform:uppercase;}' +
+    '.kop p{margin:2px 0 0;font-size:12px;}h2{text-align:center;font-size:14px;text-decoration:underline;margin:0 0 4px;}' +
+    '.sub{text-align:center;margin:0 0 14px;}table{width:100%;border-collapse:collapse;font-size:11px;}' +
+    'th,td{border:1px solid #000;padding:4px 6px;}th{background:#eee;}' +
+    '.foot{margin-top:28px;display:flex;justify-content:space-between;}' +
+    '.sig{text-align:center;}.sig p{margin:2px 0 0;}' +
+    '@media print{body{margin:12mm;}}</style></head><body>' +
+    '<div class="kop"><h1>Kartu Inventaris Ruangan (KIR)</h1><p>Ruangan: <b>' + esc(ruang && ruang.nama) + '</b></p></div>' +
+    '<table><thead><tr><th style="width:30px;">No</th><th style="width:110px;">Kode Barang</th><th>Nama Barang</th>' +
+    '<th style="width:120px;">Merk / Type</th><th style="width:50px;">Tahun</th><th style="width:110px;">Nilai Perolehan</th>' +
+    '<th style="width:60px;">Kondisi</th></tr></thead><tbody>' + rows + '</tbody>' +
+    '<tfoot><tr><td colspan="5" style="text-align:right;font-weight:bold;">Total Nilai Perolehan</td>' +
+    '<td style="text-align:right;font-weight:bold;">' + bastRupiah(total) + '</td><td></td></tr></tfoot></table>' +
+    '<div class="foot"><div class="sig"><p>Mengetahui,</p><p>Kepala</p><br><br><br><p>(...........................)</p></div>' +
+    '<div class="sig"><p>Waikabubak, ' + tgl + '</p><p>Petugas</p><br><br><br><p>(...........................)</p></div></div>' +
+    '<script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script>' +
+    '</body></html>';
+
+  const w = window.open('', '_blank');
+  if (!w) { showToast('Popup diblokir. Izinkan popup untuk mencetak KIR.', 'error'); return; }
+  w.document.write(html);
+  w.document.close();
+};
+
 /* ─── ARSIP BAST ────────────────────────────────────────────── */
 async function bastSavePayload(built) {
   const peId = window._bastSel.pe;

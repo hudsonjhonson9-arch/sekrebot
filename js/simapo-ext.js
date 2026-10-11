@@ -1,5 +1,6 @@
 /* ─── GLOBAL STATE ── */
 window._simapoMasterEditId = null;
+window._simapoMasterUnitId = null; // unit pertama saat edit (untuk tahun/pegawai/ruangan)
 window._allPinjamData = [];
 window._allTiketData = [];
 window._allMasterData = [];
@@ -60,7 +61,7 @@ window.simapoResponseError = async function(res, fallback) {
 };
 
 window.simapoSubmit = async function(endpoint, payload, opts = {}) {
-  const successMsg = opts.successMsg || 'Berhasil disimpan';
+  const successMsg = opts.successMsg !== undefined ? opts.successMsg : 'Berhasil disimpan';
   const errorMsg = opts.errorMsg || 'Gagal menyimpan data. Perubahan tidak tersimpan.';
   const onSuccess = opts.onSuccess;
 
@@ -82,9 +83,9 @@ window.simapoSubmit = async function(endpoint, payload, opts = {}) {
     return false;
   }
 
-  showToast(successMsg, 'success');
-  if (typeof onSuccess === 'function') onSuccess();
-  return true;
+  if (successMsg) showToast(successMsg, 'success');
+  if (typeof onSuccess === 'function') onSuccess(body);
+  return body || true; // body berisi id barang saat save — dipakai saveSimapoMaster untuk unit
 };
 
 /* ─── NAMA INSTANSI AKTIF ───────────────────────────────────── */
@@ -386,8 +387,21 @@ window.filterSAMaster = function(val) {
   window.renderAdminSimapoMaster(filtered);
 };
 
+/* ── Referensi pegawai & ruangan untuk form aset (sekali fetch, cache 2 menit) ── */
+window._simapoLoadRefData = function() {
+  return window._simapoCache.getOrFetch('bast_ref', async () => {
+    try {
+      const res = await apiFetch(P.simapoBastList);
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json && json.data ? { pegawai: json.data.pegawai || [], ruangan: json.data.ruangan || [] } : null;
+    } catch { return null; }
+  }, false);
+};
+
 window.showSimapoMasterForm = async function(id = null) {
   window._simapoMasterEditId = id;
+  window._simapoMasterUnitId = null;
   const modal = document.getElementById('modalSimapoMaster');
   if (!modal) return;
 
@@ -414,6 +428,11 @@ window.showSimapoMasterForm = async function(id = null) {
   document.getElementById('smfStok').value = '0';
   document.getElementById('smfHarga').value = '0';
   document.getElementById('smfSpesifikasi').value = '';
+  document.getElementById('smfTahun').value = '';
+  const selPeg = document.getElementById('smfPegawai');
+  const selRuang = document.getElementById('smfRuangan');
+  if (selPeg) selPeg.innerHTML = '<option value="">— Tanpa Pemegang —</option>';
+  if (selRuang) selRuang.innerHTML = '<option value="">— Tanpa Ruangan —</option>';
   const titleEl = document.getElementById('smfTitle');
   if (titleEl) titleEl.textContent = id ? 'Edit Data Aset' : 'Tambah Aset Baru';
 
@@ -429,6 +448,34 @@ window.showSimapoMasterForm = async function(id = null) {
       document.getElementById('smfMinStok').value = item.minimumstok || 0;
       document.getElementById('smfHarga').value = item.hargasatuan || 0;
       document.getElementById('smfSpesifikasi').value = item.spesifikasi || '';
+    }
+  }
+
+  // Tampilkan bidang unit hanya untuk Aset Tetap; isi dari unit pertama saat edit
+  const showUnit = document.getElementById('smfJenis').value === 'Aset Tetap';
+  const unitFields = document.getElementById('smfUnitFields');
+  if (unitFields) unitFields.style.display = showUnit ? 'block' : 'none';
+  if (showUnit) {
+    const ref = await window._simapoLoadRefData();
+    if (ref && selPeg) {
+      selPeg.innerHTML = '<option value="">— Tanpa Pemegang —</option>' +
+        ref.pegawai.map(p => `<option value="${p.id}">${p.nama || p.id}${p.nip ? ' (' + p.nip + ')' : ''}</option>`).join('');
+    }
+    if (ref && selRuang) {
+      selRuang.innerHTML = '<option value="">— Tanpa Ruangan —</option>' +
+        ref.ruangan.map(ru => `<option value="${ru.id}">${ru.nama}</option>`).join('');
+    }
+    if (id) {
+      try {
+        const res = await apiGet(P.simapoUnitList, { barangid: id });
+        const u0 = (res.rows || [])[0];
+        if (u0) {
+          window._simapoMasterUnitId = u0.id;
+          document.getElementById('smfTahun').value = u0.tahunperolehan || '';
+          if (selPeg) selPeg.value = u0.pegawai_id || '';
+          if (selRuang) selRuang.value = u0.ruangan_id || '';
+        }
+      } catch { /* unit belum ada — biarkan kosong */ }
     }
   }
 
@@ -498,17 +545,42 @@ window.saveSimapoMaster = async function() {
     spesifikasi: document.getElementById('smfSpesifikasi')?.value.trim(),
   };
   if (!payload.nama) { showToast('Nama wajib diisi!', 'error'); return; }
+  const unitFields = {
+    tahunperolehan: document.getElementById('smfTahun')?.value || '',
+    pegawai_id: document.getElementById('smfPegawai')?.value || '',
+    ruangan_id: document.getElementById('smfRuangan')?.value || '',
+  };
   showToast('Menyimpan...', 'info');
-  await window.simapoSubmit(P.simapoAdminMasterSave, payload, {
-    successMsg: 'Aset tersimpan',
+  const ok = await window.simapoSubmit(P.simapoAdminMasterSave, payload, {
+    successMsg: null, // pesan disimpan sampai unit ikut tersimpan
     errorMsg: 'Gagal menyimpan aset.',
-    onSuccess: () => {
-      window._simapoCache.clear('admin_master');
-      window._simapoCache.clear('user_katalog');
-      window.loadAdminSimapoMaster(true);
-      if (window.closeSimapoMasterForm) window.closeSimapoMasterForm();
-    },
+    onSuccess: () => {},
   });
+  if (!ok) return;
+  const savedId = (ok && ok.id) || window._simapoMasterEditId; // id baru dari server, atau id edit
+
+  // Simpan bidang unit (tahun/pegawai/ruangan) via bast-assign pada unit pertama
+  if (payload.jenisbarang === 'Aset Tetap' && (unitFields.tahunperolehan || unitFields.pegawai_id || unitFields.ruangan_id)) {
+    try {
+      let unitId = window._simapoMasterUnitId;
+      if (!unitId && savedId) {
+        const res = await apiGet(P.simapoUnitList, { barangid: savedId });
+        unitId = (res.rows || [])[0]?.id || null;
+      }
+      if (unitId) {
+        await window.simapoSubmit(P.simapoBastAssign, { aset_id: unitId, ...unitFields }, {
+          successMsg: null, errorMsg: 'Aset tersimpan, tetapi data unit gagal diperbarui.',
+        });
+      }
+    } catch { /* unit belum ada (mis. stok 0) — abaikan */ }
+  }
+
+  showToast('Aset tersimpan', 'success');
+  window._simapoCache.clear('admin_master');
+  window._simapoCache.clear('user_katalog');
+  window._simapoCache.clear('bast_ref');
+  window.loadAdminSimapoMaster(true);
+  if (window.closeSimapoMasterForm) window.closeSimapoMasterForm();
 };
 
 /* ─── OTHERS ── */

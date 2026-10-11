@@ -1,4 +1,4 @@
-/* Data 16 layar Aset — sumber kebenaran grid, router, dan eager load.
+/* Data 17 layar Aset — sumber kebenaran grid, router, dan eager load.
    load: [namaFungsiGlobal, ...argumen]. Fungsi yang hilang dilewati tanpa error. */
 window.ASET_SCREENS = [
   { key: 'master',        label: 'Aset',                icon: 'fa-cubes',           role: 'admin', load: [['loadAdminSimapoMaster', false]] },
@@ -7,6 +7,7 @@ window.ASET_SCREENS = [
   { key: 'opname',        label: 'Opname',              icon: 'fa-clipboard-check', role: 'admin', load: [['loadOpnameForm']] },
   { key: 'standar-harga', label: 'Standar Harga',       icon: 'fa-money-bill-wave', role: 'admin', load: [['loadStandarHarga', false]] },
   { key: 'bast',          label: 'Serah Terima (BAST)', icon: 'fa-file-signature',  role: 'admin', load: [['loadAdminBast', false], ['loadBastHistory', false]] },
+  { key: 'ruangan',       label: 'Ruangan (KIR)',       icon: 'fa-building',        role: 'admin', load: [['loadAsetRuangan', false]] },
   { key: 'pinjam',        label: 'Pinjaman',            icon: 'fa-clipboard-list',  role: 'admin', load: [['loadAdminSimapoPinjam', false]] },
   { key: 'tiket',         label: 'Tiket',               icon: 'fa-inbox',           role: 'admin', load: [['loadAdminSimapoTiket', false]] },
   { key: 'penerimaan',    label: 'Penerimaan',          icon: 'fa-truck',           role: 'admin', load: [['loadAdminPenerimaan', false], ['populateStandarHargaDatalist']] },
