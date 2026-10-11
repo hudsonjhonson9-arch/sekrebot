@@ -1544,6 +1544,7 @@
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
               <span><i class="fas fa-archive" aria-hidden="true"></i> Data Master Aset</span>
               <div style="display:flex;gap:6px;">
+                <button class="btn-sm-admin" onclick="simapoMasterExportExcel().catch(e=>showToast(e.message||'Export gagal','error'))" title="Export xlsx + QR" style="background:rgba(34,197,94,0.15);color:#22c55e;"><i class="fas fa-file-excel" aria-hidden="true"></i></button>
                 <button class="btn-sm-admin" onclick="loadAdminSimapoMaster()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
               </div>
             </div>
@@ -3197,7 +3198,7 @@
   
   <script src="js/aset-screens.js?v=3"></script>
 <script src="js/aset-nav.js?v=1"></script>
-<script src="js/simapo-ext.js?v=1000"></script>
+  <script src="js/simapo-ext.js?v=1001"></script>
   <script src="js/simapo-bast.js?v=11"></script>
 
   <!-- 6. Supplementary features -->
