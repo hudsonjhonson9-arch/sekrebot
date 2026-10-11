@@ -722,7 +722,7 @@ function renderRekap(pg) {
       else if (!rawPulang) { pulangLabel = 'Belum Absen'; pulangColor = 'var(--warning)'; pulangIcon = '<i class="fas fa-hourglass-half"></i>'; }
       else if (cepatMnt > 0) { pulangLabel = `Cepat ${cepatMnt}m`; pulangColor = '#f97316'; pulangIcon = '<i class="fas fa-running"></i>'; }
       else if (pulangLuar > 0) { pulangLabel = 'Lapangan'; pulangColor = '#f59e0b'; pulangIcon = '<i class="fas fa-running"></i>'; }
-      else { pulangLabel = 'Tepat'; pulangColor = 'var(--info)'; pulangIcon = '<i class="fas fa-circle"></i>'; }
+      else { pulangLabel = 'Tepat'; pulangColor = 'var(--info)'; pulangIcon = '<i class="fas fa-home"></i>'; }
 
       // Kehadiran overall status untuk warna border card
       const isHadir = (masuk + lambatCount) > 0 || !!p._rawMasukLog || !!p._rawPulangLog;

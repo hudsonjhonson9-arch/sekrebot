@@ -145,6 +145,23 @@
       dom.hide('logModal');
     }
 
+    // ── Auto-set Jenis Absen dari jam (sekali attach, bukan per-buka modal) ──
+    function _autoJenisLog() {
+      const jam = $('inLogJam')?.value, tgl = $('inLogTanggal')?.value, sel = $('inLogJenis');
+      if (!jam || !tgl || !sel) return;
+      // Hanya overwrite jika jenis masih tipe waktu (bukan IZIN/SAKIT/dll yang dipilih manual)
+      const TIME_TYPES = ['MASUK', 'PULANG', 'DI LUAR JAM MASUK', 'DI LUAR JAM PULANG'];
+      if (!TIME_TYPES.includes(sel.value)) return;
+      const tot = toMenitStr(jam);
+      if (tot == null) return;
+      const j = getJamForTanggal(tgl);
+      const jm = toMenitStr(j.masuk) ?? JAM_MASUK_MENIT;
+      const jp = toMenitStr(j.pulang) ?? JAM_PULANG_MENIT;
+      sel.value = tot <= jm ? 'MASUK' : tot < 720 ? 'DI LUAR JAM MASUK' : tot < jp ? 'DI LUAR JAM PULANG' : 'PULANG';
+    }
+    document.getElementById('inLogJam')?.addEventListener('change', _autoJenisLog);
+    document.getElementById('inLogTanggal')?.addEventListener('change', _autoJenisLog);
+
     let _pegawaiListCache = null;
     async function loadLogPegawaiList() {
       const select = $('inLogPegawai');

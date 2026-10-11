@@ -50,7 +50,7 @@
     function getTodayBadge(jenis) {
       const j = (jenis || '').toUpperCase().trim();
       if (j === 'MASUK') return { cls: 'tb-masuk', icon: '<i class="fas fa-circle"></i>', lbl: 'MASUK' };
-      if (j === 'PULANG') return { cls: 'tb-pulang', icon: '<i class="fas fa-circle"></i>', lbl: 'PULANG' };
+      if (j === 'PULANG') return { cls: 'tb-pulang', icon: '<i class="fas fa-home"></i>', lbl: 'PULANG' };
       if (j === 'PULANG LUAR') return { cls: 'tb-pulang-luar', icon: '<i class="fas fa-running"></i>', lbl: 'PULANG LAPANGAN' };
       if (j.includes('LUAR') && j.includes('MASUK')) return { cls: 'tb-luar', icon: '<i class="fas fa-exclamation-triangle"></i>', lbl: 'LUAR JAM MASUK' };
       if (j.includes('LUAR') && j.includes('PULANG')) return { cls: 'tb-luar', icon: '<i class="fas fa-running"></i>', lbl: 'PULANG CEPAT' };

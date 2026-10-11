@@ -87,7 +87,7 @@
     function getLC(j) {
       const x = (j || '').toUpperCase().trim();
       if (x === 'MASUK') return { cls: 'l-masuk', icon: '<i class="fas fa-circle"></i>', lbl: 'MASUK' };
-      if (x === 'PULANG') return { cls: 'l-pulang', icon: '<i class="fas fa-circle"></i>', lbl: 'PULANG' };
+      if (x === 'PULANG') return { cls: 'l-pulang', icon: '<i class="fas fa-home"></i>', lbl: 'PULANG' };
       if (x === 'PULANG LUAR') return { cls: 'l-pulang-luar', icon: '<i class="fas fa-running"></i>', lbl: 'PULANG LAPANGAN' };
       if (x.includes('LUAR') && x.includes('MASUK')) return { cls: 'l-luar', icon: '<i class="fas fa-exclamation-triangle"></i>', lbl: 'LUAR JAM MASUK' };
       if (x.includes('LUAR') && x.includes('PULANG')) return { cls: 'l-luar', icon: '<i class="fas fa-running"></i>', lbl: 'PULANG CEPAT' };
@@ -534,7 +534,7 @@ function _weekDayStatus(dStr, isToday, isFuture) {
   }
   if (isFuture) return { key: 'future', icon: 'fa-hourglass-half', label: 'Akan datang', det: '' };
   if (hariLiburSet.has(dStr)) return { key: 'libur', icon: 'fa-mug-hot', label: 'Libur', det: '' };
-  if (isToday) return { key: 'empty', icon: 'fa-ellipsis', label: 'Belum absen', det: '' };
+  if (isToday) return { key: 'empty', icon: 'fa-circle', label: 'Belum absen', det: '' };
   return { key: 'alpha', icon: 'fa-circle-xmark', label: 'Tanpa keterangan', det: '' };
 }
 
@@ -561,7 +561,7 @@ function showWeekDetail(i) {
   if (st.det) txt += ` · ${st.det}`;
   if (st.ket) txt += ` · ${st.ket}`;
   det.style.opacity = '0';
-  setTimeout(() => { det.innerHTML = txt; det.style.opacity = '1'; }, 120);
+  setTimeout(() => { det.innerHTML = txt; det.style.opacity = '1'; }, 200);
 }
 
 async function loadWeekHistory() {
