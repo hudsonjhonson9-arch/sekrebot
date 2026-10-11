@@ -625,6 +625,8 @@ window.loadAsetPegawai = async function(force = false) {
   if (window._asetPegSel.pegawai && (window._bastData.pegawai || []).some(p => String(p.id) === String(window._asetPegSel.pegawai))) {
     selEl.value = window._asetPegSel.pegawai;
   }
+  makeSearchDd('asetPegSel', { ph: 'Ketik nama/NIP pegawai...' });
+  syncSearchDdLabel('asetPegSel');
   window.renderAsetPegList();
 };
 
