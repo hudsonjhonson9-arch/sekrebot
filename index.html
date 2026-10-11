@@ -1343,8 +1343,12 @@
 
     <!-- ══ TAB SIMAPO ══ -->
     <div class="panel" id="panel-simapo">
-      <div class="rekap-header" style="margin-bottom: 12px;">
-        <div class="rekap-title"><i class="fas fa-box" aria-hidden="true"></i> Manajemen Aset</div>
+      <div class="aset-hero">
+        <div class="aset-hero-title"><i class="fas fa-box" aria-hidden="true"></i> Manajemen Aset</div>
+        <div class="aset-hero-sub">Kelola baru hingga keluar: master, pinjam, mutasi, dan perawatan aset sekolah.</div>
+        <button class="aset-scan-btn" onclick="window.scanQRAset()" aria-label="Scan QR Aset">
+          <i class="fas fa-camera" aria-hidden="true"></i> Scan QR Aset
+        </button>
       </div>
       
       <!-- Filter Instansi SIMAPO (Only visible to Superadmin) -->
@@ -1450,13 +1454,22 @@
         </div>
       </div>
 <style>
-/* ── ASET: grid fitur (4 / 3 / 2) + kontainer layar ── */
+/* ── ASET: hero + grid fitur (4 / 3 / 2) + kontainer layar ── */
+.aset-hero{display:flex;flex-direction:column;gap:8px;padding:16px 18px;margin-bottom:14px;background:var(--card-bg);border:1px solid var(--border);border-radius:16px}
+.aset-hero-title{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;color:var(--white)}
+.aset-hero-title i{color:var(--gold);font-size:18px}
+.aset-hero-sub{font-size:12px;color:var(--muted);line-height:1.5}
+.aset-scan-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:4px;padding:11px 16px;background:var(--gold);color:#1a1d21;border:none;border-radius:12px;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer;transition:transform .15s,filter .15s}
+.aset-scan-btn:hover{transform:translateY(-1px);filter:brightness(1.08)}
+.aset-scan-btn:active{transform:scale(.97)}
 .aset-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
-.aset-card{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:104px;padding:16px 10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;color:var(--white);cursor:pointer;font-family:inherit;transition:border-color .18s,background .18s,transform .18s}
-.aset-card:hover{background:rgba(59,130,246,0.10);border-color:rgba(59,130,246,0.45);transform:translateY(-2px)}
+.aset-card{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:128px;padding:16px 10px;background:var(--card-bg);border:1px solid var(--border);border-radius:14px;color:var(--white);cursor:pointer;font-family:inherit;transition:border-color .18s,background .18s,transform .18s}
+.aset-card:hover{background:var(--gold-dim);border-color:var(--gold);transform:translateY(-2px)}
+.aset-card:active{transform:translateY(0) scale(.97)}
 .aset-card:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-.aset-card i{font-size:26px;color:var(--gold);line-height:1}
+.aset-card-icon{display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:12px;background:var(--gold-dim);color:var(--gold);font-size:20px}
 .aset-card-label{font-size:12px;font-weight:700;text-align:center;line-height:1.35}
+.aset-card-desc{font-size:10px;color:var(--muted);text-align:center;line-height:1.4;min-height:14px}
 .aset-card-warn{position:absolute;top:8px;right:8px;font-size:11px;color:var(--danger)}
 .aset-sect{display:none}
 @media(max-width:1100px){.aset-grid{grid-template-columns:repeat(3,1fr)}}
@@ -1509,9 +1522,14 @@
                 <button class="btn-sm-admin" onclick="loadAdminSimapoMaster()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
               </div>
             </div>
-            <button class="btn-primary" onclick="showSimapoMasterForm()" style="width:100%;margin:10px 0;background:rgba(255,255,255,0.04);border:1px dashed var(--gold);color:var(--gold);">
-              <div class="btn-inner"><span><i class="fas fa-plus" aria-hidden="true"></i></span> Tambah Aset Baru</div>
-            </button>
+            <div style="display:flex;gap:8px;margin:10px 0 10px;">
+              <button class="btn-primary" onclick="window.scanQRAset()" style="flex:1.2;background:var(--gold);border-color:var(--gold);color:#1a1d21;">
+                <div class="btn-inner"><span><i class="fas fa-camera" aria-hidden="true"></i></span> Scan QR Aset</div>
+              </button>
+              <button class="btn-primary" onclick="showSimapoMasterForm()" style="flex:1;background:rgba(255,255,255,0.04);border:1px dashed var(--gold);color:var(--gold);">
+                <div class="btn-inner"><span><i class="fas fa-plus" aria-hidden="true"></i></span> Tambah</div>
+              </button>
+            </div>
             <input type="text" id="saSearchMaster" class="form-input" placeholder="Cari nama atau kode aset..." oninput="filterSAMaster(this.value)" style="margin-bottom:10px;">
             <div id="adminSimapoMasterList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
           </div>

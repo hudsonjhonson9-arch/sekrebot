@@ -362,20 +362,27 @@ window.renderAdminSimapoMaster = function(data) {
   if (!data || data.length === 0) { el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-box" aria-hidden="true"></i> Belum ada data aset.</div>`; return; }
   const fmt = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
 
-  el.innerHTML = data.map(item => `
-    <div data-barang-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);margin-bottom:8px;">
-      <div style="width:40px;height:40px;border-radius:8px;background:rgba(201,168,76,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;"><i class="fas fa-box" aria-hidden="true"></i></div>
+  el.innerHTML = data.map(item => {
+    const stok = Number(item.stok_saat_ini) || 0;
+    const stockColor = stok > 0 ? 'var(--success)' : 'var(--danger)';
+    return `
+    <div data-barang-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:var(--card-bg);border:1px solid var(--border);margin-bottom:8px;">
+      <div style="width:44px;height:44px;border-radius:10px;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;"><i class="fas fa-box" aria-hidden="true"></i></div>
       <div style="flex:1;min-width:0;">
         <div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.nama}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${item.kodebarang} &nbsp;·&nbsp; Stok: <span style="color:${item.stok_saat_ini > 0 ? 'var(--success)' : 'var(--danger)'}">${item.stok_saat_ini} ${item.satuan}</span></div>
-        <div style="font-size:11px;color:var(--gold);margin-top:2px;">${fmt(item.hargasatuan || 0)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${item.kodebarang}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap;">
+          <span style="font-size:10px;font-weight:800;color:${stockColor};background:rgba(255,255,255,0.04);border:1px solid currentColor;border-radius:6px;padding:2px 8px;">Stok: ${stok} ${item.satuan || ''}</span>
+          <span style="font-size:11px;font-weight:700;color:var(--gold);">${fmt(item.hargasatuan || 0)}</span>
+        </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
-        <button onclick="window.showSimapoMasterForm('${item.id}')" style="padding:6px 10px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-edit" aria-hidden="true"></i></button>
-        <button onclick="window.deleteSimapoMaster('${item.id}')" style="padding:6px 10px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-trash" aria-hidden="true"></i></button>
-        <button onclick="toggleUnitList('${item.id}', this)" style="padding:6px 10px;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2);border-radius:6px;font-size:10px;cursor:pointer;font-weight:700;">▶ QR</button>
+      <div style="display:flex;gap:6px;flex-shrink:0;align-items:center;">
+        <button onclick="window.showSimapoMasterForm('${item.id}')" title="Edit aset" aria-label="Edit aset" style="padding:8px 12px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:700;"><i class="fas fa-edit" aria-hidden="true"></i></button>
+        <button onclick="toggleUnitList('${item.id}', this)" title="Lihat unit & QR" style="padding:8px 12px;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2);border-radius:8px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-mobile-alt" aria-hidden="true"></i> QR</button>
+        <button onclick="window.deleteSimapoMaster('${item.id}')" title="Hapus aset" aria-label="Hapus aset" style="padding:8px 12px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:8px;font-size:12px;cursor:pointer;font-weight:700;"><i class="fas fa-trash" aria-hidden="true"></i></button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 };
 
 window.filterSAMaster = function(val) {

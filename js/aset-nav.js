@@ -81,8 +81,6 @@
       const label = document.createElement('span');
       label.className = 'aset-card-label';
       label.textContent = s.label;
-      card.appendChild(icon);
-      card.appendChild(label);
       const failed = (window._asetFailed || {})[s.key];
       if (failed) {
         // ponytail: pesan error lewat .title (properti DOM), bukan innerHTML —
@@ -93,6 +91,16 @@
         card.appendChild(warn);
       }
       card.addEventListener('click', function () { open(s.key, true); });
+      const chip = document.createElement('span');
+      chip.className = 'aset-card-icon';
+      chip.setAttribute('aria-hidden', 'true');
+      chip.appendChild(icon);
+      const desc = document.createElement('span');
+      desc.className = 'aset-card-desc';
+      desc.textContent = s.desc || '';
+      card.appendChild(chip);
+      card.appendChild(label);
+      card.appendChild(desc);
       grid.appendChild(card);
     });
   }
