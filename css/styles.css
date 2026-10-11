@@ -3126,7 +3126,8 @@
 
       .ket-modal {
         border-radius: 20px;
-        max-width: 420px;
+        max-width: 560px;
+        padding: 26px 28px 32px;
         transform: translateY(16px) scale(.97);
         opacity: 0;
         transition: transform .2s ease, opacity .2s ease
@@ -3135,6 +3136,31 @@
       .ket-modal-overlay.open .ket-modal {
         transform: none;
         opacity: 1
+      }
+
+      #rekapKalPicker .flatpickr-calendar {
+        width: 100% !important
+      }
+
+      #rekapKalPicker .dayContainer {
+        width: 100% !important;
+        min-width: 100% !important
+      }
+
+      #rekapKalPicker .flatpickr-day {
+        max-width: none;
+        height: 2.6em;
+        line-height: 2.6em;
+        font-size: 15px;
+        border-radius: 10px
+      }
+
+      #rekapKalPicker .flatpickr-weekdays {
+        height: 32px
+      }
+
+      #rekapKalPicker .flatpickr-weekday {
+        font-size: 12px
       }
     }
 
