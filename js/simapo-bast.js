@@ -241,6 +241,10 @@ window.setBastPemegang = async function(asetId) {
     cancelButtonText: 'Batal',
     confirmButtonColor: 'var(--primary)',
     focusConfirm: false,
+    didOpen: () => {
+      makeSearchDd('bastPemegangSel', { ph: 'Ketik nama/NIP...', static: true });
+      makeSearchDd('bastRuanganSel', { ph: 'Pilih ruangan...', static: true });
+    },
     preConfirm: () => {
       const peg = document.getElementById('bastPemegangSel').value;
       const ruang = document.getElementById('bastRuanganSel').value;
@@ -586,6 +590,10 @@ window.loadAdminBast = async function(force = false) {
   window._bastSel.incl = Object.fromEntries(prevIds.map(id => [id, true]));
 
   bastPopulateSelects();
+  makeSearchDd('bastPegawaiSel', { ph: 'Ketik nama/NIP pegawai...' });
+  makeSearchDd('bastTtdSel', { ph: 'Pilih penandatangan...' });
+  syncSearchDdLabel('bastPegawaiSel');
+  syncSearchDdLabel('bastTtdSel');
   window.renderBastAsetList();
   window.loadBastHistory(force);
 };
@@ -697,6 +705,9 @@ window.asetPegEdit = async function(asetId) {
     cancelButtonText: 'Batal',
     confirmButtonColor: 'var(--primary)',
     focusConfirm: false,
+    didOpen: () => {
+      makeSearchDd('apRuangan', { ph: 'Pilih ruangan...', static: true });
+    },
     preConfirm: () => ({
       nomorinventaris: document.getElementById('apNomor').value.trim(),
       kondisi: document.getElementById('apKondisi').value,
@@ -737,6 +748,10 @@ window.asetPegPindah = async function(asetId) {
     cancelButtonText: 'Batal',
     confirmButtonColor: 'var(--primary)',
     focusConfirm: false,
+    didOpen: () => {
+      makeSearchDd('apPeg', { ph: 'Ketik nama/NIP...', static: true });
+      makeSearchDd('apRuang', { ph: 'Pilih ruangan...', static: true });
+    },
     preConfirm: () => ({
       pegawai_id: document.getElementById('apPeg').value || null,
       ruangan_id: document.getElementById('apRuang').value || null

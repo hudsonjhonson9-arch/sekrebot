@@ -529,6 +529,8 @@
       wrap.className = 'custom-search-dropdown';
       wrap.id = selId + 'Dd';
       wrap.dataset.ddSel = selId;
+      // ponytail: static = list ikut alur dokumen (untuk dalam modal Swal yang overflow:auto memotong absolute)
+      const listStyle = opts.static ? ' style="position:relative;top:auto;left:auto;right:auto;max-height:170px;"' : '';
       wrap.innerHTML =
         '<div class="dropdown-trigger"' + (opts.h ? ' style="height:' + opts.h + 'px"' : '') +
           ' onclick="window._ddOpen(\'' + selId + '\')">' +
@@ -537,7 +539,7 @@
             'onfocus="window._ddOpen(\'' + selId + '\')" oninput="window._ddFilter(\'' + selId + '\', this.value)">' +
           '<i class="fas fa-chevron-down arrow-icon" aria-hidden="true"></i>' +
         '</div>' +
-        '<div class="dropdown-list-wrap"></div>';
+        '<div class="dropdown-list-wrap"' + listStyle + '></div>';
       sel.parentNode.insertBefore(wrap, sel);
       syncSearchDdLabel(selId);
     }
