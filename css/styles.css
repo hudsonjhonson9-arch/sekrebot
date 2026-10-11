@@ -3117,6 +3117,27 @@
       transform: translateY(0)
     }
 
+    /* desktop: dialog terpusat, bukan bottom-sheet */
+    @media (min-width: 768px) {
+      .ket-modal-overlay {
+        align-items: center;
+        padding: 24px
+      }
+
+      .ket-modal {
+        border-radius: 20px;
+        max-width: 420px;
+        transform: translateY(16px) scale(.97);
+        opacity: 0;
+        transition: transform .2s ease, opacity .2s ease
+      }
+
+      .ket-modal-overlay.open .ket-modal {
+        transform: none;
+        opacity: 1
+      }
+    }
+
     .ket-modal-title {
       font-size: 14px;
       font-weight: 800;
