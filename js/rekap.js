@@ -1089,7 +1089,7 @@ function openRekapKalender(idx) {
   $('rekapKalSub').textContent = `${isMagang ? 'ID' : 'NIP'}: ${p.nip || '—'} · ${dari || '…'} s/d ${sampai || '…'}`;
   const detailEl = $('rekapKalDetail');
   detailEl.innerHTML = '<div style="color:var(--muted);font-size:11px">Pilih tanggal untuk lihat detail…</div>';
-  $('rekapKalModal').style.display = 'flex';
+  $('rekapKalModal').classList.add('open');
 
   if (_rekapKalFp) { try { _rekapKalFp.destroy(); } catch (_) {} _rekapKalFp = null; }
   const el = $('rekapKalPicker');
@@ -1151,7 +1151,7 @@ function openRekapKalender(idx) {
 }
 
 function closeRekapKalender() {
-  $('rekapKalModal').style.display = 'none';
+  $('rekapKalModal').classList.remove('open');
   if (_rekapKalFp) { try { _rekapKalFp.destroy(); } catch (_) {} _rekapKalFp = null; }
   $('rekapKalPicker').innerHTML = '';
 }
