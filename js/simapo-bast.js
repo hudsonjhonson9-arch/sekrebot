@@ -846,7 +846,7 @@ window.asetPegExportExcel = async function() {
     });
     row.height = 72;
 
-    const payload = origin + '?qr=SIMAPO-' + (a.nomorinventaris || a.id);
+    const payload = origin + '?qr=SIMAPO-' + a.id;
     const qr = QR(0, 'M');
     qr.addData(payload);
     qr.make();

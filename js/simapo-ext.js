@@ -964,7 +964,7 @@ window.toggleUnitList = async function(barangId, btnEl) {
 window.generateQRCode = async function(unitasetId, label) {
   const origin = window.location.origin;
   const path = window.location.pathname;
-  const payload = origin + path + '?qr=SIMAPO-' + label;
+  const payload = origin + path + '?qr=SIMAPO-' + unitasetId;
 
   try {
     const qr = qrcode(0, 'M');
@@ -1025,7 +1025,7 @@ window.generateAllQR = async function(barangId) {
   for (const u of withoutQR) {
     const origin = window.location.origin;
     const path = window.location.pathname;
-    const payload = origin + path + '?qr=SIMAPO-' + (u.nomorinventaris || u.id);
+    const payload = origin + path + '?qr=SIMAPO-' + u.id;
     try {
       await apiFetch(P.simapoQRUpdate, {
         method: 'POST',
