@@ -596,4 +596,5 @@
           }
         });
       }
+      makeSearchDd('adminKetJenis', { ph: 'Pilih jenis', h: 45 });
     });
