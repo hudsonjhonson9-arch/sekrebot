@@ -653,7 +653,10 @@ window.renderAsetPegList = function() {
   }
   const owned = (window._bastData.aset || []).filter(a => String(a.pegawai_id || '') === String(pe));
   const peg = bastFindPegawai(pe);
-  const head = '<div class="radius-note" style="margin-bottom:8px;"><i class="fas fa-user" aria-hidden="true"></i> <b>' + apEsc(peg ? peg.nama : pe) + '</b> · ' + owned.length + ' unit</div>';
+  const head = '<div class="radius-note" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">' +
+    '<span><i class="fas fa-user" aria-hidden="true"></i> <b>' + apEsc(peg ? peg.nama : pe) + '</b> · ' + owned.length + ' unit</span>' +
+    (owned.length ? '<button class="btn-sm-admin" onclick="asetPegExportExcel().catch(e=>showToast(e.message||\'Export gagal\',\'error\'))" style="background:rgba(34,197,94,0.15);"><i class="fas fa-file-excel" aria-hidden="true"></i> Export Excel</button>' : '') +
+    '</div>';
   if (!owned.length) {
     el.innerHTML = head + '<div class="radius-note">Belum ada aset. Klik "Tambah Unit" untuk menambah.</div>';
     return;
@@ -789,6 +792,86 @@ window.asetPegHapus = async function(asetId) {
     window.loadAsetPegawai(true);
     window.loadAdminBast(true);
   }
+};
+
+window.asetPegExportExcel = async function() {
+  const pe = window._asetPegSel.pegawai;
+  if (!pe) { showToast('Pilih pegawai terlebih dahulu.', 'error'); return; }
+  const owned = (window._bastData.aset || []).filter(a => String(a.pegawai_id || '') === String(pe));
+  if (!owned.length) { showToast('Tidak ada aset untuk diekspor.', 'error'); return; }
+  if (typeof ExcelJS === 'undefined') { showToast('ExcelJS belum termuat', 'error'); return; }
+  const peg = bastFindPegawai(pe);
+  const QR = window.QRCode || qrcode;
+  if (typeof QR !== 'function') { showToast('QR library tidak tersedia', 'error'); return; }
+
+  const origin = window.location.origin + window.location.pathname;
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Aset ' + (peg ? peg.nama : pe));
+
+  ws.mergeCells('A1:F1');
+  ws.getCell('A1').value = 'DAFTAR ASET PEGAWAI';
+  ws.getCell('A1').font = { bold: true, size: 14 };
+  ws.getCell('A1').alignment = { horizontal: 'center' };
+  ws.mergeCells('A2:F2');
+  ws.getCell('A2').value = peg ? peg.nama : pe;
+  ws.getCell('A2').alignment = { horizontal: 'center' };
+  ws.mergeCells('A3:F3');
+  ws.getCell('A3').value = 'Tanggal Export: ' + new Date().toLocaleDateString('id-ID');
+  ws.getCell('A3').alignment = { horizontal: 'center' };
+
+  const header = ws.getRow(5);
+  ['No', 'Nama Aset', 'No. Inventaris', 'Kondisi', 'Nilai (Rp)', 'QR Code'].forEach((h, i) => {
+    const c = header.getCell(i + 1);
+    c.value = h;
+    c.font = { bold: true };
+    c.alignment = { horizontal: 'center' };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+  });
+
+  owned.forEach((a, i) => {
+    const row = ws.getRow(6 + i);
+    row.getCell(1).value = i + 1;
+    row.getCell(1).alignment = { horizontal: 'center' };
+    row.getCell(2).value = a.nama_barang || '-';
+    row.getCell(3).value = a.nomorinventaris || '-';
+    row.getCell(3).alignment = { horizontal: 'center' };
+    row.getCell(4).value = a.kondisi || '-';
+    row.getCell(4).alignment = { horizontal: 'center' };
+    row.getCell(5).value = a.nilaiperolehan || 0;
+    row.getCell(5).numFmt = '#,##0';
+    row.getCell(5).alignment = { horizontal: 'right' };
+    [1, 2, 3, 4, 5, 6].forEach(ci => {
+      row.getCell(ci).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    });
+    row.height = 72;
+
+    const payload = origin + '?qr=SIMAPO-' + (a.nomorinventaris || a.id);
+    const qr = QR(0, 'M');
+    qr.addData(payload);
+    qr.make();
+    const dataUrl = qr.createDataURL(6, 8);
+    const imgId = wb.addImage({ base64: dataUrl.split(',')[1], extension: 'png' });
+    ws.addImage(imgId, { tl: { col: 5.1, row: 5 + i + 0.15 }, ext: { width: 60, height: 60 } });
+  });
+
+  ws.columns = [
+    { key: 'no', width: 6 },
+    { key: 'nama', width: 32 },
+    { key: 'inv', width: 20 },
+    { key: 'kondisi', width: 12 },
+    { key: 'nilai', width: 16 },
+    { key: 'qr', width: 16 }
+  ];
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'Aset_' + (peg ? peg.nama : pe).replace(/[^a-zA-Z0-9]+/g, '_') + '.xlsx';
+  link.click();
+  URL.revokeObjectURL(link.href);
+  showToast('Excel berhasil diunduh', 'success');
 };
 
 window.asetPegTambah = async function() {
