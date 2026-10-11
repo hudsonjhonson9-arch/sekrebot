@@ -7,6 +7,7 @@ window.ASET_SCREENS = [
   { key: 'opname',        label: 'Opname',              icon: 'fa-clipboard-check', role: 'admin', desc: 'Cek stok fisik',                  load: [['loadOpnameForm']] },
   { key: 'standar-harga', label: 'Standar Harga',       icon: 'fa-money-bill-wave', role: 'admin', desc: 'Acuan harga pasar',               load: [['loadStandarHarga', false]] },
   { key: 'bast',          label: 'Serah Terima (BAST)', icon: 'fa-file-signature',  role: 'admin', desc: 'Pengadaan & serah terima',        load: [['loadAdminBast', false], ['loadBastHistory', false]] },
+  { key: 'aset-pegawai',  label: 'Aset Pegawai',        icon: 'fa-users',           role: 'admin', desc: 'Kelola unit per pegawai',         load: [['loadAsetPegawai', false]] },
   { key: 'ruangan',       label: 'Ruangan (KIR)',       icon: 'fa-building',        role: 'admin', desc: 'Kartu inventaris ruangan',         load: [['loadAsetRuangan', false]] },
   { key: 'pinjam',        label: 'Pinjaman',            icon: 'fa-clipboard-list',  role: 'admin', desc: 'Persetujuan peminjaman',          load: [['loadAdminSimapoPinjam', false]] },
   { key: 'tiket',         label: 'Tiket',               icon: 'fa-inbox',           role: 'admin', desc: 'Kerusakan yang dilapor',           load: [['loadAdminSimapoTiket', false]] },

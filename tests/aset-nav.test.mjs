@@ -34,10 +34,10 @@ test('isAdmin true dari keempat sumber yang sudah dipakai app', () => {
   assert.equal(load({ profileRole: 'Admin' }).ASET_NAV.isAdmin(), true, 'userProfile.role');
 });
 
-test('visibleScreens: 3 kartu untuk user biasa, 17 untuk admin', () => {
-  assert.equal(load().ASET_NAV.visibleScreens().length, 3);
-  assert.equal(load({ role: 'admin' }).ASET_NAV.visibleScreens().length, 17);
-  assert.equal(load({ isSuperAdmin: true }).ASET_NAV.visibleScreens().length, 17);
+test('visibleScreens: 3 kartu untuk user biasa, 18 untuk admin', () => {
+  assert.equal(load({ role: 'user' }).ASET_NAV.visibleScreens().length, 3);
+  assert.equal(load({ role: 'admin' }).ASET_NAV.visibleScreens().length, 18);
+  assert.equal(load({ isSuperAdmin: true }).ASET_NAV.visibleScreens().length, 18);
 });
 
 test('visibleScreens tidak pernah membocorkan kartu admin ke non-admin', () => {

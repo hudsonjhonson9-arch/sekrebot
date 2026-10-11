@@ -377,6 +377,8 @@ const P = {
   simapoBastRuangan: '/api/simapo/bast-ruangan',
   simapoBastSave: '/api/simapo/bast-save',
   simapoBastHistory: '/api/simapo/bast-history',
+  simapoBastImportUnit: '/api/simapo/bast-import-unit',
+  simapoUnitDelete: '/api/simapo/unit-delete',
   simapoAsetMassal: '/api/simapo/aset-massal',
   simapoAsetKib: '/api/simapo/aset-kib',
   simapoAsetSummary: '/api/simapo/aset-summary',

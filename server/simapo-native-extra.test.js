@@ -272,3 +272,55 @@ test('unit-list mengembalikan tahunperolehan untuk prefill form', async () => {
   assert.ok(sqls[0].includes('ua.tahunperolehan'), 'SELECT menyertakan tahunperolehan');
   assert.equal(r.body.data[0].tahunperolehan, 2019);
 });
+
+// ── unit-delete ─────────────────────────────────────────────────────────────
+
+test('unit-delete menghapus unit dengan guard instansi', async () => {
+  const calls = [];
+  const query = async (sql, params) => { calls.push({ sql, params }); return { rows: [{ id: 'u-1' }] }; };
+  const { port, close } = await listen(stubApp(query, null));
+  const r = await post(port, '/api/simapo/unit-delete', { aset_id: 'u-1' });
+  await close();
+
+  assert.equal(r.status, 200);
+  assert.equal(r.body.ok, true);
+  assert.ok(/DELETE FROM "SIMAPO"\.unit_aset WHERE id=\$1/.test(calls[0].sql));
+  assert.ok(/EXISTS\(SELECT 1 FROM "SIMAPO"\.barang/.test(calls[0].sql), 'guard instansi via EXISTS barang');
+  assert.equal(calls[0].params[0], 'u-1');
+});
+
+test('unit-delete tanpa aset_id -> 400', async () => {
+  const { port, close } = await listen(stubApp(async () => ({ rows: [] }), null));
+  const r = await post(port, '/api/simapo/unit-delete', {});
+  await close();
+
+  assert.equal(r.status, 400);
+  assert.equal(r.body.ok, false);
+});
+
+test('unit-delete tidak menemukan unit -> 404', async () => {
+  const { port, close } = await listen(stubApp(async () => ({ rows: [] }), null));
+  const r = await post(port, '/api/simapo/unit-delete', { aset_id: 'u-missing' });
+  await close();
+
+  assert.equal(r.status, 404);
+  assert.equal(r.body.ok, false);
+});
+
+test('bast-assign meneruskan nomorinventaris/kondisi/nilaiperolehan sebagai $14/$15/$16', async () => {
+  const calls = [];
+  const query = async (sql, params) => { calls.push({ sql, params }); return { rows: [{ id: 'u-1' }] }; };
+  const { port, close } = await listen(stubApp(query, null));
+  const r = await post(port, '/api/simapo/bast-assign', {
+    aset_id: 'u-1', nomorinventaris: 'INV-9', kondisi: 'Baik', nilaiperolehan: '500000',
+  });
+  await close();
+
+  assert.equal(r.status, 200);
+  assert.ok(/nomorinventaris=COALESCE\(NULLIF\(\$14,''\),nomorinventaris\)/.test(calls[0].sql));
+  assert.ok(/kondisi=COALESCE\(NULLIF\(\$15,''\),kondisi\)/.test(calls[0].sql));
+  assert.ok(/nilaiperolehan=COALESCE\(NULLIF\(\$16,''\)::numeric,nilaiperolehan\)/.test(calls[0].sql));
+  assert.equal(calls[0].params[13], 'INV-9', '$14 nomorinventaris');
+  assert.equal(calls[0].params[14], 'Baik', '$15 kondisi');
+  assert.equal(calls[0].params[15], '500000', '$16 nilaiperolehan');
+});

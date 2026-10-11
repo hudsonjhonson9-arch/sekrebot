@@ -171,7 +171,7 @@ window.renderBastAsetTotal = function() {
   if (!el) return;
   const ids = Object.keys(window._bastSel.incl);
   const items = (window._bastData.aset || []).filter(a => ids.includes(String(a.id)));
-  const total = items.reduce((s, a) => s + (Number(a.harga) || 0), 0);
+  const total = items.reduce((s, a) => s + (Number(a.nilaiperolehan) || 0), 0);
   el.innerHTML = '<div class="radius-note" style="color:#22c55e;"><i class="fas fa-check" aria-hidden="true"></i> <b>' + items.length + '</b> aset dipilih · Total nilai <b>' + bastRupiah(total) + '</b></div>';
 };
 
@@ -180,23 +180,21 @@ window.renderBastAsetList = function() {
   if (!el) return;
   const pe = window._bastSel.pe;
   if (!pe) {
-    el.innerHTML = '<div class="radius-note">Pilih pegawai untuk memuat daftar aset yang dipegangnya (default: semua aset milik pegawai tersebut).</div>';
+    el.innerHTML = '<div class="radius-note">Pilih pegawai untuk memuat daftar aset yang dipegangnya.</div>';
     return;
   }
-  const all = window._bastData.aset || [];
+  const all = (window._bastData.aset || []).filter(a => String(a.pegawai_id || '') === String(pe));
   if (all.length === 0) {
-    el.innerHTML = '<div class="radius-note">Belum ada aset terdaftar. Jalankan impor data aset atau cek inisialisasi DB.</div>';
+    el.innerHTML = '<div class="radius-note">Pegawai ini belum memiliki aset. Tambah lewat tab "Aset Pegawai" atau Set Pemegang.</div>';
     return;
   }
   const rows = all.map(a => {
     const id = a.id;
-    const owned = String(a.pegawai_id || '') === String(pe);
     const checked = !!window._bastSel.incl[id];
-    const pemegangName = owned ? (bastFindPegawai(a.pegawai_id)?.nama || '') : (a.pegawai_id ? (bastFindPegawai(a.pegawai_id)?.nama || ' (pemegang lain)') : '— belum ada');
     const ruang = a.ruangan_id ? (bastNamaRuangan(a.ruangan_id) || '—') : '—';
     const isKend = /kendaraan/i.test(a.kategori_nama || '') || !!a.no_polisi;
     return `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px;margin:8px 0;border:1px solid ${owned ? 'rgba(34,197,94,0.35)' : 'rgba(255,255,255,0.08)'};background:${owned ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.02)'};border-radius:12px;">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px;margin:8px 0;border:1px solid rgba(34,197,94,0.35);background:rgba(34,197,94,0.06);border-radius:12px;">
       <input type="checkbox" data-aset-id="${id}" onchange="bastToggleAset('${id}', this.checked)" ${checked ? 'checked' : ''} style="width:18px;height:18px;flex-shrink:0;">
       <div style="flex:1;min-width:0;">
         <div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nama_barang || '-'}</div>
@@ -205,11 +203,11 @@ window.renderBastAsetList = function() {
           ${a.merk_type ? '<span><i class="fas fa-tags" aria-hidden="true"></i> ' + (a.merk_type || '') + '</span>' : ''}
           <span><i class="fas fa-calendar-alt" aria-hidden="true"></i> ${a.tahun_pembuatan || '-'}</span>
           ${isKend ? '<span><i class="fas fa-car" aria-hidden="true"></i> ' + (a.no_polisi || '-') + '</span>' : ''}
-          <span><i class="fas fa-money-bill" aria-hidden="true"></i> ${bastRupiah(a.harga)}</span>
+          <span><i class="fas fa-money-bill" aria-hidden="true"></i> ${bastRupiah(a.nilaiperolehan)}</span>
           <span><i class="fas fa-receipt" aria-hidden="true"></i> ${a.kondisi || '-'}</span>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">
-          <i class="fas fa-user" aria-hidden="true"></i> Pemegang: <b style="color:${owned ? '#22c55e' : 'var(--white)'};">${pemegangName}</b> · <i class="fas fa-building" aria-hidden="true"></i> Ruangan: <b>${ruang}</b>
+          <i class="fas fa-building" aria-hidden="true"></i> Ruangan: <b>${ruang}</b>
         </div>
       </div>
       <button class="btn-sm-admin" onclick="setBastPemegang('${id}')" style="flex-shrink:0;background:rgba(59,130,246,0.15);"><i class="fas fa-cog" aria-hidden="true"></i> Set Pemegang</button>
@@ -307,7 +305,7 @@ function bastBuildTags() {
     nomor,
     tgl,
     totalAset: asets.length,
-    totalNilai: items.reduce((s, a) => s + (Number(a.harga) || 0), 0)
+    totalNilai: items.reduce((s, a) => s + (Number(a.nilaiperolehan) || 0), 0)
   };
 }
 
@@ -581,12 +579,252 @@ window.loadAdminBast = async function(force = false) {
     ruangan: data.ruangan || [],
     penandatangan: data.penandatangan || []
   };
+  // Re-select owned assets after reload; if a pegawai is selected, restrict incl to their assets
   const ownedIds = {};
   window._bastData.aset.forEach(a => { ownedIds[a.id] = true; });
   const prevIds = Object.keys(window._bastSel.incl).filter(id => ownedIds[id]);
-  if (prevIds.length) window._bastSel.incl = Object.fromEntries(prevIds.map(id => [id, true]));
+  window._bastSel.incl = Object.fromEntries(prevIds.map(id => [id, true]));
 
   bastPopulateSelects();
   window.renderBastAsetList();
   window.loadBastHistory(force);
+};
+
+/* ─── ASET PEGAWAI: CRUD unit per pegawai ───────────────────── */
+window._asetPegSel = { pegawai: '', aset: null };
+
+function apEsc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+window.loadAsetPegawai = async function(force = false) {
+  const listEl = document.getElementById('asetPegList');
+  const selEl = document.getElementById('asetPegSel');
+  if (!listEl || !selEl) return;
+  if (force) window.showAdminSimapoShimmer('asetPegList');
+  // Reuse bast-list data source (same auth header, same shape)
+  try {
+    const res = await apiFetch(P.simapoBastList);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    const data = (json && json.data) || {};
+    window._bastData = {
+      pegawai: data.pegawai || [],
+      aset: data.aset || [],
+      ruangan: data.ruangan || [],
+      penandatangan: data.penandatangan || []
+    };
+  } catch (e) {
+    console.warn('[AsetPegawai] fetch fail:', e);
+    window.simapoErrorState('asetPegList', 'Gagal memuat data aset pegawai.');
+    return;
+  }
+  const pegOpts = (window._bastData.pegawai || []).map(p =>
+    '<option value="' + apEsc(p.id) + '">' + apEsc(p.nama) + ' — ' + apEsc(p.nip) + '</option>').join('');
+  selEl.innerHTML = '<option value="">-- Pilih Pegawai --</option>' + pegOpts;
+  if (window._asetPegSel.pegawai && (window._bastData.pegawai || []).some(p => String(p.id) === String(window._asetPegSel.pegawai))) {
+    selEl.value = window._asetPegSel.pegawai;
+  }
+  window.renderAsetPegList();
+};
+
+window.asetPegChange = function() {
+  window._asetPegSel.pegawai = document.getElementById('asetPegSel').value;
+  window.renderAsetPegList();
+};
+
+window.renderAsetPegList = function() {
+  const el = document.getElementById('asetPegList');
+  if (!el) return;
+  const pe = window._asetPegSel.pegawai;
+  if (!pe) {
+    el.innerHTML = '<div class="radius-note">Pilih pegawai untuk melihat &amp; mengelola asetnya.</div>';
+    return;
+  }
+  const owned = (window._bastData.aset || []).filter(a => String(a.pegawai_id || '') === String(pe));
+  const peg = bastFindPegawai(pe);
+  const head = '<div class="radius-note" style="margin-bottom:8px;"><i class="fas fa-user" aria-hidden="true"></i> <b>' + apEsc(peg ? peg.nama : pe) + '</b> · ' + owned.length + ' unit</div>';
+  if (!owned.length) {
+    el.innerHTML = head + '<div class="radius-note">Belum ada aset. Klik "Tambah Unit" untuk menambah.</div>';
+    return;
+  }
+  el.innerHTML = head + owned.map(a => {
+    const isKend = /kendaraan/i.test(a.kategori_nama || '') || !!a.no_polisi;
+    const ruang = a.ruangan_id ? (bastNamaRuangan(a.ruangan_id) || '—') : '—';
+    return `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px;margin:8px 0;border:1px solid rgba(34,197,94,0.35);background:rgba(34,197,94,0.06);border-radius:12px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${apEsc(a.nama_barang) || '-'}</div>
+        <div style="font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:2px;">
+          <span><i class="fas fa-thumbtack" aria-hidden="true"></i> ${apEsc(a.nomorinventaris) || '-'}</span>
+          ${a.merk_type ? '<span><i class="fas fa-tags" aria-hidden="true"></i> ' + apEsc(a.merk_type) + '</span>' : ''}
+          ${isKend ? '<span><i class="fas fa-car" aria-hidden="true"></i> ' + (apEsc(a.no_polisi) || '-') + '</span>' : ''}
+          <span><i class="fas fa-money-bill" aria-hidden="true"></i> ${bastRupiah(a.nilaiperolehan)}</span>
+          <span><i class="fas fa-receipt" aria-hidden="true"></i> ${apEsc(a.kondisi) || '-'}</span>
+          <span><i class="fas fa-building" aria-hidden="true"></i> ${apEsc(ruang)}</span>
+        </div>
+      </div>
+      <button class="btn-sm-admin" onclick="asetPegEdit('${a.id}')" style="flex-shrink:0;background:rgba(59,130,246,0.15);"><i class="fas fa-edit" aria-hidden="true"></i></button>
+      <button class="btn-sm-admin" onclick="asetPegPindah('${a.id}')" style="flex-shrink:0;background:rgba(245,158,11,0.15);"><i class="fas fa-exchange-alt" aria-hidden="true"></i></button>
+      <button class="btn-sm-admin" onclick="asetPegHapus('${a.id}')" style="flex-shrink:0;background:rgba(239,68,68,0.15);"><i class="fas fa-trash" aria-hidden="true"></i></button>
+    </div>`;
+  }).join('');
+};
+
+window.asetPegEdit = async function(asetId) {
+  const a = bastFindAset(asetId);
+  if (!a) return;
+  const ruangOpts = '<option value="">— Tanpa Ruangan —</option>' + (window._bastData.ruangan || []).map(r =>
+    '<option value="' + apEsc(r.id) + '"' + (a.ruangan_id && String(r.id) === String(a.ruangan_id) ? ' selected' : '') + '>' + apEsc(r.nama) + '</option>').join('');
+  const { value: v } = await Swal.fire({
+    title: 'Edit Unit Aset',
+    html:
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">' + apEsc(a.nama_barang) + '<br><b>' + apEsc(a.nomorinventaris) + '</b></div>' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Nomor Inventaris</label>' +
+      '<input id="apNomor" class="form-input" value="' + apEsc(a.nomorinventaris) + '" style="width:100%;margin-bottom:8px;">' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Kondisi</label>' +
+      '<select id="apKondisi" class="form-input" style="width:100%;margin-bottom:8px;">' +
+        ['Baik', 'Rusak Ringan', 'Rusak Berat'].map(k => '<option' + (a.kondisi === k ? ' selected' : '') + '>' + k + '</option>').join('') +
+      '</select>' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Nilai Perolehan</label>' +
+      '<input id="apNilai" type="number" class="form-input" value="' + apEsc(a.nilaiperolehan) + '" style="width:100%;margin-bottom:8px;">' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Ruangan</label>' +
+      '<select id="apRuangan" class="form-input" style="width:100%;">' + ruangOpts + '</select>',
+    showCancelButton: true,
+    confirmButtonText: 'Simpan',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: 'var(--primary)',
+    focusConfirm: false,
+    preConfirm: () => ({
+      nomorinventaris: document.getElementById('apNomor').value.trim(),
+      kondisi: document.getElementById('apKondisi').value,
+      nilaiperolehan: document.getElementById('apNilai').value,
+      ruangan_id: document.getElementById('apRuangan').value || null
+    })
+  });
+  if (!v) return;
+  // ponytail: bast-assign sudah UPDATE nomorinventaris/kondisi/nilaiperolehan via COALESCE(NULLIF)
+  const ok = await window.bastSubmit(P.simapoBastAssign, {
+    aset_id: asetId,
+    pegawai_id: window._asetPegSel.pegawai,
+    ruangan_id: v.ruangan_id,
+    nomorinventaris: v.nomorinventaris,
+    kondisi: v.kondisi,
+    nilaiperolehan: v.nilaiperolehan
+  }, { successMsg: 'Unit diperbarui', errorMsg: 'Gagal memperbarui unit' });
+  if (ok) window.loadAsetPegawai(true);
+};
+
+window.asetPegPindah = async function(asetId) {
+  const a = bastFindAset(asetId);
+  if (!a) return;
+  const pegOpts = '<option value="">— Tanpa Pemegang (Gudang) —</option>' + (window._bastData.pegawai || []).map(p =>
+    '<option value="' + apEsc(p.id) + '"' + (String(a.pegawai_id || '') === String(p.id) ? ' selected' : '') + '>' + apEsc(p.nama) + ' — ' + apEsc(p.nip) + '</option>').join('');
+  const ruangOpts = '<option value="">— Tanpa Ruangan —</option>' + (window._bastData.ruangan || []).map(r =>
+    '<option value="' + apEsc(r.id) + '"' + (a.ruangan_id && String(r.id) === String(a.ruangan_id) ? ' selected' : '') + '>' + apEsc(r.nama) + '</option>').join('');
+  const { value: v } = await Swal.fire({
+    title: 'Pindah Aset',
+    html:
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">' + apEsc(a.nama_barang) + '<br><b>' + apEsc(a.nomorinventaris) + '</b></div>' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Pemegang Baru</label>' +
+      '<select id="apPeg" class="form-input" style="width:100%;margin-bottom:8px;">' + pegOpts + '</select>' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Ruangan Baru</label>' +
+      '<select id="apRuang" class="form-input" style="width:100%;">' + ruangOpts + '</select>',
+    showCancelButton: true,
+    confirmButtonText: 'Pindahkan',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: 'var(--primary)',
+    focusConfirm: false,
+    preConfirm: () => ({
+      pegawai_id: document.getElementById('apPeg').value || null,
+      ruangan_id: document.getElementById('apRuang').value || null
+    })
+  });
+  if (!v) return;
+  const ok = await window.bastSubmit(P.simapoBastAssign, { aset_id: asetId, ...v }, {
+    successMsg: 'Aset dipindahkan',
+    errorMsg: 'Gagal memindahkan aset'
+  });
+  if (ok) {
+    window.loadAsetPegawai(true);
+    window.loadAdminBast(true); // refresh BAST data too
+  }
+};
+
+window.asetPegHapus = async function(asetId) {
+  const a = bastFindAset(asetId);
+  if (!a) return;
+  const { isConfirmed } = await Swal.fire({
+    title: 'Hapus Unit Aset?',
+    html: '<div style="font-size:12px;color:var(--muted);">' + apEsc(a.nama_barang) + '<br><b>' + apEsc(a.nomorinventaris) + '</b><br><br>Tindakan ini tidak bisa dibatalkan.</div>',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Hapus',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#ef4444'
+  });
+  if (!isConfirmed) return;
+  const ok = await window.bastSubmit(P.simapoUnitDelete, { aset_id: asetId }, {
+    successMsg: 'Unit aset dihapus',
+    errorMsg: 'Gagal menghapus unit aset'
+  });
+  if (ok) {
+    window.loadAsetPegawai(true);
+    window.loadAdminBast(true);
+  }
+};
+
+window.asetPegTambah = async function() {
+  const pe = window._asetPegSel.pegawai;
+  if (!pe) { showToast('Pilih pegawai terlebih dahulu.', 'error'); return; }
+  const peg = bastFindPegawai(pe);
+  const { value: v } = await Swal.fire({
+    title: 'Tambah Unit Aset',
+    html:
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Untuk: <b>' + apEsc(peg ? peg.nama : pe) + '</b></div>' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Kode Barang</label>' +
+      '<input id="apKode" class="form-input" placeholder="KB001" style="width:100%;margin-bottom:8px;">' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Nama Barang</label>' +
+      '<input id="apNama" class="form-input" placeholder="Laptop" style="width:100%;margin-bottom:8px;">' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Nomor Inventaris</label>' +
+      '<input id="apNoInv" class="form-input" placeholder="INV-001" style="width:100%;margin-bottom:8px;">' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Satuan</label>' +
+      '<input id="apSatuan" class="form-input" value="Unit" style="width:100%;margin-bottom:8px;">' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Nilai Perolehan</label>' +
+      '<input id="apNilaiBaru" type="number" class="form-input" placeholder="0" style="width:100%;margin-bottom:8px;">' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Tahun Perolehan</label>' +
+      '<input id="apTahun" type="number" class="form-input" placeholder="2024" style="width:100%;">',
+    showCancelButton: true,
+    confirmButtonText: 'Tambah',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: 'var(--primary)',
+    focusConfirm: false,
+    preConfirm: () => ({
+      kodebarang: document.getElementById('apKode').value.trim(),
+      nama: document.getElementById('apNama').value.trim(),
+      nomorinventaris: document.getElementById('apNoInv').value.trim(),
+      satuan: document.getElementById('apSatuan').value.trim() || 'Unit',
+      nilaiperolehan: document.getElementById('apNilaiBaru').value,
+      tahunperolehan: document.getElementById('apTahun').value
+    })
+  });
+  if (!v) return;
+  if (!v.kodebarang || !v.nama || !v.nomorinventaris) {
+    showToast('Kode, nama, dan nomor inventaris wajib diisi.', 'error');
+    return;
+  }
+  // ponytail: bast-import-unit creates barang+unit; then bast-assign sets pegawai
+  const ok = await window.bastSubmit(P.simapoBastImportUnit, v, { successMsg: 'Unit ditambahkan', errorMsg: 'Gagal menambah unit' });
+  if (!ok) return;
+  // Reload to get the new unit id, then assign pegawai
+  await window.loadAsetPegawai(true);
+  const newUnit = (window._bastData.aset || []).find(a => String(a.nomorinventaris) === String(v.nomorinventaris));
+  if (newUnit) {
+    await window.bastSubmit(P.simapoBastAssign, { aset_id: newUnit.id, pegawai_id: pe }, {
+      successMsg: '',
+      errorMsg: 'Unit dibuat tapi gagal assign pegawai'
+    });
+    window.loadAsetPegawai(true);
+    window.loadAdminBast(true);
+  }
 };
