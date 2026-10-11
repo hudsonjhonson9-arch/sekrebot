@@ -1,7 +1,7 @@
 // Service Worker — Absensi Digital
 // Caching strategy: Network First, offline fallback ke cache
 
-const CACHE_NAME = 'absensi-digital-v9';
+const CACHE_NAME = 'absensi-digital-v10';
 const OFFLINE_ASSETS = [
   './',
   // index.html EXCLUDED — always fetch fresh so cache busters update
