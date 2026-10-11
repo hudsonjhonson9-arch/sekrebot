@@ -916,8 +916,25 @@ window.submitQRPinjam = async function() {
       })
     });
     if (res.ok) {
-      showToast('Pengajuan berhasil dikirim!', 'success');
-      closeQRPanel();
+      showToast('Aset berhasil dipinjam!', 'success');
+      panel.innerHTML = `
+        <div class="card glass-card" style="border:2px solid rgba(34,197,94,0.4);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <span style="font-size:24px;color:#22c55e;"><i class="fas fa-check-circle" aria-hidden="true"></i></span>
+            <div style="font-weight:800;font-size:14px;color:#22c55e;">Berhasil Dipinjam</div>
+          </div>
+          <div style="background:rgba(34,197,94,0.08);border-radius:8px;padding:12px;margin-bottom:12px;">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Unit Aset</div>
+            <div style="font-weight:700;font-size:13px;color:var(--white);">${escapeHtml(unitasetid)}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;">Peminjam: ${escapeHtml(nama)}</div>
+            <div style="font-size:11px;color:var(--muted);">Periode: ${mulai} → ${selesai}</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="adminQRKembaliScan()" style="flex:1;padding:10px;background:rgba(100,180,255,0.15);color:#64b4ff;border:1px solid rgba(100,180,255,0.3);border-radius:10px;font-weight:700;font-size:12px;cursor:pointer;"><i class="fas fa-camera" aria-hidden="true"></i> Scan QR Kembali</button>
+            <button onclick="closeQRPanel()" style="flex:1;padding:10px;background:var(--muted);color:var(--white);border:none;border-radius:10px;font-weight:700;font-size:12px;cursor:pointer;">Tutup</button>
+          </div>
+        </div>`;
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       if (window._simapoCache) {
         window._simapoCache.clear('admin_pinjam');
         window._simapoCache.clear('user_pinjam_riwayat');

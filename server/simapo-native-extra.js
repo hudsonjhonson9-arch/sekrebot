@@ -63,7 +63,7 @@ export function createSimapoNativeExtraRouter({ query, withTransaction }) {
   r.post('/qr-pinjam', async (req,res)=>{
     const b=req.body||{}, inst=instOf(req,b.instansi_id), nip=S(req.user?.nip);
     if(!nip||!id(b.unitasetid)||!S(b.tanggalmulai)||!S(b.tanggalselesai)) return res.status(400).json({ok:false,message:'Data peminjaman tidak lengkap.'});
-    try { const {rows}=await query(`INSERT INTO "SIMAPO".peminjaman(id,nomorpeminjaman,userid,unitasetid,tujuanpeminjaman,tanggalmulai,tanggalselesai,status,createdat,updatedat,instansi_id) VALUES(gen_random_uuid(),$1,$2,$3,$4,$5,$6,'MENUNGGU',NOW(),NOW(),$7) RETURNING id,status`,[S(b.nomorpeminjaman)||`PJM-${Date.now()}`,nip,id(b.unitasetid),S(b.tujuanpeminjaman)||'Peminjaman',S(b.tanggalmulai),S(b.tanggalselesai),inst]); return res.json({ok:true,...rows[0]}); } catch{return res.status(500).json({ok:false,message:'Gagal mengajukan peminjaman QR.'});}
+    try { const {rows}=await query(`INSERT INTO "SIMAPO".peminjaman(id,nomorpeminjaman,userid,unitasetid,tujuanpeminjaman,tanggalmulai,tanggalselesai,status,createdat,updatedat,instansi_id) VALUES(gen_random_uuid(),$1,$2,$3,$4,$5,$6,'DISETUJUI',NOW(),NOW(),$7) RETURNING id,status`,[S(b.nomorpeminjaman)||`PJM-${Date.now()}`,nip,id(b.unitasetid),S(b.tujuanpeminjaman)||'Peminjaman',S(b.tanggalmulai),S(b.tanggalselesai),inst]); await query(`UPDATE "SIMAPO".unit_aset SET statuspinjam=true,updatedat=NOW() WHERE id=$1`,[id(b.unitasetid)]); return res.json({ok:true,...rows[0]}); } catch{return res.status(500).json({ok:false,message:'Gagal mengajukan peminjaman QR.'});}
   });
 
   // Opname: menerima {items:[{unitasetid/kode,id,kondisi,...}]}; update unit secara atomik.

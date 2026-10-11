@@ -1506,14 +1506,14 @@
               <span><i class="fas fa-clipboard-list" aria-hidden="true"></i> Permintaan Peminjaman</span>
               <button class="btn-sm-admin" onclick="loadAdminSimapoPinjam()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
             </div>
-            <div style="display:flex;gap:6px;margin:10px 0;flex-wrap:wrap;">
+            <button onclick="adminQRKembaliScan()" style="width:100%;margin:10px 0;padding:10px;background:rgba(100,180,255,0.12);color:#64b4ff;border:1px solid rgba(100,180,255,0.3);border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;"><i class="fas fa-camera" aria-hidden="true"></i> Scan QR Kembali</button>
+            <div style="display:flex;gap:6px;margin:0 0 10px;flex-wrap:wrap;">
               <button onclick="filterSAPinjam('MENUNGGU',this)" class="sa-filter-btn active" data-filter="MENUNGGU"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Pending</button>
               <button onclick="filterSAPinjam('DISETUJUI',this)" class="sa-filter-btn"><i class="fas fa-check" aria-hidden="true"></i> Disetujui</button>
               <button onclick="filterSAPinjam('DIPINJAM',this)" class="sa-filter-btn" style="border-color:rgba(59,130,246,0.3);color:#60a5fa;"><i class="fas fa-upload" aria-hidden="true"></i> Dipinjam</button>
               <button onclick="filterSAPinjam('DITOLAK',this)" class="sa-filter-btn"><i class="fas fa-times" aria-hidden="true"></i> Ditolak</button>
               <button onclick="filterSAPinjam('KEMBALI',this)" class="sa-filter-btn"><i class="fas fa-box" aria-hidden="true"></i> Kembali</button>
               <button onclick="filterSAPinjam('',this)" class="sa-filter-btn"><i class="fas fa-search" aria-hidden="true"></i> Semua</button>
-              <button onclick="adminQRKembaliScan()" class="sa-filter-btn" style="border-color:rgba(100,180,255,0.3);color:#64b4ff;"><i class="fas fa-camera" aria-hidden="true"></i> Scan QR Kembali</button>
             </div>
             <style>.sa-filter-btn{padding:4px 10px;font-size:11px;font-weight:700;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;transition:all .2s;font-family:inherit;}.sa-filter-btn.active{background:rgba(59,130,246,0.15);color:var(--gold);border-color:rgba(59,130,246,0.4);}</style>
             <div id="adminSimapoPinjamList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
