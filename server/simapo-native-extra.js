@@ -51,7 +51,7 @@ export function createSimapoNativeExtraRouter({ query, withTransaction }) {
       await c.query(`UPDATE "SIMAPO".unit_aset SET statuspinjam=CASE WHEN $1 IN ('DIPINJAM','SELESAI') THEN true WHEN $1 IN ('DIKEMBALIKAN','KEMBALI') THEN false ELSE statuspinjam END,updatedat=NOW() WHERE id=$2`,[status,o.unitasetid]);
       return up.rows;
     }); return res.json({ok:true,...rows[0]}); }
-    catch (e) {console.error('[SIMAPO] admin-pinjam-action error:',e);return res.status(e.statusCode||500).json({ok:false,message:e.statusCode===404?'Peminjaman tidak ditemukan.':'Gagal memperbarui peminjaman.',debug:e.message});}
+    catch (e) {console.error('[SIMAPO] admin-pinjam-action error:',e);return res.status(e.statusCode||500).json({ok:false,message:e.statusCode===404?'Peminjaman tidak ditemukan.':'Gagal memperbarui peminjaman.'});}
   });
 
   // Tiket kerusakan
