@@ -40,7 +40,7 @@ export function createSimapoNativeExtraRouter({ query, withTransaction }) {
   r.post('/admin-pinjam-action', async(req,res)=>{
     const b=req.body||{}, pid=id(b.id), status=S(b.status), inst=instOf(req,b.instansi_id);
     if(!pid||!status)return res.status(400).json({ok:false,message:'id dan status wajib diisi.'});
-    try { const {rows}=await withTransaction(async c=>{
+    try { const rows=await withTransaction(async c=>{
       const locked=await c.query(`SELECT id,unitasetid,status FROM "SIMAPO".peminjaman WHERE id=$1 AND instansi_id=$2 FOR UPDATE`,[pid,inst]);
       if(!locked.rows.length) throw Object.assign(new Error('not found'),{statusCode:404});
       const o=locked.rows[0];
