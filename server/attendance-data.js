@@ -11,10 +11,10 @@ const instScope = (req, requested) => {
   const inst = requested == null || requested === '' ? req.user?.instansi_id : requested;
   return { inst, allowed: sameInstansi(req.user, inst) };
 };
-function parseDate(s) { const d = new Date(`${s}T00:00:00`); return Number.isNaN(d.getTime()) ? null : d; }
-function dateRange(start, end) {
+export function parseDate(s) { const d = new Date(`${s}T00:00:00Z`); return Number.isNaN(d.getTime()) ? null : d; }
+export function dateRange(start, end) {
   const a = parseDate(start), b = parseDate(end); if (!a || !b || b < a) return [];
-  const out=[]; for (let d=new Date(a); d<=b; d.setDate(d.getDate()+1)) out.push(d.toISOString().slice(0,10)); return out;
+  const out=[]; for (let d=new Date(a); d<=b; d.setUTCDate(d.getUTCDate()+1)) out.push(d.toISOString().slice(0,10)); return out;
 }
 function toMinutes(v) { const m=/^(\d{1,2}):(\d{2})/.exec(String(v||'')); return m ? Number(m[1])*60+Number(m[2]) : null; }
 

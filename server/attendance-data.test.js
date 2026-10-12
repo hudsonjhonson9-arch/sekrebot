@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import express from 'express';
 import { requireRole, ABSEN_ROLES } from './auth.js';
 
@@ -257,4 +258,19 @@ test('keterangan: gasUpsert gagal → 502, INSERT tidak jalan (bukti tidak hilan
   });
   assert.equal(r.status, 502);
   assert.ok(!sqls.some((s) => /INSERT INTO ket_temp/i.test(s.text)), 'upload gagal = keterangan tidak boleh tersimpan tanpa bukti');
+});
+
+test('dateRange bebas timezone: TZ +8 tidak menggeser tanggal (bug keterangan 1 hari)', () => {
+  // ponytail: child process dengan TZ=Asia/Shanghai = kondisi server produksi (DB Asia/Shanghai);
+  // sebelum fix, parse lokal + toISOString UTC memundakkan tiap tanggal 1 hari.
+  const mod = new URL('./attendance-data.js', import.meta.url).href;
+  const code = `import { dateRange } from ${JSON.stringify(mod)}; console.log(JSON.stringify([dateRange('2026-10-12','2026-10-12'),dateRange('2026-10-11','2026-10-14'),dateRange('2026-10-13','2026-10-16')]));`;
+  const out = execFileSync(process.execPath, ['--input-type=module', '-e', code], {
+    env: { ...process.env, TZ: 'Asia/Shanghai' },
+    encoding: 'utf8',
+  }).trim();
+  const [single, multi, future] = JSON.parse(out);
+  assert.deepEqual(single, ['2026-10-12'], 'tanggal tunggal harus persis tanggal input');
+  assert.deepEqual(multi, ['2026-10-11', '2026-10-12', '2026-10-13', '2026-10-14'], 'rentang harus persis dari s.d. tanpa geser');
+  assert.deepEqual(future, ['2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16'], 'pengajuan tanggal lain tidak boleh menyertakan tanggal sebelumnya');
 });
