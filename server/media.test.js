@@ -7,6 +7,7 @@ import {
   isSessionToken,
   MEDIA_ROLES,
   SIMAPO_ROLES,
+  ABSEN_ROLES,
   SESSION_LOOKUP_SQL,
   singleSessionRow,
 } from './auth.js';
@@ -300,6 +301,7 @@ test('SIMAPO_ROLES = MEDIA_ROLES + BENDAHARA saja; BENDAHARA bukan media', () =>
   );
   assert.equal(MEDIA_ROLES.has('BENDAHARA'), false, 'BENDAHARA tidak boleh menulis log media');
   assert.ok(SIMAPO_ROLES.has('BENDAHARA'));
+  assert.ok(ABSEN_ROLES.has('BENDAHARA'), 'BENDAHARA tetap bisa absen & baca log sendiri');
 });
 
 test('isSessionToken hanya menerima 192 hex huruf kecil', () => {

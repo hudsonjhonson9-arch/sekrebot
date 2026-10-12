@@ -10,10 +10,9 @@ export const MEDIA_ROLES = new Set([
   'IRBAN',
 ]);
 
-// Absen boleh dipakai seluruh peran media ditambah USER dan INSPEKTUR, sesuai
-// node "Check Role Absen" canonical. Daftar peran media tidak ditulis ulang:
-//-media.js dan USER/INSPEKTUR itu satu-satunya selisihnya.
-export const ABSEN_ROLES = new Set(['USER', 'INSPEKTUR', ...MEDIA_ROLES]);
+// Absen boleh dipakai seluruh peran media ditambah USER, INSPEKTUR, dan
+// BENDAHARA (staf bendahara barang tetap harus bisa absen & baca log sendiri).
+export const ABSEN_ROLES = new Set(['USER', 'INSPEKTUR', 'BENDAHARA', ...MEDIA_ROLES]);
 
 // BENDAHARA = staf bendahara barang: admin aset (SIMAPO) saja, BUKAN media.
 // Sengaja tidak masuk MEDIA_ROLES supaya tidak mendapat tulis log manual
