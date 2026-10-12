@@ -1,12 +1,14 @@
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 10 * 1024 * 1024;
 const MIME_PREFIX = 'image/';
-const FILE_ID_RE = /^[-\w]{5,200}$/;
+const FILE_ID_RE = /^[-\w]{10,200}$/;
 
+// ponytail: Apps Script TIDAK punya setResponseCode (permintaan fitur sejak
+// 2013, belum direalisasi) — memanggilnya melempar TypeError di setiap request.
+// Status HTTP selalu 200; pemanggil (server/gas.js) membaca ok/message di body.
 function jsonOut(code, body) {
   return ContentService
     .createTextOutput(JSON.stringify(body))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setResponseCode(code);
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function readParams_(e) {

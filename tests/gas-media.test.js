@@ -56,9 +56,11 @@ test('file dibagikan publik Anyone with link', () => {
   assert.match(code, /DriveApp\.Permission\.VIEW/);
 });
 
-test('doGet dan doPost mengembalikan status HTTP yang benar', () => {
+test('jsonOut hanya memakai API Apps Script yang ada', () => {
   assert.match(code, /function\s+jsonOut\s*\(/);
-  assert.match(code, /setResponseCode\(code\)/);
+  // setResponseCode TIDAK PERNAH ada di Apps Script (fitur minta sejak 2013,
+  // belum direalisasi) — memanggilnya membuat setiap response TypeError.
+  assert.doesNotMatch(code, /setResponseCode/);
 });
 
 test('payload dibatasi 5 MB sebelum dan sesudah decode', () => {

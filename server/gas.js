@@ -39,7 +39,9 @@ async function callGas_(path, init = {}) {
 }
 
 export function gasHealth() {
-  return callGas_('/?action=health');
+  // path mulai '?' bukan '/?' — base sudah berakhir /exec, tambahan '/' menghasilkan
+  // /exec/ yang dijawab 404 oleh Google.
+  return callGas_('?action=health');
 }
 
 export async function gasUpsert({ filename, mimeType, dataBase64, fileId }) {

@@ -154,7 +154,8 @@ test('gasUpsert mengirim base64 dan mengembalikan fileId + url', async () => {
 
     const health = await gasHealth();
     assert.equal(health.ok, true);
-    assert.equal(calls[1].url, `${GAS_URL}/?action=health&token=${GAS_SECRET}`);
+    // tanpa '/' sebelum '?' — /exec/ (trailing slash) balas 404 dari Google
+    assert.equal(calls[1].url, `${GAS_URL}?action=health&token=${GAS_SECRET}`);
   } finally {
     restoreFetch();
   }
