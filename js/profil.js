@@ -125,7 +125,7 @@
       const logoWrap = $('headerLogoWrap');
       if (logoWrap) {
         const logoUrl = (instData?.logo_url || '').trim();
-        const finalLogo = logoUrl || 'icons/logo-splash.svg';
+        const finalLogo = logoUrl || 'icons/logo-default.png';
         logoWrap.innerHTML = `<img src="${finalLogo}" alt="${instName}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">`;
         const logoImg = logoWrap.querySelector('img');
         if (logoImg) logoImg.onerror = () => { logoWrap.innerHTML = '<i class="fas fa-landmark"></i>'; };

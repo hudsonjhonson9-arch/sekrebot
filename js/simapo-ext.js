@@ -4,6 +4,7 @@ window._simapoMasterUnitId = null; // unit pertama saat edit (untuk tahun/pegawa
 window._allPinjamData = [];
 window._allTiketData = [];
 window._allMasterData = [];
+window._allUnitData = [];
 
 /* ─── CACHE MANAGER ────────────────────────────────────────── */
 window._simapoCache = {
@@ -264,7 +265,19 @@ window.adminQRKembaliScan = function() {
       });
       if (!ok.isConfirmed) return;
 
-      window.adminSimapoPinjamAction(pa.id, 'DIKEMBALIKAN');
+      // ponytail: langsung simapoSubmit — lewati adminSimapoPinjamAction yang
+      // punya confirm() native ganda (SweetAlert + confirm). Double-confirm
+      // bikin toast "gagal" palsu di mobile/Telegram WebView.
+      showToast('Memproses...', 'info');
+      await window.simapoSubmit(P.simapoAdminPinjamAction, { id: pa.id, status: 'DIKEMBALIKAN' }, {
+        successMsg: 'Aset berhasil dikembalikan',
+        errorMsg: 'Gagal mengembalikan aset.',
+        onSuccess: () => {
+          window._simapoCache.clear('admin_pinjam');
+          window._simapoCache.clear('user_pinjam_riwayat');
+          window.loadAdminSimapoPinjam(true);
+        },
+      });
     } catch (e) {
       showToast('Gagal memproses QR', 'error');
     }
@@ -334,25 +347,39 @@ window.loadAdminSimapoMaster = async function(force = false) {
   if (force || window._allMasterData.length === 0) window.showAdminSimapoShimmer('adminSimapoMasterList');
 
   let fetchError = false;
-  const data = await window._simapoCache.getOrFetch('admin_master', async () => {
-    try {
-      const res = await apiFetch(P.simapoAdminMasterList);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return parseApiResponse(await res.json());
-    } catch (e) {
-      console.warn('[SIMAPO] Master Fetch Fail:', e);
-      fetchError = true;
-      return null;
-    }
-  }, force);
+  // ponytail: dua fetch paralel — barang list (untuk mutasi/opname/edit) + unit list (untuk display flat).
+  const [barangData, unitData] = await Promise.all([
+    window._simapoCache.getOrFetch('admin_master', async () => {
+      try {
+        const res = await apiFetch(P.simapoAdminMasterList);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return parseApiResponse(await res.json());
+      } catch (e) {
+        console.warn('[SIMAPO] Master Fetch Fail:', e);
+        fetchError = true;
+        return null;
+      }
+    }, force),
+    window._simapoCache.getOrFetch('admin_units', async () => {
+      try {
+        const res = await apiFetch(P.simapoUnitListAll);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return parseApiResponse(await res.json());
+      } catch (e) {
+        console.warn('[SIMAPO] Unit Fetch Fail:', e);
+        return null;
+      }
+    }, force),
+  ]);
 
   if (fetchError) {
     window.simapoErrorState('adminSimapoMasterList', 'Gagal memuat data master aset dari server.');
     return;
   }
 
-  window._allMasterData = Array.isArray(data) ? data : [];
-  window.renderAdminSimapoMaster(window._allMasterData);
+  window._allMasterData = Array.isArray(barangData) ? barangData : [];
+  window._allUnitData = Array.isArray(unitData) ? unitData : [];
+  window.renderAdminSimapoMaster(window._allUnitData);
 };
 window._simapoRetryMap['adminSimapoMasterList'] = window.loadAdminSimapoMaster;
 
@@ -362,24 +389,28 @@ window.renderAdminSimapoMaster = function(data) {
   if (!data || data.length === 0) { el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-box" aria-hidden="true"></i> Belum ada data aset.</div>`; return; }
   const fmt = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
 
-  el.innerHTML = data.map(item => {
-    const stok = Number(item.stok_saat_ini) || 0;
-    const stockColor = stok > 0 ? 'var(--success)' : 'var(--danger)';
+  // ponytail: flat — tiap unit_aset jadi baris sendiri, tanpa grup per barang.
+  el.innerHTML = data.map(u => {
+    const dipinjam = u.statuspinjam === true || u.statuspinjam === 'true';
+    const statusColor = dipinjam ? 'var(--warning)' : 'var(--success)';
+    const statusText = dipinjam ? 'Dipinjam' : 'Tersedia';
     return `
-    <div data-barang-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:var(--card-bg);border:1px solid var(--border);margin-bottom:8px;">
+    <div data-barang-id="${u.barangid}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:var(--card-bg);border:1px solid var(--border);margin-bottom:8px;">
       <div style="width:44px;height:44px;border-radius:10px;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;"><i class="fas fa-box" aria-hidden="true"></i></div>
       <div style="flex:1;min-width:0;">
-        <div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.nama}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${item.kodebarang}${item.tahun_mulai ? ' · ' + (item.tahun_mulai === item.tahun_selesai ? item.tahun_mulai : item.tahun_mulai + '–' + item.tahun_selesai) : ''}</div>
+        <div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.nama_barang || '—'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${u.nomorinventaris || '—'} · ${u.kodebarang || ''}${u.tahunperolehan ? ' · ' + u.tahunperolehan : ''}</div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap;">
-          <span style="font-size:10px;font-weight:800;color:${stockColor};background:rgba(255,255,255,0.04);border:1px solid currentColor;border-radius:6px;padding:2px 8px;">Stok: ${stok} ${item.satuan || ''}</span>
-          <span style="font-size:11px;font-weight:700;color:var(--gold);">${fmt(item.hargasatuan || 0)}</span>
+          <span style="font-size:10px;font-weight:800;color:${statusColor};background:rgba(255,255,255,0.04);border:1px solid currentColor;border-radius:6px;padding:2px 8px;">${statusText}</span>
+          <span style="font-size:10px;font-weight:700;color:var(--muted);">${u.kondisi || '—'}</span>
+          <span style="font-size:11px;font-weight:700;color:var(--gold);">${fmt(u.hargasatuan || 0)}</span>
         </div>
+        ${u.nama_peminjam_saat_ini ? `<div style="font-size:10px;color:var(--warning);margin-top:2px;"><i class="fas fa-user" aria-hidden="true"></i> Dipinjam oleh: ${u.nama_peminjam_saat_ini}</div>` : ''}
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;align-items:center;">
-        <button onclick="window.showSimapoMasterForm('${item.id}')" title="Edit aset" aria-label="Edit aset" style="padding:8px 12px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:700;"><i class="fas fa-edit" aria-hidden="true"></i></button>
-        <button onclick="toggleUnitList('${item.id}', this)" title="Lihat unit & QR" style="padding:8px 12px;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2);border-radius:8px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-mobile-alt" aria-hidden="true"></i> QR</button>
-        <button onclick="window.deleteSimapoMaster('${item.id}')" title="Hapus aset" aria-label="Hapus aset" style="padding:8px 12px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:8px;font-size:12px;cursor:pointer;font-weight:700;"><i class="fas fa-trash" aria-hidden="true"></i></button>
+        <button onclick="window.showSimapoMasterForm('${u.barangid}')" title="Edit aset" aria-label="Edit aset" style="padding:8px 12px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:700;"><i class="fas fa-edit" aria-hidden="true"></i></button>
+        <button onclick="window.generateQRSingle('${u.id}', '${(u.nama_barang || '').replace(/'/g, "\\'")}', '${(u.nomorinventaris || '').replace(/'/g, "\\'")}')" title="QR aset ini" style="padding:8px 12px;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2);border-radius:8px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-mobile-alt" aria-hidden="true"></i> QR</button>
+        <button onclick="window.deleteSimapoMaster('${u.barangid}')" title="Hapus aset" aria-label="Hapus aset" style="padding:8px 12px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:8px;font-size:12px;cursor:pointer;font-weight:700;"><i class="fas fa-trash" aria-hidden="true"></i></button>
       </div>
     </div>`;
   }).join('');
@@ -387,9 +418,10 @@ window.renderAdminSimapoMaster = function(data) {
 
 window.filterSAMaster = function(val) {
   const q = val.toLowerCase();
-  const filtered = window._allMasterData.filter(b => 
-    (b.nama && b.nama.toLowerCase().includes(q)) || 
-    (b.kodebarang && b.kodebarang.toLowerCase().includes(q))
+  const filtered = (window._allUnitData || []).filter(u =>
+    (u.nama_barang && u.nama_barang.toLowerCase().includes(q)) ||
+    (u.kodebarang && u.kodebarang.toLowerCase().includes(q)) ||
+    (u.nomorinventaris && u.nomorinventaris.toLowerCase().includes(q))
   );
   window.renderAdminSimapoMaster(filtered);
 };
@@ -1025,6 +1057,11 @@ window.downloadQRImage = function(payload, label) {
   link.download = `QR-${label.replace(/[^a-zA-Z0-9-]/g,'_')}.png`;
   link.href = dataUrl;
   link.click();
+};
+
+// ponytail: wrapper tipis — QR button di master list flat panggil generateQRCode langsung.
+window.generateQRSingle = function(unitasetId, _nama, label) {
+  window.generateQRCode(unitasetId, label || unitasetId);
 };
 
 window.generateAllQR = async function(barangId) {

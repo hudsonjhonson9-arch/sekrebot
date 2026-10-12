@@ -355,6 +355,7 @@ const P = {
   simapoUnitByQR: '/api/simapo/unit-by-qr',
   simapoQRUpdate: '/api/simapo/qr-update',
   simapoUnitList: '/api/simapo/unit-list',
+  simapoUnitListAll: '/api/simapo/unit-list-all',
   simapoQRPinjam: '/api/simapo/qr-pinjam',
   simapoPenerimaanList: '/api/simapo/penerimaan',
   simapoPenerimaanSave: '/api/simapo/penerimaan',
