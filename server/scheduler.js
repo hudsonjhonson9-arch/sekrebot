@@ -126,8 +126,8 @@ export function createScheduler({ query, sendTelegram, logger = console, now = (
       await query(
         `INSERT INTO "Log_Absen" ("ID","Nama","NIP","Tanggal","Jam","Jenis Absen","Lokasi","Ket","koordinat","instansi_id")
          VALUES ($1,$2,$3,$4,$5,'TUBEL','-','TUBEL','-',
-           COALESCE((SELECT instansi_id FROM user_list WHERE "NIP"=$3 LIMIT 1),
-                    (SELECT instansi_id FROM user_list WHERE id::text=$1 LIMIT 1),'bapperida'))`,
+         COALESCE((SELECT instansi_id FROM user_list WHERE "NIP"=$3 LIMIT 1),
+                  (SELECT instansi_id FROM user_list WHERE id=$1 LIMIT 1),'bapperida'))`,
         [k.ID, k.username, k.NIP, tanggal, jam],
       );
     }

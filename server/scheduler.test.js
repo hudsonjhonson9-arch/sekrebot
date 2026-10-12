@@ -47,6 +47,22 @@ test('auto-tubel: catat Log_Absen TUBEL Angelina sekali per hari', async () => {
   assert.equal(inserts[0][3], '2026-10-05');
 });
 
+test('auto-tubel: INSERT tanpa bentrok tipe parameter PG ($1 "ID" bigint vs id::text)', async () => {
+  // Insiden produksi 2026-10-12 07:00: PG error 42P08 "inconsistent types deduced
+  // for parameter $1" — $1 dipakai untuk kolom bigint "ID" sekaligus dibandingkan
+  // id::text, jadi TUBEL harian tidak pernah tercatat.
+  const sqls = [];
+  const query = async (text) => {
+    if (text.startsWith('INSERT INTO "Log_Absen"')) sqls.push(text);
+    return { rows: [] };
+  };
+  const sched = createScheduler({ query, sendTelegram: null, logger: silent });
+  await sched.tick(new Date(2026, 9, 5, 7, 0));
+  assert.equal(sqls.length, 1);
+  assert.ok(!/id::text=\$1(?!\d)/.test(sqls[0]),
+    '$1 dipakai untuk "ID" (bigint) dan id::text (text) dalam satu pernyataan → 42P08 di PG');
+});
+
 test('tanpa-berita: catat 1 baris + Telegram; skip bila libur', async () => {
   const inserts = [];
   const tg = [];
