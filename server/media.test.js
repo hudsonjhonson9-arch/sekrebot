@@ -6,6 +6,7 @@ import {
   sameInstansi,
   isSessionToken,
   MEDIA_ROLES,
+  SIMAPO_ROLES,
   SESSION_LOOKUP_SQL,
   singleSessionRow,
 } from './auth.js';
@@ -290,6 +291,15 @@ test('MEDIA_ROLES memuat tepat enam peran yang diizinkan', () => {
     ['ADMIN', 'IRBAN', 'KABID', 'KEPALA', 'SEKRETARIS', 'SUPERADMIN'],
   );
   assert.ok(MEDIA_ROLES instanceof Set);
+});
+
+test('SIMAPO_ROLES = MEDIA_ROLES + BENDAHARA saja; BENDAHARA bukan media', () => {
+  assert.deepEqual(
+    [...SIMAPO_ROLES].sort(),
+    ['ADMIN', 'BENDAHARA', 'IRBAN', 'KABID', 'KEPALA', 'SEKRETARIS', 'SUPERADMIN'],
+  );
+  assert.equal(MEDIA_ROLES.has('BENDAHARA'), false, 'BENDAHARA tidak boleh menulis log media');
+  assert.ok(SIMAPO_ROLES.has('BENDAHARA'));
 });
 
 test('isSessionToken hanya menerima 192 hex huruf kecil', () => {

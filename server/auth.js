@@ -15,6 +15,11 @@ export const MEDIA_ROLES = new Set([
 //-media.js dan USER/INSPEKTUR itu satu-satunya selisihnya.
 export const ABSEN_ROLES = new Set(['USER', 'INSPEKTUR', ...MEDIA_ROLES]);
 
+// BENDAHARA = staf bendahara barang: admin aset (SIMAPO) saja, BUKAN media.
+// Sengaja tidak masuk MEDIA_ROLES supaya tidak mendapat tulis log manual
+// (log.js) atau endpoint media lain; hanya dipakai mount /api/simapo.
+export const SIMAPO_ROLES = new Set([...MEDIA_ROLES, 'BENDAHARA']);
+
 // Token sesi nyata = public.create_session() -> encode(gen_random_bytes(48),'hex'),
 // jadi 192 hex huruf kecil. Forma lain (mis. legacy `usr_<id>_<ts>` dari n8n) ditolak
 // di sini, sebelum database disentuh.

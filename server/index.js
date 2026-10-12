@@ -17,7 +17,7 @@ import { createOvertimeRouter } from './overtime.js';
 import { createNotifyRouter } from './notify.js';
 import { createCoreAdminRouter } from './core-admin.js';
 import { createCoreUserRouter } from './core-user.js';
-import { ABSEN_ROLES, MEDIA_ROLES, requireRole } from './auth.js';
+import { ABSEN_ROLES, SIMAPO_ROLES, requireRole } from './auth.js';
 
 export function createApp() {
   const app = express();
@@ -113,16 +113,17 @@ export function createApp() {
   // admin (gate requireMedia di dalam log.js).
   app.use('/api/log', requireRole(ABSEN_ROLES), createLogRouter({ query }));
 
-  // SIMAPO (penerimaan barang, pemeliharaan, BKU). requireRole MEDIA_ROLES: di n8n
+  // SIMAPO (penerimaan barang, pemeliharaan, BKU). requireRole SIMAPO_ROLES:
+  // media ditambah BENDAHARA (admin aset saja, tanpa kekuasaan media). di n8n
   // webhook ini `authentication: none`, jadi endpoint tulisnya terbuka publik tanpa
   // token. requireRole menutup lubang itu tanpa mengubah bentuk respons, dan
   // frontend sudah siap menangani 401 (pesan "Sesi Anda sudah berakhir").
   app.use(
     '/api/simapo',
-    requireRole(MEDIA_ROLES),
+    requireRole(SIMAPO_ROLES),
     createSimapoRouter({ query, withTransaction })
   );
-  app.use('/api/simapo', requireRole(MEDIA_ROLES), createSimapoNativeExtraRouter({ query, withTransaction }));
+  app.use('/api/simapo', requireRole(SIMAPO_ROLES), createSimapoNativeExtraRouter({ query, withTransaction }));
 
   return app;
 }

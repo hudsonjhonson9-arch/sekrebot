@@ -9,8 +9,9 @@
     if (window.IS_ADMIN) return true;
     if (typeof window._isSuperAdmin === 'function' && window._isSuperAdmin()) return true;
     const role = String(localStorage.getItem('MY_ROLE') || '').toLowerCase();
-    if (role.includes('admin')) return true;
-    return String((window.userProfile || {}).role || '').toLowerCase().includes('admin');
+    if (role.includes('admin') || role === 'bendahara') return true;
+    const prole = String((window.userProfile || {}).role || '').toLowerCase();
+    return prole.includes('admin') || prole === 'bendahara';
   }
 
   function visibleScreens(list) {

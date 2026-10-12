@@ -179,3 +179,34 @@ test('lokasi-update: tidak menimpa instansi_id bila body tidak mengirimnya', asy
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal(updated[4], 'bapperida2', 'instansi_id lama dipertahankan');
 });
+
+// BENDAHARA = admin aset saja. Jangan bocor ke daftar admin absensi
+// (admin_ids → ADMIN_NIPS frontend → IS_ADMIN → tab admin absensi ikut terbuka).
+test('jam-absen: query admin mengecualikan BENDAHARA', async () => {
+  const h = harness();
+  const res = await get(h, '/api/jam-absen');
+  assert.equal(res.status, 200);
+  const q = h.sql.find((s) => /FROM user_list WHERE instansi_id/.test(s.text));
+  assert.ok(q, 'jam-absen wajib query daftar admin');
+  assert.ok(
+    /NOT IN \('USER','BENDAHARA'\)/.test(q.text),
+    'BENDAHARA harus dikeluarkan dari daftar admin jam-absen'
+  );
+});
+
+// user-edit harus menerima role BENDAHARA (masuk daftar ROLES) dan
+// menyetel is_admin=false (bukan media) sehingga keterangan-notify dll tidak terpicu.
+test('user-edit: role BENDAHARA diterima, is_admin di-set false', async () => {
+  let updated = null;
+  const q = async (text, params) => {
+    if (/SELECT id::text AS id,instansi_id FROM user_list/.test(text)) return { rows: [{ id: '5', instansi_id: 'bapperida' }] };
+    if (/UPDATE user_list SET/.test(text)) { updated = params; return { rows: [{ id: '5', nama: 'Bendahara', nip: '1', role: 'BENDAHARA', instansi_id: 'bapperida' }] }; }
+    return { rows: [] };
+  };
+  const h = harness({ session: ADMIN, query: q });
+  const res = await req(h, 'POST', '/api/user-edit', { id: '5', role: 'bendahara' });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const roleIdx = updated.indexOf('bendahara');
+  assert.ok(roleIdx !== -1, 'role BENDAHARA ikut di-UPDATE');
+  assert.equal(updated[roleIdx + 1], false, 'is_admin=false (bukan media)');
+});
