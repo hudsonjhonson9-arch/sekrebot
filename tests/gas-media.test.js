@@ -75,7 +75,10 @@ test('payload dibatasi 5 MB sebelum dan sesudah decode', () => {
 });
 
 test('mimeType divalidasi sebagai image/* dan svg ditolak', () => {
-  assert.match(code, /MIME_PREFIX\.indexOf\(p\.mimeType\)\s*!==\s*0/);
+  // p.mimeType.indexOf(MIME_PREFIX), bukan sebaliknya — 'image/'.indexOf('image/png')
+  // selalu -1, semua upload ditolak.
+  assert.match(code, /p\.mimeType\.indexOf\(MIME_PREFIX\)\s*!==\s*0/);
+  assert.doesNotMatch(code, /MIME_PREFIX\.indexOf\(p\.mimeType\)/);
   assert.match(code, /\/svg\/\.test\(p\.mimeType\)/);
 });
 

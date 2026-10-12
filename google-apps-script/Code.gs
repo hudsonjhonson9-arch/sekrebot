@@ -1,6 +1,6 @@
-const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_BYTES = 5 * 1024 * 1024;
 const MIME_PREFIX = 'image/';
-const FILE_ID_RE = /^[-\w]{10,200}$/;
+const FILE_ID_RE = /^[-\w]{5,200}$/;
 
 // ponytail: Apps Script TIDAK punya setResponseCode (permintaan fitur sejak
 // 2013, belum direalisasi) — memanggilnya melempar TypeError di setiap request.
@@ -82,7 +82,7 @@ function doPost(e) {
     return jsonOut(400, { ok: false, message: 'filename dan mimeType wajib diisi' });
   }
   // svg ditolak: bisa membawa <script>, tidak pernah dibutuhkan untuk foto/signature.
-  if (MIME_PREFIX.indexOf(p.mimeType) !== 0 || /svg/.test(p.mimeType)) {
+  if (p.mimeType.indexOf(MIME_PREFIX) !== 0 || /svg/.test(p.mimeType)) {
     return jsonOut(400, { ok: false, message: 'mimeType harus image/* dan bukan svg' });
   }
   if (typeof p.dataBase64 !== 'string' || !p.dataBase64) {
