@@ -21,7 +21,8 @@ import { ABSEN_ROLES, MEDIA_ROLES, requireRole } from './auth.js';
 
 export function createApp() {
   const app = express();
-  app.use(express.json({ limit: '8mb' }));
+  // 16mb: base64 10 MB ≈ 13.3 MB JSON, sisa ruang untuk field lain
+  app.use(express.json({ limit: '16mb' }));
 
   // req.ip (dipakai gate ip_range di absen) hanya akurat kalau jumlah hop proxy
   // diketahui. Rantai produksi: Traefik (Coolify) -> nginx (container ini) ->

@@ -1,4 +1,4 @@
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 10 * 1024 * 1024;
 const MIME_PREFIX = 'image/';
 const FILE_ID_RE = /^[-\w]{5,200}$/;
 
@@ -90,7 +90,7 @@ function doPost(e) {
   }
   // ponytail: guard pra-decode, base64 ~4/3 byte asli + 4. Cabut kalau backend sudah membatasi ukuran body.
   if (p.dataBase64.length > MAX_BYTES * 4 / 3 + 4) {
-    return jsonOut(413, { ok: false, message: 'ukuran file melebihi 5 MB' });
+    return jsonOut(413, { ok: false, message: 'ukuran file melebihi 10 MB' });
   }
   // only id file Drive, bukan URL — URL disimpan di DB dan di-extract di sisi server.
   if (p.fileId && !FILE_ID_RE.test(p.fileId)) {
@@ -104,7 +104,7 @@ function doPost(e) {
     return jsonOut(400, { ok: false, message: 'dataBase64 bukan base64 yang valid' });
   }
   if (bytes.length > MAX_BYTES) {
-    return jsonOut(413, { ok: false, message: 'ukuran file melebihi 5 MB' });
+    return jsonOut(413, { ok: false, message: 'ukuran file melebihi 10 MB' });
   }
 
   try {

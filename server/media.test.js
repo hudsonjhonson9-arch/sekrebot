@@ -112,11 +112,11 @@ test('decodeDataUrl menolak input yang bukan data URL gambar', () => {
   assert.equal(fileIdFromDriveUrl('https://drive.google.com/file/d/abcde/view'), 'abcde');
 });
 
-test('decodeDataUrl menolak gambar melebihi 5 MB', () => {
-  const big = Buffer.alloc(5 * 1024 * 1024 + 1).toString('base64');
-  assert.throws(() => decodeDataUrl(`data:image/png;base64,${big}`), /5 MB/);
-  // batas pas 5 MB masih diterima; nilai ini harus sama dengan MAX_BYTES di Code.gs
-  assert.equal(MAX_IMAGE_BYTES, 5 * 1024 * 1024);
+test('decodeDataUrl menolak gambar melebihi 10 MB', () => {
+  const big = Buffer.alloc(10 * 1024 * 1024 + 1).toString('base64');
+  assert.throws(() => decodeDataUrl(`data:image/png;base64,${big}`), /10 MB/);
+  // batas pas 10 MB masih diterima; nilai ini harus sama dengan MAX_BYTES di Code.gs
+  assert.equal(MAX_IMAGE_BYTES, 10 * 1024 * 1024);
   const exact = decodeDataUrl(`data:image/png;base64,${Buffer.alloc(MAX_IMAGE_BYTES).toString('base64')}`);
   assert.equal(exact.buffer.length, MAX_IMAGE_BYTES);
   // base64 yang tidak menghasilkan byte apa pun -> buffer kosong
@@ -165,12 +165,12 @@ test('gasUpsert melempar error saat Apps Script menolak', async () => {
   stubFetch(async () => ({
     ok: false,
     status: 413,
-    json: async () => ({ ok: false, message: 'ukuran file melebihi 5 MB' }),
+    json: async () => ({ ok: false, message: 'ukuran file melebihi 10 MB' }),
   }));
   try {
     await assert.rejects(
       () => gasUpsert({ filename: 'a.png', mimeType: 'image/png', dataBase64: 'AAAA' }),
-      /5 MB/,
+      /10 MB/,
     );
 
     stubFetch(async () => okJson({ ok: true, fileId: 'F1' }));
@@ -582,7 +582,7 @@ function harness({ user = ME, userRow = row(), auth = true, query, gasUpsert } =
     },
   };
   const app = express();
-  app.use(express.json({ limit: '8mb' }));
+  app.use(express.json({ limit: '16mb' }));
   if (auth) {
     app.use(requireRole(MEDIA_ROLES, { lookup: async () => ({ ...user }) }));
   }
@@ -793,12 +793,12 @@ test('face: payload bukan data URL image -> 400 dan tidak sampai ke Drive', asyn
   }
 });
 
-test('face: foto di atas 5 MB -> 400 dan tidak sampai ke Drive', async () => {
+test('face: foto di atas 10 MB -> 400 dan tidak sampai ke Drive', async () => {
   const big = `data:image/png;base64,${Buffer.alloc(MAX_IMAGE_BYTES + 1).toString('base64')}`;
   const h = harness();
   const res = await post(h, '/api/media/face', { ...FACE, foto_base64: big });
   assert.equal(res.status, 400);
-  assert.match(res.body.message, /5 MB/);
+  assert.match(res.body.message, /10 MB/);
   assert.equal(h.gas.length, 0);
 });
 

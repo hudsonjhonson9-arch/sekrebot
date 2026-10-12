@@ -29,7 +29,7 @@ async function callGas_(path, init = {}) {
     }
     // `?.` menutup dua kasus: body JSON `null` dan body `{}` tanpa field ok
     if (!res.ok || !json?.ok) {
-      // pesan dari Apps Script diteruskan apa adanya (mis. batas 5 MB)
+      // pesan dari Apps Script diteruskan apa adanya (mis. batas 10 MB)
       throw new Error(json?.message || `Apps Script HTTP ${res.status}`);
     }
     return json;

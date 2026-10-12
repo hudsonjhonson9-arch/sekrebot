@@ -63,8 +63,8 @@ test('jsonOut hanya memakai API Apps Script yang ada', () => {
   assert.doesNotMatch(code, /setResponseCode/);
 });
 
-test('payload dibatasi 5 MB sebelum dan sesudah decode', () => {
-  assert.match(code, /const MAX_BYTES = 5 \* 1024 \* 1024/);
+test('payload dibatasi 10 MB sebelum dan sesudah decode', () => {
+  assert.match(code, /const MAX_BYTES = 10 \* 1024 \* 1024/);
   assert.match(code, /p\.dataBase64\.length > MAX_BYTES/);
   assert.match(code, /bytes\.length > MAX_BYTES/);
   assert.match(code, /return jsonOut\(413,/);
