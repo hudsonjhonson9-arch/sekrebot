@@ -264,13 +264,14 @@ test('dateRange bebas timezone: TZ +8 tidak menggeser tanggal (bug keterangan 1 
   // ponytail: child process dengan TZ=Asia/Shanghai = kondisi server produksi (DB Asia/Shanghai);
   // sebelum fix, parse lokal + toISOString UTC memundakkan tiap tanggal 1 hari.
   const mod = new URL('./attendance-data.js', import.meta.url).href;
-  const code = `import { dateRange } from ${JSON.stringify(mod)}; console.log(JSON.stringify([dateRange('2026-10-12','2026-10-12'),dateRange('2026-10-11','2026-10-14'),dateRange('2026-10-13','2026-10-16')]));`;
+  const code = `import { dateRange, parseDate } from ${JSON.stringify(mod)}; console.log(JSON.stringify([dateRange('2026-10-12','2026-10-12'),dateRange('2026-10-11','2026-10-14'),dateRange('2026-10-13','2026-10-16'),['2026-10-11','2026-10-12','2026-10-13'].map(t=>parseDate(t).getUTCDay())]));`;
   const out = execFileSync(process.execPath, ['--input-type=module', '-e', code], {
     env: { ...process.env, TZ: 'Asia/Shanghai' },
     encoding: 'utf8',
   }).trim();
-  const [single, multi, future] = JSON.parse(out);
+  const [single, multi, future, weekdays] = JSON.parse(out);
   assert.deepEqual(single, ['2026-10-12'], 'tanggal tunggal harus persis tanggal input');
   assert.deepEqual(multi, ['2026-10-11', '2026-10-12', '2026-10-13', '2026-10-14'], 'rentang harus persis dari s.d. tanpa geser');
   assert.deepEqual(future, ['2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16'], 'pengajuan tanggal lain tidak boleh menyertakan tanggal sebelumnya');
+  assert.deepEqual(weekdays, [0, 1, 2], 'parseDate -> getUTCDay harus hari Minggu/Senin/Selasa (filter akhir pekan rekap)');
 });

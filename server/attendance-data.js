@@ -145,7 +145,7 @@ async function rekapAbsenHandler(req, res, query) {
     };
     const range = dateRange(dari, sampai).filter(t => {
       const d = parseDate(t);
-      return d.getDay() !== 0 && d.getDay() !== 6 && !libur.has(t);
+      return d.getUTCDay() !== 0 && d.getUTCDay() !== 6 && !libur.has(t);
     });
     const workDays = Math.max(1, range.length);
     const map = new Map(users.map(u => [String(u.id), {
