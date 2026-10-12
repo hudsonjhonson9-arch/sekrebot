@@ -41,14 +41,17 @@ export function createSimapoNativeExtraRouter({ query, withTransaction }) {
     const b=req.body||{}, pid=id(b.id), status=S(b.status), inst=instOf(req,b.instansi_id);
     if(!pid||!status)return res.status(400).json({ok:false,message:'id dan status wajib diisi.'});
     try { const {rows}=await withTransaction(async c=>{
-      const old=await c.query(`SELECT p.id,p.unitasetid,p.status,COALESCE(b.id,b2.id) barang_id FROM "SIMAPO".peminjaman p LEFT JOIN "SIMAPO".barang b ON b.id=p.unitasetid LEFT JOIN "SIMAPO".unit_aset ua ON ua.id=p.unitasetid LEFT JOIN "SIMAPO".barang b2 ON b2.id=ua.barangid WHERE p.id=$1 AND p.instansi_id=$2 FOR UPDATE OF p`,[pid,inst]);
-      if(!old.rows.length) throw Object.assign(new Error('not found'),{statusCode:404});
-      const o=old.rows[0]; const up=await c.query(`UPDATE "SIMAPO".peminjaman SET status=$1,updatedat=NOW() WHERE id=$2 RETURNING id,status,unitasetid`,[status,pid]);
+      const locked=await c.query(`SELECT id,unitasetid,status FROM "SIMAPO".peminjaman WHERE id=$1 AND instansi_id=$2 FOR UPDATE`,[pid,inst]);
+      if(!locked.rows.length) throw Object.assign(new Error('not found'),{statusCode:404});
+      const o=locked.rows[0];
+      const bid=await c.query(`SELECT COALESCE(b.id,b2.id) barang_id FROM "SIMAPO".peminjaman p LEFT JOIN "SIMAPO".barang b ON b.id=p.unitasetid LEFT JOIN "SIMAPO".unit_aset ua ON ua.id=p.unitasetid LEFT JOIN "SIMAPO".barang b2 ON b2.id=ua.barangid WHERE p.id=$1`,[pid]);
+      o.barang_id=bid.rows[0]?.barang_id||null;
+      const up=await c.query(`UPDATE "SIMAPO".peminjaman SET status=$1,updatedat=NOW() WHERE id=$2 RETURNING id,status,unitasetid`,[status,pid]);
       if(o.barang_id){let delta=0;if(o.status==='MENUNGGU'&&['DIPINJAM','SELESAI'].includes(status))delta=-1;if(['DIPINJAM','MENUNGGU'].includes(o.status)&&['DIKEMBALIKAN','KEMBALI'].includes(status))delta=1;if(delta)await c.query(`UPDATE "SIMAPO".barang SET stok_saat_ini=GREATEST(0,COALESCE(stok_saat_ini,0)+$1),updatedat=NOW() WHERE id=$2 AND instansi_id=$3`,[delta,o.barang_id,inst]);}
       await c.query(`UPDATE "SIMAPO".unit_aset SET statuspinjam=CASE WHEN $1 IN ('DIPINJAM','SELESAI') THEN true WHEN $1 IN ('DIKEMBALIKAN','KEMBALI') THEN false ELSE statuspinjam END,updatedat=NOW() WHERE id=$2`,[status,o.unitasetid]);
       return up.rows;
     }); return res.json({ok:true,...rows[0]}); }
-    catch (e) {return res.status(e.statusCode||500).json({ok:false,message:e.statusCode===404?'Peminjaman tidak ditemukan.':'Gagal memperbarui peminjaman.'});}
+    catch (e) {console.error('[SIMAPO] admin-pinjam-action error:',e);return res.status(e.statusCode||500).json({ok:false,message:e.statusCode===404?'Peminjaman tidak ditemukan.':'Gagal memperbarui peminjaman.'});}
   });
 
   // Tiket kerusakan
