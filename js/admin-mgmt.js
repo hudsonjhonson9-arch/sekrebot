@@ -29,7 +29,7 @@ async function loadAdminMgmt() {
       const admVal = u.is_admin ?? u.Is_Admin ?? u.IS_ADMIN;
       const isAdminFlag = admVal === true || String(admVal).toLowerCase() === 'true' || Number(admVal) === 1;
       
-      return isAdminFlag || roleStr.includes('superadmin') || roleStr === 'bendahara';
+      return isAdminFlag || roleStr.includes('superadmin') || roleStr === 'bendahara barang';
     });
 
     // Update global ADMIN_NIPS
@@ -43,7 +43,7 @@ async function loadAdminMgmt() {
         // BENDAHARA: tampil di daftar manajemen saja — JANGAN masuk ADMIN_NIPS
         // (menjadi trigger IS_ADMIN → tab admin absensi ikut terbuka).
         const rs = String(u.role || u.Role || '').toLowerCase().trim();
-        if (nip && rs !== 'bendahara') ADMIN_NIPS.push(nip);
+        if (nip && rs !== 'bendahara barang') ADMIN_NIPS.push(nip);
         window._adminRoleMap[key] = rs || 'admin';
       }
     });
@@ -66,7 +66,7 @@ async function loadAdminMgmt() {
         if (r.includes('kepala') || r.includes('inspektur')) return 8;
         if (r.includes('sekretaris')) return 7;
         if (r.includes('kabid') || r.includes('irban')) return 6;
-        if (r === 'bendahara') return 5;
+        if (r === 'bendahara barang') return 5;
         return 0;
       };
       
@@ -110,7 +110,7 @@ async function loadAdminMgmt() {
             icon = '<i class="fas fa-user-tie"></i>'; color = '#f59e0b'; 
           }
           else if (role === 'irban') { roleLabel = 'IRBAN'; icon = '<i class="fas fa-search"></i>'; color = '#8b5cf6'; }
-          else if (role === 'bendahara') { roleLabel = 'BENDAHARA'; icon = '<i class="fas fa-boxes"></i>'; color = '#06b6d4'; }
+          else if (role === 'bendahara barang') { roleLabel = 'BENDAHARA BARANG'; icon = '<i class="fas fa-boxes"></i>'; color = '#06b6d4'; }
 
           return `
             <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; ${index !== admins.length - 1 ? 'border-bottom:1px solid rgba(255,255,255,0.05)' : ''}; background:${isMe ? 'rgba(201,168,76,0.05)' : 'transparent'}">

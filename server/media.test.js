@@ -294,14 +294,14 @@ test('MEDIA_ROLES memuat tepat enam peran yang diizinkan', () => {
   assert.ok(MEDIA_ROLES instanceof Set);
 });
 
-test('SIMAPO_ROLES = MEDIA_ROLES + BENDAHARA saja; BENDAHARA bukan media', () => {
+test('SIMAPO_ROLES = MEDIA_ROLES + BENDAHARA BARANG saja; BENDAHARA BARANG bukan media', () => {
   assert.deepEqual(
     [...SIMAPO_ROLES].sort(),
-    ['ADMIN', 'BENDAHARA', 'IRBAN', 'KABID', 'KEPALA', 'SEKRETARIS', 'SUPERADMIN'],
+    ['ADMIN', 'BENDAHARA BARANG', 'IRBAN', 'KABID', 'KEPALA', 'SEKRETARIS', 'SUPERADMIN'],
   );
-  assert.equal(MEDIA_ROLES.has('BENDAHARA'), false, 'BENDAHARA tidak boleh menulis log media');
-  assert.ok(SIMAPO_ROLES.has('BENDAHARA'));
-  assert.ok(ABSEN_ROLES.has('BENDAHARA'), 'BENDAHARA tetap bisa absen & baca log sendiri');
+  assert.equal(MEDIA_ROLES.has('BENDAHARA BARANG'), false, 'BENDAHARA BARANG tidak boleh menulis log media');
+  assert.ok(SIMAPO_ROLES.has('BENDAHARA BARANG'));
+  assert.ok(ABSEN_ROLES.has('BENDAHARA BARANG'), 'BENDAHARA BARANG tetap bisa absen & baca log sendiri');
 });
 
 test('isSessionToken hanya menerima 192 hex huruf kecil', () => {

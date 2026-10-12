@@ -114,7 +114,7 @@ export function createApp() {
   app.use('/api/log', requireRole(ABSEN_ROLES), createLogRouter({ query }));
 
   // SIMAPO (penerimaan barang, pemeliharaan, BKU). requireRole SIMAPO_ROLES:
-  // media ditambah BENDAHARA (admin aset saja, tanpa kekuasaan media). di n8n
+  // media ditambah BENDAHARA BARANG (admin aset saja, tanpa kekuasaan media). di n8n
   // webhook ini `authentication: none`, jadi endpoint tulisnya terbuka publik tanpa
   // token. requireRole menutup lubang itu tanpa mengubah bentuk respons, dan
   // frontend sudah siap menangani 401 (pesan "Sesi Anda sudah berakhir").

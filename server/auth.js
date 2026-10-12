@@ -11,13 +11,13 @@ export const MEDIA_ROLES = new Set([
 ]);
 
 // Absen boleh dipakai seluruh peran media ditambah USER, INSPEKTUR, dan
-// BENDAHARA (staf bendahara barang tetap harus bisa absen & baca log sendiri).
-export const ABSEN_ROLES = new Set(['USER', 'INSPEKTUR', 'BENDAHARA', ...MEDIA_ROLES]);
+// BENDAHARA BARANG (staf bendahara barang tetap harus bisa absen & baca log sendiri).
+export const ABSEN_ROLES = new Set(['USER', 'INSPEKTUR', 'BENDAHARA BARANG', ...MEDIA_ROLES]);
 
-// BENDAHARA = staf bendahara barang: admin aset (SIMAPO) saja, BUKAN media.
+// BENDAHARA BARANG = staf bendahara barang: admin aset (SIMAPO) saja, BUKAN media.
 // Sengaja tidak masuk MEDIA_ROLES supaya tidak mendapat tulis log manual
 // (log.js) atau endpoint media lain; hanya dipakai mount /api/simapo.
-export const SIMAPO_ROLES = new Set([...MEDIA_ROLES, 'BENDAHARA']);
+export const SIMAPO_ROLES = new Set([...MEDIA_ROLES, 'BENDAHARA BARANG']);
 
 // Token sesi nyata = public.create_session() -> encode(gen_random_bytes(48),'hex'),
 // jadi 192 hex huruf kecil. Forma lain (mis. legacy `usr_<id>_<ts>` dari n8n) ditolak
