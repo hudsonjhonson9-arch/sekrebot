@@ -194,7 +194,7 @@ export function createScheduler({ query, sendTelegram, logger = console, now = (
     const { rows: logs } = await query(`SELECT "ID","Jenis Absen" FROM "Log_Absen" WHERE "Tanggal"=$1`, [tanggal]);
     const sudahMasuk = new Set(logs.filter((l) => has(l, MASUK)).map((l) => String(l.ID)));
     const sudahKet = new Set(logs.filter((l) => has(l, KET)).map((l) => String(l.ID)));
-    const { rows: peg } = await query(`SELECT id::text AS id, username, "Nama", "NIP", "Status" FROM user_list`);
+    const { rows: peg } = await query(`SELECT id::text AS id, username, "NIP", "Status" FROM user_list`);
     for (const p of peg) {
       const id = String(p.id || '').trim();
       if (!id || String(p.Status || '').toUpperCase().trim() !== 'AKTIF' || sudahMasuk.has(id) || sudahKet.has(id)) continue;
@@ -204,7 +204,7 @@ export function createScheduler({ query, sendTelegram, logger = console, now = (
         `INSERT INTO "Log_Absen" ("ID","Nama","NIP","Tanggal","Jam","Jenis Absen","Lokasi","Ket","koordinat","instansi_id","request_id")
          VALUES ($1,$2,$3,$4,$5,'TANPA BERITA','-','Otomatis — tidak hadir tanpa keterangan','-',
            COALESCE((SELECT instansi_id FROM user_list WHERE "NIP"=$3 LIMIT 1),
-                    (SELECT instansi_id FROM user_list WHERE id::text=$1 LIMIT 1),'bapperida'),$6)`,
+                    (SELECT instansi_id FROM user_list WHERE id=$1 LIMIT 1),'bapperida'),$6)`,
         [id, nm, nip, tanggal, jam, `TB_${tanggal}_${id}`],
       );
       await tg(p.id, buildTanpaBerita({ Nama: nm, NIP: nip, Jam: jam, Tanggal: tanggal }));

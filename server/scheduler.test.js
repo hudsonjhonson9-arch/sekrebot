@@ -63,6 +63,27 @@ test('auto-tubel: INSERT tanpa bentrok tipe parameter PG ($1 "ID" bigint vs id::
     '$1 dipakai untuk "ID" (bigint) dan id::text (text) dalam satu pernyataan → 42P08 di PG');
 });
 
+test('tanpa-berita: SQL sesuai skema produksi (tanpa user_list."Nama"; $1 tanpa bentrok tipe)', async () => {
+  // Insiden produksi: user_list tidak punya kolom "Nama" (ada di username) → 42703,
+  // dan INSERT memakai $1 untuk "ID" bigint sekaligus id::text → 42P08.
+  const userSqls = [];
+  const insertSqls = [];
+  const query = async (text) => {
+    if (text.startsWith('INSERT INTO "Log_Absen"')) insertSqls.push(text);
+    if (text.startsWith('SELECT') && text.includes('FROM user_list')) userSqls.push(text);
+    if (text.includes('libur_nasional')) return { rows: [] };
+    if (text.includes('FROM "Log_Absen" WHERE')) return { rows: [] };
+    return { rows: [{ id: '42', username: 'Ani', NIP: '123', Status: 'AKTIF' }] };
+  };
+  const sched = createScheduler({ query, sendTelegram: noop, logger: silent });
+  await sched.tick(new Date(2026, 9, 5, 10, 0));
+  assert.equal(userSqls.length, 1);
+  assert.ok(!userSqls[0].includes('"Nama"'), 'user_list tidak punya kolom "Nama" → 42703 di PG');
+  assert.equal(insertSqls.length, 1);
+  assert.ok(!/id::text=\$1(?!\d)/.test(insertSqls[0]),
+    '$1 dipakai untuk "ID" (bigint) dan id::text (text) dalam satu pernyataan → 42P08 di PG');
+});
+
 test('tanpa-berita: catat 1 baris + Telegram; skip bila libur', async () => {
   const inserts = [];
   const tg = [];
