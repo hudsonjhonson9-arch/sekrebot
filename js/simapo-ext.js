@@ -915,15 +915,15 @@ window.simapoMasterExportExcel = async function() {
     [1, 2, 3, 4, 5].forEach(ci => {
       row.getCell(ci).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
     });
-    row.height = 72;
+    row.height = 136;
 
     const payload = origin + '?qr=SIMAPO-' + u.id;
     const qr = QR(0, 'M');
     qr.addData(payload);
     qr.make();
-    const dataUrl = qr.createDataURL(6, 8);
+    const dataUrl = qr.createDataURL(8, 10);
     const imgId = wb.addImage({ base64: dataUrl.split(',')[1], extension: 'png' });
-    ws.addImage(imgId, { tl: { col: 4.1, row: 4 + i + 0.15 }, ext: { width: 60, height: 60 } });
+    ws.addImage(imgId, { tl: { col: 4.1, row: 4 + i + 0.15 }, ext: { width: 132, height: 132 } });
   });
 
   ws.columns = [
@@ -931,7 +931,7 @@ window.simapoMasterExportExcel = async function() {
     { key: 'nama', width: 32 },
     { key: 'kode', width: 22 },
     { key: 'inv', width: 24 },
-    { key: 'qr', width: 16 }
+    { key: 'qr', width: 24 }
   ];
 
   const buf = await wb.xlsx.writeBuffer();
@@ -1016,7 +1016,7 @@ window.generateQRCode = async function(unitasetId, label) {
     const qr = qrcode(0, 'M');
     qr.addData(payload);
     qr.make();
-    const canvas = qr.createImgTag(6, 8);
+    const canvas = qr.createImgTag(8, 10).replace('<img ', '<img style="max-width:300px;height:auto;width:100%;" ');
 
     // Simpan ke API
     await apiFetch(P.simapoQRUpdate, {
@@ -1052,7 +1052,7 @@ window.downloadQRImage = function(payload, label) {
   const qr = qrcode(0, 'M');
   qr.addData(payload);
   qr.make();
-  const dataUrl = qr.createDataURL(6, 8);
+  const dataUrl = qr.createDataURL(8, 10);
   const link = document.createElement('a');
   link.download = `QR-${label.replace(/[^a-zA-Z0-9-]/g,'_')}.png`;
   link.href = dataUrl;
@@ -1823,7 +1823,7 @@ window.viewQRCode = async function(unitasetId) {
       const qr = qrcode(0, 'M');
       qr.addData(unit.qrcode);
       qr.make();
-      const canvas = qr.createImgTag(6, 8);
+      const canvas = qr.createImgTag(8, 10).replace('<img ', '<img style="max-width:300px;height:auto;width:100%;" ');
       Swal.fire({
         title: `QR: ${unit.nomorinventaris || unit.id}`,
         html: `

@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { SESSION_LOOKUP_SQL, requireRole, singleSessionRow, ABSEN_ROLES } from './auth.js';
+import { SESSION_LOOKUP_SQL, requireRole, singleSessionRow, ABSEN_ROLES, MEDIA_ROLES, SIMAPO_ROLES } from './auth.js';
 
 test('lookup sesi join lewat user_id, bukan NIP', () => {
   // NIP tidak unik di user_list. Join lewat NIP akan fan-out saat ada NIP dobel dan
@@ -80,4 +80,23 @@ test('sesi valid mengisi req.user dari user_list', async () => {
   const lookup = async () => ({ id: '7', nip: '77', role: 'user', instansi_id: 'bapperida' });
   await requireRole(ABSEN_ROLES, { lookup })(req, res, () => {});
   assert.deepEqual(req.user, { id: '7', nip: '77', role: 'USER', instansi_id: 'bapperida' });
+});
+
+// BENDAHARA BARANG = admin aset saja: di SIMAPO_ROLES (mount /api/simapo) tapi
+// sengaja BUKAN MEDIA_ROLES, supaya tidak mendapat akses tulis log/endpoint media.
+// Kontrak ini yang membuat menu admin Aset terbuka untuk bendahara barang.
+test('SIMAPO_ROLES mengotorisasi BENDAHARA BARANG untuk mount /api/simapo', async () => {
+  assert.ok(SIMAPO_ROLES.has('BENDAHARA BARANG'));
+  const req = { headers: { authorization: `Bearer ${TOKEN}` } };
+  const res = fakeRes();
+  let passed = false;
+  const lookup = async () => ({ id: '5', nip: '55', role: 'BENDAHARA BARANG', instansi_id: 'bapperida' });
+  await requireRole(SIMAPO_ROLES, { lookup })(req, res, () => { passed = true; });
+  assert.equal(passed, true, 'BENDAHARA BARANG harus lolos gate /api/simapo');
+  assert.equal(req.user.role, 'BENDAHARA BARANG');
+});
+
+test('BENDAHARA BARANG tidak masuk MEDIA_ROLES (hanya aset, bukan media)', () => {
+  assert.ok(!MEDIA_ROLES.has('BENDAHARA BARANG'));
+  assert.ok(MEDIA_ROLES.has('ADMIN'));
 });

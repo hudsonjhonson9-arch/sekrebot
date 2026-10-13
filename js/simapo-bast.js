@@ -844,15 +844,15 @@ window.asetPegExportExcel = async function() {
     [1, 2, 3, 4, 5, 6].forEach(ci => {
       row.getCell(ci).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
     });
-    row.height = 72;
+    row.height = 100;
 
     const payload = origin + '?qr=SIMAPO-' + a.id;
     const qr = QR(0, 'M');
     qr.addData(payload);
     qr.make();
-    const dataUrl = qr.createDataURL(6, 8);
+    const dataUrl = qr.createDataURL(8, 10);
     const imgId = wb.addImage({ base64: dataUrl.split(',')[1], extension: 'png' });
-    ws.addImage(imgId, { tl: { col: 5.1, row: 5 + i + 0.15 }, ext: { width: 60, height: 60 } });
+    ws.addImage(imgId, { tl: { col: 5.1, row: 5 + i + 0.15 }, ext: { width: 96, height: 96 } });
   });
 
   ws.columns = [
@@ -861,7 +861,7 @@ window.asetPegExportExcel = async function() {
     { key: 'inv', width: 20 },
     { key: 'kondisi', width: 12 },
     { key: 'nilai', width: 16 },
-    { key: 'qr', width: 16 }
+    { key: 'qr', width: 18 }
   ];
 
   const buf = await wb.xlsx.writeBuffer();

@@ -304,7 +304,7 @@ window.showQRKatalog = function(id, nama) {
   const qr = QR(0, 'M');
   qr.addData(payload);
   qr.make();
-  const dataUrl = qr.createDataURL(6, 8);
+  const dataUrl = qr.createDataURL(8, 10);
   Swal.fire({
     title: nama,
     background: '#1a1d21',
@@ -312,7 +312,7 @@ window.showQRKatalog = function(id, nama) {
     html: `
       <div style="text-align:center;">
         <div style="background:#fff;display:inline-block;padding:10px;border-radius:8px;margin:10px 0;">
-          <img src="${dataUrl}" style="width:160px;height:160px;display:block;">
+          <img src="${dataUrl}" style="width:240px;height:240px;max-width:80vw;display:block;">
         </div>
         <div style="font-size:11px;color:var(--muted);word-break:break-all;margin-bottom:8px;">${payload}</div>
         <button onclick="downloadQRFromCatalog('${id}','${nama}')" style="padding:8px 20px;background:#22c55e;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;"><i class="fas fa-download" aria-hidden="true"></i> Download PNG</button>
@@ -492,7 +492,7 @@ window.downloadQRFromCatalog = function(id, nama) {
   const qr = QR(0, 'M');
   qr.addData(payload);
   qr.make();
-  const dataUrl = qr.createDataURL(6, 8);
+  const dataUrl = qr.createDataURL(8, 10);
   const link = document.createElement('a');
   link.download = 'QR-' + (nama || id).replace(/[^a-zA-Z0-9-]/g, '_') + '.png';
   link.href = dataUrl;
