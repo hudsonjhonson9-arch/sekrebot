@@ -259,8 +259,6 @@ window.adminQRKembaliScan = function() {
         showCancelButton: true,
         confirmButtonText: 'Kembalikan',
         cancelButtonText: 'Batal',
-        background: '#1a1d21',
-        color: '#fff',
         confirmButtonColor: '#22c55e',
       });
       if (!ok.isConfirmed) return;
@@ -1038,8 +1036,6 @@ window.generateQRCode = async function(unitasetId, label) {
           </button>
         </div>
       `,
-      background: '#1a1d21',
-      color: '#fff',
       confirmButtonText: 'Tutup',
       didClose: () => { window.loadAdminSimapoMaster(true); }
     });
@@ -1832,8 +1828,6 @@ window.viewQRCode = async function(unitasetId) {
             <div style="font-size:11px;color:var(--muted);word-break:break-all;">${unit.qrcode}</div>
           </div>
         `,
-        background: '#1a1d21',
-        color: '#fff',
         confirmButtonText: 'Tutup'
       });
       return;

@@ -14,6 +14,13 @@
       --border: #334155;
       --admin: #a78bfa;
       --admin-dim: rgba(167, 139, 250, .15);
+      /* Modal panel (inline style modal Form Aset memakai ini → ikut tema) */
+      --modal-bg: #0F172A;
+      --modal-border: rgba(255, 255, 255, .08);
+      --modal-head: rgba(255, 255, 255, .01);
+      --modal-ghost: rgba(255, 255, 255, .05);
+      --field-bg: rgba(255, 255, 255, .03);
+      --overlay-bg: rgba(11, 15, 25, .85);
     }
 
     * {
@@ -6213,6 +6220,12 @@ html.light-theme {
   --gold-dim: rgba(37, 99, 235, .15);
   --gold-darker: #1D4ED8;
   --on-gold: #FFFFFF;
+  --modal-bg: #FFFFFF;
+  --modal-border: rgba(15, 23, 42, .12);
+  --modal-head: rgba(15, 23, 42, .02);
+  --modal-ghost: rgba(15, 23, 42, .06);
+  --field-bg: rgba(15, 23, 42, .04);
+  --overlay-bg: rgba(15, 23, 42, .45);
 
   /* High contrast status colors */
   --success: #059669;

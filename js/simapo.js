@@ -247,8 +247,6 @@ function showSimapoDetail(id) {
   const isOut = item.stok_saat_ini <= 0;
   Swal.fire({
     title: `<span style="font-size:18px; color:var(--white)">Detail Aset</span>`,
-    background: '#1a1d21',
-    color: '#fff',
     html: `
       <div style="text-align:left; font-size:14px;">
         <div style="width:100%; height:150px; background:rgba(255,255,255,0.03); border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:15px; overflow:hidden; border:1px solid rgba(255,255,255,0.1)">
@@ -307,8 +305,6 @@ window.showQRKatalog = function(id, nama) {
   const dataUrl = qr.createDataURL(8, 10);
   Swal.fire({
     title: nama,
-    background: '#1a1d21',
-    color: '#fff',
     html: `
       <div style="text-align:center;">
         <div style="background:#fff;display:inline-block;padding:10px;border-radius:8px;margin:10px 0;">
