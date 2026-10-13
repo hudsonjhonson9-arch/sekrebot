@@ -547,8 +547,10 @@ function _weekDayStatus(dStr, isToday, isFuture) {
     let batas = '08:00';
     try { const j = getJamForTanggal(dStr); if (j && j.masuk) batas = String(j.masuk).slice(0, 5); } catch (_) { }
     const telat = _menit(masuk) > _menit(batas);
+    // Info pulang selalu ikut tampil — baik untuk status hadir maupun telat.
+    const pulangTxt = pulang ? ` • Pulang ${pulang}` : ' • belum pulang';
     return telat
-      ? { key: 'telat', icon: 'fa-clock', label: `Telat ${_menit(masuk) - _menit(batas)}m`, det: `Masuk ${masuk} • Batas ${batas}` }
+      ? { key: 'telat', icon: 'fa-clock', label: `Telat ${_menit(masuk) - _menit(batas)}m`, det: `Masuk ${masuk} • Batas ${batas}${pulangTxt}` }
       : { key: 'hadir', icon: 'fa-check', label: 'Hadir', det: det + (pulang ? '' : ' • belum pulang') };
   }
   // Ada catatan pulang tapi tidak ada MASUK (mis. DI LUAR JAM PULANG).
@@ -572,6 +574,9 @@ function renderWeekHistory() {
       + `<span class="week-day-icon"><i class="fas ${st.icon}"></i></span>`
       + `<span class="week-day-date">${d.getDate()}</span></button>`;
   }).join('');
+  // Langsung tampilkan detail hari ini (masuk + pulang) tanpa perlu ketuk dulu.
+  const todayIdx = _weekRange.findIndex(d => fmtD(d) === todayStr);
+  showWeekDetail(todayIdx >= 0 ? todayIdx : 0);
 }
 
 function showWeekDetail(i) {

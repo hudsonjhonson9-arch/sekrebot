@@ -56,6 +56,23 @@ test('MASUK lewat batas → telat dengan ikon fa-clock', () => {
   assert.match(s.label, /Telat 20m/);
 });
 
+test('status telat tetap menampilkan jam pulang (masuk + pulang)', () => {
+  const s = load().day(D, { 'Jenis Absen': 'MASUK', Jam: '08:20' }, { 'Jenis Absen': 'PULANG', Jam: '16:30' });
+  assert.equal(s.key, 'telat');
+  assert.equal(s.det, 'Masuk 08:20 • Batas 08:00 • Pulang 16:30');
+});
+
+test('status telat tanpa pulang menandai "belum pulang"', () => {
+  const s = load().day(D, { 'Jenis Absen': 'MASUK', Jam: '08:20' });
+  assert.match(s.det, /belum pulang$/);
+});
+
+test('MASUK tepat waktu lengkap dengan pulang', () => {
+  const s = load().day(D, { 'Jenis Absen': 'MASUK', Jam: '07:55' }, { 'Jenis Absen': 'PULANG', Jam: '16:00' });
+  assert.equal(s.key, 'hadir');
+  assert.equal(s.det, 'Masuk 07:55 • Pulang 16:00');
+});
+
 test('DI LUAR JAM MASUK tetap dihitung sebagai jam masuk', () => {
   const s = load().day(D, { 'Jenis Absen': 'DI LUAR JAM MASUK', Jam: '09:00' });
   assert.equal(s.key, 'telat');
