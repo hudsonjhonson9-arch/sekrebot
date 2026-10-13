@@ -579,15 +579,42 @@ function renderWeekHistory() {
   showWeekDetail(todayIdx >= 0 ? todayIdx : 0);
 }
 
+// Pecah "Masuk 07:10 • Pulang 14:30 …" jadi chip + ikon per info.
+function _weekDetailChips(st) {
+  return String(st.det || '').split('•').map(s => s.trim()).filter(Boolean).map(text => {
+    const l = text.toLowerCase();
+    let icon = 'fa-circle';
+    if (l.startsWith('masuk')) icon = 'fa-sign-in-alt';
+    else if (l.startsWith('pulang')) icon = 'fa-sign-out-alt';
+    else if (l.startsWith('batas')) icon = 'fa-clock';
+    else if (l.startsWith('belum')) icon = 'fa-hourglass-half';
+    else if (l.startsWith('lapangan')) icon = 'fa-running';
+    return { text, icon };
+  });
+}
+
+// Kartu detail hari ke-i (murni string — bisa diuji tanpa DOM).
+function _weekDetailHtml(i) {
+  const d = _weekRange[i]; if (!d) return '';
+  const dStr = fmtD(d), todayStr = fmtD(nowWITA());
+  const st = _weekDayStatus(dStr, dStr === todayStr, dStr > todayStr);
+  const date = `${_WEEK_FULL[i]}, ${d.getDate()} ${_WEEK_BULAN[d.getMonth()]} ${d.getFullYear()}`;
+  const chips = _weekDetailChips(st);
+  if (st.ket) chips.push({ text: String(st.ket), icon: 'fa-comment-dots' });
+  const status = `<span class="wk-det-status w-${st.key}"><i class="fas ${st.icon}"></i>${escapeHtml(st.label)}</span>`;
+  const chipHtml = chips.map((c, n) =>
+    `<span class="wk-det-chip" style="animation-delay:${120 + n * 90}ms"><i class="fas ${c.icon}"></i>${escapeHtml(c.text)}</span>`).join('');
+  return `<div class="wk-det">`
+    + `<div class="wk-det-head"><span class="wk-det-date">${escapeHtml(date)}</span>${status}</div>`
+    + (chipHtml ? `<div class="wk-det-chips">${chipHtml}</div>` : '')
+    + `</div>`;
+}
+
 function showWeekDetail(i) {
   const det = $('weekDetail'); if (!det || !_weekRange[i]) return;
-  const d = _weekRange[i], dStr = fmtD(d), todayStr = fmtD(nowWITA());
-  const st = _weekDayStatus(dStr, dStr === todayStr, dStr > todayStr);
-  let txt = `<b>${_WEEK_FULL[i]}, ${d.getDate()} ${_WEEK_BULAN[d.getMonth()]} ${d.getFullYear()}</b> — <span class="w-${st.key}">${st.label}</span>`;
-  if (st.det) txt += ` · ${st.det}`;
-  if (st.ket) txt += ` · ${st.ket}`;
-  det.style.opacity = '0';
-  setTimeout(() => { det.innerHTML = txt; det.style.opacity = '1'; }, 200);
+  det.innerHTML = _weekDetailHtml(i); // animasi chip jalan otomatis saat node baru masuk DOM
+  const strip = $('weekStrip');
+  if (strip) Array.from(strip.querySelectorAll('.week-day')).forEach((b, n) => b.classList.toggle('is-sel', n === i));
 }
 
 async function loadWeekHistory() {

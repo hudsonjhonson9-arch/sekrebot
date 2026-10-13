@@ -27,11 +27,19 @@ function load({ liburSet = new Set(), jamMasuk = '08:00' } = {}) {
   };
   const hariLiburSet = liburSet;
   const getJamForTanggal = () => ({ nama: '', masuk: jamMasuk, pulang: '17:00' });
+  // escapeHtml global di js/config.js — replika mini untuk sandbox.
+  const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
   const factory = new Function(
-    'getField', 'nowWITA', 'fmtD', 'hariLiburSet', 'getJamForTanggal', 'window',
-    `${src}\n;return { status: _weekDayStatus, setWeek: (m) => { _weekByDate = m; }, ketMap: _WEEK_KET_MAP };`
+    'getField', 'nowWITA', 'fmtD', 'hariLiburSet', 'getJamForTanggal', 'escapeHtml', 'window',
+    `${src}\n;return { status: _weekDayStatus, detailHtml: _weekDetailHtml, setWeek: (m) => { _weekByDate = m; }, setRange: (r) => { _weekRange = r; }, ketMap: _WEEK_KET_MAP };`
   );
-  const api = factory(getField, nowWITA, fmtD, hariLiburSet, getJamForTanggal, win);
+  const api = factory(getField, nowWITA, fmtD, hariLiburSet, getJamForTanggal, escapeHtml, win);
+  // Senin..Minggu minggu yang memuat D (2026-10-13 = Selasa).
+  api.range = ['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18']
+    .map((t) => new Date(t + 'T12:00:00'));
+  api.setRange(api.range);
   api.day = (dStr, ...rows) => {
     const m = {};
     m[dStr] = rows;
@@ -121,4 +129,38 @@ test('hari tanpa log: future/libur/hari ini/tanpa keterangan', () => {
   assert.equal(s.status('2026-10-16', false, false).key, 'libur');
   assert.equal(s.status(D, true, false).key, 'empty');
   assert.equal(s.status('2026-10-12', false, false).key, 'alpha');
+});
+
+test('kartu detail: tanggal + chip status berwarna + chip Masuk/Pulang beranimasi', () => {
+  const s = load();
+  s.setWeek({ '2026-10-13': [
+    { 'Jenis Absen': 'MASUK', Jam: '07:10' },
+    { 'Jenis Absen': 'PULANG', Jam: '14:30' },
+  ] });
+  const html = s.detailHtml(1); // Selasa
+  assert.match(html, /class="wk-det-date">Selasa, 13 Okt 2026</);
+  assert.match(html, /wk-det-status w-hadir/);
+  assert.match(html, /fas fa-check/);
+  assert.match(html, /fa-sign-in-alt"><\/i>Masuk 07:10/);
+  assert.match(html, /fa-sign-out-alt"><\/i>Pulang 14:30/);
+  assert.match(html, /animation-delay:120ms/);
+  assert.match(html, /animation-delay:210ms/);
+});
+
+test('kartu detail telat: chip Batas ikon jam, status w-telat', () => {
+  const s = load();
+  s.setWeek({ '2026-10-13': [{ 'Jenis Absen': 'MASUK', Jam: '08:22' }] });
+  const html = s.detailHtml(1);
+  assert.match(html, /wk-det-status w-telat/);
+  assert.match(html, /fa-clock"><\/i>Batas 08:00/);
+  assert.match(html, /fa-hourglass-half"><\/i>belum pulang/);
+});
+
+test('kartu detail keterangan: chip Ket dengan ikon komentar & teks di-escape', () => {
+  const s = load();
+  s.setWeek({ '2026-10-13': [{ 'Jenis Absen': 'IZIN', Jam: '', Keterangan: 'Dinas <luar> & rapat' }] });
+  const html = s.detailHtml(1);
+  assert.match(html, /wk-det-status w-izin/);
+  assert.match(html, /fa-comment-dots"><\/i>Dinas &lt;luar&gt; &amp; rapat/);
+  assert.ok(!html.includes('<luar>'));
 });

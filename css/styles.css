@@ -7082,11 +7082,26 @@ html.light-theme .btn-pagination-all:hover {
     .week-day { display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 2px; border:1px solid var(--border); border-radius:var(--radius); background:rgba(127,127,127,.07); color:var(--white); cursor:pointer; font-family:inherit; transition:transform .15s ease, border-color .15s ease; animation:weekPop .35s ease backwards; }
 .week-day:hover { transform:translateY(-2px); border-color:var(--gold); }
 .week-day.is-today { border-color:var(--gold); box-shadow:inset 0 0 0 1px var(--gold); }
+.week-day.is-sel { border-color:var(--gold); background:rgba(201,168,76,.12); }
 .week-day-name { font-size:9px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
 .week-day-icon { font-size:17px; line-height:1; }
 .week-day-date { font-size:9px; font-weight:700; color:var(--muted); }
 .week-detail { margin-top:10px; padding-top:9px; border-top:1px solid var(--border); font-size:11px; color:var(--muted); min-height:15px; transition:opacity .18s ease; }
 .week-detail b { color:var(--white); font-weight:700; }
+/* ── Kartu detail hari (chip beranimasi, bukan teks polos) ── */
+.wk-det { display:flex; flex-direction:column; gap:7px; }
+.wk-det-head { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; animation:weekPop .3s ease backwards; }
+.wk-det-date { font-size:11.5px; font-weight:800; color:var(--white); }
+.wk-det-status { display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:800; padding:3px 10px; border-radius:999px; border:1px solid var(--border); background:rgba(127,127,127,.08); white-space:nowrap; animation:weekPop .3s ease .07s backwards; }
+.wk-det-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.wk-det-chip { display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; color:var(--white); padding:4px 10px; border-radius:8px; border:1px solid var(--border); background:rgba(127,127,127,.07); animation:weekPop .34s cubic-bezier(.2,.85,.3,1.25) backwards; }
+.wk-det-chip i { font-size:9.5px; opacity:.8; }
+.wk-det-status.w-hadir { color:var(--success); border-color:rgba(34,197,94,.4); background:rgba(34,197,94,.12); }
+.wk-det-status.w-telat, .wk-det-status.w-izin { color:var(--warning); border-color:rgba(245,158,11,.4); background:rgba(245,158,11,.12); }
+.wk-det-status.w-sakit, .wk-det-status.w-alpha { color:var(--danger); border-color:rgba(239,68,68,.4); background:rgba(239,68,68,.12); }
+.wk-det-status.w-tugas { color:#a78bfa; border-color:rgba(139,92,246,.4); background:rgba(139,92,246,.12); }
+.wk-det-status.w-cuti { color:var(--info); border-color:rgba(99,102,241,.4); background:rgba(99,102,241,.12); }
+.wk-det-status.w-future, .wk-det-status.w-empty, .wk-det-status.w-libur { color:var(--muted); }
 .week-loading { grid-column:1/-1; text-align:center; color:var(--muted); font-size:11px; padding:10px 0; }
 .week-loading i, .week-card .fa-spin { display:inline-block; animation:weekSpin .9s linear infinite; }
 .w-hadir .week-day-icon { color:var(--success); }
@@ -7105,6 +7120,6 @@ html.light-theme {
 
 /* ════ Reduced motion ════ */
 @media (prefers-reduced-motion: reduce) {
-  .week-day, .panel.active, .week-loading i, .week-card .fa-spin { animation: none !important; }
+  .week-day, .panel.active, .week-loading i, .week-card .fa-spin, .wk-det-head, .wk-det-status, .wk-det-chip { animation: none !important; }
   .week-detail { transition: none; }
 }
