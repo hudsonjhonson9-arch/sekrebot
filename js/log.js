@@ -489,6 +489,20 @@
 const _WEEK_NAMA = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 const _WEEK_FULL = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 const _WEEK_BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+// Jenis keterangan → { key, icon, label }. Ikon disamakan dengan ikon kehadiran di
+// Rekap (izin/sakit/tugas/tubel/cuti/TB) supaya riwayat minggu & rekap satu bahasa.
+const _WEEK_KET_MAP = {
+  'IZIN':          { key: 'izin',  icon: 'fa-file-signature', label: 'Izin' },
+  'IZIN PENDING':  { key: 'izin',  icon: 'fa-hourglass-half', label: 'Izin (Menunggu)' },
+  'SAKIT':         { key: 'sakit', icon: 'fa-user-sick',      label: 'Sakit' },
+  'SAKIT PENDING': { key: 'sakit', icon: 'fa-hourglass-half', label: 'Sakit (Menunggu)' },
+  'TUGAS':         { key: 'tugas', icon: 'fa-briefcase',      label: 'Tugas/DL' },
+  'DL':            { key: 'tugas', icon: 'fa-briefcase',      label: 'Tugas/DL' },
+  'TUGAS PENDING': { key: 'tugas', icon: 'fa-hourglass-half', label: 'Tugas (Menunggu)' },
+  'TUBEL':         { key: 'tugas', icon: 'fa-graduation-cap', label: 'Tubel' },
+  'CUTI':          { key: 'cuti',  icon: 'fa-umbrella-beach', label: 'Cuti' },
+  'TANPA BERITA':  { key: 'alpha', icon: 'fa-times',          label: 'Tanpa Berita' },
+};
 let _weekRange = [];   // Date[] Senin..Minggu
 let _weekByDate = {};  // 'YYYY-MM-DD' -> rows[]
 
@@ -504,25 +518,30 @@ function _weekDates() {
 }
 
 // Ringkas 1 hari → { key, icon, label, det, ket }
+// Mencakup SEMUA jenis absen di "Log_Absen":
+//   MASUK + DI LUAR JAM MASUK                 → hadir / telat
+//   PULANG + PULANG LUAR + DI LUAR JAM PULANG → jam pulang (lapangan bila PULANG LUAR)
+//   IZIN/SAKIT/TUGAS/DL/TUBEL/CUTI/TANPA BERITA (+ varian PENDING) → keterangan
+// Ikon keterangan & jam disamakan dengan ikon kehadiran di Rekap.
 function _weekDayStatus(dStr, isToday, isFuture) {
   const rows = _weekByDate[dStr] || [];
   const jenis = r => String(getField(r, 'Jenis Absen', 'jenis', 'Jenis') || '').toUpperCase().trim();
-  const rMasuk  = rows.find(r => jenis(r) === 'MASUK');
+  const rMasuk  = rows.find(r => jenis(r) === 'MASUK' || jenis(r) === 'DI LUAR JAM MASUK');
   const rPulang = rows.find(r => jenis(r).includes('PULANG'));
-  const ketRow  = rows.find(r => ['IZIN', 'SAKIT', 'TUGAS', 'TUBEL', 'CUTI', 'TANPA BERITA'].includes(jenis(r)));
+  const ketRow  = rows.find(r => _WEEK_KET_MAP[jenis(r)]);
   const jk = ketRow ? jenis(ketRow) : '';
   const ket = ketRow ? getField(ketRow, 'Keterangan', 'ket', 'Keterangan Absen') : '';
   const masuk = rMasuk ? String(getField(rMasuk, 'Jam', 'jam') || '').slice(0, 5) : '';
   const pulang = rPulang ? String(getField(rPulang, 'Jam', 'jam') || '').slice(0, 5) : '';
+  const pulangLuar = !!rPulang && jenis(rPulang) === 'PULANG LUAR';
   let det = masuk ? `Masuk ${masuk}` : '';
   if (pulang) det += (det ? ' • ' : '') + `Pulang ${pulang}`;
 
-  if (jk === 'IZIN')  return { key: 'izin',  icon: 'fa-file-signature', label: 'Izin',  ket };
-  if (jk === 'SAKIT') return { key: 'sakit', icon: 'fa-user-sick',      label: 'Sakit', ket };
-  if (jk === 'TUGAS') return { key: 'tugas', icon: 'fa-briefcase',      label: 'Tugas/DL', ket };
-  if (jk === 'TUBEL') return { key: 'tugas', icon: 'fa-graduation-cap', label: 'Tubel', ket };
-  if (jk === 'CUTI')  return { key: 'cuti',  icon: 'fa-umbrella-beach', label: 'Cuti',  ket };
-  if (jk === 'TANPA BERITA') return { key: 'alpha', icon: 'fa-circle-xmark', label: 'Tanpa Berita', det, ket };
+  // Keterangan (izin/sakit/tugas/dll) mengalahkan status jam, sama seperti Rekap.
+  if (_WEEK_KET_MAP[jk]) return { ..._WEEK_KET_MAP[jk], det, ket };
+
+  // Absen pulang di lapangan tanpa catatan MASUK.
+  if (!masuk && pulangLuar) return { key: 'hadir', icon: 'fa-running', label: 'Lapangan', det: det || 'Pulang lapangan', ket };
 
   if (masuk) {
     let batas = '08:00';
@@ -530,12 +549,14 @@ function _weekDayStatus(dStr, isToday, isFuture) {
     const telat = _menit(masuk) > _menit(batas);
     return telat
       ? { key: 'telat', icon: 'fa-clock', label: `Telat ${_menit(masuk) - _menit(batas)}m`, det: `Masuk ${masuk} • Batas ${batas}` }
-      : { key: 'hadir', icon: 'fa-circle-check', label: 'Hadir', det: det + (pulang ? '' : ' • belum pulang') };
+      : { key: 'hadir', icon: 'fa-check', label: 'Hadir', det: det + (pulang ? '' : ' • belum pulang') };
   }
+  // Ada catatan pulang tapi tidak ada MASUK (mis. DI LUAR JAM PULANG).
+  if (pulang) return { key: 'hadir', icon: 'fa-check', label: 'Hadir', det: det + ' • belum absen masuk' };
   if (isFuture) return { key: 'future', icon: 'fa-hourglass-half', label: 'Akan datang', det: '' };
   if (hariLiburSet.has(dStr)) return { key: 'libur', icon: 'fa-mug-hot', label: 'Libur', det: '' };
   if (isToday) return { key: 'empty', icon: 'fa-circle', label: 'Belum absen', det: '' };
-  return { key: 'alpha', icon: 'fa-circle-xmark', label: 'Tanpa keterangan', det: '' };
+  return { key: 'alpha', icon: 'fa-times', label: 'Tanpa keterangan', det: '' };
 }
 
 function renderWeekHistory() {
