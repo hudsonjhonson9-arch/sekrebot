@@ -93,9 +93,15 @@ export function createApp() {
       : null,
   });
   // Jadwal cron pengganti workflow n8n "Notif Absensi". Hanya di-start saat server
-  // jadi entrypoint (blok isMain), tidak saat test meng-import createApp. Notif absen
-  // lewat Telegram; WhatsApp hanya untuk keterangan (lihat notifyKeterangan di atas).
-  app.locals.scheduler = createScheduler({ query, sendTelegram });
+  // jadi entrypoint (blok isMain), tidak saat test meng-import createApp. Reminder
+  // absen lewat Telegram; peringatan akumulasi lewat Telegram PM + WA pribadi
+  // pegawai (chatId dihitung dari nomorhp tiap pengiriman). WhatsApp grup tetap
+  // hanya untuk keterangan (lihat notifyKeterangan di atas).
+  app.locals.scheduler = createScheduler({
+    query,
+    sendTelegram,
+    sendWhatsApp: wahaCfg ? wahaSender(wahaCfg) : null,
+  });
   app.use('/api', requireRole(ABSEN_ROLES), createAttendanceDataRouter({ query, withTransaction, notify: notifyKeterangan, gasUpsert }));
   app.use('/api', requireRole(ABSEN_ROLES), createOvertimeRouter({ query }));
   app.use('/api', requireRole(ABSEN_ROLES), createNotifyRouter());

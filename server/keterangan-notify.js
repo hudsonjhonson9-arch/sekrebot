@@ -47,12 +47,24 @@ export function telegramSender(token) {
   };
 }
 
+// nomorhp lokal (0812…) → chatId WhatsApp personal WAHA (62812…@s.whatsapp.net).
+// '' kalau nomor kosong/tidak valid — pemanggil wajib menganggap '' = jangan kirim.
+export function waChatId(no) {
+  let n = String(no || '').replace(/\D/g, '');
+  if (!n) return '';
+  if (n.startsWith('0')) n = '62' + n.slice(1);
+  else if (n.startsWith('8')) n = '62' + n;
+  return `${n}@s.whatsapp.net`;
+}
+
+// chatId bawaan dipakai untuk grup; pemanggil bisa menimpa per pesan lewat
+// { chatId } di argumen (mis. peringatan akumulasi ke nomor pribadi pegawai).
 export function wahaSender({ url, apiKey, session = 'default', chatId }) {
-  return async ({ text }) => {
+  return async ({ text, chatId: ke }) => {
     const r = await fetch(`${String(url).replace(/\/$/, '')}/api/sendText`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(apiKey ? { 'X-Api-Key': apiKey } : {}) },
-      body: JSON.stringify({ session, chatId, text }),
+      body: JSON.stringify({ session, chatId: ke || chatId, text }),
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.message || `WAHA HTTP ${r.status}`);

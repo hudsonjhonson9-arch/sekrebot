@@ -7,6 +7,7 @@
 //
 // ponytail: jam lokal server = WITA (Dockerfile ENV TZ=Asia/Makassar), jadi pakai
 // getters lokal, tanpa library timezone. Kalau TZ server diubah, ubah di sini.
+import { waChatId } from './keterangan-notify.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 export const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -80,7 +81,7 @@ export function buildAkumulasi(p, waktu) {
     + `Melalui pesan otomatis ini, kami menginformasikan bahwa akumulasi waktu "Di Luar Jam" (Keterlambatan & Pulang Cepat) Anda telah mencapai batas maksimum.\n\n`
     + `📊 *Detail Akumulasi:*\n`
     + `• Total Waktu: *${waktu}*\n`
-    + `• Ambang Batas: 8 Jam (480 Menit)\n\n`
+    + `• Ambang Batas: 7 Jam 15 Menit (435 Menit)\n\n`
     + `Sesuai dengan peraturan yang berlaku, akumulasi ini setara dengan 1 hari kerja. Mohon segera melakukan konfirmasi ke bagian Kepegawaian untuk klarifikasi atau tindak lanjut administratif.\n\n`
     + `_Terima kasih atas perhatiannya._\n`
     + `───────────────────\n`
@@ -109,9 +110,14 @@ const PULANG = ['PULANG', 'DI LUAR JAM PULANG', 'PULANG LUAR'];
 const KET = ['IZIN', 'SAKIT', 'TUGAS', 'TUBEL', 'CUTI', 'TANPA BERITA'];
 const has = (row, list) => list.includes(String(row['Jenis Absen'] || '').toUpperCase().trim());
 
-export function createScheduler({ query, sendTelegram, logger = console, now = () => new Date() }) {
+export function createScheduler({ query, sendTelegram, sendWhatsApp, logger = console, now = () => new Date() }) {
   const tg = (chatId, text) => (sendTelegram && chatId
     ? Promise.resolve(sendTelegram({ chatId: String(chatId), text })).catch((e) => logger.error('[sched/tg]', chatId, e.message))
+    : Promise.resolve());
+  // WhatsApp pribadi pegawai via WAHA — chatId = nomorhp sudah dinormalkan
+  // (0812… → 62812…@s.whatsapp.net). Fail-soft seperti Telegram.
+  const wa = (chatId, text) => (sendWhatsApp && chatId
+    ? Promise.resolve(sendWhatsApp({ chatId, text })).catch((e) => logger.error('[sched/wa]', chatId, e.message))
     : Promise.resolve());
 
   // 0 7 * * 1-5 — catat TUBEL harian untuk AUTO_TUBEL, sekali per NIP per hari.
@@ -134,8 +140,12 @@ export function createScheduler({ query, sendTelegram, logger = console, now = (
   }
 
   // 0 7 * * 1-5 — akumulasi "Di Luar Jam" >= 435 menit (7j15m) dari SELURUH Log_Absen.
+  // Peringatan dikirim ke Telegram PM + WA pribadi (nomorhp user_list).
   async function akumulasi() {
-    const { rows } = await query(`SELECT "ID","Nama","Tanggal","Jam","Jenis Absen" FROM "Log_Absen"`);
+    const { rows } = await query(
+      'SELECT l."ID", l."Nama", l."Tanggal", l."Jam", l."Jenis Absen", u.nomorhp '
+      + 'FROM "Log_Absen" l LEFT JOIN "user_list" u ON u.id::text = l."ID"::text',
+    );
     const acc = new Map();
     for (const r of rows) {
       const jenis = String(r['Jenis Absen'] || '');
@@ -145,13 +155,15 @@ export function createScheduler({ query, sendTelegram, logger = console, now = (
       if (jenis.includes('MASUK')) add = menit > 435 ? menit - 435 : 0;
       else if (jenis.includes('PULANG')) add = menit < 870 ? 870 - menit : 0;
       const key = String(r.ID);
-      const cur = acc.get(key) || { id: key, nama: r.Nama, total: 0 };
+      const cur = acc.get(key) || { id: key, nama: r.Nama, nomorhp: r.nomorhp, total: 0 };
       cur.total += add;
       acc.set(key, cur);
     }
     for (const p of acc.values()) {
       if (p.total < 435) continue;
-      await tg(p.id, buildAkumulasi(p, `${Math.floor(p.total / 60)}j ${p.total % 60}m`));
+      const text = buildAkumulasi(p, `${Math.floor(p.total / 60)}j ${p.total % 60}m`);
+      await tg(p.id, text);
+      await wa(waChatId(p.nomorhp), text);
     }
   }
 

@@ -132,6 +132,50 @@ test('akumulasi: total > 435 menit memicu peringatan', async () => {
   assert.match(tg[0].text, /PERINGATAN AKUMULASI WAKTU/);
 });
 
+test('akumulasi: kirim WA pribadi (nomorhp) + Telegram; ambang 435 menit sesuai teks', async () => {
+  const tg = [], wa = [];
+  const query = async (text) => {
+    if (text.includes('FROM "Log_Absen" l')) {
+      return {
+        rows: [
+          { ID: '5', Nama: 'Cici', Tanggal: '2026-10-01', Jam: '16:00', 'Jenis Absen': 'DI LUAR JAM MASUK', nomorhp: '081234567890' },
+          { ID: '6', Nama: 'Dedi', Tanggal: '2026-10-01', Jam: '08:30', 'Jenis Absen': 'DI LUAR JAM MASUK', nomorhp: '089999999999' },
+          { ID: '7', Nama: 'Eka', Tanggal: '2026-10-01', Jam: '16:00', 'Jenis Absen': 'DI LUAR JAM MASUK', nomorhp: '' },
+        ],
+      };
+    }
+    return { rows: [] };
+  };
+  const sched = createScheduler({
+    query,
+    sendTelegram: (m) => { tg.push(m); return Promise.resolve(); },
+    sendWhatsApp: (m) => { wa.push(m); return Promise.resolve(); },
+    logger: silent,
+  });
+  await sched.tick(new Date(2026, 9, 5, 7, 0));
+
+  // Lewat ambang: Cici (525m) + Eka (525m). Dedi (75m) tidak.
+  assert.deepEqual(tg.map(m => m.chatId), ['5', '7']);
+  // WA pribadi hanya ke yang punya nomorhp.
+  assert.equal(wa.length, 1);
+  assert.equal(wa[0].chatId, '6281234567890@s.whatsapp.net');
+  assert.match(wa[0].text, /PERINGATAN AKUMULASI WAKTU/);
+  assert.match(wa[0].text, /7 Jam 15 Menit \(435 Menit\)/);
+  assert.ok(!wa[0].text.includes('480'), 'teks tidak boleh menyebut ambang 480 lagi');
+  // Teks Telegram & WA identik.
+  assert.equal(tg[0].text, wa[0].text);
+});
+
+test('akumulasi: tanpa sendWhatsApp (mis. WAHA mati) tetap kirim Telegram', async () => {
+  const tg = [];
+  const query = async () => ({
+    rows: [{ ID: '5', Nama: 'Cici', Tanggal: '2026-10-01', Jam: '16:00', 'Jenis Absen': 'DI LUAR JAM MASUK', nomorhp: '081234567890' }],
+  });
+  const sched = createScheduler({ query, sendTelegram: (m) => { tg.push(m); return Promise.resolve(); }, sendWhatsApp: null, logger: silent });
+  await sched.tick(new Date(2026, 9, 5, 7, 0));
+  assert.equal(tg.length, 1);
+});
+
 test('idempoten: tick dua kali di menit sama tidak menggandakan kiriman', async () => {
   const tg = [];
   const query = async (text) => {
