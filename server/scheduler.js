@@ -46,10 +46,6 @@ export function matchCron(expr, date) {
   return f.slice(0, 5).every((spec, i) => fieldMatch(spec, v[i], RANGE[i][0], RANGE[i][1]));
 }
 
-const toMin = (t) => {
-  const [h, m] = String(t || '0:0').split(':').map(Number);
-  return (h || 0) * 60 + (m || 0);
-};
 const nama = (p) => p.username || p.Nama || '—';
 
 // 0 7 * * 1-5 — catat Log_Absen TUBEL harian untuk pegawai yang sedang bertugas
@@ -78,7 +74,7 @@ export function buildAkumulasi(p, waktu) {
   return `🔔 *PERINGATAN AKUMULASI WAKTU*\n`
     + `───────────────────\n`
     + `Yth. Bapak/Ibu *${p.nama}*,\n\n`
-    + `Melalui pesan otomatis ini, kami menginformasikan bahwa akumulasi waktu "Di Luar Jam" (Keterlambatan & Pulang Cepat) Anda telah mencapai batas maksimum.\n\n`
+    + `Melalui pesan otomatis ini, kami menginformasikan bahwa akumulasi waktu "Di Luar Jam" (Keterlambatan, Pulang Cepat & Tanpa Berita) Anda telah mencapai batas maksimum.\n\n`
     + `📊 *Detail Akumulasi:*\n`
     + `• Total Waktu: *${waktu}*\n`
     + `• Ambang Batas: 7 Jam 15 Menit (435 Menit)\n\n`
@@ -139,29 +135,22 @@ export function createScheduler({ query, sendTelegram, sendWhatsApp, logger = co
     }
   }
 
-  // 0 7 * * 1-5 — akumulasi "Di Luar Jam" >= 435 menit (7j15m) dari SELURUH Log_Absen.
-  // Peringatan dikirim ke Telegram PM + WA pribadi (nomorhp user_list).
+  // 0 7 * * 1-5 — akumulasi "Di Luar Jam" >= 435 menit (7j15m) dari tabel agregat
+  // statistik_pegawai (dipelihara trigger trg_sync_statistik_pegawai di Log_Absen).
+  // Angka sudah termasuk Tanpa Berita (alpa) 450 menit/hari. Hanya pegawai AKTIF;
+  // kirim Telegram PM + WA pribadi (nomorhp user_list).
   async function akumulasi() {
     const { rows } = await query(
-      'SELECT l."ID", l."Nama", l."Tanggal", l."Jam", l."Jenis Absen", u.nomorhp '
-      + 'FROM "Log_Absen" l LEFT JOIN "user_list" u ON u.id::text = l."ID"::text',
+      'SELECT u.id::text AS id, u.username, u.nomorhp, u."Status", '
+      + '(s.akum_menit_terlambat + s.akum_menit_lebih_awal) AS total '
+      + 'FROM statistik_pegawai s JOIN user_list u ON u."NIP" = s.nip '
+      + 'WHERE (s.akum_menit_terlambat + s.akum_menit_lebih_awal) >= 435',
     );
-    const acc = new Map();
-    for (const r of rows) {
-      const jenis = String(r['Jenis Absen'] || '');
-      if (!r.Tanggal || !jenis.includes('DI LUAR JAM')) continue;
-      const menit = toMin(r.Jam);
-      let add = 0;
-      if (jenis.includes('MASUK')) add = menit > 435 ? menit - 435 : 0;
-      else if (jenis.includes('PULANG')) add = menit < 870 ? 870 - menit : 0;
-      const key = String(r.ID);
-      const cur = acc.get(key) || { id: key, nama: r.Nama, nomorhp: r.nomorhp, total: 0 };
-      cur.total += add;
-      acc.set(key, cur);
-    }
-    for (const p of acc.values()) {
-      if (p.total < 435) continue;
-      const text = buildAkumulasi(p, `${Math.floor(p.total / 60)}j ${p.total % 60}m`);
+    for (const p of rows) {
+      if (String(p.Status || '').toUpperCase() !== 'AKTIF') continue;
+      const total = Number(p.total) || 0;
+      if (total < 435) continue;
+      const text = buildAkumulasi({ nama: p.username || '—' }, `${Math.floor(total / 60)}j ${total % 60}m`);
       await tg(p.id, text);
       await wa(waChatId(p.nomorhp), text);
     }
@@ -173,7 +162,7 @@ export function createScheduler({ query, sendTelegram, sendWhatsApp, logger = co
     const jam = hm(date);
     const { rows: logs } = await query(`SELECT "ID","Jenis Absen" FROM "Log_Absen" WHERE "Tanggal"=$1`, [tanggal]);
     const sudah = new Set(logs.filter((l) => has(l, MASUK)).map((l) => String(l.ID)));
-    const { rows: peg } = await query(`SELECT id::text AS id, username, "Nama", "nomorhp", "Status" FROM user_list`);
+    const { rows: peg } = await query(`SELECT id::text AS id, username, "nomorhp", "Status" FROM user_list`);
     for (const p of peg) {
       if (String(p.Status || '').toUpperCase() !== 'AKTIF' || sudah.has(String(p.id))) continue;
       await tg(p.id, buildReminderMasuk(p, jam));
@@ -186,7 +175,7 @@ export function createScheduler({ query, sendTelegram, sendWhatsApp, logger = co
     const { rows: logs } = await query(`SELECT "ID","Jenis Absen" FROM "Log_Absen" WHERE "Tanggal"=$1`, [tanggal]);
     const sudahMasuk = new Set(logs.filter((l) => has(l, MASUK)).map((l) => String(l.ID)));
     const sudahPulang = new Set(logs.filter((l) => has(l, PULANG)).map((l) => String(l.ID)));
-    const { rows: peg } = await query(`SELECT id::text AS id, username, "Nama", "nomorhp", "Status" FROM user_list`);
+    const { rows: peg } = await query(`SELECT id::text AS id, username, "nomorhp", "Status" FROM user_list`);
     for (const p of peg) {
       const id = String(p.id);
       if (String(p.Status || '').toUpperCase() !== 'AKTIF' || !sudahMasuk.has(id) || sudahPulang.has(id)) continue;

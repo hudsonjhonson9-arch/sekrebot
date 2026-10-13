@@ -121,26 +121,27 @@ test('sync-status: pegawai tak punya keterangan aktif di-reset ke AKTIF', async 
   assert.deepEqual(updates, [['7']]);
 });
 
-test('akumulasi: total > 435 menit memicu peringatan', async () => {
+test('akumulasi: total > 435 menit dari statistik_pegawai memicu peringatan', async () => {
   const tg = [];
-  const query = async () => ({
-    rows: [{ ID: '5', Nama: 'Cici', Tanggal: '2026-10-01', Jam: '16:00', 'Jenis Absen': 'DI LUAR JAM MASUK' }],
-  });
+  const query = async (text) => (text.includes('FROM statistik_pegawai')
+    ? { rows: [{ id: '5', username: 'Cici', nomorhp: '081234567890', Status: 'AKTIF', total: 525 }] }
+    : { rows: [] });
   const sched = createScheduler({ query, sendTelegram: (m) => { tg.push(m); return Promise.resolve(); }, logger: silent });
   await sched.tick(new Date(2026, 9, 5, 7, 0));
   assert.equal(tg[0].chatId, '5');
   assert.match(tg[0].text, /PERINGATAN AKUMULASI WAKTU/);
 });
 
-test('akumulasi: kirim WA pribadi (nomorhp) + Telegram; ambang 435 menit sesuai teks', async () => {
+test('akumulasi: kirim WA pribadi (nomorhp) + Telegram; hanya Status AKTIF; ambang 435 menit sesuai teks', async () => {
   const tg = [], wa = [];
   const query = async (text) => {
-    if (text.includes('FROM "Log_Absen" l')) {
+    if (text.includes('FROM statistik_pegawai')) {
       return {
         rows: [
-          { ID: '5', Nama: 'Cici', Tanggal: '2026-10-01', Jam: '16:00', 'Jenis Absen': 'DI LUAR JAM MASUK', nomorhp: '081234567890' },
-          { ID: '6', Nama: 'Dedi', Tanggal: '2026-10-01', Jam: '08:30', 'Jenis Absen': 'DI LUAR JAM MASUK', nomorhp: '089999999999' },
-          { ID: '7', Nama: 'Eka', Tanggal: '2026-10-01', Jam: '16:00', 'Jenis Absen': 'DI LUAR JAM MASUK', nomorhp: '' },
+          { id: '5', username: 'Cici', nomorhp: '081234567890', Status: 'AKTIF', total: 525 },
+          { id: '6', username: 'Dedi', nomorhp: '089999999999', Status: 'AKTIF', total: 75 },
+          { id: '7', username: 'Eka', nomorhp: '', Status: 'AKTIF', total: 525 },
+          { id: '8', username: 'Noni', nomorhp: '081111111111', Status: 'NONAKTIF', total: 900 },
         ],
       };
     }
@@ -154,13 +155,15 @@ test('akumulasi: kirim WA pribadi (nomorhp) + Telegram; ambang 435 menit sesuai 
   });
   await sched.tick(new Date(2026, 9, 5, 7, 0));
 
-  // Lewat ambang: Cici (525m) + Eka (525m). Dedi (75m) tidak.
+  // Lewat ambang & AKTIF: Cici (525m) + Eka (525m). Dedi (75m) di bawah; Noni NONAKTIF.
   assert.deepEqual(tg.map(m => m.chatId), ['5', '7']);
   // WA pribadi hanya ke yang punya nomorhp.
   assert.equal(wa.length, 1);
   assert.equal(wa[0].chatId, '6281234567890@s.whatsapp.net');
   assert.match(wa[0].text, /PERINGATAN AKUMULASI WAKTU/);
   assert.match(wa[0].text, /7 Jam 15 Menit \(435 Menit\)/);
+  // Sumber angka = statistik_pegawai: Tanpa Berita (alpa) ikut dihitung, sebutkan di teks.
+  assert.match(wa[0].text, /Keterlambatan, Pulang Cepat & Tanpa Berita/);
   assert.ok(!wa[0].text.includes('480'), 'teks tidak boleh menyebut ambang 480 lagi');
   // Teks Telegram & WA identik.
   assert.equal(tg[0].text, wa[0].text);
@@ -168,9 +171,9 @@ test('akumulasi: kirim WA pribadi (nomorhp) + Telegram; ambang 435 menit sesuai 
 
 test('akumulasi: tanpa sendWhatsApp (mis. WAHA mati) tetap kirim Telegram', async () => {
   const tg = [];
-  const query = async () => ({
-    rows: [{ ID: '5', Nama: 'Cici', Tanggal: '2026-10-01', Jam: '16:00', 'Jenis Absen': 'DI LUAR JAM MASUK', nomorhp: '081234567890' }],
-  });
+  const query = async (text) => (text.includes('FROM statistik_pegawai')
+    ? { rows: [{ id: '5', username: 'Cici', nomorhp: '081234567890', Status: 'AKTIF', total: 525 }] }
+    : { rows: [] });
   const sched = createScheduler({ query, sendTelegram: (m) => { tg.push(m); return Promise.resolve(); }, sendWhatsApp: null, logger: silent });
   await sched.tick(new Date(2026, 9, 5, 7, 0));
   assert.equal(tg.length, 1);
