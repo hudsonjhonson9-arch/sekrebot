@@ -19,6 +19,29 @@ import { createCoreAdminRouter } from './core-admin.js';
 import { createCoreUserRouter } from './core-user.js';
 import { ABSEN_ROLES, SIMAPO_ROLES, requireRole } from './auth.js';
 
+// Endpoint SIMAPO yang aman untuk pegawai biasa (USER/INSPEKTUR): baca katalog &
+// QR, pinjam (manual & via QR), baca riwayat pinjaman sendiri, dan buat tiket
+// kerusakan. Semua endpoint admin (master, mutasi, opname, BAST, impor, pengaturan,
+// pasar stan-harga/PKS, dll.) tidak boleh diakses oleh non-SIMAPO_ROLES.
+// Method-agnostic: endpoint pinjam hanya POST, katalog/unit-by-qr hanya GET — path
+// yang cocok sudah cukup, dan POST ke path GET akan tetap 400 dari router.
+const SIMAPO_USER_PATHS = new Set([
+  '/katalog',
+  '/pinjam',
+  '/pinjam-list',
+  '/tiket',
+  '/kategori-list',
+  '/unit-by-qr',
+  '/qr-pinjam',
+]);
+
+function simapoGate(req, res, next) {
+  const role = req.user?.role;
+  if (SIMAPO_ROLES.has(role)) return next();
+  if (ABSEN_ROLES.has(role) && SIMAPO_USER_PATHS.has(req.path)) return next();
+  return res.status(403).json({ ok: false, message: 'Forbidden' });
+}
+
 export function createApp() {
   const app = express();
   // 16mb: base64 10 MB ≈ 13.3 MB JSON, sisa ruang untuk field lain
@@ -113,17 +136,22 @@ export function createApp() {
   // admin (gate requireMedia di dalam log.js).
   app.use('/api/log', requireRole(ABSEN_ROLES), createLogRouter({ query }));
 
-  // SIMAPO (penerimaan barang, pemeliharaan, BKU). requireRole SIMAPO_ROLES:
-  // media ditambah BENDAHARA BARANG (admin aset saja, tanpa kekuasaan media). di n8n
-  // webhook ini `authentication: none`, jadi endpoint tulisnya terbuka publik tanpa
-  // token. requireRole menutup lubang itu tanpa mengubah bentuk respons, dan
-  // frontend sudah siap menangani 401 (pesan "Sesi Anda sudah berakhir").
+  // SIMAPO (penerimaan barang, pemeliharaan, BKU). Simapo gate: role SIMAPO_ROLES
+  // (media + BENDAHARA BARANG) lalu lintas penuh; role ABSEN_ROLES lain (USER,
+  // INSPEKTUR) hanya boleh lewat ke endpoint user-facing (scan QR, pinjam, katalog,
+  // tiket) — endpoint admin ditolak 403 tanpa membocorkan restu ke n8n webhook.
   app.use(
     '/api/simapo',
-    requireRole(SIMAPO_ROLES),
+    requireRole(ABSEN_ROLES),
+    simapoGate,
     createSimapoRouter({ query, withTransaction })
   );
-  app.use('/api/simapo', requireRole(SIMAPO_ROLES), createSimapoNativeExtraRouter({ query, withTransaction }));
+  app.use(
+    '/api/simapo',
+    requireRole(ABSEN_ROLES),
+    simapoGate,
+    createSimapoNativeExtraRouter({ query, withTransaction })
+  );
 
   return app;
 }

@@ -1,4 +1,5 @@
 import express from 'express';
+import { SIMAPO_ROLES } from './auth.js';
 
 const S = v => v == null ? '' : String(v).trim();
 const N = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -22,7 +23,10 @@ export function createSimapoNativeExtraRouter({ query, withTransaction }) {
     } catch{ return res.status(500).json({ok:false,message:'Gagal menyimpan peminjaman.'}); }
   });
   r.get('/pinjam-list', async(req,res)=>{
-    try { const nip=S(req.query.nip)||S(req.user?.nip); const {rows}=await query(`SELECT COALESCE(json_agg(t.*),'[]'::json) items FROM (
+    // Pegawai biasa hanya boleh melihat riwayatnya sendiri; nip via query hanya
+    // berlaku untuk role admin (SIMAPO_ROLES: media / BENDAHARA BARANG).
+    const nip = SIMAPO_ROLES.has(req.user?.role) ? (S(req.query.nip) || S(req.user?.nip)) : S(req.user?.nip); if(!nip)return res.status(400).json({ok:false,message:'nip tidak tersedia.'});
+    try { const {rows}=await query(`SELECT COALESCE(json_agg(t.*),'[]'::json) items FROM (
       SELECT p.id,b.nama nama_barang,COALESCE(b.kodebarang,ua.nomorinventaris) kodebarang,p.tujuanpeminjaman,
       TO_CHAR(p.tanggalmulai,'YYYY-MM-DD') tanggalmulai,TO_CHAR(p.tanggalselesai,'YYYY-MM-DD') tanggalselesai,p.status,TO_CHAR(p.createdat,'YYYY-MM-DD') createdat
       FROM "SIMAPO".peminjaman p LEFT JOIN "SIMAPO".unit_aset ua ON ua.id=p.unitasetid LEFT JOIN "SIMAPO".barang b ON b.id=ua.barangid
