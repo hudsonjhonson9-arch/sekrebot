@@ -165,6 +165,74 @@ test('rekap-absen menyertakan logByDate & ketByDate (kalender per tanggal di js/
   assert.equal(p.disiplinPct, 80, '1 alpa = -20%');
 });
 
+const STAT_ROW = {
+  nip: PEGAWAI.NIP,
+  akum_menit_terlambat: 520,
+  akum_menit_lebih_awal: 30,
+  total_izin: 1, total_sakit: 0, total_tugas: 2, total_tubel: 0, total_cuti: 0, total_alpa: 3,
+};
+
+function statQuery(opts = {}) {
+  const sqls = [];
+  const q = async (text) => {
+    sqls.push(text);
+    if (/FROM user_list/i.test(text)) {
+      return {
+        rows: [{
+          id: PEGAWAI.id, username: PEGAWAI.username, nama: PEGAWAI.username, nip: PEGAWAI.NIP,
+          jabatan: PEGAWAI.Jabatan, pangkat: PEGAWAI.pangkat, bidang: PEGAWAI.bidang,
+          nomorhp: PEGAWAI.nomorhp, urutan: PEGAWAI.no, status: PEGAWAI.Status,
+        }],
+      };
+    }
+    if (/statistik_pegawai/i.test(text)) {
+      if (opts.statThrow) throw new Error('relation "statistik_pegawai" does not exist');
+      return { rows: opts.stat ?? [STAT_ROW] };
+    }
+    if (/Log_Absen/i.test(text)) {
+      // 07:10 = 430 menit → di bawah batas 435, jadi angka periode 0.
+      return { rows: [{ ID_Log: 601, ID: PEGAWAI.id, Tanggal: '2026-10-06', Jam: '07:10', 'Jenis Absen': 'MASUK', Ket: '' }] };
+    }
+    return { rows: [] };
+  };
+  return { q, sqls };
+}
+
+const REKAP_URL = '/api/rekap-absen?dari=2026-10-06&sampai=2026-10-06&instansi_id=bapperida';
+
+test('rekap-absen: all-time dari statistik_pegawai, periode tetap dari log', async () => {
+  const { q, sqls } = statQuery();
+  const r = await get(harness(q), REKAP_URL);
+  assert.equal(r.status, 200);
+  assert.ok(sqls.some((s) => /statistik_pegawai/i.test(s)), 'wajib baca tabel statistik_pegawai');
+  const p = r.body.pegawai[0];
+  assert.equal(p.all_menit_terlambat, 520, 'akum_menit_terlambat (di luar jam masuk, termasuk TB)');
+  assert.equal(p.all_menit_lebih_awal, 30, 'akum_menit_lebih_awal (di luar jam pulang)');
+  assert.equal(p.all_izin, 1);
+  assert.equal(p.all_tugas, 2);
+  assert.equal(p.all_alpa, 3);
+  assert.equal(p.menit_terlambat, 0, 'masuk 07:10 → periode 0 menit, terpisah dari all-time');
+  assert.equal(p.masuk, 1, 'data periode tetap dari log');
+});
+
+test('rekap-absen: statistik_pegawai gagal dibaca → rekap tetap jalan tanpa field all_*', async () => {
+  const { q } = statQuery({ statThrow: true });
+  const r = await get(harness(q), REKAP_URL);
+  assert.equal(r.status, 200);
+  const p = r.body.pegawai[0];
+  assert.equal(p.all_menit_terlambat, undefined);
+  assert.equal(p.all_alpa, undefined);
+  assert.equal(p.masuk, 1, 'data periode tetap tersaji');
+});
+
+test('rekap-absen: NIP beda format (spasi/petak) tetap cocok dengan statistik_pegawai', async () => {
+  const { q } = statQuery({ stat: [{ ...STAT_ROW, nip: '1972 1102 2001 12 1001' }] });
+  const r = await get(harness(q), REKAP_URL);
+  const p = r.body.pegawai[0];
+  assert.equal(p.all_menit_terlambat, 520);
+  assert.equal(p.all_menit_lebih_awal, 30);
+});
+
 test('keterangan admin panel: target adalah pegawai terpilih (user.id), bukan admin', async () => {
   const sqls = [];
   const q = async (text, params) => {

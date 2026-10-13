@@ -191,6 +191,33 @@ async function rekapAbsenHandler(req, res, query) {
         p.ketByDate[t] = (jenis === 'DL') ? 'TUGAS' : (['TB', 'TANPA BERITA'].includes(jenis) ? 'ALPA' : jenis);
       }
     }
+    // ── Statistik all-time per pegawai dari tabel agregat statistik_pegawai ──
+    // Akumulasi = akum_menit_terlambat (DI LUAR JAM MASUK, sudah termasuk TB 450m)
+    //           + akum_menit_lebih_awal (DI LUAR JAM PULANG). Fail-soft: kalau tabel
+    // tidak ada / query gagal, rekap tetap dikirim tanpa field all_*.
+    let statByNip = new Map();
+    try {
+      const s = await query(
+        'SELECT nip, akum_menit_terlambat, akum_menit_lebih_awal, total_izin, total_sakit, total_tugas, total_tubel, total_cuti, total_alpa FROM statistik_pegawai',
+      );
+      for (const r of s.rows) statByNip.set(String(r.nip || '').replace(/\D/g, ''), r);
+    } catch (e) {
+      console.warn('[rekap] statistik_pegawai tidak terbaca:', e.message);
+    }
+    const statAll = (u) => {
+      const r = statByNip.get(String(u.nip || '').replace(/\D/g, ''));
+      if (!r) return null;
+      return {
+        all_menit_terlambat: Number(r.akum_menit_terlambat) || 0,
+        all_menit_lebih_awal: Number(r.akum_menit_lebih_awal) || 0,
+        all_izin: Number(r.total_izin) || 0,
+        all_sakit: Number(r.total_sakit) || 0,
+        all_tugas: Number(r.total_tugas) || 0,
+        all_tubel: Number(r.total_tubel) || 0,
+        all_cuti: Number(r.total_cuti) || 0,
+        all_alpa: Number(r.total_alpa) || 0,
+      };
+    };
     const pegawai = users.map(u => {
       const p = map.get(String(u.id));
       let hadirMenit = 0;
@@ -204,6 +231,7 @@ async function rekapAbsenHandler(req, res, query) {
       const kehadiran = Math.min(100, Math.round(sah / workDays * 100));
       return {
         ...p,
+        ...(statAll(u) || {}),
         jamHadir: (hadirMenit / 60).toFixed(1),
         lambat_count: p.di_luar_masuk_periode,
         pulang_cepat_count: p.di_luar_pulang_periode,

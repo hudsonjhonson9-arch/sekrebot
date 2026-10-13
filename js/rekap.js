@@ -949,8 +949,9 @@ function renderRekap(pg) {
         </div>
 
         ${(function () {
-          const mT = p.menit_terlambat ?? p.all_menit_terlambat ?? 0;
-          const mC = p.menit_lebih_awal ?? p.all_menit_lebih_awal ?? 0;
+          // All-Time dari statistik_pegawai (server); fallback ke periode kalau kosong.
+          const mT = p.all_menit_terlambat ?? p.menit_terlambat ?? 0;
+          const mC = p.all_menit_lebih_awal ?? p.menit_lebih_awal ?? 0;
           const mAllTotal_Local = mT + mC;
 
           const aLambat = toHHMM(mT);
@@ -978,9 +979,9 @@ function renderRekap(pg) {
     /* ─────────────────────────────────────────
        TAMPILAN RANGE — KARTU PREMIUM (V2)
        ───────────────────────────────────────── */
-    // ── Akumulasi Waktu (All-Time) ──
-    const mT = p.menit_terlambat ?? p.all_menit_terlambat ?? 0;
-    const mC = p.menit_lebih_awal ?? p.all_menit_lebih_awal ?? 0;
+    // ── Akumulasi Waktu (All-Time, dari statistik_pegawai: DI LUAR JAM MASUK + PULANG) ──
+    const mT = p.all_menit_terlambat ?? p.menit_terlambat ?? 0;
+    const mC = p.all_menit_lebih_awal ?? p.menit_lebih_awal ?? 0;
     const mAllTotal = mT + mC;
 
     const akkTotalWaktuFmt = (function () {
