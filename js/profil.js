@@ -42,7 +42,7 @@
               nip: cleanS(d.nip || d.NIP),
               username: cleanS(d.username || d.Username || (typeof tgUser !== 'undefined' ? tgUser.username : '')),
               status: cleanS(d.status || d.Status || 'AKTIF'),
-              role: cleanS(d.role || d.Role || 'user').toLowerCase().replace(/\s/g, ''),
+              role: cleanS(d.role || d.Role || 'user').toLowerCase(),
               instansi_id: cleanS(d.instansi_id || d.Instansi_Id || ''),
               bidang: cleanS(d.bidang || d.Bidang || ''),
               tgl_pangkat: d.tgl_pangkat || d.tgl_kenaikan_pangkat || null,

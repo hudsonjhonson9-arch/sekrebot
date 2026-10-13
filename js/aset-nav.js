@@ -8,10 +8,13 @@
   function isAdmin() {
     if (window.IS_ADMIN) return true;
     if (typeof window._isSuperAdmin === 'function' && window._isSuperAdmin()) return true;
-    const role = String(localStorage.getItem('MY_ROLE') || '').toLowerCase();
-    if (role.includes('admin') || role === 'bendahara barang') return true;
-    const prole = String((window.userProfile || {}).role || '').toLowerCase();
-    return prole.includes('admin') || prole === 'bendahara barang';
+    // profil.js pernah menulis role ke MY_ROLE/usermanProfile tanpa spasi
+    // ('BENDAHARABARANG'), jadi normalkan di sini: spasi dianggap tidak ada.
+    const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, '');
+    const role = norm(localStorage.getItem('MY_ROLE'));
+    if (role.includes('admin') || role === 'bendaharabarang') return true;
+    const prole = norm((window.userProfile || {}).role);
+    return prole.includes('admin') || prole === 'bendaharabarang';
   }
 
   function visibleScreens(list) {

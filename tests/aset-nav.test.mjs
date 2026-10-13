@@ -40,8 +40,18 @@ test('isAdmin true untuk bendahara barang (admin aset saja)', () => {
   assert.equal(load({ profileRole: 'bendahara barang' }).ASET_NAV.isAdmin(), true, 'userProfile.role');
 });
 
+test('isAdmin true untuk bentuk tanpa-spasi yang ditulis profil.js', () => {
+  // profil.js menulis role tanpa spasi ('BENDAHARA BARANG' -> 'BENDAHARABARANG').
+  // Perbandingan aset-nav harus kebal bentuk itu, kalau tidak kartu admin aset
+  // tidak pernah muncul untuk bendahara barang di produksi.
+  assert.equal(load({ role: 'BENDAHARABARANG' }).ASET_NAV.isAdmin(), true, 'MY_ROLE space-stripped');
+  assert.equal(load({ role: 'bendaharabarang' }).ASET_NAV.isAdmin(), true, 'MY_ROLE space-stripped lowercase');
+  assert.equal(load({ profileRole: 'BENDAHARABARANG' }).ASET_NAV.isAdmin(), true, 'userProfile.role space-stripped');
+});
+
 test('visibleScreens bendahara barang melihat 18 kartu (termasuk admin)', () => {
   assert.equal(load({ role: 'bendahara barang' }).ASET_NAV.visibleScreens().length, 18);
+  assert.equal(load({ role: 'bendaharabarang' }).ASET_NAV.visibleScreens().length, 18, 'role tanpa spasi (hasil profil.js)');
 });
 
 test('visibleScreens: 3 kartu untuk user biasa, 18 untuk admin', () => {
