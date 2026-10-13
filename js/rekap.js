@@ -654,49 +654,7 @@ function renderRekap(pg) {
   const myInstansi = (window.userProfile?.instansi_id || localStorage.getItem('MY_INSTANSI') || '').toLowerCase().trim();
   const isAdmin = isAdminRaw && myInstansi === 'bapperida';
 
-  // ── STATISTIK PEGAWAI (agregat) — mengikuti filter bidang & periode aktif ──
-  const _fmtAkum = (m) => { m = Math.round(m || 0); const h = Math.floor(m / 60); return h > 0 ? `${h}j ${m % 60}m` : `${m}m`; };
-  const statPeg = (() => {
-    const s = { n: filteredPg.length, hadir: 0, telat: 0, cepat: 0, izin: 0, sakit: 0, tugas: 0, tubel: 0, cuti: 0, alpa: 0, akum: 0 };
-    for (const p of filteredPg) {
-      const isHadir = (p.masuk || 0) > 0 || (p.pulang || 0) > 0 || (p.lambat_count || 0) > 0 || !!p._rawMasukLog || !!p._rawPulangLog;
-      const isKet = (p.izin || 0) > 0 || (p.sakit || 0) > 0 || (p.tugas || 0) > 0 || (p.tubel || 0) > 0 || (p.cuti || 0) > 0;
-      if (isHadir) s.hadir++;
-      if ((p.lambat_count || 0) > 0) s.telat++;
-      if ((p.pulang_cepat_count || 0) > 0) s.cepat++;
-      if ((p.izin || 0) > 0) s.izin++;
-      if ((p.sakit || 0) > 0) s.sakit++;
-      if ((p.tugas || 0) > 0) s.tugas++;
-      if ((p.tubel || 0) > 0) s.tubel++;
-      if ((p.cuti || 0) > 0) s.cuti++;
-      if (!isHadir && !isKet) s.alpa++;
-      s.akum += (Number(p.menit_terlambat) || Number(p.menit_terlambat_periode) || 0)
-        + (Number(p.menit_lebih_awal) || Number(p.menit_lebih_awal_periode) || 0);
-    }
-    return s;
-  })();
-  const statPct = statPeg.n ? Math.round(statPeg.hadir / statPeg.n * 100) : 0;
-  const statHtml = `
-        <div style="margin-bottom:10px;padding:10px 10px 1px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:10px">
-          <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">
-            <i class="fas fa-chart-bar"></i> Statistik Pegawai ${isHarian ? `· ${tanggalLabel}` : `· ${_dari} s/d ${_sampai}`}</div>
-          <div class="rekap-stats-grid" style="margin-bottom:9px">
-            <div class="stat-box-small" title="Jumlah pegawai pada filter ini"><span class="stat-box-val" style="color:var(--text)">${statPeg.n}</span><span class="stat-box-lbl">Pegawai</span></div>
-            <div class="stat-box-small" title="Pegawai yang hadir (punya log masuk/pulang)"><span class="stat-box-val" style="color:var(--success)">${statPeg.hadir}</span><span class="stat-box-lbl">Hadir</span></div>
-            <div class="stat-box-small" title="Persentase kehadiran"><span class="stat-box-val" style="color:var(--info)">${statPct}%</span><span class="stat-box-lbl">Kehadiran</span></div>
-            <div class="stat-box-small" title="Pegawai terlambat masuk"><span class="stat-box-val" style="color:var(--warning)">${statPeg.telat}</span><span class="stat-box-lbl">Telat</span></div>
-            <div class="stat-box-small" title="Pegawai pulang lebih awal"><span class="stat-box-val" style="color:#f97316">${statPeg.cepat}</span><span class="stat-box-lbl">Cepat</span></div>
-            <div class="stat-box-small" title="Pegawai dengan izin"><span class="stat-box-val" style="color:var(--warning)">${statPeg.izin}</span><span class="stat-box-lbl">Izin</span></div>
-            <div class="stat-box-small" title="Pegawai dengan sakit"><span class="stat-box-val" style="color:var(--danger)">${statPeg.sakit}</span><span class="stat-box-lbl">Sakit</span></div>
-            <div class="stat-box-small" title="Pegawai dengan tugas luar"><span class="stat-box-val" style="color:#a78bfa">${statPeg.tugas}</span><span class="stat-box-lbl">Tugas</span></div>
-            <div class="stat-box-small" title="Pegawai dengan tubel"><span class="stat-box-val" style="color:#818cf8">${statPeg.tubel}</span><span class="stat-box-lbl">Tubel</span></div>
-            <div class="stat-box-small" title="Pegawai dengan cuti"><span class="stat-box-val" style="color:#2dd4bf">${statPeg.cuti}</span><span class="stat-box-lbl">Cuti</span></div>
-            <div class="stat-box-small" title="Pegawai tanpa keterangan / belum absen"><span class="stat-box-val" style="color:var(--danger)">${statPeg.alpa}</span><span class="stat-box-lbl">TB</span></div>
-            <div class="stat-box-small" title="Total akumulasi di luar jam seluruh pegawai"><span class="stat-box-val" style="color:${statPeg.akum > 0 ? 'var(--warning)' : 'rgba(255,255,255,.35)'}">${_fmtAkum(statPeg.akum)}</span><span class="stat-box-lbl">Akumulasi</span></div>
-          </div>
-        </div>`;
-
-  el.innerHTML = statHtml + filteredPg.map((p, idx) => {
+  el.innerHTML = filteredPg.map((p, idx) => {
     const nama = p.nama || '—';
     const nip = p.nip || '—';
     const jabatan = p.jabatan || '';
