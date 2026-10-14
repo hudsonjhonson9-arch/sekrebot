@@ -39,49 +39,10 @@
       const modal = $('logModal');
       if (!modal) return;
 
-      // Find the existing ID from various sources
-      let existingId = log ? getLogId(log) : '';
-
-      // SMART UI DETECTION: If ID still missing, search in our global order cache
-      if (!existingId && uid && date) {
-        const p = (window.userListOrder || []).find(u => String(u.id) === String(uid));
-        if (p) {
-          // Check which log we should prioritize based on possible selection
-          // If log data was passed but has no ID, or if we have a hintJenis
-          const hJ = (hintJenis || '').toUpperCase();
-          const isM = hJ.includes('MASUK');
-          const isP = hJ.includes('PULANG');
-
-          const logsToCheck = [];
-          if (isM) { if (p._rawMasukLog) logsToCheck.push(p._rawMasukLog); }
-          else if (isP) { if (p._rawPulangLog) logsToCheck.push(p._rawPulangLog); }
-          else {
-            if (p._rawMasukLog) logsToCheck.push(p._rawMasukLog);
-            if (p._rawPulangLog) logsToCheck.push(p._rawPulangLog);
-            if (p._rawKetLog) logsToCheck.push(p._rawKetLog);
-          }
-
-          for (const l of logsToCheck) {
-            const lid = getLogId(l);
-            if (lid) {
-              const lTime = (l.Jam || l.jam || '').substring(0, 5);
-              const paramTime = log ? ((log.Jam || log.jam || '').substring(0, 5)) : '';
-              if (paramTime && lTime === paramTime) {
-                existingId = lid;
-                break;
-              }
-              // If we have a hint, and this is the record of that type, we target it
-              if (hJ) {
-                const lJ = (l['Jenis Absen'] || l.jenis_absen || l.Jenis || '').toUpperCase();
-                if (lJ.includes(hJ)) {
-                   existingId = lid;
-                   break;
-                }
-              }
-            }
-          }
-        }
-      }
+      // ID_Log HANYA dari baris log yang diedit (objek `log` dari tombol Edit).
+      // Jangan pernah menebak ID dari cache rekap: tebakan itu bisa salah sasaran
+      // (mis. tombol "tambah pulang" malah menimpa log MASUK/keterangan yang ada).
+      const existingId = log ? getLogId(log) : '';
 
       const applyMode = () => {
         $('editLogId').value = existingId;
@@ -116,34 +77,10 @@
         syncSearchDdLabel('inLogPegawai');
       });
 
-      // Fallback server-side: kalau cache rekap untuk hari itu belum pernah
-      // dimuat (userListOrder kosong / _raw*Log tidak ada), tanya /api/log
-      // SETELAH modal tampil, lalu update mode kalau ketemu. Log sudah ada
-      // (pegawai+tanggal+jenis) = mode EDIT (<i class="fas fa-edit"></i>), bukan tambah baru (<i class="fas fa-plus"></i>).
-      if (!existingId && uid && date) {
-        try {
-          const { ok, rows } = await apiGet(P.log, { user_id: uid, tanggal: date });
-          if (ok && rows?.length) {
-            const d = String(date).slice(0, 10);
-            const dayRows = rows.filter(l => String(l.Tanggal || l.tanggal || '').slice(0, 10) === d);
-            const hJ = String(hintJenis || '').toUpperCase();
-            let target = null;
-            if (hJ) {
-              target = dayRows.find(l => {
-                const j = String(l['Jenis Absen'] || l.jenis_absen || l.Jenis || '').toUpperCase();
-                if (hJ.includes('MASUK')) return j.includes('MASUK');
-                if (hJ.includes('PULANG')) return j.includes('PULANG');
-                return !j.includes('MASUK') && !j.includes('PULANG');
-              });
-            }
-            if (!target && dayRows.length) {
-              // Tanpa hint: ambil catatan paling baru hari itu (ID_Log terbesar).
-              target = [...dayRows].sort((a, b) => Number(getLogId(b)) - Number(getLogId(a)))[0];
-            }
-            if (target) { existingId = getLogId(target); applyMode(); }
-          }
-        } catch (e) { console.warn('[LogEditor] Cari log existing gagal', e); }
-      }
+      // Tidak ada lagi fallback "cari log lama lalu mode edit": kalau log dengan
+      // jenis yang sama memang sudah ada, server /api/log/add akan memperbarui
+      // baris itu (upsert per pegawai+tanggal+jenis) — tanpa menebak ID_Log
+      // dari baris lain yang bisa salah sasaran.
     }
 
     function closeLogEditor() {
@@ -224,21 +161,9 @@
       const jenis = $('inLogJenis').value;
       const ket = $('inLogKet').value.trim();
 
-      // SMART DETECTION: If no editId is set, check if we already have this log in memory (rekap view)
-      if (!editId && uid && tgl && jenis) {
-        const p = (window.userListOrder || []).find(u => String(u.id) === String(uid));
-        if (p) {
-          const jU = jenis.toUpperCase();
-          const isMasuk = jU.includes('MASUK');
-          const isPulang = jU.includes('PULANG');
-          const existing = isMasuk ? p._rawMasukLog : (isPulang ? p._rawPulangLog : p._rawKetLog);
-          const lid = existing ? getLogId(existing) : '';
-          if (lid) {
-            editId = lid;
-            console.log(`[Smart Log] Detected existing record: ${editId}. Switching to EDIT mode.`);
-          }
-        }
-      }
+      // editId hanya dari field tersembunyi yang diisi openLogEditor dari baris
+      // log yang benar-benar diedit. Tanpa tebak-ID: kalau log jenis sama sudah
+      // ada, server /add memperbaruinya; kalau belum, server INSERT baris baru.
 
       const isEdit = !!editId;
 
@@ -279,7 +204,7 @@
         if (!res.ok || d.ok === false) {
           showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal', d.message || 'Gagal menyimpan log.');
         } else {
-          showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'success', '<i class="fas fa-check"></i>', 'Berhasil', isEdit ? 'Log absen diperbarui.' : 'Log absen manual ditambahkan.');
+          showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'success', '<i class="fas fa-check"></i>', 'Berhasil', (d.updated || isEdit) ? 'Log absen diperbarui.' : 'Log absen manual ditambahkan.');
           setTimeout(() => {
             closeLogEditor();
             loadRekap(); // Refresh rekap after change
