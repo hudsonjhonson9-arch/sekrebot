@@ -647,21 +647,10 @@ window.renderAsetPegList = function() {
   const el = document.getElementById('asetPegList');
   if (!el) return;
   const pe = window._asetPegSel.pegawai;
-  if (!pe) {
-    el.innerHTML = '<div class="radius-note">Pilih pegawai untuk melihat &amp; mengelola asetnya.</div>';
-    return;
-  }
-  const owned = (window._bastData.aset || []).filter(a => String(a.pegawai_id || '') === String(pe));
-  const peg = bastFindPegawai(pe);
-  const head = '<div class="radius-note" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">' +
-    '<span><i class="fas fa-user" aria-hidden="true"></i> <b>' + apEsc(peg ? peg.nama : pe) + '</b> · ' + owned.length + ' unit</span>' +
-    (owned.length ? '<button class="btn-sm-admin" onclick="asetPegExportExcel().catch(e=>showToast(e.message||\'Export gagal\',\'error\'))" style="background:rgba(34,197,94,0.15);"><i class="fas fa-file-excel" aria-hidden="true"></i> Export Excel</button>' : '') +
-    '</div>';
-  if (!owned.length) {
-    el.innerHTML = head + '<div class="radius-note">Belum ada aset. Klik "Tambah Unit" untuk menambah.</div>';
-    return;
-  }
-  el.innerHTML = head + owned.map(a => {
+  const aset = window._bastData.aset || [];
+  const pegawai = window._bastData.pegawai || [];
+
+  function card(a) {
     const isKend = /kendaraan/i.test(a.kategori_nama || '') || !!a.no_polisi;
     const ruang = a.ruangan_id ? (bastNamaRuangan(a.ruangan_id) || '—') : '—';
     return `
@@ -670,6 +659,7 @@ window.renderAsetPegList = function() {
         <div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${apEsc(a.nama_barang) || '-'}</div>
         <div style="font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:2px;">
           <span><i class="fas fa-thumbtack" aria-hidden="true"></i> ${apEsc(a.nomorinventaris) || '-'}</span>
+          ${a.tahunperolehan ? '<span><i class="fas fa-calendar" aria-hidden="true"></i> ' + apEsc(a.tahunperolehan) + '</span>' : ''}
           ${a.merk_type ? '<span><i class="fas fa-tags" aria-hidden="true"></i> ' + apEsc(a.merk_type) + '</span>' : ''}
           ${isKend ? '<span><i class="fas fa-car" aria-hidden="true"></i> ' + (apEsc(a.no_polisi) || '-') + '</span>' : ''}
           <span><i class="fas fa-money-bill" aria-hidden="true"></i> ${bastRupiah(a.nilaiperolehan)}</span>
@@ -681,6 +671,51 @@ window.renderAsetPegList = function() {
       <button class="btn-sm-admin" onclick="asetPegPindah('${a.id}')" style="flex-shrink:0;background:rgba(245,158,11,0.15);"><i class="fas fa-exchange-alt" aria-hidden="true"></i></button>
       <button class="btn-sm-admin" onclick="asetPegHapus('${a.id}')" style="flex-shrink:0;background:rgba(239,68,68,0.15);"><i class="fas fa-trash" aria-hidden="true"></i></button>
     </div>`;
+  }
+
+  if (pe) {
+    const owned = aset.filter(a => String(a.pegawai_id || '') === String(pe));
+    const peg = bastFindPegawai(pe);
+    const head = '<div class="radius-note" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">' +
+      '<span><i class="fas fa-user" aria-hidden="true"></i> <b>' + apEsc(peg ? peg.nama : pe) + '</b> · ' + owned.length + ' unit</span>' +
+      (owned.length ? '<button class="btn-sm-admin" onclick="asetPegExportExcel().catch(e=>showToast(e.message||\'Export gagal\',\'error\'))" style="background:rgba(34,197,94,0.15);"><i class="fas fa-file-excel" aria-hidden="true"></i> Export Excel</button>' : '') +
+      '</div>';
+    if (!owned.length) {
+      el.innerHTML = head + '<div class="radius-note">Belum ada aset. Klik "Tambah Unit" untuk menambah.</div>';
+      return;
+    }
+    el.innerHTML = head + owned.map(card).join('');
+    return;
+  }
+
+  // ── Tanpa pilihan pegawai: overview semua pemegang aset, langsung tampil ──
+  const groups = pegawai
+    .map(p => ({
+      id: String(p.id),
+      nama: p.nama || p.nip || '—',
+      list: aset.filter(a => String(a.pegawai_id || '') === String(p.id)),
+    }))
+    .filter(g => g.list.length)
+    .sort((a, b) => b.list.length - a.list.length || String(a.nama).localeCompare(String(b.nama)));
+  const known = new Set(groups.map(g => g.id));
+  const orphan = aset.filter(a => a.pegawai_id && !known.has(String(a.pegawai_id)));
+  if (orphan.length) groups.push({ id: '', nama: 'Pegawai tidak terdaftar', list: orphan });
+  if (!groups.length) {
+    el.innerHTML = '<div class="radius-note"><i class="fas fa-inbox" aria-hidden="true"></i> Belum ada aset yang dipegang pegawai. Pilih pegawai di atas lalu klik "Tambah Unit".</div>';
+    return;
+  }
+  const totalUnit = groups.reduce((n, g) => n + g.list.length, 0);
+  const summary = '<div class="radius-note" style="margin-bottom:8px;"><i class="fas fa-users" aria-hidden="true"></i> <b>' + groups.length + ' pemegang</b> · <b>' + totalUnit + ' unit</b> — klik nama untuk melipat/membuka</div>';
+  el.innerHTML = summary + groups.map(g => {
+    const nilai = g.list.reduce((n, a) => n + (Number(a.nilaiperolehan) || 0), 0);
+    return `
+    <details open style="margin-bottom:8px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);overflow:hidden;">
+      <summary style="cursor:pointer;list-style:none;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <span style="font-weight:800;font-size:12px;color:var(--white);"><i class="fas fa-user" aria-hidden="true"></i> ${apEsc(g.nama)} <span style="color:var(--muted);font-weight:600;">· ${g.list.length} unit</span></span>
+        <span style="font-size:11px;font-weight:700;color:var(--gold);white-space:nowrap;">${bastRupiah(nilai)}</span>
+      </summary>
+      <div style="padding:0 6px 6px;">${g.list.map(card).join('')}</div>
+    </details>`;
   }).join('');
 };
 
