@@ -514,7 +514,7 @@ test('nilai berbahaya pada kategori/katalog/master tidak pernah masuk ke teks SQ
   });
   await call(a, 'POST', '/api/simapo/admin-master-delete', { id: jahat });
 
-  assert.equal(tx.calls.length, 7, 'ada endpoint yang tidak menyentuh query');
+  assert.equal(tx.calls.length, 8, 'ada endpoint yang tidak menyentuh query (admin-master-save kini 2 query: simpan + kode_aset unit)');
   for (const c of tx.calls) {
     assert.ok(!c.sql.includes('DROP TABLE'), `SQL mengandung input mentah: ${c.sql}`);
   }

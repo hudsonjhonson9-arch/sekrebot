@@ -397,7 +397,7 @@ window.renderAdminSimapoMaster = function(data) {
       <div style="width:44px;height:44px;border-radius:10px;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;"><i class="fas fa-box" aria-hidden="true"></i></div>
       <div style="flex:1;min-width:0;">
         <div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.nama_barang || '—'}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${u.nomorinventaris || '—'} · ${u.kodebarang || ''}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${u.kode_aset ? '<b style="color:var(--gold);">' + u.kode_aset + '</b> · ' : ''}${u.nomorinventaris || '—'} · ${u.kodebarang || ''}</div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap;">
           <span style="font-size:10px;font-weight:800;color:${statusColor};background:rgba(255,255,255,0.04);border:1px solid currentColor;border-radius:6px;padding:2px 8px;">${statusText}</span>
           <span style="font-size:10px;font-weight:700;color:var(--muted);">${u.kondisi || '—'}</span>
@@ -420,6 +420,7 @@ window.filterSAMaster = function(val) {
   const filtered = (window._allUnitData || []).filter(u =>
     (u.nama_barang && u.nama_barang.toLowerCase().includes(q)) ||
     (u.kodebarang && u.kodebarang.toLowerCase().includes(q)) ||
+    (u.kode_aset && u.kode_aset.toLowerCase().includes(q)) ||
     (u.nomorinventaris && u.nomorinventaris.toLowerCase().includes(q))
   );
   window.renderAdminSimapoMaster(filtered);
@@ -884,16 +885,16 @@ window.simapoMasterExportExcel = async function() {
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Daftar Aset');
 
-  ws.mergeCells('A1:F1');
+  ws.mergeCells('A1:G1');
   ws.getCell('A1').value = 'DAFTAR ASET';
   ws.getCell('A1').font = { bold: true, size: 14 };
   ws.getCell('A1').alignment = { horizontal: 'center' };
-  ws.mergeCells('A2:F2');
+  ws.mergeCells('A2:G2');
   ws.getCell('A2').value = 'Tanggal Export: ' + new Date().toLocaleDateString('id-ID');
   ws.getCell('A2').alignment = { horizontal: 'center' };
 
   const header = ws.getRow(4);
-  ['No', 'Nama Aset', 'Kode Barang', 'No. Inventaris', 'Tahun Aset', 'QR Code'].forEach((h, i) => {
+  ['No', 'Nama Aset', 'Kode Aset', 'Kode Barang', 'No. Inventaris', 'Tahun Aset', 'QR Code'].forEach((h, i) => {
     const c = header.getCell(i + 1);
     c.value = h;
     c.font = { bold: true };
@@ -907,13 +908,15 @@ window.simapoMasterExportExcel = async function() {
     row.getCell(1).value = i + 1;
     row.getCell(1).alignment = { horizontal: 'center' };
     row.getCell(2).value = u.nama_barang || '-';
-    row.getCell(3).value = u.kodebarang || '-';
+    row.getCell(3).value = u.kode_aset || '-';
     row.getCell(3).alignment = { horizontal: 'center' };
-    row.getCell(4).value = u.nomorinventaris || '-';
+    row.getCell(4).value = u.kodebarang || '-';
     row.getCell(4).alignment = { horizontal: 'center' };
-    row.getCell(5).value = u.tahunperolehan || '-';
+    row.getCell(5).value = u.nomorinventaris || '-';
     row.getCell(5).alignment = { horizontal: 'center' };
-    [1, 2, 3, 4, 5, 6].forEach(ci => {
+    row.getCell(6).value = u.tahunperolehan || '-';
+    row.getCell(6).alignment = { horizontal: 'center' };
+    [1, 2, 3, 4, 5, 6, 7].forEach(ci => {
       row.getCell(ci).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
     });
     row.height = 136;
@@ -924,12 +927,13 @@ window.simapoMasterExportExcel = async function() {
     qr.make();
     const dataUrl = qr.createDataURL(8, 10);
     const imgId = wb.addImage({ base64: dataUrl.split(',')[1], extension: 'png' });
-    ws.addImage(imgId, { tl: { col: 5.1, row: 4 + i + 0.15 }, ext: { width: 132, height: 132 } });
+    ws.addImage(imgId, { tl: { col: 6.1, row: 4 + i + 0.15 }, ext: { width: 132, height: 132 } });
   });
 
   ws.columns = [
     { key: 'no', width: 6 },
     { key: 'nama', width: 32 },
+    { key: 'kodeaset', width: 34 },
     { key: 'kode', width: 22 },
     { key: 'inv', width: 24 },
     { key: 'tahun', width: 12 },

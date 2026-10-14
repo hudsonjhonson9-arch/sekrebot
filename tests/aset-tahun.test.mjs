@@ -21,11 +21,12 @@ test('daftar aset (layar master) selalu menampilkan Tahun Aset', () => {
     'tahun tidak boleh disembunyikan lagi saat null');
 });
 
-test('export Excel "Daftar Aset" punya kolom Tahun Aset sebelum QR Code', () => {
+test('export Excel "Daftar Aset" punya kolom Kode Aset & Tahun Aset sebelum QR Code', () => {
   const body = fnBody('simapoMasterExportExcel');
-  assert.match(body, /'No', 'Nama Aset', 'Kode Barang', 'No\. Inventaris', 'Tahun Aset', 'QR Code'/);
-  assert.match(body, /row\.getCell\(5\)\.value = u\.tahunperolehan \|\| '-'/);
-  assert.match(body, /ws\.mergeCells\('A1:F1'\)/, 'judul melebar ke kolom F');
-  assert.match(body, /tl: \{ col: 5\.1,/, 'gambar QR pindah ke kolom 6 (ExcelJS 0-based)');
+  assert.match(body, /'No', 'Nama Aset', 'Kode Aset', 'Kode Barang', 'No\. Inventaris', 'Tahun Aset', 'QR Code'/);
+  assert.match(body, /row\.getCell\(3\)\.value = u\.kode_aset \|\| '-'/, 'kolom Kode Aset (3) diisi kode_aset');
+  assert.match(body, /row\.getCell\(6\)\.value = u\.tahunperolehan \|\| '-'/);
+  assert.match(body, /ws\.mergeCells\('A1:G1'\)/, 'judul melebar ke kolom G');
+  assert.match(body, /tl: \{ col: 6\.1,/, 'gambar QR pindah ke kolom 7 (ExcelJS 0-based)');
   assert.match(body, /key: 'tahun', width: 12/);
 });

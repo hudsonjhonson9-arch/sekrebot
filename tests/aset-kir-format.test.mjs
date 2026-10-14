@@ -56,8 +56,8 @@ test('server: kolom penanggung di ruangan + bast-ruangan mode ubah + kolom KIR d
     'bast-init menyiapkan kolom penanggung');
   assert.match(extraSrc, /UPDATE "SIMAPO"\.ruangan SET penanggung_id=\$2/,
     'bast-ruangan mendukung mode ubah (kirim id)');
-  assert.match(extraSrc, /ua\.no_register,''\) no_register,COALESCE\(ua\.bahan,''\) bahan,COALESCE\(ua\.ukuran,''\) ukuran/,
-    'bast-list mengirim kolom KIR: no_register, bahan, ukuran');
+  assert.match(extraSrc, /ua\.no_register,''\) no_register,COALESCE\(ua\.kode_aset,''\) kode_aset,COALESCE\(ua\.bahan,''\) bahan,COALESCE\(ua\.ukuran,''\) ukuran/,
+    'bast-list mengirim kolom KIR: no_register, kode_aset, bahan, ukuran');
   assert.match(extraSrc, /ua\.keterangan,''\) keterangan/,
     'bast-list mengirim keterangan');
 });

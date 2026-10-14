@@ -750,6 +750,7 @@ window.renderAsetPegList = function() {
         <div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${apEsc(a.nama_barang) || '-'}</div>
         <div style="font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:2px;">
           <span><i class="fas fa-thumbtack" aria-hidden="true"></i> ${apEsc(a.nomorinventaris) || '-'}</span>
+          ${a.kode_aset ? '<span style="color:var(--gold);"><i class="fas fa-id-card" aria-hidden="true"></i> ' + apEsc(a.kode_aset) + '</span>' : ''}
           ${a.tahunperolehan ? '<span><i class="fas fa-calendar" aria-hidden="true"></i> ' + apEsc(a.tahunperolehan) + '</span>' : ''}
           ${a.merk_type ? '<span><i class="fas fa-tags" aria-hidden="true"></i> ' + apEsc(a.merk_type) + '</span>' : ''}
           ${isKend ? '<span><i class="fas fa-car" aria-hidden="true"></i> ' + (apEsc(a.no_polisi) || '-') + '</span>' : ''}
@@ -1012,7 +1013,7 @@ window.asetPegTambah = async function() {
         <input type="checkbox" data-aset-id="${u.id}" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;accent-color:#22c55e;" onclick="event.stopPropagation()" onchange="window._apUpdateCount()">
         <div style="flex:1;min-width:0;">
           <div style="font-weight:700;font-size:13px;color:var(--white);line-height:1.3;">${apEsc(u.nama_barang || '-')}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px;">${apEsc(u.nomorinventaris || '-')}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;">${apEsc(u.nomorinventaris || '-')}${u.kode_aset ? ' · <b style="color:var(--gold);">' + apEsc(u.kode_aset) + '</b>' : ''}</div>
         </div>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:4px 8px;font-size:10px;color:var(--muted);padding-left:25px;">

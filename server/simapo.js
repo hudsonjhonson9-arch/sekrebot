@@ -1,4 +1,5 @@
 import express from 'express';
+import { buatKodeAset } from './kode-aset.js';
 
 // ── SQL ──
 // Workflow n8n "SIMAPO Ext" menyisipkan nilai client ke teks SQL dengan
@@ -492,6 +493,14 @@ export function createSimapoRouter({ query, withTransaction }) {
       if (!rows.length) {
         return res.status(404).json({ ok: false, message: 'Barang tidak ditemukan atau bukan milik instansi ini.' });
       }
+      // Best-effort: beri kode aset unik pada unit baru yang belum punya.
+      try {
+        const ka = buatKodeAset({
+          nama: S(body.nama), kodeBarang: S(body.kodebarang) || undefined,
+          tahun: new Date().getFullYear(), harga: N(body.hargasatuan),
+        });
+        await query(`UPDATE "SIMAPO".unit_aset SET kode_aset=$1 WHERE barangid=$2 AND (kode_aset IS NULL OR kode_aset='')`, [ka, rows[0].id]);
+      } catch { /* kode_aset diisi ulang oleh scripts/gen-kode-aset.mjs bila gagal */ }
       return res.json({ ok: true, message: 'Barang berhasil disimpan.', ...rows[0] });
     } catch {
       return res.status(500).json({ ok: false, message: 'Gagal menyimpan barang.' });
