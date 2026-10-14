@@ -403,6 +403,7 @@ window.renderAdminSimapoMaster = function(data) {
           <span style="font-size:10px;font-weight:700;color:var(--muted);">${u.kondisi || '—'}</span>
           <span style="font-size:10px;font-weight:800;color:var(--gold);background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.25);border-radius:6px;padding:2px 8px;"><i class="fas fa-calendar" aria-hidden="true"></i> Tahun ${u.tahunperolehan || '—'}</span>
           <span style="font-size:11px;font-weight:700;color:var(--gold);">${fmt(u.hargasatuan || 0)}</span>
+          <span style="font-size:10px;font-weight:700;color:${u.nama_pemegang ? 'var(--white)' : 'var(--muted)'};"><i class="fas fa-user" aria-hidden="true"></i> Pemegang: ${u.nama_pemegang || '—'}</span>
         </div>
         ${u.nama_peminjam_saat_ini ? `<div style="font-size:10px;color:var(--warning);margin-top:2px;"><i class="fas fa-user" aria-hidden="true"></i> Dipinjam oleh: ${u.nama_peminjam_saat_ini}</div>` : ''}
       </div>
@@ -421,6 +422,7 @@ window.filterSAMaster = function(val) {
     (u.nama_barang && u.nama_barang.toLowerCase().includes(q)) ||
     (u.kodebarang && u.kodebarang.toLowerCase().includes(q)) ||
     (u.kode_aset && u.kode_aset.toLowerCase().includes(q)) ||
+    (u.nama_pemegang && u.nama_pemegang.toLowerCase().includes(q)) ||
     (u.nomorinventaris && u.nomorinventaris.toLowerCase().includes(q))
   );
   window.renderAdminSimapoMaster(filtered);
