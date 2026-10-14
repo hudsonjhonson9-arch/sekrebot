@@ -365,7 +365,7 @@ window.loadAsetRuangan = async function(force = false) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const json = await res.json();
     const data = (json && json.data) || {};
-    window._kirData = { ruangan: data.ruangan || [], aset: data.aset || [] };
+    window._kirData = { ruangan: data.ruangan || [], aset: data.aset || [], pegawai: data.pegawai || [] };
   } catch (e) {
     console.warn('[Ruangan] fetch fail:', e);
     window.simapoErrorState('ruanganList', 'Gagal memuat data ruangan.');
@@ -384,15 +384,55 @@ window.renderAsetRuangan = function() {
   }
   el.innerHTML = ruangan.map(function(r) {
     const n = aset.filter(function(a) { return String(a.ruangan_id || '') === String(r.id); }).length;
+    const pj = r.penanggung_nama
+      ? '<div style="font-size:11px;color:var(--gold);margin-top:2px;"><i class="fas fa-user-tie" aria-hidden="true"></i> PJ: ' + String(r.penanggung_nama).replace(/</g, '&lt;') + (r.penanggung_nip ? ' · NIP. ' + String(r.penanggung_nip).replace(/</g, '&lt;') : '') + '</div>'
+      : '<div style="font-size:11px;color:var(--muted);margin-top:2px;"><i class="fas fa-user-tie" aria-hidden="true"></i> Penanggung jawab belum ditentukan</div>';
     return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;margin-bottom:8px;">' +
       '<i class="fas fa-building" aria-hidden="true" style="color:var(--muted);"></i>' +
       '<div style="flex:1;min-width:0;">' +
       '<div style="font-size:13px;font-weight:600;color:var(--white);">' + String(r.nama || '').replace(/</g, '&lt;') + '</div>' +
       '<div style="font-size:11px;color:var(--muted);">' + n + ' aset' + (r.kode ? ' · ' + String(r.kode).replace(/</g, '&lt;') : '') + '</div>' +
+      pj +
       '</div>' +
+      '<button class="btn-sm-admin" onclick="aturPenanggungJawab(\'' + String(r.id).replace(/'/g, '') + '\')" title="Atur penanggung jawab ruangan (tampil di KIR)" style="background:rgba(201,168,76,0.15);white-space:nowrap;"><i class="fas fa-user-tie" aria-hidden="true"></i> PJ</button>' +
       '<button class="btn-sm-admin" onclick="cetakKIR(\'' + String(r.id).replace(/'/g, '') + '\')" style="background:rgba(59,130,246,0.2);white-space:nowrap;"><i class="fas fa-print" aria-hidden="true"></i> Cetak KIR</button>' +
       '</div>';
   }).join('');
+};
+
+/* Atur Penanggung Jawab ruangan — nama & NIP tampil di blok tanda tangan bawah KIR. */
+window.aturPenanggungJawab = async function(rid) {
+  const r = (window._kirData.ruangan || []).find(x => String(x.id) === String(rid));
+  if (!r) return;
+  const peg = window._kirData.pegawai || [];
+  if (!peg.length) { showToast('Daftar pegawai belum termuat. Muat ulang layar Ruangan.', 'error'); return; }
+  const opts = '<option value="">— Belum ditentukan —</option>' + peg.map(p =>
+    '<option value="' + apEsc(p.id) + '"' + (String(r.penanggung_id || '') === String(p.id) ? ' selected' : '') + '>' +
+    apEsc(p.nama) + (p.nip ? ' — ' + apEsc(p.nip) : '') + '</option>').join('');
+  const { value: v } = await Swal.fire({
+    title: 'Penanggung Jawab Ruangan',
+    html: '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;text-align:left;">' +
+      '<b>' + apEsc(r.nama) + '</b>' + (r.kode ? ' (' + apEsc(r.kode) + ')' : '') +
+      '<br>Nama terpilih menjadi penandatangan bawah pada KIR (sebelah Kepala Badan).</div>' +
+      '<select id="apPjSel" class="form-input" style="width:100%;">' + opts + '</select>',
+    showCancelButton: true,
+    confirmButtonText: 'Simpan',
+    cancelButtonText: 'Batal',
+    preConfirm: () => document.getElementById('apPjSel').value,
+  });
+  if (typeof v !== 'string') return;
+  const p = peg.find(x => String(x.id) === String(v)) || null;
+  try {
+    const res = await apiPost(P.simapoBastRuangan, {
+      id: rid,
+      penanggung_id: p ? p.id : '',
+      penanggung_nama: p ? p.nama : '',
+      penanggung_nip: p ? (p.nip || '') : '',
+    });
+    if (!res.ok) throw new Error(res.message || 'Gagal menyimpan');
+    showToast(p ? 'Penanggung jawab ruangan: ' + p.nama : 'Penanggung jawab dikosongkan.', 'success');
+    window.loadAsetRuangan(true);
+  } catch (e) { showToast(e.message || 'Gagal menyimpan penanggung jawab', 'error'); }
 };
 
 window.cetakKIR = function(rid) {
@@ -402,34 +442,85 @@ window.cetakKIR = function(rid) {
   if (!asets.length) { showToast('Tidak ada aset di ruangan ini.', 'error'); return; }
 
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const KOP = {
+    provinsi: 'Nusa Tenggara Timur',
+    kabupaten: 'Sumba Barat',
+    kota: 'Waikabubak',
+    opd: 'Badan Perencanaan Pembangunan, Riset dan Inovasi Daerah (BAPPERIDA)',
+  };
+  // Kepala Badan: pegawai dengan jabatan berawalan "Kepala Badan"
+  const peg = window._kirData.pegawai || [];
+  const kepala = peg.find(p => /^Kepala Badan/i.test(String(p.jabatan || '').trim())) || null;
+  const pj = (ruang && ruang.penanggung_nama)
+    ? { nama: ruang.penanggung_nama, nip: ruang.penanggung_nip || '' }
+    : { nama: '', nip: '' };
   const tgl = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-  const rows = asets.map((a, i) =>
-    '<tr><td style="text-align:center;">' + (i + 1) + '</td>' +
-    '<td>' + esc(a.kodebarang) + '</td>' +
-    '<td>' + esc(a.nama_barang) + '</td>' +
-    '<td>' + esc(a.merk_type || a.model_jenis || '-') + '</td>' +
-    '<td style="text-align:center;">' + esc(a.tahun_pembuatan || '-') + '</td>' +
-    '<td style="text-align:right;">' + bastRupiah(a.nilaiperolehan || 0) + '</td>' +
-    '<td style="text-align:center;">' + esc(a.kondisi || '-') + '</td></tr>').join('');
-  const total = asets.reduce((s, a) => s + (Number(a.nilaiperolehan) || 0), 0);
+
+  let nBaik = 0, nKb = 0, nRb = 0, total = 0;
+  const rows = asets.map((a, i) => {
+    const kd = /kurang baik/i.test(a.kondisi || '') ? 'Kurang Baik'
+      : /rusak/i.test(a.kondisi || '') ? 'Rusak Berat' : 'Baik';
+    if (kd === 'Kurang Baik') nKb++; else if (kd === 'Rusak Berat') nRb++; else nBaik++;
+    const nilai = Number(a.nilaiperolehan) || 0;
+    total += nilai;
+    return '<tr><td style="text-align:center;">' + (i + 1) + '</td>' +
+      '<td>' + esc(a.nama_barang || '-') + '</td>' +
+      '<td>' + esc(a.merk_type || a.model_jenis || '') + '</td>' +
+      '<td>' + esc(a.ukuran || a.no_polisi || '') + '</td>' +
+      '<td>' + esc(a.bahan || '') + '</td>' +
+      '<td style="text-align:center;">' + esc(a.tahunperolehan || a.tahun_pembuatan || '') + '</td>' +
+      '<td style="text-align:center;">' + esc(a.kodebarang || '') + '</td>' +
+      '<td style="text-align:center;">' + esc(a.no_register || '') + '</td>' +
+      '<td style="text-align:center;">1</td>' +
+      '<td style="text-align:right;">' + bastRupiah(nilai) + '</td>' +
+      '<td style="text-align:center;">' + (kd === 'Baik' ? '1' : '') + '</td>' +
+      '<td style="text-align:center;">' + (kd === 'Kurang Baik' ? '1' : '') + '</td>' +
+      '<td style="text-align:center;">' + (kd === 'Rusak Berat' ? '1' : '') + '</td>' +
+      '<td>' + esc(a.keterangan || '') + '</td></tr>';
+  }).join('');
+
+  const ttdKiri = 'Mengetahui,<br>' + esc(kepala ? (kepala.jabatan || 'Kepala Badan') : 'Kepala Badan') +
+    '<div style="height:48px"></div><b><u>' + esc(kepala ? kepala.nama : '...............................') + '</u></b>' +
+    (kepala && kepala.nip ? '<br>NIP. ' + esc(kepala.nip) : '');
+  const ttdKanan = esc(KOP.kota) + ', ' + tgl + '<br>Penanggung Jawab Ruangan' +
+    '<div style="height:48px"></div><b><u>' + esc(pj.nama || '...............................') + '</u></b>' +
+    (pj.nip ? '<br>NIP. ' + esc(pj.nip) : '');
 
   const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>KIR - ' + esc(ruang && ruang.nama) + '</title>' +
-    '<style>body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:24px;}' +
-    '.kop{text-align:center;margin-bottom:14px;}.kop h1{font-size:15px;margin:0;text-transform:uppercase;}' +
-    '.kop p{margin:2px 0 0;font-size:12px;}h2{text-align:center;font-size:14px;text-decoration:underline;margin:0 0 4px;}' +
-    '.sub{text-align:center;margin:0 0 14px;}table{width:100%;border-collapse:collapse;font-size:11px;}' +
-    'th,td{border:1px solid #000;padding:4px 6px;}th{background:#eee;}' +
-    '.foot{margin-top:28px;display:flex;justify-content:space-between;}' +
-    '.sig{text-align:center;}.sig p{margin:2px 0 0;}' +
-    '@media print{body{margin:12mm;}}</style></head><body>' +
-    '<div class="kop"><h1>Kartu Inventaris Ruangan (KIR)</h1><p>Ruangan: <b>' + esc(ruang && ruang.nama) + '</b></p></div>' +
-    '<table><thead><tr><th style="width:30px;">No</th><th style="width:110px;">Kode Barang</th><th>Nama Barang</th>' +
-    '<th style="width:120px;">Merk / Type</th><th style="width:50px;">Tahun</th><th style="width:110px;">Nilai Perolehan</th>' +
-    '<th style="width:60px;">Kondisi</th></tr></thead><tbody>' + rows + '</tbody>' +
-    '<tfoot><tr><td colspan="5" style="text-align:right;font-weight:bold;">Total Nilai Perolehan</td>' +
-    '<td style="text-align:right;font-weight:bold;">' + bastRupiah(total) + '</td><td></td></tr></tfoot></table>' +
-    '<div class="foot"><div class="sig"><p>Mengetahui,</p><p>Kepala</p><br><br><br><p>(...........................)</p></div>' +
-    '<div class="sig"><p>Waikabubak, ' + tgl + '</p><p>Petugas</p><br><br><br><p>(...........................)</p></div></div>' +
+    '<style>@page{size:A4 landscape;margin:10mm;}' +
+    'body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#000;margin:0;}' +
+    '.kop{text-align:center;margin-bottom:8px;}.kop div{font-size:11px;font-weight:bold;}' +
+    '.kop h1{font-size:13px;margin:2px 0 0;text-transform:uppercase;}' +
+    '.info{margin:0 0 6px;font-size:10px;}.info b{display:inline-block;min-width:120px;}' +
+    'table{width:100%;border-collapse:collapse;font-size:9px;}' +
+    'th,td{border:1px solid #000;padding:2px 3px;}' +
+    'th{background:#f0f0f0;font-size:8px;}' +
+    '.ttd{margin-top:40px;display:flex;justify-content:space-between;font-size:10px;}' +
+    '.ttd>div{width:46%;text-align:center;}' +
+    '</style></head><body>' +
+    '<div class="kop"><div>PEMERINTAH KABUPATEN ' + esc(KOP.kabupaten.toUpperCase()) + '</div>' +
+    '<div>' + esc(KOP.opd.toUpperCase()) + '</div>' +
+    '<h1>KARTU INVENTARIS RUANGAN (KIR)</h1></div>' +
+    '<div class="info">' +
+    '<div><b>Provinsi</b> : ' + esc(KOP.provinsi) + '</div>' +
+    '<div><b>Kabupaten / Kota</b> : ' + esc(KOP.kabupaten) + '</div>' +
+    '<div><b>OPD / Unit</b> : ' + esc(KOP.opd) + '</div>' +
+    '<div><b>Ruangan</b> : <b>' + esc(ruang && ruang.nama) + '</b>' + (ruang && ruang.kode ? ' (kode ' + esc(ruang.kode) + ')' : '') + '</div>' +
+    '</div>' +
+    '<table><thead><tr>' +
+    '<th rowspan="2">No</th><th rowspan="2">Nama Barang</th><th rowspan="2">Merk / Model</th>' +
+    '<th rowspan="2">No. Seri / Ukuran</th><th rowspan="2">Bahan</th><th rowspan="2">Tahun</th>' +
+    '<th rowspan="2">Kode Barang</th><th rowspan="2">No. Register</th><th rowspan="2">Jumlah</th>' +
+    '<th rowspan="2">Harga Perolehan (Rp)</th>' +
+    '<th colspan="3" style="text-align:center;">Keadaan Barang</th><th rowspan="2">Keterangan</th></tr>' +
+    '<tr><th>Baik</th><th>Kurang Baik</th><th>Rusak Berat</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody>' +
+    '<tfoot><tr><th colspan="8" style="text-align:right;">JUMLAH</th>' +
+    '<th style="text-align:center;">' + asets.length + '</th>' +
+    '<th style="text-align:right;">' + bastRupiah(total) + '</th>' +
+    '<th style="text-align:center;">' + nBaik + '</th><th style="text-align:center;">' + nKb + '</th>' +
+    '<th style="text-align:center;">' + nRb + '</th><th></th></tr></tfoot></table>' +
+    '<div class="ttd"><div>' + ttdKiri + '</div><div>' + ttdKanan + '</div></div>' +
     '<script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script>' +
     '</body></html>';
 

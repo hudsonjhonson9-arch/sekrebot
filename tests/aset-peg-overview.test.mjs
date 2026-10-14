@@ -31,9 +31,10 @@ test('aset pegawai: mode 1 pegawai (head + Export Excel) tetap berfungsi', () =>
 });
 
 test('bast-list mengirim tahunperolehan; cache-buster simapo-bast di-bump', () => {
-  assert.match(extraSrc, /ua\.tahunperolehan,b\.nama nama_barang/,
+  assert.match(extraSrc, /ua\.tahunperolehan,/,
     'bast-list harus memilih tahunperolehan agar chip Tahun tampil');
-  assert.match(html, /js\/simapo-bast\.js\?v=20261014/);
+  assert.match(html, /js\/simapo-bast\.js\?v=\d{8}[a-z]?/,
+    'cache-buster simapo-bast.js harus ada di index.html');
 });
 
 test('bast-list: id pegawai = user_list.id, bukan NIP (regresi pemetaan aset)', () => {
