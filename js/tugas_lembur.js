@@ -1229,6 +1229,10 @@
       }
     });
 
+    // Rekap valid = minimal satu pegawai punya lembur nyata (menit > 0, tanpa keterangan)
+    const hasValidLembur = Object.values(groups).some(g =>
+      Object.values(g.dates).some(d => !d.ket && (d.mins || 0) > 0));
+
     // Find true Kepala dynamically (excluding sub-heads like Kepala Bidang)
     const getKepalaSignatureData = (employees) => {
       if (!Array.isArray(employees)) return null;
@@ -1518,18 +1522,12 @@
         const dateIdx = Math.floor(dataColIdx / 4);
         const dateKey = dates[dateIdx];
         const val = g.dates[dateKey];
-        if (!val || val.ket) return; // keterangan or no data → no TTD
+        // TTD hanya untuk sel valid: ada lembur nyata (menit > 0) dan tanpa keterangan
+        if (!val || val.ket || !(val.mins > 0)) return;
 
         const nipClean  = String(g.nip || '').replace(/\s/g, '');
         const nipSigMap = window._currentNipSigMap || {};
         const sigMap    = window._currentSigMap    || {};
-
-        // DEBUG (remove after fix)
-        if (dataColIdx === 3 && data.row.index === 0) {
-          console.log('[TTD-DEBUG] nipClean:', nipClean,
-            '| nipSigMap keys:', Object.keys(nipSigMap),
-            '| found:', !!nipSigMap[nipClean]);
-        }
 
         // Use NIP-keyed map (built via _allPegawaiLembur cross-ref at fetch time)
         let sig = nipSigMap[nipClean] || sigMap[nipClean] || sigMap[g.nip];
@@ -1640,6 +1638,19 @@
     doc.text(`Waikabubak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, signatureX, footerY, { align: 'center' });
     doc.text('Mengetahui,', signatureX, footerY + 6, { align: 'center' });
     doc.text(kepTitle, signatureX, footerY + 11, { align: 'center' });
+
+    // TTD gambar Kepala — hanya jika hasil rekap valid (ada lembur nyata) dan ttd tersedia
+    const kbNip   = String(kb.nip || '').replace(/\s/g, '');
+    const kbUid   = String(kb.id || kb.telegram_id || '');
+    const kabanSig = (window._currentNipSigMap || {})[kbNip]
+      || (window._currentSigMap || {})[kbNip]
+      || (window._currentSigMap || {})[kbUid];
+    if (hasValidLembur && kabanSig) {
+      try {
+        const kbFmt = kabanSig.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
+        doc.addImage(kabanSig, kbFmt, signatureX - 15, footerY + 14, 30, 15, undefined, 'FAST');
+      } catch (e) { console.warn('Gagal gambar tanda tangan Kepala lembur:', e); }
+    }
 
     doc.setFont('times', 'bold');
     doc.text(kb.nama, signatureX, footerY + 38, { align: 'center' });
