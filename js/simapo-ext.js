@@ -377,14 +377,15 @@ window.loadAdminSimapoMaster = async function(force = false) {
 
   window._allMasterData = Array.isArray(barangData) ? barangData : [];
   window._allUnitData = Array.isArray(unitData) ? unitData : [];
-  window.renderAdminSimapoMaster(window._allUnitData);
+  window._fillMasterFilters();
+  window._applyMasterFilters();
 };
 window._simapoRetryMap['adminSimapoMasterList'] = window.loadAdminSimapoMaster;
 
 window.renderAdminSimapoMaster = function(data) {
   const el = document.getElementById('adminSimapoMasterList');
   if (!el) return;
-  if (!data || data.length === 0) { el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-box" aria-hidden="true"></i> Belum ada data aset.</div>`; return; }
+  if (!data || data.length === 0) { el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-box" aria-hidden="true"></i> Tidak ada aset yang cocok dengan filter.</div>`; return; }
   const fmt = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
 
   // ponytail: flat — tiap unit_aset jadi baris sendiri, tanpa grup per barang.
@@ -416,16 +417,59 @@ window.renderAdminSimapoMaster = function(data) {
   }).join('');
 };
 
-window.filterSAMaster = function(val) {
-  const q = val.toLowerCase();
-  const filtered = (window._allUnitData || []).filter(u =>
-    (u.nama_barang && u.nama_barang.toLowerCase().includes(q)) ||
-    (u.kodebarang && u.kodebarang.toLowerCase().includes(q)) ||
-    (u.kode_aset && u.kode_aset.toLowerCase().includes(q)) ||
-    (u.nama_pemegang && u.nama_pemegang.toLowerCase().includes(q)) ||
-    (u.nomorinventaris && u.nomorinventaris.toLowerCase().includes(q))
-  );
+// Isi opsi dropdown filter (Kategori · Pemegang · Tahun) dari data unit yang
+// sudah dimuat; pilihan user dipertahankan kalau masih ada di opsi baru.
+window._fillMasterFilters = function() {
+  const units = window._allUnitData || [];
+  const esc = (s) => window.pksEsc ? window.pksEsc(String(s)) : String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fill = (selId, pairs, placeholder) => {
+    const sel = document.getElementById(selId);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = `<option value="">${placeholder}</option>` + pairs.map(p => `<option value="${esc(p[0])}">${esc(p[1])}</option>`).join('');
+    if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+  };
+  fill('saFilterKat',
+    [...new Set(units.map(u => u.kategori).filter(Boolean))].sort().map(k => [k, k]),
+    'Semua Kategori');
+  const pegSeen = new Map();
+  for (const u of units) if (u.pegawai_id && u.nama_pemegang && !pegSeen.has(String(u.pegawai_id))) pegSeen.set(String(u.pegawai_id), u.nama_pemegang);
+  fill('saFilterPeg',
+    [...pegSeen.entries()].sort((a, b) => a[1].localeCompare(b[1])),
+    'Semua Pemegang');
+  fill('saFilterTahun',
+    [...new Set(units.map(u => String(u.tahunperolehan || '')).filter(Boolean))].sort().reverse().map(t => [t, t]),
+    'Semua Tahun');
+};
+
+window._applyMasterFilters = function() {
+  const q = (document.getElementById('saSearchMaster')?.value || '').toLowerCase().trim();
+  const kat = document.getElementById('saFilterKat')?.value || '';
+  const peg = document.getElementById('saFilterPeg')?.value || '';
+  const th = document.getElementById('saFilterTahun')?.value || '';
+  const filtered = (window._allUnitData || []).filter(u => {
+    const cocokQ = !q ||
+      (u.nama_barang && u.nama_barang.toLowerCase().includes(q)) ||
+      (u.kodebarang && u.kodebarang.toLowerCase().includes(q)) ||
+      (u.kode_aset && u.kode_aset.toLowerCase().includes(q)) ||
+      (u.nama_pemegang && u.nama_pemegang.toLowerCase().includes(q)) ||
+      (u.nomorinventaris && u.nomorinventaris.toLowerCase().includes(q));
+    const cocokKat = !kat || (u.kategori || '') === kat;
+    const cocokPeg = !peg || String(u.pegawai_id || '') === peg;
+    const cocokTh = !th || String(u.tahunperolehan || '') === th;
+    return cocokQ && cocokKat && cocokPeg && cocokTh;
+  });
   window.renderAdminSimapoMaster(filtered);
+};
+
+window.filterSAMaster = function() {
+  window._applyMasterFilters();
+};
+
+window.resetSAMasterFilter = function() {
+  const s = document.getElementById('saSearchMaster'); if (s) s.value = '';
+  for (const id of ['saFilterKat', 'saFilterPeg', 'saFilterTahun']) { const el = document.getElementById(id); if (el) el.value = ''; }
+  window._applyMasterFilters();
 };
 
 /* ── Referensi pegawai & ruangan untuk form aset (sekali fetch, cache 2 menit) ── */
@@ -442,9 +486,8 @@ window._simapoLoadRefData = function() {
 
 window.showSimapoMasterForm = async function(id = null, unitId = null) {
   window._simapoMasterEditId = id;
-  // Konteks unit yang diklik di daftar — JANGAN jatuh ke unit pertama barang:
-  // satu barang bisa punya banyak unit (beda pemegang/nilai), dan unit pertama
-  // sering milik orang lain → modal menampilkan detail yang salah.
+  // Konteks unit yang diklik di daftar (kebijakan 1:1: unit = aset; tetap
+  // eksplisit supaya modal membaca unit itu sendiri, bukan nebak urutan).
   window._simapoMasterUnitId = unitId || null;
   const modal = document.getElementById('modalSimapoMaster');
   if (!modal) return;

@@ -46,6 +46,19 @@ test('client: cache-buster simapo-ext ikut di-bump', () => {
   assert.match(html, /js\/simapo-ext\.js\?v=\d{8}[a-z]?/);
 });
 
+test('client: filter dropdown Daftar Aset (Kategori · Pemegang · Tahun) + tombol reset', () => {
+  assert.match(extSrc, /window\._fillMasterFilters = function/);
+  assert.match(extSrc, /window\._applyMasterFilters = function/);
+  assert.match(extSrc, /window\.resetSAMasterFilter = function/);
+  assert.match(extSrc, /document\.getElementById\('saFilterKat'\)/);
+  assert.match(extSrc, /document\.getElementById\('saFilterPeg'\)/);
+  assert.match(extSrc, /document\.getElementById\('saFilterTahun'\)/);
+  assert.match(html, /id="saFilterKat"[\s\S]*id="saFilterPeg"[\s\S]*id="saFilterTahun"/);
+  assert.match(extSrc, /window\._fillMasterFilters\(\);\s*\n\s*window\._applyMasterFilters\(\);/,
+    'setelah load: isi opsi filter lalu terapkan (pilihan lama dipertahankan)');
+  assert.match(html, /oninput="filterSAMaster\(\)"/, 'search memakai apply gabungan');
+});
+
 // Satu barang bisa dimiliki banyak unit dengan nilai perolehan berbeda
 // (mis. 2 PC bekas pakai, satu 8.702.400 satu 11.523.680). Daftar & modal
 // harus menampilkan data UNIT yang diklik, bukan harga/unit pertama barang.
@@ -54,6 +67,9 @@ test('server: unit-list-all kirim nilai perolehan unit, bukan harga satuan baran
   const sql = endpointSrc('unit-list-all');
   assert.match(sql, /COALESCE\(ua\.nilaiperolehan,b\.hargasatuan\) hargasatuan/,
     'kolom hargasatuan = nilai perolehan unit (fallback harga barang)');
+  assert.match(sql, /COALESCE\(k\.nama,''\) kategori/,
+    'unit-list-all ikut kirim nama kategori untuk dropdown filter');
+  assert.match(sql, /LEFT JOIN "SIMAPO"\.kategori_barang k ON k\.id=b\.kategoriid/);
 });
 
 test('client: kartu daftar memakai hargasatuan (sudah nilai unit dari server)', () => {

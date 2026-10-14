@@ -1557,7 +1557,13 @@
                 <div class="btn-inner"><span><i class="fas fa-plus" aria-hidden="true"></i></span> Tambah</div>
               </button>
             </div>
-            <input type="text" id="saSearchMaster" class="form-input" placeholder="Cari nama atau kode aset..." oninput="filterSAMaster(this.value)" style="margin-bottom:10px;">
+            <input type="text" id="saSearchMaster" class="form-input" placeholder="Cari nama atau kode aset..." oninput="filterSAMaster()" style="margin-bottom:8px;">
+            <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+              <select id="saFilterKat" class="form-input" onchange="filterSAMaster()" style="flex:1;min-width:110px;font-size:11px;padding:6px 8px;"><option value="">Semua Kategori</option></select>
+              <select id="saFilterPeg" class="form-input" onchange="filterSAMaster()" style="flex:1;min-width:110px;font-size:11px;padding:6px 8px;"><option value="">Semua Pemegang</option></select>
+              <select id="saFilterTahun" class="form-input" onchange="filterSAMaster()" style="flex:1;min-width:90px;font-size:11px;padding:6px 8px;"><option value="">Semua Tahun</option></select>
+              <button type="button" onclick="resetSAMasterFilter()" title="Reset filter" style="padding:6px 10px;background:rgba(255,255,255,0.06);color:var(--muted);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;flex-shrink:0;"><i class="fas fa-times" aria-hidden="true"></i></button>
+            </div>
             <div id="adminSimapoMasterList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div>
           </div>
         </div>
@@ -3201,7 +3207,7 @@
   
   <script src="js/aset-screens.js?v=3"></script>
 <script src="js/aset-nav.js?v=20261013a"></script>
-  <script src="js/simapo-ext.js?v=20261014e"></script>
+  <script src="js/simapo-ext.js?v=20261014g"></script>
   <script src="js/simapo-bast.js?v=20261014f"></script>
 
   <!-- 6. Supplementary features -->
