@@ -45,3 +45,34 @@ test('client: kartu Daftar Aset menampilkan Pemegang dan bisa dicari', () => {
 test('client: cache-buster simapo-ext ikut di-bump', () => {
   assert.match(html, /js\/simapo-ext\.js\?v=\d{8}[a-z]?/);
 });
+
+// Satu barang bisa dimiliki banyak unit dengan nilai perolehan berbeda
+// (mis. 2 PC bekas pakai, satu 8.702.400 satu 11.523.680). Daftar & modal
+// harus menampilkan data UNIT yang diklik, bukan harga/unit pertama barang.
+
+test('server: unit-list-all kirim nilai perolehan unit, bukan harga satuan barang', () => {
+  const sql = endpointSrc('unit-list-all');
+  assert.match(sql, /COALESCE\(ua\.nilaiperolehan,b\.hargasatuan\) hargasatuan/,
+    'kolom hargasatuan = nilai perolehan unit (fallback harga barang)');
+});
+
+test('client: kartu daftar memakai hargasatuan (sudah nilai unit dari server)', () => {
+  assert.match(extSrc, /fmt\(u\.hargasatuan \|\| 0\)/);
+});
+
+test('client: tombol Edit kartu membawa id unit; modal pakai unit itu, bukan unit pertama', () => {
+  assert.match(extSrc, /showSimapoMasterForm\('\$\{u\.barangid\}', '\$\{u\.id\}'\)/,
+    'Edit diklik dari kartu unit → kirim unit id');
+  const fn = fnBody(extSrc, 'window.showSimapoMasterForm = async function', 'window.closeSimapoMasterForm');
+  assert.match(fn, /function\(id = null, unitId = null\)/);
+  assert.match(fn, /\(unitId && units\.find\(x => String\(x\.id\) === String\(unitId\)\)\) \|\| units\[0\]/,
+    'cari unit yang diklik dulu; unit pertama hanya fallback');
+});
+
+function fnBody(src, startMarker, endMarker) {
+  const i = src.indexOf(startMarker);
+  assert.ok(i > -1, `penanda awal ada: ${startMarker}`);
+  const j = src.indexOf(endMarker, i + startMarker.length);
+  assert.ok(j > -1, `penanda akhir ada: ${endMarker}`);
+  return src.slice(i, j);
+}

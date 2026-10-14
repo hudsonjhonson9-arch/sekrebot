@@ -408,7 +408,7 @@ window.renderAdminSimapoMaster = function(data) {
         ${u.nama_peminjam_saat_ini ? `<div style="font-size:10px;color:var(--warning);margin-top:2px;"><i class="fas fa-user" aria-hidden="true"></i> Dipinjam oleh: ${u.nama_peminjam_saat_ini}</div>` : ''}
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;align-items:center;">
-        <button onclick="window.showSimapoMasterForm('${u.barangid}')" title="Edit aset" aria-label="Edit aset" style="padding:8px 12px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:700;"><i class="fas fa-edit" aria-hidden="true"></i></button>
+        <button onclick="window.showSimapoMasterForm('${u.barangid}', '${u.id}')" title="Edit aset" aria-label="Edit aset" style="padding:8px 12px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:700;"><i class="fas fa-edit" aria-hidden="true"></i></button>
         <button onclick="window.generateQRSingle('${u.id}', '${(u.nama_barang || '').replace(/'/g, "\\'")}', '${(u.nomorinventaris || '').replace(/'/g, "\\'")}')" title="QR aset ini" style="padding:8px 12px;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2);border-radius:8px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-mobile-alt" aria-hidden="true"></i> QR</button>
         <button onclick="window.deleteSimapoMaster('${u.barangid}')" title="Hapus aset" aria-label="Hapus aset" style="padding:8px 12px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:8px;font-size:12px;cursor:pointer;font-weight:700;"><i class="fas fa-trash" aria-hidden="true"></i></button>
       </div>
@@ -440,9 +440,12 @@ window._simapoLoadRefData = function() {
   }, false);
 };
 
-window.showSimapoMasterForm = async function(id = null) {
+window.showSimapoMasterForm = async function(id = null, unitId = null) {
   window._simapoMasterEditId = id;
-  window._simapoMasterUnitId = null;
+  // Konteks unit yang diklik di daftar — JANGAN jatuh ke unit pertama barang:
+  // satu barang bisa punya banyak unit (beda pemegang/nilai), dan unit pertama
+  // sering milik orang lain → modal menampilkan detail yang salah.
+  window._simapoMasterUnitId = unitId || null;
   const modal = document.getElementById('modalSimapoMaster');
   if (!modal) return;
 
@@ -492,7 +495,7 @@ window.showSimapoMasterForm = async function(id = null) {
     }
   }
 
-  // Tampilkan bidang unit hanya untuk Aset Tetap; isi dari unit pertama saat edit
+  // Tampilkan bidang unit hanya untuk Aset Tetap; isi dari unit yang diklik saat edit
   const showUnit = document.getElementById('smfJenis').value === 'Aset Tetap';
   const unitFields = document.getElementById('smfUnitFields');
   if (unitFields) unitFields.style.display = showUnit ? 'block' : 'none';
@@ -509,7 +512,8 @@ window.showSimapoMasterForm = async function(id = null) {
     if (id) {
       try {
         const res = await apiGet(P.simapoUnitList, { barangid: id });
-        const u0 = (res.rows || [])[0];
+        const units = res.rows || [];
+        const u0 = (unitId && units.find(x => String(x.id) === String(unitId))) || units[0];
         if (u0) {
           window._simapoMasterUnitId = u0.id;
           document.getElementById('smfTahun').value = u0.tahunperolehan || '';
