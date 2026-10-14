@@ -192,7 +192,7 @@ test('import-bapperida: urutan hapus benar, kolom baru ditambah, QR di-set, user
   assert.equal(r.status, 200);
   assert.equal(r.body.ok, true);
   assert.equal(r.body.data.unit_baru, 2);
-  assert.equal(r.body.data.barang_baru, 1, 'dua unit, satu barang (grup kode+nama)');
+  assert.equal(r.body.data.barang_baru, 2, '1 baris aset = 1 barang (kebijakan 1:1, tanpa grup kode+nama)');
   assert.equal(r.body.data.kategori, 1);
   assert.equal(r.body.data.ruangan, 1);
   assert.equal(r.body.data.pegawai_dilewati, 1, 'NIP 999 tak ada di user_list');

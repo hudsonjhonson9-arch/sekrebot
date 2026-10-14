@@ -773,7 +773,7 @@ window.renderAsetPegList = function() {
       (owned.length ? '<button class="btn-sm-admin" onclick="asetPegExportExcel().catch(e=>showToast(e.message||\'Export gagal\',\'error\'))" style="background:rgba(34,197,94,0.15);"><i class="fas fa-file-excel" aria-hidden="true"></i> Export Excel</button>' : '') +
       '</div>';
     if (!owned.length) {
-      el.innerHTML = head + '<div class="radius-note">Belum ada aset. Klik "Tambah Unit" untuk menambah.</div>';
+      el.innerHTML = head + '<div class="radius-note">Belum ada aset. Klik "Tambah Aset" untuk menambah.</div>';
       return;
     }
     el.innerHTML = head + owned.map(card).join('');
@@ -793,7 +793,7 @@ window.renderAsetPegList = function() {
   const orphan = aset.filter(a => a.pegawai_id && !known.has(String(a.pegawai_id)));
   if (orphan.length) groups.push({ id: '', nama: 'Pegawai tidak terdaftar', list: orphan });
   if (!groups.length) {
-    el.innerHTML = '<div class="radius-note"><i class="fas fa-inbox" aria-hidden="true"></i> Belum ada aset yang dipegang pegawai. Pilih pegawai di atas lalu klik "Tambah Unit".</div>';
+    el.innerHTML = '<div class="radius-note"><i class="fas fa-inbox" aria-hidden="true"></i> Belum ada aset yang dipegang pegawai. Pilih pegawai di atas lalu klik "Tambah Aset".</div>';
     return;
   }
   const totalUnit = groups.reduce((n, g) => n + g.list.length, 0);
@@ -1024,17 +1024,17 @@ window.asetPegTambah = async function() {
     </div>`).join('');
 
   const { value: v } = await Swal.fire({
-    title: 'Tambah Unit ke Pegawai',
+    title: 'Tambah Aset ke Pegawai',
     width: '720px',
     html:
       '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Untuk: <b>' + apEsc(peg ? peg.nama : pe) + '</b></div>' +
       '<input id="apSearch" class="form-input" placeholder="Ketik nama / nomor inventaris..." style="width:100%;margin-bottom:10px;font-size:12px;" oninput="window._apFilterGrid(this.value)">' +
       '<div id="apGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;max-height:420px;overflow-y:auto;padding:2px;">' +
-        (gridRows || '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:20px;font-size:12px;">Tidak ada unit tersedia.</div>') +
+        (gridRows || '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:20px;font-size:12px;">Tidak ada aset tersedia.</div>') +
       '</div>' +
       '<div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;">' +
         '<span style="font-size:11px;color:var(--muted);"><span id="apCount">0</span> dipilih</span>' +
-        '<button type="button" onclick="window.asetPegTambahManual()" style="font-size:10px;color:var(--gold);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;">atau buat unit baru...</button>' +
+        '<button type="button" onclick="window.asetPegTambahManual()" style="font-size:10px;color:var(--gold);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;">atau tambah aset baru...</button>' +
       '</div>',
     showCancelButton: true,
     confirmButtonText: 'Assign Terpilih',
@@ -1052,7 +1052,7 @@ window.asetPegTambah = async function() {
   for (const id of v.ids) {
     await window.bastSubmit(P.simapoBastAssign, { aset_id: id, pegawai_id: pe }, { successMsg: '', errorMsg: '' });
   }
-  showToast(v.ids.length + ' unit berhasil diassign', 'success');
+  showToast(v.ids.length + ' aset berhasil diassign', 'success');
   window.loadAsetPegawai(true);
   window.loadAdminBast(true);
 };
@@ -1075,7 +1075,7 @@ window.asetPegTambahManual = async function() {
   const peg = bastFindPegawai(pe);
   Swal.close();
   const { value: v } = await Swal.fire({
-    title: 'Buat Unit Baru',
+    title: 'Tambah Aset Baru',
     html:
       '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Untuk: <b>' + apEsc(peg ? peg.nama : pe) + '</b></div>' +
       '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Kode Barang</label>' +
