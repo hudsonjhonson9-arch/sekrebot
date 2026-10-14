@@ -55,6 +55,15 @@ test('server /add: upsert exact (pegawai+tanggal+jenis), bukan fuzzy', () => {
   assert.match(logSrv, /UPDATE "Log_Absen" SET "Tanggal"=\$1, "Jam"=\$2, "Jenis Absen"=\$3, "Ket"=\$4\s*\n\s*WHERE "ID_Log" = \$5/);
 });
 
+test('_autoJenisLog: jenis eksplisit (hint tombol / pilihan admin) tidak boleh ditimpa auto', () => {
+  const auto = fnBody(adminLog, 'function _autoJenisLog', "document.getElementById('inLogJam')");
+  assert.match(auto, /if \(_logJenisDisentuh\) return;/, 'guard flag eksplisit di baris pertama');
+  const open = fnBody(adminLog, 'async function openLogEditor', 'function closeLogEditor');
+  assert.match(open, /_logJenisDisentuh = !!\(log \|\| hintJenis\);/, 'edit & tambah-dengan-hint menandai jenis eksplisit');
+  assert.match(adminLog, /getElementById\('inLogJenis'\)\?\.addEventListener\('change', function \(\) \{ _logJenisDisentuh = true; \}\)/,
+    'pilihan manual admin menandai jenis eksplisit');
+});
+
 test('cache-buster admin-log & rekap ikut di-bump', () => {
   assert.match(html, /js\/admin-log\.js\?v=\d{8}[a-z]?/);
   assert.match(html, /js\/rekap\.js\?v=\d{8}[a-z]?/);

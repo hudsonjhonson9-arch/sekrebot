@@ -27,6 +27,11 @@
      * @param {string} hintJenis - Hint jenis absen ('MASUK' | 'PULANG' | ...)
      * @returns {Promise<void>}
      */
+    // Jenis yang dipilih admin atau dikirim hint tombol (MASUK/PULANG) bersifat
+    // eksplisit. Dulu _autoJenisLog menimpanya diam-diam: admin membuka "tambah
+    // masuk", mengisi jam 15:23, jenis melompat jadi PULANG lalu log masuk hilang.
+    let _logJenisDisentuh = false;
+
     async function openLogEditor(uid = '', date = '', log = null, hintJenis = '') {
       const isSA = typeof _isSuperAdmin === 'function' && _isSuperAdmin();
       const isAdmin = isSA || (window.userProfile?.role?.toLowerCase().includes('admin')) || !!window.IS_ADMIN;
@@ -61,6 +66,8 @@
       $('inLogTanggal').value = date || fmtD(nowWITA());
       $('inLogJam').value = log ? ((log.Jam || log.jam || '').substring(0, 5)) : '';
       $('inLogJenis').value = log ? (log['Jenis Absen'] || log.jenis_absen || log.Jenis || 'MASUK') : (hintJenis || 'MASUK');
+      // Edit / tombol + dengan hint = jenis sudah ditentukan; jangan diubah auto.
+      _logJenisDisentuh = !!(log || hintJenis);
       $('inLogKet').value = log ? (log.Ket || log.ket || log.keterangan || '') : '';
       dom.hide('logFormResult');
       applyMode();
@@ -89,6 +96,7 @@
 
     // ── Auto-set Jenis Absen dari jam (sekali attach, bukan per-buka modal) ──
     function _autoJenisLog() {
+      if (_logJenisDisentuh) return; // pilihan eksplisit admin/hint menang
       const jam = $('inLogJam')?.value, tgl = $('inLogTanggal')?.value, sel = $('inLogJenis');
       if (!jam || !tgl || !sel) return;
       // Hanya overwrite jika jenis masih tipe waktu (bukan IZIN/SAKIT/dll yang dipilih manual)
@@ -103,6 +111,9 @@
     }
     document.getElementById('inLogJam')?.addEventListener('change', _autoJenisLog);
     document.getElementById('inLogTanggal')?.addEventListener('change', _autoJenisLog);
+    // Admin mengubah jenis lewat dropdown = pilihan eksplisit (set.value manual
+    // dari kode tidak men-trigger event change, jadi tidak menyalakan flag sendiri).
+    document.getElementById('inLogJenis')?.addEventListener('change', function () { _logJenisDisentuh = true; });
 
     let _pegawaiListCache = null;
     async function loadLogPegawaiList() {
