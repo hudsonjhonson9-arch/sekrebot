@@ -31,8 +31,9 @@ let meLoaded = false;
   // diketahui) supaya tidak pernah tertinggal.
   // FAB hanya di view Dokumen — beranda/KK/BD tidak punya tombol unggah, sama
   // seperti arsipdigital. Sembunyikan juga saat panel detail terbuka.
-  // Kembali hanya di mode "Aplikasi lengkap" (iframe): di view native sudah ada
-  // cara navigasi sendiri (folder, detail, bottom nav).
+  // Kembali tampil di semua view selain beranda (Dokumen/KK/BD/app) → langsung
+  // ke grid beranda; di beranda disembunyikan karena navigasi keluar tab ada di
+  // bottom nav.
   function syncChrome() {
     const upBtn = $('arsipUploadBtn');
     if (upBtn) {
@@ -40,7 +41,7 @@ let meLoaded = false;
       upBtn.style.display = (IS_ADMIN() && diDokumen) ? '' : 'none';
     }
     const backBtn = $('arsipBackBtn');
-    if (backBtn) backBtn.style.display = view.view === 'app' ? 'flex' : 'none';
+    if (backBtn) backBtn.style.display = view.view !== 'home' ? 'flex' : 'none';
   }
 
   // Modul Tahap 2/3 dipasang lewat kontrak mount/unmount. Kalau skripnya belum

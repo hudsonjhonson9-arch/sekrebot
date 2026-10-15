@@ -7045,8 +7045,9 @@ html.light-theme .btn-pagination-all:hover {
   background: var(--card-bg);
 }
 
-/* Tombol kembali: hanya tampil di tampilan full (iframe "Aplikasi lengkap").
-   Daftar native memakai bottom nav, jadi tombol ini tidak dibutuhkan di sana. */
+/* Tombol kembali: tampil di semua view selain beranda (kendali via inline
+   syncChrome), posisi di atas bottom nav; di desktop digeser melewati sidebar
+   260px supaya tidak menimpa nav. */
 .arsip-back {
   display: none;
   position: fixed;
@@ -7065,6 +7066,9 @@ html.light-theme .btn-pagination-all:hover {
   font-weight: 700;
   cursor: pointer;
   box-shadow: var(--shadow-md);
+}
+@media (min-width: 768px) {
+  .arsip-back { left: calc(260px + 16px); }
 }
 @media (max-width: 767px) {
   body.arsip-fs .header,
@@ -7558,6 +7562,11 @@ body.arsip-preview-open { overflow: hidden; }
 .kk-head { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; }
 .kk-judul { margin: 0; font-size: 15px; color: var(--white); flex: 1 1 auto; min-width: 0; }
 .kk-tahun { max-width: 110px; flex: 0 0 auto; }
+/* dropdown tahun custom (makeSearchDd): kompak seperti select lama */
+.kk-head .custom-search-dropdown { width: 110px; flex: 0 0 auto; }
+.kk-head .custom-search-dropdown .dropdown-trigger { height: 38px; padding: 0 10px; border-radius: var(--radius); }
+.kk-head .custom-search-dropdown .dropdown-trigger input { padding-left: 0; font-weight: 600; }
+.kk-head .custom-search-dropdown .dropdown-list-wrap { right: auto; min-width: 110px; }
 
 .kk-ringkas { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px; margin-bottom: 14px; }
 .kk-stat { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; text-align: center; }

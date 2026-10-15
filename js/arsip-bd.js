@@ -133,6 +133,15 @@
   function tulis(isi) {
     if (!el) return;
     el.innerHTML = isi + `<div class="kk-hasil-wrap">${hasilHtml}</div>`;
+    pasangTahunDd();
+  }
+
+  // Select tahun diganti dropdown custom (makeSearchDd) — select asli tetap
+  // jadi value source, pick dispatch 'change' ke onChange() lama.
+  function pasangTahunDd() {
+    if (el && el.querySelector('#bdTahunSel') && typeof makeSearchDd === 'function') {
+      makeSearchDd('bdTahunSel', { ph: 'Tahun', h: 38, noIcon: true });
+    }
   }
 
   function render(opt) {
@@ -144,7 +153,7 @@
 
     let isi = `<div class="kk-head">
       <h3 class="kk-judul">Bank Data</h3>
-      <select class="arsip-search kk-tahun" aria-label="Tahun">${opsiTahun || '<option value="">—</option>'}</select>
+      <select id="bdTahunSel" class="arsip-search kk-tahun" aria-label="Tahun">${opsiTahun || '<option value="">—</option>'}</select>
       ${isAdmin() ? '<button class="arsip-act" data-bd="tambah-tahun"><i class="fas fa-plus" aria-hidden="true"></i> Tahun</button>' : ''}
       <button class="arsip-act" data-bd="muat"><i class="fas fa-sync" aria-hidden="true"></i> Muat ulang</button>
     </div>`;

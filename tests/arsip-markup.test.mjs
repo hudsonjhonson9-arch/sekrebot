@@ -94,7 +94,7 @@ test('loadArsipMe baca isi body dari amplop apiGet (r.data), bukan level atas', 
   assert.doesNotMatch(arsipJs, /r\.ok && r\.isAdmin/, 'r.isAdmin di level atas apiGet selalu undefined');
 });
 
-test('FAB hanya di view Dokumen; Kembali hanya di mode Aplikasi lengkap', () => {
+test('FAB hanya di view Dokumen; Kembali di semua view selain beranda', () => {
   // render() HANYA dipanggil untuk view 'dokumen' (lihat applyView). Kalau
   // penyinkronan tombol cuma ada di sana, beranda/KK/BD tidak pernah jalan.
   // FAB unggah sengaja hanya di Dokumen (keputusan produk, sama seperti arsipdigital).
@@ -105,7 +105,7 @@ test('FAB hanya di view Dokumen; Kembali hanya di mode Aplikasi lengkap', () => 
   assert.ok(iRender > iApply, 'fungsi tidak ditemukan urut — pola salah?');
   const blokApply = arsipJs.slice(iApply, iRender);
   assert.match(blokApply, /syncChrome\(\)/, 'applyView() harus memanggil syncChrome() di setiap navigasi');
-  assert.match(arsipJs, /view\.view === 'app' \? 'flex' : 'none'/, 'Kembali harus hanya muncul di mode Aplikasi lengkap');
+  assert.match(arsipJs, /view\.view !== 'home' \? 'flex' : 'none'/, 'Kembali harus tampil di semua view selain beranda');
   assert.match(arsipJs, /view\.view === 'dokumen' && !view\.detail/, 'FAB harus dikunci ke view Dokumen dan disembunyikan saat detail terbuka');
   assert.match(arsipJs, /IS_ADMIN\(\) && diDokumen/, 'FAB harus tetap untuk admin saja');
 });

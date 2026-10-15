@@ -29,7 +29,7 @@ const FAKE_SEL = {
 test('helpers.js punya makeSearchDd generik + dispatch change ke select tersembunyi', () => {
   assert.match(helpers, /function makeSearchDd\(/);
   assert.match(helpers, /function syncSearchDdLabel\(/);
-  assert.match(helpers, /sel\.dispatchEvent\(new Event\('change'\)\)/, 'pick harus men-trigger onchange inline lama');
+  assert.match(helpers, /sel\.dispatchEvent\(new Event\('change', \{ bubbles: true \}\)\)/, 'pick harus men-trigger change yang bubbling ke container (arsip KK/BD) + onchange inline lama');
   assert.match(helpers, /sel\.style\.display = 'none'/, 'select asli disembunyikan, bukan dihapus');
   assert.match(helpers, /dataset\.ddReady/, 'guard double-init');
 });

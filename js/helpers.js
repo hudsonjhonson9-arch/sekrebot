@@ -516,7 +516,8 @@
       sel.value = item.getAttribute('data-v');
       wrap.classList.remove('open');
       syncSearchDdLabel(selId);
-      sel.dispatchEvent(new Event('change')); // aktifkan onchange inline lama
+      // bubbles: true supaya listener delegasi di container (mis. arsip KK/BD) ikut kena
+      sel.dispatchEvent(new Event('change', { bubbles: true })); // aktifkan onchange inline lama
     };
 
     function makeSearchDd(selId, opts) {
@@ -534,7 +535,7 @@
       wrap.innerHTML =
         '<div class="dropdown-trigger"' + (opts.h ? ' style="height:' + opts.h + 'px"' : '') +
           ' onclick="window._ddOpen(\'' + selId + '\')">' +
-          '<i class="fas fa-search search-icon" aria-hidden="true"></i>' +
+          (opts.noIcon ? '' : '<i class="fas fa-search search-icon" aria-hidden="true"></i>') +
           '<input type="text" autocomplete="off" placeholder="' + _ddEsc(opts.ph || 'Pilih...') + '" ' +
             'onfocus="window._ddOpen(\'' + selId + '\')" oninput="window._ddFilter(\'' + selId + '\', this.value)">' +
           '<i class="fas fa-chevron-down arrow-icon" aria-hidden="true"></i>' +
