@@ -304,6 +304,8 @@
 
       if (tab === 'arsip') {
         // Panel Dokumen native (Jalur A); iframe hanya dibuka via ARSIP.showFull().
+        // Selalu mulai dari beranda tile, jadi tidak nyangkut di sub-menu terakhir.
+        if (typeof window.arsipReset === 'function') window.arsipReset();
         if (typeof loadArsipDocs === 'function') loadArsipDocs();
       }
 

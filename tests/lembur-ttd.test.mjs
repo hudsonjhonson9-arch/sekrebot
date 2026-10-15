@@ -10,8 +10,14 @@ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 function fnBody(name) {
   const start = src.indexOf('window.' + name + ' =');
   assert.ok(start >= 0, name + ' harus ada di js/tugas_lembur.js');
+  // ponytail: file ini tidak punya satu pun '\nwindow.' berikutnya, jadi batas
+  // jatuh ke fallback. Dulu fallback-nya tebakan 20000 char yang memotong badan
+  // fungsi SEBELUM kode footer ttd kepala (baris ~1648) — makanya asersi footer
+  // selalu gagal walau kodenya benar. Sekarang sampai akhir file.
+  // Upgrade path: batas per kurung kurawal kalau suatu saat ada assignment lain
+  // setelah generateLemburPDF.
   const next = src.indexOf('\nwindow.', start + 1);
-  return src.slice(start, next > 0 ? next : start + 20000);
+  return src.slice(start, next > 0 ? next : src.length);
 }
 
 test('rekap lembur: hasil valid = ada lembur nyata (menit > 0, tanpa keterangan)', () => {

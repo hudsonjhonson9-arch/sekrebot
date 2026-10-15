@@ -47,7 +47,9 @@ async function via(app, path, headers = {}, init = {}) {
   }
 }
 
-function harness({ fetchImpl, baseUrl = UPSTREAM, secret = SECRET, user = ME } = {}) {
+// roleDb = isi kolom user_credentials.role (tabel arsipdigital), karena gate tulis
+// dan /me tidak lagi membaca role absensi dari user_list.
+function harness({ fetchImpl, baseUrl = UPSTREAM, secret = SECRET, user = ME, roleDb = 'Admin' } = {}) {
   const captured = [];
   const app = express();
   app.use(express.json());
@@ -57,6 +59,7 @@ function harness({ fetchImpl, baseUrl = UPSTREAM, secret = SECRET, user = ME } =
     createArsipRouter({
       baseUrl,
       secret,
+      query: async () => ({ rows: roleDb ? [{ role: roleDb }] : [] }),
       fetchImpl: async (url, opts) => {
         captured.push({ url, opts });
         if (fetchImpl) return fetchImpl(url, opts);
@@ -110,7 +113,7 @@ test('tanpa konfigurasi -> 503, fetch tidak dipanggil', async () => {
   assert.equal(captured.length, 0);
 });
 
-test('tulis diteruskan dengan method+body dan cookie; 403 untuk role USER', async () => {
+test('tulis diteruskan dengan method+body dan cookie; gate dari user_credentials, bukan role absensi', async () => {
   const { app, captured } = harness({
     fetchImpl: async () => ({ status: 200, text: async () => '{"message":"ok"}' }),
   });
@@ -126,14 +129,30 @@ test('tulis diteruskan dengan method+body dan cookie; 403 untuk role USER', asyn
   assert.equal(captured[0].opts.method, 'PATCH');
   assert.equal(JSON.parse(captured[0].opts.body).status, 'Diarsipkan');
 
-  const { app: appUser } = harness({ user: { ...ME, role: 'USER' } });
+  // Absensi bilang ADMIN, tapi di user_credentials orang ini Staf -> tetap ditolak.
+  const { app: appStaf } = harness({ roleDb: 'Staf' });
   const r2 = await via(
-    appUser,
+    appStaf,
     '/api/arsip/docs/7/status',
     { 'Content-Type': 'application/json' },
     { method: 'PATCH', body: '{}' }
   );
   assert.equal(r2.status, 403);
+
+  // Kebalikannya juga: absensi bilang USER, tapi di user_credentials Admin -> boleh.
+  const { app: appAdmin, captured: cap3 } = harness({
+    user: { ...ME, role: 'USER' },
+    roleDb: 'Admin',
+    fetchImpl: async () => ({ status: 200, text: async () => '{"message":"ok"}' }),
+  });
+  const r3 = await via(
+    appAdmin,
+    '/api/arsip/docs/7/status',
+    { 'Content-Type': 'application/json' },
+    { method: 'PATCH', body: '{}' }
+  );
+  assert.equal(r3.status, 200);
+  assert.equal(cap3.length, 1);
 });
 
 test('DELETE diteruskan ke peta', async () => {
@@ -146,8 +165,8 @@ test('DELETE diteruskan ke peta', async () => {
   assert.equal(captured[0].url, UPSTREAM + '/api/docs/7');
 });
 
-test('upload-file: 403 untuk role USER, GAS tidak dipanggil', async () => {
-  const { app, captured } = harness({ user: { ...ME, role: 'USER' } });
+test('upload-file: 403 untuk role Staf, GAS tidak dipanggil', async () => {
+  const { app, captured } = harness({ roleDb: 'Staf' });
   const r = await via(
     app,
     '/api/arsip/docs/upload-file',
@@ -167,4 +186,73 @@ test('upload-file: 400 tanpa filename/dataBase64 (admin)', async () => {
     { method: 'POST', body: '{}' }
   );
   assert.equal(r.status, 400);
+});
+
+test('whitelist /p/*: path diizinkan diteruskan, query string ikut', async () => {
+  const { app, captured } = harness();
+  const r = await via(app, '/api/arsip/p/api/kertas-kerja?tahun=2026');
+  assert.equal(r.status, 200);
+  assert.equal(captured.length, 1);
+  assert.equal(captured[0].url, UPSTREAM + '/api/kertas-kerja?tahun=2026');
+});
+
+test('whitelist /p/*: path di luar daftar ditolak 403 tanpa menyentuh upstream', async () => {
+  const { app, captured } = harness();
+  const r = await via(app, '/api/arsip/p/api/users');
+  assert.equal(r.status, 403);
+  assert.equal(captured.length, 0);
+});
+
+test('whitelist /p/*: tulis oleh role Staf ditolak 403 (gate user_credentials)', async () => {
+  const { app, captured } = harness({ roleDb: 'Staf' });
+  const r = await via(
+    app,
+    '/api/arsip/p/api/bankdata/opd',
+    { 'Content-Type': 'application/json' },
+    { method: 'POST', body: '{}' }
+  );
+  assert.equal(r.status, 403);
+  assert.equal(captured.length, 0);
+});
+
+test('whitelist /p/*: GET bankdata diteruskan dan /p/api/docs tidak menabrak /docs/:id', async () => {
+  const { app, captured } = harness();
+  const r1 = await via(app, '/api/arsip/p/api/bankdata');
+  assert.equal(r1.status, 200);
+  assert.equal(captured[0].url, UPSTREAM + '/api/bankdata');
+
+  const { app: app2, captured: cap2 } = harness();
+  const r2 = await via(app2, '/api/arsip/p/api/docs/abc123');
+  assert.equal(r2.status, 200);
+  assert.equal(cap2[0].url, UPSTREAM + '/api/docs/abc123');
+});
+
+test('whitelist /p/*: master kategori/sektor/bidang diteruskan untuk dropdown unggah', async () => {
+  for (const p of ['/api/kategori-dokumen', '/api/sektor', '/api/bidang']) {
+    const { app, captured } = harness();
+    const r = await via(app, '/api/arsip/p' + p);
+    assert.equal(r.status, 200, p);
+    assert.equal(captured[0].url, UPSTREAM + p, p);
+  }
+});
+
+test('GET /api/arsip/me: role ternormalisasi dari user_credentials', async () => {
+  const { app } = harness({ roleDb: 'ADMIN' });
+  const b = JSON.parse((await via(app, '/api/arsip/me')).body);
+  assert.equal(b.role, 'Admin');
+  assert.equal(b.isAdmin, true);
+
+  // Kapitalisasi/alias berbeda, hasilnya tetap sama.
+  assert.equal(JSON.parse((await via(harness({ roleDb: 'kabid' }).app, '/api/arsip/me')).body).role, 'Reviewer');
+  assert.equal(JSON.parse((await via(harness({ roleDb: 'KABID' }).app, '/api/arsip/me')).body).role, 'Reviewer');
+
+  // Bukan admin.
+  const r = JSON.parse((await via(harness({ roleDb: 'Staf' }).app, '/api/arsip/me')).body);
+  assert.equal(r.role, 'Staf');
+  assert.equal(r.isAdmin, false);
+
+  // NIP tidak ada di user_credentials -> Staf, bukan admin (fail-closed).
+  const kosong = JSON.parse((await via(harness({ roleDb: '' }).app, '/api/arsip/me')).body);
+  assert.equal(kosong.role, 'Staf');
+  assert.equal(kosong.isAdmin, false);
 });

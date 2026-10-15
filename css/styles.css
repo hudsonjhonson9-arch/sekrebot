@@ -7417,3 +7417,224 @@ html.light-theme #panel-arsip .arsip-filter option { background: #ffffff; color:
   /* ruang untuk bottom-nav mobile (mode fs menang lewat spesifikitas lebih tinggi) */
   #panel-arsip.active { padding-bottom: 76px !important; }
 }
+
+/* ── Arsip: beranda tile, baris dokumen, overlay preview, FAB ── */
+.arsip-home {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  padding: 0 32px 16px;
+}
+.arsip-tile {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 16px; text-align: left; cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.arsip-tile:hover { border-color: var(--gold); box-shadow: var(--shadow-md); }
+.arsip-tile-ico {
+  display: grid; place-items: center; width: 42px; height: 42px;
+  margin-bottom: 8px; border-radius: var(--radius);
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+}
+.arsip-tile-ico i { color: var(--gold); font-size: 18px; }
+.arsip-tile-name { font-size: 13px; font-weight: 800; color: var(--white); line-height: 1.35; }
+.arsip-tile em { font-style: normal; font-weight: 600; font-size: 11px; color: var(--muted); }
+
+.arsip-dokumen { display: flex; flex-direction: column; min-height: 0; }
+.arsip-section { padding: 0 32px 16px; color: var(--white); font-size: 13px; }
+
+/* baris dokumen gaya arsipdigital: ikon berwarna + judul + meta + badge */
+.arsip-item {
+  display: flex; gap: 10px; align-items: center;
+  padding: 10px 12px; width: 100%; text-align: left;
+  border: 0; background: transparent; color: var(--white);
+  cursor: pointer; font: inherit;
+}
+.arsip-item-body { min-width: 0; flex: 1 1 auto; display: block; }
+.arsip-ico { --ic: var(--gold); }
+.arsip-ico i { color: var(--ic); }
+.arsip-item-meta, .arsip-item-sub { display: block; }
+
+.arsip-skel {
+  min-height: 56px; border-radius: var(--radius);
+  background: linear-gradient(90deg, var(--card-bg) 25%, var(--border) 37%, var(--card-bg) 63%);
+  background-size: 400% 100%;
+  animation: arsip-skel 1.2s ease-in-out infinite;
+}
+@keyframes arsip-skel { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+
+@media (prefers-reduced-motion: reduce) { .arsip-skel { animation: none; } }
+
+/* FAB unggah: warna/border dari #panel-arsip .arsip-upload (sama kelasnya),
+   di sini hanya bentuk & posisi. Di atas bottom nav. */
+.arsip-fab {
+  position: absolute;
+  right: 16px;
+  bottom: calc(16px + var(--tg-safe-area-inset-bottom, 0px));
+  z-index: 1200;
+  display: grid; place-items: center;
+  width: 52px; height: 52px; padding: 0;
+  border: 0; border-radius: 999px;
+  box-shadow: var(--shadow-md); font-size: 18px;
+}
+#panel-arsip { position: relative; }
+
+/* overlay preview: mengisi area panel, tidak pernah keluar tab */
+.arsip-preview {
+  position: absolute; inset: 0; z-index: 1300;
+  display: flex; flex-direction: column;
+  background: var(--card-bg);
+}
+.arsip-preview-bar {
+  display: flex; align-items: center; gap: 8px; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+}
+.arsip-preview-bar strong {
+  color: var(--white); font-size: 13px; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.arsip-preview-acts { display: flex; gap: 6px; flex: 0 0 auto; }
+.arsip-preview-body { flex: 1 1 auto; min-height: 0; display: grid; place-items: center; overflow: auto; }
+.arsip-preview-img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.arsip-preview-frame { width: 100%; height: 100%; border: 0; display: block; background: var(--card-bg); }
+body.arsip-preview-open { overflow: hidden; }
+
+@media (max-width: 767px) {
+  .arsip-home { padding: 0 14px 12px; grid-template-columns: repeat(2, 1fr); }
+  .arsip-section { padding: 0 14px 12px; }
+  .arsip-fab { right: 14px; bottom: calc(80px + var(--tg-safe-area-inset-bottom, 0px)); }
+  .arsip-preview-img { max-height: 70vh; }
+}
+
+/* ── Modal unggah bergaya arsipdigital: section header, grid, dropzone ── */
+.arsip-modal-box { max-width: 560px; padding: 20px; }
+.arsip-form { gap: 12px; }
+.arsip-form-sec {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: var(--white);
+}
+.arsip-form-sec::before {
+  content: ''; width: 4px; height: 18px; border-radius: 2px;
+  background: var(--gold); flex: 0 0 auto;
+}
+.arsip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.arsip-grid .span2 { grid-column: 1 / -1; }
+.arsip-grid label, .arsip-lbl-req { font-weight: 600; }
+.arsip-lbl-req { font-size: 12px; color: var(--muted); }
+  .arsip-form input:not([type='file']), .arsip-form textarea { border: 1.5px solid var(--border); border-radius: 8px; }
+  .arsip-form textarea {
+  width: 100%; padding: 8px 10px; font: inherit; font-weight: 400;
+  background: transparent; color: var(--white); resize: vertical;
+  }
+.arsip-divider { height: 1px; background: var(--border); }
+#arsipUploadFile { display: none; }
+.arsip-drop {
+  border: 2px dashed var(--border); border-radius: var(--radius-lg);
+  padding: 22px; text-align: center; cursor: pointer;
+  background: rgba(127, 127, 127, 0.05);
+  transition: border-color .2s, background .2s;
+}
+.arsip-drop.drag { border-color: var(--gold); background: rgba(255, 215, 0, .07); }
+.arsip-drop > i { display: block; font-size: 28px; color: var(--muted); margin-bottom: 10px; }
+.arsip-drop-hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+.arsip-drop-sub { font-size: 11px; color: var(--muted); opacity: .7; margin-top: 3px; }
+.arsip-drop-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.arsip-drop-list li {
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  font-size: 13px; color: var(--white); min-width: 0;
+}
+.arsip-drop-list li i { color: var(--gold); flex: 0 0 auto; }
+.arsip-drop-list li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arsip-drop-list .size { flex: 0 0 auto; color: var(--muted); font-size: 11px; }
+@media (max-width: 767px) {
+  .arsip-modal-box { padding: 16px; }
+  .arsip-grid { grid-template-columns: 1fr; }
+  .arsip-grid .span2 { grid-column: auto; }
+}
+
+/* ════ Modul Kertas Kerja (Tahap 2) — js/arsip-kk.js ════ */
+.kk-head { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; }
+.kk-judul { margin: 0; font-size: 15px; color: var(--white); flex: 1 1 auto; min-width: 0; }
+.kk-tahun { max-width: 110px; flex: 0 0 auto; }
+
+.kk-ringkas { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.kk-stat { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; text-align: center; }
+.kk-stat b { display: block; font-size: 18px; color: var(--gold); line-height: 1.2; }
+.kk-stat span { font-size: 11px; color: var(--muted); }
+
+.kk-block { margin-bottom: 16px; }
+.kk-block-t { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+.kk-block-t i { color: var(--gold); }
+
+.kk-dl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.kk-dl li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 10px; font-size: 12px; }
+.kk-dl li.lewat { border-color: rgba(220, 38, 38, .5); }
+.kk-dl-tgl { color: var(--gold); font-weight: 700; flex: 0 0 auto; }
+.kk-dl-teks { color: var(--white); flex: 1 1 140px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.kk-grup { margin-bottom: 12px; }
+.kk-grup-t { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 0 0 6px; }
+
+.kk-row { display: flex; align-items: flex-start; gap: 8px; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; margin-bottom: 6px; }
+.kk-row.on { border-color: var(--gold); }
+.kk-buka { flex: 0 0 auto; background: none; border: 0; color: var(--gold); cursor: pointer; padding: 2px 4px; font-size: 12px; }
+.kk-row.on .kk-buka i { display: inline-block; transform: rotate(180deg); }
+.kk-info { flex: 1 1 auto; min-width: 0; }
+.kk-nama { font-size: 13px; color: var(--white); line-height: 1.35; }
+.kk-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 4px; font-size: 11px; color: var(--muted); }
+.kk-meta i { color: var(--gold); }
+
+.kk-periode { border-left: 2px solid var(--gold); margin: 0 0 8px 20px; padding-left: 10px; }
+.kk-out { margin-bottom: 8px; }
+.kk-out-t { font-size: 12px; font-weight: 700; color: var(--gold); margin-bottom: 4px; }
+.kk-per { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; background: rgba(255,255,255,.02); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 10px; margin-bottom: 5px; }
+.kk-per-info { flex: 1 1 180px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.kk-per-label { font-size: 12px; color: var(--white); font-weight: 600; }
+.kk-per-meta, .kk-per-doc { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.kk-per-meta i, .kk-per-doc i { color: var(--gold); }
+.kk-per-aksi { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+
+.kk-kandidat-wrap { width: 100%; }
+.kk-kandidat { width: 100%; margin-top: 6px; display: flex; flex-direction: column; gap: 6px; }
+.kk-kandidat .arsip-search { width: 100%; }
+.kk-kand { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--white); background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 10px; }
+.kk-kand-judul { flex: 1 1 140px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kk-kand button[disabled] { opacity: .5; cursor: not-allowed; }
+
+.kk-hasil-wrap:empty { display: none; }
+.kk-hasil { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; margin-bottom: 12px; background: var(--card-bg); }
+.kk-hasil.ok { border-color: rgba(22, 163, 74, .6); }
+.kk-hasil.no { border-color: rgba(220, 38, 38, .6); }
+.kk-aksi-judul { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+.kk-raw { margin: 6px 0 0; padding: 8px; background: rgba(0,0,0,.25); border-radius: var(--radius); font-size: 11px; color: var(--muted); white-space: pre-wrap; word-break: break-word; max-height: 160px; overflow: auto; }
+
+@media (max-width: 767px) {
+  .kk-head { flex-wrap: wrap; }
+  .kk-judul { flex: 1 1 100%; }
+  .kk-per { flex-direction: column; }
+  .kk-per-aksi { align-items: stretch; width: 100%; }
+}
+
+/* ════ Bank Data (Tahap 3) — js/arsip-bd.js ════ */
+.kk-tabel { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 6px; }
+.kk-tabel th, .kk-tabel td { border: 1px solid var(--border); padding: 5px 8px; text-align: left; vertical-align: top; color: var(--white); }
+.kk-tabel th { background: rgba(255,255,255,.04); color: var(--muted); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+.kk-tabel td:empty::after { content: "—"; color: var(--muted); }
+
+.kk-form-baris { align-items: flex-start; }
+.kk-form-baris .kk-kandidat { margin-top: 0; }
+.kk-label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); }
+.kk-label .arsip-search { width: 100%; }
+.kk-form-judul { font-size: 11px; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: .04em; }
+.kk-form-aksi { display: flex; gap: 8px; }
+
+.kk-tw { display: flex; align-items: center; gap: 6px; }
+.kk-tw-label { flex: 0 0 34px; font-size: 11px; color: var(--muted); }
+.kk-tw .arsip-search { flex: 1 1 0; min-width: 0; }
+
+@media (max-width: 767px) {
+  .kk-tabel { font-size: 11px; }
+  .kk-tabel th, .kk-tabel td { padding: 4px 5px; }
+}
