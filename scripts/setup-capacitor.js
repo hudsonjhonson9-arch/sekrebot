@@ -41,6 +41,10 @@ if (fs.existsSync('manifest.json')) fs.copyFileSync('manifest.json', 'www/manife
 if (fs.existsSync('service-worker.js')) fs.copyFileSync('service-worker.js', 'www/service-worker.js');
 if (fs.existsSync('css')) copyDirSync('css', 'www/css');
 if (fs.existsSync('js')) copyDirSync('js', 'www/js');
+// icons/ dibutuhkan css/lib/runeicons.css (mask SVG) — tanpa ini semua ikon 404 di APK.
+if (fs.existsSync('icons')) copyDirSync('icons', 'www/icons');
+// bast_template.docx di-fetch js/simapo-bast.js untuk generate BAST.
+if (fs.existsSync('bast_template.docx')) fs.copyFileSync('bast_template.docx', 'www/bast_template.docx');
 console.log('✅ Clean web assets copied to "www"!');
 
 // 2. Write capacitor.config.json pointing to "www"

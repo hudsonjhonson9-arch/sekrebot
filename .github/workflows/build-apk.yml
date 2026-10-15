@@ -39,6 +39,7 @@ jobs:
 
       - name: Build Debug APK using Gradle
         run: |
+          chmod +x android/gradlew
           cd android && ./gradlew assembleDebug
 
       - name: Upload Compiled APK Artifact
