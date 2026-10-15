@@ -6,6 +6,14 @@
         if (!await _checkIdentityOnLoad()) return; // Stop if not logged in
 
         console.log('[Init] Starting application...');
+
+        // Pulihkan posisi tab SEBELUM muat data. Muat data di bawah ini bisa lama
+        // atau gagal (mis. sesi native belum ada) — lokasi tab tidak boleh ikut tertunda,
+        // supaya refresh tetap membuka tab yang sama (mis. arsip).
+        const lastTab = localStorage.getItem('absen_last_tab') || 'absen';
+        switchTab(lastTab);
+        if (typeof hideResult === 'function') hideResult();
+
         await idb.init();
 
         // Critical: Load role & face settings first
@@ -39,10 +47,6 @@
           // Check face registration requirement AFTER loading from server
           _cekWajibFace();
         }, 1500);
-
-        const lastTab = localStorage.getItem('absen_last_tab') || 'absen';
-        switchTab(lastTab);
-        if (typeof hideResult === 'function') hideResult(); // Ensure result is hidden on startup
 
         if (IS_ADMIN) {
           const lastSection = localStorage.getItem('absen_last_admin_section') || 'ops';

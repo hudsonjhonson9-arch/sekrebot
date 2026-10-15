@@ -60,7 +60,7 @@
   <link rel="stylesheet" href="css/lib/leaflet.min.css" />
 
   <!-- App Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=23" />
+  <link rel="stylesheet" href="css/styles.css?v=34" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -416,8 +416,50 @@
 
     <!-- ══ TAB ARSIP ══ -->
 <div class="panel" id="panel-arsip">
-<button class="arsip-back" onclick="switchTab(window._arsipPrevTab || 'absen')"><i class="fas fa-arrow-left" aria-hidden="true"></i> Kembali</button>
-<iframe id="arsipFrame" class="arsip-frame" title="Arsip Digital" loading="lazy"></iframe>
+<button class="arsip-back" onclick="arsipBack()"><i class="fas fa-arrow-left" aria-hidden="true"></i> Kembali</button>
+<div class="arsip-native" id="arsipNative">
+  <div class="arsip-head">
+    <div class="arsip-h1">Dokumen</div>
+    <div class="arsip-sub" id="arsipCount">Memuat dokumen…</div>
+  </div>
+  <div class="arsip-toolbar">
+    <input id="arsipQuery" class="arsip-search" placeholder="Cari judul / bidang / tahun…" aria-label="Cari dokumen" />
+    <select id="arsipStatus" class="arsip-search arsip-filter" aria-label="Filter status">
+      <option value="">Semua</option>
+      <option>Diarsipkan</option>
+      <option>Menunggu Review</option>
+      <option>Ditolak</option>
+    </select>
+    <button class="arsip-upload" id="arsipUploadBtn" style="display:none" title="Unggah dokumen baru">
+      <i class="fas fa-upload" aria-hidden="true"></i><span>Unggah</span>
+    </button>
+    <button class="arsip-full" id="arsipFullBtn" title="Buka seluruh menu arsip (aplikasi web)">
+      <i class="fas fa-external-link-alt" aria-hidden="true"></i><span>Aplikasi lengkap</span>
+    </button>
+  </div>
+  <div id="arsipList" class="arsip-list"><div class="arsip-placeholder">Memuat dokumen…</div></div>
+  <div id="arsipDetail" class="arsip-detail" style="display:none"></div>
+  <div id="arsipUploadModal" class="arsip-modal" style="display:none">
+    <div class="arsip-modal-box">
+      <div class="arsip-modal-head"><strong>Unggah Dokumen</strong><button class="arsip-act" data-upload-close>Tutup</button></div>
+      <form id="arsipUploadForm" class="arsip-form">
+        <label>Judul <span class="arsip-req">*</span><input name="title" required maxlength="200" /></label>
+        <label>Kategori <input name="type" placeholder="mis. SK, Laporan" maxlength="80" /></label>
+        <label>Sektor <input name="sector" maxlength="80" /></label>
+        <label>Bidang <input name="bidang" maxlength="80" /></label>
+        <label>Nomor Dokumen <input name="nomor_dokumen" maxlength="80" /></label>
+        <label>Tanggal Dokumen <input name="tanggal_dokumen" type="date" /></label>
+        <label>Berkas <span class="arsip-req">*</span><input name="file" type="file" required /></label>
+        <div id="arsipUploadMsg" class="arsip-form-msg"></div>
+        <div class="arsip-form-acts">
+          <button type="submit" class="arsip-act ok" id="arsipUploadSubmit">Unggah</button>
+          <button type="button" class="arsip-act" data-upload-close>Batal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<iframe id="arsipFrame" class="arsip-frame" title="Arsip Digital" loading="lazy" style="display:none"></iframe>
     </div>
 
     <!-- ══ TAB ABSEN ══ -->
@@ -3178,9 +3220,10 @@
   <script src="js/errors.js"></script>
   <script src="js/dom.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/arsip.js?v=11"></script>
 
   <!-- 4. Core utilities -->
-  <script src="js/ui.js?v=20261011e"></script>
+  <script src="js/ui.js?v=20261011g"></script>
   <script src="js/helpers.js?v=20261011d"></script>
   <script src="js/network.js"></script>
 
@@ -3223,7 +3266,7 @@
   <script src="js/offline.js"></script>
   <script src="js/meja-handler.js?v=20260706a"></script>
   <script src="js/auth.js?v=20261008b"></script>
-  <script src="js/app.js?v=20261011d"></script>
+  <script src="js/app.js?v=20261011e"></script>
 
   <!-- 8. Service Worker Registration -->
   <script>

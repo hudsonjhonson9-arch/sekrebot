@@ -9,6 +9,7 @@ import { createAuthDeviceRouter } from './auth-device.js';
 import { createLogRouter } from './log.js';
 import { createSimapoRouter } from './simapo.js';
 import { createSimapoNativeExtraRouter } from './simapo-native-extra.js';
+import { createArsipRouter } from './arsip.js';
 import { verifyInitData } from './telegram.js';
 import { createAttendanceDataRouter } from './attendance-data.js';
 import { createKeteranganNotify, telegramSender, wahaSender } from './keterangan-notify.js';
@@ -158,6 +159,10 @@ export function createApp() {
     simapoGate,
     createSimapoNativeExtraRouter({ query, withTransaction })
   );
+
+  // Port Jalur A: panel Dokumen arsipdigital di-render native, backend-nya proxy
+  // ke API peta-ekonomi (PETA_API_URL). Token arsip di-mint server dari nip.
+  app.use('/api/arsip', requireRole(ABSEN_ROLES), createArsipRouter());
 
   return app;
 }

@@ -225,8 +225,9 @@
       });
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       const el = $('panel-' + tab); if (el) el.classList.add('active');
-      // Arsip tampil full-screen di mobile (header + bottom nav disembunyikan)
-      document.body.classList.toggle('arsip-fs', tab === 'arsip');
+      // Arsip native memakai bottom nav. Full-screen hanya untuk iframe "Aplikasi lengkap".
+      if (tab !== 'arsip' && typeof closeFull === 'function') closeFull();
+      document.body.classList.toggle('arsip-fs', tab === 'arsip' && !!window._arsipFull);
 
       if (tab === 'absen') {
         updateClock(); // refresh notif & batas jam periode segera
@@ -302,24 +303,8 @@
       }
 
       if (tab === 'arsip') {
-        // Lazy-load: set src sekali saja, agar iframe tidak memuat arsip di startup.
-        const frame = $('arsipFrame');
-        if (frame && !frame.src) {
-          const url = window.AppConfig?.ARCHIVE_URL || 'https://arsipdigital.mindcloud.my.id';
-          // Webview Telegram: POST /api/auth/session tidak berjalan lagi saat app
-          // dibuka ulang (token sudah ada di localStorage), sehingga cookie
-          // arsip_session tidak pernah diterbitkan di webview itu → iframe 401.
-          // Re-issue cookie dulu dari sesi yang masih berlaku; fail-open, iframe
-          // tetap dimuat walau refresh gagal.
-          let token = null;
-          try { token = localStorage.getItem('_native_token'); } catch { /* mode privat */ }
-          if (token && typeof apiPost === 'function') {
-            apiPost('/api/auth/arsip-cookie', { session_token: token })
-              .finally(() => { frame.src = url; });
-          } else {
-            frame.src = url;
-          }
-        }
+        // Panel Dokumen native (Jalur A); iframe hanya dibuka via ARSIP.showFull().
+        if (typeof loadArsipDocs === 'function') loadArsipDocs();
       }
 
       // Re-apply role based visibility on every switch to ensure consistency
