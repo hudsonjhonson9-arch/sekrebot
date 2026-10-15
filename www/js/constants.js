@@ -52,6 +52,7 @@
               const currentVal = rekapSelect.value;
               rekapSelect.innerHTML = `<option value="Semua">— Tampilkan Semua Bidang —</option>` + options;
               if (currentVal && options.includes(`value="${currentVal}"`)) rekapSelect.value = currentVal;
+              if (typeof syncSearchDdLabel === 'function') syncSearchDdLabel('rekapBidang');
             }
             if (adminSelect) {
               const currentVal = adminSelect.value;

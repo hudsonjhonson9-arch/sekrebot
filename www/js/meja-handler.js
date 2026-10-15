@@ -12,7 +12,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
       _forceResetAiState(true);
       _autoCaptured = false;
       startDetectLoop();
-      setCamStatus('ok', '🔍', 'Siap Scan...', 'Posisikan wajah pegawai selanjutnya');
+      setCamStatus('ok', '<i class="fas fa-search"></i>', 'Siap Scan...', 'Posisikan wajah pegawai selanjutnya');
     }, 1500);
     return;
   }
@@ -28,7 +28,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
     window._mejaProcessing = false;
     _forceResetAiState(true);
     if ($('mejaOverlayResult')) $('mejaOverlayResult').style.display = 'none';
-    _setMejaStatus('active', '⚠️', 'Timeout', 'Server tidak merespons, coba scan ulang');
+    _setMejaStatus('active', '<i class="fas fa-exclamation-triangle"></i>', 'Timeout', 'Server tidak merespons, coba scan ulang');
     startDetectLoop();
   }, 15000);
 
@@ -49,7 +49,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
 
   // JIKA WAJAH TIDAK DIKENAL
   if (telegramId === 'unknown') {
-    _moIcon.textContent = '❓';
+    _moIcon.innerHTML = '<i class="fas fa-question"></i>';
     _moNama.textContent = 'TIDAK DIKENAL';
     _moStatus.textContent = 'WAJAH BELUM TERDAFTAR';
     _moStatus.style.color = 'var(--danger)';
@@ -58,7 +58,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
 
     _mejaCnt.gagal++;
     _updateMejaCnt();
-    _setMejaStatus('active', '⚠️', 'Wajah Tak Dikenal', 'Pegawai tidak terdaftar di sistem');
+    _setMejaStatus('active', '<i class="fas fa-exclamation-triangle"></i>', 'Wajah Tak Dikenal', 'Pegawai tidak terdaftar di sistem');
 
     setTimeout(() => {
       overlay.style.display = 'none';
@@ -81,18 +81,18 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
   if (!_mejaGpsLocation || _mejaGpsLocation.lat === 0 || _mejaGpsLocation.lng === 0) {
     _mejaCnt.gagal++;
     _updateMejaCnt();
-    _setMejaStatus('active', '⚠️', 'GPS Tidak Terdeteksi', 'Pindah ke area terbuka untuk mendapatkan sinyal GPS');
+    _setMejaStatus('active', '<i class="fas fa-exclamation-triangle"></i>', 'GPS Tidak Terdeteksi', 'Pindah ke area terbuka untuk mendapatkan sinyal GPS');
     setTimeout(() => {
       _forceResetAiState(true);
       window._mejaProcessing = false;
-      setCamStatus('ok', '🔍', 'Siap Scan...', 'Posisikan wajah pegawai selanjutnya');
+      setCamStatus('ok', '<i class="fas fa-search"></i>', 'Siap Scan...', 'Posisikan wajah pegawai selanjutnya');
     }, 3000);
     return;
   }
   
   const score = Math.max(0, Math.round((distance || 0) * 100));
 
-  if (_moIcon) _moIcon.textContent = '⏳';
+  if (_moIcon) _moIcon.innerHTML = '<i class="fas fa-hourglass-half"></i>';
   if (_moNama) _moNama.textContent = user.nama;
   if (_moStatus) {
     _moStatus.textContent = 'MEMERIKSA STATUS...';
@@ -103,7 +103,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
 
   // ── START SUBMISSION PROCESS ──
   window._isSubmitting = true; 
-  _setMejaStatus('processing', '⏳', `Mencatat: ${user.nama}...`, 'Tunggu konfirmasi server');
+  _setMejaStatus('processing', '<i class="fas fa-hourglass-half"></i>', `Mencatat: ${user.nama}...`, 'Tunggu konfirmasi server');
 
   try {
     const n = nowWITA();
@@ -161,36 +161,36 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
       const ismasuk = jenis.toUpperCase().includes('MASUK');
       if (ismasuk) _mejaCnt.masuk++; else _mejaCnt.pulang++;
 
-      _moIcon.textContent = '✅';
+      _moIcon.innerHTML = '<i class="fas fa-check"></i>';
       _moStatus.textContent = jenis.toUpperCase();
       _moStatus.style.color = '#4ade80';
       _moStatus.style.background = 'rgba(74,222,128,0.2)';
       _moDetail.textContent = d.validasi?.keterangan || 'Data tercatat di server.';
-      _setMejaStatus('active', '✅', `${user.nama} — ${jenis}`, 'Siap scan berikutnya...');
+      _setMejaStatus('active', '<i class="fas fa-check"></i>', `${user.nama} — ${jenis}`, 'Siap scan berikutnya...');
     } else {
       let errMsg = (d && (d.message || d.error)) || 'Ditolak Server';
       if (d && d.validasi && d.validasi.keterangan) errMsg = d.validasi.keterangan;
 
       const isSudah = errMsg.toLowerCase().includes('sudah');
 
-      _moIcon.textContent = isSudah ? 'ℹ️' : '❌';
+      _moIcon.innerHTML = isSudah ? 'ℹ' : '<i class="fas fa-times"></i>';
       _moStatus.textContent = isSudah ? 'SUDAH ABSEN' : 'GAGAL';
       _moStatus.style.color = isSudah ? '#60a5fa' : '#f87171';
       _moStatus.style.background = isSudah ? 'rgba(96,165,250,0.2)' : 'rgba(248,113,113,0.2)';
       _moDetail.textContent = errMsg;
 
       if (!isSudah) _mejaCnt.gagal++;
-      _setMejaStatus('active', isSudah ? 'ℹ️' : '⚠️', user.nama, errMsg);
+      _setMejaStatus('active', isSudah ? 'ℹ' : '<i class="fas fa-exclamation-triangle"></i>', user.nama, errMsg);
     }
   } catch (e) {
     console.error('[Meja] Submission Fatal Error:', e);
-    _moIcon.textContent = '🔌';
+    _moIcon.innerHTML = '<i class="fas fa-plug"></i>';
     _moStatus.textContent = 'GAGAL PROSES';
     _moStatus.style.color = '#f87171';
     _moStatus.style.background = 'rgba(248,113,113,0.2)';
     _moDetail.textContent = e.message || 'Terjadi kesalahan sistem';
     _mejaCnt.gagal++;
-    _setMejaStatus('active', '🔌', 'System Error', e.message);
+    _setMejaStatus('active', '<i class="fas fa-plug"></i>', 'System Error', e.message);
   } finally {
     clearTimeout(safetyTimer); 
     window._isSubmitting = false; 
@@ -199,7 +199,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
     if ($('mejaOverlayResult')) $('mejaOverlayResult').style.display = 'none';
     _forceResetAiState(true);
     window._mejaProcessing = false;
-    setCamStatus('ok', '🔍', 'Siap Scan...', 'Posisikan wajah pegawai selanjutnya');
+    setCamStatus('ok', '<i class="fas fa-search"></i>', 'Siap Scan...', 'Posisikan wajah pegawai selanjutnya');
 
     const vid = $('camVideo');
     if (vid && vid.paused) {
@@ -219,7 +219,7 @@ openSignaturePad = function (nip, callback) {
   if (titleEl) {
     const myNip = localStorage.getItem('MY_NIP') || '';
     if (_sigTargetNip !== myNip) {
-      titleEl.textContent = `✍️ TTD NIP: ${nip}`;
+      titleEl.innerHTML = `<i class="fas fa-pen"></i> TTD NIP: ${nip}`;
     }
   }
   _origOpenSignaturePad(nip, callback);
@@ -233,7 +233,7 @@ function adminCaptureSignatureFor(uid, name) {
     loadAdminFaceReg();
   });
   const titleEl = $('sigOverlayTitle');
-  if (titleEl) titleEl.textContent = `✍️ TTD: ${name}`;
+  if (titleEl) titleEl.innerHTML = `<i class="fas fa-pen"></i> TTD: ${name}`;
 }
 
 // Auto-init Desktop Mode jika di layar laptop/PC

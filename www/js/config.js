@@ -106,6 +106,7 @@ const API_BASE = '';
 // endpoint n8n yang masih berjalan tidak ikut menerima bearer yang tak dikenal.
 let _nativeToken = null;
 let _deviceToken = null;
+let _authExpiredShown = false;
 try {
   _nativeToken = localStorage.getItem('_native_token');
   _deviceToken = localStorage.getItem('_device_token');
@@ -130,6 +131,7 @@ const EMPTY_N8N_RESPONSE = 'Empty N8n Response';
 // lewat /api/auth/login, jadi iframe tidak meminta login ulang.
 const ARCHIVE_URL = 'https://arsipdigital.mindcloud.my.id';
 window.AppConfig = Object.assign(window.AppConfig || {}, { ARCHIVE_URL });
+
 let ADMIN_NIPS = [];
 let MANDATORY_FACE_NIPS = [];
 window._adminRoleMap = {};
@@ -168,12 +170,31 @@ window._session = {
 // Sesi native: tukar init_data Telegram jadi bearer 192 hex milik Express.
 // Tidak ada kredensial yang di-hardcode di sini; init_data sudah ditandatangani
 // Telegram lalu diverifikasi ulang di server lewat HMAC bot token.
+let _nativeSessionPromise = null;
 async function ensureNativeSession() {
   if (_nativeToken) return _nativeToken;
   // Meja Absen/perangkat bersama memakai token dv_ yang diterbitkan SUPERADMIN
   // lewat /api/auth/devices. Token hanya disimpan di perangkat, bukan di source.
   if (_deviceToken && /^dv_[0-9a-f]{64}$/.test(_deviceToken)) return _deviceToken;
-  const initData = window.tg?.initData || window.Telegram?.WebApp?.initData || '';
+  // ponytail: initApp memanggil banyak endpoint secara paralel. Tanpa janji
+  // bersama, tiap request menerbitkan sesi sendiri dan satu 401 menghapus token
+  // milik request lain lewat _handleAuthExpired → data kosong sampai user
+  // me-refresh (baru ada token di localStorage). Dibungkus satu promise.
+  if (!_nativeSessionPromise) {
+    _nativeSessionPromise = _mintNativeSession().finally(() => { _nativeSessionPromise = null; });
+  }
+  return _nativeSessionPromise;
+}
+
+async function _mintNativeSession() {
+  // ponytail: Telegram WebApp kadang baru siap setelah skrip utama jalan. Tunggu
+  // sebentar sebelum menyerah, supaya load pertama tidak berakhir 401.
+  let initData = window.tg?.initData || window.Telegram?.WebApp?.initData || '';
+  for (let i = 0; i < 10 && !initData; i++) {
+    await new Promise(r => setTimeout(r, 200));
+    initData = window.tg?.initData || window.Telegram?.WebApp?.initData || '';
+  }
+  console.info('[Native] init_data Telegram, panjang:', initData.length);
   if (!initData) {
     console.warn('[Native] Tidak ada init_data Telegram. Endpoint /api/* akan 401.');
     console.warn('[Native] Halaman ini dibuka di luar Mini App, atau_user_list belum punya id yang cocok.');
@@ -208,6 +229,7 @@ function setSession(token, data) {
   window._session.role = (data.role || 'USER').toUpperCase();
   window._session.instansi_id = data.instansi_id || '';
   window._session.isLoggedIn = true;
+  _authExpiredShown = false;
   try {
     localStorage.setItem('_sess_token', token);
     localStorage.setItem('_sess_nip', data.nip || '');
@@ -242,6 +264,7 @@ function clearSession() {
 // supaya nativeFetch memakainya, dan di localStorage supaya bertahan reload.
 function setNativeToken(token) {
   _nativeToken = token;
+  _authExpiredShown = false;
   try { localStorage.setItem('_native_token', token); } catch { /* mode privat */ }
 }
 
@@ -332,6 +355,7 @@ const P = {
   simapoUnitByQR: '/api/simapo/unit-by-qr',
   simapoQRUpdate: '/api/simapo/qr-update',
   simapoUnitList: '/api/simapo/unit-list',
+  simapoUnitListAll: '/api/simapo/unit-list-all',
   simapoQRPinjam: '/api/simapo/qr-pinjam',
   simapoPenerimaanList: '/api/simapo/penerimaan',
   simapoPenerimaanSave: '/api/simapo/penerimaan',
@@ -354,6 +378,8 @@ const P = {
   simapoBastRuangan: '/api/simapo/bast-ruangan',
   simapoBastSave: '/api/simapo/bast-save',
   simapoBastHistory: '/api/simapo/bast-history',
+  simapoBastImportUnit: '/api/simapo/bast-import-unit',
+  simapoUnitDelete: '/api/simapo/unit-delete',
   simapoAsetMassal: '/api/simapo/aset-massal',
   simapoAsetKib: '/api/simapo/aset-kib',
   simapoAsetSummary: '/api/simapo/aset-summary',
@@ -433,6 +459,21 @@ const HDR = {
 // Endpoint native (/api/*) memakai satu origin lewat API_BASE.
 // tanpa failover SERVER_1/SERVER_2, tanpa injeksi nip/instansi ke query string
 // (server membaca body dan session), dan bearer-nya token native.
+// Sesi native kedaluwarsa (TTL 12 jam) -> 401. Tak ada refresh token di server,
+// jadi bersihkan token basi supaya ensureNativeSession menerbitkan ulang dari
+// init_data Telegram; pengguna web/NIP tak punya init_data -> tampilkan layar login.
+function _handleAuthExpired() {
+  _nativeToken = null;
+  _nativeSessionPromise = null;
+  try { localStorage.removeItem('_native_token'); } catch { /* mode privat */ }
+  try { clearSession(); } catch { /* belum terdefinisi saat boot */ }
+  const hasTg = !!(window.tg?.initData || window.Telegram?.WebApp?.initData);
+  if (hasTg || _authExpiredShown) return;
+  _authExpiredShown = true;
+  const overlay = document.getElementById('authOverlay');
+  if (overlay) overlay.style.display = 'flex';
+}
+
 async function nativeFetch(path, opts = {}) {
   const token = await ensureNativeSession();
   if (!token) throw new Error('Sesi native tidak tersedia: login Telegram atau token perangkat.');
@@ -440,12 +481,14 @@ async function nativeFetch(path, opts = {}) {
   const ctrl = new AbortController();
   const tid = setTimeout(() => ctrl.abort(), 15000);
   try {
-    return await fetch(API_BASE + path, {
+    const res = await fetch(API_BASE + path, {
       method: opts.method || 'GET',
       body: opts.body,
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       signal: ctrl.signal,
     });
+    if (res.status === 401) _handleAuthExpired();
+    return res;
   } finally {
     clearTimeout(tid);
   }

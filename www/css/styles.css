@@ -14,6 +14,13 @@
       --border: #334155;
       --admin: #a78bfa;
       --admin-dim: rgba(167, 139, 250, .15);
+      /* Modal panel (inline style modal Form Aset memakai ini → ikut tema) */
+      --modal-bg: #0F172A;
+      --modal-border: rgba(255, 255, 255, .08);
+      --modal-head: rgba(255, 255, 255, .01);
+      --modal-ghost: rgba(255, 255, 255, .05);
+      --field-bg: rgba(255, 255, 255, .03);
+      --overlay-bg: rgba(11, 15, 25, .85);
     }
 
     * {
@@ -297,7 +304,9 @@
 
     .panel.active {
       display: block !important;
+      animation: panelIn .3s ease;
     }
+    @keyframes panelIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 
     /* Responsive visibility */
     @media (max-width: 767px) {
@@ -647,7 +656,7 @@
       justify-content: center;
       font-size: 16px;
       font-weight: 800;
-      color: var(--navy);
+      color: var(--on-gold);
       flex-shrink: 0
     }
 
@@ -950,7 +959,7 @@
 
     .auth-tab.active {
       background: var(--gold);
-      color: var(--navy);
+      color: var(--on-gold);
     }
 
     .form-input-auth {
@@ -981,7 +990,7 @@
     .btn-auth {
       width: 100%;
       background: var(--gold);
-      color: var(--navy);
+      color: var(--on-gold);
       border: none;
       border-radius: 12px;
       padding: 14px;
@@ -1515,7 +1524,7 @@
       border-radius: 13px;
       background: linear-gradient(135deg, var(--gold), #1D4ED8);
       border: none;
-      color: var(--navy);
+      color: var(--on-gold);
       font-size: 13px;
       font-weight: 800;
       cursor: pointer;
@@ -1804,7 +1813,7 @@
       border: none;
       border-radius: 13px;
       background: linear-gradient(135deg, var(--gold) 0%, #1D4ED8 100%);
-      color: var(--navy);
+      color: var(--on-gold);
       font-family: inherit;
       font-size: 14px;
       font-weight: 800;
@@ -1960,7 +1969,7 @@
       height: 15px;
       border-radius: 50%;
       border: 2px solid rgba(15, 23, 42, .3);
-      border-top-color: var(--navy);
+      border-top-color: var(--on-gold);
       animation: spin .7s linear infinite;
       display: inline-block
     }
@@ -2067,7 +2076,7 @@
     select.date-range-input,
     select.dok-input,
     .dok-select {
-      background: rgba(30, 41, 59, .92);
+      background-color: #1E293B;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%233B82F6' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 12px center;
@@ -2803,7 +2812,7 @@
       background: rgba(34, 197, 94, .06)
     }
 
-    .rs-masuk .rs-num {
+    .rs-masuk .rs-num, .rs-masuk .rs-ico {
       color: var(--success)
     }
 
@@ -2812,7 +2821,7 @@
       background: rgba(96, 165, 250, .06)
     }
 
-    .rs-pulang .rs-num {
+    .rs-pulang .rs-num, .rs-pulang .rs-ico {
       color: var(--info)
     }
 
@@ -2821,7 +2830,7 @@
       background: rgba(245, 158, 11, .06)
     }
 
-    .rs-lap .rs-num {
+    .rs-lap .rs-num, .rs-lap .rs-ico {
       color: #f59e0b
     }
 
@@ -2830,7 +2839,7 @@
       background: rgba(245, 158, 11, .04)
     }
 
-    .rs-luar .rs-num {
+    .rs-luar .rs-num, .rs-luar .rs-ico {
       color: var(--warning)
     }
 
@@ -2839,7 +2848,7 @@
       background: rgba(251, 191, 36, .06)
     }
 
-    .rs-izin .rs-num {
+    .rs-izin .rs-num, .rs-izin .rs-ico {
       color: #fbbf24
     }
 
@@ -2848,7 +2857,7 @@
       background: rgba(239, 68, 68, .06)
     }
 
-    .rs-sakit .rs-num {
+    .rs-sakit .rs-num, .rs-sakit .rs-ico {
       color: var(--danger)
     }
 
@@ -2857,7 +2866,7 @@
       background: rgba(139, 92, 246, .06)
     }
 
-    .rs-tugas .rs-num {
+    .rs-tugas .rs-num, .rs-tugas .rs-ico {
       color: #8b5cf6
     }
 
@@ -2866,7 +2875,7 @@
       background: rgba(99, 102, 241, .06)
     }
 
-    .rs-tubel .rs-num {
+    .rs-tubel .rs-num, .rs-tubel .rs-ico {
       color: #818cf8
     }
 
@@ -2875,7 +2884,7 @@
       background: rgba(20, 184, 166, .06)
     }
 
-    .rs-cuti .rs-num {
+    .rs-cuti .rs-num, .rs-cuti .rs-ico {
       color: #2dd4bf
     }
 
@@ -2884,7 +2893,7 @@
       background: rgba(239, 68, 68, .1)
     }
 
-    .rs-alpa .rs-num {
+    .rs-alpa .rs-num, .rs-alpa .rs-ico {
       color: #fca5a5
     }
 
@@ -2910,7 +2919,7 @@
       justify-content: center;
       font-size: 24px;
       font-weight: 800;
-      color: var(--navy);
+      color: var(--on-gold);
       flex-shrink: 0
     }
 
@@ -3113,6 +3122,53 @@
 
     .ket-modal-overlay.open .ket-modal {
       transform: translateY(0)
+    }
+
+    /* desktop: dialog terpusat, bukan bottom-sheet */
+    @media (min-width: 768px) {
+      .ket-modal-overlay {
+        align-items: center;
+        padding: 24px
+      }
+
+      .ket-modal {
+        border-radius: 20px;
+        max-width: 560px;
+        padding: 26px 28px 32px;
+        transform: translateY(16px) scale(.97);
+        opacity: 0;
+        transition: transform .2s ease, opacity .2s ease
+      }
+
+      .ket-modal-overlay.open .ket-modal {
+        transform: none;
+        opacity: 1
+      }
+
+      #rekapKalPicker .flatpickr-calendar {
+        width: 100% !important
+      }
+
+      #rekapKalPicker .dayContainer {
+        width: 100% !important;
+        min-width: 100% !important
+      }
+
+      #rekapKalPicker .flatpickr-day {
+        max-width: none;
+        height: 2.6em;
+        line-height: 2.6em;
+        font-size: 15px;
+        border-radius: 10px
+      }
+
+      #rekapKalPicker .flatpickr-weekdays {
+        height: 32px
+      }
+
+      #rekapKalPicker .flatpickr-weekday {
+        font-size: 12px
+      }
     }
 
     .ket-modal-title {
@@ -3791,7 +3847,7 @@
       justify-content: center;
       font-size: 13px;
       font-weight: 800;
-      color: var(--navy);
+      color: var(--on-gold);
       flex-shrink: 0
     }
 
@@ -4847,7 +4903,7 @@
       border-radius: 12px;
       background: linear-gradient(135deg, var(--gold), #2563EB);
       border: none;
-      color: var(--navy);
+      color: var(--on-gold);
       font-size: 13px;
       font-weight: 800;
       cursor: pointer;
@@ -5233,7 +5289,7 @@
       border-radius: 10px;
       background: linear-gradient(135deg, var(--gold), #1D4ED8);
       border: none;
-      color: var(--navy);
+      color: var(--on-gold);
       font-size: 12px;
       font-weight: 800;
       cursor: pointer;
@@ -6154,22 +6210,28 @@ body {
 }
 
 html.light-theme {
-  /* Warm Eye-Comfort Palette — ponytail: warm tones reduce eye strain */
-  --navy: #F8FAFC;       /* Warm parchment background */
-  --white: #0F172A;      /* Warm dark text (high contrast on cream) */
-  --muted: #64748B;      /* Warm secondary text */
-  --card-bg: #FFFFFF;    /* Warm white cards — no pure #fff glare */
-  --border: #E2E8F0;  /* Gold border, warmer & visible */
+  /* Palette mengikuti arsip (peta-ekonomi src/theme.js LIGHT) */
+  --navy: #F8FAFC;
+  --white: #0F172A;
+  --muted: #64748B;
+  --card-bg: #FFFFFF;
+  --border: #E2E8F0;
   --gold: #2563EB;
   --gold-dim: rgba(37, 99, 235, .15);
   --gold-darker: #1D4ED8;
-  --on-gold: #FFFFFF;  /* Dark gold for 4.5:1+ contrast on cream */
+  --on-gold: #FFFFFF;
+  --modal-bg: #FFFFFF;
+  --modal-border: rgba(15, 23, 42, .12);
+  --modal-head: rgba(15, 23, 42, .02);
+  --modal-ghost: rgba(15, 23, 42, .06);
+  --field-bg: rgba(15, 23, 42, .04);
+  --overlay-bg: rgba(15, 23, 42, .45);
 
-  /* High contrast status colors — warmer tones */
-  --success: #059669;    /* Forest green */
-  --warning: #D97706;    /* Deep amber */
-  --info: #1D4ED8;       /* Deep blue */
-  --danger: #DC2626;     /* Deep red */
+  /* High contrast status colors */
+  --success: #059669;
+  --warning: #D97706;
+  --info: #1D4ED8;
+  --danger: #DC2626;
 }
 
 /* Ensure background of body, app and panel are light and allow body::before gradient to show */
@@ -6331,6 +6393,15 @@ html.light-theme .auth-card {
   border-color: rgba(29, 78, 216, 0.2);
   box-shadow: 0 4px 20px rgba(29, 78, 216, 0.04);
 }
+html.light-theme .aset-card {
+  background: rgba(248, 250, 252, 0.9);
+  border-color: rgba(29, 78, 216, 0.2);
+  box-shadow: 0 4px 20px rgba(29, 78, 216, 0.04);
+}
+html.light-theme .aset-card:hover {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.45);
+}
 html.light-theme .clock-left {
   border-right-color: rgba(29, 78, 216, 0.12);
 }
@@ -6354,6 +6425,9 @@ html.light-theme .clock-weather-tag {
 html.light-theme .avatar {
   color: #0F172A;
 }
+html.light-theme .sig-overlay {
+  background: rgba(248, 250, 252, 0.98);
+}
 
 /* 4. Form Controls, Inputs & Select Options — warm white inputs */
 html.light-theme .form-input,
@@ -6376,6 +6450,9 @@ html.light-theme .dok-select {
   background-color: #FFFFFF;
   color: #0F172A;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231D4ED8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
 }
 html.light-theme select.form-input option,
 html.light-theme select.date-range-input option,
@@ -6587,54 +6664,147 @@ html.light-theme #appSplash .splash-progress {
   background: linear-gradient(90deg, #1D4ED8, #3B82F6) !important;
 }
 
-/* 7. Kalender Flatpickr — warm calendar */
-html.light-theme .flatpickr-calendar {
-  background: #FFFFFF !important;
-  box-shadow: 0 10px 30px rgba(29, 78, 216, 0.08) !important;
-  border: 1px solid rgba(29, 78, 216, 0.12) !important;
+/* 7. Kalender Flatpickr — tema mengikuti aplikasi (CSS vars, dark & light otomatis) */
+.flatpickr-calendar {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .35) !important;
+  font-family: inherit;
 }
-html.light-theme .flatpickr-calendar::before,
-html.light-theme .flatpickr-calendar::after {
+.flatpickr-calendar::before,
+.flatpickr-calendar::after {
   display: none !important;
 }
-html.light-theme .flatpickr-day {
-  color: #4a4035 !important;
+.flatpickr-months {
+  background: var(--card-bg) !important;
+  border-bottom: 1px solid var(--border);
+  border-radius: 14px 14px 0 0;
 }
-html.light-theme .flatpickr-day:hover,
-html.light-theme .flatpickr-day.prevMonthDay:hover,
-html.light-theme .flatpickr-day.nextMonthDay:hover {
-  background: #F8FAFC !important;
-  color: #0F172A !important;
+.flatpickr-months .flatpickr-month {
+  background: transparent !important;
+  color: var(--white) !important;
+  fill: var(--white) !important;
+  height: 40px;
 }
-html.light-theme .flatpickr-day.prevMonthDay,
-html.light-theme .flatpickr-day.nextMonthDay {
-  color: #64748B !important;
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month {
+  color: var(--muted) !important;
+  fill: var(--muted) !important;
+  top: 4px;
 }
-html.light-theme .flatpickr-day.selected {
-  background: #1D4ED8 !important;
-  color: #FFFFFF !important;
-  border-color: #1D4ED8 !important;
+.flatpickr-months .flatpickr-prev-month:hover,
+.flatpickr-months .flatpickr-next-month:hover,
+.flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-months .flatpickr-next-month:hover svg {
+  color: var(--gold) !important;
+  fill: var(--gold) !important;
 }
-html.light-theme .flatpickr-day.inRange {
-  background: rgba(29, 78, 216, 0.1) !important;
+.flatpickr-months .flatpickr-prev-month svg path,
+.flatpickr-months .flatpickr-next-month svg path {
+  fill: inherit !important;
+}
+.flatpickr-current-month input.cur-year {
+  color: var(--white) !important;
+  background: transparent;
+}
+.flatpickr-current-month .numInputWrapper span.arrowUp::after {
+  border-bottom-color: var(--white) !important;
+}
+.flatpickr-current-month .numInputWrapper span.arrowDown::after {
+  border-top-color: var(--white) !important;
+}
+.flatpickr-weekdays {
+  background: var(--card-bg) !important;
+  height: 26px;
+}
+.flatpickr-weekday {
+  color: var(--muted) !important;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  background: transparent !important;
+}
+.dayContainer + .dayContainer {
+  box-shadow: -1px 0 0 var(--border) !important;
+}
+.flatpickr-day {
+  color: var(--white) !important;
+  border-radius: 10px !important;
+  font-weight: 600;
+}
+.flatpickr-day:hover,
+.flatpickr-day.prevMonthDay:hover,
+.flatpickr-day.nextMonthDay:hover {
+  background: var(--gold-dim) !important;
+  color: var(--white) !important;
+  border-color: transparent !important;
+}
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay {
+  color: var(--muted) !important;
+  opacity: .45;
+}
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+  background: var(--gold) !important;
+  color: var(--on-gold) !important;
+  border-color: var(--gold) !important;
+}
+.flatpickr-day.inRange {
+  background: var(--gold-dim) !important;
   box-shadow: none !important;
 }
-html.light-theme .flatpickr-months,
-html.light-theme .flatpickr-month {
-  color: #0F172A !important;
-  fill: #0F172A !important;
+.flatpickr-day.today {
+  border-color: var(--gold) !important;
 }
-html.light-theme .flatpickr-current-month input.cur-year {
-  color: #0F172A !important;
+.flatpickr-day.today:hover {
+  background: var(--gold-dim) !important;
 }
-html.light-theme .flatpickr-current-month .numInputWrapper span.arrowUp::after {
-  border-bottom-color: #0F172A !important;
+
+/* ── Kalender detail kehadiran (modal rekap per pegawai) ── */
+.flatpickr-day.rk-hadir { box-shadow: inset 0 0 0 1.5px rgba(52, 211, 153, .65) !important; }
+.flatpickr-day.rk-lambat { box-shadow: inset 0 0 0 1.5px rgba(251, 191, 36, .65) !important; }
+.flatpickr-day.rk-izin { background: rgba(251, 191, 36, .18) !important; }
+.flatpickr-day.rk-sakit { background: rgba(248, 113, 113, .18) !important; }
+.flatpickr-day.rk-tugas { background: rgba(139, 92, 246, .18) !important; }
+.flatpickr-day.rk-tubel { background: rgba(99, 102, 241, .18) !important; }
+.flatpickr-day.rk-cuti { background: rgba(20, 184, 166, .18) !important; }
+.flatpickr-day.rk-alpa {
+  background: rgba(248, 113, 113, .28) !important;
+  box-shadow: inset 0 0 0 1.5px rgba(248, 113, 113, .65) !important;
 }
-html.light-theme .flatpickr-current-month .numInputWrapper span.arrowDown::after {
-  border-top-color: #0F172A !important;
+.flatpickr-day.rk-libur {
+  color: var(--muted) !important;
+  opacity: .35;
+  font-weight: 400;
 }
-html.light-theme .flatpickr-weekday {
-  color: #64748B !important;
+.rk-detail-tgl {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--white);
+}
+.rk-detail-status {
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 2px;
+}
+.rk-detail-status.rk-hadir { color: #34D399; }
+.rk-detail-status.rk-lambat { color: #FBBF24; }
+.rk-detail-status.rk-izin { color: #FBBF24; }
+.rk-detail-status.rk-sakit { color: #F87171; }
+.rk-detail-status.rk-tugas { color: #a78bfa; }
+.rk-detail-status.rk-tubel { color: #818cf8; }
+.rk-detail-status.rk-cuti { color: #2dd4bf; }
+.rk-detail-status.rk-alpa { color: #F87171; }
+.rk-detail-status.rk-libur { color: var(--muted); }
+.rk-jam {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 /* 8. SweetAlert2 — warm modal */
@@ -6856,6 +7026,10 @@ html.light-theme .btn-pagination-all:hover {
   text-decoration-color: rgba(44, 36, 23, 0.5);
 }
 
+/* Warna brand ikon file (mask pakai currentColor → cukup set color) */
+.fas.fa-file-pdf { color: #dc2626; }
+.fas.fa-file-excel { color: #16a34a; }
+
 /* ════ TAB ARSIP (SSO iframe arsipdigital.mindcloud.my.id) ════ */
 /* Panel arsip tanpa padding supaya iframe mengisi penuh area konten. */
 #panel-arsip.active { padding: 0; }
@@ -6868,6 +7042,42 @@ html.light-theme .btn-pagination-all:hover {
   background: var(--card-bg);
 }
 
+/* Tombol kembali (hanya mobile: nav absensi disembunyikan saat arsip full-screen).
+   Diangkat di atas bottom-nav arsip sendiri (BottomNav.jsx: bar ~58px + safe-area). */
+.arsip-back {
+  display: none;
+  position: fixed;
+  left: 12px;
+  bottom: calc(74px + var(--tg-safe-area-inset-bottom, 0px));
+  z-index: 1200;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  color: var(--white);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+}
+@media (max-width: 767px) {
+  body.arsip-fs .header,
+  body.arsip-fs .bottom-nav { display: none !important; }
+  body.arsip-fs .app { padding-bottom: 0 !important; }
+  body.arsip-fs #panel-arsip { padding: 0; overflow: hidden; }
+  body.arsip-fs .arsip-frame {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+  body.arsip-fs .arsip-back { display: flex; }
+}
+
 
 /* WS4: token tema arsip (peta-ekonomi src/theme.js) */
 :root {
@@ -6876,8 +7086,53 @@ html.light-theme .btn-pagination-all:hover {
   --shadow-md: 0 4px 6px -1px rgba(0,0,0,.4), 0 2px 4px -2px rgba(0,0,0,.3);
   --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.4), 0 4px 6px -4px rgba(0,0,0,.3);
 }
+
+/* ════ Riwayat Kehadiran Minggu Ini ════ */
+.week-card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px; margin-top:15px; }
+.week-lokasi { margin-top:12px; padding-top:10px; border-top:1px dashed var(--border); }
+.week-lokasi-title { display:flex; align-items:center; gap:6px; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.week-strip { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:10px; }
+    .week-day { display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 2px; border:1px solid var(--border); border-radius:var(--radius); background:rgba(127,127,127,.07); color:var(--white); cursor:pointer; font-family:inherit; transition:transform .15s ease, border-color .15s ease; animation:weekPop .35s ease backwards; }
+.week-day:hover { transform:translateY(-2px); border-color:var(--gold); }
+.week-day.is-today { border-color:var(--gold); box-shadow:inset 0 0 0 1px var(--gold); }
+.week-day.is-sel { border-color:var(--gold); background:rgba(201,168,76,.12); }
+.week-day-name { font-size:9px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+.week-day-icon { font-size:17px; line-height:1; }
+.week-day-date { font-size:9px; font-weight:700; color:var(--muted); }
+.week-detail { margin-top:10px; padding-top:9px; border-top:1px solid var(--border); font-size:11px; color:var(--muted); min-height:15px; transition:opacity .18s ease; }
+.week-detail b { color:var(--white); font-weight:700; }
+/* ── Kartu detail hari (chip beranimasi, bukan teks polos) ── */
+.wk-det { display:flex; flex-direction:column; gap:7px; }
+.wk-det-head { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; animation:weekPop .3s ease backwards; }
+.wk-det-date { font-size:11.5px; font-weight:800; color:var(--white); }
+.wk-det-status { display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:800; padding:3px 10px; border-radius:999px; border:1px solid var(--border); background:rgba(127,127,127,.08); white-space:nowrap; animation:weekPop .3s ease .07s backwards; }
+.wk-det-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.wk-det-chip { display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; color:var(--white); padding:4px 10px; border-radius:8px; border:1px solid var(--border); background:rgba(127,127,127,.07); animation:weekPop .34s cubic-bezier(.2,.85,.3,1.25) backwards; }
+.wk-det-chip i { font-size:9.5px; opacity:.8; }
+.wk-det-status.w-hadir { color:var(--success); border-color:rgba(34,197,94,.4); background:rgba(34,197,94,.12); }
+.wk-det-status.w-telat, .wk-det-status.w-izin { color:var(--warning); border-color:rgba(245,158,11,.4); background:rgba(245,158,11,.12); }
+.wk-det-status.w-sakit, .wk-det-status.w-alpha { color:var(--danger); border-color:rgba(239,68,68,.4); background:rgba(239,68,68,.12); }
+.wk-det-status.w-tugas { color:#a78bfa; border-color:rgba(139,92,246,.4); background:rgba(139,92,246,.12); }
+.wk-det-status.w-cuti { color:var(--info); border-color:rgba(99,102,241,.4); background:rgba(99,102,241,.12); }
+.wk-det-status.w-future, .wk-det-status.w-empty, .wk-det-status.w-libur { color:var(--muted); }
+.week-loading { grid-column:1/-1; text-align:center; color:var(--muted); font-size:11px; padding:10px 0; }
+.week-loading i, .week-card .fa-spin { display:inline-block; animation:weekSpin .9s linear infinite; }
+.w-hadir .week-day-icon { color:var(--success); }
+.w-telat .week-day-icon, .w-izin .week-day-icon { color:var(--warning); }
+.w-sakit .week-day-icon, .w-alpha .week-day-icon { color:var(--danger); }
+.w-tugas .week-day-icon { color:#8b5cf6; }
+.w-cuti .week-day-icon { color:var(--info); }
+.w-libur .week-day-icon, .w-future .week-day-icon, .w-empty .week-day-icon { color:var(--muted); }
+@keyframes weekPop { from { opacity:0; transform:translateY(8px) scale(.95); } to { opacity:1; transform:none; } }
+@keyframes weekSpin { to { transform:rotate(360deg); } }
 html.light-theme {
   --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
   --shadow-md: 0 4px 6px -1px rgba(0,0,0,.07), 0 2px 4px -2px rgba(0,0,0,.05);
   --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.08), 0 4px 6px -4px rgba(0,0,0,.04);
+}
+
+/* ════ Reduced motion ════ */
+@media (prefers-reduced-motion: reduce) {
+  .week-day, .panel.active, .week-loading i, .week-card .fa-spin, .wk-det-head, .wk-det-status, .wk-det-chip { animation: none !important; }
+  .week-detail { transition: none; }
 }

@@ -72,12 +72,12 @@
       }
 
       if (cached && cached.blob) {
-        if (statusEl) { statusEl.textContent = '✅ Tersedia (Offline Ready)'; statusEl.style.color = 'var(--success)'; }
+        if (statusEl) { statusEl.innerHTML = '<i class="fas fa-check"></i> Tersedia (Offline Ready)'; statusEl.style.color = 'var(--success)'; }
         if (btnEl) btnEl.style.display = 'none';
         if ($('btnClearHumanJs')) dom.show('btnClearHumanJs', 'flex');
         return true;
       } else {
-        if (statusEl) { statusEl.textContent = '❌ Belum Didownload'; statusEl.style.color = 'var(--warning)'; }
+        if (statusEl) { statusEl.innerHTML = '<i class="fas fa-times"></i> Belum Didownload'; statusEl.style.color = 'var(--warning)'; }
         if (btnEl) btnEl.style.display = 'flex';
         if ($('btnClearHumanJs')) dom.hide('btnClearHumanJs');
         return false;
@@ -94,7 +94,7 @@
 
     async function downloadHumanJsOffline() {
       const btn = $('btnDownloadHumanJs');
-      if (btn) { btn.innerHTML = '⏳ Mendownload... (0%)'; btn.disabled = true; }
+      if (btn) { btn.innerHTML = '<i class="fas fa-hourglass-half"></i> Mendownload... (0%)'; btn.disabled = true; }
       try {
         const response = await fetch(HUMAN_CDN);
         if (!response.ok) throw new Error('Response tidak OK');
@@ -115,17 +115,17 @@
             chunks.push(value);
             loaded += value.length;
             const progress = Math.round((loaded / total) * 100);
-            if (btn) btn.innerHTML = `⏳ Mendownload... (${progress}%)`;
+            if (btn) btn.innerHTML = `<i class="fas fa-hourglass-half"></i> Mendownload... (${progress}%)`;
           }
           const blob = new Blob(chunks, { type: 'application/javascript' });
           await idb.set('master_data', { key: 'human_script', blob: blob });
         }
 
-        alert('✅ Human.js berhasil didownload dan disimpan ke penyimpanan lokal perangkat!');
+        alert(' Human.js berhasil didownload dan disimpan ke penyimpanan lokal perangkat!');
         await checkHumanJsCache();
       } catch (err) {
-        alert('❌ Gagal mendownload Human.js: ' + err.message);
-        if (btn) { btn.innerHTML = '📥 Coba Lagi Download (Offline)'; btn.disabled = false; }
+        alert(' Gagal mendownload Human.js: ' + err.message);
+        if (btn) { btn.innerHTML = '<i class="fas fa-download"></i> Coba Lagi Download (Offline)'; btn.disabled = false; }
       }
     }
 
@@ -217,6 +217,7 @@
       const T = getAllTabs();
       if (!T.includes(tab)) tab = 'absen';
 
+      if (tab === 'arsip' && currentTab !== 'arsip') window._arsipPrevTab = currentTab;
       localStorage.setItem('absen_last_tab', tab);
       window.scrollTo(0, 0);
       document.querySelectorAll('.nav-item').forEach((t) => {
@@ -224,6 +225,8 @@
       });
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       const el = $('panel-' + tab); if (el) el.classList.add('active');
+      // Arsip tampil full-screen di mobile (header + bottom nav disembunyikan)
+      document.body.classList.toggle('arsip-fs', tab === 'arsip');
 
       if (tab === 'absen') {
         updateClock(); // refresh notif & batas jam periode segera
@@ -303,7 +306,19 @@
         const frame = $('arsipFrame');
         if (frame && !frame.src) {
           const url = window.AppConfig?.ARCHIVE_URL || 'https://arsipdigital.mindcloud.my.id';
-          frame.src = url;
+          // Webview Telegram: POST /api/auth/session tidak berjalan lagi saat app
+          // dibuka ulang (token sudah ada di localStorage), sehingga cookie
+          // arsip_session tidak pernah diterbitkan di webview itu → iframe 401.
+          // Re-issue cookie dulu dari sesi yang masih berlaku; fail-open, iframe
+          // tetap dimuat walau refresh gagal.
+          let token = null;
+          try { token = localStorage.getItem('_native_token'); } catch { /* mode privat */ }
+          if (token && typeof apiPost === 'function') {
+            apiPost('/api/auth/arsip-cookie', { session_token: token })
+              .finally(() => { frame.src = url; });
+          } else {
+            frame.src = url;
+          }
         }
       }
 
@@ -443,12 +458,12 @@
       const jmStr = _jamHari.masuk, jpStr = _jamHari.pulang;
 
       let jenis = '', batas = '';
-      if (tot <= _jamMasukHari) { jenis = `🟢 Waktu Absen Masuk${_jamHari.nama ? ' 🌙 ' + _jamHari.nama : ''}`; batas = `Masuk ≤ ${jmStr}` }
-      else if (tot >= _jamPulangHari) { jenis = '🔵 Waktu Absen Pulang'; batas = `Pulang ≥ ${jpStr}` }
-      else if (tot < 720) { jenis = '🔴 Di luar jam masuk'; batas = 'Terlambat' }
-      else { jenis = '🟡 Belum Waktunya Pulang'; batas = `Pulang ≥ ${jpStr}` }
+      if (tot <= _jamMasukHari) { jenis = `<i class="fas fa-circle"></i> Waktu Absen Masuk${_jamHari.nama ? ' <i class="fas fa-moon"></i> ' + _jamHari.nama : ''}`; batas = `Masuk ≤ ${jmStr}` }
+      else if (tot >= _jamPulangHari) { jenis = '<i class="fas fa-circle"></i> Waktu Absen Pulang'; batas = `Pulang ≥ ${jpStr}` }
+      else if (tot < 720) { jenis = '<i class="fas fa-circle"></i> Di luar jam masuk'; batas = 'Terlambat' }
+      else { jenis = '<i class="fas fa-circle"></i> Belum Waktunya Pulang'; batas = `Pulang ≥ ${jpStr}` }
       
-      if (elJenis) elJenis.textContent = jenis;
+      if (elJenis) elJenis.innerHTML = jenis;
       if (elBatas) elBatas.textContent = batas;
       
       const isJamPulang = tot >= _jamPulangHari;

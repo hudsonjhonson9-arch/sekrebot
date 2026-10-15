@@ -19,9 +19,9 @@
       const fmtD = s => { try { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? s : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
       box.style.display = 'block';
       box.innerHTML =
-        `<b style="color:#a78bfa">🌙 ${escapeHtml(nama) || '(belum ada nama)'}</b><br>` +
-        `📅 ${dari ? fmtD(dari) : '—'} s.d. ${sampai ? fmtD(sampai) : '—'}<br>` +
-        `🟢 Masuk ≤ ${masuk || '—'} &nbsp;·&nbsp; 🔵 Pulang ≥ ${pulang || '—'}`;
+        `<b style="color:#a78bfa"><i class="fas fa-moon"></i> ${escapeHtml(nama) || '(belum ada nama)'}</b><br>` +
+        `<i class="fas fa-calendar"></i> ${dari ? fmtD(dari) : '—'} s.d. ${sampai ? fmtD(sampai) : '—'}<br>` +
+        `<i class="fas fa-circle"></i> Masuk ≤ ${masuk || '—'} &nbsp;·&nbsp; <i class="fas fa-circle"></i> Pulang ≥ ${pulang || '—'}`;
     }
     let _faceSigCurrentTab = 'data';
     function switchFaceSigTab(tab) {
@@ -70,12 +70,12 @@
     async function loadJamPeriodeAdmin() {
       const list = $('periodeAdminList');
       if (!list) return;
-      list.innerHTML = '<div style="text-align:center;padding:14px;color:var(--muted);font-size:11px">⏳ Memuat...</div>';
+      list.innerHTML = '<div style="text-align:center;padding:14px;color:var(--muted);font-size:11px"><i class="fas fa-hourglass-half"></i> Memuat...</div>';
       try {
         await fetchJamPeriode(); // pakai fungsi yang sudah ada (update jamPeriodeList)
         renderPeriodeAdminList();
       } catch {
-        list.innerHTML = '<div style="text-align:center;padding:14px;color:var(--danger);font-size:11px">❌ Gagal memuat periode</div>';
+        list.innerHTML = '<div style="text-align:center;padding:14px;color:var(--danger);font-size:11px"><i class="fas fa-times"></i> Gagal memuat periode</div>';
       }
     }
 
@@ -85,8 +85,8 @@
       if (!tgl) return;
       const hasil = getJamForTanggal(tgl);
       const msg = hasil.nama
-        ? `✅ ${tgl} → PERIODE: "${hasil.nama}"\nMasuk  : ${hasil.masuk}\nPulang : ${hasil.pulang}`
-        : `🔵 ${tgl} → JAM GLOBAL\nMasuk  : ${hasil.masuk}\nPulang : ${hasil.pulang}`;
+        ? `<i class="fas fa-check"></i> ${tgl} → PERIODE: "${hasil.nama}"\nMasuk  : ${hasil.masuk}\nPulang : ${hasil.pulang}`
+        : `<i class="fas fa-circle"></i> ${tgl} → JAM GLOBAL\nMasuk  : ${hasil.masuk}\nPulang : ${hasil.pulang}`;
       alert(msg);
     }
 
@@ -94,7 +94,7 @@
       const list = $('periodeAdminList');
       if (!list) return;
       if (!jamPeriodeList.length) {
-        list.innerHTML = '<div style="text-align:center;padding:14px;color:var(--muted);font-size:11px">📭 Belum ada periode khusus</div>';
+        list.innerHTML = '<div style="text-align:center;padding:14px;color:var(--muted);font-size:11px"><i class="fas fa-envelope-open-text"></i> Belum ada periode khusus</div>';
         return;
       }
       const todayStr = fmtD(nowWITA());
@@ -103,18 +103,18 @@
         const aktif = todayStr >= p.dari && todayStr <= p.sampai;
         const expired = todayStr > p.sampai;
         const belumMulai = todayStr < p.dari;
-        const statusLabel = aktif ? '● Aktif' : expired ? '✕ Expired' : '○ Belum Mulai';
+        const statusLabel = aktif ? '● Aktif' : expired ? '<i class="fas fa-times"></i> Expired' : '○ Belum Mulai';
         const statusColor = aktif ? '#a78bfa' : expired ? 'var(--danger)' : 'var(--muted)';
         const borderAlpha = aktif ? '.4' : expired ? '.2' : '.15';
         const bgAlpha = aktif ? '.07' : expired ? '.03' : '.04';
         return `<div style="background:rgba(167,139,250,${bgAlpha});border:1px solid rgba(167,139,250,${borderAlpha});border-radius:10px;padding:10px 12px;margin-bottom:7px;position:relative;${expired ? 'opacity:.6' : ''}">
       <div style="position:absolute;top:8px;right:10px;font-size:8px;font-weight:700;color:${statusColor};background:rgba(0,0,0,.2);border-radius:5px;padding:2px 6px">${statusLabel}</div>
       <div style="font-size:11px;font-weight:800;color:var(--white);margin-bottom:4px;padding-right:70px">${p.nama}</div>
-      <div style="font-size:9px;color:var(--muted);margin-bottom:6px">📅 ${fmtTgl(p.dari)} — ${fmtTgl(p.sampai)}</div>
+      <div style="font-size:9px;color:var(--muted);margin-bottom:6px"><i class="fas fa-calendar"></i> ${fmtTgl(p.dari)} — ${fmtTgl(p.sampai)}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <span style="font-size:9px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:6px;padding:2px 8px;color:var(--success)">🟢 Masuk ≤ ${p.masuk}</span>
-        <span style="font-size:9px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.2);border-radius:6px;padding:2px 8px;color:#60a5fa">🔵 Pulang ≥ ${p.pulang}</span>
-        ${expired ? `<button onclick="hapusPeriodeAdmin('${p.id}')" style="font-size:8px;padding:2px 8px;border-radius:6px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:var(--danger);cursor:pointer;font-weight:700;margin-left:auto">🗑️ Hapus</button>` : ''}
+        <span style="font-size:9px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:6px;padding:2px 8px;color:var(--success)"><i class="fas fa-circle"></i> Masuk ≤ ${p.masuk}</span>
+        <span style="font-size:9px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.2);border-radius:6px;padding:2px 8px;color:#60a5fa"><i class="fas fa-circle"></i> Pulang ≥ ${p.pulang}</span>
+        ${expired ? `<button onclick="hapusPeriodeAdmin('${p.id}')" style="font-size:8px;padding:2px 8px;border-radius:6px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:var(--danger);cursor:pointer;font-weight:700;margin-left:auto"><i class="fas fa-trash"></i> Hapus</button>` : ''}
       </div>
     </div>`;
       }).join('');
@@ -144,16 +144,16 @@
       const pulang = $('inPeriodePulang')?.value || '';
 
       if (!nama || !dari || !sampai || !masuk || !pulang) {
-        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '⚠️', 'Field Belum Lengkap', 'Isi semua field: nama, tanggal, jam masuk & pulang.');
+        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Field Belum Lengkap', 'Isi semua field: nama, tanggal, jam masuk & pulang.');
         return;
       }
       if (dari > sampai) {
-        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '⚠️', 'Tanggal Tidak Valid', 'Tanggal selesai tidak boleh sebelum tanggal mulai.');
+        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Tanggal Tidak Valid', 'Tanggal selesai tidak boleh sebelum tanggal mulai.');
         return;
       }
       const mM = toMenitStr(masuk), mP = toMenitStr(pulang);
       if (mM === null || mP === null || mM >= mP) {
-        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '⚠️', 'Jam Tidak Valid', 'Jam masuk harus lebih kecil dari jam pulang.');
+        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Jam Tidak Valid', 'Jam masuk harus lebih kecil dari jam pulang.');
         return;
       }
       const btn = $('btnTambahPeriode');
@@ -167,13 +167,13 @@
         // Reset form
         ['inPeriodeNama', 'inPeriodeDari', 'inPeriodeSampai', 'inPeriodeMasuk', 'inPeriodePulang'].forEach(id => { const el = $(id); if (el) el.value = ''; });
         dom.hide('periodePreview');
-        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'success', '✅', 'Periode Tersimpan!', `🌙 ${nama} (${dari} s.d. ${sampai}) berhasil ditambahkan.`);
+        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'success', '<i class="fas fa-check"></i>', 'Periode Tersimpan!', `<i class="fas fa-moon"></i> ${nama} (${dari} s.d. ${sampai}) berhasil ditambahkan.`);
         setTimeout(() => togglePeriodeForm(false), 2000);
         await loadJamPeriodeAdmin();
       } catch {
-        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '⚠️', 'Gagal Menyimpan', 'Pastikan webhook jam-periode-add aktif di n8n.');
+        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal Menyimpan', 'Pastikan webhook jam-periode-add aktif di n8n.');
       } finally {
-        if (btn) { btn.disabled = false; dom.setText('btnTambahPeriodeTxt', '💾 Simpan Periode'); }
+        if (btn) { btn.disabled = false; dom.setHTML('btnTambahPeriodeTxt', '<i class="fas fa-save"></i> Simpan Periode'); }
       }
     }
 
@@ -189,10 +189,10 @@
       try {
         const res = await apiPost(P.jamPeriodeDel, { id });
         if (!res.ok) throw 0;
-        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'success', '🗑️', 'Periode Dihapus', `"${nama}" berhasil dihapus.`);
+        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'success', '<i class="fas fa-trash"></i>', 'Periode Dihapus', `"${nama}" berhasil dihapus.`);
         await loadJamPeriodeAdmin();
       } catch {
-        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '⚠️', 'Gagal Hapus', 'Pastikan webhook jam-periode-delete aktif di n8n.');
+        showResult('periodeResult', 'periodeRIcon', 'periodeRTitle', 'periodeRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal Hapus', 'Pastikan webhook jam-periode-delete aktif di n8n.');
       }
     }
 
@@ -211,12 +211,12 @@
       if (enabled) {
         if (sw) sw.style.background = '#22c55e'; // Green
         if (knob) knob.style.left = '27px';    // Right
-        if (label) label.textContent = '🟢 Face Recognition Aktif';
+        if (label) label.innerHTML = '<i class="fas fa-circle"></i> Face Recognition Aktif';
         if (desc) desc.textContent = 'Pegawai wajib verifikasi wajah saat absen';
       } else {
         if (sw) sw.style.background = '#6b7280'; // Grey (Neutral Inactive)
         if (knob) knob.style.left = '3px';     // Left
-        if (label) label.textContent = '⚪ Face Recognition Nonaktif';
+        if (label) label.innerHTML = '<i class="fas fa-circle"></i> Face Recognition Nonaktif';
         if (desc) desc.textContent = 'Absen tanpa verifikasi wajah (hanya GPS)';
       }
       // Show toggle card only for superadmin
@@ -262,7 +262,7 @@
         async function simpanFaceToggle() {
       const enabled = _faceTogglePending ?? FACE_RECOGNITION_ENABLED;
       const btn = $('btnSimpanFaceToggle');
-      if (btn) { btn.disabled = true; dom.setText('btnFaceToggleText', '💾 Menyimpan...'); }
+      if (btn) { btn.disabled = true; dom.setHTML('btnFaceToggleText', '<i class="fas fa-save"></i> Menyimpan...'); }
       const rc = $('faceToggleResult');
       if (rc) rc.style.display = 'flex';
       try {
@@ -270,7 +270,7 @@
         await apiPost(P.faceToggle, { enabled, instansi_id: instId, admin_id: MY_ID, admin_nips: ADMIN_NIPS });
         FACE_RECOGNITION_ENABLED = enabled;
         _applyFaceToggleUI(enabled);
-        showResult('faceToggleResult', 'faceToggleRIcon', 'faceToggleRTitle', 'faceToggleRMsg', 'success', '✅',
+        showResult('faceToggleResult', 'faceToggleRIcon', 'faceToggleRTitle', 'faceToggleRMsg', 'success', '<i class="fas fa-check"></i>',
           enabled ? 'Face Recognition Diaktifkan' : 'Face Recognition Dinonaktifkan',
           enabled
             ? 'Semua pegawai wajib verifikasi wajah saat absen.'
@@ -279,7 +279,7 @@
       } catch {
         // Simpan lokal saja
         FACE_RECOGNITION_ENABLED = enabled;
-        showResult('faceToggleResult', 'faceToggleRIcon', 'faceToggleRTitle', 'faceToggleRMsg', 'warning', '⚠️', 'Tersimpan Lokal',
+        showResult('faceToggleResult', 'faceToggleRIcon', 'faceToggleRTitle', 'faceToggleRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Tersimpan Lokal',
           'Berhasil disimpan di perangkat ini, tapi gagal ke server. Pastikan webhook face-toggle aktif di n8n.');
       } finally {
         if (btn) { setTimeout(() => { btn.disabled = false; dom.setText('btnFaceToggleText', 'Simpan Pengaturan Face Recognition'); }, 2500); }
@@ -335,9 +335,9 @@
       });
       const clb = $('clockLocBadge'); if (!clb) return;
       if (best && bestDist <= (best.radius || 150)) {
-        clb.textContent = '📍 ' + best.nama; clb.className = 'clock-loc-badge';
+        clb.innerHTML = '<i class="fas fa-map-marker-alt"></i> ' + best.nama; clb.className = 'clock-loc-badge';
       } else {
-        clb.textContent = '📍 Di luar area kantor'; clb.className = 'clock-loc-badge unknown';
+        clb.innerHTML = '<i class="fas fa-map-marker-alt"></i> Di luar area kantor'; clb.className = 'clock-loc-badge unknown';
       }
     }
 
@@ -349,7 +349,7 @@
       if (_permState === 'denied') {
         _locPermDenied = true;
         const clb = $('clockLocBadge');
-        if (clb) { clb.textContent = '📍 Izin lokasi ditolak'; clb.className = 'clock-loc-badge unknown'; }
+        if (clb) { clb.innerHTML = '<i class="fas fa-map-marker-alt"></i> Izin lokasi ditolak'; clb.className = 'clock-loc-badge unknown'; }
         return;
       }
 
@@ -375,7 +375,7 @@
           if (err && err.code === 1) {
             _locPermDenied = true;
             _writePermStore({ geolocation: 'denied' });
-            if (clb) { clb.textContent = '📍 Izin lokasi ditolak'; clb.className = 'clock-loc-badge unknown'; }
+            if (clb) { clb.innerHTML = '<i class="fas fa-map-marker-alt"></i> Izin lokasi ditolak'; clb.className = 'clock-loc-badge unknown'; }
           }
           // timeout/unavailable → badge tetap "Mendeteksi", tidak minta lagi
         },
@@ -517,8 +517,8 @@
           <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px"></div>
         </div>
         <div style="display:flex;gap:12px;margin-top:6px">
-          <span style="font-size:9px;color:var(--success)">✅ Sudah: ${sudah.length}</span>
-          <span style="font-size:9px;color:var(--danger)">❌ Belum: ${belum.length}</span>
+          <span style="font-size:9px;color:var(--success)"><i class="fas fa-check"></i> Sudah: ${sudah.length}</span>
+          <span style="font-size:9px;color:var(--danger)"><i class="fas fa-times"></i> Belum: ${belum.length}</span>
         </div>
       </div>`;
 
@@ -529,7 +529,7 @@
             const uid = getUid(p);
             const nip = getNip(p);
             html += `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;margin-bottom:6px">
-          <div style="width:32px;height:32px;border-radius:8px;background:rgba(239,68,68,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👤</div>
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(239,68,68,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0"><i class="fas fa-user"></i></div>
           <div style="flex:1;min-width:0">
             <div style="font-size:11px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nama}</div>
             <div style="font-size:9px;color:var(--muted)">${nip ? 'NIP: ' + nip + ' · ' : ''}Belum daftar wajah</div>
@@ -559,16 +559,16 @@
               try {
                 const arr = typeof histData === 'string' ? JSON.parse(histData) : histData;
                 const dLen = Array.isArray(arr) ? arr.length : 0;
-                if (dLen >= 512) engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(201,168,76,0.2);color:var(--gold);border-radius:4px;margin-left:4px;border:1px solid rgba(201,168,76,0.3)">🛡️ Human</span>';
-                else if (dLen === 128) engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(96,165,250,0.2);color:#60a5fa;border-radius:4px;margin-left:4px;border:1px solid rgba(96,165,250,0.3)">🤖 API</span>';
+                if (dLen >= 512) engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(201,168,76,0.2);color:var(--gold);border-radius:4px;margin-left:4px;border:1px solid rgba(201,168,76,0.3)"><i class="fas fa-shield-alt"></i> Human</span>';
+                else if (dLen === 128) engineBadge = '<span style="font-size:8px;padding:1px 4px;background:rgba(96,165,250,0.2);color:#60a5fa;border-radius:4px;margin-left:4px;border:1px solid rgba(96,165,250,0.3)"><i class="fas fa-robot"></i> API</span>';
               } catch (e) { }
             }
 
             html += `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.2);border-radius:10px;margin-bottom:6px">
           <div style="width:32px;height:32px;border-radius:8px;border:1px solid rgba(34,197,94,.3);overflow:hidden;flex-shrink:0;background:rgba(0,0,0,.3)">
             ${thumb
-                ? `<img src="${escapeHtml(thumb)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.parentNode.innerHTML='👤'">`
-                : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:16px">👤</div>`
+                ? `<img src="${escapeHtml(thumb)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.parentNode.innerHTML='<i class="fas fa-user"></i>'">`
+                : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:16px"><i class="fas fa-user"></i></div>`
               }
           </div>
           <div style="flex:1;min-width:0">
@@ -577,7 +577,7 @@
           </div>
           <button onclick="resetFacePegawai('${escapeHtml(uid)}','${escapeHtml(nama)}')"
             style="font-size:9px;padding:3px 8px;border-radius:6px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:var(--danger);cursor:pointer;flex-shrink:0;font-weight:700">
-            🗑️ Reset
+            <i class="fas fa-trash"></i> Reset
           </button>
         </div>`;
           });
@@ -712,10 +712,10 @@
       _applyFsGlobals();
 
       if (serverOk) {
-        showResult('fsResult', 'fsRIcon', 'fsRTitle', 'fsRMsg', 'success', '✅', 'Tersimpan ke Server',
+        showResult('fsResult', 'fsRIcon', 'fsRTitle', 'fsRMsg', 'success', '<i class="fas fa-check"></i>', 'Tersimpan ke Server',
           `Liveness: ${_fsData.liveness_enabled ? 'ON' : 'OFF'} · Absen: ${_fsData.face_threshold} · Meja: ${_fsData.meja_threshold} · Liveness Min: ${_fsData.liveness_score} · NIP Wajib: ${_fsData.mandatory_nips.length}`);
       } else {
-        showResult('fsResult', 'fsRIcon', 'fsRTitle', 'fsRMsg', 'warning', '⚠️', 'Tersimpan Lokal',
+        showResult('fsResult', 'fsRIcon', 'fsRTitle', 'fsRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Tersimpan Lokal',
           'Gagal sync ke server. Pastikan webhook face-settings aktif di n8n.');
       }
     }

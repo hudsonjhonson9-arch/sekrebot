@@ -28,14 +28,14 @@ async function handleAbsen() {
 
   // STRICT VALIDATION: Prevent 'undefined' or empty identity submission
   if (!myNip || !myId || myNip.toLowerCase() === 'undefined' || String(myId).toLowerCase() === 'undefined' || myNip === 'null') {
-    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '🆔', 'Identitas Tidak Valid',
+    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '<i class="fas fa-id-card"></i>', 'Identitas Tidak Valid',
       'Data profil Anda tidak valid atau belum lengkap. Silakan muat ulang halaman atau hubungi admin.');
     window._isAbsenSubmitting = false; return;
   }
 
   const unlock = () => { window._isAbsenSubmitting = false; };
   if (isDesktop()) {
-    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'fail', '🖥️', 'Perangkat Tidak Didukung', 'HADIR hanya dapat dilakukan dari smartphone. Gunakan Telegram di HP Anda.');
+    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'fail', '', 'Perangkat Tidak Didukung', 'HADIR hanya dapat dilakukan dari smartphone. Gunakan Telegram di HP Anda.');
     unlock(); return;
   }
   setBtnL('btnAbsen', true, 'Memeriksa...');
@@ -46,7 +46,7 @@ async function handleAbsen() {
   console.log('[Absen] Identity check:', { hasInitData: !!initData, MY_ID: window.MY_ID, hasProfile: !!window.userProfile, isTgX, isCapacitor });
 
   if (!initData && !isTgX) {
-    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '⚠️', 'Buka via Telegram', 'Aplikasi harus dibuka melalui Telegram, bukan browser biasa.');
+    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '', 'Buka via Telegram', 'Aplikasi harus dibuka melalui Telegram, bukan browser biasa.');
     setBtnL('btnAbsen', false, 'Kirim Lokasi & Absen');
     unlock(); return;
   }
@@ -61,8 +61,8 @@ async function handleAbsen() {
 
   if (ketRow) {
     const nmKet = (ketRow['Jenis Absen'] || ketRow['jenis'] || ketRow['Jenis'] || 'KETERANGAN').toUpperCase().trim();
-    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '🚫', 'Tidak Dapat Absen', `Anda tidak dapat melakukan absen karena status hari ini adalah ${nmKet}.`);
-    setBtnL('btnAbsen', false, `🚫 Status: ${nmKet}`);
+    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '<i class="fas fa-ban"></i>', 'Tidak Dapat Absen', `Anda tidak dapat melakukan absen karena status hari ini adalah ${nmKet}.`);
+    setBtnL('btnAbsen', false, `<i class="fas fa-ban"></i> Status: ${nmKet}`);
     $('btnAbsen').disabled = true;
     unlock(); return;
   }
@@ -90,7 +90,7 @@ async function handleAbsen() {
   const _faceRef = getFaceRef();
   if (!_faceRef || !_faceRef.dataUrl) {
     setBtnL('btnAbsen', false, 'Kirim Lokasi & Absen');
-    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '🧠', 'Wajah Belum Didaftarkan',
+    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '<i class="fas fa-brain"></i>', 'Wajah Belum Didaftarkan',
       'Daftarkan wajah Anda terlebih dahulu melalui tab Profil atau tunggu layar pendaftaran muncul.');
     setTimeout(_showFaceRequiredModal, 500);
     unlock(); return;
@@ -230,13 +230,13 @@ async function _doAbsenWithGPS(initData, isTgX, camResult) {
         handleAbsenError(new AbsenError(
           'Akurasi 0m tidak valid. Nonaktifkan Mock Location di pengaturan developer.',
           ERROR_CODES.FAKE_GPS), 'resultCard');
-        setBtnL('btnAbsen', false, '🔄 Coba Lagi'); window._isAbsenSubmitting = false; resolve(); return;
+        setBtnL('btnAbsen', false, '<i class="fas fa-sync"></i> Coba Lagi'); window._isAbsenSubmitting = false; resolve(); return;
       }
       if (accuracy === 1) { _score += 20; _flags.push('ACCURACY_EXACTLY_1M'); }
       if (accuracy > GPS_MAX_ACCURACY_M) {
-        showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '⚠️', 'Sinyal GPS Lemah',
+        showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Sinyal GPS Lemah',
           `Akurasi ${Math.round(accuracy)}m terlalu lemah. Pindah ke area terbuka.`);
-        setBtnL('btnAbsen', false, '🔄 Coba Lagi'); window._isAbsenSubmitting = false; resolve(); return;
+        setBtnL('btnAbsen', false, '<i class="fas fa-sync"></i> Coba Lagi'); window._isAbsenSubmitting = false; resolve(); return;
       }
 
       // ── Layer 5: Koordinat presisi mencurigakan ───────────
@@ -390,7 +390,7 @@ async function _doAbsenWithGPS(initData, isTgX, camResult) {
           ? 'Terdeteksi patching framework (Xposed/Frida).\nNonaktifkan Mock Location di Pengaturan → Opsi Developer.'
           : `Pola GPS mencurigakan (skor: ${_score}).\nPastikan Mock Location dinonaktifkan di Pengaturan Developer.`;
         handleAbsenError(new AbsenError(_reason, ERROR_CODES.FAKE_GPS), 'resultCard');
-        setBtnL('btnAbsen', false, '🔄 Coba Lagi');
+        setBtnL('btnAbsen', false, '<i class="fas fa-sync"></i> Coba Lagi');
         try {
           apiFetch(P.absen, {
             method: 'POST', body: JSON.stringify({
@@ -494,11 +494,11 @@ async function _doAbsenWithGPS(initData, isTgX, camResult) {
         };
         await idb.set('offline_queue', offlineData);
 
-        const fotoOfflineKet = camResult?.faceOk ? '\n📸 Wajah: ✅ Tersimpan offline' : '\n📸 Foto: ⚠️ Dilewati';
-        showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '📴', 'Tersimpan Sementara Karena Offline',
-          `Data absen Anda tersimpan di antrean perangkat.\n📅 ${tanggal}\n🕐 ${jam}\n📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}${fotoOfflineKet}\n\nSistem akan mengirim otomatis saat koneksi internet kembali.`);
+        const fotoOfflineKet = camResult?.faceOk ? '\n<i class="fas fa-camera"></i> Wajah: <i class="fas fa-check"></i> Tersimpan offline' : '\n<i class="fas fa-camera"></i> Foto: <i class="fas fa-exclamation-triangle"></i> Dilewati';
+        showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '<i class="fas fa-mobile-alt"></i>', 'Tersimpan Sementara Karena Offline',
+          `Data absen Anda tersimpan di antrean perangkat.\n<i class="fas fa-calendar"></i> ${tanggal}\n<i class="fas fa-clock"></i> ${jam}\n<i class="fas fa-map-marker-alt"></i> ${latitude.toFixed(5)}, ${longitude.toFixed(5)}${fotoOfflineKet}\n\nSistem akan mengirim otomatis saat koneksi internet kembali.`);
 
-        setBtnL('btnAbsen', false, '✅ Tersimpan Offline');
+        setBtnL('btnAbsen', false, '<i class="fas fa-check"></i> Tersimpan Offline');
         if ($('btnAbsen')) $('btnAbsen').disabled = true;
         logLoaded = false;
         if (typeof autoUpdateStatusAktif === 'function') autoUpdateStatusAktif();
@@ -512,7 +512,7 @@ async function _doAbsenWithGPS(initData, isTgX, camResult) {
         if (!absenOk) {
           const errMsg = absenStatus === 0 ? 'Server tidak merespons. Periksa koneksi dan coba lagi.' : `Terjadi kesalahan pada server (Status ${absenStatus}).`;
           handleAbsenError(new AbsenError(errMsg, ERROR_CODES.UNKNOWN), 'resultCard');
-          setBtnL('btnAbsen', false, '🔄 Coba Lagi');
+          setBtnL('btnAbsen', false, '<i class="fas fa-sync"></i> Coba Lagi');
           window._isAbsenSubmitting = false; resolve(); return;
         }
 
@@ -536,17 +536,17 @@ async function _doAbsenWithGPS(initData, isTgX, camResult) {
           const gLok = $('gpsLokasi');
           if (gLok) gLok.textContent = lokNm; 
           const clb = $('clockLocBadge'); 
-          if (clb) { clb.textContent = '📍 ' + lokNm; clb.className = 'clock-loc-badge'; } 
+          if (clb) { clb.innerHTML = '<i class="fas fa-map-marker-alt"></i> ' + lokNm; clb.className = 'clock-loc-badge'; } 
         }
 
         const fotoKet = camResult?.faceOk
-          ? `\n📸 Wajah: ✅ Terdeteksi${camResult.livenessOk ? ' · Liveness ✅' : ' · Liveness ⚠️'}`
-          : '\n📸 Foto: ⚠️ Wajah tidak terdeteksi (tersimpan untuk admin)';
+          ? `\n<i class="fas fa-camera"></i> Wajah: <i class="fas fa-check"></i> Terdeteksi${camResult.livenessOk ? ' · Liveness <i class="fas fa-check"></i>' : ' · Liveness <i class="fas fa-exclamation-triangle"></i>'}`
+          : '\n<i class="fas fa-camera"></i> Foto: <i class="fas fa-exclamation-triangle"></i> Wajah tidak terdeteksi (tersimpan untuk admin)';
 
         if (isValid) {
-          showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'success', '✅', 'Absen Berhasil!',
-            `${ket}\n📅 ${tanggal}\n🕐 ${jam}\n📍 ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${Math.round(accuracy)}m)${fotoKet}`);
-          setBtnL('btnAbsen', false, '✅ Absen Tercatat');
+          showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'success', '<i class="fas fa-check"></i>', 'Absen Berhasil!',
+            `${ket}\n<i class="fas fa-calendar"></i> ${tanggal}\n<i class="fas fa-clock"></i> ${jam}\n<i class="fas fa-map-marker-alt"></i> ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${Math.round(accuracy)}m)${fotoKet}`);
+          setBtnL('btnAbsen', false, '<i class="fas fa-check"></i> Absen Tercatat');
           $('btnAbsen').disabled = true;
           logLoaded = false;
           if (typeof autoUpdateStatusAktif === 'function') autoUpdateStatusAktif();
@@ -554,36 +554,36 @@ async function _doAbsenWithGPS(initData, isTgX, camResult) {
           if (window.tg) setTimeout(() => window.tg.close(), 3500);
 
           Swal.fire({
-            title: '✅ Absen Berhasil!',
-            html: `<b>${ket}</b><br><br>📅 ${tanggal}<br>🕐 ${jam}<br>📍 GPS: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}<br>${fotoKet.replace(/\n/g, '<br>')}`,
+            title: '<i class="fas fa-check"></i> Absen Berhasil!',
+            html: `<b>${ket}</b><br><br><i class="fas fa-calendar"></i> ${tanggal}<br><i class="fas fa-clock"></i> ${jam}<br><i class="fas fa-map-marker-alt"></i> GPS: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}<br>${fotoKet.replace(/\n/g, '<br>')}`,
             icon: 'success',
             timer: 4000,
             showConfirmButton: true,
             confirmButtonText: 'OK'
           });
         } else if (kode_tolak === 'SUDAH_ABSEN') {
-          showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', 'ℹ️', 'Sudah Absen',
+          showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', 'ℹ', 'Sudah Absen',
             `${ket}\n\nRiwayat HADIR hari ini sudah tercatat. Tidak perlu absen ulang.`);
-          setBtnL('btnAbsen', false, '✅ Sudah Tercatat');
+          setBtnL('btnAbsen', false, '<i class="fas fa-check"></i> Sudah Tercatat');
           $('btnAbsen').disabled = true;
           logLoaded = false;
           setTimeout(loadTodayHistory, 1500);
           if (window.tg) setTimeout(() => window.tg.close(), 3500);
 
           Swal.fire({
-            title: 'ℹ️ Sudah Absen',
+            title: 'ℹ Sudah Absen',
             text: 'Riwayat HADIR hari ini sudah tercatat. Tidak perlu absen ulang.',
             icon: 'info',
             timer: 3000,
             showConfirmButton: true
           });
         } else {
-          showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'fail', '❌', 'Absen Ditolak',
+          showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'fail', '<i class="fas fa-times"></i>', 'Absen Ditolak',
             `${ket}\n\nKode: ${kode_tolak || 'ERROR'}`);
-          setBtnL('btnAbsen', false, '❌ Ditolak');
+          setBtnL('btnAbsen', false, '<i class="fas fa-times"></i> Ditolak');
 
           Swal.fire({
-            title: '❌ Absen Ditolak',
+            title: '<i class="fas fa-times"></i> Absen Ditolak',
             text: ket + (kode_tolak ? ` (Kode: ${kode_tolak})` : ''),
             icon: 'error',
             confirmButtonText: 'Tutup'
@@ -592,7 +592,7 @@ async function _doAbsenWithGPS(initData, isTgX, camResult) {
       } catch (err) {
         console.error('[Absen] GPS Success Callback Critical Error:', err);
         handleAbsenError(new AbsenError('Gagal memproses data absen.', ERROR_CODES.UNKNOWN), 'resultCard');
-        setBtnL('btnAbsen', false, '🔄 Coba Lagi');
+        setBtnL('btnAbsen', false, '<i class="fas fa-sync"></i> Coba Lagi');
       } finally {
         window._isAbsenSubmitting = false;
         resolve();
@@ -600,7 +600,7 @@ async function _doAbsenWithGPS(initData, isTgX, camResult) {
     },
     (err) => {
       handleAbsenError(geoErrorToAbsenError(err), 'resultCard');
-      setBtnL('btnAbsen', false, '🔄 Coba Lagi');
+      setBtnL('btnAbsen', false, '<i class="fas fa-sync"></i> Coba Lagi');
       window._isAbsenSubmitting = false;
       resolve();
     },
@@ -623,20 +623,20 @@ async function handlePulangLuar() {
   const myId = window.MY_ID;
 
   if (!myNip || !myId || myNip.toLowerCase() === 'undefined' || String(myId).toLowerCase() === 'undefined') {
-    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '🆔', 'Identitas Tidak Valid',
+    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '<i class="fas fa-id-card"></i>', 'Identitas Tidak Valid',
       'Identitas Anda tidak valid (undefined). Silakan logout dan login kembali.');
     window._isAbsenSubmitting = false;
     return;
   }
   const ket = ($('ketPulangLuar').value || '').trim();
   if (!ket) {
-    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '⚠️', 'Keterangan Wajib Diisi',
+    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Keterangan Wajib Diisi',
       'Tuliskan lokasi/kegiatan lapangan Anda sebelum absen pulang.');
     window._isAbsenSubmitting = false;
     return;
   }
   if (isDesktop()) {
-    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'fail', '🖥️', 'Perangkat Tidak Didukung',
+    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'fail', '<i class="fas fa-desktop"></i>', 'Perangkat Tidak Didukung',
       'HADIR hanya dapat dilakukan dari smartphone.');
     window._isAbsenSubmitting = false;
     return;
@@ -645,13 +645,13 @@ async function handlePulangLuar() {
   const isCapacitor = !!window.Capacitor || window.location.protocol === 'capacitor:';
   const isTgX = (!initData && window.MY_ID && window.userProfile) || isCapacitor;
   if (!initData && !isTgX) {
-    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '⚠️', 'Buka via Telegram',
+    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '', 'Buka via Telegram',
       'Aplikasi harus dibuka melalui Telegram.');
     window._isAbsenSubmitting = false;
     return;
   }
   if (!navigator.geolocation) {
-    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'fail', '❌', 'GPS Tidak Tersedia', 'Buka di Telegram versi terbaru.');
+    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'fail', '', 'GPS Tidak Tersedia', 'Buka di Telegram versi terbaru.');
     window._isAbsenSubmitting = false;
     return;
   }
@@ -666,10 +666,10 @@ async function handlePulangLuar() {
 
   if (ketRow) {
     const nmKet = (ketRow['Jenis Absen'] || ketRow['jenis'] || ketRow['Jenis'] || 'KETERANGAN').toUpperCase().trim();
-    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '🚫', 'Tidak Dapat Absen', `Anda tidak dapat melakukan absen karena status hari ini adalah ${nmKet}.`);
+    showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '<i class="fas fa-ban"></i>', 'Tidak Dapat Absen', `Anda tidak dapat melakukan absen karena status hari ini adalah ${nmKet}.`);
     $('btnPulangLuar').disabled = true;
     const tSpan = $('btnPulangLuarText');
-    if (tSpan) tSpan.textContent = `🚫 Status: ${nmKet}`;
+    if (tSpan) tSpan.innerHTML = `<i class="fas fa-ban"></i> Status: ${nmKet}`;
     window._isAbsenSubmitting = false;
     return;
   }
@@ -694,10 +694,10 @@ async function handlePulangLuar() {
   navigator.geolocation.getCurrentPosition(
     async ({ coords: { latitude, longitude, accuracy } }) => {
       if (accuracy > GPS_MAX_ACCURACY_M) {
-        showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '⚠️', 'Sinyal GPS Lemah',
+        showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Sinyal GPS Lemah',
           `Akurasi ${Math.round(accuracy)}m terlalu lemah. Pindah ke area terbuka.`);
         $('btnPulangLuar').disabled = false;
-        if (tSpan) tSpan.textContent = '🏃 Pulang dari Lapangan';
+        if (tSpan) tSpan.innerHTML = '<i class="fas fa-running"></i> Pulang dari Lapangan';
         window._isAbsenSubmitting = false;
         resolve();
         return;
@@ -745,8 +745,8 @@ async function handlePulangLuar() {
         };
         await idb.set('offline_queue', offlineData);
 
-        showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '📴', 'Tersimpan Sementara Karena Offline',
-          `Data Pulang Lapangan Anda tersimpan di perangkat.\n${ket}\n📅 ${tanggal}\n🕐 ${jam}\n\nSistem akan mengirim otomatis saat koneksi internet kembali.`);
+        showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '<i class="fas fa-mobile-alt"></i>', 'Tersimpan Sementara Karena Offline',
+          `Data Pulang Lapangan Anda tersimpan di perangkat.\n${ket}\n<i class="fas fa-calendar"></i> ${tanggal}\n<i class="fas fa-clock"></i> ${jam}\n\nSistem akan mengirim otomatis saat koneksi internet kembali.`);
 
         $('btnPulangLuar').disabled = true;
         $('btnAbsen').disabled = true;
@@ -761,16 +761,16 @@ async function handlePulangLuar() {
         const { ok: absenOk, data: absenData, status: absenStatus } = await apiPost(P.absen, payload);
         if (!absenOk) {
           const errMsg = absenStatus === 0 ? 'Server Tidak Merespons. Pastikan n8n & koneksi internet aktif, lalu coba lagi.' : `Terjadi kesalahan pada server (Status ${absenStatus}).`;
-          showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'fail', '🔌', 'Gagal', errMsg);
+          showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'fail', '<i class="fas fa-plug"></i>', 'Gagal', errMsg);
           $('btnPulangLuar').disabled = false;
-          if (tSpan) tSpan.textContent = '🏃 Pulang dari Lapangan';
+          if (tSpan) tSpan.innerHTML = '<i class="fas fa-running"></i> Pulang dari Lapangan';
           return;
         }
         const d = absenData || {};
         const isValid = (d?.validasi?.is_valid === true) || (d?.ok === true);
         if (isValid) {
-          showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'success', '✅', 'Pulang Lapangan Tercatat!',
-            `${ket}\n📅 ${tanggal}\n🕐 ${jam}\n📍 GPS: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+          showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'success', '<i class="fas fa-check"></i>', 'Pulang Lapangan Tercatat!',
+            `${ket}\n<i class="fas fa-calendar"></i> ${tanggal}\n<i class="fas fa-clock"></i> ${jam}\n<i class="fas fa-map-marker-alt"></i> GPS: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
           $('btnPulangLuar').disabled = true;
           $('btnAbsen').disabled = true;
           const plf = $('pulangLuarForm'), bpl = $('btnPulangLuar');
@@ -782,16 +782,16 @@ async function handlePulangLuar() {
           if (tg) setTimeout(() => tg.close(), 3500);
         } else {
           const errMsg = d?.validasi?.keterangan || d?.message || 'Absen ditolak server.';
-          showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'fail', '❌', 'Gagal', errMsg);
+          showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal', errMsg);
           $('btnPulangLuar').disabled = false;
-          if (tSpan) tSpan.textContent = '🏃 Pulang dari Lapangan';
+          if (tSpan) tSpan.innerHTML = '<i class="fas fa-running"></i> Pulang dari Lapangan';
         }
       } catch (err) {
         console.error('[Absen] Error in PulangLuar callback:', err);
-        showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'fail', '🔌', 'Server Tidak Merespons',
+        showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'fail', '<i class="fas fa-plug"></i>', 'Server Tidak Merespons',
           'Pastikan n8n & ngrok berjalan.');
         $('btnPulangLuar').disabled = false;
-        if (tSpan) tSpan.textContent = '🏃 Pulang dari Lapangan';
+        if (tSpan) tSpan.innerHTML = '<i class="fas fa-running"></i> Pulang dari Lapangan';
       } finally {
         window._isAbsenSubmitting = false;
         resolve();
@@ -801,7 +801,7 @@ async function handlePulangLuar() {
       const msg = { 1: 'Izin GPS ditolak.', 2: 'GPS tidak tersedia.', 3: 'Timeout GPS. Coba di area terbuka.' };
       handleAbsenError(geoErrorToAbsenError(err), 'resultCard');
       $('btnPulangLuar').disabled = false;
-      if (tSpan) tSpan.textContent = '🏃 Pulang dari Lapangan';
+      if (tSpan) tSpan.innerHTML = '<i class="fas fa-running"></i> Pulang dari Lapangan';
       window._isAbsenSubmitting = false;
       resolve();
     },

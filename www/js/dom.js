@@ -124,11 +124,11 @@
       /**
        * Render empty state di dalam container.
        * @param {string} id
-       * @param {string} [icon='📭']
+       * @param {string} [icon='<i class="fas fa-envelope-open-text"></i>']
        * @param {string} [text='Tidak ada data']
        * @param {string} [sub='']
        */
-      emptyState(id, icon = '📭', text = 'Tidak ada data', sub = '') {
+      emptyState(id, icon = '<i class="fas fa-envelope-open-text"></i>', text = 'Tidak ada data', sub = '') {
         const el = document.getElementById(id);
         if (!el) return;
         el.innerHTML = `
@@ -149,7 +149,7 @@
         if (!el) return;
         el.innerHTML = `
           <div class="empty-state">
-            <div class="empty-icon">🔌</div>
+            <div class="empty-icon"><i class="fas fa-plug"></i></div>
             <div class="empty-text">${msg}</div>
           </div>`;
       },

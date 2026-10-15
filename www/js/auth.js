@@ -144,7 +144,7 @@
                           alert('Wajah berhasil didaftarkan! Selamat datang.');
                           finalizeLogin();
                        } catch (err) {
-                          alert('⚠️ ' + err.message);
+                          alert(' ' + err.message);
                           if (overlayEl) overlayEl.style.display = 'flex';
                           btn.disabled = false;
                           btn.innerHTML = originalText;
@@ -328,7 +328,7 @@
                 alert('Pendaftaran berhasil! Wajah Anda telah terdaftar.');
                 location.reload();
               } catch (err) {
-                alert('⚠️ ' + err.message);
+                alert(' ' + err.message);
                 window.MY_ID = null;
                 window.tgUser = {};
                 if (overlayEl) overlayEl.style.display = 'flex';
@@ -345,7 +345,7 @@
           return;
         }
       } catch (err) {
-        alert('⚠️ ' + err.message);
+        alert(' ' + err.message);
       } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;

@@ -1,8 +1,10 @@
 /* ─── GLOBAL STATE ── */
 window._simapoMasterEditId = null;
+window._simapoMasterUnitId = null; // unit pertama saat edit (untuk tahun/pegawai/ruangan)
 window._allPinjamData = [];
 window._allTiketData = [];
 window._allMasterData = [];
+window._allUnitData = [];
 
 /* ─── CACHE MANAGER ────────────────────────────────────────── */
 window._simapoCache = {
@@ -60,7 +62,7 @@ window.simapoResponseError = async function(res, fallback) {
 };
 
 window.simapoSubmit = async function(endpoint, payload, opts = {}) {
-  const successMsg = opts.successMsg || 'Berhasil disimpan';
+  const successMsg = opts.successMsg !== undefined ? opts.successMsg : 'Berhasil disimpan';
   const errorMsg = opts.errorMsg || 'Gagal menyimpan data. Perubahan tidak tersimpan.';
   const onSuccess = opts.onSuccess;
 
@@ -82,9 +84,9 @@ window.simapoSubmit = async function(endpoint, payload, opts = {}) {
     return false;
   }
 
-  showToast(successMsg, 'success');
-  if (typeof onSuccess === 'function') onSuccess();
-  return true;
+  if (successMsg) showToast(successMsg, 'success');
+  if (typeof onSuccess === 'function') onSuccess(body);
+  return body || true; // body berisi id barang saat save — dipakai saveSimapoMaster untuk unit
 };
 
 /* ─── NAMA INSTANSI AKTIF ───────────────────────────────────── */
@@ -257,13 +259,23 @@ window.adminQRKembaliScan = function() {
         showCancelButton: true,
         confirmButtonText: 'Kembalikan',
         cancelButtonText: 'Batal',
-        background: '#1a1d21',
-        color: '#fff',
         confirmButtonColor: '#22c55e',
       });
       if (!ok.isConfirmed) return;
 
-      window.adminSimapoPinjamAction(pa.id, 'DIKEMBALIKAN');
+      // ponytail: langsung simapoSubmit — lewati adminSimapoPinjamAction yang
+      // punya confirm() native ganda (SweetAlert + confirm). Double-confirm
+      // bikin toast "gagal" palsu di mobile/Telegram WebView.
+      showToast('Memproses...', 'info');
+      await window.simapoSubmit(P.simapoAdminPinjamAction, { id: pa.id, status: 'DIKEMBALIKAN' }, {
+        successMsg: 'Aset berhasil dikembalikan',
+        errorMsg: 'Gagal mengembalikan aset.',
+        onSuccess: () => {
+          window._simapoCache.clear('admin_pinjam');
+          window._simapoCache.clear('user_pinjam_riwayat');
+          window.loadAdminSimapoPinjam(true);
+        },
+      });
     } catch (e) {
       showToast('Gagal memproses QR', 'error');
     }
@@ -333,61 +345,150 @@ window.loadAdminSimapoMaster = async function(force = false) {
   if (force || window._allMasterData.length === 0) window.showAdminSimapoShimmer('adminSimapoMasterList');
 
   let fetchError = false;
-  const data = await window._simapoCache.getOrFetch('admin_master', async () => {
-    try {
-      const res = await apiFetch(P.simapoAdminMasterList);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return parseApiResponse(await res.json());
-    } catch (e) {
-      console.warn('[SIMAPO] Master Fetch Fail:', e);
-      fetchError = true;
-      return null;
-    }
-  }, force);
+  // ponytail: dua fetch paralel — barang list (untuk mutasi/opname/edit) + unit list (untuk display flat).
+  const [barangData, unitData] = await Promise.all([
+    window._simapoCache.getOrFetch('admin_master', async () => {
+      try {
+        const res = await apiFetch(P.simapoAdminMasterList);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return parseApiResponse(await res.json());
+      } catch (e) {
+        console.warn('[SIMAPO] Master Fetch Fail:', e);
+        fetchError = true;
+        return null;
+      }
+    }, force),
+    window._simapoCache.getOrFetch('admin_units', async () => {
+      try {
+        const res = await apiFetch(P.simapoUnitListAll);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return parseApiResponse(await res.json());
+      } catch (e) {
+        console.warn('[SIMAPO] Unit Fetch Fail:', e);
+        return null;
+      }
+    }, force),
+  ]);
 
   if (fetchError) {
     window.simapoErrorState('adminSimapoMasterList', 'Gagal memuat data master aset dari server.');
     return;
   }
 
-  window._allMasterData = Array.isArray(data) ? data : [];
-  window.renderAdminSimapoMaster(window._allMasterData);
+  window._allMasterData = Array.isArray(barangData) ? barangData : [];
+  window._allUnitData = Array.isArray(unitData) ? unitData : [];
+  window._fillMasterFilters();
+  window._applyMasterFilters();
 };
 window._simapoRetryMap['adminSimapoMasterList'] = window.loadAdminSimapoMaster;
 
 window.renderAdminSimapoMaster = function(data) {
   const el = document.getElementById('adminSimapoMasterList');
   if (!el) return;
-  if (!data || data.length === 0) { el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-box" aria-hidden="true"></i> Belum ada data aset.</div>`; return; }
+  if (!data || data.length === 0) { el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-box" aria-hidden="true"></i> Tidak ada aset yang cocok dengan filter.</div>`; return; }
   const fmt = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
 
-  el.innerHTML = data.map(item => `
-    <div data-barang-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);margin-bottom:8px;">
-      <div style="width:40px;height:40px;border-radius:8px;background:rgba(201,168,76,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;"><i class="fas fa-box" aria-hidden="true"></i></div>
+  // ponytail: flat — tiap unit_aset jadi baris sendiri, tanpa grup per barang.
+  el.innerHTML = data.map(u => {
+    const dipinjam = u.statuspinjam === true || u.statuspinjam === 'true';
+    const statusColor = dipinjam ? 'var(--warning)' : 'var(--success)';
+    const statusText = dipinjam ? 'Dipinjam' : 'Tersedia';
+    return `
+    <div data-barang-id="${u.barangid}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:var(--card-bg);border:1px solid var(--border);margin-bottom:8px;">
+      <div style="width:44px;height:44px;border-radius:10px;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;"><i class="fas fa-box" aria-hidden="true"></i></div>
       <div style="flex:1;min-width:0;">
-        <div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.nama}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${item.kodebarang} &nbsp;·&nbsp; Stok: <span style="color:${item.stok_saat_ini > 0 ? 'var(--success)' : 'var(--danger)'}">${item.stok_saat_ini} ${item.satuan}</span></div>
-        <div style="font-size:11px;color:var(--gold);margin-top:2px;">${fmt(item.hargasatuan || 0)}</div>
+        <div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.nama_barang || '—'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${u.kode_aset ? '<b style="color:var(--gold);">' + u.kode_aset + '</b> · ' : ''}${u.nomorinventaris || '—'} · ${u.kodebarang || ''}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap;">
+          <span style="font-size:10px;font-weight:800;color:${statusColor};background:rgba(255,255,255,0.04);border:1px solid currentColor;border-radius:6px;padding:2px 8px;">${statusText}</span>
+          <span style="font-size:10px;font-weight:700;color:var(--muted);">${u.kondisi || '—'}</span>
+          <span style="font-size:10px;font-weight:800;color:var(--gold);background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.25);border-radius:6px;padding:2px 8px;"><i class="fas fa-calendar" aria-hidden="true"></i> Tahun ${u.tahunperolehan || '—'}</span>
+          <span style="font-size:11px;font-weight:700;color:var(--gold);">${fmt(u.hargasatuan || 0)}</span>
+          <span style="font-size:10px;font-weight:700;color:${u.nama_pemegang ? 'var(--white)' : 'var(--muted)'};"><i class="fas fa-user" aria-hidden="true"></i> Pemegang: ${u.nama_pemegang || '—'}</span>
+        </div>
+        ${u.nama_peminjam_saat_ini ? `<div style="font-size:10px;color:var(--warning);margin-top:2px;"><i class="fas fa-user" aria-hidden="true"></i> Dipinjam oleh: ${u.nama_peminjam_saat_ini}</div>` : ''}
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
-        <button onclick="window.showSimapoMasterForm('${item.id}')" style="padding:6px 10px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-edit" aria-hidden="true"></i></button>
-        <button onclick="window.deleteSimapoMaster('${item.id}')" style="padding:6px 10px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-trash" aria-hidden="true"></i></button>
-        <button onclick="toggleUnitList('${item.id}', this)" style="padding:6px 10px;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2);border-radius:6px;font-size:10px;cursor:pointer;font-weight:700;">▶ QR</button>
+      <div style="display:flex;gap:6px;flex-shrink:0;align-items:center;">
+        <button onclick="window.showSimapoMasterForm('${u.barangid}', '${u.id}')" title="Edit aset" aria-label="Edit aset" style="padding:8px 12px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:700;"><i class="fas fa-edit" aria-hidden="true"></i></button>
+        <button onclick="window.generateQRSingle('${u.id}', '${(u.nama_barang || '').replace(/'/g, "\\'")}', '${(u.nomorinventaris || '').replace(/'/g, "\\'")}')" title="QR aset ini" style="padding:8px 12px;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2);border-radius:8px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-mobile-alt" aria-hidden="true"></i> QR</button>
+        <button onclick="window.deleteSimapoMaster('${u.barangid}')" title="Hapus aset" aria-label="Hapus aset" style="padding:8px 12px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:8px;font-size:12px;cursor:pointer;font-weight:700;"><i class="fas fa-trash" aria-hidden="true"></i></button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 };
 
-window.filterSAMaster = function(val) {
-  const q = val.toLowerCase();
-  const filtered = window._allMasterData.filter(b => 
-    (b.nama && b.nama.toLowerCase().includes(q)) || 
-    (b.kodebarang && b.kodebarang.toLowerCase().includes(q))
-  );
+// Isi opsi dropdown filter (Kategori · Pemegang · Tahun) dari data unit yang
+// sudah dimuat; pilihan user dipertahankan kalau masih ada di opsi baru.
+window._fillMasterFilters = function() {
+  const units = window._allUnitData || [];
+  const esc = (s) => window.pksEsc ? window.pksEsc(String(s)) : String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fill = (selId, pairs, placeholder) => {
+    const sel = document.getElementById(selId);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = `<option value="">${placeholder}</option>` + pairs.map(p => `<option value="${esc(p[0])}">${esc(p[1])}</option>`).join('');
+    if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+  };
+  fill('saFilterKat',
+    [...new Set(units.map(u => u.kategori).filter(Boolean))].sort().map(k => [k, k]),
+    'Semua Kategori');
+  const pegSeen = new Map();
+  for (const u of units) if (u.pegawai_id && u.nama_pemegang && !pegSeen.has(String(u.pegawai_id))) pegSeen.set(String(u.pegawai_id), u.nama_pemegang);
+  fill('saFilterPeg',
+    [...pegSeen.entries()].sort((a, b) => a[1].localeCompare(b[1])),
+    'Semua Pemegang');
+  fill('saFilterTahun',
+    [...new Set(units.map(u => String(u.tahunperolehan || '')).filter(Boolean))].sort().reverse().map(t => [t, t]),
+    'Semua Tahun');
+};
+
+window._applyMasterFilters = function() {
+  const q = (document.getElementById('saSearchMaster')?.value || '').toLowerCase().trim();
+  const kat = document.getElementById('saFilterKat')?.value || '';
+  const peg = document.getElementById('saFilterPeg')?.value || '';
+  const th = document.getElementById('saFilterTahun')?.value || '';
+  const filtered = (window._allUnitData || []).filter(u => {
+    const cocokQ = !q ||
+      (u.nama_barang && u.nama_barang.toLowerCase().includes(q)) ||
+      (u.kodebarang && u.kodebarang.toLowerCase().includes(q)) ||
+      (u.kode_aset && u.kode_aset.toLowerCase().includes(q)) ||
+      (u.nama_pemegang && u.nama_pemegang.toLowerCase().includes(q)) ||
+      (u.nomorinventaris && u.nomorinventaris.toLowerCase().includes(q));
+    const cocokKat = !kat || (u.kategori || '') === kat;
+    const cocokPeg = !peg || String(u.pegawai_id || '') === peg;
+    const cocokTh = !th || String(u.tahunperolehan || '') === th;
+    return cocokQ && cocokKat && cocokPeg && cocokTh;
+  });
   window.renderAdminSimapoMaster(filtered);
 };
 
-window.showSimapoMasterForm = async function(id = null) {
+window.filterSAMaster = function() {
+  window._applyMasterFilters();
+};
+
+window.resetSAMasterFilter = function() {
+  const s = document.getElementById('saSearchMaster'); if (s) s.value = '';
+  for (const id of ['saFilterKat', 'saFilterPeg', 'saFilterTahun']) { const el = document.getElementById(id); if (el) el.value = ''; }
+  window._applyMasterFilters();
+};
+
+/* ── Referensi pegawai & ruangan untuk form aset (sekali fetch, cache 2 menit) ── */
+window._simapoLoadRefData = function() {
+  return window._simapoCache.getOrFetch('bast_ref', async () => {
+    try {
+      const res = await apiFetch(P.simapoBastList);
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json && json.data ? { pegawai: json.data.pegawai || [], ruangan: json.data.ruangan || [] } : null;
+    } catch { return null; }
+  }, false);
+};
+
+window.showSimapoMasterForm = async function(id = null, unitId = null) {
   window._simapoMasterEditId = id;
+  // Konteks unit yang diklik di daftar (kebijakan 1:1: unit = aset; tetap
+  // eksplisit supaya modal membaca unit itu sendiri, bukan nebak urutan).
+  window._simapoMasterUnitId = unitId || null;
   const modal = document.getElementById('modalSimapoMaster');
   if (!modal) return;
 
@@ -414,6 +515,11 @@ window.showSimapoMasterForm = async function(id = null) {
   document.getElementById('smfStok').value = '0';
   document.getElementById('smfHarga').value = '0';
   document.getElementById('smfSpesifikasi').value = '';
+  document.getElementById('smfTahun').value = '';
+  const selPeg = document.getElementById('smfPegawai');
+  const selRuang = document.getElementById('smfRuangan');
+  if (selPeg) selPeg.innerHTML = '<option value="">— Tanpa Pemegang —</option>';
+  if (selRuang) selRuang.innerHTML = '<option value="">— Tanpa Ruangan —</option>';
   const titleEl = document.getElementById('smfTitle');
   if (titleEl) titleEl.textContent = id ? 'Edit Data Aset' : 'Tambah Aset Baru';
 
@@ -429,6 +535,35 @@ window.showSimapoMasterForm = async function(id = null) {
       document.getElementById('smfMinStok').value = item.minimumstok || 0;
       document.getElementById('smfHarga').value = item.hargasatuan || 0;
       document.getElementById('smfSpesifikasi').value = item.spesifikasi || '';
+    }
+  }
+
+  // Tampilkan bidang unit hanya untuk Aset Tetap; isi dari unit yang diklik saat edit
+  const showUnit = document.getElementById('smfJenis').value === 'Aset Tetap';
+  const unitFields = document.getElementById('smfUnitFields');
+  if (unitFields) unitFields.style.display = showUnit ? 'block' : 'none';
+  if (showUnit) {
+    const ref = await window._simapoLoadRefData();
+    if (ref && selPeg) {
+      selPeg.innerHTML = '<option value="">— Tanpa Pemegang —</option>' +
+        ref.pegawai.map(p => `<option value="${p.id}">${p.nama || p.id}${p.nip ? ' (' + p.nip + ')' : ''}</option>`).join('');
+    }
+    if (ref && selRuang) {
+      selRuang.innerHTML = '<option value="">— Tanpa Ruangan —</option>' +
+        ref.ruangan.map(ru => `<option value="${ru.id}">${ru.nama}</option>`).join('');
+    }
+    if (id) {
+      try {
+        const res = await apiGet(P.simapoUnitList, { barangid: id });
+        const units = res.rows || [];
+        const u0 = (unitId && units.find(x => String(x.id) === String(unitId))) || units[0];
+        if (u0) {
+          window._simapoMasterUnitId = u0.id;
+          document.getElementById('smfTahun').value = u0.tahunperolehan || '';
+          if (selPeg) selPeg.value = u0.pegawai_id || '';
+          if (selRuang) selRuang.value = u0.ruangan_id || '';
+        }
+      } catch { /* unit belum ada — biarkan kosong */ }
     }
   }
 
@@ -498,17 +633,42 @@ window.saveSimapoMaster = async function() {
     spesifikasi: document.getElementById('smfSpesifikasi')?.value.trim(),
   };
   if (!payload.nama) { showToast('Nama wajib diisi!', 'error'); return; }
+  const unitFields = {
+    tahunperolehan: document.getElementById('smfTahun')?.value || '',
+    pegawai_id: document.getElementById('smfPegawai')?.value || '',
+    ruangan_id: document.getElementById('smfRuangan')?.value || '',
+  };
   showToast('Menyimpan...', 'info');
-  await window.simapoSubmit(P.simapoAdminMasterSave, payload, {
-    successMsg: 'Aset tersimpan',
+  const ok = await window.simapoSubmit(P.simapoAdminMasterSave, payload, {
+    successMsg: null, // pesan disimpan sampai unit ikut tersimpan
     errorMsg: 'Gagal menyimpan aset.',
-    onSuccess: () => {
-      window._simapoCache.clear('admin_master');
-      window._simapoCache.clear('user_katalog');
-      window.loadAdminSimapoMaster(true);
-      if (window.closeSimapoMasterForm) window.closeSimapoMasterForm();
-    },
+    onSuccess: () => {},
   });
+  if (!ok) return;
+  const savedId = (ok && ok.id) || window._simapoMasterEditId; // id baru dari server, atau id edit
+
+  // Simpan bidang unit (tahun/pegawai/ruangan) via bast-assign pada unit pertama
+  if (payload.jenisbarang === 'Aset Tetap' && (unitFields.tahunperolehan || unitFields.pegawai_id || unitFields.ruangan_id)) {
+    try {
+      let unitId = window._simapoMasterUnitId;
+      if (!unitId && savedId) {
+        const res = await apiGet(P.simapoUnitList, { barangid: savedId });
+        unitId = (res.rows || [])[0]?.id || null;
+      }
+      if (unitId) {
+        await window.simapoSubmit(P.simapoBastAssign, { aset_id: unitId, ...unitFields }, {
+          successMsg: null, errorMsg: 'Aset tersimpan, tetapi data unit gagal diperbarui.',
+        });
+      }
+    } catch { /* unit belum ada (mis. stok 0) — abaikan */ }
+  }
+
+  showToast('Aset tersimpan', 'success');
+  window._simapoCache.clear('admin_master');
+  window._simapoCache.clear('user_katalog');
+  window._simapoCache.clear('bast_ref');
+  window.loadAdminSimapoMaster(true);
+  if (window.closeSimapoMasterForm) window.closeSimapoMasterForm();
 };
 
 /* ─── OTHERS ── */
@@ -752,6 +912,93 @@ window._simapoKatPick = function(item) {
 /* ─── ADMIN: QR GENERATOR ──────────────────────────────────── */
 window._unitCache = {};
 
+window.simapoMasterExportExcel = async function() {
+  const data = window._allMasterData || [];
+  if (!data.length) { showToast('Tidak ada data aset.', 'error'); return; }
+  if (typeof ExcelJS === 'undefined') { showToast('ExcelJS belum termuat', 'error'); return; }
+  const QR = window.QRCode || qrcode;
+  if (typeof QR !== 'function') { showToast('QR library tidak tersedia', 'error'); return; }
+
+  showToast('Memuat unit aset...', 'info');
+  const allUnits = [];
+  for (const item of data) {
+    try {
+      const res = await apiGet(P.simapoUnitList, { barangid: item.id });
+      const units = res.ok ? (res.rows || []) : [];
+      units.forEach(u => allUnits.push({ ...u, nama_barang: item.nama, kodebarang: item.kodebarang }));
+    } catch (e) { /* skip */ }
+  }
+  if (!allUnits.length) { showToast('Tidak ada unit aset.', 'error'); return; }
+
+  const origin = window.location.origin + window.location.pathname;
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Daftar Aset');
+
+  ws.mergeCells('A1:G1');
+  ws.getCell('A1').value = 'DAFTAR ASET';
+  ws.getCell('A1').font = { bold: true, size: 14 };
+  ws.getCell('A1').alignment = { horizontal: 'center' };
+  ws.mergeCells('A2:G2');
+  ws.getCell('A2').value = 'Tanggal Export: ' + new Date().toLocaleDateString('id-ID');
+  ws.getCell('A2').alignment = { horizontal: 'center' };
+
+  const header = ws.getRow(4);
+  ['No', 'Nama Aset', 'Kode Aset', 'Kode Barang', 'No. Inventaris', 'Tahun Aset', 'QR Code'].forEach((h, i) => {
+    const c = header.getCell(i + 1);
+    c.value = h;
+    c.font = { bold: true };
+    c.alignment = { horizontal: 'center' };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+  });
+
+  allUnits.forEach((u, i) => {
+    const row = ws.getRow(5 + i);
+    row.getCell(1).value = i + 1;
+    row.getCell(1).alignment = { horizontal: 'center' };
+    row.getCell(2).value = u.nama_barang || '-';
+    row.getCell(3).value = u.kode_aset || '-';
+    row.getCell(3).alignment = { horizontal: 'center' };
+    row.getCell(4).value = u.kodebarang || '-';
+    row.getCell(4).alignment = { horizontal: 'center' };
+    row.getCell(5).value = u.nomorinventaris || '-';
+    row.getCell(5).alignment = { horizontal: 'center' };
+    row.getCell(6).value = u.tahunperolehan || '-';
+    row.getCell(6).alignment = { horizontal: 'center' };
+    [1, 2, 3, 4, 5, 6, 7].forEach(ci => {
+      row.getCell(ci).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    });
+    row.height = 136;
+
+    const payload = origin + '?qr=SIMAPO-' + u.id;
+    const qr = QR(0, 'M');
+    qr.addData(payload);
+    qr.make();
+    const dataUrl = qr.createDataURL(8, 10);
+    const imgId = wb.addImage({ base64: dataUrl.split(',')[1], extension: 'png' });
+    ws.addImage(imgId, { tl: { col: 6.1, row: 4 + i + 0.15 }, ext: { width: 132, height: 132 } });
+  });
+
+  ws.columns = [
+    { key: 'no', width: 6 },
+    { key: 'nama', width: 32 },
+    { key: 'kodeaset', width: 34 },
+    { key: 'kode', width: 22 },
+    { key: 'inv', width: 24 },
+    { key: 'tahun', width: 12 },
+    { key: 'qr', width: 24 }
+  ];
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'Daftar_Aset_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+  link.click();
+  URL.revokeObjectURL(link.href);
+  showToast('Excel berhasil diunduh (' + allUnits.length + ' unit)', 'success');
+};
+
 window.toggleUnitList = async function(barangId, btnEl) {
   const row = document.getElementById('unit-list-' + barangId);
   if (row) {
@@ -824,7 +1071,7 @@ window.generateQRCode = async function(unitasetId, label) {
     const qr = qrcode(0, 'M');
     qr.addData(payload);
     qr.make();
-    const canvas = qr.createImgTag(6, 8);
+    const canvas = qr.createImgTag(8, 10).replace('<img ', '<img style="max-width:300px;height:auto;width:100%;" ');
 
     // Simpan ke API
     await apiFetch(P.simapoQRUpdate, {
@@ -846,8 +1093,6 @@ window.generateQRCode = async function(unitasetId, label) {
           </button>
         </div>
       `,
-      background: '#1a1d21',
-      color: '#fff',
       confirmButtonText: 'Tutup',
       didClose: () => { window.loadAdminSimapoMaster(true); }
     });
@@ -860,11 +1105,16 @@ window.downloadQRImage = function(payload, label) {
   const qr = qrcode(0, 'M');
   qr.addData(payload);
   qr.make();
-  const dataUrl = qr.createDataURL(6, 8);
+  const dataUrl = qr.createDataURL(8, 10);
   const link = document.createElement('a');
   link.download = `QR-${label.replace(/[^a-zA-Z0-9-]/g,'_')}.png`;
   link.href = dataUrl;
   link.click();
+};
+
+// ponytail: wrapper tipis — QR button di master list flat panggil generateQRCode langsung.
+window.generateQRSingle = function(unitasetId, _nama, label) {
+  window.generateQRCode(unitasetId, label || unitasetId);
 };
 
 window.generateAllQR = async function(barangId) {
@@ -1626,7 +1876,7 @@ window.viewQRCode = async function(unitasetId) {
       const qr = qrcode(0, 'M');
       qr.addData(unit.qrcode);
       qr.make();
-      const canvas = qr.createImgTag(6, 8);
+      const canvas = qr.createImgTag(8, 10).replace('<img ', '<img style="max-width:300px;height:auto;width:100%;" ');
       Swal.fire({
         title: `QR: ${unit.nomorinventaris || unit.id}`,
         html: `
@@ -1635,8 +1885,6 @@ window.viewQRCode = async function(unitasetId) {
             <div style="font-size:11px;color:var(--muted);word-break:break-all;">${unit.qrcode}</div>
           </div>
         `,
-        background: '#1a1d21',
-        color: '#fff',
         confirmButtonText: 'Tutup'
       });
       return;

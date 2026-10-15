@@ -21,8 +21,9 @@
       if (_todayLoading) return;
       _todayLoading = true;
       const el = $('todayList');
-      if (!el) return;
-      el.innerHTML = `<div class="shimmer" style="height:32px;border-radius:8px;margin-bottom:5px"></div>
+      // Kartu "Log Absen Hari Ini" dihapus dari UI. Fetch & logika (_todayRows,
+      // status tombol absen) tetap jalan; hanya render DOM yang dilewati.
+      if (el) el.innerHTML = `<div class="shimmer" style="height:32px;border-radius:8px;margin-bottom:5px"></div>
                   <div class="shimmer" style="height:32px;border-radius:8px"></div>`;
       try {
         const todayStr = fmtD(nowWITA());
@@ -41,30 +42,30 @@
         });
         renderTodayHistory(rowsMut);
       } catch (e) {
-        el.innerHTML = `<div class="today-empty">🔌 Gagal memuat. Pastikan n8n aktif.</div>`;
+        el.innerHTML = `<div class="today-empty"><i class="fas fa-plug"></i> Gagal memuat. Pastikan n8n aktif.</div>`;
       } finally {
         _todayLoading = false;
       }
     }
     function getTodayBadge(jenis) {
       const j = (jenis || '').toUpperCase().trim();
-      if (j === 'MASUK') return { cls: 'tb-masuk', icon: '🟢', lbl: 'MASUK' };
-      if (j === 'PULANG') return { cls: 'tb-pulang', icon: '🔵', lbl: 'PULANG' };
-      if (j === 'PULANG LUAR') return { cls: 'tb-pulang-luar', icon: '🏃', lbl: 'PULANG LAPANGAN' };
-      if (j.includes('LUAR') && j.includes('MASUK')) return { cls: 'tb-luar', icon: '⚠️', lbl: 'LUAR JAM MASUK' };
-      if (j.includes('LUAR') && j.includes('PULANG')) return { cls: 'tb-luar', icon: '🏃', lbl: 'PULANG CEPAT' };
-      if (j.includes('LUAR')) return { cls: 'tb-luar', icon: '⚠️', lbl: 'DI LUAR JAM' };
-      if (j === 'IZIN') return { cls: 'tb-izin', icon: '🙏', lbl: 'KETERANGAN' };
-      if (j === 'SAKIT') return { cls: 'tb-sakit', icon: '🤒', lbl: 'SAKIT' };
-      if (j === 'TUGAS') return { cls: 'tb-tugas', icon: '💼', lbl: 'TUGAS' };
-      return { cls: 'tb-luar', icon: '📋', lbl: jenis || '—' };
+      if (j === 'MASUK') return { cls: 'tb-masuk', icon: '<i class="fas fa-circle"></i>', lbl: 'MASUK' };
+      if (j === 'PULANG') return { cls: 'tb-pulang', icon: '<i class="fas fa-home"></i>', lbl: 'PULANG' };
+      if (j === 'PULANG LUAR') return { cls: 'tb-pulang-luar', icon: '<i class="fas fa-running"></i>', lbl: 'PULANG LAPANGAN' };
+      if (j.includes('LUAR') && j.includes('MASUK')) return { cls: 'tb-luar', icon: '<i class="fas fa-exclamation-triangle"></i>', lbl: 'LUAR JAM MASUK' };
+      if (j.includes('LUAR') && j.includes('PULANG')) return { cls: 'tb-luar', icon: '<i class="fas fa-running"></i>', lbl: 'PULANG CEPAT' };
+      if (j.includes('LUAR')) return { cls: 'tb-luar', icon: '<i class="fas fa-exclamation-triangle"></i>', lbl: 'DI LUAR JAM' };
+      if (j === 'IZIN') return { cls: 'tb-izin', icon: '<i class="fas fa-file-signature"></i>', lbl: 'KETERANGAN' };
+      if (j === 'SAKIT') return { cls: 'tb-sakit', icon: '<i class="fas fa-user-sick"></i>', lbl: 'SAKIT' };
+      if (j === 'TUGAS') return { cls: 'tb-tugas', icon: '<i class="fas fa-briefcase"></i>', lbl: 'TUGAS' };
+      return { cls: 'tb-luar', icon: '<i class="fas fa-clipboard-list"></i>', lbl: jenis || '—' };
     }
     function renderTodayHistory(rows) {
       const el = $('todayList');
       // Simpan ke global untuk dipakai cek masuk di pulang luar
       window._todayRows = rows;
       if (!rows.length) {
-        el.innerHTML = `<div class="today-empty">📭 Belum ada absen hari ini</div>`;
+        if (el) el.innerHTML = `<div class="today-empty"><i class="fas fa-envelope-open-text"></i> Belum ada absen hari ini</div>`;
         // Pastikan tombol aktif jika belum absen sama sekali
         const btn = $('btnAbsen');
         if (btn && !btn.dataset.manualDisabled) {
@@ -74,7 +75,7 @@
         return;
       }
 
-      el.innerHTML = rows.map(r => {
+      if (el) el.innerHTML = rows.map(r => {
         const jenis = getField(r, 'Jenis Absen', 'jenis', 'Jenis') || '';
         const jam = getField(r, 'Jam', 'jam') || '—';
         const lokasi = getField(r, 'Lokasi', 'lokasi') || '—';
@@ -82,7 +83,7 @@
         return `<div class="today-row">
       <span class="today-badge ${cls}">${icon} ${lbl}</span>
       <span class="today-jam">${jam}</span>
-      <span class="today-lokasi">📍 ${lokasi}</span>
+      <span class="today-lokasi"><i class="fas fa-map-marker-alt"></i> ${lokasi}</span>
     </div>`;
       }).join('');
 
@@ -123,19 +124,19 @@
         const nmKet = (getField(ketRow, 'Jenis Absen', 'jenis', 'Jenis') || 'KETERANGAN').toUpperCase().trim();
         btn.disabled = true;
         btn.dataset.manualDisabled = '1';
-        setBtnL('btnAbsen', false, `🚫 Status: ${nmKet}`);
+        setBtnL('btnAbsen', false, `<i class="fas fa-ban"></i> Status: ${nmKet}`);
         
         // Disable tombol pulang luar juga jika ada
         const bpl = $('btnPulangLuar');
         if (bpl) {
           bpl.disabled = true;
           const tSpan = $('btnPulangLuarText');
-          if (tSpan) tSpan.textContent = `🚫 Status: ${nmKet}`;
+          if (tSpan) tSpan.innerHTML = `<i class="fas fa-ban"></i> Status: ${nmKet}`;
         }
       } else if (sudahAbsen) {
         btn.disabled = true;
         btn.dataset.manualDisabled = '1';
-        setBtnL('btnAbsen', false, '✅ Sudah Absen');
+        setBtnL('btnAbsen', false, '<i class="fas fa-check"></i> Sudah Absen');
       } else {
         // Belum absen di periode ini — aktifkan tombol
         btn.disabled = false;
@@ -202,7 +203,7 @@
       el.className = `result-card r-${type} show`;
       el.style.display = 'flex'; // Force show
       const iEl = $(iid), tEl = $(tid), mEl = $(mid);
-      if (iEl) iEl.textContent = icon;
+      if (iEl) iEl.innerHTML = icon;
       if (tEl) tEl.textContent = title;
       if (mEl) mEl.textContent = msg;
     }
@@ -227,10 +228,10 @@
       const clb = $('clockLocBadge');
       if (clb) {
         if (lokasi) {
-          clb.textContent = '📍 ' + lokasi;
+          clb.innerHTML = '<i class="fas fa-map-marker-alt"></i> ' + lokasi;
           clb.className = 'clock-loc-badge';
         } else {
-          clb.textContent = '📍 Mendeteksi lokasi...';
+          clb.innerHTML = '<i class="fas fa-map-marker-alt"></i> Mendeteksi lokasi...';
           clb.className = 'clock-loc-badge unknown';
         }
       }
@@ -372,6 +373,24 @@
         }
       });
     }
+
+    /**
+     * Ubah URL Google Drive apa pun (uc?export=view&id=, /file/d/<id>/, thumbnail?id=)
+     * jadi thumbnail yang MASIH bisa di-embed <img>. Google menghentikan embed
+     * `uc?export=view` sejak Jan 2024, jadi URL lama dirender kosong tanpa ini.
+     * URL non-Drive dan data: dilewatkan apa adanya.
+     * @param {string} url
+     * @param {number} [size=400] - lebar px (sz=w<size>)
+     * @returns {string}
+     */
+    function driveImgUrl(url, size = 400) {
+      const s = String(url ?? '').trim();
+      if (!s || s.startsWith('data:')) return s;
+      const m = s.match(/[?&]id=([a-zA-Z0-9_-]+)/) || s.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w${size}` : s;
+    }
+    window.driveImgUrl = driveImgUrl;
+
     /**
      * Tampilkan toast notification menggunakan SweetAlert2.
      * @param {string} msg - Pesan yang ditampilkan
@@ -437,3 +456,100 @@
       return null;
     }
     window.getInstansiData = getInstansiData;
+
+    /* ════ CUSTOM SEARCHABLE DROPDOWN (generic) ════
+       Select asli disembunyikan (display:none), tetap jadi value source —
+       pemanggil lama baca .value / tulis .innerHTML seperti biasa.
+       List di-rebuild dari opsi select SETIAP dibuka, jadi otomatis sinkron
+       saat loadBidangList / loadRekap menulis ulang isi select.
+       Pick → dispatch Event('change') supaya onchange inline lama tetap jalan.
+       ponytail: tutup via klik luar pakai listener sendiri yang RESTORE label —
+       listener global di simapo-ext.js hanya remove('open') tanpa restore. */
+    function _ddEsc(s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function _ddItemsHtml(selId, q) {
+      const sel = document.getElementById(selId);
+      if (!sel) return '';
+      q = String(q || '').toLowerCase().trim();
+      const cur = String(sel.value == null ? '' : sel.value);
+      let html = '';
+      for (const opt of sel.options) {
+        if (q && opt.text.toLowerCase().indexOf(q) === -1) continue;
+        html += '<div class="dropdown-item' + (String(opt.value) === cur ? ' selected' : '') +
+          '" data-v="' + _ddEsc(opt.value) + '" onclick="window._ddPick(\'' + selId + '\', this)">' +
+          '<span class="item-name">' + _ddEsc(opt.text) + '</span></div>';
+      }
+      return html || '<div class="dropdown-item" style="color:var(--muted)">Tidak ditemukan</div>';
+    }
+    window._ddItemsHtml = _ddItemsHtml;
+
+    function syncSearchDdLabel(selId) {
+      const sel = document.getElementById(selId);
+      const wrap = document.getElementById(selId + 'Dd');
+      if (!sel || !wrap) return;
+      const opt = sel.options[sel.selectedIndex];
+      const input = wrap.querySelector('input');
+      if (input) input.value = opt ? opt.text : '';
+    }
+    window.syncSearchDdLabel = syncSearchDdLabel;
+
+    window._ddOpen = function (selId) {
+      const wrap = document.getElementById(selId + 'Dd');
+      if (!wrap) return;
+      const input = wrap.querySelector('input');
+      // saat buka: kosongkan teks pencarian; label lama dipulihkan saat tutup
+      if (input) input.value = '';
+      wrap.querySelector('.dropdown-list-wrap').innerHTML = _ddItemsHtml(selId, '');
+      wrap.classList.add('open');
+    };
+    window._ddFilter = function (selId, q) {
+      const wrap = document.getElementById(selId + 'Dd');
+      if (!wrap) return;
+      wrap.querySelector('.dropdown-list-wrap').innerHTML = _ddItemsHtml(selId, q);
+      wrap.classList.add('open');
+    };
+    window._ddPick = function (selId, item) {
+      const sel = document.getElementById(selId);
+      const wrap = document.getElementById(selId + 'Dd');
+      if (!sel || !wrap) return;
+      sel.value = item.getAttribute('data-v');
+      wrap.classList.remove('open');
+      syncSearchDdLabel(selId);
+      sel.dispatchEvent(new Event('change')); // aktifkan onchange inline lama
+    };
+
+    function makeSearchDd(selId, opts) {
+      opts = opts || {};
+      const sel = document.getElementById(selId);
+      if (!sel || sel.dataset.ddReady) return;
+      sel.dataset.ddReady = '1';
+      sel.style.display = 'none';
+      const wrap = document.createElement('div');
+      wrap.className = 'custom-search-dropdown';
+      wrap.id = selId + 'Dd';
+      wrap.dataset.ddSel = selId;
+      // ponytail: static = list ikut alur dokumen (untuk dalam modal Swal yang overflow:auto memotong absolute)
+      const listStyle = opts.static ? ' style="position:relative;top:auto;left:auto;right:auto;max-height:170px;"' : '';
+      wrap.innerHTML =
+        '<div class="dropdown-trigger"' + (opts.h ? ' style="height:' + opts.h + 'px"' : '') +
+          ' onclick="window._ddOpen(\'' + selId + '\')">' +
+          '<i class="fas fa-search search-icon" aria-hidden="true"></i>' +
+          '<input type="text" autocomplete="off" placeholder="' + _ddEsc(opts.ph || 'Pilih...') + '" ' +
+            'onfocus="window._ddOpen(\'' + selId + '\')" oninput="window._ddFilter(\'' + selId + '\', this.value)">' +
+          '<i class="fas fa-chevron-down arrow-icon" aria-hidden="true"></i>' +
+        '</div>' +
+        '<div class="dropdown-list-wrap"' + listStyle + '></div>';
+      sel.parentNode.insertBefore(wrap, sel);
+      syncSearchDdLabel(selId);
+    }
+    window.makeSearchDd = makeSearchDd;
+
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll('.custom-search-dropdown.open').forEach(function (el) {
+        if (!el.contains(e.target)) {
+          el.classList.remove('open');
+          if (el.dataset.ddSel) syncSearchDdLabel(el.dataset.ddSel);
+        }
+      });
+    });

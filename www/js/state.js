@@ -11,15 +11,15 @@ function _updateModelProgress(idx, pctPerStep) {
   if (bar) bar.style.width = _modelLoadPct + '%';
   if (per) per.textContent = _modelLoadPct + '%';
   if (st) { st.style.color = 'var(--white)'; st.style.fontWeight = '700'; }
-  if (ic) ic.textContent = '⏳';
+  if (ic) ic.innerHTML = '<i class="fas fa-hourglass-half"></i>';
   // Mark previous as done
   for (let i = 0; i < idx; i++) {
     const sic = $(`mlStep${i}Icon`), sst = $(`mlStep${i}`);
-    if (sic) sic.textContent = '✅';
+    if (sic) sic.innerHTML = '<i class="fas fa-check"></i>';
     if (sst) { sst.style.color = 'var(--success)'; sst.style.opacity = '1'; }
   }
   if (_modelLoadPct >= 100) {
-    if (ic) ic.textContent = '✅';
+    if (ic) ic.innerHTML = '<i class="fas fa-check"></i>';
     if (st) st.style.color = 'var(--success)';
     if ($('mlTitle')) $('mlTitle').textContent = 'Sistem AI Siap';
     if ($('mlHint')) $('mlHint').textContent = 'Semua model berhasil dimuat.';

@@ -60,7 +60,7 @@
       finally { 
         _isLogLoading = false;
         if (btn) btn.disabled = false; 
-        const s = $('rIcon2'); if (s) s.outerHTML = '<span id="rIcon2">🔄</span>'; 
+        const s = $('rIcon2'); if (s) s.outerHTML = '<span id="rIcon2"><i class="fas fa-sync"></i></span>'; 
       }
     }
     let currentLogLimit = 10;
@@ -86,20 +86,20 @@
 
     function getLC(j) {
       const x = (j || '').toUpperCase().trim();
-      if (x === 'MASUK') return { cls: 'l-masuk', icon: '🟢', lbl: 'MASUK' };
-      if (x === 'PULANG') return { cls: 'l-pulang', icon: '🔵', lbl: 'PULANG' };
-      if (x === 'PULANG LUAR') return { cls: 'l-pulang-luar', icon: '🏃', lbl: 'PULANG LAPANGAN' };
-      if (x.includes('LUAR') && x.includes('MASUK')) return { cls: 'l-luar', icon: '⚠️', lbl: 'LUAR JAM MASUK' };
-      if (x.includes('LUAR') && x.includes('PULANG')) return { cls: 'l-luar', icon: '🏃', lbl: 'PULANG CEPAT' };
-      if (x.includes('LUAR')) return { cls: 'l-luar', icon: '⚠️', lbl: 'DI LUAR JAM' };
-      if (x === 'IZIN') return { cls: 'l-izin', icon: '🙏', lbl: 'KETERANGAN' };
-      if (x === 'SAKIT') return { cls: 'l-sakit', icon: '🤒', lbl: 'SAKIT' };
-      if (x === 'TUGAS') return { cls: 'l-tugas', icon: '💼', lbl: 'TUGAS' };
-      if (x === 'IZIN PENDING') return { cls: 'l-pending', icon: '⏳', lbl: 'IZIN (Menunggu)' };
-      if (x === 'SAKIT PENDING') return { cls: 'l-pending', icon: '⏳', lbl: 'SAKIT (Menunggu)' };
-      if (x === 'TUGAS PENDING') return { cls: 'l-pending', icon: '⏳', lbl: 'TUGAS (Menunggu)' };
-      if (x === 'TANPA BERITA') return { cls: 'l-alpa', icon: '❌', lbl: 'TANPA BERITA' };
-      return { cls: 'l-pulang', icon: '📋', lbl: j || '—' };
+      if (x === 'MASUK') return { cls: 'l-masuk', icon: '<i class="fas fa-circle"></i>', lbl: 'MASUK' };
+      if (x === 'PULANG') return { cls: 'l-pulang', icon: '<i class="fas fa-home"></i>', lbl: 'PULANG' };
+      if (x === 'PULANG LUAR') return { cls: 'l-pulang-luar', icon: '<i class="fas fa-running"></i>', lbl: 'PULANG LAPANGAN' };
+      if (x.includes('LUAR') && x.includes('MASUK')) return { cls: 'l-luar', icon: '<i class="fas fa-exclamation-triangle"></i>', lbl: 'LUAR JAM MASUK' };
+      if (x.includes('LUAR') && x.includes('PULANG')) return { cls: 'l-luar', icon: '<i class="fas fa-running"></i>', lbl: 'PULANG CEPAT' };
+      if (x.includes('LUAR')) return { cls: 'l-luar', icon: '<i class="fas fa-exclamation-triangle"></i>', lbl: 'DI LUAR JAM' };
+      if (x === 'IZIN') return { cls: 'l-izin', icon: '<i class="fas fa-file-signature"></i>', lbl: 'KETERANGAN' };
+      if (x === 'SAKIT') return { cls: 'l-sakit', icon: '<i class="fas fa-user-sick"></i>', lbl: 'SAKIT' };
+      if (x === 'TUGAS') return { cls: 'l-tugas', icon: '<i class="fas fa-briefcase"></i>', lbl: 'TUGAS' };
+      if (x === 'IZIN PENDING') return { cls: 'l-pending', icon: '<i class="fas fa-hourglass-half"></i>', lbl: 'IZIN (Menunggu)' };
+      if (x === 'SAKIT PENDING') return { cls: 'l-pending', icon: '<i class="fas fa-hourglass-half"></i>', lbl: 'SAKIT (Menunggu)' };
+      if (x === 'TUGAS PENDING') return { cls: 'l-pending', icon: '<i class="fas fa-hourglass-half"></i>', lbl: 'TUGAS (Menunggu)' };
+      if (x === 'TANPA BERITA') return { cls: 'l-alpa', icon: '<i class="fas fa-times"></i>', lbl: 'TANPA BERITA' };
+      return { cls: 'l-pulang', icon: '<i class="fas fa-clipboard-list"></i>', lbl: j || '—' };
     }
     function renderLog(logs, keepLimit = false) {
       if (!keepLimit) {
@@ -109,7 +109,7 @@
         logs = currentRenderedLogs;
       }
       const el = $('logList');
-      if (!logs?.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Belum ada data</div><div class="empty-sub">Data muncul setelah Anda absen</div></div>`; return; }
+      if (!logs?.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-envelope-open-text"></i></div><div class="empty-text">Belum ada data</div><div class="empty-sub">Data muncul setelah Anda absen</div></div>`; return; }
 
       // Group by tanggal
       const byDate = {};
@@ -201,20 +201,20 @@
         const cepatMnt = (mPulang !== null && mPulangBatas !== null && mPulang < mPulangBatas) ? mPulangBatas - mPulang : 0;
 
         let masukLabel, masukColor, masukBg, masukIcon;
-        if (rIzin) { masukLabel = 'Izin'; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.12)'; masukIcon = '🙏'; }
-        else if (rSakit) { masukLabel = 'Sakit'; masukColor = 'var(--danger)'; masukBg = 'rgba(239,68,68,.12)'; masukIcon = '🤒'; }
-        else if (rTugas) { masukLabel = 'Tugas/DL'; masukColor = '#8b5cf6'; masukBg = 'rgba(139,92,246,.12)'; masukIcon = '💼'; }
-        else if (isAlpa) { masukLabel = 'Tanpa Berita'; masukColor = 'var(--danger)'; masukBg = 'rgba(239,68,68,.08)'; masukIcon = '❌'; }
+        if (rIzin) { masukLabel = 'Izin'; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.12)'; masukIcon = '<i class="fas fa-file-signature"></i>'; }
+        else if (rSakit) { masukLabel = 'Sakit'; masukColor = 'var(--danger)'; masukBg = 'rgba(239,68,68,.12)'; masukIcon = '<i class="fas fa-user-sick"></i>'; }
+        else if (rTugas) { masukLabel = 'Tugas/DL'; masukColor = '#8b5cf6'; masukBg = 'rgba(139,92,246,.12)'; masukIcon = '<i class="fas fa-briefcase"></i>'; }
+        else if (isAlpa) { masukLabel = 'Tanpa Berita'; masukColor = 'var(--danger)'; masukBg = 'rgba(239,68,68,.08)'; masukIcon = '<i class="fas fa-times"></i>'; }
         else if (!jamMasuk) { masukLabel = 'Tidak Masuk'; masukColor = 'var(--muted)'; masukBg = 'rgba(255,255,255,.04)'; masukIcon = '—'; }
-        else if (terlambatMnt > 0) { masukLabel = `+${terlambatMnt}m`; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.08)'; masukIcon = '⏰'; }
-        else { masukLabel = 'Tepat Waktu'; masukColor = 'var(--success)'; masukBg = 'rgba(34,197,94,.08)'; masukIcon = '✅'; }
+        else if (terlambatMnt > 0) { masukLabel = `+${terlambatMnt}m`; masukColor = 'var(--warning)'; masukBg = 'rgba(245,158,11,.08)'; masukIcon = '<i class="fas fa-clock"></i>'; }
+        else { masukLabel = 'Tepat Waktu'; masukColor = 'var(--success)'; masukBg = 'rgba(34,197,94,.08)'; masukIcon = '<i class="fas fa-check"></i>'; }
 
         let pulangLabel, pulangColor, pulangIcon;
         if (isKet) { pulangLabel = '—'; pulangColor = 'var(--muted)'; pulangIcon = '—'; }
-        else if (!jamPulang) { pulangLabel = 'Belum Absen'; pulangColor = 'var(--warning)'; pulangIcon = '⏳'; }
-        else if (cepatMnt > 0) { pulangLabel = `-${cepatMnt}m`; pulangColor = '#f97316'; pulangIcon = '🏃'; }
-        else if (rPulang && (getField(rPulang, 'Jenis Absen', 'jenis', 'Jenis') || '').toUpperCase() === 'PULANG LUAR') { pulangLabel = 'Lapangan'; pulangColor = '#f59e0b'; pulangIcon = '🏃'; }
-        else { pulangLabel = 'Tepat'; pulangColor = 'var(--info)'; pulangIcon = '🔵'; }
+        else if (!jamPulang) { pulangLabel = 'Belum Absen'; pulangColor = 'var(--warning)'; pulangIcon = '<i class="fas fa-hourglass-half"></i>'; }
+        else if (cepatMnt > 0) { pulangLabel = `-${cepatMnt}m`; pulangColor = '#f97316'; pulangIcon = '<i class="fas fa-running"></i>'; }
+        else if (rPulang && (getField(rPulang, 'Jenis Absen', 'jenis', 'Jenis') || '').toUpperCase() === 'PULANG LUAR') { pulangLabel = 'Lapangan'; pulangColor = '#f59e0b'; pulangIcon = '<i class="fas fa-running"></i>'; }
+        else { pulangLabel = 'Tepat'; pulangColor = 'var(--info)'; pulangIcon = '<i class="fas fa-circle"></i>'; }
 
         const cardBorder = isKet ? 'rgba(139,92,246,.3)'
           : isAlpa ? 'rgba(239,68,68,.3)'
@@ -247,21 +247,21 @@
       <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px 6px">
         <div>
           <div style="font-size:10px;font-weight:800;color:var(--white)">${tglLabel}</div>
-          ${periodeNama ? `<div style="font-size:8px;font-weight:700;color:#a78bfa;margin-top:2px">🌙 ${periodeNama}</div>` : ''}
-          ${isLibur ? `<div style="font-size:8px;font-weight:700;color:${isLiburNasional ? '#f87171' : 'var(--muted)'};margin-top:2px;background:${isLiburNasional ? 'rgba(239,68,68,.10)' : 'rgba(255,255,255,.05)'};border:1px solid ${isLiburNasional ? 'rgba(239,68,68,.25)' : 'rgba(255,255,255,.1)'};border-radius:5px;padding:1px 6px;display:inline-block">${isLiburNasional ? '🎉' : '📅'} ${namaLibur}</div>` : ''}
+          ${periodeNama ? `<div style="font-size:8px;font-weight:700;color:#a78bfa;margin-top:2px"><i class="fas fa-moon"></i> ${periodeNama}</div>` : ''}
+          ${isLibur ? `<div style="font-size:8px;font-weight:700;color:${isLiburNasional ? '#f87171' : 'var(--muted)'};margin-top:2px;background:${isLiburNasional ? 'rgba(239,68,68,.10)' : 'rgba(255,255,255,.05)'};border:1px solid ${isLiburNasional ? 'rgba(239,68,68,.25)' : 'rgba(255,255,255,.1)'};border-radius:5px;padding:1px 6px;display:inline-block">${isLiburNasional ? '<i class="fas fa-glass-cheers"></i>' : '<i class="fas fa-calendar"></i>'} ${namaLibur}</div>` : ''}
         </div>
-        <div style="font-size:16px">${masukIcon}</div>
+        <div style="font-size:16px;color:${masukColor}">${masukIcon}</div>
       </div>
 
       ${isKet ? `
       <!-- ── KETERANGAN: satu kotak penuh ── -->
       <div style="margin:0 10px 8px;background:${masukBg};border:1px solid ${masukColor}44;border-radius:10px;padding:10px 12px">
         <div style="display:flex;align-items:center;gap:10px">
-          <div style="font-size:22px;line-height:1">${masukIcon}</div>
+          <div style="font-size:22px;line-height:1;color:${masukColor}">${masukIcon}</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:12px;font-weight:800;color:${masukColor}">${masukLabel}</div>
             <div style="font-size:8px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">${ketJenis || 'Keterangan'}</div>
-            ${ketTglRange ? `<div style="font-size:8.5px;color:var(--muted);margin-top:4px">📅 ${ketTglRange}</div>` : ''}
+            ${ketTglRange ? `<div style="font-size:8.5px;color:var(--muted);margin-top:4px"><i class="fas fa-calendar"></i> ${ketTglRange}</div>` : ''}
             ${ketTeks ? `<div style="font-size:9px;color:rgba(255,255,255,.75);margin-top:5px;line-height:1.5;background:rgba(0,0,0,.2);border-radius:6px;padding:5px 8px;white-space:pre-wrap">${ketTeks}</div>` : ''}
           </div>
         </div>
@@ -269,13 +269,13 @@
       <!-- ── NORMAL: 2 kotak masuk / pulang ── -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 10px 8px">
         <div style="background:${masukBg};border:1px solid ${masukColor}44;border-radius:9px;padding:7px 9px">
-          <div style="font-size:7.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">🟢 Jam Masuk</div>
+          <div style="font-size:7.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px"><i class="fas fa-circle" style="color:${masukColor}"></i> Jam Masuk</div>
           <div style="font-size:18px;font-family:'JetBrains Mono',monospace;font-weight:800;color:${masukColor};line-height:1">${jamMasuk ? jamMasuk.slice(0,5) : '—:—'}</div>
           <div style="font-size:9px;color:${masukColor};font-weight:700;margin-top:2px">${masukLabel}</div>
           <div style="font-size:7.5px;color:var(--muted);margin-top:3px;opacity:.7">Batas ≤ ${jmBatas}${periodeNama ? '' : ' (Global)'}</div>
         </div>
         <div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:9px;padding:7px 9px">
-          <div style="font-size:7.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">🔵 Jam Pulang</div>
+          <div style="font-size:7.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px"><i class="fas fa-circle" style="color:${pulangColor}"></i> Jam Pulang</div>
           <div style="font-size:18px;font-family:'JetBrains Mono',monospace;font-weight:800;color:${pulangColor};line-height:1">${jamPulang ? jamPulang.slice(0,5) : '—:—'}</div>
           <div style="font-size:9px;color:${pulangColor};font-weight:700;margin-top:2px">${pulangIcon} ${pulangLabel}</div>
           <div style="font-size:7.5px;color:var(--muted);margin-top:3px;opacity:.7">Batas ≥ ${jpBatas}${periodeNama ? '' : ' (Global)'}</div>
@@ -285,7 +285,7 @@
       <!-- Footer: lokasi + koordinat maps -->
       <div style="padding:0 10px 9px;display:flex;flex-direction:column;gap:4px">
         <div style="font-size:9px;color:var(--muted);display:flex;align-items:center;gap:5px">
-          <span>📍</span>
+          <span><i class="fas fa-map-marker-alt"></i></span>
           <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${lokasi}</span>
         </div>
         ${_hasGps ? `<div style="display:flex;gap:5px;flex-wrap:wrap">
@@ -311,7 +311,7 @@
             <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 15px 0 25px;">
               <button class="btn-pagination" onclick="window.loadMoreLogs()">
                 <span>Lihat 10 Lagi</span>
-                <span style="font-size: 14px;">⬇️</span>
+                <span style="font-size: 14px;"><i class="fas fa-arrow-down"></i></span>
               </button>
               
               <button class="btn-pagination-all" onclick="window.loadAllLogs()">
@@ -323,7 +323,7 @@
          html += `
             <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 15px 0 25px;">
               <button class="btn-pagination-all" onclick="window.collapseLogs()">
-                <span style="font-size: 14px; margin-right:4px;">⬆️</span> Sembunyikan (Tampilkan 10 Saja)
+                <span style="font-size: 14px; margin-right:4px;"><i class="fas fa-arrow-up"></i></span> Sembunyikan (Tampilkan 10 Saja)
               </button>
             </div>
          `;
@@ -483,3 +483,163 @@
       });
       renderLog(filtered);
     }
+
+/* ════ RIWAYAT KEHADIRAN MINGGU INI (widget menu utama) ════ */
+// ponytail: 7 sel Senin–Minggu dari /api/log?dari&sampai, tanpa endpoint baru.
+const _WEEK_NAMA = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+const _WEEK_FULL = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+const _WEEK_BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+// Jenis keterangan → { key, icon, label }. Ikon disamakan dengan ikon kehadiran di
+// Rekap (izin/sakit/tugas/tubel/cuti/TB) supaya riwayat minggu & rekap satu bahasa.
+const _WEEK_KET_MAP = {
+  'IZIN':          { key: 'izin',  icon: 'fa-file-signature', label: 'Izin' },
+  'IZIN PENDING':  { key: 'izin',  icon: 'fa-hourglass-half', label: 'Izin (Menunggu)' },
+  'SAKIT':         { key: 'sakit', icon: 'fa-user-sick',      label: 'Sakit' },
+  'SAKIT PENDING': { key: 'sakit', icon: 'fa-hourglass-half', label: 'Sakit (Menunggu)' },
+  'TUGAS':         { key: 'tugas', icon: 'fa-briefcase',      label: 'Tugas/DL' },
+  'DL':            { key: 'tugas', icon: 'fa-briefcase',      label: 'Tugas/DL' },
+  'TUGAS PENDING': { key: 'tugas', icon: 'fa-hourglass-half', label: 'Tugas (Menunggu)' },
+  'TUBEL':         { key: 'tugas', icon: 'fa-graduation-cap', label: 'Tubel' },
+  'CUTI':          { key: 'cuti',  icon: 'fa-umbrella-beach', label: 'Cuti' },
+  'TANPA BERITA':  { key: 'alpha', icon: 'fa-times',          label: 'Tanpa Berita' },
+};
+let _weekRange = [];   // Date[] Senin..Minggu
+let _weekByDate = {};  // 'YYYY-MM-DD' -> rows[]
+
+function _menit(jam) { const m = String(jam || '').match(/^(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : 0; }
+
+function _weekDates() {
+  const n = nowWITA();
+  const back = (n.getDay() + 6) % 7;               // hari sejak Senin
+  const mon = new Date(n); mon.setDate(n.getDate() - back);
+  const out = [];
+  for (let i = 0; i < 7; i++) { const d = new Date(mon); d.setDate(mon.getDate() + i); out.push(d); }
+  return out;
+}
+
+// Ringkas 1 hari → { key, icon, label, det, ket }
+// Mencakup SEMUA jenis absen di "Log_Absen":
+//   MASUK + DI LUAR JAM MASUK                 → hadir / telat
+//   PULANG + PULANG LUAR + DI LUAR JAM PULANG → jam pulang (lapangan bila PULANG LUAR)
+//   IZIN/SAKIT/TUGAS/DL/TUBEL/CUTI/TANPA BERITA (+ varian PENDING) → keterangan
+// Ikon keterangan & jam disamakan dengan ikon kehadiran di Rekap.
+function _weekDayStatus(dStr, isToday, isFuture) {
+  const rows = _weekByDate[dStr] || [];
+  const jenis = r => String(getField(r, 'Jenis Absen', 'jenis', 'Jenis') || '').toUpperCase().trim();
+  const rMasuk  = rows.find(r => jenis(r) === 'MASUK' || jenis(r) === 'DI LUAR JAM MASUK');
+  const rPulang = rows.find(r => jenis(r).includes('PULANG'));
+  const ketRow  = rows.find(r => _WEEK_KET_MAP[jenis(r)]);
+  const jk = ketRow ? jenis(ketRow) : '';
+  const ket = ketRow ? getField(ketRow, 'Keterangan', 'ket', 'Keterangan Absen') : '';
+  const masuk = rMasuk ? String(getField(rMasuk, 'Jam', 'jam') || '').slice(0, 5) : '';
+  const pulang = rPulang ? String(getField(rPulang, 'Jam', 'jam') || '').slice(0, 5) : '';
+  const pulangLuar = !!rPulang && jenis(rPulang) === 'PULANG LUAR';
+  let det = masuk ? `Masuk ${masuk}` : '';
+  if (pulang) det += (det ? ' • ' : '') + `Pulang ${pulang}`;
+
+  // Keterangan (izin/sakit/tugas/dll) mengalahkan status jam, sama seperti Rekap.
+  if (_WEEK_KET_MAP[jk]) return { ..._WEEK_KET_MAP[jk], det, ket };
+
+  // Absen pulang di lapangan tanpa catatan MASUK.
+  if (!masuk && pulangLuar) return { key: 'hadir', icon: 'fa-running', label: 'Lapangan', det: det || 'Pulang lapangan', ket };
+
+  if (masuk) {
+    let batas = '08:00';
+    try { const j = getJamForTanggal(dStr); if (j && j.masuk) batas = String(j.masuk).slice(0, 5); } catch (_) { }
+    const telat = _menit(masuk) > _menit(batas);
+    // Info pulang selalu ikut tampil — baik untuk status hadir maupun telat.
+    const pulangTxt = pulang ? ` • Pulang ${pulang}` : ' • belum pulang';
+    return telat
+      ? { key: 'telat', icon: 'fa-clock', label: `Telat ${_menit(masuk) - _menit(batas)}m`, det: `Masuk ${masuk} • Batas ${batas}${pulangTxt}` }
+      : { key: 'hadir', icon: 'fa-check', label: 'Hadir', det: det + (pulang ? '' : ' • belum pulang') };
+  }
+  // Ada catatan pulang tapi tidak ada MASUK (mis. DI LUAR JAM PULANG).
+  if (pulang) return { key: 'hadir', icon: 'fa-check', label: 'Hadir', det: det + ' • belum absen masuk' };
+  if (isFuture) return { key: 'future', icon: 'fa-hourglass-half', label: 'Akan datang', det: '' };
+  if (hariLiburSet.has(dStr)) return { key: 'libur', icon: 'fa-mug-hot', label: 'Libur', det: '' };
+  if (isToday) return { key: 'empty', icon: 'fa-circle', label: 'Belum absen', det: '' };
+  return { key: 'alpha', icon: 'fa-times', label: 'Tanpa keterangan', det: '' };
+}
+
+function renderWeekHistory() {
+  const el = $('weekStrip'); if (!el) return;
+  const todayStr = fmtD(nowWITA());
+  el.innerHTML = _weekRange.map((d, i) => {
+    const dStr = fmtD(d);
+    const isToday = dStr === todayStr, isFuture = dStr > todayStr;
+    const st = _weekDayStatus(dStr, isToday, isFuture);
+    const cls = `week-day w-${st.key}${isToday ? ' is-today' : ''}`;
+    return `<button class="${cls}" style="animation-delay:${i * 55}ms" onclick="showWeekDetail(${i})" title="${st.label}">`
+      + `<span class="week-day-name">${_WEEK_NAMA[i]}</span>`
+      + `<span class="week-day-icon"><i class="fas ${st.icon}"></i></span>`
+      + `<span class="week-day-date">${d.getDate()}</span></button>`;
+  }).join('');
+  // Langsung tampilkan detail hari ini (masuk + pulang) tanpa perlu ketuk dulu.
+  const todayIdx = _weekRange.findIndex(d => fmtD(d) === todayStr);
+  showWeekDetail(todayIdx >= 0 ? todayIdx : 0);
+}
+
+// Pecah "Masuk 07:10 • Pulang 14:30 …" jadi chip + ikon per info.
+function _weekDetailChips(st) {
+  return String(st.det || '').split('•').map(s => s.trim()).filter(Boolean).map(text => {
+    const l = text.toLowerCase();
+    let icon = 'fa-circle';
+    if (l.startsWith('masuk')) icon = 'fa-sign-in-alt';
+    else if (l.startsWith('pulang')) icon = 'fa-sign-out-alt';
+    else if (l.startsWith('batas')) icon = 'fa-clock';
+    else if (l.startsWith('belum')) icon = 'fa-hourglass-half';
+    else if (l.startsWith('lapangan')) icon = 'fa-running';
+    return { text, icon };
+  });
+}
+
+// Kartu detail hari ke-i (murni string — bisa diuji tanpa DOM).
+function _weekDetailHtml(i) {
+  const d = _weekRange[i]; if (!d) return '';
+  const dStr = fmtD(d), todayStr = fmtD(nowWITA());
+  const st = _weekDayStatus(dStr, dStr === todayStr, dStr > todayStr);
+  const date = `${_WEEK_FULL[i]}, ${d.getDate()} ${_WEEK_BULAN[d.getMonth()]} ${d.getFullYear()}`;
+  const chips = _weekDetailChips(st);
+  if (st.ket) chips.push({ text: String(st.ket), icon: 'fa-comment-dots' });
+  const status = `<span class="wk-det-status w-${st.key}"><i class="fas ${st.icon}"></i>${escapeHtml(st.label)}</span>`;
+  const chipHtml = chips.map((c, n) =>
+    `<span class="wk-det-chip" style="animation-delay:${120 + n * 90}ms"><i class="fas ${c.icon}"></i>${escapeHtml(c.text)}</span>`).join('');
+  return `<div class="wk-det">`
+    + `<div class="wk-det-head"><span class="wk-det-date">${escapeHtml(date)}</span>${status}</div>`
+    + (chipHtml ? `<div class="wk-det-chips">${chipHtml}</div>` : '')
+    + `</div>`;
+}
+
+function showWeekDetail(i) {
+  const det = $('weekDetail'); if (!det || !_weekRange[i]) return;
+  det.innerHTML = _weekDetailHtml(i); // animasi chip jalan otomatis saat node baru masuk DOM
+  const strip = $('weekStrip');
+  if (strip) Array.from(strip.querySelectorAll('.week-day')).forEach((b, n) => b.classList.toggle('is-sel', n === i));
+}
+
+async function loadWeekHistory() {
+  const el = $('weekStrip'); if (!el) return;
+  _weekRange = _weekDates();
+  const dari = fmtD(_weekRange[0]), sampai = fmtD(_weekRange[6]);
+  el.innerHTML = `<div class="week-loading"><i class="fas fa-sync fa-spin"></i> Memuat…</div>`;
+  try {
+    const uid = (typeof waitForMyId === 'function') ? await waitForMyId() : (window.MY_ID || '');
+    // ponytail: sesi native bisa belum terbit saat boot; satu kali coba ulang
+    // supaya kartu minggu tidak perlu di-refresh manual oleh user.
+    let res = await apiGet(P.log, { user_id: uid || '', dari, sampai });
+    if (!res.ok) {
+      await new Promise(r => setTimeout(r, 1500));
+      res = await apiGet(P.log, { user_id: uid || '', dari, sampai });
+    }
+    const { ok: logOk, rows } = res;
+    if (!logOk) throw new Error('gagal');
+    _weekByDate = {};
+    (rows || []).forEach(r => {
+      const t = String(getField(r, 'Tanggal', 'tanggal') || '').slice(0, 10);
+      if (t) (_weekByDate[t] = _weekByDate[t] || []).push(r);
+    });
+    renderWeekHistory();
+  } catch (e) {
+    el.innerHTML = `<div class="week-loading"><i class="fas fa-plug"></i> Gagal memuat riwayat minggu ini.</div>`;
+  }
+}

@@ -40,7 +40,7 @@
         row.innerHTML =
           `<input type="time" value="${t.jam}" onchange="kkEditJam(${i}, this.value)" style="flex:1;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--white);font-size:12px">` +
           `<label style="font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" ${t.aktif ? 'checked' : ''} onchange="kkToggleJam(${i})"> Aktif</label>` +
-          `<button onclick="removeKkJam(${i})" style="background:none;border:none;color:#ef4444;font-size:14px;cursor:pointer">🗑</button>`;
+          `<button onclick="removeKkJam(${i})" style="background:none;border:none;color:#ef4444;font-size:14px;cursor:pointer"><i class="fas fa-trash"></i></button>`;
         wrap.appendChild(row);
       });
     }
@@ -63,10 +63,10 @@
         instansi_id: _kkData.instansi_id
       });
       if (res.ok) {
-        showResult('kkResult', 'kkRIcon', 'kkRTitle', 'kkRMsg', 'success', '✅', 'Tersimpan',
+        showResult('kkResult', 'kkRIcon', 'kkRTitle', 'kkRMsg', 'success', '<i class="fas fa-check"></i>', 'Tersimpan',
           `JAM JAGA ${_kkData.enabled ? 'ON' : 'OFF'} · Toleransi ${_kkData.toleransi} menit · ${times.length} jam (${_kkData.instansi_id})`);
       } else {
-        showResult('kkResult', 'kkRIcon', 'kkRTitle', 'kkRMsg', 'fail', '❌', 'Gagal Tersimpan',
+        showResult('kkResult', 'kkRIcon', 'kkRTitle', 'kkRMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal Tersimpan',
           'Pastikan webhook kontrol-absen aktif di n8n & sesi admin valid.');
       }
     }

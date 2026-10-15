@@ -96,6 +96,9 @@ function bastRodaText(roda) {
 function bastFindPegawai(nip) {
   return (window._bastData.pegawai || []).find(p => String(p.id) === String(nip)) || null;
 }
+function bastFindPenandatangan(nip) {
+  return (window._bastData.penandatangan || []).find(p => String(p.id) === String(nip)) || null;
+}
 function bastFindAset(id) {
   return (window._bastData.aset || []).find(a => String(a.id) === String(id)) || null;
 }
@@ -168,7 +171,7 @@ window.renderBastAsetTotal = function() {
   if (!el) return;
   const ids = Object.keys(window._bastSel.incl);
   const items = (window._bastData.aset || []).filter(a => ids.includes(String(a.id)));
-  const total = items.reduce((s, a) => s + (Number(a.harga) || 0), 0);
+  const total = items.reduce((s, a) => s + (Number(a.nilaiperolehan) || 0), 0);
   el.innerHTML = '<div class="radius-note" style="color:#22c55e;"><i class="fas fa-check" aria-hidden="true"></i> <b>' + items.length + '</b> aset dipilih · Total nilai <b>' + bastRupiah(total) + '</b></div>';
 };
 
@@ -177,23 +180,21 @@ window.renderBastAsetList = function() {
   if (!el) return;
   const pe = window._bastSel.pe;
   if (!pe) {
-    el.innerHTML = '<div class="radius-note">Pilih pegawai untuk memuat daftar aset yang dipegangnya (default: semua aset milik pegawai tersebut).</div>';
+    el.innerHTML = '<div class="radius-note">Pilih pegawai untuk memuat daftar aset yang dipegangnya.</div>';
     return;
   }
-  const all = window._bastData.aset || [];
+  const all = (window._bastData.aset || []).filter(a => String(a.pegawai_id || '') === String(pe));
   if (all.length === 0) {
-    el.innerHTML = '<div class="radius-note">Belum ada aset terdaftar. Jalankan impor data aset atau cek inisialisasi DB.</div>';
+    el.innerHTML = '<div class="radius-note">Pegawai ini belum memiliki aset. Tambah lewat tab "Aset Pegawai" atau Set Pemegang.</div>';
     return;
   }
   const rows = all.map(a => {
     const id = a.id;
-    const owned = String(a.pegawai_id || '') === String(pe);
     const checked = !!window._bastSel.incl[id];
-    const pemegangName = owned ? (bastFindPegawai(a.pegawai_id)?.nama || '') : (a.pegawai_id ? (bastFindPegawai(a.pegawai_id)?.nama || ' (pemegang lain)') : '— belum ada');
     const ruang = a.ruangan_id ? (bastNamaRuangan(a.ruangan_id) || '—') : '—';
     const isKend = /kendaraan/i.test(a.kategori_nama || '') || !!a.no_polisi;
     return `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px;margin:8px 0;border:1px solid ${owned ? 'rgba(34,197,94,0.35)' : 'rgba(255,255,255,0.08)'};background:${owned ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.02)'};border-radius:12px;">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px;margin:8px 0;border:1px solid rgba(34,197,94,0.35);background:rgba(34,197,94,0.06);border-radius:12px;">
       <input type="checkbox" data-aset-id="${id}" onchange="bastToggleAset('${id}', this.checked)" ${checked ? 'checked' : ''} style="width:18px;height:18px;flex-shrink:0;">
       <div style="flex:1;min-width:0;">
         <div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nama_barang || '-'}</div>
@@ -202,11 +203,11 @@ window.renderBastAsetList = function() {
           ${a.merk_type ? '<span><i class="fas fa-tags" aria-hidden="true"></i> ' + (a.merk_type || '') + '</span>' : ''}
           <span><i class="fas fa-calendar-alt" aria-hidden="true"></i> ${a.tahun_pembuatan || '-'}</span>
           ${isKend ? '<span><i class="fas fa-car" aria-hidden="true"></i> ' + (a.no_polisi || '-') + '</span>' : ''}
-          <span><i class="fas fa-money-bill" aria-hidden="true"></i> ${bastRupiah(a.harga)}</span>
+          <span><i class="fas fa-money-bill" aria-hidden="true"></i> ${bastRupiah(a.nilaiperolehan)}</span>
           <span><i class="fas fa-receipt" aria-hidden="true"></i> ${a.kondisi || '-'}</span>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">
-          <i class="fas fa-user" aria-hidden="true"></i> Pemegang: <b style="color:${owned ? '#22c55e' : 'var(--white)'};">${pemegangName}</b> · <i class="fas fa-building" aria-hidden="true"></i> Ruangan: <b>${ruang}</b>
+          <i class="fas fa-building" aria-hidden="true"></i> Ruangan: <b>${ruang}</b>
         </div>
       </div>
       <button class="btn-sm-admin" onclick="setBastPemegang('${id}')" style="flex-shrink:0;background:rgba(59,130,246,0.15);"><i class="fas fa-cog" aria-hidden="true"></i> Set Pemegang</button>
@@ -240,6 +241,10 @@ window.setBastPemegang = async function(asetId) {
     cancelButtonText: 'Batal',
     confirmButtonColor: 'var(--primary)',
     focusConfirm: false,
+    didOpen: () => {
+      makeSearchDd('bastPemegangSel', { ph: 'Ketik nama/NIP...', static: true });
+      makeSearchDd('bastRuanganSel', { ph: 'Pilih ruangan...', static: true });
+    },
     preConfirm: () => {
       const peg = document.getElementById('bastPemegangSel').value;
       const ruang = document.getElementById('bastRuanganSel').value;
@@ -260,7 +265,7 @@ function bastBuildTags() {
   const peId = window._bastSel.pe;
   const ttdId = window._bastSel.ttd || document.getElementById('bastTtdSel')?.value;
   const pe = bastFindPegawai(peId);
-  const ttd = bastFindPegawai(ttdId);
+  const ttd = bastFindPenandatangan(ttdId) || bastFindPegawai(ttdId);
   if (!pe) { showToast('Pilih pegawai (Pihak Kedua) terlebih dahulu.', 'error'); return null; }
   if (!ttd) { showToast('Pilih penandatangan (Pihak Pertama).', 'error'); return null; }
 
@@ -304,7 +309,7 @@ function bastBuildTags() {
     nomor,
     tgl,
     totalAset: asets.length,
-    totalNilai: items.reduce((s, a) => s + (Number(a.harga) || 0), 0)
+    totalNilai: items.reduce((s, a) => s + (Number(a.nilaiperolehan) || 0), 0)
   };
 }
 
@@ -348,12 +353,189 @@ window.bastPreviewDocx = async function() {
   await window.bastRenderDocx(built.tags, fname);
 };
 
+/* ─── KIR — KARTU INVENTARIS RUANGAN (cetak dari layar Ruangan) ─── */
+window._kirData = { ruangan: [], aset: [] };
+
+window.loadAsetRuangan = async function(force = false) {
+  const el = document.getElementById('ruanganList');
+  if (!el) return;
+  if (force) window.showAdminSimapoShimmer('ruanganList');
+  try {
+    const res = await apiFetch(P.simapoBastList);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    const data = (json && json.data) || {};
+    window._kirData = { ruangan: data.ruangan || [], aset: data.aset || [], pegawai: data.pegawai || [] };
+  } catch (e) {
+    console.warn('[Ruangan] fetch fail:', e);
+    window.simapoErrorState('ruanganList', 'Gagal memuat data ruangan.');
+    return;
+  }
+  window.renderAsetRuangan();
+};
+
+window.renderAsetRuangan = function() {
+  const el = document.getElementById('ruanganList');
+  if (!el) return;
+  const { ruangan, aset } = window._kirData;
+  if (!ruangan.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px;">Belum ada ruangan. Tambah lewat "Set Pemegang" pada layar BAST.</div>';
+    return;
+  }
+  el.innerHTML = ruangan.map(function(r) {
+    const n = aset.filter(function(a) { return String(a.ruangan_id || '') === String(r.id); }).length;
+    const pj = r.penanggung_nama
+      ? '<div style="font-size:11px;color:var(--gold);margin-top:2px;"><i class="fas fa-user-tie" aria-hidden="true"></i> PJ: ' + String(r.penanggung_nama).replace(/</g, '&lt;') + (r.penanggung_nip ? ' · NIP. ' + String(r.penanggung_nip).replace(/</g, '&lt;') : '') + '</div>'
+      : '<div style="font-size:11px;color:var(--muted);margin-top:2px;"><i class="fas fa-user-tie" aria-hidden="true"></i> Penanggung jawab belum ditentukan</div>';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;margin-bottom:8px;">' +
+      '<i class="fas fa-building" aria-hidden="true" style="color:var(--muted);"></i>' +
+      '<div style="flex:1;min-width:0;">' +
+      '<div style="font-size:13px;font-weight:600;color:var(--white);">' + String(r.nama || '').replace(/</g, '&lt;') + '</div>' +
+      '<div style="font-size:11px;color:var(--muted);">' + n + ' aset' + (r.kode ? ' · ' + String(r.kode).replace(/</g, '&lt;') : '') + '</div>' +
+      pj +
+      '</div>' +
+      '<button class="btn-sm-admin" onclick="aturPenanggungJawab(\'' + String(r.id).replace(/'/g, '') + '\')" title="Atur penanggung jawab ruangan (tampil di KIR)" style="background:rgba(201,168,76,0.15);white-space:nowrap;"><i class="fas fa-user-tie" aria-hidden="true"></i> PJ</button>' +
+      '<button class="btn-sm-admin" onclick="cetakKIR(\'' + String(r.id).replace(/'/g, '') + '\')" style="background:rgba(59,130,246,0.2);white-space:nowrap;"><i class="fas fa-print" aria-hidden="true"></i> Cetak KIR</button>' +
+      '</div>';
+  }).join('');
+};
+
+/* Atur Penanggung Jawab ruangan — nama & NIP tampil di blok tanda tangan bawah KIR. */
+window.aturPenanggungJawab = async function(rid) {
+  const r = (window._kirData.ruangan || []).find(x => String(x.id) === String(rid));
+  if (!r) return;
+  const peg = window._kirData.pegawai || [];
+  if (!peg.length) { showToast('Daftar pegawai belum termuat. Muat ulang layar Ruangan.', 'error'); return; }
+  const opts = '<option value="">— Belum ditentukan —</option>' + peg.map(p =>
+    '<option value="' + apEsc(p.id) + '"' + (String(r.penanggung_id || '') === String(p.id) ? ' selected' : '') + '>' +
+    apEsc(p.nama) + (p.nip ? ' — ' + apEsc(p.nip) : '') + '</option>').join('');
+  const { value: v } = await Swal.fire({
+    title: 'Penanggung Jawab Ruangan',
+    html: '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;text-align:left;">' +
+      '<b>' + apEsc(r.nama) + '</b>' + (r.kode ? ' (' + apEsc(r.kode) + ')' : '') +
+      '<br>Nama terpilih menjadi penandatangan bawah pada KIR (sebelah Kepala Badan).</div>' +
+      '<select id="apPjSel" class="form-input" style="width:100%;">' + opts + '</select>',
+    showCancelButton: true,
+    confirmButtonText: 'Simpan',
+    cancelButtonText: 'Batal',
+    preConfirm: () => document.getElementById('apPjSel').value,
+  });
+  if (typeof v !== 'string') return;
+  const p = peg.find(x => String(x.id) === String(v)) || null;
+  try {
+    const res = await apiPost(P.simapoBastRuangan, {
+      id: rid,
+      penanggung_id: p ? p.id : '',
+      penanggung_nama: p ? p.nama : '',
+      penanggung_nip: p ? (p.nip || '') : '',
+    });
+    if (!res.ok) throw new Error(res.message || 'Gagal menyimpan');
+    showToast(p ? 'Penanggung jawab ruangan: ' + p.nama : 'Penanggung jawab dikosongkan.', 'success');
+    window.loadAsetRuangan(true);
+  } catch (e) { showToast(e.message || 'Gagal menyimpan penanggung jawab', 'error'); }
+};
+
+window.cetakKIR = function(rid) {
+  if (!rid) return;
+  const ruang = (window._kirData.ruangan || []).find(x => String(x.id) === String(rid));
+  const asets = (window._kirData.aset || []).filter(a => String(a.ruangan_id || '') === String(rid));
+  if (!asets.length) { showToast('Tidak ada aset di ruangan ini.', 'error'); return; }
+
+  const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const KOP = {
+    provinsi: 'Nusa Tenggara Timur',
+    kabupaten: 'Sumba Barat',
+    kota: 'Waikabubak',
+    opd: 'Badan Perencanaan Pembangunan, Riset dan Inovasi Daerah (BAPPERIDA)',
+  };
+  // Kepala Badan: pegawai dengan jabatan berawalan "Kepala Badan"
+  const peg = window._kirData.pegawai || [];
+  const kepala = peg.find(p => /^Kepala Badan/i.test(String(p.jabatan || '').trim())) || null;
+  const pj = (ruang && ruang.penanggung_nama)
+    ? { nama: ruang.penanggung_nama, nip: ruang.penanggung_nip || '' }
+    : { nama: '', nip: '' };
+  const tgl = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  let nBaik = 0, nKb = 0, nRb = 0, total = 0;
+  const rows = asets.map((a, i) => {
+    const kd = /kurang baik/i.test(a.kondisi || '') ? 'Kurang Baik'
+      : /rusak/i.test(a.kondisi || '') ? 'Rusak Berat' : 'Baik';
+    if (kd === 'Kurang Baik') nKb++; else if (kd === 'Rusak Berat') nRb++; else nBaik++;
+    const nilai = Number(a.nilaiperolehan) || 0;
+    total += nilai;
+    return '<tr><td style="text-align:center;">' + (i + 1) + '</td>' +
+      '<td>' + esc(a.nama_barang || '-') + '</td>' +
+      '<td>' + esc(a.merk_type || a.model_jenis || '') + '</td>' +
+      '<td>' + esc(a.ukuran || a.no_polisi || '') + '</td>' +
+      '<td>' + esc(a.bahan || '') + '</td>' +
+      '<td style="text-align:center;">' + esc(a.tahunperolehan || a.tahun_pembuatan || '') + '</td>' +
+      '<td style="text-align:center;">' + esc(a.kodebarang || '') + '</td>' +
+      '<td style="text-align:center;">' + esc(a.no_register || '') + '</td>' +
+      '<td style="text-align:center;">1</td>' +
+      '<td style="text-align:right;">' + bastRupiah(nilai) + '</td>' +
+      '<td style="text-align:center;">' + (kd === 'Baik' ? '1' : '') + '</td>' +
+      '<td style="text-align:center;">' + (kd === 'Kurang Baik' ? '1' : '') + '</td>' +
+      '<td style="text-align:center;">' + (kd === 'Rusak Berat' ? '1' : '') + '</td>' +
+      '<td>' + esc(a.keterangan || '') + '</td></tr>';
+  }).join('');
+
+  const ttdKiri = 'Mengetahui,<br>' + esc(kepala ? (kepala.jabatan || 'Kepala Badan') : 'Kepala Badan') +
+    '<div style="height:48px"></div><b><u>' + esc(kepala ? kepala.nama : '...............................') + '</u></b>' +
+    (kepala && kepala.nip ? '<br>NIP. ' + esc(kepala.nip) : '');
+  const ttdKanan = esc(KOP.kota) + ', ' + tgl + '<br>Penanggung Jawab Ruangan' +
+    '<div style="height:48px"></div><b><u>' + esc(pj.nama || '...............................') + '</u></b>' +
+    (pj.nip ? '<br>NIP. ' + esc(pj.nip) : '');
+
+  const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>KIR - ' + esc(ruang && ruang.nama) + '</title>' +
+    '<style>@page{size:A4 landscape;margin:10mm;}' +
+    'body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#000;margin:0;}' +
+    '.kop{text-align:center;margin-bottom:8px;}.kop div{font-size:11px;font-weight:bold;}' +
+    '.kop h1{font-size:13px;margin:2px 0 0;text-transform:uppercase;}' +
+    '.info{margin:0 0 6px;font-size:10px;}.info b{display:inline-block;min-width:120px;}' +
+    'table{width:100%;border-collapse:collapse;font-size:9px;}' +
+    'th,td{border:1px solid #000;padding:2px 3px;}' +
+    'th{background:#f0f0f0;font-size:8px;}' +
+    '.ttd{margin-top:40px;display:flex;justify-content:space-between;font-size:10px;}' +
+    '.ttd>div{width:46%;text-align:center;}' +
+    '</style></head><body>' +
+    '<div class="kop"><div>PEMERINTAH KABUPATEN ' + esc(KOP.kabupaten.toUpperCase()) + '</div>' +
+    '<div>' + esc(KOP.opd.toUpperCase()) + '</div>' +
+    '<h1>KARTU INVENTARIS RUANGAN (KIR)</h1></div>' +
+    '<div class="info">' +
+    '<div><b>Provinsi</b> : ' + esc(KOP.provinsi) + '</div>' +
+    '<div><b>Kabupaten / Kota</b> : ' + esc(KOP.kabupaten) + '</div>' +
+    '<div><b>OPD / Unit</b> : ' + esc(KOP.opd) + '</div>' +
+    '<div><b>Ruangan</b> : <b>' + esc(ruang && ruang.nama) + '</b>' + (ruang && ruang.kode ? ' (kode ' + esc(ruang.kode) + ')' : '') + '</div>' +
+    '</div>' +
+    '<table><thead><tr>' +
+    '<th rowspan="2">No</th><th rowspan="2">Nama Barang</th><th rowspan="2">Merk / Model</th>' +
+    '<th rowspan="2">No. Seri / Ukuran</th><th rowspan="2">Bahan</th><th rowspan="2">Tahun</th>' +
+    '<th rowspan="2">Kode Barang</th><th rowspan="2">No. Register</th><th rowspan="2">Jumlah</th>' +
+    '<th rowspan="2">Harga Perolehan (Rp)</th>' +
+    '<th colspan="3" style="text-align:center;">Keadaan Barang</th><th rowspan="2">Keterangan</th></tr>' +
+    '<tr><th>Baik</th><th>Kurang Baik</th><th>Rusak Berat</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody>' +
+    '<tfoot><tr><th colspan="8" style="text-align:right;">JUMLAH</th>' +
+    '<th style="text-align:center;">' + asets.length + '</th>' +
+    '<th style="text-align:right;">' + bastRupiah(total) + '</th>' +
+    '<th style="text-align:center;">' + nBaik + '</th><th style="text-align:center;">' + nKb + '</th>' +
+    '<th style="text-align:center;">' + nRb + '</th><th></th></tr></tfoot></table>' +
+    '<div class="ttd"><div>' + ttdKiri + '</div><div>' + ttdKanan + '</div></div>' +
+    '<script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script>' +
+    '</body></html>';
+
+  const w = window.open('', '_blank');
+  if (!w) { showToast('Popup diblokir. Izinkan popup untuk mencetak KIR.', 'error'); return; }
+  w.document.write(html);
+  w.document.close();
+};
+
 /* ─── ARSIP BAST ────────────────────────────────────────────── */
 async function bastSavePayload(built) {
   const peId = window._bastSel.pe;
   const ttdId = window._bastSel.ttd || document.getElementById('bastTtdSel')?.value;
   const pe = bastFindPegawai(peId);
-  const ttd = bastFindPegawai(ttdId);
+  const ttd = bastFindPenandatangan(ttdId) || bastFindPegawai(ttdId);
   const inst = (typeof getScopedInstansiId === 'function' ? getScopedInstansiId() : '') || 'bapperida';
   return {
     id: null,
@@ -492,12 +674,451 @@ window.loadAdminBast = async function(force = false) {
     ruangan: data.ruangan || [],
     penandatangan: data.penandatangan || []
   };
+  // Re-select owned assets after reload; if a pegawai is selected, restrict incl to their assets
   const ownedIds = {};
   window._bastData.aset.forEach(a => { ownedIds[a.id] = true; });
   const prevIds = Object.keys(window._bastSel.incl).filter(id => ownedIds[id]);
-  if (prevIds.length) window._bastSel.incl = Object.fromEntries(prevIds.map(id => [id, true]));
+  window._bastSel.incl = Object.fromEntries(prevIds.map(id => [id, true]));
 
   bastPopulateSelects();
+  makeSearchDd('bastPegawaiSel', { ph: 'Ketik nama/NIP pegawai...' });
+  makeSearchDd('bastTtdSel', { ph: 'Pilih penandatangan...' });
+  syncSearchDdLabel('bastPegawaiSel');
+  syncSearchDdLabel('bastTtdSel');
   window.renderBastAsetList();
   window.loadBastHistory(force);
+};
+
+/* ─── ASET PEGAWAI: CRUD unit per pegawai ───────────────────── */
+window._asetPegSel = { pegawai: '', aset: null };
+
+function apEsc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+window.loadAsetPegawai = async function(force = false) {
+  const listEl = document.getElementById('asetPegList');
+  const selEl = document.getElementById('asetPegSel');
+  if (!listEl || !selEl) return;
+  if (force) window.showAdminSimapoShimmer('asetPegList');
+  // Reuse bast-list data source (same auth header, same shape)
+  try {
+    const res = await apiFetch(P.simapoBastList);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    const data = (json && json.data) || {};
+    window._bastData = {
+      pegawai: data.pegawai || [],
+      aset: data.aset || [],
+      ruangan: data.ruangan || [],
+      penandatangan: data.penandatangan || []
+    };
+  } catch (e) {
+    console.warn('[AsetPegawai] fetch fail:', e);
+    window.simapoErrorState('asetPegList', 'Gagal memuat data aset pegawai.');
+    return;
+  }
+  const pegOpts = (window._bastData.pegawai || []).map(p =>
+    '<option value="' + apEsc(p.id) + '">' + apEsc(p.nama) + ' — ' + apEsc(p.nip) + '</option>').join('');
+  selEl.innerHTML = '<option value="">-- Pilih Pegawai --</option>' + pegOpts;
+  if (window._asetPegSel.pegawai && (window._bastData.pegawai || []).some(p => String(p.id) === String(window._asetPegSel.pegawai))) {
+    selEl.value = window._asetPegSel.pegawai;
+  }
+  makeSearchDd('asetPegSel', { ph: 'Ketik nama/NIP pegawai...' });
+  syncSearchDdLabel('asetPegSel');
+  window.renderAsetPegList();
+};
+
+window.asetPegChange = function() {
+  window._asetPegSel.pegawai = document.getElementById('asetPegSel').value;
+  window.renderAsetPegList();
+};
+
+window.renderAsetPegList = function() {
+  const el = document.getElementById('asetPegList');
+  if (!el) return;
+  const pe = window._asetPegSel.pegawai;
+  const aset = window._bastData.aset || [];
+  const pegawai = window._bastData.pegawai || [];
+
+  function card(a) {
+    const isKend = /kendaraan/i.test(a.kategori_nama || '') || !!a.no_polisi;
+    const ruang = a.ruangan_id ? (bastNamaRuangan(a.ruangan_id) || '—') : '—';
+    return `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px;margin:8px 0;border:1px solid rgba(34,197,94,0.35);background:rgba(34,197,94,0.06);border-radius:12px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:800;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${apEsc(a.nama_barang) || '-'}</div>
+        <div style="font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:2px;">
+          <span><i class="fas fa-thumbtack" aria-hidden="true"></i> ${apEsc(a.nomorinventaris) || '-'}</span>
+          ${a.kode_aset ? '<span style="color:var(--gold);"><i class="fas fa-id-card" aria-hidden="true"></i> ' + apEsc(a.kode_aset) + '</span>' : ''}
+          ${a.tahunperolehan ? '<span><i class="fas fa-calendar" aria-hidden="true"></i> ' + apEsc(a.tahunperolehan) + '</span>' : ''}
+          ${a.merk_type ? '<span><i class="fas fa-tags" aria-hidden="true"></i> ' + apEsc(a.merk_type) + '</span>' : ''}
+          ${isKend ? '<span><i class="fas fa-car" aria-hidden="true"></i> ' + (apEsc(a.no_polisi) || '-') + '</span>' : ''}
+          <span><i class="fas fa-money-bill" aria-hidden="true"></i> ${bastRupiah(a.nilaiperolehan)}</span>
+          <span><i class="fas fa-receipt" aria-hidden="true"></i> ${apEsc(a.kondisi) || '-'}</span>
+          <span><i class="fas fa-building" aria-hidden="true"></i> ${apEsc(ruang)}</span>
+        </div>
+      </div>
+      <button class="btn-sm-admin" onclick="asetPegEdit('${a.id}')" style="flex-shrink:0;background:rgba(59,130,246,0.15);"><i class="fas fa-edit" aria-hidden="true"></i></button>
+      <button class="btn-sm-admin" onclick="asetPegPindah('${a.id}')" style="flex-shrink:0;background:rgba(245,158,11,0.15);"><i class="fas fa-exchange-alt" aria-hidden="true"></i></button>
+      <button class="btn-sm-admin" onclick="asetPegHapus('${a.id}')" style="flex-shrink:0;background:rgba(239,68,68,0.15);"><i class="fas fa-trash" aria-hidden="true"></i></button>
+    </div>`;
+  }
+
+  if (pe) {
+    const owned = aset.filter(a => String(a.pegawai_id || '') === String(pe));
+    const peg = bastFindPegawai(pe);
+    const head = '<div class="radius-note" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">' +
+      '<span><i class="fas fa-user" aria-hidden="true"></i> <b>' + apEsc(peg ? peg.nama : pe) + '</b> · ' + owned.length + ' unit</span>' +
+      (owned.length ? '<button class="btn-sm-admin" onclick="asetPegExportExcel().catch(e=>showToast(e.message||\'Export gagal\',\'error\'))" style="background:rgba(34,197,94,0.15);"><i class="fas fa-file-excel" aria-hidden="true"></i> Export Excel</button>' : '') +
+      '</div>';
+    if (!owned.length) {
+      el.innerHTML = head + '<div class="radius-note">Belum ada aset. Klik "Tambah Aset" untuk menambah.</div>';
+      return;
+    }
+    el.innerHTML = head + owned.map(card).join('');
+    return;
+  }
+
+  // ── Tanpa pilihan pegawai: overview semua pemegang aset, langsung tampil ──
+  const groups = pegawai
+    .map(p => ({
+      id: String(p.id),
+      nama: p.nama || p.nip || '—',
+      list: aset.filter(a => String(a.pegawai_id || '') === String(p.id)),
+    }))
+    .filter(g => g.list.length)
+    .sort((a, b) => b.list.length - a.list.length || String(a.nama).localeCompare(String(b.nama)));
+  const known = new Set(groups.map(g => g.id));
+  const orphan = aset.filter(a => a.pegawai_id && !known.has(String(a.pegawai_id)));
+  if (orphan.length) groups.push({ id: '', nama: 'Pegawai tidak terdaftar', list: orphan });
+  if (!groups.length) {
+    el.innerHTML = '<div class="radius-note"><i class="fas fa-inbox" aria-hidden="true"></i> Belum ada aset yang dipegang pegawai. Pilih pegawai di atas lalu klik "Tambah Aset".</div>';
+    return;
+  }
+  const totalUnit = groups.reduce((n, g) => n + g.list.length, 0);
+  const summary = '<div class="radius-note" style="margin-bottom:8px;"><i class="fas fa-users" aria-hidden="true"></i> <b>' + groups.length + ' pemegang</b> · <b>' + totalUnit + ' unit</b> — klik nama untuk melipat/membuka</div>';
+  el.innerHTML = summary + groups.map(g => {
+    const nilai = g.list.reduce((n, a) => n + (Number(a.nilaiperolehan) || 0), 0);
+    return `
+    <details open style="margin-bottom:8px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);overflow:hidden;">
+      <summary style="cursor:pointer;list-style:none;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <span style="font-weight:800;font-size:12px;color:var(--white);"><i class="fas fa-user" aria-hidden="true"></i> ${apEsc(g.nama)} <span style="color:var(--muted);font-weight:600;">· ${g.list.length} unit</span></span>
+        <span style="font-size:11px;font-weight:700;color:var(--gold);white-space:nowrap;">${bastRupiah(nilai)}</span>
+      </summary>
+      <div style="padding:0 6px 6px;">${g.list.map(card).join('')}</div>
+    </details>`;
+  }).join('');
+};
+
+window.asetPegEdit = async function(asetId) {
+  const a = bastFindAset(asetId);
+  if (!a) return;
+  const ruangOpts = '<option value="">— Tanpa Ruangan —</option>' + (window._bastData.ruangan || []).map(r =>
+    '<option value="' + apEsc(r.id) + '"' + (a.ruangan_id && String(r.id) === String(a.ruangan_id) ? ' selected' : '') + '>' + apEsc(r.nama) + '</option>').join('');
+  const { value: v } = await Swal.fire({
+    title: 'Edit Unit Aset',
+    html:
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">' + apEsc(a.nama_barang) + '<br><b>' + apEsc(a.nomorinventaris) + '</b></div>' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Nomor Inventaris</label>' +
+      '<input id="apNomor" class="form-input" value="' + apEsc(a.nomorinventaris) + '" style="width:100%;margin-bottom:8px;">' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Kondisi</label>' +
+      '<select id="apKondisi" class="form-input" style="width:100%;margin-bottom:8px;">' +
+        ['Baik', 'Rusak Ringan', 'Rusak Berat'].map(k => '<option' + (a.kondisi === k ? ' selected' : '') + '>' + k + '</option>').join('') +
+      '</select>' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Nilai Perolehan</label>' +
+      '<input id="apNilai" type="number" class="form-input" value="' + apEsc(a.nilaiperolehan) + '" style="width:100%;margin-bottom:8px;">' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Ruangan</label>' +
+      '<select id="apRuangan" class="form-input" style="width:100%;">' + ruangOpts + '</select>',
+    showCancelButton: true,
+    confirmButtonText: 'Simpan',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: 'var(--primary)',
+    focusConfirm: false,
+    didOpen: () => {
+      makeSearchDd('apRuangan', { ph: 'Pilih ruangan...', static: true });
+    },
+    preConfirm: () => ({
+      nomorinventaris: document.getElementById('apNomor').value.trim(),
+      kondisi: document.getElementById('apKondisi').value,
+      nilaiperolehan: document.getElementById('apNilai').value,
+      ruangan_id: document.getElementById('apRuangan').value || null
+    })
+  });
+  if (!v) return;
+  // ponytail: bast-assign sudah UPDATE nomorinventaris/kondisi/nilaiperolehan via COALESCE(NULLIF)
+  const ok = await window.bastSubmit(P.simapoBastAssign, {
+    aset_id: asetId,
+    pegawai_id: window._asetPegSel.pegawai,
+    ruangan_id: v.ruangan_id,
+    nomorinventaris: v.nomorinventaris,
+    kondisi: v.kondisi,
+    nilaiperolehan: v.nilaiperolehan
+  }, { successMsg: 'Unit diperbarui', errorMsg: 'Gagal memperbarui unit' });
+  if (ok) window.loadAsetPegawai(true);
+};
+
+window.asetPegPindah = async function(asetId) {
+  const a = bastFindAset(asetId);
+  if (!a) return;
+  const pegOpts = '<option value="">— Tanpa Pemegang (Gudang) —</option>' + (window._bastData.pegawai || []).map(p =>
+    '<option value="' + apEsc(p.id) + '"' + (String(a.pegawai_id || '') === String(p.id) ? ' selected' : '') + '>' + apEsc(p.nama) + ' — ' + apEsc(p.nip) + '</option>').join('');
+  const ruangOpts = '<option value="">— Tanpa Ruangan —</option>' + (window._bastData.ruangan || []).map(r =>
+    '<option value="' + apEsc(r.id) + '"' + (a.ruangan_id && String(r.id) === String(a.ruangan_id) ? ' selected' : '') + '>' + apEsc(r.nama) + '</option>').join('');
+  const { value: v } = await Swal.fire({
+    title: 'Pindah Aset',
+    html:
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">' + apEsc(a.nama_barang) + '<br><b>' + apEsc(a.nomorinventaris) + '</b></div>' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Pemegang Baru</label>' +
+      '<select id="apPeg" class="form-input" style="width:100%;margin-bottom:8px;">' + pegOpts + '</select>' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Ruangan Baru</label>' +
+      '<select id="apRuang" class="form-input" style="width:100%;">' + ruangOpts + '</select>',
+    showCancelButton: true,
+    confirmButtonText: 'Pindahkan',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: 'var(--primary)',
+    focusConfirm: false,
+    didOpen: () => {
+      makeSearchDd('apPeg', { ph: 'Ketik nama/NIP...', static: true });
+      makeSearchDd('apRuang', { ph: 'Pilih ruangan...', static: true });
+    },
+    preConfirm: () => ({
+      pegawai_id: document.getElementById('apPeg').value || null,
+      ruangan_id: document.getElementById('apRuang').value || null
+    })
+  });
+  if (!v) return;
+  const ok = await window.bastSubmit(P.simapoBastAssign, { aset_id: asetId, ...v }, {
+    successMsg: 'Aset dipindahkan',
+    errorMsg: 'Gagal memindahkan aset'
+  });
+  if (ok) {
+    window.loadAsetPegawai(true);
+    window.loadAdminBast(true); // refresh BAST data too
+  }
+};
+
+window.asetPegHapus = async function(asetId) {
+  const a = bastFindAset(asetId);
+  if (!a) return;
+  const { isConfirmed } = await Swal.fire({
+    title: 'Hapus Unit Aset?',
+    html: '<div style="font-size:12px;color:var(--muted);">' + apEsc(a.nama_barang) + '<br><b>' + apEsc(a.nomorinventaris) + '</b><br><br>Tindakan ini tidak bisa dibatalkan.</div>',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Hapus',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#ef4444'
+  });
+  if (!isConfirmed) return;
+  const ok = await window.bastSubmit(P.simapoUnitDelete, { aset_id: asetId }, {
+    successMsg: 'Unit aset dihapus',
+    errorMsg: 'Gagal menghapus unit aset'
+  });
+  if (ok) {
+    window.loadAsetPegawai(true);
+    window.loadAdminBast(true);
+  }
+};
+
+window.asetPegExportExcel = async function() {
+  const pe = window._asetPegSel.pegawai;
+  if (!pe) { showToast('Pilih pegawai terlebih dahulu.', 'error'); return; }
+  const owned = (window._bastData.aset || []).filter(a => String(a.pegawai_id || '') === String(pe));
+  if (!owned.length) { showToast('Tidak ada aset untuk diekspor.', 'error'); return; }
+  if (typeof ExcelJS === 'undefined') { showToast('ExcelJS belum termuat', 'error'); return; }
+  const peg = bastFindPegawai(pe);
+  const QR = window.QRCode || qrcode;
+  if (typeof QR !== 'function') { showToast('QR library tidak tersedia', 'error'); return; }
+
+  const origin = window.location.origin + window.location.pathname;
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Aset ' + (peg ? peg.nama : pe));
+
+  ws.mergeCells('A1:F1');
+  ws.getCell('A1').value = 'DAFTAR ASET PEGAWAI';
+  ws.getCell('A1').font = { bold: true, size: 14 };
+  ws.getCell('A1').alignment = { horizontal: 'center' };
+  ws.mergeCells('A2:F2');
+  ws.getCell('A2').value = peg ? peg.nama : pe;
+  ws.getCell('A2').alignment = { horizontal: 'center' };
+  ws.mergeCells('A3:F3');
+  ws.getCell('A3').value = 'Tanggal Export: ' + new Date().toLocaleDateString('id-ID');
+  ws.getCell('A3').alignment = { horizontal: 'center' };
+
+  const header = ws.getRow(5);
+  ['No', 'Nama Aset', 'No. Inventaris', 'Kondisi', 'Nilai (Rp)', 'QR Code'].forEach((h, i) => {
+    const c = header.getCell(i + 1);
+    c.value = h;
+    c.font = { bold: true };
+    c.alignment = { horizontal: 'center' };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+  });
+
+  owned.forEach((a, i) => {
+    const row = ws.getRow(6 + i);
+    row.getCell(1).value = i + 1;
+    row.getCell(1).alignment = { horizontal: 'center' };
+    row.getCell(2).value = a.nama_barang || '-';
+    row.getCell(3).value = a.nomorinventaris || '-';
+    row.getCell(3).alignment = { horizontal: 'center' };
+    row.getCell(4).value = a.kondisi || '-';
+    row.getCell(4).alignment = { horizontal: 'center' };
+    row.getCell(5).value = a.nilaiperolehan || 0;
+    row.getCell(5).numFmt = '#,##0';
+    row.getCell(5).alignment = { horizontal: 'right' };
+    [1, 2, 3, 4, 5, 6].forEach(ci => {
+      row.getCell(ci).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    });
+    row.height = 100;
+
+    const payload = origin + '?qr=SIMAPO-' + a.id;
+    const qr = QR(0, 'M');
+    qr.addData(payload);
+    qr.make();
+    const dataUrl = qr.createDataURL(8, 10);
+    const imgId = wb.addImage({ base64: dataUrl.split(',')[1], extension: 'png' });
+    ws.addImage(imgId, { tl: { col: 5.1, row: 5 + i + 0.15 }, ext: { width: 96, height: 96 } });
+  });
+
+  ws.columns = [
+    { key: 'no', width: 6 },
+    { key: 'nama', width: 32 },
+    { key: 'inv', width: 20 },
+    { key: 'kondisi', width: 12 },
+    { key: 'nilai', width: 16 },
+    { key: 'qr', width: 18 }
+  ];
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'Aset_' + (peg ? peg.nama : pe).replace(/[^a-zA-Z0-9]+/g, '_') + '.xlsx';
+  link.click();
+  URL.revokeObjectURL(link.href);
+  showToast('Excel berhasil diunduh', 'success');
+};
+
+window.asetPegTambah = async function() {
+  const pe = window._asetPegSel.pegawai;
+  if (!pe) { showToast('Pilih pegawai terlebih dahulu.', 'error'); return; }
+  const peg = bastFindPegawai(pe);
+
+  const units = (window._bastData.aset || []).filter(a => String(a.pegawai_id || '') !== String(pe));
+  const gridRows = units.map(u => `
+    <div class="ap-grid-row" style="display:flex;flex-direction:column;gap:4px;padding:11px 13px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.02);border-radius:12px;cursor:pointer;transition:border-color .15s;" onclick="this.querySelector('input[type=checkbox]').click();this.querySelector('input[type=checkbox]').dispatchEvent(new Event('change'));this.style.borderColor=this.querySelector('input[type=checkbox').checked?'var(--success)':'';">
+      <div style="display:flex;align-items:flex-start;gap:9px;">
+        <input type="checkbox" data-aset-id="${u.id}" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;accent-color:#22c55e;" onclick="event.stopPropagation()" onchange="window._apUpdateCount()">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:13px;color:var(--white);line-height:1.3;">${apEsc(u.nama_barang || '-')}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;">${apEsc(u.nomorinventaris || '-')}${u.kode_aset ? ' · <b style="color:var(--gold);">' + apEsc(u.kode_aset) + '</b>' : ''}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px 8px;font-size:10px;color:var(--muted);padding-left:25px;">
+        <span><i class="fas fa-receipt" aria-hidden="true"></i> ${apEsc(u.kondisi || '-')}</span>
+        ${u.pegawai_id ? '<span style="color:var(--warning);"><i class="fas fa-user" aria-hidden="true"></i> ' + apEsc(bastFindPegawai(u.pegawai_id)?.nama || 'Pegawai lain') + '</span>' : '<span style="color:var(--success);"><i class="fas fa-check" aria-hidden="true"></i> Tanpa pemegang</span>'}
+      </div>
+      <div style="font-size:11px;color:var(--gold);font-weight:700;padding-left:25px;">${bastRupiah(u.nilaiperolehan || 0)}</div>
+    </div>`).join('');
+
+  const { value: v } = await Swal.fire({
+    title: 'Tambah Aset ke Pegawai',
+    width: '720px',
+    html:
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Untuk: <b>' + apEsc(peg ? peg.nama : pe) + '</b></div>' +
+      '<input id="apSearch" class="form-input" placeholder="Ketik nama / nomor inventaris..." style="width:100%;margin-bottom:10px;font-size:12px;" oninput="window._apFilterGrid(this.value)">' +
+      '<div id="apGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;max-height:420px;overflow-y:auto;padding:2px;">' +
+        (gridRows || '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:20px;font-size:12px;">Tidak ada aset tersedia.</div>') +
+      '</div>' +
+      '<div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;">' +
+        '<span style="font-size:11px;color:var(--muted);"><span id="apCount">0</span> dipilih</span>' +
+        '<button type="button" onclick="window.asetPegTambahManual()" style="font-size:10px;color:var(--gold);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;">atau tambah aset baru...</button>' +
+      '</div>',
+    showCancelButton: true,
+    confirmButtonText: 'Assign Terpilih',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: 'var(--primary)',
+    focusConfirm: false,
+    preConfirm: () => {
+      const ids = [...document.querySelectorAll('#apGrid input[type=checkbox]:checked')].map(cb => cb.dataset.asetId);
+      if (!ids.length) { showToast('Pilih minimal satu unit.', 'error'); return false; }
+      return { ids };
+    }
+  });
+  if (!v) return;
+
+  for (const id of v.ids) {
+    await window.bastSubmit(P.simapoBastAssign, { aset_id: id, pegawai_id: pe }, { successMsg: '', errorMsg: '' });
+  }
+  showToast(v.ids.length + ' aset berhasil diassign', 'success');
+  window.loadAsetPegawai(true);
+  window.loadAdminBast(true);
+};
+
+window._apUpdateCount = function() {
+  const el = document.getElementById('apCount');
+  if (el) el.textContent = document.querySelectorAll('#apGrid input[type=checkbox]:checked').length;
+};
+
+window._apFilterGrid = function(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('#apGrid .ap-grid-row').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+};
+
+window.asetPegTambahManual = async function() {
+  const pe = window._asetPegSel.pegawai;
+  if (!pe) { showToast('Pilih pegawai terlebih dahulu.', 'error'); return; }
+  const peg = bastFindPegawai(pe);
+  Swal.close();
+  const { value: v } = await Swal.fire({
+    title: 'Tambah Aset Baru',
+    html:
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Untuk: <b>' + apEsc(peg ? peg.nama : pe) + '</b></div>' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Kode Barang</label>' +
+      '<input id="apKode" class="form-input" placeholder="KB001" style="width:100%;margin-bottom:8px;">' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Nama Barang</label>' +
+      '<input id="apNama" class="form-input" placeholder="Laptop" style="width:100%;margin-bottom:8px;">' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Nomor Inventaris</label>' +
+      '<input id="apNoInv" class="form-input" placeholder="INV-001" style="width:100%;margin-bottom:8px;">' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Satuan</label>' +
+      '<input id="apSatuan" class="form-input" value="Unit" style="width:100%;margin-bottom:8px;">' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Nilai Perolehan</label>' +
+      '<input id="apNilaiBaru" type="number" class="form-input" placeholder="0" style="width:100%;margin-bottom:8px;">' +
+      '<label style="font-size:11px;font-weight:700;display:block;margin:6px 0 4px;text-align:left;">Tahun Perolehan</label>' +
+      '<input id="apTahun" type="number" class="form-input" placeholder="2024" style="width:100%;">',
+    showCancelButton: true,
+    confirmButtonText: 'Tambah',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: 'var(--primary)',
+    focusConfirm: false,
+    preConfirm: () => ({
+      kodebarang: document.getElementById('apKode').value.trim(),
+      nama: document.getElementById('apNama').value.trim(),
+      nomorinventaris: document.getElementById('apNoInv').value.trim(),
+      satuan: document.getElementById('apSatuan').value.trim() || 'Unit',
+      nilaiperolehan: document.getElementById('apNilaiBaru').value,
+      tahunperolehan: document.getElementById('apTahun').value
+    })
+  });
+  if (!v) return;
+  if (!v.kodebarang || !v.nama || !v.nomorinventaris) {
+    showToast('Kode, nama, dan nomor inventaris wajib diisi.', 'error');
+    return;
+  }
+  const ok = await window.bastSubmit(P.simapoBastImportUnit, v, { successMsg: 'Unit ditambahkan', errorMsg: 'Gagal menambah unit' });
+  if (!ok) return;
+  await window.loadAsetPegawai(true);
+  const newUnit = (window._bastData.aset || []).find(a => String(a.nomorinventaris) === String(v.nomorinventaris));
+  if (newUnit) {
+    await window.bastSubmit(P.simapoBastAssign, { aset_id: newUnit.id, pegawai_id: pe }, {
+      successMsg: '',
+      errorMsg: 'Unit dibuat tapi gagal assign pegawai'
+    });
+    window.loadAsetPegawai(true);
+    window.loadAdminBast(true);
+  }
 };

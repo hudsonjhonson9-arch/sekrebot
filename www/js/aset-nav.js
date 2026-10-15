@@ -8,9 +8,13 @@
   function isAdmin() {
     if (window.IS_ADMIN) return true;
     if (typeof window._isSuperAdmin === 'function' && window._isSuperAdmin()) return true;
-    const role = String(localStorage.getItem('MY_ROLE') || '').toLowerCase();
-    if (role.includes('admin')) return true;
-    return String((window.userProfile || {}).role || '').toLowerCase().includes('admin');
+    // profil.js pernah menulis role ke MY_ROLE/usermanProfile tanpa spasi
+    // ('BENDAHARABARANG'), jadi normalkan di sini: spasi dianggap tidak ada.
+    const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, '');
+    const role = norm(localStorage.getItem('MY_ROLE'));
+    if (role.includes('admin') || role === 'bendaharabarang') return true;
+    const prole = norm((window.userProfile || {}).role);
+    return prole.includes('admin') || prole === 'bendaharabarang';
   }
 
   function visibleScreens(list) {
@@ -81,8 +85,6 @@
       const label = document.createElement('span');
       label.className = 'aset-card-label';
       label.textContent = s.label;
-      card.appendChild(icon);
-      card.appendChild(label);
       const failed = (window._asetFailed || {})[s.key];
       if (failed) {
         // ponytail: pesan error lewat .title (properti DOM), bukan innerHTML —
@@ -93,6 +95,16 @@
         card.appendChild(warn);
       }
       card.addEventListener('click', function () { open(s.key, true); });
+      const chip = document.createElement('span');
+      chip.className = 'aset-card-icon';
+      chip.setAttribute('aria-hidden', 'true');
+      chip.appendChild(icon);
+      const desc = document.createElement('span');
+      desc.className = 'aset-card-desc';
+      desc.textContent = s.desc || '';
+      card.appendChild(chip);
+      card.appendChild(label);
+      card.appendChild(desc);
       grid.appendChild(card);
     });
   }
