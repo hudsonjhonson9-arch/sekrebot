@@ -267,6 +267,14 @@
   function $(id) { return document.getElementById(id); }
 
   let _grupAktif = null;
+  let _siapMaster = null;
+
+  // ponytail: submit menunggu master selesai (maks 1,5 dtk) agar nilai yang terlihat di dialog
+  // = yang tercetak; batas waktu mencegah tombol menggantung saat /api/user-list lambat.
+  function tungguMaster(ms) {
+    if (!_siapMaster) return Promise.resolve();
+    return Promise.race([_siapMaster, new Promise(r => setTimeout(r, ms || 1500))]).then(() => {}, () => {});
+  }
 
   // ponytail: penyalin field tunggal — dipakai fillForm & bukaModal (master menyusul).
   // Sekaligus membersihkan tanda merah validasi supaya dialog yang dibuka ulang tidak
@@ -351,8 +359,10 @@
     fillForm(p);
     modal.style.display = 'flex';
     const punya = grup.perjadin || {};
-    if (!punya.kepala || !punya.sekretaris) {
-      try {
+    // Promise dicatat (bukan di-await) supaya dialog tetap muncul segera; submit menunggunya
+    // lewat tungguMaster() agar nilai yang terlihat = yang tercetak.
+    _siapMaster = (!punya.kepala || !punya.sekretaris)
+      ? (async () => {
         const idx = await masterIndex((grup.items[0] || {}).instansi_id || '');
         const d = defaultsDariMaster(idx);
         if (d.kepala && !punya.kepala) {
@@ -361,8 +371,8 @@
         if (d.sekretaris && !punya.sekretaris) {
           setField('sekretarisNama', d.sekretaris.nama); setField('sekretarisNIP', d.sekretaris.nip);
         }
-      } catch (e) { console.error('[SPT] default pejabat gagal:', e); }
-    }
+      })().catch(e => console.error('[SPT] default pejabat gagal:', e))
+      : null;
   }
 
   function tutupModal() { const m = $('perjadinModal'); if (m) m.style.display = 'none'; }
@@ -381,6 +391,7 @@
       const btn = form.querySelector('button[type="submit"]');
       if (btn) btn.disabled = true;
       try {
+        await tungguMaster();
         const p = readForm();
         const kurang = validasiPerjadin(p);
         FIELD_WAJIB.forEach(f => {
@@ -408,6 +419,6 @@
     personTag, bangunTagsSPT, bangunTagsSPPD, DEFAULT_PERJADIN, merge,
     cariPejabat, defaultsDariMaster, validasiPerjadin,
     masterIndex, bukaModal, generate, simpanPerjadin,
-    readForm, fillForm
+    readForm, fillForm, tungguMaster
   };
 })();

@@ -177,6 +177,49 @@ test('bukaModal: dialog tampil SEBELUM master termuat (apiGet lambat tidak menah
   }
 });
 
+test('tungguMaster: submit menunggu master, tapi tak menggantung bila master lambat', async () => {
+  const win = fresh();
+  const win2 = fresh();
+  const modal = { style: { display: 'none' } };
+  const lama = globalThis.document;
+  globalThis.document = {
+    getElementById: id => ({ perjadinModal: modal, perjadinInfo: { textContent: '' }, perjadinForm: { elements: {} } }[id] || null)
+  };
+  try {
+    // tanpa master tertunda -> langsung selesai
+    await win.TugasSPT.tungguMaster(10);
+
+    let lepas = () => {};
+    win.apiGet = () => new Promise(r => { lepas = () => r({ rows: [] }); });
+    const grup = { items: [{ id: '1', nip: '111', nama: 'A', tanggal: '2026-07-02', instansi_id: 'INS' }], perjadin: null };
+    const buka = win.TugasSPT.bukaModal(grup);
+
+    let selesai = false;
+    const tunggu = win.TugasSPT.tungguMaster(2000).then(() => { selesai = true; });
+    await new Promise(r => setTimeout(r, 30));
+    assert.equal(selesai, false, 'submit harus menunggu selama master masih tertunda');
+    lepas();
+    await buka; await tunggu;
+    assert.equal(selesai, true, 'setelah master selesai, tungguMaster lanjut');
+
+    // master yang tak pernah balas: tetap lanjut lewat batas waktu (tidak menggantung)
+    win2.apiGet = () => new Promise(() => {});
+    win2.TugasSPT.bukaModal({ items: [{ id: '1', nip: '1', nama: 'A', instansi_id: 'INS' }], perjadin: null });
+    const mulai = Date.now();
+    await win2.TugasSPT.tungguMaster(40);
+    assert.ok(Date.now() - mulai < 1000, 'batas waktu membebaskan submit walau master menggantung');
+  } finally {
+    if (lama === undefined) delete globalThis.document; else globalThis.document = lama;
+  }
+});
+
+test('submit menunggu master SEBELUM membaca form (nilai yang terlihat = yang tercetak)', () => {
+  const iTunggu = src.indexOf('await tungguMaster();');
+  const iBaca = src.indexOf('const p = readForm();');
+  assert.ok(iTunggu > -1 && iBaca > -1, 'kedua baris harus ada');
+  assert.ok(iTunggu < iBaca, 'submit wajib await tungguMaster() sebelum readForm()');
+});
+
 test('validasiPerjadin: kosong -> 4 label wajib, lengkap -> lolos', () => {
   assert.deepEqual(T.validasiPerjadin({}), ['Maksud', 'Tempat Tujuan', 'Tanggal Berangkat', 'Tanggal Kembali']);
   assert.deepEqual(T.validasiPerjadin({ maksud: 'Rakor', tempatTujuan: 'Kupang', tanggalBerangkat: '2026-07-02', tanggalKembali: '2026-07-04' }), []);
@@ -234,6 +277,8 @@ test('generate: field wajib kosong -> batal + TIDAK menyentuh render (kontrol po
     assert.equal(tags[0].Paraf3, 'Kasubbag Y');
     assert.equal(tags[1].SekretarisNama, 'Sek Uji', 'nama sekretaris masuk tag SPPD');
     assert.equal(tags[1].SekretarisNIP, '901');
+    assert.equal(tags[1].KpaNama, 'Kepala Uji', 'kepala juga masuk tag SPPD (KpaNama)');
+    assert.equal(tags[1].KepalaNama, 'Kepala Uji');
   } finally {
     if (lamaToast === undefined) delete globalThis.showToast; else globalThis.showToast = lamaToast;
   }
