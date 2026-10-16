@@ -2376,45 +2376,6 @@
       line-height: 1.6
     }
 
-    /* Blok TTD "Mengetahui" — hanya tampil saat cetak */
-    .rekap-print-ttd {
-      display: none
-    }
-
-    @media print {
-      .rekap-print-ttd {
-        display: flex !important;
-        justify-content: space-between;
-        gap: 12px;
-        margin-top: 18px;
-        font-size: 12px;
-        color: #111 !important;
-        line-height: 1.5
-      }
-
-      .rekap-print-ttd-col {
-        width: 46%;
-        text-align: center
-      }
-
-      .rekap-print-ttd-img {
-        height: 48px;
-        margin: 4px 0
-      }
-
-      .rekap-print-ttd-img img {
-        max-height: 48px;
-        max-width: 160px
-      }
-
-      .rekap-print-ttd-col #rekapPrintTtdNama,
-      .rekap-print-ttd-col #rekapPrintTtdNama2 {
-        margin-top: 4px;
-        font-weight: bold;
-        text-decoration: underline
-      }
-    }
-
     /* Riwayat */
     .log-header {
       display: flex;

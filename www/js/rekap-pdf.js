@@ -450,9 +450,9 @@
         }
 
         doc.setFontSize(10);
-        const tglCetak = `Waikabubak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
-        const leftX = margin + 45;   // kolom kiri: Mengetahui
-        const rightX = pageWidth - margin - 45; // kolom kanan: Yang Membuat
+        const signatureX = pageWidth - 60; // Posisi di sisi kanan
+        doc.text(`Waikabubak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, signatureX, footerY, { align: 'center' });
+        doc.text('Mengetahui,', signatureX, footerY + 6, { align: 'center' });
 
         // Find true Kepala dynamically (excluding sub-heads like Kepala Bidang)
         const getKepalaSignatureData = (employees) => {
@@ -479,9 +479,7 @@
           return found;
         };
 
-        // Penandatangan: pilihan user (dropdown rekapTtdSel) — jika kosong, auto-detect Kepala
-        let kaban = (typeof getRekapTtdSigner === 'function' ? getRekapTtdSigner() : null);
-        if (!kaban) kaban = getKepalaSignatureData(lastRekapPegawai) || filteredPegawai[0];
+        const kaban = getKepalaSignatureData(lastRekapPegawai) || filteredPegawai[0];
 
         // Dynamic Signature Title: Inspektur, Kepala Dinas, Kepala Badan, Camat, etc.
         let leaderTitle = 'Kepala Badan';
@@ -504,9 +502,7 @@
           }
         }
         
-        // ── Kolom kiri: MENGETAHUI (penandatangan terpilih / Kepala) ──
-        doc.text('Mengetahui,', leftX, footerY + 6, { align: 'center' });
-        doc.text(leaderTitle, leftX, footerY + 11, { align: 'center' });
+        doc.text(leaderTitle, signatureX, footerY + 11, { align: 'center' });
 
         const kabanUid = String(kaban?.id || kaban?.ID || '');
         const kabanNip = String(kaban?.nip || kaban?.NIP || '');
@@ -514,59 +510,20 @@
         if (kabanSig) {
           try {
             const kabanFmt = kabanSig.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
-            doc.addImage(kabanSig, kabanFmt, leftX - 15, footerY + 14, 30, 15, undefined, 'FAST');
+            doc.addImage(kabanSig, kabanFmt, signatureX - 15, footerY + 14, 30, 15, undefined, 'FAST');
           } catch (e) { console.warn('Gagal gambar tanda tangan Kepala:', e); }
         }
 
         doc.setFont('times', 'bold');
-        doc.text(kaban?.nama || '__________________________', leftX, footerY + 38, { align: 'center' });
+        doc.text(kaban?.nama || '__________________________', signatureX, footerY + 38, { align: 'center' });
         doc.setFont('times', 'normal');
-
-        // Pangkat & NIP (kiri)
+        
+        // Pangkat & NIP
         if (kaban?.pangkat) {
-          doc.text(kaban.pangkat, leftX, footerY + 48, { align: 'center' });
-          doc.text(`NIP. ${kaban?.nip || '..........................................'}`, leftX, footerY + 53, { align: 'center' });
+          doc.text(kaban.pangkat, signatureX, footerY + 48, { align: 'center' });
+          doc.text(`NIP. ${kaban?.nip || '..........................................'}`, signatureX, footerY + 53, { align: 'center' });
         } else {
-          doc.text(`NIP. ${kaban?.nip || '..........................................'}`, leftX, footerY + 48, { align: 'center' });
-        }
-
-        // ── Kolom kanan: YANG MEMBUAT (dropdown rekapPembuatSel, fallback: user login) ──
-        let pembuat = (typeof resolveRekapPembuat === 'function' ? resolveRekapPembuat() : null);
-        if (!pembuat) {
-          const myNip = String(localStorage.getItem('MY_NIP') || '');
-          pembuat = lastRekapPegawai.find(p => String(p.nip || '') === myNip) || null;
-          if (!pembuat) {
-            pembuat = {
-              nama: window.userProfile?.nama || '',
-              nip: myNip,
-              jabatan: window.userProfile?.jabatan || '',
-              pangkat: ''
-            };
-          }
-        }
-
-        doc.text(tglCetak, rightX, footerY, { align: 'center' });
-        doc.text('Yang Membuat,', rightX, footerY + 6, { align: 'center' });
-        if (pembuat.jabatan) doc.text(pembuat.jabatan, rightX, footerY + 11, { align: 'center' });
-
-        const pembuatNip = String(pembuat?.nip || '');
-        const pembuatSig = sigMap[pembuatNip] || sigMap[String(pembuat?.id || pembuat?.ID || '')] || null;
-        if (pembuatSig) {
-          try {
-            const pembuatFmt = pembuatSig.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
-            doc.addImage(pembuatSig, pembuatFmt, rightX - 15, footerY + 14, 30, 15, undefined, 'FAST');
-          } catch (e) { console.warn('Gagal gambar tanda tangan pembuat:', e); }
-        }
-
-        doc.setFont('times', 'bold');
-        doc.text(pembuat.nama || '__________________________', rightX, footerY + 38, { align: 'center' });
-        doc.setFont('times', 'normal');
-
-        if (pembuat.pangkat) {
-          doc.text(pembuat.pangkat, rightX, footerY + 48, { align: 'center' });
-          doc.text(`NIP. ${pembuat.nip || '..........................................'}`, rightX, footerY + 53, { align: 'center' });
-        } else {
-          doc.text(`NIP. ${pembuat.nip || '..........................................'}`, rightX, footerY + 48, { align: 'center' });
+          doc.text(`NIP. ${kaban?.nip || '..........................................'}`, signatureX, footerY + 48, { align: 'center' });
         }
 
         // 6. Simpan & Kirim references
@@ -788,41 +745,13 @@
         html += `</tbody></table>`;
       }
       
-      // Penandatangan "Mengetahui" — pakai pilihan dropdown rekap jika ada
-      let ttdSigner = (typeof getRekapTtdSigner === 'function' ? getRekapTtdSigner() : null);
-      if (!ttdSigner && context === 'rekap' && window.lastRekapPegawai?.length) {
-        const keps = window.lastRekapPegawai.filter(u => {
-          const j = String(u.jabatan || '').toUpperCase();
-          if (j.includes('BIDANG') || j.includes('SEKSI') || j.includes('SUB') || j.includes('BAGIAN') || j.includes('UPTD') || j.includes('PELAKSANA') || j.includes('FUNGSIONAL')) return false;
-          return j.includes('KEPALA BADAN') || j.includes('KEPALA DINAS') || j.includes('INSPEKTUR') || j.includes('SEKRETARIS DAERAH') || j.includes('CAMAT') || j === 'KEPALA';
-        });
-        ttdSigner = keps[0] || null;
-      }
-      const escT = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const ttdNama = escT(ttdSigner?.nama || '__________________________');
-      const ttdJab = escT(ttdSigner?.jabatan || 'Pimpinan');
-      const ttdNip = escT(ttdSigner?.nip || '—');
-
-      // "Yang Membuat" — dropdown rekapPembuatSel, fallback user yang login
-      const pembuatNow = (typeof resolveRekapPembuat === 'function' ? resolveRekapPembuat() : null) || {};
-      const pbNama = escT(pembuatNow.nama || window.userProfile?.nama || '__________________________');
-      const pbJab = escT(pembuatNow.jabatan || window.userProfile?.jabatan || '');
-      const pbNip = escT(pembuatNow.nip || String(localStorage.getItem('MY_NIP') || '') || '—');
-
       html += `
-            <div class="footer" style="justify-content:space-between; gap:12px;">
-              <div class="footer-box" style="width:48%; text-align:center;">
-                <p>Mengetahui,</p>
-                <p>${ttdJab}</p>
-                <div class="name">${ttdNama}</div>
-                <p style="font-size:9px;color:#555">NIP. ${ttdNip}</p>
-              </div>
-              <div class="footer-box" style="width:48%; text-align:center;">
+            <div class="footer">
+              <div class="footer-box">
                 <p>Waikabubak, ${new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</p>
-                <p>Yang Membuat,</p>
-                ${pbJab ? `<p>${pbJab}</p>` : ''}
-                <div class="name">${pbNama}</div>
-                <p style="font-size:9px;color:#555">NIP. ${pbNip}</p>
+                <p>Mengetahui,</p>
+                <p>Pimpinan</p>
+                <div class="name">TTD</div>
               </div>
             </div>
           </body>

@@ -836,6 +836,67 @@
   /**
    * Load Pegawai for Lembur Dropdown
    */
+  /* ════ PENANDATANGAN "YANG MEMBUAT" (TTD rekap lembur) ════
+     Pilihan NIP disimpan di localStorage LEMBUR_PEMBUAT_NIP.
+     Kosong = otomatis pakai user yang login. */
+  const LEMBUR_PEMBUAT_NIP_KEY = 'LEMBUR_PEMBUAT_NIP';
+  if ($('lemburPembuatSel') && typeof makeSearchDd === 'function') {
+    makeSearchDd('lemburPembuatSel', { ph: 'Cari nama / jabatan...', h: 38 });
+  }
+
+  function lemburPembuatPool() {
+    let list = _allPegawaiLembur || [];
+    if (!list.length && typeof userListOrder !== 'undefined') list = userListOrder || [];
+    if (!list.length && typeof lastRekapPegawai !== 'undefined') list = lastRekapPegawai || [];
+    return list.filter(p => p && p.nama);
+  }
+
+  function populateLemburPembuatSel() {
+    const sel = $('lemburPembuatSel');
+    if (!sel) return;
+    const list = lemburPembuatPool();
+    if (!list.length) return;
+    const cur = localStorage.getItem(LEMBUR_PEMBUAT_NIP_KEY) || sel.value || '';
+    const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const score = j => (typeof getJabatanScore === 'function' ? getJabatanScore(j) : 0);
+    const opts = list.slice().sort((a, b) => (score(b.jabatan) - score(a.jabatan)) ||
+      String(a.nama || '').localeCompare(String(b.nama || ''), 'id')).map(p =>
+      `<option value="${esc(p.nip || '')}">${esc(p.nama)} — ${esc(p.jabatan || '—')}</option>`).join('');
+    sel.innerHTML = '<option value="">— Otomatis (Saya yang login) —</option>' + opts;
+    if (cur && Array.from(sel.options).some(o => o.value === cur)) sel.value = cur;
+    if (typeof syncSearchDdLabel === 'function') syncSearchDdLabel('lemburPembuatSel');
+  }
+  window.populateLemburPembuatSel = populateLemburPembuatSel;
+
+  window.onLemburPembuatChange = function () {
+    const sel = $('lemburPembuatSel');
+    const nip = sel ? sel.value : '';
+    if (nip) localStorage.setItem(LEMBUR_PEMBUAT_NIP_KEY, nip);
+    else localStorage.removeItem(LEMBUR_PEMBUAT_NIP_KEY);
+  };
+
+  /* Pegawai terpilih sbg "Yang Membuat", atau fallback user yang login */
+  function resolveLemburPembuat() {
+    const sel = $('lemburPembuatSel');
+    const nip = (sel && sel.value) || localStorage.getItem(LEMBUR_PEMBUAT_NIP_KEY) || '';
+    const list = lemburPembuatPool();
+    let p = nip ? list.find(x => String(x.nip || '') === String(nip)) : null;
+    if (!p) {
+      const myNip = String(localStorage.getItem('MY_NIP') || '');
+      p = list.find(x => String(x.nip || '') === myNip) || null;
+    }
+    if (!p) {
+      p = {
+        nama: window.userProfile?.nama || '',
+        nip: String(localStorage.getItem('MY_NIP') || ''),
+        jabatan: window.userProfile?.jabatan || '',
+        pangkat: ''
+      };
+    }
+    return p;
+  }
+  window.resolveLemburPembuat = resolveLemburPembuat;
+
   async function loadLemburPegawai() {
     const el = $('lemburOptionsList');
     if (!el) return;
@@ -854,6 +915,7 @@
       })).sort((a, b) => a.nama.localeCompare(b.nama));
 
       renderLemburPegawaiList(_allPegawaiLembur);
+      populateLemburPembuatSel();
     } catch (e) {
       el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--danger)"><i class="fas fa-times"></i> Gagal</div>';
     }
@@ -1634,8 +1696,8 @@
     }
 
     doc.setFontSize(10);
-    const signatureX = pageWidth - 60;
-    doc.text(`Waikabubak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, signatureX, footerY, { align: 'center' });
+    const signatureX = margin + 45;         // kolom kiri: Mengetahui
+    const rightX = pageWidth - margin - 45; // kolom kanan: Yang Membuat
     doc.text('Mengetahui,', signatureX, footerY + 6, { align: 'center' });
     doc.text(kepTitle, signatureX, footerY + 11, { align: 'center' });
 
@@ -1660,6 +1722,37 @@
       doc.text(`NIP. ${kb.nip || '—'}`, signatureX, footerY + 49, { align: 'center' });
     } else {
       doc.text(`NIP. ${kb.nip || '—'}`, signatureX, footerY + 44, { align: 'center' });
+    }
+
+    // ── Kolom kanan: YANG MEMBUAT (dropdown lemburPembuatSel, fallback: user login) ──
+    const pembuat = resolveLemburPembuat();
+    doc.text(`Waikabubak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, rightX, footerY, { align: 'center' });
+    doc.text('Yang Membuat,', rightX, footerY + 6, { align: 'center' });
+    if (pembuat.jabatan) doc.text(pembuat.jabatan, rightX, footerY + 11, { align: 'center' });
+
+    const pbNip = String(pembuat.nip || '').replace(/\s/g, '');
+    const pbUid = String(pembuat.id || pembuat.telegram_id || '');
+    let pembuatSig = (window._currentNipSigMap || {})[pbNip]
+      || (window._currentSigMap || {})[pbNip]
+      || (window._currentSigMap || {})[pbUid]
+      || localStorage.getItem('sig_' + pbNip)
+      || localStorage.getItem('sig_' + String(pembuat.nip || ''));
+    if (pembuatSig && !String(pembuatSig).startsWith('data:')) pembuatSig = null; // jsPDF butuh data URI
+    if (hasValidLembur && pembuatSig) {
+      try {
+        const pbFmt = pembuatSig.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
+        doc.addImage(pembuatSig, pbFmt, rightX - 15, footerY + 14, 30, 15, undefined, 'FAST');
+      } catch (e) { console.warn('Gagal gambar tanda tangan pembuat lembur:', e); }
+    }
+
+    doc.setFont('times', 'bold');
+    doc.text(pembuat.nama || '__________________________', rightX, footerY + 38, { align: 'center' });
+    doc.setFont('times', 'normal');
+    if (pembuat.pangkat) {
+      doc.text(pembuat.pangkat, rightX, footerY + 44, { align: 'center' });
+      doc.text(`NIP. ${pembuat.nip || '—'}`, rightX, footerY + 49, { align: 'center' });
+    } else {
+      doc.text(`NIP. ${pembuat.nip || '—'}`, rightX, footerY + 44, { align: 'center' });
     }
 
     // 7. Store references
@@ -2194,6 +2287,10 @@
     } else {
       sec.style.display = 'none';
     }
+
+    // Isi dropdown "Yang Membuat" (TTD) saat tab Lembur dibuka
+    if (_allPegawaiLembur.length) populateLemburPembuatSel();
+    else loadLemburPegawai();
   }
 
   function onLemburInstansiChange() {
