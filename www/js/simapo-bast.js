@@ -313,10 +313,12 @@ function bastBuildTags() {
   };
 }
 
-window.bastRenderDocx = async function(tags, filename, templateUrl) {
+// ponytail: inti render docx (mengembalikan blob, tanpa efek samping) supaya pemanggil
+// bisa memilih: unduh langsung, atau bungkus dulu jadi satu .zip.
+window.bastRenderDocxBlob = async function(tags, templateUrl) {
   if (!window.PizZip || !window.docxtemplater) {
     showToast('Library docxtemplater belum dimuat. Muat ulang aplikasi.', 'error');
-    return;
+    return null;
   }
   try {
     const tp = await fetch(templateUrl || 'bast_template.docx');
@@ -326,24 +328,50 @@ window.bastRenderDocx = async function(tags, filename, templateUrl) {
     const Docx = window.docxtemplater.default || window.docxtemplater;
     const doc = new Docx(zip, { delimiters: { start: '{', end: '}' }, paragraphLoop: true, linebreaks: true });
     doc.render(tags);
-    const blob = doc.getZip().generate({
+    return doc.getZip().generate({
       type: 'blob',
       mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       compression: 'DEFLATE'
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename || 'BAST.docx';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
-    return true;
   } catch (e) {
     console.error('[BAST] Gagal render docx:', e);
     showToast('Gagal membuat dokumen: ' + (e && e.message ? e.message : e), 'error');
+    return null;
+  }
+};
+
+window.unduhBerkas = function(blob, nama) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nama;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+};
+
+// ponytail: bungkus beberapa .docx jadi 1 .zip. Chrome hanya mengizinkan unduhan
+// otomatis pertama; unduhan ke-2 dst diblokir sampai pengguna mengizinkan
+// ("Download multiple files?"), jadi SPT/SPPD bisa tak lengkap tanpa pesan galat.
+window.unduhZipBerkas = async function(berkas, nama) {
+  if (!window.PizZip) { showToast('Library PizZip belum dimuat. Muat ulang aplikasi.', 'error'); return false; }
+  try {
+    const zip = new window.PizZip();
+    for (const b of berkas) zip.file(b.nama, new Uint8Array(await b.blob.arrayBuffer()));
+    window.unduhBerkas(zip.generate({ type: 'blob', mimeType: 'application/zip', compression: 'DEFLATE' }), nama);
+    return true;
+  } catch (e) {
+    console.error('[BAST] Gagal membuat zip:', e);
+    showToast('Gagal membungkus dokumen: ' + (e && e.message ? e.message : e), 'error');
     return false;
   }
+};
+
+window.bastRenderDocx = async function(tags, filename, templateUrl) {
+  const blob = await window.bastRenderDocxBlob(tags, templateUrl);
+  if (!blob) return false;
+  window.unduhBerkas(blob, filename || 'BAST.docx');
+  return true;
 };
 
 window.bastPreviewDocx = async function() {

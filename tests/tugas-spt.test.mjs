@@ -27,6 +27,12 @@ test('tanggalID: format Indonesia, aman timezone', () => {
   assert.equal(T.tanggalID('2026-06-29'), '29 Juni 2026');
   assert.equal(T.tanggalID('2026-01-01T00:00:00.000Z'), '1 Januari 2026');
   assert.equal(T.tanggalID(''), '');
+  // Tanggal penugasan dari API berbentuk timestamp (…T16:00:00.000Z = tengah malam WITA).
+  // Kartu monitoring merendernya dengan new Date(v) + toLocaleDateString('id-ID'); dokumen
+  // SPT/SPPD harus menyebut hari yang SAMA, bukan hari UTC-nya (dulu meleset 1 hari di WITA).
+  const berwaktu = '2026-10-15T16:00:00.000Z';
+  const kartu = new Date(berwaktu).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  assert.equal(T.tanggalID(berwaktu), kartu, 'tanggal berwaktu harus sama dengan tampilan kartu monitoring');
 });
 
 test('lamaHari: inklusif dari tanggal berangkat s.d. kembali', () => {
@@ -249,7 +255,8 @@ test('generate: field wajib kosong -> batal + TIDAK menyentuh render (kontrol po
   try {
     const win = fresh();
     const calls = [];
-    win.bastRenderDocx = async () => { calls.push(1); return true; };
+    win.bastRenderDocxBlob = async () => { calls.push(1); return new Blob(['x']); };
+    win.unduhZipBerkas = async () => true;
     win.apiGet = async () => ({ rows: [] });
 
     const tolak = await win.TugasSPT.generate(grup, { maksud: '', tempatTujuan: '' });
@@ -261,7 +268,9 @@ test('generate: field wajib kosong -> batal + TIDAK menyentuh render (kontrol po
     // sekaligus membuktikan nilai pejabat benar-benar SAMPAI ke tag dokumen.
     const win2 = fresh();
     const tags = [];
-    win2.bastRenderDocx = async (t) => { tags.push(t); return true; };
+    const zip = [];
+    win2.bastRenderDocxBlob = async (t) => { tags.push(t); return new Blob(['x']); };
+    win2.unduhZipBerkas = async (berkas, nama) => { zip.push({ berkas, nama }); return true; };
     win2.apiGet = async () => ({ rows: [] });
     const lanjut = await win2.TugasSPT.generate(grup, {
       maksud: 'Rakor', tempatTujuan: 'Kupang', tanggalBerangkat: '2026-07-02', tanggalKembali: '2026-07-04',
@@ -279,9 +288,36 @@ test('generate: field wajib kosong -> batal + TIDAK menyentuh render (kontrol po
     assert.equal(tags[1].SekretarisNIP, '901');
     assert.equal(tags[1].KpaNama, 'Kepala Uji', 'kepala juga masuk tag SPPD (KpaNama)');
     assert.equal(tags[1].KepalaNama, 'Kepala Uji');
+    // Satu unduhan saja: Chrome memblokir unduhan otomatis ke-2 dst, jadi SPT+SPPD
+    // harus keluar sebagai satu .zip, bukan satu berkas per dokumen.
+    assert.equal(zip.length, 1, 'tepat satu unduhan (zip)');
+    assert.deepEqual(
+      zip[0].berkas.map(b => b.nama),
+      ['SPT_2026-07-02.docx', 'SPPD_111_2026-07-02.docx'],
+      'isi zip: SPT + SPPD dengan nama bertanggal penugasan'
+    );
+    assert.equal(zip[0].nama, 'SPT-SPPD_2026-07-02.zip', 'nama unduhan .zip');
   } finally {
     if (lamaToast === undefined) delete globalThis.showToast; else globalThis.showToast = lamaToast;
   }
+});
+
+test('generate: SPPD gagal -> batal, tidak ada unduhan zip', async () => {
+  const grup = { items: [{ id: '1', nip: '111', nama: 'A', tanggal: '2026-07-02', keterangan: 'Rakor', instansi_id: 'INS' }] };
+  const win = fresh();
+  let unduh = 0;
+  win.bastRenderDocxBlob = async (t, tpl) => (String(tpl).startsWith('sppd') ? null : new Blob(['x']));
+  win.unduhZipBerkas = async () => { unduh++; return true; };
+  win.apiGet = async () => ({ rows: [] });
+  const ok = await win.TugasSPT.generate(grup, {
+    maksud: 'Rakor', tempatTujuan: 'Kupang', tanggalBerangkat: '2026-07-02', tanggalKembali: '2026-07-04',
+    kepala: { nama: 'Kepala Uji', pangkat: 'IV/c', nip: '900' },
+    sekretaris: { nama: 'Sek Uji', nip: '901' },
+    paraf: [{ jabatan: 'a' }, { jabatan: 'b' }, { jabatan: 'c' }]
+  });
+  // Dulu nilai balik render SPPD diabaikan -> generate() tetap lapor sukses & menyimpan.
+  assert.equal(ok, false, 'SPPD gagal harus membatalkan seluruh proses');
+  assert.equal(unduh, 0, 'tidak ada zip setengah isi');
 });
 
 // Membuktikan editan pejabat di form benar-benar sampai ke objek perjadin (dan sebaliknya),

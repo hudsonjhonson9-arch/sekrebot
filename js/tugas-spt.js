@@ -21,12 +21,15 @@
   // ponytail: sambung ekor hanya bila ada, supaya "Tiga Puluh" tak berjejak spasi.
   function sisa(r) { return r ? ' ' + terbilang(r) : ''; }
 
-  // ponytail: parse tanggal-only sendiri (bukan new Date(str)) supaya tidak geser hari
-  // akibat timezone. Upgrade path: pakai Temporal bila sudah tersedia di target.
+  // ponytail: tanggal-only (yyyy-mm-dd) di-parse sendiri supaya tidak geser hari karena timezone.
+  // String berwaktu (…T…Z, mis. tanggal penugasan dari API) diserahkan ke new Date agar
+  // hasilnya sama dengan yang ditampilkan kartu monitoring (new Date + toLocaleDateString);
+  // memotong bagian tanggalnya memberi hari UTC, yang bisa meleset 1 hari di WITA.
+  // Upgrade path: pakai Temporal bila sudah tersedia di target.
   function toDate(v) {
     if (!v) return null;
     const s = String(v);
-    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const m = s.includes('T') ? null : s.match(/^(\d{4})-(\d{2})-(\d{2})/);
     const d = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(s);
     return isNaN(d.getTime()) ? null : d;
   }
@@ -236,7 +239,7 @@
       if (typeof showToast === 'function') showToast('Wajib diisi: ' + kurang.join(', '), 'error');
       return false;
     }
-    if (!window.bastRenderDocx) { showToast('Fungsi render dokumen belum siap.', 'error'); return false; }
+    if (!window.bastRenderDocxBlob || !window.unduhZipBerkas) { showToast('Fungsi render dokumen belum siap.', 'error'); return false; }
     const instansiId = (grup.items[0] && grup.items[0].instansi_id) || '';
     const idx = await masterIndex(instansiId);
     // Jangan diam-diam mencetak pangkat/jabatan kosong di dokumen legal.
@@ -246,15 +249,24 @@
     if (kosong.length && typeof showToast === 'function') {
       showToast('Pangkat/jabatan belum lengkap: ' + kosong.join(', '), 'info');
     }
-    const tglKunci = (grup.items[0] && grup.items[0].tanggal) || '';
+    // Nama berkas dipakai juga sebagai entri di dalam .zip -> buang ':' (ilegal di Windows).
+    const tglKunci = String((grup.items[0] && grup.items[0].tanggal) || '').replace(/[^\w.-]+/g, '_');
     const tagsSPT = bangunTagsSPT(grup, perjadin, idx);
-    const okSPT = await window.bastRenderDocx(tagsSPT, 'SPT_' + tglKunci + '.docx', 'spt_template.docx');
-    if (!okSPT) return false;
+    const berkas = [];
+    const spt = await window.bastRenderDocxBlob(tagsSPT, 'spt_template.docx');
+    if (!spt) return false;
+    berkas.push({ nama: 'SPT_' + tglKunci + '.docx', blob: spt });
     for (const row of grup.items) {
       const tags = bangunTagsSPPD(row, grup, perjadin, idx);
       const nip = String(row.nip || '').replace(/\s+/g, '');
-      await window.bastRenderDocx(tags, 'SPPD_' + nip + '_' + tglKunci + '.docx', 'sppd_template.docx');
+      const spd = await window.bastRenderDocxBlob(tags, 'sppd_template.docx');
+      // ponytail: dulu nilai balik render SPPD diabaikan -> SPPD bisa hilang tanpa jejak.
+      if (!spd) return false;
+      berkas.push({ nama: 'SPPD_' + nip + '_' + tglKunci + '.docx', blob: spd });
     }
+    // Satu .zip: Chrome memblokir unduhan otomatis ke-2 dst (prompt "unduhan ganda"),
+    // sehingga SPPD bisa tak pernah sampai ke pengguna.
+    await window.unduhZipBerkas(berkas, 'SPT-SPPD_' + tglKunci + '.zip');
     const ids = grup.items.map(r => r.id).filter(Boolean);
     if (ids.length) {
       const ok = await simpanPerjadin(ids, perjadin);

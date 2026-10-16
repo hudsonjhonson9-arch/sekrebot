@@ -1833,6 +1833,28 @@
       transform: none
     }
 
+    /* ponytail: .btn-secondary dipakai tombol Batal (modal perjadin + modal lain) tapi
+       belum pernah punya aturan -> tampil seperti teks polos. Sekali di sini, bukan per-modal. */
+    .btn-secondary {
+      width: 100%;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: transparent;
+      color: var(--white);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: transform .15s, background .15s
+    }
+
+    .btn-secondary:active {
+      transform: scale(.97);
+      background: var(--border)
+    }
+
     .btn-admin {
       width: 100%;
       padding: 14px;
@@ -7698,10 +7720,44 @@ body.arsip-preview-open { overflow: hidden; }
   position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.65);
   display:none;align-items:flex-end;justify-content:center;padding:12px
 }
-#perjadinModal .modal-content{background:var(--card-bg);border:1px solid var(--border);border-radius:16px 16px 0 0;padding:16px;width:100%}
-#perjadinModal .btn-icon{background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer}
-#perjadinModal .form-group{margin-bottom:8px}
+#perjadinModal .perjadin-modal{
+  background:var(--card-bg);border:1px solid var(--border);border-radius:16px 16px 0 0;
+  width:100%;max-width:560px;max-height:100%;padding:0;overflow:hidden;
+  display:flex;flex-direction:column
+}
+/* ponytail: 21 isian -> header/footer tetap, hanya .perjadin-body yang menggulir.
+   Tombol Cetak tak lagi hilang di balik gulungan. */
+#perjadinModal .perjadin-head{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:14px 16px;border-bottom:1px solid var(--border);flex:0 0 auto
+}
+#perjadinModal .perjadin-title{font-weight:800;font-size:13px;color:var(--gold);min-width:0}
+#perjadinModal .btn-icon{
+  background:transparent;border:none;color:var(--muted);font-size:22px;line-height:1;
+  cursor:pointer;padding:2px 8px;border-radius:8px
+}
+#perjadinModal .perjadin-body{
+  overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px 0;flex:1 1 auto
+}
+#perjadinModal .perjadin-info{font-size:11px;color:var(--muted);margin-bottom:12px}
+#perjadinModal .perjadin-grid{display:grid;grid-template-columns:1fr;gap:0 12px}
+#perjadinModal .form-group{margin-bottom:10px;min-width:0}
+#perjadinModal .perjadin-sect{margin-top:4px;padding-top:12px;border-top:1px solid var(--border)}
+#perjadinModal .perjadin-sect-title{font-weight:700;font-size:11px;color:var(--muted);margin-bottom:8px}
+#perjadinModal .perjadin-foot{
+  position:sticky;bottom:0;display:flex;gap:8px;align-items:center;
+  margin:10px -16px 0;padding:12px 16px;border-top:1px solid var(--border);background:var(--card-bg)
+}
+#perjadinModal .perjadin-foot .btn-secondary{flex:1;margin-bottom:0}
+#perjadinModal .perjadin-foot .btn-primary{flex:2;margin-bottom:0}
 @media (min-width:768px){
   #perjadinModal{align-items:center;padding:24px}
-  #perjadinModal .modal-content{border-radius:16px}
+  #perjadinModal .perjadin-modal{border-radius:16px}
+  #perjadinModal .perjadin-grid{grid-template-columns:1fr 1fr}
+}
+/* sangat sempit (HP kecil): tombol turun jadi satu kolom penuh agar label tak terpotong */
+@media (max-width:360px){
+  #perjadinModal .perjadin-foot{flex-direction:column-reverse}
+  #perjadinModal .perjadin-foot .btn-secondary,
+  #perjadinModal .perjadin-foot .btn-primary{width:100%;flex:none}
 }
