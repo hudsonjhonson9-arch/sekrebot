@@ -7660,7 +7660,10 @@ body.arsip-preview-open { overflow: hidden; }
   .kk-head { flex-wrap: wrap; }
   .kk-judul { flex: 1 1 100%; }
   .kk-per { flex-direction: column; }
-  .kk-per-aksi { align-items: stretch; width: 100%; }
+  .kk-per .kk-per-aksi { align-items: stretch; width: 100%; }
+  /* di .kk-row (pohon Bank Data) aksi tetap sebaris supaya nama tidak terhimpit */
+  .kk-row { flex-wrap: wrap; }
+  .kk-row .kk-per-aksi { flex-direction: row; justify-content: flex-end; }
   .kk-buka { padding: 10px; margin: -6px -4px; }
   .kk-head .custom-search-dropdown .dropdown-trigger { height: 44px; }
   .kk-head .custom-search-dropdown .dropdown-trigger input { font-size: 16px; }

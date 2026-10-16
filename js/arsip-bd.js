@@ -645,5 +645,14 @@
       buka = new Set();
       pohon = [];
     },
+    // Isi tile beranda sebelum panel pernah dibuka (muat() butuh el saat mount).
+    async warm() {
+      try {
+        await Promise.all([muatTahun(), perluPohon ? muatPohon() : Promise.resolve()]);
+        setTile(hitung()[1][1]);
+      } catch { /* gagal: tile tetap "—" */ }
+    },
   };
+
+  window.addEventListener('load', () => window.ArsipBD.warm());
 })();

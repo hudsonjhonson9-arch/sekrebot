@@ -375,5 +375,14 @@
       buka.clear();
       muat();
     },
+    // Isi tile beranda sebelum panel pernah dibuka (setTile hanya jalan di muat()).
+    async warm() {
+      try {
+        if (!tahun) await muatTahun();
+        await muat();
+      } catch { /* gagal: tile tetap "—" */ }
+    },
   };
+
+  window.addEventListener('load', () => window.ArsipKK.warm());
 })();
