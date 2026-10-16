@@ -348,6 +348,7 @@ async function loadRekap() {
     rekapLoaded = true;
 
     renderRekap(pegawai);
+    if (typeof populateRekapTtdSel === 'function') populateRekapTtdSel();
   } catch (e) {
     console.warn('loadRekap error:', e);
     $('pegawaiList').innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-plug"></i></div><div class="empty-text">Gagal memuat rekap</div><div class="empty-sub">Pastikan webhook n8n aktif</div></div>`;
@@ -1468,3 +1469,91 @@ window.onRekapInstansiChange = onRekapInstansiChange;
 makeSearchDd('rekapInstansiSelect', { ph: 'Pilih instansi', h: 38 });
 makeSearchDd('rekapRoleFilter', { ph: 'Pilih role', h: 38 });
 makeSearchDd('rekapBidang', { ph: 'Semua bidang', h: 38 });
+makeSearchDd('rekapTtdSel', { ph: 'Cari nama / jabatan...', h: 38 });
+
+/* ════ PENANDATANGAN "MENGETAHUI" (TTD rekap) ════
+   Pilihan user (NIP) disimpan di localStorage REKAP_TTD_NIP.
+   Kosong = otomatis deteksi Kepala Instansi (fallback lama). */
+const REKAP_TTD_NIP_KEY = 'REKAP_TTD_NIP';
+
+function populateRekapTtdSel() {
+  const sel = $('rekapTtdSel');
+  if (!sel) return;
+  const list = (lastRekapPegawai && lastRekapPegawai.length ? lastRekapPegawai : []) ||
+    (typeof userListOrder !== 'undefined' ? userListOrder : []);
+  const cur = localStorage.getItem(REKAP_TTD_NIP_KEY) || sel.value || '';
+  const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const opts = list.filter(p => p && p.nama).slice().sort((a, b) => (getJabatanScore(b.jabatan) - getJabatanScore(a.jabatan)) ||
+    String(a.nama || '').localeCompare(String(b.nama || ''), 'id')).map(p =>
+    `<option value="${esc(p.nip || '')}">${esc(p.nama)} — ${esc(p.jabatan || '—')}</option>`).join('');
+  sel.innerHTML = '<option value="">— Otomatis (Kepala Instansi) —</option>' + opts;
+  if (cur && Array.from(sel.options).some(o => o.value === cur)) sel.value = cur;
+  if (typeof syncSearchDdLabel === 'function') syncSearchDdLabel('rekapTtdSel');
+  updateRekapPrintTtd();
+}
+window.populateRekapTtdSel = populateRekapTtdSel;
+
+function onRekapTtdChange() {
+  const sel = $('rekapTtdSel');
+  const nip = sel ? sel.value : '';
+  if (nip) localStorage.setItem(REKAP_TTD_NIP_KEY, nip);
+  else localStorage.removeItem(REKAP_TTD_NIP_KEY);
+  updateRekapPrintTtd();
+}
+window.onRekapTtdChange = onRekapTtdChange;
+
+/* Pegawai terpilih sbagai penandatangan, atau null (otomatis) */
+function getRekapTtdSigner() {
+  const sel = $('rekapTtdSel');
+  const nip = (sel && sel.value) || localStorage.getItem(REKAP_TTD_NIP_KEY) || '';
+  if (!nip) return null;
+  const pool = (lastRekapPegawai && lastRekapPegawai.length ? lastRekapPegawai :
+    (typeof userListOrder !== 'undefined' ? userListOrder : []));
+  return (pool || []).find(p => String(p.nip || '') === String(nip)) || null;
+}
+window.getRekapTtdSigner = getRekapTtdSigner;
+
+/* Isi blok TTD pada tampilan cetak browser (@media print) */
+function updateRekapPrintTtd() {
+  const box = $('rekapPrintTtd');
+  if (!box) return;
+  let signer = getRekapTtdSigner();
+  // Mode otomatis: deteksi Kepala Instansi (sama dgn logika PDF)
+  if (!signer && lastRekapPegawai?.length) {
+    const keps = lastRekapPegawai.filter(u => {
+      const j = String(u.jabatan || '').toUpperCase();
+      if (j.includes('BIDANG') || j.includes('SEKSI') || j.includes('SUB') || j.includes('BAGIAN') || j.includes('UPTD') || j.includes('PELAKSANA') || j.includes('FUNGSIONAL')) return false;
+      return j.includes('KEPALA BADAN') || j.includes('KEPALA DINAS') || j.includes('INSPEKTUR') || j.includes('SEKRETARIS DAERAH') || j.includes('CAMAT') || j === 'KEPALA';
+    });
+    signer = keps[0] || null;
+  }
+  if (!signer) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  $('rekapPrintTtdTanggal').textContent = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  $('rekapPrintTtdJab').textContent = signer.jabatan || '—';
+  $('rekapPrintTtdNama').textContent = signer.nama || '—';
+  $('rekapPrintTtdNip').textContent = (signer.pangkat ? signer.pangkat + ' · ' : '') + 'NIP. ' + (signer.nip || '—');
+  const img = $('rekapPrintTtdImg');
+  const nip = String(signer.nip || '');
+  const showImg = (src) => {
+    if (!img) return;
+    if (src) { img.src = src; img.style.display = ''; } else { img.removeAttribute('src'); img.style.display = 'none'; }
+  };
+  const cached = localStorage.getItem('sig_' + nip) || '';
+  const toPreview = (u) => {
+    if (!u) return '';
+    if (String(u).startsWith('data:')) return u;
+    const m = String(u).match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || String(u).match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    return m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w400' : u;
+  };
+  if (cached) { showImg(toPreview(cached)); return; }
+  if (typeof apiGet === 'function' && nip) {
+    apiGet(P.signatureGet, { nip: nip }).then(res => {
+      const d = (res && (res.data?.data || res.data)) || null;
+      const row = Array.isArray(d) ? d[0] : d;
+      const url = row && (row.signature || row.url || row.fileUrl) || '';
+      if (url) { try { localStorage.setItem('sig_' + nip, url); } catch (_) { } showImg(toPreview(url)); }
+    }).catch(() => { });
+  }
+}
+window.updateRekapPrintTtd = updateRekapPrintTtd;

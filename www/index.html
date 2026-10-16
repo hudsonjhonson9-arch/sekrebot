@@ -1106,6 +1106,15 @@
             <option value="Semua">— Tampilkan Semua Bidang —</option>
           </select>
         </div>
+
+        <!-- Penandatangan "Mengetahui" (TTD PDF & cetak) -->
+        <div style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+          <div class="date-range-label" style="margin-bottom: 4px"><i class="fas fa-file-signature"></i> Penandatangan "Mengetahui" (TTD Rekap)</div>
+          <select id="rekapTtdSel" class="date-range-input" style="width: 100%; height: 38px; cursor: pointer"
+            onchange="onRekapTtdChange()">
+            <option value="">— Otomatis (Kepala Instansi) —</option>
+          </select>
+        </div>
       </div>
       <!-- Stat Rekap: baris atas kehadiran, baris bawah keterangan -->
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
@@ -1199,6 +1208,15 @@
         </div>
       </div>
       <div class="footer" style="margin-top:12px">Data rekap dihitung langsung dari log absen</div>
+      <!-- Blok TTD "Mengetahui" — hanya tampil saat cetak (@media print) -->
+      <div id="rekapPrintTtd" class="rekap-print-ttd">
+        <div>Waikabubak, <span id="rekapPrintTtdTanggal">—</span></div>
+        <div>Mengetahui,</div>
+        <div id="rekapPrintTtdJab">—</div>
+        <div class="rekap-print-ttd-img"><img id="rekapPrintTtdImg" alt="" style="display:none"></div>
+        <div id="rekapPrintTtdNama">—</div>
+        <div id="rekapPrintTtdNip">—</div>
+      </div>
     </div>
 
     <!-- ══ TAB PENUGASAN ══ -->
@@ -3191,7 +3209,7 @@
 <script src="js/kontrol.js?v=20260811c"></script>
   <script src="js/keterangan.js"></script>
   <script src="js/log.js?v=20261013c"></script>
-  <script src="js/rekap.js?v=20261014"></script>
+  <script src="js/rekap.js?v=20261016"></script>
 
   <!-- 5. Admin modules (split by section) -->
   <script src="js/admin-libur.js"></script>
@@ -3215,7 +3233,7 @@
   <script src="js/desktop.js?v=9993"></script>
   <script src="js/signature.js"></script>
   <script src="js/meja.js"></script>
-  <script src="js/rekap-pdf.js"></script>
+  <script src="js/rekap-pdf.js?v=20261016"></script>
   <script src="js/tugas_lembur.js?v=20261014"></script>
   <script src="js/simapo.js?v=20261013b"></script>
 

@@ -479,7 +479,9 @@
           return found;
         };
 
-        const kaban = getKepalaSignatureData(lastRekapPegawai) || filteredPegawai[0];
+        // Penandatangan: pilihan user (dropdown rekapTtdSel) — jika kosong, auto-detect Kepala
+        let kaban = (typeof getRekapTtdSigner === 'function' ? getRekapTtdSigner() : null);
+        if (!kaban) kaban = getKepalaSignatureData(lastRekapPegawai) || filteredPegawai[0];
 
         // Dynamic Signature Title: Inspektur, Kepala Dinas, Kepala Badan, Camat, etc.
         let leaderTitle = 'Kepala Badan';
@@ -745,13 +747,28 @@
         html += `</tbody></table>`;
       }
       
+      // Penandatangan "Mengetahui" — pakai pilihan dropdown rekap jika ada
+      let ttdSigner = (typeof getRekapTtdSigner === 'function' ? getRekapTtdSigner() : null);
+      if (!ttdSigner && context === 'rekap' && window.lastRekapPegawai?.length) {
+        const keps = window.lastRekapPegawai.filter(u => {
+          const j = String(u.jabatan || '').toUpperCase();
+          if (j.includes('BIDANG') || j.includes('SEKSI') || j.includes('SUB') || j.includes('BAGIAN') || j.includes('UPTD') || j.includes('PELAKSANA') || j.includes('FUNGSIONAL')) return false;
+          return j.includes('KEPALA BADAN') || j.includes('KEPALA DINAS') || j.includes('INSPEKTUR') || j.includes('SEKRETARIS DAERAH') || j.includes('CAMAT') || j === 'KEPALA';
+        });
+        ttdSigner = keps[0] || null;
+      }
+      const ttdNama = ttdSigner?.nama || '__________________________';
+      const ttdJab = ttdSigner?.jabatan || 'Pimpinan';
+      const ttdNip = ttdSigner?.nip || '—';
+
       html += `
             <div class="footer">
               <div class="footer-box">
                 <p>Waikabubak, ${new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</p>
                 <p>Mengetahui,</p>
-                <p>Pimpinan</p>
-                <div class="name">TTD</div>
+                <p>${String(ttdJab).replace(/</g, '&lt;')}</p>
+                <div class="name">${String(ttdNama).replace(/</g, '&lt;')}</div>
+                <p style="font-size:9px;color:#555">NIP. ${String(ttdNip).replace(/</g, '&lt;')}</p>
               </div>
             </div>
           </body>
