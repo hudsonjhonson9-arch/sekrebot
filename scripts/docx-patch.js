@@ -8,30 +8,20 @@ const tOf = run => {
   return { open: m[0].slice(0, m[0].indexOf('>') + 1), text: m[1] };
 };
 
-function spliceRun(par, rawRun, newT) {
-  const i = par.indexOf(rawRun);
-  const t = tOf(rawRun);
-  const inner = t.open + t.text + '</w:t>';
-  const replaced = rawRun.slice(0, rawRun.indexOf(inner)) + newT + rawRun.slice(rawRun.indexOf(inner) + inner.length);
-  return par.slice(0, i) + replaced + par.slice(i + rawRun.length);
-}
-
 export function rewriteWhole(par, tag) {
-  // ganti seluruh teks paragraf: run pertama berisi teks -> tag, sisanya dikosongkan
-  const runs = Array.from(par.matchAll(/<w:r\b[^>]*>[\s\S]*?<\/w:r>/g), m => m[0]);
+  // ganti seluruh teks paragraf: <w:t> pertama yang berisi -> tag, sisanya dikosongkan.
+  // Bekerja per-<w:t> (bukan per-run): satu run bisa memuat beberapa <w:t>.
   let done = false;
-  let out = par;
-  for (const r of runs) {
-    const t = tOf(r);
-    if (!t) continue;
-    if (!done && t.text.trim() !== '') {
-      out = spliceRun(out, r, t.open + tag + '</w:t>');
+  return par.replace(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g, m => {
+    const open = m.slice(0, m.indexOf('>') + 1);
+    const text = m.slice(open.length, m.length - '</w:t>'.length);
+    if (!done && text.trim() !== '') {
       done = true;
-    } else if (t.text.length) {
-      out = spliceRun(out, r, t.open + '</w:t>');
+      return open + tag + '</w:t>';
     }
-  }
-  return out;
+    if (text.length) return open + '</w:t>';
+    return m;
+  });
 }
 
 function applyOne(para, target, repl) {
@@ -91,12 +81,25 @@ export function loadParagraphs(docXml) {
   return out;
 }
 
+export const parText = par =>
+  Array.from(par.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g), m => m[1]).join('').replace(/\s+/g, ' ').trim();
+
 // wholeMap: { index: '{Tag}' }, patchesMap: { index: [[target, repl], …] }, blankList: [index, …]
 export function applyByIndex(paras, wholeMap = {}, patchesMap = {}, blankList = []) {
   const blanks = new Set(blankList);
-  const newParas = paras.map(({ raw, text }, i) => {
-    if (blanks.has(i)) return rewriteWhole(raw, '');
-    if (wholeMap[i] !== undefined) return rewriteWhole(raw, wholeMap[i]);
+  const newParas = paras.map(({ raw }, i) => {
+    if (blanks.has(i)) {
+      const out = rewriteWhole(raw, '');
+      if (parText(out) !== '') throw new Error(`Paragraf ${i}: hasil blank tidak kosong: "${parText(out)}"`);
+      return out;
+    }
+    if (wholeMap[i] !== undefined) {
+      const out = rewriteWhole(raw, wholeMap[i]);
+      const got = parText(out);
+      const want = String(wholeMap[i]).replace(/\s+/g, ' ').trim();
+      if (got !== want) throw new Error(`Paragraf ${i}: hasil "${got}" != "${want}"`);
+      return out;
+    }
     if (patchesMap[i] !== undefined) return patchParagraph(raw, patchesMap[i]);
     return raw;
   });
