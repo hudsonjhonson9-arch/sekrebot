@@ -91,6 +91,7 @@
   "paperclip": "documents-paperclip",
   "pen": "documents-file-pen",
   "pen-fancy": "tools-pencil",
+  "pen-nib": "documents-file-pen-line",
   "plug": null,
   "plus": null,
   "plus-circle": null,

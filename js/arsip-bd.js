@@ -347,7 +347,7 @@
       : '';
     const isiCapaian = conf.valB && baris ? angka(baris[conf.valB]) : '';
 
-    return `<table class="kk-tabel">
+    return `<div class="kk-tabel-wrap"><table class="kk-tabel">
       <thead><tr>${kepala}</tr></thead>
       <tbody>
         <tr>
@@ -357,7 +357,7 @@
           ${kolomTw}
         </tr>
       </tbody>
-    </table>
+    </table></div>
     ${isAdmin() ? `<div class="kk-per-aksi kk-form-baris">
       <button class="arsip-act" data-bd="nilai" data-level="${escapeHtml(level)}" data-id="${escapeHtml(node.id)}">
         <i class="fas fa-pen" aria-hidden="true"></i> ${baris ? 'Ubah nilai' : 'Isi nilai'}</button>
