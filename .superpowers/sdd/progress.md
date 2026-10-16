@@ -196,3 +196,18 @@ FIX ROUND 2 (c36809a, 5 file, +147/-31) - menutup 2 Medium + 1 Low + lubang tes:
   Mutasi divalidasi ulang (cadangan file + Copy-Item, TIDAK pakai git checkout): tagnama->tes15; readform->tes16; border->tes16; cache->tes12; mirror->tes17; modalorder->tes13. Baseline & restore 18/0.
   Suite penuh 534/534. Browser (vite :5173, ?v=20261020): readForm/fillForm ada, dialog flex @85ms saat master masih pending 800ms, kepalaNama terisi 'Pejabat Kepala' dari master, validasi toast+border merah+modal tetap terbuka, fillForm membersihkan border, 22 kontrol form, 0 console error.
   CATATAN: cache-bust WAJIB dinaikkan tiap js/ berubah - sempat tertipu cache browser (?v=20261019) sampai dinaikkan ke 20261020.
+RE-REVIEW FIX ROUND 2 (c36809a) -> APPROVED oleh reviewer independen. M3 & M4 direproduksi sendiri: mutasi `KepalaNama: ''` di js:150 -> GAGAL tes generate (expected 'Kepala Uji', actual ''); mutasi `p.kepala` -> `p.kepalaX` di js:296 -> GAGAL tes readForm/fillForm. Medium #1/#2 + Low #3 PASS dgn file:line. Suite 534/534, tes file 18/18. Nol perubahan file oleh reviewer.
+  Sisa catatan (Low, ditutup di cd4d34b):
+    (a) nilai tag SPPD `KpaNama` (js:164) & `KepalaNama` SPPD (js:181) tak di-assert -> mutasi lolos. Ditutup: 2 assert baru; mutasi baris 164/181/184 kini GAGAL tes generate.
+    (b) BALAPAN yang saya sendiri ciptakan di c36809a: dialog kini tampil sebelum master selesai -> submit cepat (master lambat) mencetak nama DEFAULT_PERJADIN, bukan nama master.
+        Ditutup: `tungguMaster(ms)` (batas 1,5 dtk) + `_siapMaster` promise dicatat di bukaModal; handler submit `await tungguMaster()` SEBELUM `readForm()`.
+        ponytail: batas waktu mencegah tombol menggantung bila /api/user-list tak pernah balas; nilai yang terlihat = yang tercetak.
+
+FIX ROUND 3 (cd4d34b, 5 file, +79/-12):
+  js/tugas-spt.js: `let _siapMaster`, `tungguMaster(ms)` (Promise.race dgn batas waktu), bukaModal mencatat promise (bukan await), submit `await tungguMaster()` sebelum readForm, export +tungguMaster; cache-bust js/tugas-spt.js -> ?v=20261021.
+  tests/tugas-spt.test.mjs: 18 -> 20 tes:
+    (a) `tungguMaster: submit menunggu master, tapi tak menggantung bila master lambat` - dua sisi: menunggu selama master tertunda (assert selesai===false) DAN tetap lanjut lewat batas waktu saat master menggantung.
+    (b) `submit menunggu master SEBELUM membaca form` - assert urutan sumber (await tungguMaster < const p = readForm) karena handler submit hanya terpasang di browser.
+    Pelajaran: `fresh()` kedua JANGAN dipanggil saat shim globalThis.document sudah terpasang (modal tiruan tanpa `.dataset` -> initPerjadinModal TypeError). Ambil semua `fresh()` di awal tes.
+  Mutasi divalidasi (cadangan file + Copy-Item): tunggumaster->tes14; hapus `await tungguMaster()`->tes15; kpanama->tes17; baris181/184->tes17. Baseline & restore 20/0.
+  Suite penuh 536/536. Browser (vite :5173, ?v=20261021): 6 export (tungguMaster ada), dialog flex @1ms saat master tertunda, KLIK SUBMIT saat master tertunda -> setelh tunggu kepalaNama = 'Pejabat Kepala' (nilai master, bukan DEFAULT_PERJADIN), toast 'Wajib diisi: Maksud, Tempat Tujuan, Tanggal Berangkat, Tanggal Kembali', modal tetap terbuka, 0 console error (3 warning Telegram pre-existing). Sisa: E2E click-through penuh (butuh kredensial login) + push.
