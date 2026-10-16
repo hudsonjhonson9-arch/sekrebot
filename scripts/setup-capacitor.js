@@ -47,6 +47,8 @@ if (fs.existsSync('icons')) copyDirSync('icons', 'www/icons');
 if (fs.existsSync('bast_template.docx')) fs.copyFileSync('bast_template.docx', 'www/bast_template.docx');
 // spt_template.docx di-fetch js/tugas-spt.js untuk generate SPT/SPPD.
 if (fs.existsSync('spt_template.docx')) fs.copyFileSync('spt_template.docx', 'www/spt_template.docx');
+// sppd_template.docx di-fetch js/tugas-spt.js untuk generate SPPD.
+if (fs.existsSync('sppd_template.docx')) fs.copyFileSync('sppd_template.docx', 'www/sppd_template.docx');
 console.log('✅ Clean web assets copied to "www"!');
 
 // 2. Write capacitor.config.json pointing to "www"
