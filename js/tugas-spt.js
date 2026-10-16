@@ -89,6 +89,36 @@
     return out;
   }
 
+  // Pejabat dari master: entri pertama yang jabatannya cocok (spec §6, mis. /^Kepala Badan/i).
+  function cariPejabat(masterIndex, re) {
+    const idx = masterIndex || {};
+    for (const nip of Object.keys(idx)) {
+      const m = idx[nip] || {};
+      if (m.jabatan && re.test(String(m.jabatan))) return m;
+    }
+    return null;
+  }
+
+  // Default penandatangan dari master; null bila tak ada yang cocok (pakai DEFAULT_PERJADIN).
+  function defaultsDariMaster(masterIndex) {
+    const k = cariPejabat(masterIndex, /^Kepala Badan/i);
+    const s = cariPejabat(masterIndex, /^Sekretaris/i);
+    return {
+      kepala: k ? { nama: k.nama || '', pangkat: k.pangkat || '', nip: k.nip || '' } : null,
+      sekretaris: s ? { nama: s.nama || '', nip: s.nip || '' } : null
+    };
+  }
+
+  // Field wajib sebelum generate (spec §11) -> label yang masih kosong.
+  const FIELD_WAJIB = [
+    ['maksud', 'Maksud'], ['tempatTujuan', 'Tempat Tujuan'],
+    ['tanggalBerangkat', 'Tanggal Berangkat'], ['tanggalKembali', 'Tanggal Kembali']
+  ];
+  function validasiPerjadin(p) {
+    const q = merge(p);
+    return FIELD_WAJIB.filter(f => !String(q[f[0]] || '').trim()).map(f => f[1]);
+  }
+
   function personTag(row, masterIndex) {
     const m = (masterIndex && masterIndex[String(row.nip)]) || {};
     return {
@@ -199,6 +229,11 @@
   }
 
   async function generate(grup, perjadin) {
+    const kurang = validasiPerjadin(perjadin);
+    if (kurang.length) {
+      if (typeof showToast === 'function') showToast('Wajib diisi: ' + kurang.join(', '), 'error');
+      return false;
+    }
     if (!window.bastRenderDocx) { showToast('Fungsi render dokumen belum siap.', 'error'); return false; }
     const instansiId = (grup.items[0] && grup.items[0].instansi_id) || '';
     const idx = await masterIndex(instansiId);
@@ -247,6 +282,21 @@
     p.tingkatBiaya = g('tingkatBiaya') || p.tingkatBiaya;
     p.tanggalPenetapan = g('tanggalPenetapan');
     p.mataAnggaran = g('mataAnggaran') || p.mataAnggaran;
+    p.ditetapkanDi = g('ditetapkanDi') || p.ditetapkanDi;
+    p.kepala = {
+      nama: g('kepalaNama') || p.kepala.nama,
+      pangkat: g('kepalaPangkat') || p.kepala.pangkat,
+      nip: g('kepalaNIP') || p.kepala.nip
+    };
+    p.sekretaris = {
+      nama: g('sekretarisNama') || p.sekretaris.nama,
+      nip: g('sekretarisNIP') || p.sekretaris.nip
+    };
+    p.paraf = [
+      { jabatan: g('paraf1') || (p.paraf[0] || {}).jabatan || '' },
+      { jabatan: g('paraf2') || (p.paraf[1] || {}).jabatan || '' },
+      { jabatan: g('paraf3') || (p.paraf[2] || {}).jabatan || '' }
+    ];
     return p;
   }
 
@@ -265,9 +315,19 @@
     set('tingkatBiaya', perjadin.tingkatBiaya);
     set('tanggalPenetapan', perjadin.tanggalPenetapan);
     set('mataAnggaran', perjadin.mataAnggaran);
+    const k = perjadin.kepala || {}, s = perjadin.sekretaris || {}, pf = perjadin.paraf || [];
+    set('ditetapkanDi', perjadin.ditetapkanDi);
+    set('kepalaNama', k.nama);
+    set('kepalaPangkat', k.pangkat);
+    set('kepalaNIP', k.nip);
+    set('sekretarisNama', s.nama);
+    set('sekretarisNIP', s.nip);
+    set('paraf1', (pf[0] || {}).jabatan);
+    set('paraf2', (pf[1] || {}).jabatan);
+    set('paraf3', (pf[2] || {}).jabatan);
   }
 
-  function bukaModal(grup) {
+  async function bukaModal(grup) {
     _grupAktif = grup;
     const modal = $('perjadinModal');
     if (!modal) return;
@@ -276,7 +336,19 @@
       const nama = grup.items.map(r => r.nama || r.nip).join(', ');
       info.textContent = grup.items.length + ' pelaksana: ' + nama + ' — ' + ((grup.items[0] || {}).keterangan || '');
     }
-    fillForm(merge(grup.perjadin));
+    const p = merge(grup.perjadin);
+    // Pejabat dari master (spec §6) hanya bila grup belum punya nilai tersimpan -
+    // supaya surat instansi lain tidak mewarisi nama BAPPERIDA yang di-hardcode.
+    const punya = grup.perjadin || {};
+    if (!punya.kepala || !punya.sekretaris) {
+      try {
+        const idx = await masterIndex((grup.items[0] || {}).instansi_id || '');
+        const d = defaultsDariMaster(idx);
+        if (d.kepala && !punya.kepala) p.kepala = d.kepala;
+        if (d.sekretaris && !punya.sekretaris) p.sekretaris = d.sekretaris;
+      } catch (e) { console.error('[SPT] default pejabat gagal:', e); }
+    }
+    fillForm(p);
     modal.style.display = 'flex';
   }
 
@@ -296,7 +368,17 @@
       const btn = form.querySelector('button[type="submit"]');
       if (btn) btn.disabled = true;
       try {
-        if (await generate(_grupAktif, readForm())) tutupModal();
+        const p = readForm();
+        const kurang = validasiPerjadin(p);
+        FIELD_WAJIB.forEach(f => {
+          const el = form.elements[f[0]];
+          if (el) el.style.borderColor = String(el.value || '').trim() ? '' : '#dc3545';
+        });
+        if (kurang.length) {
+          if (typeof showToast === 'function') showToast('Wajib diisi: ' + kurang.join(', '), 'error');
+          return;
+        }
+        if (await generate(_grupAktif, p)) tutupModal();
       } finally {
         if (btn) btn.disabled = false;
       }
@@ -311,6 +393,7 @@
   window.TugasSPT = {
     terbilang, tanggalID, lamaHari, kunciGrup, kelompokkan,
     personTag, bangunTagsSPT, bangunTagsSPPD, DEFAULT_PERJADIN, merge,
+    cariPejabat, defaultsDariMaster, validasiPerjadin,
     masterIndex, bukaModal, generate, simpanPerjadin
   };
 })();

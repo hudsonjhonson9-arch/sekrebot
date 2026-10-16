@@ -140,3 +140,77 @@ test('masterIndex: meneruskan instansi_id grup ke apiGet', async () => {
   await win2.TugasSPT.masterIndex();
   assert.deepEqual(got2, {});
 });
+
+test('validasiPerjadin: kosong -> 4 label wajib, lengkap -> lolos', () => {
+  assert.deepEqual(T.validasiPerjadin({}), ['Maksud', 'Tempat Tujuan', 'Tanggal Berangkat', 'Tanggal Kembali']);
+  assert.deepEqual(T.validasiPerjadin({ maksud: 'Rakor', tempatTujuan: 'Kupang', tanggalBerangkat: '2026-07-02', tanggalKembali: '2026-07-04' }), []);
+  // spasi saja dihitung kosong
+  assert.deepEqual(T.validasiPerjadin({ maksud: '  ', tempatTujuan: 'Kupang', tanggalBerangkat: '2026-07-02', tanggalKembali: '2026-07-04' }), ['Maksud']);
+});
+
+test('defaultsDariMaster: Kepala Badan & Sekretaris diambil dari jabatan master', () => {
+  const idx = {
+    '111': { nip: '111', nama: 'Bukan', pangkat: 'III/a', jabatan: 'Pranata Komputer' },
+    '222': { nip: '222', nama: 'Kepala', pangkat: 'IV/c', jabatan: 'Kepala Badan' },
+    '333': { nip: '333', nama: 'Sek', pangkat: 'IV/a', jabatan: 'Sekretaris' }
+  };
+  const d = T.defaultsDariMaster(idx);
+  assert.deepEqual(d.kepala, { nama: 'Kepala', pangkat: 'IV/c', nip: '222' });
+  assert.deepEqual(d.sekretaris, { nama: 'Sek', nip: '333' });
+  // tidak ada yang cocok -> null (pemanggil kembali ke DEFAULT_PERJADIN)
+  assert.deepEqual(T.defaultsDariMaster({ '111': { jabatan: 'Staf' } }), { kepala: null, sekretaris: null });
+  assert.deepEqual(T.defaultsDariMaster(null), { kepala: null, sekretaris: null });
+});
+
+test('generate: field wajib kosong -> batal + TIDAK menyentuh render (kontrol positif ikut diuji)', async () => {
+  const toasts = [];
+  const lamaToast = globalThis.showToast;
+  globalThis.showToast = (m, t) => toasts.push([m, t]);
+  const grup = { items: [{ id: '1', nip: '111', nama: 'A', tanggal: '2026-07-02', keterangan: 'Rakor', instansi_id: 'INS' }] };
+  try {
+    const win = fresh();
+    const calls = [];
+    win.bastRenderDocx = async () => { calls.push(1); return true; };
+    win.apiGet = async () => ({ rows: [] });
+
+    const tolak = await win.TugasSPT.generate(grup, { maksud: '', tempatTujuan: '' });
+    assert.equal(tolak, false);
+    assert.deepEqual(calls, [], 'render tidak boleh dipanggil saat validasi gagal');
+    assert.ok(toasts.some(x => /Wajib diisi: .*Maksud/.test(x[0])), 'toast menyebut field wajib');
+
+    // kontrol positif: perjadin lengkap harus tetap lanjut merender (1 SPT + 1 SPPD)
+    const win2 = fresh();
+    const calls2 = [];
+    win2.bastRenderDocx = async () => { calls2.push(1); return true; };
+    win2.apiGet = async () => ({ rows: [] });
+    const lanjut = await win2.TugasSPT.generate(grup, {
+      maksud: 'Rakor', tempatTujuan: 'Kupang', tanggalBerangkat: '2026-07-02', tanggalKembali: '2026-07-04'
+    });
+    assert.equal(lanjut, true);
+    assert.equal(calls2.length, 2, 'SPT + 1 SPPD di-render');
+  } finally {
+    if (lamaToast === undefined) delete globalThis.showToast; else globalThis.showToast = lamaToast;
+  }
+});
+
+test('modal #perjadinModal: tiap field ter-wiring di readForm DAN fillForm (index.html + www)', () => {
+  const iRead = src.indexOf('function readForm() {');
+  const iFill = src.indexOf('function fillForm(');
+  const iBuka = src.indexOf('async function bukaModal(');
+  assert.ok(iRead > 0 && iFill > iRead && iBuka > iFill, 'struktur readForm/fillForm/bukaModal wajar');
+  const baca = new Set([...src.slice(iRead, iFill).matchAll(/\bg\('([A-Za-z0-9]+)'\)/g)].map(m => m[1]));
+  const isi = new Set([...src.slice(iFill, iBuka).matchAll(/\bset\('([A-Za-z0-9]+)'/g)].map(m => m[1]));
+  assert.ok(baca.size >= 20 && isi.size >= 20, 'ekstraksi nama field wajar: baca=' + baca.size + ' isi=' + isi.size);
+  for (const file of ['index.html', 'www/index.html']) {
+    const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    const modalAll = html.slice(html.indexOf('id="perjadinModal"'), html.indexOf('</form>', html.indexOf('id="perjadinForm"')));
+    const namaHtml = new Set([...modalAll.matchAll(/name="([A-Za-z0-9]+)"/g)].map(m => m[1]));
+    assert.ok(namaHtml.size >= 20, file + ': field modal terbaca, dapat ' + namaHtml.size);
+    for (const [label, kumpulan] of [['readForm', baca], ['fillForm', isi]]) {
+      const kurang = [...namaHtml].filter(n => !kumpulan.has(n));
+      const lebih = [...kumpulan].filter(n => !namaHtml.has(n));
+      assert.deepEqual(kurang, [], file + ': field di form tapi tak di-' + label + ' -> ' + kurang.join(', '));
+      assert.deepEqual(lebih, [], file + ': ' + label + ' menunjuk field yang tak ada di form -> ' + lebih.join(', '));
+    }
+  }
+});
