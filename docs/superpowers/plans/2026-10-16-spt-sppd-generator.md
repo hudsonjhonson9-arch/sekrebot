@@ -237,14 +237,15 @@ node -e "const z=require('pizzip'),fs=require('fs');const x=z(fs.readFileSync('p
 ```
 Expected: `[OK] … spt_template.docx … bytes` dua kali, lalu empat baris `OK …`.
 
-- [ ] **Step 4: Daftarkan template di Capacitor**
+- [ ] **Step 4: Daftarkan template di Capacitor + salin ke www**
 
 Modify `scripts/setup-capacitor.js:47` — tambahkan `spt_template.docx` ke daftar salin, tepat setelah `bast_template.docx`.
+Lalu salin salinan APK: `Copy-Item public/spt_template.docx www/spt_template.docx -Force` (tanpa ini fitur mati di APK — sama seperti `www/bast_template.docx`).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add scripts/docx-patch.js scripts/build-spt-template.js scripts/setup-capacitor.js public/spt_template.docx spt_template.docx
+git add scripts/docx-patch.js scripts/build-spt-template.js scripts/setup-capacitor.js public/spt_template.docx spt_template.docx www/spt_template.docx
 git commit -m "feat(spt): build template SPT dari dokumen asli + helper patch docx"
 ```
 
@@ -347,14 +348,15 @@ node scripts/build-sppd-template.js
 ```
 Expected: dua baris `[OK] … sppd_template.docx … bytes`, tanpa `[FAIL]`.
 
-- [ ] **Step 3: Daftarkan template di Capacitor**
+- [ ] **Step 3: Daftarkan template di Capacitor + salin ke www**
 
 Modify `scripts/setup-capacitor.js:47` — tambahkan `sppd_template.docx` setelah `spt_template.docx` (Task 1).
+Lalu salin: `Copy-Item public/sppd_template.docx www/sppd_template.docx -Force`.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add scripts/build-sppd-template.js scripts/setup-capacitor.js public/sppd_template.docx sppd_template.docx
+git add scripts/build-sppd-template.js scripts/setup-capacitor.js public/sppd_template.docx sppd_template.docx www/sppd_template.docx
 git commit -m "feat(spt): build template SPPD dari dokumen asli"
 ```
 
