@@ -58,6 +58,7 @@ const OFFLINE_ASSETS = [
   './js/meja.js',
   './js/rekap-pdf.js',
   './js/tugas_lembur.js',
+  './js/tugas-spt.js',
   './js/simapo.js',
   './js/offline.js',
   './js/meja-handler.js',
