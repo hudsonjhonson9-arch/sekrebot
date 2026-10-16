@@ -7512,15 +7512,18 @@ html.light-theme #panel-arsip .arsip-filter option { background: #ffffff; color:
 /* mode penuh (iframe): FAB unggah tidak boleh melayang di atasnya */
 body.arsip-fs .arsip-fab { display: none !important; }
 
-/* overlay preview: mengisi area panel, tidak pernah keluar tab */
+/* overlay preview: fixed fullscreen (di dalam tab yang sama) — absolute di panel
+   membuat overlay terpotong di HP saat tinggi panel < viewport */
 .arsip-preview {
-  position: absolute; inset: 0; z-index: 1300;
+  position: fixed; inset: 0; z-index: 1300;
   display: flex; flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--card-bg);
 }
 .arsip-preview-bar {
   display: flex; align-items: center; gap: 8px; justify-content: space-between;
-  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 10px;
+  border-bottom: 1px solid var(--border);
 }
 .arsip-preview-bar strong {
   color: var(--white); font-size: 13px; min-width: 0;
@@ -7536,7 +7539,7 @@ body.arsip-preview-open { overflow: hidden; }
   .arsip-home { padding: 0 14px 12px; grid-template-columns: repeat(2, 1fr); }
   .arsip-section { padding: 0 14px 12px; }
   .arsip-fab { right: 14px; bottom: calc(80px + max(var(--tg-safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px))); }
-  .arsip-preview-img { max-height: 70vh; }
+  .arsip-preview-img { max-height: calc(100dvh - 96px); }
 }
 
 /* ── Modal unggah bergaya arsipdigital: section header, grid, dropzone ── */
