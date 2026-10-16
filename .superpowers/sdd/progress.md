@@ -174,3 +174,25 @@ FIX ROUND FINAL REVIEW (controller, 8aae9a2, 5 file, +273/-9) - menutup 2 temuan
     Dipulihkan penuh dari salinan mirror www/js/tugas-spt.js + re-apply edit html; sha1 mirror diverifikasi ulang True. PELAJARAN: bukti mutasi WAJIB pakai cadangan file, jangan git checkout.
   Plan doc diberi amandemen fix round (blok penandatangan + validasi) -> plan:970-993.
   Minor sisa (tak ditutup, dipandang tak perlu): paritas readForm/fillForm diuji 3 himpunan terpisah (baca/isi/form) supaya field yg ada di form+fillForm tapi tak dibaca TIDAK lolos (sempat lolos sebelum diperketat).
+RE-REVIEW FIX ROUND (8aae9a2) -> NEEDS-FIX (minor) oleh reviewer independen. Diterima SEMUA temuan (terverifikasi benar):
+  Important #1 & #2: CLOSED (reviewer konfirmasi dgn file:line).
+  Cacat tes (nyata, dibuktikan reviewer dgn mutasi): tes paritas hanya cek KEBERADAAN nama field.
+    M3 `KepalaNama: ''` -> 534/534 masih lolos; M4 `readForm: p.kepala -> p.kepalaX` -> 15/15 masih lolos. Nilai pejabat bisa tak sampai ke dokumen tanpa ada tes yang gagal.
+  Medium #1: bukaModal menaruh `modal.style.display='flex'` SETELAH `await masterIndex` -> /api/user-list lambat = dialog tak muncul.
+  Medium #2: masterIndex meng-cache hasil fetch GAGAL -> pejabat/pangkat hilang untuk SEMUA dialog berikutnya sampai reload (mekanisme lama, tapi fix #1 kini bergantung padanya).
+  Low #3: border merah validasi tak pernah dibersihkan fillForm -> dialog dibuka ulang masih merah.
+
+FIX ROUND 2 (c36809a, 5 file, +147/-31) - menutup 2 Medium + 1 Low + lubang tes:
+  js/tugas-spt.js: helper `setField(n,v)` (isi + bersihkan borderColor) dipakai fillForm & bukaModal;
+    bukaModal: `fillForm(p); modal.style.display='flex';` SEBELUM await master, master menyusul via setField 6 field;
+    masterIndex: `_masterCache = out;` dipindah KE DALAM try (cache hanya saat sukses);
+    readForm(perjadinAwal) opsional; export readForm/fillForm; cache-bust js/tugas-spt.js ?v=20261020.
+  tests/tugas-spt.test.mjs: 15 -> 18 tes:
+    (a) readForm/fillForm lewat DOM tiruan dua arah (menutup M4);
+    (b) kontrol positif generate kini assert nilai masuk tag: tags[0].KepalaNama/KepalaNIP/Paraf1/Paraf3 + tags[1].SekretarisNama/NIP (menutup M3);
+    (c) masterIndex: kegagalan fetch TIDAK di-cache (menutup Medium #2);
+    (d) bukaModal: dialog flex SEBELUM master balas, via apiGet yang di-pending (menutup Medium #1);
+    (e) tes paritas + assert buffer js vs www identik (mirror APK tak bisa lagi basi diam-diam).
+  Mutasi divalidasi ulang (cadangan file + Copy-Item, TIDAK pakai git checkout): tagnama->tes15; readform->tes16; border->tes16; cache->tes12; mirror->tes17; modalorder->tes13. Baseline & restore 18/0.
+  Suite penuh 534/534. Browser (vite :5173, ?v=20261020): readForm/fillForm ada, dialog flex @85ms saat master masih pending 800ms, kepalaNama terisi 'Pejabat Kepala' dari master, validasi toast+border merah+modal tetap terbuka, fillForm membersihkan border, 22 kontrol form, 0 console error.
+  CATATAN: cache-bust WAJIB dinaikkan tiap js/ berubah - sempat tertipu cache browser (?v=20261019) sampai dinaikkan ke 20261020.
