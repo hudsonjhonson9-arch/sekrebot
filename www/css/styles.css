@@ -7136,3 +7136,8 @@ html.light-theme {
   .week-day, .panel.active, .week-loading i, .week-card .fa-spin, .wk-det-head, .wk-det-status, .wk-det-chip { animation: none !important; }
   .week-detail { transition: none; }
 }
+
+/* perjadin modal (SPT/SPPD) */
+#perjadinModal .modal-content{background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:16px}
+#perjadinModal .btn-icon{background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer}
+#perjadinModal .form-group{margin-bottom:8px}

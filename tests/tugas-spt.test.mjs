@@ -88,3 +88,55 @@ test('bangunTagsSPPD: lama hari + nama pegawai dari baris', () => {
   assert.equal(t.TempatTujuan, 'Kupang');
   assert.equal(t.Nama === t.KpaNama, false);
 });
+
+// masterIndex memakai cache modul; tiap tes butuh instance baru (new Function = closure baru).
+function fresh() {
+  const win = {};
+  new Function('window', src)(win);
+  assert.ok(win.TugasSPT, 'window.TugasSPT harus terdefinisi');
+  return win;
+}
+
+test('masterIndex: memetakan nip -> {pangkat, jabatan} dari apiGet palsu', async () => {
+  const win = fresh();
+  win.apiGet = async () => ({ rows: [{ nip: '123', nama: 'A', pangkat: 'IV/A', jabatan: 'Kabid' }] });
+  const idx = await win.TugasSPT.masterIndex();
+  assert.equal(idx['123'].pangkat, 'IV/A');
+  assert.equal(idx['123'].jabatan, 'Kabid');
+  assert.equal(idx['123'].nama, 'A');
+});
+
+test('personTag: PangkatGol/Jabatan dari indeks master', () => {
+  const idx = { '111': { nama: 'Nama Master', pangkat: 'Penata – III/c', jabatan: 'Kasubbag', nip: '111' } };
+  const t = T.personTag({ nip: '111', nama: 'Nama Baris', jabatan: 'Staf' }, idx);
+  assert.equal(t.PangkatGol, 'Penata – III/c');
+  assert.equal(t.Jabatan, 'Kasubbag');
+  // Presedensi eksisting (dijaga tes bangunTagsSPT/SPPD): master menang saat punya nama.
+  assert.equal(t.Nama, 'Nama Master');
+  // Nama baris dipakai bila master tanpa nama.
+  const t2 = T.personTag({ nip: '222', nama: 'Nama Baris 2' }, { '222': { pangkat: 'IX', jabatan: 'Kabid' } });
+  assert.equal(t2.Nama, 'Nama Baris 2');
+});
+
+test('personTag: pelaksana tak ada di master jatuh ke baris, pangkat kosong', () => {
+  const t = T.personTag({ nip: '999', nama: 'Bud', jabatan: 'Staf' }, {});
+  assert.equal(t.Nama, 'Bud');
+  assert.equal(t.PangkatGol, '');
+  assert.equal(t.Jabatan, 'Staf');
+  assert.equal(t.NIP, '999');
+});
+
+test('masterIndex: meneruskan instansi_id grup ke apiGet', async () => {
+  const win = fresh();
+  let got = null, endpoint = null;
+  win.apiGet = async (ep, params) => { endpoint = ep; got = params; return { rows: [] }; };
+  await win.TugasSPT.masterIndex('INS-1');
+  assert.deepEqual(got, { instansi_id: 'INS-1' });
+  assert.equal(typeof endpoint, 'string');
+
+  const win2 = fresh();
+  let got2 = null;
+  win2.apiGet = async (ep, params) => { got2 = params; return { rows: [] }; };
+  await win2.TugasSPT.masterIndex();
+  assert.deepEqual(got2, {});
+});

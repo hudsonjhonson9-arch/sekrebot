@@ -313,13 +313,13 @@ function bastBuildTags() {
   };
 }
 
-window.bastRenderDocx = async function(tags, filename) {
+window.bastRenderDocx = async function(tags, filename, templateUrl) {
   if (!window.PizZip || !window.docxtemplater) {
     showToast('Library docxtemplater belum dimuat. Muat ulang aplikasi.', 'error');
     return;
   }
   try {
-    const tp = await fetch('bast_template.docx');
+    const tp = await fetch(templateUrl || 'bast_template.docx');
     if (!tp.ok) throw new Error('template HTTP ' + tp.status);
     const buf = await tp.arrayBuffer();
     const zip = new window.PizZip(buf);

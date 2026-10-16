@@ -156,8 +156,161 @@
     };
   }
 
+  /* ─── INDEKS MASTER PEGAWAI (pangkat/jabatan) ─── */
+  // ponytail: cache modul — sekali muat per sesi. Upgrade: invalidasi saat master berubah.
+  let _masterCache = null;
+
+  async function masterIndex(instansiId) {
+    if (_masterCache) return _masterCache;
+    const out = {};
+    for (const m of (window.MASTER_PEGAWAI || [])) {
+      const n = String((m && m.nip) || ''); if (n) out[n] = m;
+    }
+    const fn = window.apiGet || (typeof apiGet !== 'undefined' ? apiGet : null);
+    if (!fn) { _masterCache = out; return out; }
+    // ponytail: P hanya ada di browser; fallback literal agar modul bisa diuji murni.
+    const endpoint = (typeof P !== 'undefined' && P && P.userList) || '/api/user-list';
+    try {
+      const res = await fn(endpoint, instansiId ? { instansi_id: instansiId } : {});
+      const rows = (res && (res.rows || (res.data && res.data.rows))) || [];
+      for (const u of rows) {
+        const nip = String(u.nip || u.NIP || ''); if (!nip) continue;
+        out[nip] = {
+          nama: u.nama || u.Nama || u.username || '', nip,
+          pangkat: u.pangkat || u.Pangkat || '', jabatan: u.jabatan || u.Jabatan || ''
+        };
+      }
+    } catch (e) { console.error('[SPT] goldmaster pegawai gagal dimuat:', e); }
+    _masterCache = out;
+    return out;
+  }
+
+  /* ─── SIMPAN + ORKESTRASI GENERATE ─── */
+  async function simpanPerjadin(ids, perjadin) {
+    try {
+      const body = { ids, perjadin };
+      if (perjadin.nomor) body.nomor_surat = perjadin.nomor;
+      const r = await apiPost(P.penugasanPerjadin, body);
+      return !!(r && r.ok && r.data && r.data.ok !== false);
+    } catch (e) {
+      console.error('[SPT] simpan perjadin gagal:', e);
+      return false;
+    }
+  }
+
+  async function generate(grup, perjadin) {
+    if (!window.bastRenderDocx) { showToast('Fungsi render dokumen belum siap.', 'error'); return false; }
+    const instansiId = (grup.items[0] && grup.items[0].instansi_id) || '';
+    const idx = await masterIndex(instansiId);
+    // Jangan diam-diam mencetak pangkat/jabatan kosong di dokumen legal.
+    const kosong = grup.items.map(r => personTag(r, idx))
+      .filter(t => !t.PangkatGol || !t.Jabatan)
+      .map(t => t.Nama || t.NIP);
+    if (kosong.length && typeof showToast === 'function') {
+      showToast('Pangkat/jabatan belum lengkap: ' + kosong.join(', '), 'info');
+    }
+    const tglKunci = (grup.items[0] && grup.items[0].tanggal) || '';
+    const tagsSPT = bangunTagsSPT(grup, perjadin, idx);
+    const okSPT = await window.bastRenderDocx(tagsSPT, 'SPT_' + tglKunci + '.docx', 'spt_template.docx');
+    if (!okSPT) return false;
+    for (const row of grup.items) {
+      const tags = bangunTagsSPPD(row, grup, perjadin, idx);
+      const nip = String(row.nip || '').replace(/\s+/g, '');
+      await window.bastRenderDocx(tags, 'SPPD_' + nip + '_' + tglKunci + '.docx', 'sppd_template.docx');
+    }
+    const ids = grup.items.map(r => r.id).filter(Boolean);
+    if (ids.length) {
+      const ok = await simpanPerjadin(ids, perjadin);
+      showToast(ok ? 'SPT & SPPD dibuat, detail tersimpan.' : 'Dokumen dibuat, tapi detail gagal disimpan.', ok ? 'success' : 'error');
+    }
+    return true;
+  }
+
+  /* ─── DIALOG PERJADIN (DOM) ─── */
+  function $(id) { return document.getElementById(id); }
+
+  let _grupAktif = null;
+
+  function readForm() {
+    const f = $('perjadinForm');
+    const g = n => { const el = f.elements[n]; return el ? el.value : ''; };
+    const p = merge(_grupAktif.perjadin);
+    p.nomor = g('nomor') || p.nomor;
+    p.nomorSPPD = g('nomorSPPD') || p.nomorSPPD;
+    p.dasar = g('dasar') || p.dasar;
+    p.maksud = g('maksud');
+    p.tempatBerangkat = g('tempatBerangkat') || p.tempatBerangkat;
+    p.tempatTujuan = g('tempatTujuan');
+    p.alatAngkut = g('alatAngkut') || p.alatAngkut;
+    p.tanggalBerangkat = g('tanggalBerangkat');
+    p.tanggalKembali = g('tanggalKembali');
+    p.tingkatBiaya = g('tingkatBiaya') || p.tingkatBiaya;
+    p.tanggalPenetapan = g('tanggalPenetapan');
+    p.mataAnggaran = g('mataAnggaran') || p.mataAnggaran;
+    return p;
+  }
+
+  function fillForm(perjadin) {
+    const f = $('perjadinForm');
+    const set = (n, v) => { const el = f.elements[n]; if (el) el.value = v || ''; };
+    set('nomor', perjadin.nomor);
+    set('nomorSPPD', perjadin.nomorSPPD);
+    set('dasar', perjadin.dasar);
+    set('maksud', perjadin.maksud);
+    set('tempatBerangkat', perjadin.tempatBerangkat);
+    set('tempatTujuan', perjadin.tempatTujuan);
+    set('alatAngkut', perjadin.alatAngkut);
+    set('tanggalBerangkat', perjadin.tanggalBerangkat);
+    set('tanggalKembali', perjadin.tanggalKembali);
+    set('tingkatBiaya', perjadin.tingkatBiaya);
+    set('tanggalPenetapan', perjadin.tanggalPenetapan);
+    set('mataAnggaran', perjadin.mataAnggaran);
+  }
+
+  function bukaModal(grup) {
+    _grupAktif = grup;
+    const modal = $('perjadinModal');
+    if (!modal) return;
+    const info = $('perjadinInfo');
+    if (info) {
+      const nama = grup.items.map(r => r.nama || r.nip).join(', ');
+      info.textContent = grup.items.length + ' pelaksana: ' + nama + ' — ' + ((grup.items[0] || {}).keterangan || '');
+    }
+    fillForm(merge(grup.perjadin));
+    modal.style.display = 'flex';
+  }
+
+  function tutupModal() { const m = $('perjadinModal'); if (m) m.style.display = 'none'; }
+
+  function initPerjadinModal() {
+    const modal = $('perjadinModal');
+    if (!modal || modal.dataset.ready) return;
+    modal.dataset.ready = '1';
+    const close = $('perjadinClose'), cancel = $('perjadinCancel'), form = $('perjadinForm');
+    if (close) close.addEventListener('click', tutupModal);
+    if (cancel) cancel.addEventListener('click', tutupModal);
+    modal.addEventListener('click', e => { if (e.target === modal) tutupModal(); });
+    if (form) form.addEventListener('submit', async e => {
+      e.preventDefault();
+      if (!_grupAktif) return;
+      const btn = form.querySelector('button[type="submit"]');
+      if (btn) btn.disabled = true;
+      try {
+        if (await generate(_grupAktif, readForm())) tutupModal();
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+  }
+
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initPerjadinModal);
+    else initPerjadinModal();
+  }
+
   window.TugasSPT = {
     terbilang, tanggalID, lamaHari, kunciGrup, kelompokkan,
-    personTag, bangunTagsSPT, bangunTagsSPPD, DEFAULT_PERJADIN, merge
+    personTag, bangunTagsSPT, bangunTagsSPPD, DEFAULT_PERJADIN, merge,
+    masterIndex, bukaModal, generate, simpanPerjadin
   };
 })();

@@ -3176,7 +3176,7 @@
 
   <!-- ════ APP SCRIPTS (urutan load penting) ════ -->
   <!-- 1. Config & constants — harus pertama -->
-  <script src="js/config.js?v=20261011c"></script>
+  <script src="js/config.js?v=20261016a"></script>
   <script src="js/constants.js?v=20261011a"></script>
 
   <!-- 2. State global & Telegram init -->
@@ -3216,8 +3216,8 @@
   <script src="js/aset-screens.js?v=3"></script>
 <script src="js/aset-nav.js?v=20261013a"></script>
   <script src="js/simapo-ext.js?v=20261014g"></script>
-  <script src="js/simapo-bast.js?v=20261014f"></script>
-  <script src="js/tugas-spt.js?v=1"></script>
+  <script src="js/simapo-bast.js?v=20261016a"></script>
+  <script src="js/tugas-spt.js?v=20261016a"></script>
 
   <!-- 6. Supplementary features -->
 
@@ -3567,6 +3567,35 @@
       #pdfPreviewMobileWarning { display: none !important; }
     }
   </style>
+
+  <!-- Modal detail perjalanan dinas (SPT/SPPD) -->
+  <div id="perjadinModal" class="modal-overlay" style="display:none">
+    <div class="modal-content" style="max-width:520px; max-height:90vh; overflow-y:auto">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+        <div style="font-weight:800; font-size:13px; color:var(--gold)"><i class="fas fa-file-signature"></i> Detail Perjalanan Dinas</div>
+        <button type="button" id="perjadinClose" class="btn-icon" aria-label="Tutup">&times;</button>
+      </div>
+      <div id="perjadinInfo" style="font-size:10px; color:var(--muted); margin-bottom:12px"></div>
+      <form id="perjadinForm">
+        <div class="form-group"><label class="form-label">Nomor SPT</label><input class="form-input" name="nomor"></div>
+        <div class="form-group"><label class="form-label">Nomor SPPD</label><input class="form-input" name="nomorSPPD"></div>
+        <div class="form-group"><label class="form-label">Dasar</label><input class="form-input" name="dasar"></div>
+        <div class="form-group"><label class="form-label">Maksud Perjalanan</label><input class="form-input" name="maksud"></div>
+        <div class="form-group"><label class="form-label">Tempat Berangkat</label><input class="form-input" name="tempatBerangkat"></div>
+        <div class="form-group"><label class="form-label">Tempat Tujuan</label><input class="form-input" name="tempatTujuan"></div>
+        <div class="form-group"><label class="form-label">Alat Angkut</label><input class="form-input" name="alatAngkut"></div>
+        <div class="form-group"><label class="form-label">Tanggal Berangkat</label><input type="date" class="form-input" name="tanggalBerangkat"></div>
+        <div class="form-group"><label class="form-label">Tanggal Kembali</label><input type="date" class="form-input" name="tanggalKembali"></div>
+        <div class="form-group"><label class="form-label">Tingkat Biaya</label><input class="form-input" name="tingkatBiaya"></div>
+        <div class="form-group"><label class="form-label">Tanggal Penetapan</label><input type="date" class="form-input" name="tanggalPenetapan"></div>
+        <div class="form-group"><label class="form-label">Mata Anggaran</label><input class="form-input" name="mataAnggaran"></div>
+        <div style="display:flex; gap:8px; margin-top:14px">
+          <button type="button" id="perjadinCancel" class="btn-secondary" style="flex:1">Batal</button>
+          <button type="submit" class="btn-primary" style="flex:2"><i class="fas fa-print"></i> Cetak SPT &amp; SPPD</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
 </body>
 </html>

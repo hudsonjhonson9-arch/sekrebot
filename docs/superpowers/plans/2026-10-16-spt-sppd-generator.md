@@ -742,7 +742,7 @@ git commit -m "feat(spt): endpoint simpan detail perjadin + fix nomor_surat penu
 
 **Interfaces:**
 - Consumes: `window.TugasSPT.*` (Task 3), `window.bastRenderDocx(tags, filename, templateUrl)` (dimodifikasi di sini), route `POST /api/penugasan/perjadin` (Task 4) via `P.penugasanPerjadin`, globals `showToast`, `escapeHtml`, `localStorage.MY_NIP`.
-- Produces: `window.TugasSPT.bukaModal(rows)` — membuka dialog untuk **satu grup** (dipanggil Task 6 dari kartu). `window.TugasSPT.generate(grup, perjadin, masterIndex)` mengunduh 1 SPT + N SPPD lalu menyimpan perjadin.
+- Produces: `window.TugasSPT.bukaModal(rows)` — membuka dialog untuk **satu grup** (dipanggil Task 6 dari kartu). `window.TugasSPT.generate(grup, perjadin)` mengunduh 1 SPT + N SPPD lalu menyimpan perjadin.
 
 - [ ] **Step 1: Buat `bastRenderDocx` menerima template**
 
@@ -783,7 +783,7 @@ Tambahkan sebelum `</body>` (setelah modal-modal eksisting):
         <div class="form-group"><label class="form-label">Mata Anggaran</label><input class="form-input" name="mataAnggaran"></div>
         <div style="display:flex; gap:8px; margin-top:14px">
           <button type="button" id="perjadinCancel" class="btn-secondary" style="flex:1">Batal</button>
-          <button type="submit" class="btn-primary" style="flex:2"><i class="fas fa-file-word"></i> Cetak SPT &amp; SPPD</button>
+          <button type="submit" class="btn-primary" style="flex:2"><i class="fas fa-print"></i> Cetak SPT &amp; SPPD</button>
         </div>
       </form>
     </div>
@@ -808,20 +808,42 @@ Tambahkan di dalam IIFE, **sebelum** baris `window.TugasSPT = {…}`:
 ```js
   function $(id) { return document.getElementById(id); }
 
-  let _grupAktif = null;
+  /* ─── INDEKS MASTER PEGAWAI (pangkat/jabatan) ─── */
+  // AMANDEMEN: window.MASTER_PEGAWAI / window._masterPegawai TIDAK ADA di codebase ini.
+  // masterIndex() dibuat async, cache di scope modul, mengambil /api/user-list (kolom
+  // `jabatan` & `pangkat` — core-admin.js:69) lewat window.apiGet agar bisa di-fake di tes.
+  let _masterCache = null;
 
-  function masterIndex() {
+  async function masterIndex(instansiId) {
+    if (_masterCache) return _masterCache;
     const out = {};
-    const list = (window.MASTER_PEGAWAI || window._masterPegawai || []);
-    for (const m of list) { if (m && m.nip) out[String(m.nip)] = m; }
+    for (const m of (window.MASTER_PEGAWAI || [])) {
+      const n = String((m && m.nip) || ''); if (n) out[n] = m;
+    }
+    const fn = window.apiGet || (typeof apiGet !== 'undefined' ? apiGet : null);
+    if (!fn) { _masterCache = out; return out; }
+    // ponytail: P hanya ada di browser; fallback literal agar modul bisa diuji murni.
+    const endpoint = (typeof P !== 'undefined' && P && P.userList) || '/api/user-list';
+    try {
+      const res = await fn(endpoint, instansiId ? { instansi_id: instansiId } : {});
+      const rows = (res && (res.rows || (res.data && res.data.rows))) || [];
+      for (const u of rows) {
+        const nip = String(u.nip || u.NIP || ''); if (!nip) continue;
+        out[nip] = {
+          nama: u.nama || u.Nama || u.username || '', nip,
+          pangkat: u.pangkat || u.Pangkat || '', jabatan: u.jabatan || u.Jabatan || ''
+        };
+      }
+    } catch (e) { console.error('[SPT] goldmaster pegawai gagal dimuat:', e); }
+    _masterCache = out;
     return out;
   }
 
   async function simpanPerjadin(ids, perjadin) {
     try {
-      const r = await apiPost(P.penugasanPerjadin, {
-        ids, perjadin, nomor_surat: perjadin.nomor
-      });
+      const body = { ids, perjadin };
+      if (perjadin.nomor) body.nomor_surat = perjadin.nomor; // kirim hanya bila non-kosong
+      const r = await apiPost(P.penugasanPerjadin, body);
       return !!(r && r.ok && r.data && r.data.ok !== false);
     } catch (e) {
       console.error('[SPT] simpan perjadin gagal:', e);
@@ -831,7 +853,15 @@ Tambahkan di dalam IIFE, **sebelum** baris `window.TugasSPT = {…}`:
 
   async function generate(grup, perjadin) {
     if (!window.bastRenderDocx) { showToast('Fungsi render dokumen belum siap.', 'error'); return false; }
-    const idx = masterIndex();
+    const instansiId = (grup.items[0] && grup.items[0].instansi_id) || '';
+    const idx = await masterIndex(instansiId);
+    // Jangan diam-diam mencetak pangkat/jabatan kosong di dokumen legal.
+    const kosong = grup.items.map(r => personTag(r, idx))
+      .filter(t => !t.PangkatGol || !t.Jabatan)
+      .map(t => t.Nama || t.NIP);
+    if (kosong.length && typeof showToast === 'function') {
+      showToast('Pangkat/jabatan belum lengkap: ' + kosong.join(', '), 'info');
+    }
     const tglKunci = (grup.items[0] && grup.items[0].tanggal) || '';
     const tagsSPT = bangunTagsSPT(grup, perjadin, idx);
     const okSPT = await window.bastRenderDocx(tagsSPT, 'SPT_' + tglKunci + '.docx', 'spt_template.docx');
@@ -933,9 +963,22 @@ Lalu ubah ekspor menjadi:
   window.TugasSPT = {
     terbilang, tanggalID, lamaHari, kunciGrup, kelompokkan,
     personTag, bangunTagsSPT, bangunTagsSPPD, DEFAULT_PERJADIN, merge,
-    bukaModal, generate, simpanPerjadin
+    masterIndex, bukaModal, generate, simpanPerjadin
   };
 ```
+
+> **Amandemen (Controller, 2026-10-16):** `masterIndex` asli membaca
+> `window.MASTER_PEGAWAI || window._masterPegawai` — **kedua global itu tidak ada** di
+> codebase ini, sehingga `PangkatGol`/`Jabatan` tiap pelaksana akan cetak kosong di dokumen
+> legal. Implementasi final: `masterIndex` **async**, cache di scope modul, prefer
+> `window.apiGet` (agar bisa di-fake di tes) dan ambil `/api/user-list` (kolom `jabatan` &
+> `pangkat`, `server/core-admin.js:69`). `generate` memanggilnya dengan
+> `grup.items[0].instansi_id` dan memunculkan `showToast` bila ada pelaksana tanpa
+> pangkat/jabatan. `masterIndex` ikut diekspor untuk tes.
+>
+> **Amandemen markup:** ikon tombol cetak memakai `fa-print` (bukan `fa-file-word`) karena
+> `tests/deemoji.test.mjs` mewajibkan setiap `fas fa-*` yang dipakai `js/` + `index.html`
+> ada di `css/lib/runeicons.css` (subset ikon tidak memuat `fa-file-word`).
 
 > Catatan: `apiPost(endpoint, body)` sudah ada (`js/api.js:15`) dan menerima path dari objek `P.*`. Konfigurasi wajib ditambah dulu — Modify `js/config.js:326` tepat setelah `penugasanList: '/api/penugasan',`:
 >

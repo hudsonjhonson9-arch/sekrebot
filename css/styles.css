@@ -7692,3 +7692,8 @@ body.arsip-preview-open { overflow: hidden; }
   .kk-tabel { font-size: 11px; min-width: 460px; }
   .kk-tabel th, .kk-tabel td { padding: 4px 5px; }
 }
+
+/* perjadin modal (SPT/SPPD) */
+#perjadinModal .modal-content{background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:16px}
+#perjadinModal .btn-icon{background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer}
+#perjadinModal .form-group{margin-bottom:8px}

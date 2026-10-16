@@ -324,6 +324,7 @@ const P = {
   userAdd: '/api/user-add',
   userEdit: '/api/user-edit',
   penugasanList: '/api/penugasan',
+  penugasanPerjadin: '/api/penugasan/perjadin',
   penugasanSave: '/api/penugasan',
   userDel: '/api/user-delete',
   logAdd: '/api/log/add',
