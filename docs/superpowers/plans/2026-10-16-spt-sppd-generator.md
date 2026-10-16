@@ -1071,7 +1071,7 @@ Lalu di dalam `data.map(t => { … })`, tambahkan tombol di baris aksi — tepat
 
 ```js
             <button class="btn-cetak-spt" data-grup="${grupIndex.has(String(t.id)) ? grupIndex.get(String(t.id)) : ''}" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--white); padding:6px 12px; border-radius:10px; font-size:10px; font-weight:700; cursor:pointer">
-              <i class="fas fa-file-word"></i> SPT/SPPD
+              <i class="fas fa-file-signature"></i> SPT/SPPD
             </button>
 ```
 

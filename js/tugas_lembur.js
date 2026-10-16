@@ -2032,6 +2032,13 @@
       </div>
     `;
 
+    // ponytail: kelompokkan sekali, indeks id->grup supaya tombol tinggal bawa nomor grup.
+    const grupList = (window.TugasSPT && window.TugasSPT.kelompokkan)
+      ? window.TugasSPT.kelompokkan(_activeMonitoringTasks)
+      : [];
+    const grupIndex = new Map();
+    grupList.forEach((g, gi) => g.items.forEach(it => grupIndex.set(String(it.id), gi)));
+
     const cards = data.map(t => {
       const isSelesai = String(t.status).toUpperCase() === 'SELESAI';
       const color = isSelesai ? 'var(--success)' : 'var(--warning)';
@@ -2070,17 +2077,32 @@
               </div>
             </div>
             
+            <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">
             ${t.bukti ? `
               <button onclick="viewTugasBuktiById('${t.id}')" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--white); padding:6px 12px; border-radius:10px; font-size:10px; font-weight:700; cursor:pointer">
                 <i class="fas fa-camera"></i> BUKTI
               </button>
             ` : ''}
+              <button class="btn-cetak-spt" data-grup="${grupIndex.has(String(t.id)) ? grupIndex.get(String(t.id)) : ''}" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--white); padding:6px 12px; border-radius:10px; font-size:10px; font-weight:700; cursor:pointer">
+                <i class="fas fa-file-signature"></i> SPT/SPPD
+              </button>
+            </div>
           </div>
         </div>
       `;
     }).join('');
 
     el.innerHTML = header + cards;
+
+    window.__tugasGrup = grupList;
+    el.querySelectorAll('.btn-cetak-spt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const gi = Number(btn.dataset.grup);
+        if (btn.dataset.grup !== '' && Number.isInteger(gi) && window.__tugasGrup[gi]) {
+          window.TugasSPT.bukaModal(window.__tugasGrup[gi]);
+        }
+      });
+    });
   }
 
   window.viewTugasBuktiById = function(id) {
