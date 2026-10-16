@@ -46,18 +46,53 @@ test('index.html: tugas-spt.js dimuat sebelum tugas_lembur.js', () => {
   }
 });
 
-// Kontrak data yang diandalkan tombol: kelompokkan() mengembalikan grup yang
-// item-nya masih membawa id baris, sehingga grupIndex.get(String(row.id)) bekerja.
-test('kelompokkan: tiap item grup masih membawa id baris (kontrak tombol data-grup)', () => {
+// Uji perilaku nyata: jalankan renderMonitoringTasks dengan DOM tiruan, lalu pastikan
+// tiap tombol membawa nomor grup yang BENAR (bukan indeks kartu) dan klik-nya membuka
+// grup itu. Urutan `data` sengaja diacak terhadap urutan grup supaya binding yang salah
+// (mis. selalu grup 0, atau indeks kartu alih-alih id baris) tertangkap.
+test('renderMonitoringTasks: tombol terikat ke grup yang benar + klik membuka grup itu', () => {
   const win = {};
   new Function('window', sptSrc)(win);
+
   const rows = [
-    { id: 'a1', tanggal: '2026-06-29', keterangan: 'Rakor', created_by_nip: '1' },
-    { id: 'a2', tanggal: '2026-06-29', keterangan: 'Rakor', created_by_nip: '1' }
+    { id: 'b1', tanggal: '2026-07-01', keterangan: 'Pengawasan', created_by_nip: '9', status: 'PENDING', nama: 'B', bukti: '' },
+    { id: 'a1', tanggal: '2026-06-29', keterangan: 'Rakor', created_by_nip: '1', status: 'PENDING', nama: 'A1', bukti: '' },
+    { id: 'a2', tanggal: '2026-06-29', keterangan: 'Rakor', created_by_nip: '1', status: 'SELESAI', nama: 'A2', bukti: 'x.jpg' }
   ];
+
+  const listeners = [];
+  const el = {
+    innerHTML: '',
+    querySelectorAll(sel) {
+      assert.equal(sel, '.btn-cetak-spt');
+      return [...this.innerHTML.matchAll(/<button[^>]*class="btn-cetak-spt"[^>]*>/g)].map(tag => {
+        const grup = (tag[0].match(/data-grup="([^"]*)"/) || [])[1];
+        assert.notEqual(grup, undefined, 'tombol cetak harus punya data-grup');
+        return {
+          dataset: { grup },
+          addEventListener(ev, fn) { assert.equal(ev, 'click'); listeners.push({ grup, fn }); }
+        };
+      });
+    }
+  };
+
+  const render = new Function('window', '$', '_activeMonitoringTasks',
+    bodyOf('renderMonitoringTasks') + '\nreturn renderMonitoringTasks;')(win, () => el, rows);
+
+  const dibuka = [];
+  win.TugasSPT.bukaModal = g => dibuka.push(g);
+  render(rows);
+
+  // Oracle: nomor grup tiap baris menurut kontrak kelompokkan (item grup membawa id baris).
   const grup = win.TugasSPT.kelompokkan(rows);
-  const index = new Map();
-  grup.forEach((g, gi) => g.items.forEach(it => index.set(String(it.id), gi)));
-  assert.equal(index.get('a1'), 0);
-  assert.equal(index.get('a2'), 0);
+  const grupDari = id => String(grup.findIndex(g => g.items.some(i => String(i.id) === id)));
+  assert.deepEqual(listeners.map(l => l.grup), [grupDari('b1'), grupDari('a1'), grupDari('a2')],
+    'data-grup harus nomor grup sebenarnya, bukan indeks kartu');
+
+  listeners[0].fn();  // tombol milik b1
+  listeners[1].fn();  // tombol milik a1
+  assert.equal(dibuka.length, 2, 'klik tiap tombol harus membuka tepat satu grup');
+  assert.deepEqual(dibuka[0].items.map(i => String(i.id)), ['b1'], 'tombol b1 harus membuka grup b1');
+  assert.deepEqual(dibuka[1].items.map(i => String(i.id)).sort(), ['a1', 'a2'],
+    'tombol a1 harus membuka grup a1+a2, bukan grup lain');
 });

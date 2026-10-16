@@ -85,7 +85,8 @@ Template asli yang jadi acuan:
 |---|---|---|
 | `scripts/build-spt-template.js` | baru | Sulam `{Tag}` ke `Salinan Surat Tugas.docx` → `public/spt_template.docx` + root |
 | `scripts/build-sppd-template.js` | baru | Sulam `{Tag}` ke `8656838432_..._TUGAS.docx` → `public/sppd_template.docx` + root |
-| `js/tugas-spt.js` | baru | `window.TugasSPT = { grup(list), bukaModal(grup), generate(grup, perjadin) }`, tag builder + render docx |
+| `js/tugas-spt.js` | baru | `window.TugasSPT = { terbilang, tanggalID, lamaHari, kunciGrup, kelompokkan, merge, personTag, bangunTagsSPT, bangunTagsSPPD, masterIndex, bukaModal, generate, simpanPerjadin }` |
+| `js/simapo-bast.js` | ubah | `bastRenderDocx(tags, filename, templateUrl)` — dipakai ulang untuk render SPT/SPPD, bukan fungsi render baru |
 | `js/tugas_lembur.js` | ubah | `renderMonitoringTasks` dikelompokkan + tombol per grup; panggil `TugasSPT` |
 | `index.html` | ubah | modal `#perjadinModal`; `<script src="js/tugas-spt.js?v=...">` |
 | `www/index.html`, `www/js/tugas-spt.js`, `www/*_template.docx` | ubah | salinan untuk APK |
@@ -96,6 +97,8 @@ Template asli yang jadi acuan:
 | `package.json` | ubah | tambah `tests/tugas-spt.test.mjs` ke `scripts.test` |
 
 Tidak ada dependency baru (`pizzip`, `docxtemplater` sudah ada di `devDependencies`).
+
+Render `.docx` SPT/SPPD memakai kembali pola BAST: `window.bastRenderDocx(tags, filename, templateUrl)` — parameter ketiga ditambahkan, dan `fetch(templateUrl || 'bast_template.docx')` menjaga dua pemanggil BAST lama (`js/simapo-bast.js`) tetap jalan tanpa diubah. Tidak ada fungsi render baru.
 
 ## 6. Skema data & API
 
@@ -188,6 +191,8 @@ Tag SPT (`spt_template.docx`):
 | `{DitetapkanDi}`, `{TanggalSurat}` | `perjadin.ditetapkanDi`, `perjadin.tanggalPenetapan` |
 | `{KepalaNama}`, `{KepalaPangkat}`, `{KepalaNIP}` | `perjadin.kepala` |
 | `{Paraf1}`, `{Paraf2}`, `{Paraf3}` | `perjadin.paraf[0..2].jabatan` (default §6) |
+
+Kedua template dirender lewat `window.bastRenderDocx(tags, filename, templateUrl)` (pakai ulang pola BAST); `templateUrl` memilih `spt_template.docx` / `sppd_template.docx`, default `bast_template.docx` untuk pemanggil lama.
 
 Tag SPPD (`sppd_template.docx`):
 
