@@ -124,7 +124,7 @@ Bentuk `perjadin` (JSONB):
 {
   "nomorSPT": "BP4D.011.7/69/53.12/ST/01/2026",
   "nomorSPPD": "42 /SPPD/202566 / SPPD / 2024",
-  "dasar": ["DPA Bapperida Kabupaten Sumba Barat TA 2026"],
+  "dasar": "DPA Bapperida Kabupaten Sumba Barat TA 2026",
   "alatAngkut": "Pesawat",
   "tempatBerangkat": "Waikabubak",
   "tempatTujuan": "Kupang",
@@ -182,12 +182,12 @@ Tag SPT (`spt_template.docx`):
 | Tag | Sumber |
 |---|---|
 | `{Nomor}` | `perjadin.nomorSPT` |
-| `{#dasar}{.}{/dasar}` | `perjadin.dasar[]` |
+| `{Dasar}` | `perjadin.dasar` (1 baris, seperti template) |
 | `{#pelaksana}{No}{Nama}{PangkatGol}{NIP}{Jabatan}{/pelaksana}` | master pegawai per baris grup |
 | `{Untuk}` | disusun: `"<keterangan> di <tempatTujuan>"`, lalu baris ke-2 `"<tanggalBerangkat> s.d. <tanggalKembali>"` (kalau ada) |
 | `{DitetapkanDi}`, `{TanggalSurat}` | `perjadin.ditetapkanDi`, `perjadin.tanggalPenetapan` |
 | `{KepalaNama}`, `{KepalaPangkat}`, `{KepalaNIP}` | `perjadin.kepala` |
-| `{#paraf}{No}{Jabatan}{/paraf}` | `perjadin.paraf[]` (default §6: Sekretaris, Kabid Ekonomi, KTU) |
+| `{Paraf1}`, `{Paraf2}`, `{Paraf3}` | `perjadin.paraf[0..2].jabatan` (default §6) |
 
 Tag SPPD (`sppd_template.docx`):
 
@@ -201,16 +201,21 @@ Tag SPPD (`sppd_template.docx`):
 | `{AlatAngkut}` | `perjadin.alatAngkut` |
 | `{TempatBerangkat}`, `{TempatTujuan}` | `perjadin.*` |
 | `{LamaHari}`, `{TanggalBerangkat}`, `{TanggalKembali}` | `perjadin.*` (`LamaHari` → "4 (Empat) Hari") |
-| `{#pengikut}{No}{Nama}{TanggalLahir}{Keterangan}{/pengikut}` | `perjadin.pengikut[]` |
+| `{#pengikut}{No}{Nama}{TanggalLahir}{Keterangan}{/pengikut}` | **dilewati** — baris pengikut template kosong, diisi tangan. Tidak ada tag. |
 | `{Instansi}`, `{MataAnggaran}` | `perjadin.*` |
 | `{DitetapkanDi}`, `{TanggalPenetapan}` | `perjadin.*` |
 | `{KepalaNama}`, `{KepalaPangkat}`, `{KepalaNIP}` | `perjadin.kepala` |
-| `{SekretarisNama}`, `{SekretarisNIP}`, `{KtuNama}` | `perjadin.sekretaris`, `perjadin.ktu` |
+| `{SekretarisNama}`, `{SekretarisNIP}` | `perjadin.sekretaris` |
 
 Kolom **Berangkat/Tiba I–IV**, ruang ttd basah, dan tanggal jabatan tangan **tidak** diisi.
-Struktur run persis (apakah "Kepada" berupa tabel baris-per-pelaksana atau list bernomor)
-dipastikan saat menulis build script — script mencetak teks tiap paragraf dulu (sama seperti
-`build-bast-template.js`), lalu menyulam tag pada run yang tepat.
+
+Struktur run sudah dipetakan (SPT 79 paragraf, SPPD 237 paragraf). Hampir semua paragraf yang
+diganti isinya **multi-run** (nilai terpecah antar-run), jadi build script memakai
+**ganti-seluruh-paragraf** (`rewriteWhole` pola BAST), bukan menyisipkan di tengah. Khusus
+dua nilai yang harus tetap di baris terpisah — pangkat Kepala pada SPPD (`CHARLES HERMANA
+WERU,S.Sos` + `Pembina Utama Muda – IV/c`) — dipakai patch per-run. Beberapa paragraf isi
+contoh (tanggal/tempat log Berangkat–Tiba I–IV) dikosongkan berdasarkan **indeks paragraf**
+(deterministik, bukan cocok-teks) supaya tidak ikut terisi data lama.
 
 ## 10. UI
 
