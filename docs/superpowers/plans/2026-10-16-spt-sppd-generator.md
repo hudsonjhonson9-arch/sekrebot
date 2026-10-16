@@ -368,7 +368,7 @@ git commit -m "feat(spt): build template SPPD dari dokumen asli"
 - Create: `js/tugas-spt.js` (bagian murni saja — tanpa DOM di top level)
 - Create: `tests/tugas-spt.test.mjs`
 - Modify: `package.json` (`scripts.test` — tambahkan `tests/tugas-spt.test.mjs`)
-- Modify: `index.html` (script tag), `www/tugas-spt.js`, `www/index.html`
+- Modify: `index.html` (script tag), `www/js/tugas-spt.js`, `www/index.html`
 
 **Interfaces:**
 - Consumes: —
@@ -495,11 +495,14 @@ Expected: FAIL — `ENOENT: no such file or directory … js\tugas-spt.js`.
     n = Math.abs(Math.round(Number(n) || 0));
     if (n < 12) return SATUAN[n];
     if (n < 20) return terbilang(n - 10) + ' Belas';
-    if (n < 100) return terbilang(Math.floor(n / 10)) + ' Puluh ' + terbilang(n % 10);
-    if (n < 200) return 'Seratus ' + terbilang(n - 100);
-    if (n < 1000) return terbilang(Math.floor(n / 100)) + ' Ratus ' + terbilang(n % 100);
+    if (n < 100) return terbilang(Math.floor(n / 10)) + ' Puluh' + sisa(n % 10);
+    if (n < 200) return 'Seratus' + sisa(n - 100);
+    if (n < 1000) return terbilang(Math.floor(n / 100)) + ' Ratus' + sisa(n % 100);
     return String(n);
   }
+
+  // ponytail: sambung ekor hanya bila ada, supaya "Tiga Puluh" tak berjejak spasi.
+  function sisa(r) { return r ? ' ' + terbilang(r) : ''; }
 
   // ponytail: parse tanggal-only sendiri (bukan new Date(str)) supaya tidak geser hari
   // akibat timezone. Upgrade path: pakai Temporal bila sudah tersedia di target.
@@ -651,12 +654,12 @@ Expected: `# pass 7` (0 fail).
 - [ ] **Step 6: Muat di index.html + salin ke www**
 
 Modify `index.html`: tambahkan `<script src="js/tugas-spt.js?v=1"></script>` di dekat blok script `js/arsip-*` (sekitar baris 3309) — **setelah** `js/simapo-bast.js` dan `js/helpers.js` (butuh `window.bastRenderDocx` dan `apiGet` saat runtime, bukan saat load).
-Lalu salin: `Copy-Item js/tugas-spt.js www/tugas-spt.js -Force` dan tambahkan script tag yang sama ke `www/index.html`.
+Lalu salin: `Copy-Item js/tugas-spt.js www/js/tugas-spt.js -Force` dan tambahkan script tag yang sama ke `www/index.html`.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add js/tugas-spt.js tests/tugas-spt.test.mjs package.json index.html www/tugas-spt.js www/index.html
+git add js/tugas-spt.js tests/tugas-spt.test.mjs package.json index.html www/js/tugas-spt.js www/index.html
 git commit -m "feat(spt): logika murni generator SPT/SPPD + tes"
 ```
 
@@ -734,7 +737,7 @@ git commit -m "feat(spt): endpoint simpan detail perjadin + fix nomor_surat penu
 - Modify: `js/config.js:326` (tambah `penugasanPerjadin: '/api/penugasan/perjadin',` setelah `penugasanList`)
 - Modify: `index.html` (modal `#perjadinModal` + script tag tetap dari Task 3)
 - Modify: `css/styles.css` (kelas `.perjadin-*`)
-- Modify: `www/tugas-spt.js`, `www/index.html`, `www/css/styles.css`, `www/js/simapo-bast.js`, `www/js/config.js`
+- Modify: `www/js/tugas-spt.js`, `www/index.html`, `www/css/styles.css`, `www/js/simapo-bast.js`, `www/js/config.js`
 - Modify: `docs/superpowers/specs/2026-10-16-spt-sppd-generator-design.md` (catat reuse `bastRenderDocx`)
 
 **Interfaces:**
@@ -944,7 +947,7 @@ Lalu ubah ekspor menjadi:
 
 - [ ] **Step 5: Salin ke www + update spec**
 
-`Copy-Item js/tugas-spt.js www/tugas-spt.js -Force`; salin juga `css/styles.css` → `www/css/styles.css`, `js/simapo-bast.js` → `www/js/simapo-bast.js`, `js/config.js` → `www/js/config.js`; samakan script tag di `www/index.html`.
+`Copy-Item js/tugas-spt.js www/js/tugas-spt.js -Force`; salin juga `css/styles.css` → `www/css/styles.css`, `js/simapo-bast.js` → `www/js/simapo-bast.js`, `js/config.js` → `www/js/config.js`; samakan script tag di `www/index.html`.
 Modify spec §5/§9: catat bahwa generate memakai kembali `window.bastRenderDocx(tags, filename, templateUrl)` (diberi parameter template) alih-alih fungsi render baru.
 
 - [ ] **Step 6: Uji manual (vite hidup di :5173)**
@@ -954,7 +957,7 @@ Buka Monitoring → pilih kartu → buka dialog → isi → Cetak. Expected: 2+ 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add js/simapo-bast.js js/tugas-spt.js js/config.js index.html css/styles.css www/tugas-spt.js www/index.html www/css/styles.css www/js/simapo-bast.js www/js/config.js docs/superpowers/specs/2026-10-16-spt-sppd-generator-design.md
+git add js/simapo-bast.js js/tugas-spt.js js/config.js index.html css/styles.css www/js/tugas-spt.js www/index.html www/css/styles.css www/js/simapo-bast.js www/js/config.js docs/superpowers/specs/2026-10-16-spt-sppd-generator-design.md
 git commit -m "feat(spt): dialog detail perjadin + generate SPT/SPPD"
 ```
 
