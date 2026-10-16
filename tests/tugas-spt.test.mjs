@@ -141,6 +141,42 @@ test('masterIndex: meneruskan instansi_id grup ke apiGet', async () => {
   assert.deepEqual(got2, {});
 });
 
+test('masterIndex: kegagalan fetch TIDAK di-cache (bisa pulih tanpa reload)', async () => {
+  const win = fresh();
+  let gagal = true;
+  win.apiGet = async () => {
+    if (gagal) throw new Error('jaringan putus');
+    return { rows: [{ nip: '7', nama: 'A', jabatan: 'Kepala Badan', pangkat: 'IV' }] };
+  };
+  const kosong = await win.TugasSPT.masterIndex('INS');
+  assert.deepEqual(kosong, {}, 'gagal -> indeks kosong, tidak melempar');
+  gagal = false;
+  const idx = await win.TugasSPT.masterIndex('INS');
+  assert.equal((idx['7'] || {}).jabatan, 'Kepala Badan', 'percobaan berikutnya mencoba fetch ulang (tidak teracuni)');
+});
+
+test('bukaModal: dialog tampil SEBELUM master termuat (apiGet lambat tidak menahan dialog)', async () => {
+  const win = fresh();
+  const modal = { style: { display: 'none' } };
+  const elements = {};
+  const lama = globalThis.document;
+  globalThis.document = {
+    getElementById: id => ({ perjadinModal: modal, perjadinInfo: { textContent: '' }, perjadinForm: { elements } }[id] || null)
+  };
+  try {
+    let lepas = () => {};
+    win.apiGet = () => new Promise(r => { lepas = () => r({ rows: [] }); });
+    const grup = { items: [{ id: '1', nip: '111', nama: 'A', tanggal: '2026-07-02', keterangan: 'R', instansi_id: 'INS' }], perjadin: null };
+    const jalan = win.TugasSPT.bukaModal(grup);
+    assert.equal(modal.style.display, 'flex', 'dialog sudah tampil walau /api/user-list belum balas');
+    lepas();
+    await jalan;
+    assert.equal(modal.style.display, 'flex');
+  } finally {
+    if (lama === undefined) delete globalThis.document; else globalThis.document = lama;
+  }
+});
+
 test('validasiPerjadin: kosong -> 4 label wajib, lengkap -> lolos', () => {
   assert.deepEqual(T.validasiPerjadin({}), ['Maksud', 'Tempat Tujuan', 'Tanggal Berangkat', 'Tanggal Kembali']);
   assert.deepEqual(T.validasiPerjadin({ maksud: 'Rakor', tempatTujuan: 'Kupang', tanggalBerangkat: '2026-07-02', tanggalKembali: '2026-07-04' }), []);
@@ -179,22 +215,69 @@ test('generate: field wajib kosong -> batal + TIDAK menyentuh render (kontrol po
     assert.ok(toasts.some(x => /Wajib diisi: .*Maksud/.test(x[0])), 'toast menyebut field wajib');
 
     // kontrol positif: perjadin lengkap harus tetap lanjut merender (1 SPT + 1 SPPD)
+    // sekaligus membuktikan nilai pejabat benar-benar SAMPAI ke tag dokumen.
     const win2 = fresh();
-    const calls2 = [];
-    win2.bastRenderDocx = async () => { calls2.push(1); return true; };
+    const tags = [];
+    win2.bastRenderDocx = async (t) => { tags.push(t); return true; };
     win2.apiGet = async () => ({ rows: [] });
     const lanjut = await win2.TugasSPT.generate(grup, {
-      maksud: 'Rakor', tempatTujuan: 'Kupang', tanggalBerangkat: '2026-07-02', tanggalKembali: '2026-07-04'
+      maksud: 'Rakor', tempatTujuan: 'Kupang', tanggalBerangkat: '2026-07-02', tanggalKembali: '2026-07-04',
+      kepala: { nama: 'Kepala Uji', pangkat: 'IV/c', nip: '900' },
+      sekretaris: { nama: 'Sek Uji', nip: '901' },
+      paraf: [{ jabatan: 'Sekretaris BAPPERIDA' }, { jabatan: 'Kabid X' }, { jabatan: 'Kasubbag Y' }]
     });
     assert.equal(lanjut, true);
-    assert.equal(calls2.length, 2, 'SPT + 1 SPPD di-render');
+    assert.equal(tags.length, 2, 'SPT + 1 SPPD di-render');
+    assert.equal(tags[0].KepalaNama, 'Kepala Uji', 'nama kepala masuk tag SPT');
+    assert.equal(tags[0].KepalaNIP, '900');
+    assert.equal(tags[0].Paraf1, 'Sekretaris BAPPERIDA');
+    assert.equal(tags[0].Paraf3, 'Kasubbag Y');
+    assert.equal(tags[1].SekretarisNama, 'Sek Uji', 'nama sekretaris masuk tag SPPD');
+    assert.equal(tags[1].SekretarisNIP, '901');
   } finally {
     if (lamaToast === undefined) delete globalThis.showToast; else globalThis.showToast = lamaToast;
   }
 });
 
+// Membuktikan editan pejabat di form benar-benar sampai ke objek perjadin (dan sebaliknya),
+// bukan sekadar "nama field ada di sumber" — lubang yang ditemukan reviewer fix round.
+test('readForm/fillForm: dua arah lewat DOM tiruan (editan pejabat sampai ke perjadin)', () => {
+  const Mod = load();
+  const isi = {
+    nomor: '005/SPT', ditetapkanDi: 'Kupang', kepalaNama: 'Kepala Uji', kepalaPangkat: 'IV/c',
+    kepalaNIP: '900', sekretarisNama: 'Sek Uji', sekretarisNIP: '901',
+    paraf1: 'Sekretaris BAPPERIDA', paraf2: 'Kabid X', paraf3: 'Kasubbag Y'
+  };
+  const elements = {};
+  for (const n of Object.keys(isi)) elements[n] = { value: isi[n], style: {} };
+  const lama = globalThis.document;
+  globalThis.document = { getElementById: id => (id === 'perjadinForm' ? { elements } : null) };
+  try {
+    const p = Mod.readForm({});
+    assert.equal(p.ditetapkanDi, 'Kupang');
+    assert.equal(p.kepala.nama, 'Kepala Uji', 'kepala dari form harus menang atas default');
+    assert.equal(p.kepala.pangkat, 'IV/c');
+    assert.equal(p.kepala.nip, '900');
+    assert.equal(p.sekretaris.nama, 'Sek Uji');
+    assert.equal(p.sekretaris.nip, '901');
+    assert.equal(p.paraf[0].jabatan, 'Sekretaris BAPPERIDA');
+    assert.equal(p.paraf[2].jabatan, 'Kasubbag Y');
+    // fillForm menulis balik + membersihkan border merah sisa submit sebelumnya
+    elements['kepalaNama'].style.borderColor = 'rgb(220, 53, 69)';
+    elements['sekretarisNama'].value = 'harus tertimpa';
+    Mod.fillForm({ kepala: { nama: 'Hasil Isi', pangkat: 'X', nip: '1' }, sekretaris: { nama: 'Sek Isi', nip: '2' }, paraf: [{ jabatan: 'P1' }] });
+    assert.equal(elements['kepalaNama'].value, 'Hasil Isi');
+    assert.equal(elements['kepalaNama'].style.borderColor, '', 'border merah dibersihkan fillForm');
+    assert.equal(elements['sekretarisNama'].value, 'Sek Isi');
+    assert.equal(elements['paraf1'].value, 'P1');
+    assert.equal(elements['paraf2'].value, '');
+  } finally {
+    if (lama === undefined) delete globalThis.document; else globalThis.document = lama;
+  }
+});
+
 test('modal #perjadinModal: tiap field ter-wiring di readForm DAN fillForm (index.html + www)', () => {
-  const iRead = src.indexOf('function readForm() {');
+  const iRead = src.indexOf('function readForm(');
   const iFill = src.indexOf('function fillForm(');
   const iBuka = src.indexOf('async function bukaModal(');
   assert.ok(iRead > 0 && iFill > iRead && iBuka > iFill, 'struktur readForm/fillForm/bukaModal wajar');
@@ -213,4 +296,9 @@ test('modal #perjadinModal: tiap field ter-wiring di readForm DAN fillForm (inde
       assert.deepEqual(lebih, [], file + ': ' + label + ' menunjuk field yang tak ada di form -> ' + lebih.join(', '));
     }
   }
+  // www = salinan APK yang dikirim; tanpa ini, mirroring bisa lupa dan APK basi lolos.
+  assert.ok(
+    fs.readFileSync(path.join(ROOT, 'js', 'tugas-spt.js')).equals(fs.readFileSync(path.join(ROOT, 'www', 'js', 'tugas-spt.js'))),
+    'www/js/tugas-spt.js harus identik byte-per-byte dengan js/tugas-spt.js'
+  );
 });

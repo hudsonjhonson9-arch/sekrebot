@@ -210,8 +210,10 @@
           pangkat: u.pangkat || u.Pangkat || '', jabatan: u.jabatan || u.Jabatan || ''
         };
       }
+      // ponytail: cache HANYA saat fetch sukses — kegagalan sesaat jangan meracuni sesi
+      // (kalau di-cache, semua dialog berikutnya kehilangan pejabat/pangkat sampai reload).
+      _masterCache = out;
     } catch (e) { console.error('[SPT] goldmaster pegawai gagal dimuat:', e); }
-    _masterCache = out;
     return out;
   }
 
@@ -266,10 +268,18 @@
 
   let _grupAktif = null;
 
-  function readForm() {
+  // ponytail: penyalin field tunggal — dipakai fillForm & bukaModal (master menyusul).
+  // Sekaligus membersihkan tanda merah validasi supaya dialog yang dibuka ulang tidak
+  // mewarisi border merah dari submit sebelumnya.
+  function setField(n, v) {
+    const el = $('perjadinForm').elements[n];
+    if (el) { el.value = v || ''; el.style.borderColor = ''; }
+  }
+
+  function readForm(perjadinAwal) {
     const f = $('perjadinForm');
     const g = n => { const el = f.elements[n]; return el ? el.value : ''; };
-    const p = merge(_grupAktif.perjadin);
+    const p = merge(perjadinAwal || (_grupAktif && _grupAktif.perjadin));
     p.nomor = g('nomor') || p.nomor;
     p.nomorSPPD = g('nomorSPPD') || p.nomorSPPD;
     p.dasar = g('dasar') || p.dasar;
@@ -301,8 +311,7 @@
   }
 
   function fillForm(perjadin) {
-    const f = $('perjadinForm');
-    const set = (n, v) => { const el = f.elements[n]; if (el) el.value = v || ''; };
+    const set = setField;
     set('nomor', perjadin.nomor);
     set('nomorSPPD', perjadin.nomorSPPD);
     set('dasar', perjadin.dasar);
@@ -337,19 +346,23 @@
       info.textContent = grup.items.length + ' pelaksana: ' + nama + ' — ' + ((grup.items[0] || {}).keterangan || '');
     }
     const p = merge(grup.perjadin);
-    // Pejabat dari master (spec §6) hanya bila grup belum punya nilai tersimpan -
-    // supaya surat instansi lain tidak mewarisi nama BAPPERIDA yang di-hardcode.
+    // Dialog tampil lebih dulu (nilai tersimpan/default), master dimuat menyusul —
+    // supaya /api/user-list yang lambat tidak menahan munculnya dialog.
+    fillForm(p);
+    modal.style.display = 'flex';
     const punya = grup.perjadin || {};
     if (!punya.kepala || !punya.sekretaris) {
       try {
         const idx = await masterIndex((grup.items[0] || {}).instansi_id || '');
         const d = defaultsDariMaster(idx);
-        if (d.kepala && !punya.kepala) p.kepala = d.kepala;
-        if (d.sekretaris && !punya.sekretaris) p.sekretaris = d.sekretaris;
+        if (d.kepala && !punya.kepala) {
+          setField('kepalaNama', d.kepala.nama); setField('kepalaPangkat', d.kepala.pangkat); setField('kepalaNIP', d.kepala.nip);
+        }
+        if (d.sekretaris && !punya.sekretaris) {
+          setField('sekretarisNama', d.sekretaris.nama); setField('sekretarisNIP', d.sekretaris.nip);
+        }
       } catch (e) { console.error('[SPT] default pejabat gagal:', e); }
     }
-    fillForm(p);
-    modal.style.display = 'flex';
   }
 
   function tutupModal() { const m = $('perjadinModal'); if (m) m.style.display = 'none'; }
@@ -394,6 +407,7 @@
     terbilang, tanggalID, lamaHari, kunciGrup, kelompokkan,
     personTag, bangunTagsSPT, bangunTagsSPPD, DEFAULT_PERJADIN, merge,
     cariPejabat, defaultsDariMaster, validasiPerjadin,
-    masterIndex, bukaModal, generate, simpanPerjadin
+    masterIndex, bukaModal, generate, simpanPerjadin,
+    readForm, fillForm
   };
 })();
