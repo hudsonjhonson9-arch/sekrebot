@@ -349,6 +349,7 @@ async function loadRekap() {
 
     renderRekap(pegawai);
     if (typeof populateRekapTtdSel === 'function') populateRekapTtdSel();
+    if (typeof populateRekapPembuatSel === 'function') populateRekapPembuatSel();
   } catch (e) {
     console.warn('loadRekap error:', e);
     $('pegawaiList').innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-plug"></i></div><div class="empty-text">Gagal memuat rekap</div><div class="empty-sub">Pastikan webhook n8n aktif</div></div>`;
@@ -1470,6 +1471,7 @@ makeSearchDd('rekapInstansiSelect', { ph: 'Pilih instansi', h: 38 });
 makeSearchDd('rekapRoleFilter', { ph: 'Pilih role', h: 38 });
 makeSearchDd('rekapBidang', { ph: 'Semua bidang', h: 38 });
 makeSearchDd('rekapTtdSel', { ph: 'Cari nama / jabatan...', h: 38 });
+makeSearchDd('rekapPembuatSel', { ph: 'Cari nama / jabatan...', h: 38 });
 
 /* ════ PENANDATANGAN "MENGETAHUI" (TTD rekap) ════
    Pilihan user (NIP) disimpan di localStorage REKAP_TTD_NIP.
@@ -1513,7 +1515,70 @@ function getRekapTtdSigner() {
 }
 window.getRekapTtdSigner = getRekapTtdSigner;
 
-/* Isi blok TTD pada tampilan cetak browser (@media print) */
+/* ════ PENANDATANGAN "YANG MEMBUAT" (TTD rekap) ════
+   Pilihan user (NIP) disimpan di localStorage REKAP_PEMBUAT_NIP.
+   Kosong = otomatis pakai user yang login. */
+const REKAP_PEMBUAT_NIP_KEY = 'REKAP_PEMBUAT_NIP';
+
+function populateRekapPembuatSel() {
+  const sel = $('rekapPembuatSel');
+  if (!sel) return;
+  const list = (lastRekapPegawai && lastRekapPegawai.length ? lastRekapPegawai : []) ||
+    (typeof userListOrder !== 'undefined' ? userListOrder : []);
+  const cur = localStorage.getItem(REKAP_PEMBUAT_NIP_KEY) || sel.value || '';
+  const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const opts = list.filter(p => p && p.nama).slice().sort((a, b) => (getJabatanScore(b.jabatan) - getJabatanScore(a.jabatan)) ||
+    String(a.nama || '').localeCompare(String(b.nama || ''), 'id')).map(p =>
+    `<option value="${esc(p.nip || '')}">${esc(p.nama)} — ${esc(p.jabatan || '—')}</option>`).join('');
+  sel.innerHTML = '<option value="">— Otomatis (Saya yang login) —</option>' + opts;
+  if (cur && Array.from(sel.options).some(o => o.value === cur)) sel.value = cur;
+  if (typeof syncSearchDdLabel === 'function') syncSearchDdLabel('rekapPembuatSel');
+  updateRekapPrintTtd();
+}
+window.populateRekapPembuatSel = populateRekapPembuatSel;
+
+function onRekapPembuatChange() {
+  const sel = $('rekapPembuatSel');
+  const nip = sel ? sel.value : '';
+  if (nip) localStorage.setItem(REKAP_PEMBUAT_NIP_KEY, nip);
+  else localStorage.removeItem(REKAP_PEMBUAT_NIP_KEY);
+  updateRekapPrintTtd();
+}
+window.onRekapPembuatChange = onRekapPembuatChange;
+
+/* Pegawai terpilih sbg "Yang Membuat", atau null (otomatis = user login) */
+function getRekapTtdPembuat() {
+  const sel = $('rekapPembuatSel');
+  const nip = (sel && sel.value) || localStorage.getItem(REKAP_PEMBUAT_NIP_KEY) || '';
+  if (!nip) return null;
+  const pool = (lastRekapPegawai && lastRekapPegawai.length ? lastRekapPegawai :
+    (typeof userListOrder !== 'undefined' ? userListOrder : []));
+  return (pool || []).find(p => String(p.nip || '') === String(nip)) || null;
+}
+window.getRekapTtdPembuat = getRekapTtdPembuat;
+
+/* "Yang Membuat": pilihan dropdown, fallback user yang login */
+function resolveRekapPembuat() {
+  let pembuat = getRekapTtdPembuat();
+  if (!pembuat) {
+    const myNip = String(localStorage.getItem('MY_NIP') || '');
+    const pool = (lastRekapPegawai && lastRekapPegawai.length ? lastRekapPegawai :
+      (typeof userListOrder !== 'undefined' ? userListOrder : []));
+    pembuat = (pool || []).find(p => String(p.nip || '') === myNip) || null;
+    if (!pembuat) {
+      pembuat = {
+        nama: window.userProfile?.nama || '',
+        nip: myNip,
+        jabatan: window.userProfile?.jabatan || '',
+        pangkat: ''
+      };
+    }
+  }
+  return pembuat;
+}
+window.resolveRekapPembuat = resolveRekapPembuat;
+
+/* Isi blok TTD pada tampilan cetak browser (@media print) — 2 kolom */
 function updateRekapPrintTtd() {
   const box = $('rekapPrintTtd');
   if (!box) return;
@@ -1527,33 +1592,43 @@ function updateRekapPrintTtd() {
     });
     signer = keps[0] || null;
   }
-  if (!signer) { box.style.display = 'none'; return; }
+  const pembuat = resolveRekapPembuat();
+  if (!signer && !pembuat) { box.style.display = 'none'; return; }
   box.style.display = '';
-  $('rekapPrintTtdTanggal').textContent = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-  $('rekapPrintTtdJab').textContent = signer.jabatan || '—';
-  $('rekapPrintTtdNama').textContent = signer.nama || '—';
-  $('rekapPrintTtdNip').textContent = (signer.pangkat ? signer.pangkat + ' · ' : '') + 'NIP. ' + (signer.nip || '—');
-  const img = $('rekapPrintTtdImg');
-  const nip = String(signer.nip || '');
-  const showImg = (src) => {
-    if (!img) return;
-    if (src) { img.src = src; img.style.display = ''; } else { img.removeAttribute('src'); img.style.display = 'none'; }
-  };
-  const cached = localStorage.getItem('sig_' + nip) || '';
+
   const toPreview = (u) => {
     if (!u) return '';
     if (String(u).startsWith('data:')) return u;
     const m = String(u).match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || String(u).match(/[?&]id=([a-zA-Z0-9_-]+)/);
     return m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w400' : u;
   };
-  if (cached) { showImg(toPreview(cached)); return; }
-  if (typeof apiGet === 'function' && nip) {
-    apiGet(P.signatureGet, { nip: nip }).then(res => {
-      const d = (res && (res.data?.data || res.data)) || null;
-      const row = Array.isArray(d) ? d[0] : d;
-      const url = row && (row.signature || row.url || row.fileUrl) || '';
-      if (url) { try { localStorage.setItem('sig_' + nip, url); } catch (_) { } showImg(toPreview(url)); }
-    }).catch(() => { });
-  }
+  const fillCol = (p, idSuf) => {
+    if (!p) return;
+    const jab = $('rekapPrintTtdJab' + idSuf);
+    const nama = $('rekapPrintTtdNama' + idSuf);
+    const nipEl = $('rekapPrintTtdNip' + idSuf);
+    const img = $('rekapPrintTtdImg' + idSuf);
+    if (jab) jab.textContent = p.jabatan || '—';
+    if (nama) nama.textContent = p.nama || '—';
+    if (nipEl) nipEl.textContent = (p.pangkat ? p.pangkat + ' · ' : '') + 'NIP. ' + (p.nip || '—');
+    const nip = String(p.nip || '');
+    const showImg = (src) => {
+      if (!img) return;
+      if (src) { img.src = src; img.style.display = ''; } else { img.removeAttribute('src'); img.style.display = 'none'; }
+    };
+    const cached = localStorage.getItem('sig_' + nip) || '';
+    if (cached) { showImg(toPreview(cached)); return; }
+    if (typeof apiGet === 'function' && nip) {
+      apiGet(P.signatureGet, { nip: nip }).then(res => {
+        const d = (res && (res.data?.data || res.data)) || null;
+        const row = Array.isArray(d) ? d[0] : d;
+        const url = row && (row.signature || row.url || row.fileUrl) || '';
+        if (url) { try { localStorage.setItem('sig_' + nip, url); } catch (_) { } showImg(toPreview(url)); }
+      }).catch(() => { });
+    }
+  };
+  $('rekapPrintTtdTanggal').textContent = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  fillCol(signer, '');     // kolom kiri: Mengetahui
+  fillCol(pembuat, '2');   // kolom kanan: Yang Membuat
 }
 window.updateRekapPrintTtd = updateRekapPrintTtd;
