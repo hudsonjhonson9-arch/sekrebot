@@ -980,6 +980,21 @@ Lalu ubah ekspor menjadi:
 > `tests/deemoji.test.mjs` mewajibkan setiap `fas fa-*` yang dipakai `js/` + `index.html`
 > ada di `css/lib/runeicons.css` (subset ikon tidak memuat `fa-file-word`).
 
+> **Amandemen (Controller, fix round pasca-review, 2026-10-18):** snippet `readForm`/`fillForm`
+> pada Task 5 di atas **tidak memuat blok penandatangan** dan **tidak memvalidasi field wajib**,
+> padahal spec menghendaki keduanya (`specs/...:230` "blok penandatangan (Kepala/Sekretaris/KTU)
+> yang bisa diedit"; `:240` tolak generate bila field wajib kosong) dan kalimat di dokumen ini
+> sendiri (Task 5 poin "bisa diedit di dialog"). Implementasi final menambah:
+> `cariPejabat(masterIndex, re)` + `defaultsDariMaster(masterIndex)` (Kepala Badan/Sekretaris dari
+> `/api/user-list`, dipakai hanya bila `perjadin` grup belum punya pejabat — **bukan** nama
+> BAPPERIDA hardcode), `FIELD_WAJIB` + `validasiPerjadin(p)` sebagai guard awal `generate`
+> (toast `Wajib diisi: …`, tak menyentuh render), 9 input penandatangan di `#perjadinModal`
+> (`ditetapkanDi`, `kepala{Nama,Pangkat,NIP}`, `sekretaris{Nama,NIP}`, `paraf1..3`) yang dibaca
+> `readForm` dan diisi `fillForm`, penandaan `borderColor #dc3545` pada field kurang saat submit,
+> dan `bukaModal` menjadi `async` (await `masterIndex`). Cache-bust `js/tugas-spt.js?v=20261019`.
+> Commit `8aae9a2`; tes `tests/tugas-spt.test.mjs` (15 tes, paritas modal↔`readForm`↔`fillForm`
+> untuk kedua tree) terverifikasi falsifiable via mutasi.
+
 > Catatan: `apiPost(endpoint, body)` sudah ada (`js/api.js:15`) dan menerima path dari objek `P.*`. Konfigurasi wajib ditambah dulu — Modify `js/config.js:326` tepat setelah `penugasanList: '/api/penugasan',`:
 >
 > ```js

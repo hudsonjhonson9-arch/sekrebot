@@ -1,4 +1,4 @@
-﻿# SDD Progress — Plan 1 (2026-09-30-aset-backend-pengaturan.md)
+# SDD Progress — Plan 1 (2026-09-30-aset-backend-pengaturan.md)
 
 Task 1: complete (commits 7f0dedb + 87a5ab3 + 84ddd33, BASE 9a62600, review approved after 2 fix rounds)
 
@@ -93,3 +93,84 @@ Final whole-branch review: Needs fixes -> 1 Important (N1: face_histogram '[]' t
 Minor roll-up: N2 cancel/fail tinggalkan _native_token 12h (ledger), N3 async route tanpa try/catch (konvensi saudara, fix saat sentuh file), N4 report task-4/5 basi (ditulis ulang).
 MENUNGGU: redeploy Coolify (a1f29a2) + smoke test.
 
+
+# SDD Progress - Plan 3 (2026-10-16-spt-sppd-generator.md)
+
+BASE awal: a0e370c (branch master, keputusan user: implementasi langsung di master)
+
+Task 1: complete (fc39260) - docx-patch.js + build-spt-template.js + public/spt_template.docx (75643 B, 18 tag)
+  Review: 1 Important -> www/spt_template.docx hilang. Fix c00ad96 (+ plan: langkah copy/git add utk Task 1 & 2). Re-review APPROVED (byte-identical + tag OK).
+Task 2: complete (8d53fb7) - build-sppd-template.js + public/sppd_template.docx (67422 B, 23 tag)
+  Review: 1 Important (root cause) -> SPPD para 8 sisa ":  42 /SPPD/2025" karena <w:r> pertama punya DUA <w:t>, rewriteWhole hanya menimpa yang pertama.
+  Fix db2700d di scripts/docx-patch.js: rewriteWhole per-<w:t>, + parText + assertion applyByIndex (wholeMap & blankList); rebuild KEDUA template.
+  SPT blob hash 6a58704e->9166a693 hanya karena timestamp zip (word/document.xml identik). Re-review APPROVED.
+Task 3: complete (b0cf742) - js/tugas-spt.js + tests/tugas-spt.test.mjs (7 tes) + package.json + index.html + www/js/tugas-spt.js + www/index.html
+  focused 7/7, full 510/510. 2 deviasi di-rule BENAR oleh reviewer: (a) sisa() trim spasi ekor terbilang (kode plan kontradiksi tesnya sendiri);
+  (b) path www/js/ bukan www/ (setup-capacitor.js:43 menyalin js/ -> www/js/). Review APPROVED.
+  Sinkron plan 28dda18 (6x www/js/, snippet terbilang + sisa()), brief diregenerasi.
+Task 4: complete (3e8a7be) - server/overtime.js POST /penugasan/perjadin + fix INSERT nomor_surat ($12, 12 kolom/12 placeholder konsisten)
+  + tests/penugasan-perjadin.test.mjs BEHAVIORAL (express harness + fake query; menolak source-grep plan). RED 0/4 -> GREEN 4/4, full 514/514.
+  Review: APPROVED, 0 Critical/Important. Minor: assertion `!calls.some(UPDATE_RE)` near-tautolog (bukti asli = assert 403); Test 4 jalur INSERT independen (scoping benar).
+Task 5: complete (a0b3c95) - js/tugas-spt.js (masterIndex ASYNC + generate + simpanPerjadin + DOM glue modal), js/simapo-bast.js (bastRenderDocx + param templateUrl), js/config.js (penugasanPerjadin), index.html, css/styles.css + mirror www/*, tests/tugas-spt.test.mjs (11 tes), plan doc.
+  focused RED 9/11 -> GREEN 11/11, full 518/518. sha1 mirror www/js/* = js/* semua true.
+  Deviations sah: P.userList dijaga guard (P top-level const, tak ada di window); personTag TIDAK diubah (tes lama menang); ikon fa-print (fa-file-word absen di runeicons.css).
+  Review: APPROVED. 3 Minor -> (a) spec belum diupdate padahal diminta brief, (b) cache-bust css/styles.css belum naik (stale webview), (c) masterIndex meng-cache hasil gagal fetch.
+  TEMUAN CONTROLLER (sebelum dispatch): plan Step-4 masterIndex() baca global yang TIDAK ADA (MASTER_PEGAWAI/_masterPegawai)
+  -> PangkatGol & Jabatan pelaksana akan KOSONG di surat. Verifikasi: /api/user-list (server/core-admin.js:69-70, MEDIA=ADMIN/SUPERADMIN/KEPALA/SEKRETARIS/KABID/IRBAN)
+  mengembalikan `pangkat` + `"Jabatan" AS jabatan`; _allPegawaiTugas (tugas_lembur.js:601-621) TIDAK memuat pangkat. Penugasan rows (SELECT *) juga tanpa pangkat/jabatan.
+  -> Task 5 wajib pakai masterIndex ASYNC dari apiGet(P.userList) ter-scope instansi_id + warn bila pangkat/jabatan kosong.
+
+Roll-up Minor (final whole-branch review):
+  1. Duplikasi primitif docx-patch.js vs build-bast-template.js (plan-mandated, sengaja).
+  2. Rebuild template -> blob hash baru (timestamp zip non-deterministik, isi identik) -> diff berisik.
+  3. Commit db2700d subject scope (spt) padahal cacat SPPD.
+  4. Plan Task 4 Step 1 masih teks source-grep (implementasi pakai behavioral) - belum disinkronkan di titik itu.
+
+Task 6: complete (1e1dd7a) - tombol cetak SPT/SPPD di kartu Monitoring Perjalanan Dinas.
+  js/tugas_lembur.js renderMonitoringTasks (grupList render-time, tombol .btn-cetak-spt[data-grup], window.__tugasGrup[gi] di-reassign tiap render,
+  guard dataset.grup !== '' untuk bug Number('')===0), tests/tugas-spt-wiring.test.mjs (+5 tes), package.json, index.html, www/index.html + mirror JS.
+  Wiring RED 2/5 -> GREEN 5/0, full 523/523. Review: APPROVED + 1 Important (plan-mandated): tes wiring hanya uji KEBERADAAN, bukan BINDING id->grup.
+
+FIX ROUND (controller, 08668f4, 4 file, +52/-12) - menutup Important Task 6 + Minor Task 5 (a)(b):
+  - tests/tugas-spt-wiring.test.mjs: tes ke-5 (tautolog) diganti harness DOM-tiruan yang MENJALANKAN renderMonitoringTasks via new Function('window','$','_activeMonitoringTasks'),
+    menangkap markup .btn-cetak-spt dari el.innerHTML, memanggil listener tertangkap, assert data-grup vs oracle kelompokkan + grup yang benar-benar dibuka (klik 2 tombol). Input diacak vs urutan grup.
+  - Mutasi dibuktikan: grup0, kartu, bukagrup0, tanpabutton -> SEMUA CAUGHT; baseline 5/0; restore bersih.
+  - cache-bust css/styles.css ?v=43/?v=23 -> ?v=20261016a (index.html + www/index.html).
+  - spec §5 + §9: catat reuse bastRenderDocx(tags, filename, templateUrl).
+  Re-review APPROVED (independen): baseline 5/0, 4 mutasi CAUGHT, probe tambahan (registrasi listener ditiadakan) juga CAUGHT.
+  Kelemahan sisa: oracle & implementasi sama-sama panggil TugasSPT.kelompokkan -> bug DI DALAM kelompokkan tak terdeteksi.
+
+TES PENJAGA BARU (bcf72cb) - tests/spt-template-tags.test.mjs (4 tes, paket -> 527):
+  render template nyata (PizZip + docxtemplater 3.71.0) dengan tags dari builder; nullGetter mencatat tag template yang TIDAK punya nilai
+  -> menangkap mismatch nama tag (surat kosong) yang tak terlihat oleh tes unit mana pun. Plus assert nilai kunci benar-benar masuk & SPPD tak menyisakan nomor/tahun template lama.
+  Mutasi Nomor->NomorX, PangkatGol->PangkatGolX -> 0/4 (gagal, pesan menunjuk tag kosong); restore 4/4. Ini satu-satunya tes yang menyambung builder <-> template.
+
+VERIFIKASI BROWSER (vite :5173, chrome-devtools) - HIJAU:
+  semua modul termuat (TugasSPT 14 export, bastRenderDocx/PizZip/docxtemplater/showToast function), urutan script tugas-spt.js(46) < tugas_lembur.js(51),
+  cache-bust ?v=20261018, #perjadinModal + #perjadinForm + 12 field nama hadir, P.userList + P.penugasanPerjadin terisi, 0 console error (hanya 3 warning Telegram pre-existing).
+  TIDAK dilakukan: click-through pasca-login (isi form -> unduh docx -> simpan perjadin) - butuh kredensial uji.
+
+Roll-up Minor tambahan (final whole-branch review):
+  5. Tes wiring: oracle memakai kelompokkan yang sama dengan implementasi (bug internal kelompokkan saling menghapus).
+  6. masterIndex meng-cache hasil gagal fetch (error sementara -> dialog kosong sampai reload).
+  7. Plan Task 5 Step 6 (uji manual :5173) baru terverifikasi sampai smoke; click-through butuh kredensial.
+  Sudah SELESAI dari daftar Task 5 Minor: (a) spec diupdate, (b) cache-bust css dinaikkan.
+
+FIX ROUND FINAL REVIEW (controller, 8aae9a2, 5 file, +273/-9) - menutup 2 temuan Important final review:
+  Important #1 (blok penandatangan tak bisa diedit; nama pejabat BAPPERIDA hardcode):
+    js/tugas-spt.js + cariPejabat(masterIndex, re) + defaultsDariMaster(masterIndex) (regex /^Kepala Badan/i, /^Sekretaris/i dari /api/user-list);
+    bukaModal -> async, await masterIndex, pakai defaultsDariMaster hanya bila perjadin grup belum punya kepala/sekretaris.
+    Terverifikasi di BROWSER (halaman segar, window.apiGet di-fake): master berisi "Kepala Badan"/"Sekretaris" -> dialog prefill "Pejabat Kepala"/"Pejabat Sek"
+    (BUKAN "CHARLES HERMANA WERU,S.Sos"); tanpa sesi login -> jatuh ke DEFAULT_PERJADIN (jalur terdegradasi yang benar).
+  Important #2 (tak ada validasi field wajib sebelum generate):
+    FIELD_WAJIB + validasiPerjadin(p) (merge dulu -> cek maksud/tempatTujuan/tanggalBerangkat/tanggalKembali); guard awal generate -> toast 'Wajib diisi: ...' + return false (render tak disentuh);
+    handler submit menandai field kurang borderColor #dc3545 (inline, tanpa CSS baru -> cache-bust css tak perlu dinaikkan).
+    Terverifikasi di BROWSER (#perjadinForm.requestSubmit dgn 4 field kosong): toast tepat, borderMaksud=rgb(220,53,69), modal TETAP terbuka (tidak menutup).
+  UI: 9 input "Penandatangan" di #perjadinModal (ditetapkanDi, kepala{Nama,Pangkat,NIP}, sekretaris{Nama,NIP}, paraf1..3) di index.html DAN www/index.html (2x9/9); cache-bust js/tugas-spt.js ?v=20261018 -> ?v=20261019; mirror www (sha1 True).
+  Tes: tests/tugas-spt.test.mjs +4 (validasiPerjadin, defaultsDariMaster, generate tolak + kontrol positif 2 render, paritas modal<->kode) -> file 15 tes, suite 531/531.
+  Falsifiabilitas dibuktikan via MUTASI (backup file, BUKAN git checkout): guard->tes14 fail; pejabat->tes13 fail; paraf1x di index.html->tes15 fail;
+    kepalaNama dihapus dari readForm->tes15 fail; set(paraf3) dihapus->tes15 fail; sekretarisNIPx di www/index.html->tes15 fail. Baseline & restore 15/0.
+  CATATAN PROSES (penting): mutasi pertama saya memakai `git checkout --` pada file ber-perubahan-belum-commit -> menghapus 3 file kerja (js/tugas-spt.js, index.html, +1).
+    Dipulihkan penuh dari salinan mirror www/js/tugas-spt.js + re-apply edit html; sha1 mirror diverifikasi ulang True. PELAJARAN: bukti mutasi WAJIB pakai cadangan file, jangan git checkout.
+  Plan doc diberi amandemen fix round (blok penandatangan + validasi) -> plan:970-993.
+  Minor sisa (tak ditutup, dipandang tak perlu): paritas readForm/fillForm diuji 3 himpunan terpisah (baca/isi/form) supaya field yg ada di form+fillForm tapi tak dibaca TIDAK lolos (sempat lolos sebelum diperketat).
