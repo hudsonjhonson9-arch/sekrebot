@@ -45,6 +45,8 @@ if (fs.existsSync('js')) copyDirSync('js', 'www/js');
 if (fs.existsSync('icons')) copyDirSync('icons', 'www/icons');
 // bast_template.docx di-fetch js/simapo-bast.js untuk generate BAST.
 if (fs.existsSync('bast_template.docx')) fs.copyFileSync('bast_template.docx', 'www/bast_template.docx');
+// spt_template.docx di-fetch js/tugas-spt.js untuk generate SPT/SPPD.
+if (fs.existsSync('spt_template.docx')) fs.copyFileSync('spt_template.docx', 'www/spt_template.docx');
 console.log('✅ Clean web assets copied to "www"!');
 
 // 2. Write capacitor.config.json pointing to "www"
