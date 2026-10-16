@@ -7693,7 +7693,15 @@ body.arsip-preview-open { overflow: hidden; }
   .kk-tabel th, .kk-tabel td { padding: 4px 5px; }
 }
 
-/* perjadin modal (SPT/SPPD) */
-#perjadinModal .modal-content{background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:16px}
+/* perjadin modal (SPT/SPPD) — pola .ket-modal-overlay: app ini tak punya class umum .modal-overlay */
+#perjadinModal{
+  position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.65);
+  display:none;align-items:flex-end;justify-content:center;padding:12px
+}
+#perjadinModal .modal-content{background:var(--card-bg);border:1px solid var(--border);border-radius:16px 16px 0 0;padding:16px;width:100%}
 #perjadinModal .btn-icon{background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer}
 #perjadinModal .form-group{margin-bottom:8px}
+@media (min-width:768px){
+  #perjadinModal{align-items:center;padding:24px}
+  #perjadinModal .modal-content{border-radius:16px}
+}

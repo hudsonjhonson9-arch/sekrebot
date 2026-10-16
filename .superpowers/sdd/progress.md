@@ -211,3 +211,13 @@ FIX ROUND 3 (cd4d34b, 5 file, +79/-12):
     Pelajaran: `fresh()` kedua JANGAN dipanggil saat shim globalThis.document sudah terpasang (modal tiruan tanpa `.dataset` -> initPerjadinModal TypeError). Ambil semua `fresh()` di awal tes.
   Mutasi divalidasi (cadangan file + Copy-Item): tunggumaster->tes14; hapus `await tungguMaster()`->tes15; kpanama->tes17; baris181/184->tes17. Baseline & restore 20/0.
   Suite penuh 536/536. Browser (vite :5173, ?v=20261021): 6 export (tungguMaster ada), dialog flex @1ms saat master tertunda, KLIK SUBMIT saat master tertunda -> setelh tunggu kepalaNama = 'Pejabat Kepala' (nilai master, bukan DEFAULT_PERJADIN), toast 'Wajib diisi: Maksud, Tempat Tujuan, Tanggal Berangkat, Tanggal Kembali', modal tetap terbuka, 0 console error (3 warning Telegram pre-existing). Sisa: E2E click-through penuh (butuh kredensial login) + push.
+DIAGNOSA PRODUKSI (user: tombol SPT/SPPD tampil di https://absensi.mindcloud.my.id tapi klik TIDAK memunculkan dialog):
+  Probe live: tag js/tugas-spt.js?v=20261021 200, window.TugasSPT lengkap (21 ekspor), #perjadinModal ada, js/tugas_lembur.js 200 + btn-cetak-spt + panggil TugasSPT.bukaModal -> lapisan JS sehat; gagal di VISIBILITAS.
+  Bukti: bukaModal di live -> display:flex TAPI position:static, z-index:auto, getBoundingClientRect().top=1740 dgn viewport 844 -> dialog terbuka 1740px di bawah layar (di luar layar).
+  Akar: #perjadinModal dikasih class="modal-overlay" yang TIDAK punya aturan CSS apa pun (app ini pakai class ber-prefix: .ket-modal-overlay, .dok-modal-backdrop, .arsip-modal; tak ada .modal/.modal-overlay generik). Yang ada cuma styling anak (.modal-content/.form-group) tanpa fixed/z-index.
+
+FIX ROUND 4:
+  css/styles.css: #perjadinModal -> pola .ket-modal-overlay (position:fixed, inset:0, bg rgba(0,0,0,.65), z-index:9000, bottom-sheet mobile / terpusat >=768px); .modal-content radius 16px 16px 0 0 mobile. display:none tetap dari inline HTML; JS display:flex menang. Mirror www/css/styles.css (byte-identik).
+  index.html:63 + www/index.html:63: cache-buster styles.css ?v=20261016a -> ?v=20261021.
+  Verifikasi (vite :5173): setelah bukaModal -> position:fixed, z-index:9000, rect 0..844 (viewport 844), terpusatX, terlihat:true; screenshot: dialog Detail Perjalanan Dinas tampil dgn backdrop + form terisi default. Suite 536/536.
+  Sisa: user Redeploy Coolify + hard refresh (Ctrl+Shift+R) lalu klik tombol; E2E click-through penuh (butuh kredensial).
