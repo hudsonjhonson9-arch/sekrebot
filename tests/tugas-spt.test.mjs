@@ -138,6 +138,25 @@ function fresh() {
   return win;
 }
 
+// Tiruan <select> yang meniru SEMANTIK BROWSER: menetapkan .value yang tak punya
+// <option> cocok DIABAIKAN (browser: select.value = 'x' tanpa option x = no-op).
+// Tanpa ini, bug "nilai hilang karena diisi sebelum opsi dimuat" tak terlihat tes.
+class SelectTiruan {
+  constructor(nilai) {
+    this.tagName = 'SELECT'; this.children = []; this.style = {}; this._value = '';
+    if (nilai != null) this.value = nilai;
+  }
+  get value() { return this._value; }
+  set value(v) {
+    const s = String(v == null ? '' : v);
+    if (s === '' || this.children.some(o => String(o.value) === s)) this._value = s;
+  }
+  appendChild(c) { this.children.push(c); return c; }
+  set innerHTML(_) { this.children = []; }
+  get innerHTML() { return ''; }
+}
+class OptionTiruan { constructor(t, v) { this.text = t; this.value = v; } }
+
 test('masterIndex: memetakan nip -> {pangkat, jabatan} dari apiGet palsu', async () => {
   const win = fresh();
   win.apiGet = async () => ({ rows: [{ nip: '123', nama: 'A', pangkat: 'IV/A', jabatan: 'Kabid' }] });
@@ -212,6 +231,7 @@ test('bukaModal: dialog tampil SEBELUM master termuat (apiGet lambat tidak menah
     assert.equal(modal.style.display, 'flex', 'dialog sudah tampil walau /api/user-list belum balas');
     lepas();
     await jalan;
+    await win.TugasSPT.tungguMaster(2000); // _siapMaster selesai SEBELUM document dipulihkan
     assert.equal(modal.style.display, 'flex');
   } finally {
     if (lama === undefined) delete globalThis.document; else globalThis.document = lama;
@@ -437,7 +457,7 @@ test('readForm/fillForm: select pegawai dua arah (NIP <-> nama/jabatan), legacy 
   }
 });
 
-test('readForm: tanpa master, nilai tersimpan tidak tertimpa kosong', () => {
+test('readForm: tanpa master, pejabat tersimpan & default bidang dipertahankan', () => {
   const Mod = fresh().TugasSPT;
   const elements = { kepalaNip: { value: '', style: {} }, kepalaPangkat: { value: '', style: {} },
     sekretarisNip: { value: '', style: {} }, bidangNip: { value: '', style: {} }, ktuNip: { value: '', style: {} },
@@ -449,8 +469,9 @@ test('readForm: tanpa master, nilai tersimpan tidak tertimpa kosong', () => {
       paraf: [{ jabatan: 'Sekretaris BAPPERIDA' }, { jabatan: 'Kepala Bidang Ekonomi' }, { jabatan: 'KTU BAPPERIDA' }] });
     assert.equal(p.kepala.nama, 'Kepala Lama');
     assert.equal(p.kepala.nip, '777');
-    assert.equal(p.paraf[0].jabatan, 'Sekretaris BAPPERIDA', 'paraf default dipertahankan');
     assert.equal(p.bidang.nama, 'BERLIAN MAGU WERU,S.Sos', 'default bidang dipertahankan');
+    // paraf TANPA pilihan -> kosong (spec: ketiga paraf wajib), walau default punya jabatan.
+    assert.equal(p.paraf[0].jabatan, '', 'paraf tanpa pilihan kosong, tidak ambil default jabatan');
   } finally {
     if (lama === undefined) delete globalThis.document; else globalThis.document = lama;
   }
@@ -458,11 +479,12 @@ test('readForm: tanpa master, nilai tersimpan tidak tertimpa kosong', () => {
 
 test('isiOpsiPegawai: opsi dari master, pilihan lama dipertahankan', () => {
   const Mod = fresh().TugasSPT;
-  const dibuat = [];
-  class OptionTiruan { constructor(t, v) { this.text = t; this.value = v; } }
   const lamaOption = globalThis.Option, lamaDoc = globalThis.document;
   globalThis.Option = OptionTiruan;
-  const sel = { tagName: 'SELECT', value: '902', children: [], appendChild(c) { this.children.push(c); }, set innerHTML(_) { this.children = []; }, get innerHTML() { return ''; } };
+  const sel = new SelectTiruan();
+  // buka modal ke-2 di halaman yang sama: opsi sudah pernah dimuat -> pilihan bertahan
+  sel.appendChild(new OptionTiruan('Lama', '902'));
+  sel.value = '902';
   globalThis.document = { getElementById: id => (id === 'perjadinForm' ? { elements: { kepalaNip: sel } } : null) };
   try {
     Mod.isiOpsiPegawai({ '901': { nip: '901', nama: 'Budi', jabatan: 'Staf' }, '902': { nip: '902', nama: 'Ayu', jabatan: 'Kabid' } });
@@ -472,6 +494,75 @@ test('isiOpsiPegawai: opsi dari master, pilihan lama dipertahankan', () => {
   } finally {
     if (lamaOption === undefined) delete globalThis.Option; else globalThis.Option = lamaOption;
     if (lamaDoc === undefined) delete globalThis.document; else globalThis.document = lamaDoc;
+  }
+});
+
+test('bukaModal: perjadin tersimpan -> 7 select terisi NIP setelah master siap (bukan kosong)', async () => {
+  const win = fresh();
+  win.apiGet = async () => ({ rows: [
+    { nip: '900', nama: 'Kepala Uji', pangkat: 'IV/c', jabatan: 'Kepala Badan' },
+    { nip: '901', nama: 'Sek Uji', jabatan: 'Sekretaris' },
+    { nip: '902', nama: 'Kabid Uji', jabatan: 'Kepala Bidang Ekonomi' },
+    { nip: '903', nama: 'Ktu Uji', jabatan: 'KTU Bapperida' }
+  ] });
+  const modal = { style: { display: 'none' } };
+  const elements = {};
+  for (const n of ['kepalaNip', 'sekretarisNip', 'bidangNip', 'ktuNip', 'paraf1', 'paraf2', 'paraf3']) elements[n] = new SelectTiruan();
+  const lamaOption = globalThis.Option, lamaDoc = globalThis.document;
+  globalThis.Option = OptionTiruan;
+  globalThis.document = { getElementById: id => ({ perjadinModal: modal, perjadinInfo: { textContent: '' }, perjadinForm: { elements } }[id] || null) };
+  try {
+    const grup = { items: [{ id: '1', nip: '111', nama: 'A', tanggal: '2026-07-02', keterangan: 'R', instansi_id: 'INS' }],
+      perjadin: {
+        kepala: { nama: 'Kepala Uji', pangkat: 'IV/c', nip: '900' },
+        sekretaris: { nama: 'Sek Uji', nip: '901' },
+        bidang: { nama: 'Kabid Uji', nip: '902' },
+        ktu: { nama: 'Ktu Uji', nip: '903' },
+        paraf: [
+          { nip: '901', nama: 'Sek Uji', jabatan: 'Sekretaris' },
+          { nip: '902', nama: 'Kabid Uji', jabatan: 'Kepala Bidang Ekonomi' },
+          { nip: '903', nama: 'Ktu Uji', jabatan: 'KTU Bapperida' }
+        ]
+      } };
+    await win.TugasSPT.bukaModal(grup);
+    await win.TugasSPT.tungguMaster(2000);
+    assert.equal(elements.kepalaNip.value, '900', 'perjadin tersimpan: kepala terpilih (bukan — pilih —)');
+    assert.equal(elements.sekretarisNip.value, '901');
+    assert.equal(elements.bidangNip.value, '902');
+    assert.equal(elements.ktuNip.value, '903');
+    assert.equal(elements.paraf1.value, '901');
+    assert.equal(elements.paraf2.value, '902');
+    assert.equal(elements.paraf3.value, '903');
+  } finally {
+    if (lamaOption === undefined) delete globalThis.Option; else globalThis.Option = lamaOption;
+    if (lamaDoc === undefined) delete globalThis.document; else globalThis.document = lamaDoc;
+  }
+});
+
+test('readForm + validasiPerjadin: 3 paraf kosong -> wajib semuanya; terisi -> lolos', async () => {
+  const win = fresh();
+  win.apiGet = async () => ({ rows: [
+    { nip: '901', nama: 'Sek Uji', jabatan: 'Sekretaris' },
+    { nip: '902', nama: 'Kabid Uji', jabatan: 'Kepala Bidang Ekonomi' },
+    { nip: '903', nama: 'Ktu Uji', jabatan: 'KTU Bapperida' }
+  ] });
+  await win.TugasSPT.masterIndex('INS');
+  const Mod = win.TugasSPT;
+  const elements = {
+    maksud: { value: 'Rakor' }, tempatTujuan: { value: 'Kupang' },
+    tanggalBerangkat: { value: '2026-07-02' }, tanggalKembali: { value: '2026-07-04' },
+    paraf1: { value: '' }, paraf2: { value: '' }, paraf3: { value: '' }
+  };
+  const lama = globalThis.document;
+  globalThis.document = { getElementById: id => (id === 'perjadinForm' ? { elements } : null) };
+  try {
+    const kurang = Mod.validasiPerjadin(Mod.readForm({})).filter(x => /^Paraf/.test(x));
+    assert.deepEqual(kurang, ['Paraf 1', 'Paraf 2', 'Paraf 3'], 'paraf tanpa pilihan harus dihitung kosong');
+    elements.paraf1.value = '901'; elements.paraf2.value = '902'; elements.paraf3.value = '903';
+    const kurang2 = Mod.validasiPerjadin(Mod.readForm({})).filter(x => /^Paraf/.test(x));
+    assert.deepEqual(kurang2, [], 'setelah NIP dipilih, paraf tidak lagi wajib');
+  } finally {
+    if (lama === undefined) delete globalThis.document; else globalThis.document = lama;
   }
 });
 

@@ -290,10 +290,11 @@
     }
   }
 
-  // NIP terpilih -> dari master; tak ada pilihan -> pakai nilai tersimpan (data lama tetap jalan).
+  // NIP terpilih -> dari master; tak ada pilihan -> KOSONG (bukan jatuh ke default jabatan),
+  // supaya "— pilih —" benar-benar dihitung belum diisi oleh parafKurang (ketiga paraf wajib).
   function parafDariForm(nip, lama) {
     const l = lama || {}, e = pegawaiByNip(nip);
-    if (!e) return { nip: l.nip || '', nama: l.nama || '', jabatan: l.jabatan || '' };
+    if (!e) return { nip: '', nama: '', jabatan: '' };
     return { nip: e.nip || String(nip), nama: e.nama || l.nama || '', jabatan: e.jabatan || l.jabatan || '' };
   }
 
@@ -457,6 +458,16 @@
     _siapMaster = (async () => {
       const idx = await masterIndex((grup.items[0] || {}).instansi_id || '');
       isiOpsiPegawai(idx);                       // opsi dipasang setelah master siap
+      // fillForm() tadi jalan SAAT select belum beropsi -> .value = nip diabaikan browser.
+      // Terapkan ulang nilai tersimpan (p) ke 7 select sekarang opsi sudah ada, SEBELUM
+      // default: yang tersimpan menang; default hanya mengisi slot yang belum pernah disimpan.
+      setField('kepalaNip', p.kepala.nip || nipCocok('nama', p.kepala.nama));
+      setField('sekretarisNip', p.sekretaris.nip || nipCocok('nama', p.sekretaris.nama));
+      setField('bidangNip', (p.bidang || {}).nip || nipCocok('nama', (p.bidang || {}).nama));
+      setField('ktuNip', (p.ktu || {}).nip || nipCocok('nama', (p.ktu || {}).nama));
+      setField('paraf1', (p.paraf[0] || {}).nip || nipCocok('jabatan', (p.paraf[0] || {}).jabatan));
+      setField('paraf2', (p.paraf[1] || {}).nip || nipCocok('jabatan', (p.paraf[1] || {}).jabatan));
+      setField('paraf3', (p.paraf[2] || {}).nip || nipCocok('jabatan', (p.paraf[2] || {}).jabatan));
       const d = defaultsDariMaster(idx);
       if (d.kepala && !punya.kepala) { setField('kepalaNip', d.kepala.nip); setField('kepalaPangkat', d.kepala.pangkat); }
       if (d.sekretaris && !punya.sekretaris) setField('sekretarisNip', d.sekretaris.nip);
@@ -467,7 +478,7 @@
         setField('paraf2', (d.bidang || {}).nip || '');
         setField('paraf3', (d.ktu || {}).nip || '');
       }
-    })().catch(() => {});
+    })().catch(e => console.error('[SPT] muat master gagal:', e));
   }
 
   function tutupModal() { const m = $('perjadinModal'); if (m) m.style.display = 'none'; }
