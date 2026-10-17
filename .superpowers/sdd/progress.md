@@ -254,3 +254,17 @@ FIX ROUND Task 3 (plan TTD/PARAF) - 2 temuan Important + Minor:
   Finding 2 (parafKurang tak terjangkau): parafDariForm !e mengembalikan lama.jabatan (default) -> 3 paraf "wajib" tak ditegakkan. Fix: !e -> {nip:'',nama:'',jabatan:''}.
   Minor: .catch(()=>{}) -> .catch(e => console.error('[SPT] muat master gagal:', e)); hapus const dibuat (mati) di tes isiOpsiPegawai.
   Tes: harness <select> diperkuat (SelectTiruan; .value tanpa option cocok = no-op) + tes bukaModal perjadin-tersimpan + tes readForm/validasiPerjadin 3-paraf-kosong; 1 tes lama disesuaikan ke spec Finding 2. RED 27/3 -> GREEN focused 30/30, full npm test 548/548. Mirror www/js byte-identik. Tidak menyentuh index.html/www/css/templates.
+
+TASK 4 (plan TTD/PARAF) SELESAI — verifikasi end-to-end + tutup. Fitur pemilih ttd & paraf rampung (Task 1-4):
+  Commit: 29947fd (Task 1: model data & tag), 4291637 (Task 2: sppd_template tag bidang/KTU + tabel paraf 3 salinan), 54ac84a (Task 3: form select pegawai index+www+mirror js), 242abbb (Task 3 fix: select terisi saat modal dibuka + 3 paraf wajib), <commit Task 4> (verifikasi render + cache-bust 20261024 + progress).
+  TEMUAN BEDAH TEMPLATE (sppd_template.docx): 30 tag = 23 lama + 7 baru ({BidangNama}{BidangNIP}{KtuNama}{KtuNIP}{Paraf1..3}); tabel paraf disalin ke elemen BODY TERAKHIR sebelum <w:sectPr> (tanpa page break), font diubah ke Arial (0 Bookman); nama keras BERLIAN MAGU WERU + Nip lama diganti tag; nama/NIP KTU masuk ke sel ke-2 yang SEBELUMNYA KOSONG ("KTU Bapperida" | {KtuNama}/NIP. {KtuNIP}).
+  JEBAKAN (jangan diulang):
+    (a) `Expand-Archive` PowerShell 5.1 MENOLAK `.docx` (ekstensi tak diizinkan) -> bedah/verifikasi isi docx WAJIB via PizZip (baca word/document.xml), bukan ekstrak zip.
+    (b) `readForm` WAJIB membaca field paraf dengan panggilan LITERAL g('paraf1')/g('paraf2')/g('paraf3'); tes wiring meng-regex nama LITERAL itu — loop dengan kunci terkonkatenasi (g('paraf'+i)) memutus regex dan wiring test GAGAL walau runtime benar.
+  FIX RE-REVIEW (di 242abbb + Task 4):
+    - select ttd KOSONG saat modal pertama dibuka (fillForm jalan sebelum <option> terpasang) -> perbaikan: terapkan ulang nilai tersimpan ke 7 select SETELAH isiOpsiPegawai (setField literal kepalaNip/sekretarisNip/bidangNip/ktuNip/paraf1..3).
+    - parafDariForm tidak lagi jatuh ke jabatan tersimpan pada input kosong -> ketiga paraf benar-benar WAJIB (parafKurang kini terjangkau).
+    - cache-bust: 242abbb mengubah js/tugas-spt.js tapi index tetap ?v=20261023 (bundel lama bisa nyangkut di browser) -> dinaikkan ke ?v=20261024 di index.html + www/index.html (hanya tugas-spt.js; aset lain tak berubah).
+  VERIFIKASI TASK 4 (tanpa browser/kredensial): tes E2E baru di tests/spt-template-tags.test.mjs merender SPPD+SPT NYATA via builder nyata (classic script ke window) + docxtemplater (PizZip, delimiters {..}, paragraphLoop, linebreaks, nullGetter). Assert: 0 kurung kurawal tersisa; SPPD Kepala Bidang 'BIDANG UJI' + 'NIP. 333'; sel KTU memuat 'KTU UJI' + 'NIP. 444'; blok paraf tepat 3 baris, tiap baris Nama lalu Jabatan (dua baris); SPT Paraf1..3 sama. full npm test 549/549 (was 548, +1).
+  HASH: sppd_template.docx/www/public sha256 81077C33... IDENTIK; spt_template.docx/www/public 752E2903... IDENTIK; js/tugas-spt.js vs www/js/tugas-spt.js 382F94E6... IDENTIK (js tak disentuh Task 4 -> mirror sudah identik).
+  SISA UNTUK USER: Redeploy Coolify (build produksi Docker, bukan dev server) + hard refresh (Ctrl+Shift+R).

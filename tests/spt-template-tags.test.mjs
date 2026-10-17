@@ -98,3 +98,44 @@ test('SPPD: render mengisi slot bidang/KTU/paraf yang baru', () => {
   for (const s of [base.BidangNama, base.BidangNIP, 'KTU UJI', '333', base.Paraf1, base.Paraf2, base.Paraf3])
     assert.ok(s && text.includes(s), 'SPPD slot baru kosong: ' + s);
 });
+
+// Flatten XML ke teks baris-demi-baris: <w:br/> jadi baris baru, paragraf & baris tabel juga.
+function flatten(xml) {
+  return xml.replace(/<w:br\b[^>]*>/g, '\n').replace(/<\/w:p>/g, '\n')
+    .replace(/<\/w:tc>/g, '\t').replace(/<\/w:tr>/g, '\n').replace(/<[^>]+>/g, '');
+}
+
+// E2E: pakai builder nyata + template nyata, semua orang dipilih (kepala/sekretaris/bidang/KTU + 3 paraf).
+test('E2E: SPPD & SPT merender pilihan ttd/paraf (nama + jabatan, tepat 3 baris paraf)', () => {
+  const p = {
+    ...perjadin,
+    kepala: { nama: 'KEPALA UJI', pangkat: 'PEMBINA UJI', nip: '111' },
+    sekretaris: { nama: 'SEKRETARIS UJI', nip: '222' },
+    bidang: { nama: 'BIDANG UJI', nip: '333' },
+    ktu: { nama: 'KTU UJI', nip: '444' },
+    paraf: [
+      { nama: 'PARAF A', jabatan: 'JABATAN A' },
+      { nama: 'PARAF B', jabatan: 'JABATAN B' },
+      { nama: 'PARAF C', jabatan: 'JABATAN C' }
+    ]
+  };
+  const baris = [['PARAF A', 'JABATAN A'], ['PARAF B', 'JABATAN B'], ['PARAF C', 'JABATAN C']];
+  const hitung = t => t.split('\n').filter(l => /^\s*PARAF [ABC]$/.test(l)).length;
+
+  // SPPD: Kepala Bidang + NIP, sel KTU + NIP, blok paraf 3 baris.
+  const sppd = flatten(renderDocx('sppd_template.docx', T.bangunTagsSPPD(grup.items[0], grup, p, master)).xml);
+  assert.ok(!sppd.includes('{') && !sppd.includes('}'), 'SPPD menyisakan kurung kurawal');
+  assert.ok(sppd.includes('BIDANG UJI') && sppd.includes('NIP. 333'), 'SPPD: Kepala Bidang + NIP kosong');
+  const ktu = sppd.slice(sppd.indexOf('KTU Bapperida'), sppd.indexOf('Berangkat dari'));
+  assert.ok(ktu.includes('KTU UJI') && ktu.includes('NIP. 444'), 'SPPD: sel KTU + NIP kosong');
+  const pSp = sppd.slice(sppd.indexOf('Paraf Hirarki'));
+  baris.forEach(([n, j], i) => assert.ok(pSp.includes(n + '\n' + j), `SPPD paraf baris ${i + 1} bukan nama lalu jabatan`));
+  assert.equal(hitung(pSp), 3, 'SPPD harus tepat 3 baris paraf');
+
+  // SPT: Paraf1..3 = nama lalu jabatan, dua baris.
+  const spt = flatten(renderDocx('spt_template.docx', T.bangunTagsSPT(grup, p, master)).xml);
+  assert.ok(!spt.includes('{') && !spt.includes('}'), 'SPT menyisakan kurung kurawal');
+  const pSt = spt.slice(spt.indexOf('Paraf Hirarki'));
+  baris.forEach(([n, j], i) => assert.ok(pSt.includes(n + '\n' + j), `SPT paraf baris ${i + 1} bukan nama lalu jabatan`));
+  assert.equal(hitung(pSt), 3, 'SPT harus tepat 3 baris paraf');
+});
