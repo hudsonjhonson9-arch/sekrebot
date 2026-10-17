@@ -84,3 +84,44 @@ yang menutup ascii/hAnsi/cs/eastAsia sekaligus.
   mempopulasi KTU dari sumber data) — template-nya benar; pengisian nilai ada di Task 3/4.
 - Tabel paraf masih memakai teks `NO | Paraf Hirarki` persis seperti SPT (sesuai brief: "copy").
   Bila SPPD ingin judul lain, sesuaikan di task lanjutan.
+
+## FIX CRITICAL (pasca review whole-branch): sel KTU paragraf bersarang
+
+Defect: `patch-sppd-template.mjs` menyuntik blok KTU sebagai `[<w:r>{KtuNama}</w:r>][<w:p>…NIP. {KtuNIP}…</w:p>]`
+mengganti run kosong YANG SUDAH ada di dalam `<w:p>` sel → `<w:p>` di dalam `<w:p>` (CT_P memuat CT_P,
+WordprocessingML tak sah → Word bisa minta "repair" & buang baris NIP.). Tes render tak melihat ini
+(docxtemplater = substitusi teks, bukan validasi skema).
+
+BUKTI kedalaman <w:p> (PizZip, word/document.xml):
+| artefak | max depth | nested |
+|---|---|---|
+| before (sppd_template.docx HEAD) | 2 | 1 |
+| after (regenerasi base) | 1 | 0 |
+
+Fix: blok KTU jadi SATU paragraf — run `{KtuNama}` + `<w:br/>` + run `NIP. {KtuNIP}` (rPr Arial/sz22
+yang sama seperti run sekitar; pPr sel dibiarkan utuh).
+Guard keras baru di skrip: `pDepth(xml)` max 1 / nested 0; sel KTU satu paragraf memuat `{KtuNama}`,
+`<w:br/>`, `NIP. {KtuNIP}`.
+Guard baru di `tests/spt-template-tags.test.mjs`: pDepth(template)=1/0 + region KTU ter-flatten =
+`KTU UJI\nNIP. 444`.
+
+REGENERASI dari base PRA-patch (blob `01da3e89` = `4291637^:sppd_template.docx`, 67412 B),
+diambil via `cmd /c "git cat-file blob <sha> > file"` (diverifikasi `git hash-object` == blob).
+JEBAKAN: `cmd /c "git show 4291637^:…"` MEMAKAN `^` (escape cmd) → resolves ke `4291637:…` (versi
+sudah-patched) — salah; pakai `git rev-parse` lalu `git cat-file blob <sha>`.
+
+DIFF old↔new `word/document.xml` (hanya region KTU):
+- common prefix 93200 char, common suffix 81834 char; old total 175368, new 175360 (Δ8 bita XML).
+- OLD : `…{KtuNama}</w:t></w:r><w:p><w:pPr>…</w:pPr><w:r>…NIP. {KtuNIP}…</w:r></w:p></w:p></w:tc>`
+- NEW : `…{KtuNama}</w:t></w:r><w:r>…<w:br/></w:r><w:r>…NIP. {KtuNIP}…</w:r></w:p></w:tc>`
+Tidak ada perbedaan lain di seluruh dokumen.
+
+VERIFIKASI:
+- 30 tag distinct (23 lama + 7 baru: {BidangNama}{BidangNIP}{KtuNama}{KtuNIP}{Paraf1..3}) OK
+- Bookman di blok paraf = 0 (Arial) OK
+- tabel paraf = elemen body terakhir sebelum `<w:sectPr`, tanpa page break OK
+- 3 salinan byte-identik, SHA256 `8989b929ef0f1d78…` (68003 B) OK
+- `word/document.xml` parse XML OK
+- focused `node --test tests/spt-template-tags.test.mjs` 7/7 OK
+- full `npm test` 549/549 OK
+- tanpa BOM/mojibake di berkas teks yang berubah OK

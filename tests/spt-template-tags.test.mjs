@@ -26,6 +26,18 @@ function renderDocx(file, tags) {
   return { xml, text: xml.replace(/<[^>]+>/g, '') };
 }
 
+// Kedalaman <w:p> maks + jumlah paragraf bersarang: CT_P tak boleh memuat CT_P
+// (kalau ini >1, Word minta "repair" dan bisa membuang baris NIP.).
+function pDepth(xml) {
+  const re = /<w:p(\s[^>]*)?\/?>|<\/w:p>/g;
+  let max = 0, depth = 0, nested = 0, m;
+  while ((m = re.exec(xml))) {
+    if (m[0] === '</w:p>') depth--;
+    else if (!m[0].endsWith('/>')) { depth++; if (depth > 1) nested++; if (depth > max) max = depth; }
+  }
+  return { max, nested };
+}
+
 const NIP1 = '19721102 200112 1 001';
 const NIP2 = '19800315 200501 1 011';
 const grup = {
@@ -89,6 +101,9 @@ test('sppd_template: tag ttd/paraf baru ada, nama keras hilang, 3 salinan identi
   assert.ok(paraf.includes('<w:tblStyle w:val="TableGrid"'), 'tabel paraf (TableGrid) tidak tersalin');
   assert.ok(!/Bookman Old Style/.test(paraf), 'font tabel paraf harus Arial');
   assert.ok(xml.indexOf('{Paraf1}') < xml.lastIndexOf('<w:sectPr'), 'blok paraf harus sebelum <w:sectPr>');
+  const d = pDepth(xml);
+  assert.equal(d.max, 1, 'sppd_template punya <w:p> bersarang (max depth ' + d.max + ')');
+  assert.equal(d.nested, 0, 'sppd_template punya ' + d.nested + ' paragraf bersarang');
 });
 
 test('SPPD: render mengisi slot bidang/KTU/paraf yang baru', () => {
@@ -128,6 +143,7 @@ test('E2E: SPPD & SPT merender pilihan ttd/paraf (nama + jabatan, tepat 3 baris 
   assert.ok(sppd.includes('BIDANG UJI') && sppd.includes('NIP. 333'), 'SPPD: Kepala Bidang + NIP kosong');
   const ktu = sppd.slice(sppd.indexOf('KTU Bapperida'), sppd.indexOf('Berangkat dari'));
   assert.ok(ktu.includes('KTU UJI') && ktu.includes('NIP. 444'), 'SPPD: sel KTU + NIP kosong');
+  assert.ok(ktu.includes('KTU UJI\nNIP. 444'), 'SPPD: sel KTU harus nama lalu baris NIP. (dipisah <w:br/>)');
   const pSp = sppd.slice(sppd.indexOf('Paraf Hirarki'));
   baris.forEach(([n, j], i) => assert.ok(pSp.includes(n + '\n' + j), `SPPD paraf baris ${i + 1} bukan nama lalu jabatan`));
   assert.equal(hitung(pSp), 3, 'SPPD harus tepat 3 baris paraf');

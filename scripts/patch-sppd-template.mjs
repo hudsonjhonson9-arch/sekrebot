@@ -23,6 +23,26 @@ function tabelParafSPT(xmlSPT) {
   throw new Error('tabel paraf tidak tertutup');
 }
 
+// Kedalaman <w:p> maksimum + jumlah paragraf bersarang (CT_P tak boleh memuat CT_P).
+function pDepth(s) {
+  const re = /<w:p(\s[^>]*)?\/?>|<\/w:p>/g;
+  let max = 0, depth = 0, nested = 0, m;
+  while ((m = re.exec(s))) {
+    if (m[0] === '</w:p>') depth--;
+    else if (!m[0].endsWith('/>')) { depth++; if (depth > 1) nested++; if (depth > max) max = depth; }
+  }
+  return { max, nested };
+}
+
+// Isi paragraf pertama (tanpa tag <w:p> pembungkus) — untuk cek satu-paragraf.
+function paragrafPertama(s) {
+  const m = /<w:p(\s[^>]*)?>/.exec(s);
+  if (!m) return '';
+  const open = m.index + m[0].length;
+  const end = s.indexOf('</w:p>', open);
+  return end < 0 ? '' : s.slice(open, end);
+}
+
 function bedah() {
   const spt = baca('spt_template.docx').file('word/document.xml').asText();
   // ponytail: brief menulis pola `<w:ascii="Bookman Old Style"`, padahal di XML nyata atribut
@@ -53,10 +73,19 @@ function bedah() {
   const kosong = /<w:r [^>]*><w:rPr><w:rtl w:val="0"\/><\/w:rPr><\/w:r>/;
   if ((tc2.match(kosong) || []).length !== 1) throw new Error('run kosong sel KTU tidak unik');
   const rPr = '<w:rPr><w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
+  // Satu paragraf: nama, <w:br/> (dua baris), lalu NIP. — bukan <w:p> di dalam <w:p>
+  // (WordprocessingML CT_P tak boleh memuat CT_P; Word bisa minta "repair").
   const isi = `<w:r>${rPr}<w:t xml:space="preserve">{KtuNama}</w:t></w:r>`
-    + `<w:p><w:pPr>${rPr}</w:pPr><w:r>${rPr}<w:t xml:space="preserve">NIP. {KtuNIP}</w:t></w:r></w:p>`;
+    + `<w:r>${rPr}<w:br/></w:r>`
+    + `<w:r>${rPr}<w:t xml:space="preserve">NIP. {KtuNIP}</w:t></w:r>`;
   const tcBaru = tc2.replace(kosong, isi);
   xml = xml.replace(tc2, tcBaru);   // tc2 unik (berisi id paragraf 00000080)
+
+  // Guard sel KTU: ketiga run ada di SATU paragraf, nama lalu <w:br/> lalu NIP.
+  const selP = paragrafPertama(tcBaru);
+  if (!selP.includes('{KtuNama}') || !selP.includes('<w:br/>') || !selP.includes('NIP. {KtuNIP}'))
+    throw new Error('sel KTU harus satu paragraf: {KtuNama} <w:br/> NIP. {KtuNIP}');
+  if (/<w:p(\s|>)/.test(selP)) throw new Error('sel KTU punya <w:p> bersarang');
 
   // Blok paraf di akhir dokumen (tanpa page-break; Word mengalirkan sendiri)
   const sect = xml.lastIndexOf('<w:sectPr');
@@ -65,6 +94,11 @@ function bedah() {
     + '<w:r><w:rPr><w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/><w:b/><w:sz w:val="24"/></w:rPr>'
     + '<w:t xml:space="preserve">Paraf:</w:t></w:r></w:p>';
   xml = xml.slice(0, sect) + judul + parafTbl + xml.slice(sect);
+
+  // Hard guard akhir: seluruh dokumen tak boleh punya <w:p> bersarang.
+  const d = pDepth(xml);
+  if (d.max !== 1 || d.nested !== 0)
+    throw new Error(`struktur XML tak sah: max <w:p> depth=${d.max}, nested=${d.nested} (harus 1/0)`);
 
   zip.file('word/document.xml', xml);
   return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
