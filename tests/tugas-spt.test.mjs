@@ -82,6 +82,21 @@ test('bangunTagsSPT: nomor urut pelaksana, 3 slot paraf, Untuk dari keterangan',
   assert.equal(t.Paraf3, 'KTU BAPPERIDA');
 });
 
+test('bangunTagsSPT: paraf cetak nama + jabatan dua baris', () => {
+  const grup = { items: [{ tanggal: '2026-06-29', keterangan: 'Rakor', nip: '111', nama: 'A' }] };
+  const t = T.bangunTagsSPT(grup, {
+    tempatTujuan: 'Waingapu',
+    paraf: [
+      { nip: '901', nama: 'Sek Uji', jabatan: 'Sekretaris' },
+      { nip: '', nama: '', jabatan: 'Kepala Bidang Ekonomi' },   // legacy: jabatan saja
+      { nip: '903', nama: 'Ktu Uji', jabatan: 'KTU' }
+    ]
+  }, {});
+  assert.equal(t.Paraf1, 'Sek Uji\nSekretaris');
+  assert.equal(t.Paraf2, 'Kepala Bidang Ekonomi');
+  assert.equal(t.Paraf3, 'Ktu Uji\nKTU');
+});
+
 test('bangunTagsSPPD: lama hari + nama pegawai dari baris', () => {
   const grup = { items: [{ tanggal: '2026-06-29', keterangan: 'Fasilitasi RKPD', nip: '111', nama: 'Alvian' }] };
   const t = T.bangunTagsSPPD(
@@ -93,6 +108,26 @@ test('bangunTagsSPPD: lama hari + nama pegawai dari baris', () => {
   assert.equal(t.LamaHari, '4 (Empat) Hari');
   assert.equal(t.TempatTujuan, 'Kupang');
   assert.equal(t.Nama === t.KpaNama, false);
+});
+
+test('bangunTagsSPPD: Bidang & KTU masuk tag, paraf ikut', () => {
+  const grup = { items: [{ tanggal: '2026-06-29', keterangan: 'Fasilitasi', nip: '111', nama: 'A' }] };
+  const t = T.bangunTagsSPPD({ nip: '111', nama: 'A' }, grup,
+    { tanggalBerangkat: '2026-06-29', tanggalKembali: '2026-07-02', tempatTujuan: 'Kupang',
+      bidang: { nama: 'Kabid Uji', nip: '902' }, ktu: { nama: 'Ktu Uji', nip: '903' },
+      paraf: [{ nip: '901', nama: 'Sek Uji', jabatan: 'Sekretaris' }] }, {});
+  assert.equal(t.BidangNama, 'Kabid Uji');
+  assert.equal(t.BidangNIP, '902');
+  assert.equal(t.KtuNama, 'Ktu Uji');
+  assert.equal(t.KtuNIP, '903');
+  assert.equal(t.Paraf1, 'Sek Uji\nSekretaris');
+});
+
+test('DEFAULT_PERJADIN: bidang = nama keras template lama (anti-regresi SPPD)', () => {
+  const t = T.bangunTagsSPPD({ nip: '111', nama: 'A' }, { items: [{ nip: '111', nama: 'A', tanggal: '2026-06-29' }] },
+    { tanggalBerangkat: '2026-06-29', tanggalKembali: '2026-06-29' }, {});
+  assert.equal(t.BidangNama, 'BERLIAN MAGU WERU,S.Sos', 'default harus mengisi nama lama');
+  assert.equal(t.BidangNIP, '19690619 200903 1 001');
 });
 
 // masterIndex memakai cache modul; tiap tes butuh instance baru (new Function = closure baru).
@@ -233,6 +268,22 @@ test('validasiPerjadin: kosong -> 4 label wajib, lengkap -> lolos', () => {
   assert.deepEqual(T.validasiPerjadin({ maksud: '  ', tempatTujuan: 'Kupang', tanggalBerangkat: '2026-07-02', tanggalKembali: '2026-07-04' }), ['Maksud']);
 });
 
+test('validasiPerjadin: paraf kosong ditolak satu per satu', () => {
+  const dasar = { maksud: 'Rakor', tempatTujuan: 'Kupang', tanggalBerangkat: '2026-07-02', tanggalKembali: '2026-07-04' };
+  // default paraf terisi jabatan -> tetap lolos (perilaku lama tidak berubah)
+  assert.deepEqual(T.validasiPerjadin(dasar), []);
+  assert.deepEqual(
+    T.validasiPerjadin(Object.assign({}, dasar, {
+      paraf: [{ jabatan: 'Sekretaris BAPPERIDA' }, { jabatan: '' }, { jabatan: 'KTU BAPPERIDA' }]
+    })),
+    ['Paraf 2']
+  );
+  assert.deepEqual(
+    T.validasiPerjadin(Object.assign({}, dasar, { paraf: [{ nip: '1', nama: 'A', jabatan: 'X' }, {}, {}] })),
+    ['Paraf 2', 'Paraf 3']
+  );
+});
+
 test('defaultsDariMaster: Kepala Badan & Sekretaris diambil dari jabatan master', () => {
   const idx = {
     '111': { nip: '111', nama: 'Bukan', pangkat: 'III/a', jabatan: 'Pranata Komputer' },
@@ -243,8 +294,24 @@ test('defaultsDariMaster: Kepala Badan & Sekretaris diambil dari jabatan master'
   assert.deepEqual(d.kepala, { nama: 'Kepala', pangkat: 'IV/c', nip: '222' });
   assert.deepEqual(d.sekretaris, { nama: 'Sek', nip: '333' });
   // tidak ada yang cocok -> null (pemanggil kembali ke DEFAULT_PERJADIN)
-  assert.deepEqual(T.defaultsDariMaster({ '111': { jabatan: 'Staf' } }), { kepala: null, sekretaris: null });
-  assert.deepEqual(T.defaultsDariMaster(null), { kepala: null, sekretaris: null });
+  assert.deepEqual(T.defaultsDariMaster({ '111': { jabatan: 'Staf' } }), { kepala: null, sekretaris: null, bidang: null, ktu: null });
+  assert.deepEqual(T.defaultsDariMaster(null), { kepala: null, sekretaris: null, bidang: null, ktu: null });
+});
+
+test('defaultsDariMaster: Kepala Bidang & KTU ikut dideteksi', () => {
+  const idx = {
+    '111': { nip: '111', nama: 'Kepala', pangkat: 'IV/c', jabatan: 'Kepala Badan' },
+    '112': { nip: '112', nama: 'Sek', jabatan: 'Sekretaris' },
+    '113': { nip: '113', nama: 'Kabid', jabatan: 'Kepala Bidang Ekonomi' },
+    '114': { nip: '114', nama: 'Ktu', jabatan: 'KTU Bapperida' }
+  };
+  const d = T.defaultsDariMaster(idx);
+  assert.deepEqual(d.bidang, { nama: 'Kabid', nip: '113' });
+  assert.deepEqual(d.ktu, { nama: 'Ktu', nip: '114' });
+  assert.deepEqual(T.defaultsDariMaster({ '111': { jabatan: 'Staf' } }),
+    { kepala: null, sekretaris: null, bidang: null, ktu: null });
+  assert.deepEqual(T.defaultsDariMaster(null),
+    { kepala: null, sekretaris: null, bidang: null, ktu: null });
 });
 
 test('generate: field wajib kosong -> batal + TIDAK menyentuh render (kontrol positif ikut diuji)', async () => {

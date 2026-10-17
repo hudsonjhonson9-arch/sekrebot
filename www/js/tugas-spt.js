@@ -81,14 +81,24 @@
     tanggalPenetapan: '',
     kepala: { nama: 'CHARLES HERMANA WERU,S.Sos', pangkat: 'Pembina Utama Muda – IV/c', nip: '19721102 200112 1 001' },
     sekretaris: { nama: 'IMANUEL MOSES KALEGOTAN, ST.,M.Si', nip: '19800315 200501 1 011' },
-    paraf: [{ jabatan: 'Sekretaris BAPPERIDA' }, { jabatan: 'Kepala Bidang Ekonomi' }, { jabatan: 'KTU BAPPERIDA' }]
+    // ponytail: nama keras template SPPD dipakai sebagai default -> SPPD tetap terisi walau master kosong.
+    bidang: { nama: 'BERLIAN MAGU WERU,S.Sos', nip: '19690619 200903 1 001' },
+    ktu: { nama: '', nip: '' },
+    paraf: [
+      { nip: '', nama: '', jabatan: 'Sekretaris BAPPERIDA' },
+      { nip: '', nama: '', jabatan: 'Kepala Bidang Ekonomi' },
+      { nip: '', nama: '', jabatan: 'KTU BAPPERIDA' }
+    ]
   };
 
   function merge(p) {
     const out = Object.assign({}, DEFAULT_PERJADIN, p || {});
     out.kepala = Object.assign({}, DEFAULT_PERJADIN.kepala, (p && p.kepala) || {});
     out.sekretaris = Object.assign({}, DEFAULT_PERJADIN.sekretaris, (p && p.sekretaris) || {});
-    out.paraf = (p && Array.isArray(p.paraf) && p.paraf.length) ? p.paraf : DEFAULT_PERJADIN.paraf;
+    out.bidang = Object.assign({}, DEFAULT_PERJADIN.bidang, (p && p.bidang) || {});
+    out.ktu = Object.assign({}, DEFAULT_PERJADIN.ktu, (p && p.ktu) || {});
+    const pf = (p && Array.isArray(p.paraf) && p.paraf.length) ? p.paraf : DEFAULT_PERJADIN.paraf;
+    out.paraf = pf.map(e => { const x = e || {}; return { nip: x.nip || '', nama: x.nama || '', jabatan: x.jabatan || '' }; });
     return out;
   }
 
@@ -106,9 +116,13 @@
   function defaultsDariMaster(masterIndex) {
     const k = cariPejabat(masterIndex, /^Kepala Badan/i);
     const s = cariPejabat(masterIndex, /^Sekretaris/i);
+    const b = cariPejabat(masterIndex, /^Kepala Bidang/i);
+    const t = cariPejabat(masterIndex, /^(KTU|Kepala Tata Usaha|Kasubbag Tata Usaha)/i);
     return {
       kepala: k ? { nama: k.nama || '', pangkat: k.pangkat || '', nip: k.nip || '' } : null,
-      sekretaris: s ? { nama: s.nama || '', nip: s.nip || '' } : null
+      sekretaris: s ? { nama: s.nama || '', nip: s.nip || '' } : null,
+      bidang: b ? { nama: b.nama || '', nip: b.nip || '' } : null,
+      ktu: t ? { nama: t.nama || '', nip: t.nip || '' } : null
     };
   }
 
@@ -119,8 +133,21 @@
   ];
   function validasiPerjadin(p) {
     const q = merge(p);
-    return FIELD_WAJIB.filter(f => !String(q[f[0]] || '').trim()).map(f => f[1]);
+    return FIELD_WAJIB.filter(f => !String(q[f[0]] || '').trim()).map(f => f[1]).concat(parafKurang(q));
   }
+
+  // Paraf berbentuk array -> diperiksa terpisah; ketiganya wajib (permintaan user minimal 3).
+  function parafKurang(p) {
+    const kurang = [];
+    for (let i = 0; i < 3; i++) {
+      const e = (p.paraf || [])[i] || {};
+      if (!String(e.nip || '').trim() && !String(e.jabatan || '').trim() && !String(e.nama || '').trim()) kurang.push('Paraf ' + (i + 1));
+    }
+    return kurang;
+  }
+
+  // Satu baris bila cuma jabatan (perilaku lama), dua baris bila ada nama.
+  function parafTeks(e) { const x = e || {}; return [x.nama, x.jabatan].filter(Boolean).join('\n'); }
 
   function personTag(row, masterIndex) {
     const m = (masterIndex && masterIndex[String(row.nip)]) || {};
@@ -153,9 +180,9 @@
       KepalaNama: p.kepala.nama,
       KepalaPangkat: p.kepala.pangkat,
       KepalaNIP: p.kepala.nip,
-      Paraf1: (p.paraf[0] || {}).jabatan || '',
-      Paraf2: (p.paraf[1] || {}).jabatan || '',
-      Paraf3: (p.paraf[2] || {}).jabatan || ''
+      Paraf1: parafTeks(p.paraf[0]),
+      Paraf2: parafTeks(p.paraf[1]),
+      Paraf3: parafTeks(p.paraf[2])
     };
   }
 
@@ -185,7 +212,14 @@
       KepalaPangkat: p.kepala.pangkat,
       KepalaNIP: p.kepala.nip,
       SekretarisNama: p.sekretaris.nama,
-      SekretarisNIP: p.sekretaris.nip
+      SekretarisNIP: p.sekretaris.nip,
+      BidangNama: (p.bidang || {}).nama || '',
+      BidangNIP: (p.bidang || {}).nip || '',
+      KtuNama: (p.ktu || {}).nama || '',
+      KtuNIP: (p.ktu || {}).nip || '',
+      Paraf1: parafTeks(p.paraf[0]),
+      Paraf2: parafTeks(p.paraf[1]),
+      Paraf3: parafTeks(p.paraf[2])
     };
   }
 
