@@ -196,3 +196,17 @@ test('setiap wadah tempat data-view/data-detail muncul diikat ke onListClick', (
   assert.match(arsipJs, /closest\('\[data-view\]'\)/, 'cabang data-view hilang dari onListClick');
   assert.match(arsipJs, /return openPreview\(vw\.dataset\.view\)/, 'data-view harus memanggil openPreview');
 });
+
+test('apiSend meneruskan path apa adanya (tanpa prefix ganda /api/arsip)', () => {
+  // Laporan: "Gagal memuat riwayat." di detail dokumen. Sebabnya apiSend
+  // menambah '/api/arsip' lagi padahal semua pemanggil sudah mengirim path
+  // penuh ('/api/arsip/docs/...') -> URL jadi /api/arsip/api/arsip/... (404).
+  // Kena juga hapus/setujui/publik/bulk/upload-file/create — semua lewat apiSend.
+  assert.doesNotMatch(arsipJs, /apiFetch\('\/api\/arsip' \+ path/, 'apiSend melipatgandakan prefix /api/arsip');
+  assert.match(arsipJs, /async function apiSend\(method, path, body\)[\s\S]{0,300}?await apiFetch\(path,/, 'apiSend harus memanggil apiFetch(path) apa adanya');
+  const pemanggil = [...arsipJs.matchAll(/apiSend\(\s*'([A-Z]+)'\s*,\s*'([^']+)'/g)];
+  assert.ok(pemanggil.length >= 5, 'pemanggil apiSend tidak ditemukan, cuma ' + pemanggil.length);
+  for (const [, , p] of pemanggil) {
+    assert.ok(p.startsWith('/api/arsip/'), 'pemanggil harus mengirim path penuh: ' + p);
+  }
+});

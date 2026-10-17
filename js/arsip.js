@@ -249,7 +249,9 @@ let meLoaded = false;
 
   async function apiSend(method, path, body) {
     try {
-      const res = await apiFetch('/api/arsip' + path, {
+      // path sudah lengkap ('/api/arsip/docs/...') dari pemanggil — jangan
+      // ditambah prefix lagi, dulu menghasilkan /api/arsip/api/arsip/... (404).
+      const res = await apiFetch(path, {
         method,
         body: body === undefined ? undefined : JSON.stringify(body),
       });
