@@ -240,3 +240,7 @@ FIX ROUND 5 (bundle zip + tanggal + poles modal):
 Task 1: complete (feat(spt): paraf jadi pilihan pegawai (nama+jabatan), tambah data bidang & KTU) - model data & tag
   js/tugas-spt.js: DEFAULT_PERJADIN +bidang/+ktu, paraf jadi {nip,nama,jabatan}; merge normalisasi; parafTeks(nama+jabatan dua baris, legacy jabatan-saja tetap 1 baris); defaultsDariMaster kembalikan 4 kunci (bidang/Kepala Bidang, ktu/KTU) ; validasiPerjadin +parafKurang (3 slot wajib); bangunTagsSPT Paraf1..3 via parafTeks; bangunTagsSPPD +BidangNama/NIP, KtuNama/NIP, Paraf1..3. Mirror www byte-identik (Get-FileHash).
   tests/tugas-spt.test.mjs: 21->26 tes; 2 assertion defaultsDariMaster lama diubah ke bentuk 4 kunci. TDD: RED 20/6 (bidang/ktu/paraf-barukan belum ada) -> GREEN 26/26; npm test 542/542.
+
+TASK 1 (plan TTD/PARAF) SELESAI: commit 29947fd 'feat(spt): paraf jadi pilihan pegawai (nama+jabatan), tambah data bidang & KTU'. Review task: APPROVED (0 Critical/0 Important; 2 catatan Minor -> dibawa ke Task 3: readForm fallback jabatan wajib dibuang; cache-bust ?v= di Task 3). Focused 26/26, full npm test 542/542.
+
+TASK 2 (plan TTD/PARAF) SELESAI: sppd_template.docx ditambahi tag {BidangNama}/{BidangNIP} (ganti nama keras BERLIAN MAGU WERU + Nip), sel KTU kosong -> {KtuNama}+NIP. {KtuNIP}, dan tabel paraf SPT (TableGrid, font diubah ke Arial) disalin sebelum <w:sectPr>. 23 tag lama + 7 tag baru = 30 tag; 3 salinan byte-identik. Skrip jejak scripts/patch-sppd-template.mjs idempoten. TDD: tests/spt-template-tags.test.mjs +2 tes, RED -> GREEN; npm test 544/544.

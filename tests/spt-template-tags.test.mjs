@@ -74,3 +74,27 @@ test('SPPD: isi SPPD benar dan tidak menyisakan nomor/format template lama', () 
   assert.ok(!text.includes('2025'), 'SPPD masih menyisakan tahun template lama (2025)');
   assert.ok(!text.includes('42 /SPPD'), 'SPPD masih menyisakan nomor template lama');
 });
+
+test('sppd_template: tag ttd/paraf baru ada, nama keras hilang, 3 salinan identik', () => {
+  const ROOT = path.resolve(import.meta.dirname, '..');
+  const berkas = ['sppd_template.docx', 'www/sppd_template.docx', 'public/sppd_template.docx'];
+  const isi = berkas.map(b => fs.readFileSync(path.join(ROOT, b)));
+  assert.ok(isi[0].equals(isi[1]) && isi[0].equals(isi[2]), 'tiga salinan sppd_template.docx harus identik');
+  const xml = new PizZip(isi[0]).file('word/document.xml').asText();
+  for (const tag of ['{BidangNama}', '{BidangNIP}', '{KtuNama}', '{KtuNIP}', '{Paraf1}', '{Paraf2}', '{Paraf3}'])
+    assert.ok(xml.includes(tag), 'tag hilang: ' + tag);
+  assert.ok(!xml.includes('BERLIAN MAGU WERU'), 'nama keras masih ada');
+  assert.ok(!xml.includes('Nip. 19690619'), 'NIP keras masih ada');
+  const paraf = xml.slice(xml.lastIndexOf('<w:tbl>', xml.indexOf('{Paraf1}')), xml.indexOf('</w:tbl>', xml.indexOf('{Paraf1}')) + 8);
+  assert.ok(paraf.includes('<w:tblStyle w:val="TableGrid"'), 'tabel paraf (TableGrid) tidak tersalin');
+  assert.ok(!/Bookman Old Style/.test(paraf), 'font tabel paraf harus Arial');
+  assert.ok(xml.indexOf('{Paraf1}') < xml.lastIndexOf('<w:sectPr'), 'blok paraf harus sebelum <w:sectPr>');
+});
+
+test('SPPD: render mengisi slot bidang/KTU/paraf yang baru', () => {
+  const base = T.bangunTagsSPPD(grup.items[0], grup, perjadin, master);
+  const tags = { ...base, KtuNama: 'KTU UJI', KtuNIP: '333' };
+  const { text } = renderDocx('sppd_template.docx', tags);
+  for (const s of [base.BidangNama, base.BidangNIP, 'KTU UJI', '333', base.Paraf1, base.Paraf2, base.Paraf3])
+    assert.ok(s && text.includes(s), 'SPPD slot baru kosong: ' + s);
+});
