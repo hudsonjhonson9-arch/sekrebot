@@ -254,6 +254,49 @@
     return out;
   }
 
+  /* ─── PILIH PEGAWAI (select dari master) ─── */
+  const SLOT_PEGAWAI = ['kepalaNip', 'sekretarisNip', 'bidangNip', 'ktuNip', 'paraf1', 'paraf2', 'paraf3'];
+
+  function pegawaiByNip(nip) {
+    const n = String(nip || '').trim();
+    return n && _masterCache ? (_masterCache[n] || null) : null;
+  }
+
+  // Cari NIP dari nama/jabatan (dipakai untuk data lama yang belum menyimpan NIP).
+  function nipCocok(field, nilai) {
+    const t = String(nilai || '').trim().toUpperCase().replace(/\s+/g, ' ');
+    if (!t || !_masterCache) return '';
+    for (const nip of Object.keys(_masterCache)) {
+      const v = ((_masterCache[nip] || {})[field] || '').trim().toUpperCase().replace(/\s+/g, ' ');
+      if (v === t) return nip;
+    }
+    return '';
+  }
+
+  // ponytail: <select> native; opsi pertama '— pilih —' (nilai kosong).
+  function isiOpsiPegawai(idx) {
+    const f = $('perjadinForm');
+    if (!f || !f.elements) return;
+    const daftar = Object.keys(idx || {}).map(nip => idx[nip]).filter(m => m && m.nama)
+      .sort((a, b) => String(a.nama).localeCompare(String(b.nama)));
+    for (const n of SLOT_PEGAWAI) {
+      const el = f.elements[n];
+      if (!el || el.tagName !== 'SELECT') continue;
+      const simpan = el.value;
+      el.innerHTML = '';
+      el.appendChild(new Option('— pilih —', ''));
+      for (const m of daftar) el.appendChild(new Option(m.nama + ' — ' + (m.jabatan || 'tanpa jabatan'), String(m.nip)));
+      el.value = simpan;
+    }
+  }
+
+  // NIP terpilih -> dari master; tak ada pilihan -> pakai nilai tersimpan (data lama tetap jalan).
+  function parafDariForm(nip, lama) {
+    const l = lama || {}, e = pegawaiByNip(nip);
+    if (!e) return { nip: l.nip || '', nama: l.nama || '', jabatan: l.jabatan || '' };
+    return { nip: e.nip || String(nip), nama: e.nama || l.nama || '', jabatan: e.jabatan || l.jabatan || '' };
+  }
+
   /* ─── SIMPAN + ORKESTRASI GENERATE ─── */
   async function simpanPerjadin(ids, perjadin) {
     try {
@@ -347,19 +390,16 @@
     p.tanggalPenetapan = g('tanggalPenetapan');
     p.mataAnggaran = g('mataAnggaran') || p.mataAnggaran;
     p.ditetapkanDi = g('ditetapkanDi') || p.ditetapkanDi;
-    p.kepala = {
-      nama: g('kepalaNama') || p.kepala.nama,
-      pangkat: g('kepalaPangkat') || p.kepala.pangkat,
-      nip: g('kepalaNIP') || p.kepala.nip
-    };
-    p.sekretaris = {
-      nama: g('sekretarisNama') || p.sekretaris.nama,
-      nip: g('sekretarisNIP') || p.sekretaris.nip
-    };
+    const k = pegawaiByNip(g('kepalaNip')), s = pegawaiByNip(g('sekretarisNip'));
+    const b = pegawaiByNip(g('bidangNip')), t = pegawaiByNip(g('ktuNip'));
+    p.kepala = { nama: (k && k.nama) || p.kepala.nama, pangkat: g('kepalaPangkat') || p.kepala.pangkat, nip: (k && k.nip) || p.kepala.nip };
+    p.sekretaris = { nama: (s && s.nama) || p.sekretaris.nama, nip: (s && s.nip) || p.sekretaris.nip };
+    p.bidang = { nama: (b && b.nama) || p.bidang.nama, nip: (b && b.nip) || p.bidang.nip };
+    p.ktu = { nama: (t && t.nama) || p.ktu.nama, nip: (t && t.nip) || p.ktu.nip };
     p.paraf = [
-      { jabatan: g('paraf1') || (p.paraf[0] || {}).jabatan || '' },
-      { jabatan: g('paraf2') || (p.paraf[1] || {}).jabatan || '' },
-      { jabatan: g('paraf3') || (p.paraf[2] || {}).jabatan || '' }
+      parafDariForm(g('paraf1'), p.paraf[0]),
+      parafDariForm(g('paraf2'), p.paraf[1]),
+      parafDariForm(g('paraf3'), p.paraf[2])
     ];
     return p;
   }
@@ -380,14 +420,15 @@
     set('mataAnggaran', perjadin.mataAnggaran);
     const k = perjadin.kepala || {}, s = perjadin.sekretaris || {}, pf = perjadin.paraf || [];
     set('ditetapkanDi', perjadin.ditetapkanDi);
-    set('kepalaNama', k.nama);
+    set('kepalaNip', k.nip || nipCocok('nama', k.nama));
     set('kepalaPangkat', k.pangkat);
-    set('kepalaNIP', k.nip);
-    set('sekretarisNama', s.nama);
-    set('sekretarisNIP', s.nip);
-    set('paraf1', (pf[0] || {}).jabatan);
-    set('paraf2', (pf[1] || {}).jabatan);
-    set('paraf3', (pf[2] || {}).jabatan);
+    set('sekretarisNip', s.nip || nipCocok('nama', s.nama));
+    const bd = perjadin.bidang || {}, kt = perjadin.ktu || {};
+    set('bidangNip', bd.nip || nipCocok('nama', bd.nama));
+    set('ktuNip', kt.nip || nipCocok('nama', kt.nama));
+    set('paraf1', (pf[0] || {}).nip || nipCocok('jabatan', (pf[0] || {}).jabatan));
+    set('paraf2', (pf[1] || {}).nip || nipCocok('jabatan', (pf[1] || {}).jabatan));
+    set('paraf3', (pf[2] || {}).nip || nipCocok('jabatan', (pf[2] || {}).jabatan));
   }
 
   async function bukaModal(grup) {
@@ -404,21 +445,29 @@
     // supaya /api/user-list yang lambat tidak menahan munculnya dialog.
     fillForm(p);
     modal.style.display = 'flex';
-    const punya = grup.perjadin || {};
+    const simpan = grup.perjadin || {};
+    const punya = {
+      kepala: !!(simpan.kepala && simpan.kepala.nama), sekretaris: !!(simpan.sekretaris && simpan.sekretaris.nama),
+      bidang: !!(simpan.bidang && simpan.bidang.nama), ktu: !!(simpan.ktu && simpan.ktu.nama),
+      paraf: !!(simpan.paraf && simpan.paraf.length)
+    };
     // Promise dicatat (bukan di-await) supaya dialog tetap muncul segera; submit menunggunya
     // lewat tungguMaster() agar nilai yang terlihat = yang tercetak.
-    _siapMaster = (!punya.kepala || !punya.sekretaris)
-      ? (async () => {
-        const idx = await masterIndex((grup.items[0] || {}).instansi_id || '');
-        const d = defaultsDariMaster(idx);
-        if (d.kepala && !punya.kepala) {
-          setField('kepalaNama', d.kepala.nama); setField('kepalaPangkat', d.kepala.pangkat); setField('kepalaNIP', d.kepala.nip);
-        }
-        if (d.sekretaris && !punya.sekretaris) {
-          setField('sekretarisNama', d.sekretaris.nama); setField('sekretarisNIP', d.sekretaris.nip);
-        }
-      })().catch(e => console.error('[SPT] default pejabat gagal:', e))
-      : null;
+    // _siapMaster SELALU diisi: select harus tetap terisi walau perjadin sudah lengkap.
+    _siapMaster = (async () => {
+      const idx = await masterIndex((grup.items[0] || {}).instansi_id || '');
+      isiOpsiPegawai(idx);                       // opsi dipasang setelah master siap
+      const d = defaultsDariMaster(idx);
+      if (d.kepala && !punya.kepala) { setField('kepalaNip', d.kepala.nip); setField('kepalaPangkat', d.kepala.pangkat); }
+      if (d.sekretaris && !punya.sekretaris) setField('sekretarisNip', d.sekretaris.nip);
+      if (d.bidang && !punya.bidang) setField('bidangNip', d.bidang.nip);
+      if (d.ktu && !punya.ktu) setField('ktuNip', d.ktu.nip);
+      if (!punya.paraf) {                        // tebak dari jabatan (persis default lama)
+        setField('paraf1', (d.sekretaris || {}).nip || '');
+        setField('paraf2', (d.bidang || {}).nip || '');
+        setField('paraf3', (d.ktu || {}).nip || '');
+      }
+    })().catch(() => {});
   }
 
   function tutupModal() { const m = $('perjadinModal'); if (m) m.style.display = 'none'; }
@@ -465,6 +514,6 @@
     personTag, bangunTagsSPT, bangunTagsSPPD, DEFAULT_PERJADIN, merge,
     cariPejabat, defaultsDariMaster, validasiPerjadin,
     masterIndex, bukaModal, generate, simpanPerjadin,
-    readForm, fillForm, tungguMaster
+    readForm, fillForm, tungguMaster, isiOpsiPegawai
   };
 })();

@@ -389,12 +389,21 @@ test('generate: SPPD gagal -> batal, tidak ada unduhan zip', async () => {
 
 // Membuktikan editan pejabat di form benar-benar sampai ke objek perjadin (dan sebaliknya),
 // bukan sekadar "nama field ada di sumber" — lubang yang ditemukan reviewer fix round.
-test('readForm/fillForm: dua arah lewat DOM tiruan (editan pejabat sampai ke perjadin)', () => {
-  const Mod = load();
+test('readForm/fillForm: select pegawai dua arah (NIP <-> nama/jabatan), legacy tetap jalan', async () => {
+  const win = fresh();
+  win.apiGet = async () => ({ rows: [
+    { nip: '900', nama: 'Kepala Uji', pangkat: 'IV/c', jabatan: 'Kepala Badan' },
+    { nip: '901', nama: 'Sek Uji', jabatan: 'Sekretaris' },
+    { nip: '902', nama: 'Kabid Uji', jabatan: 'Kepala Bidang Ekonomi' },
+    { nip: '903', nama: 'Ktu Uji', jabatan: 'KTU Bapperida' }
+  ] });
+  await win.TugasSPT.masterIndex('INS');
+  const Mod = win.TugasSPT;
+
   const isi = {
-    nomor: '005/SPT', ditetapkanDi: 'Kupang', kepalaNama: 'Kepala Uji', kepalaPangkat: 'IV/c',
-    kepalaNIP: '900', sekretarisNama: 'Sek Uji', sekretarisNIP: '901',
-    paraf1: 'Sekretaris BAPPERIDA', paraf2: 'Kabid X', paraf3: 'Kasubbag Y'
+    nomor: '005/SPT', ditetapkanDi: 'Kupang', kepalaPangkat: 'IV/c',
+    kepalaNip: '900', sekretarisNip: '901', bidangNip: '902', ktuNip: '903',
+    paraf1: '901', paraf2: '902', paraf3: '903'
   };
   const elements = {};
   for (const n of Object.keys(isi)) elements[n] = { value: isi[n], style: {} };
@@ -402,25 +411,67 @@ test('readForm/fillForm: dua arah lewat DOM tiruan (editan pejabat sampai ke per
   globalThis.document = { getElementById: id => (id === 'perjadinForm' ? { elements } : null) };
   try {
     const p = Mod.readForm({});
-    assert.equal(p.ditetapkanDi, 'Kupang');
-    assert.equal(p.kepala.nama, 'Kepala Uji', 'kepala dari form harus menang atas default');
-    assert.equal(p.kepala.pangkat, 'IV/c');
+    assert.equal(p.kepala.nama, 'Kepala Uji', 'nama kepala dari master lewat NIP');
     assert.equal(p.kepala.nip, '900');
+    assert.equal(p.kepala.pangkat, 'IV/c');
     assert.equal(p.sekretaris.nama, 'Sek Uji');
-    assert.equal(p.sekretaris.nip, '901');
-    assert.equal(p.paraf[0].jabatan, 'Sekretaris BAPPERIDA');
-    assert.equal(p.paraf[2].jabatan, 'Kasubbag Y');
-    // fillForm menulis balik + membersihkan border merah sisa submit sebelumnya
-    elements['kepalaNama'].style.borderColor = 'rgb(220, 53, 69)';
-    elements['sekretarisNama'].value = 'harus tertimpa';
-    Mod.fillForm({ kepala: { nama: 'Hasil Isi', pangkat: 'X', nip: '1' }, sekretaris: { nama: 'Sek Isi', nip: '2' }, paraf: [{ jabatan: 'P1' }] });
-    assert.equal(elements['kepalaNama'].value, 'Hasil Isi');
-    assert.equal(elements['kepalaNama'].style.borderColor, '', 'border merah dibersihkan fillForm');
-    assert.equal(elements['sekretarisNama'].value, 'Sek Isi');
-    assert.equal(elements['paraf1'].value, 'P1');
+    assert.equal(p.bidang.nama, 'Kabid Uji');
+    assert.equal(p.bidang.nip, '902');
+    assert.equal(p.ktu.nama, 'Ktu Uji');
+    assert.deepEqual(p.paraf[0], { nip: '901', nama: 'Sek Uji', jabatan: 'Sekretaris' });
+    assert.equal(p.paraf[2].nama, 'Ktu Uji');
+
+    // legacy: perjadin lama (jabatan saja, tanpa nip) -> select terisi lewat jabatan master
+    Mod.fillForm({ kepala: { nama: 'Kepala Uji', nip: '900' }, sekretaris: { nama: 'Sek Uji', nip: '901' },
+      paraf: [{ jabatan: 'Sekretaris' }, { jabatan: 'Kepala Bidang Ekonomi' }, { jabatan: 'KTU Bapperida' }] });
+    assert.equal(elements['paraf1'].value, '901', 'jabatan lama dipetakan ke NIP master');
+    assert.equal(elements['paraf2'].value, '902');
+    assert.equal(elements['paraf3'].value, '903');
+    assert.equal(elements['kepalaNip'].value, '900');
+    // jabatan tak dikenal -> kosong (tidak crash)
+    Mod.fillForm({ paraf: [{ jabatan: 'Jabatan Aneh' }] });
+    assert.equal(elements['paraf1'].value, '');
     assert.equal(elements['paraf2'].value, '');
   } finally {
     if (lama === undefined) delete globalThis.document; else globalThis.document = lama;
+  }
+});
+
+test('readForm: tanpa master, nilai tersimpan tidak tertimpa kosong', () => {
+  const Mod = fresh().TugasSPT;
+  const elements = { kepalaNip: { value: '', style: {} }, kepalaPangkat: { value: '', style: {} },
+    sekretarisNip: { value: '', style: {} }, bidangNip: { value: '', style: {} }, ktuNip: { value: '', style: {} },
+    paraf1: { value: '', style: {} }, paraf2: { value: '', style: {} }, paraf3: { value: '', style: {} } };
+  const lama = globalThis.document;
+  globalThis.document = { getElementById: id => (id === 'perjadinForm' ? { elements } : null) };
+  try {
+    const p = Mod.readForm({ kepala: { nama: 'Kepala Lama', pangkat: 'IV', nip: '777' },
+      paraf: [{ jabatan: 'Sekretaris BAPPERIDA' }, { jabatan: 'Kepala Bidang Ekonomi' }, { jabatan: 'KTU BAPPERIDA' }] });
+    assert.equal(p.kepala.nama, 'Kepala Lama');
+    assert.equal(p.kepala.nip, '777');
+    assert.equal(p.paraf[0].jabatan, 'Sekretaris BAPPERIDA', 'paraf default dipertahankan');
+    assert.equal(p.bidang.nama, 'BERLIAN MAGU WERU,S.Sos', 'default bidang dipertahankan');
+  } finally {
+    if (lama === undefined) delete globalThis.document; else globalThis.document = lama;
+  }
+});
+
+test('isiOpsiPegawai: opsi dari master, pilihan lama dipertahankan', () => {
+  const Mod = fresh().TugasSPT;
+  const dibuat = [];
+  class OptionTiruan { constructor(t, v) { this.text = t; this.value = v; } }
+  const lamaOption = globalThis.Option, lamaDoc = globalThis.document;
+  globalThis.Option = OptionTiruan;
+  const sel = { tagName: 'SELECT', value: '902', children: [], appendChild(c) { this.children.push(c); }, set innerHTML(_) { this.children = []; }, get innerHTML() { return ''; } };
+  globalThis.document = { getElementById: id => (id === 'perjadinForm' ? { elements: { kepalaNip: sel } } : null) };
+  try {
+    Mod.isiOpsiPegawai({ '901': { nip: '901', nama: 'Budi', jabatan: 'Staf' }, '902': { nip: '902', nama: 'Ayu', jabatan: 'Kabid' } });
+    assert.deepEqual(sel.children.map(o => o.value), ['', '902', '901'], 'opsi terurut nama + opsi kosong di depan');
+    assert.equal(sel.children[1].text, 'Ayu — Kabid');
+    assert.equal(sel.value, '902', 'pilihan lama tidak hilang setelah opsi dimuat ulang');
+  } finally {
+    if (lamaOption === undefined) delete globalThis.Option; else globalThis.Option = lamaOption;
+    if (lamaDoc === undefined) delete globalThis.document; else globalThis.document = lamaDoc;
   }
 });
 
