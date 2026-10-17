@@ -37,8 +37,11 @@
   }
 
   function extOf(d) {
-    var s = String((d && (d.title || d.url)) || '');
-    var m = s.match(/\.([a-z0-9]{2,5})(?=$|[?#])/i);
+    // Judul lebih dulu (biasanya lebih deskriptif), TAPI jatuh ke url kalau judul
+    // tidak punya ekstensi — dulu url tidak pernah dilihat selama judul terisi,
+    // jadi PDF Drive bermjudul "Laporan 2024" dikira 'lain' dan tidak di-preview.
+    var pola = /\.([a-z0-9]{2,5})(?=$|[?#])/i;
+    var m = String((d && d.title) || '').match(pola) || String((d && d.url) || '').match(pola);
     return m ? m[1].toLowerCase() : '';
   }
 
@@ -51,6 +54,18 @@
 
   function warnaFile(d) {
     return WARNA_EXT[extOf(d)] || '#64748b';
+  }
+
+  // Cara overlay menampilkan satu dokumen. Murni (tanpa DOM) supaya bisa diuji:
+  //   'gambar' -> <img> (thumbnail Drive, paling ringan)
+  //   'embed'  -> <iframe> Drive /preview — Drive merender pdf, docx, xlsx, ppt
+  //               sendiri, jadi tidak perlu tahu ekstensinya
+  //   'luar'   -> pesan + tombol "Buka di tab baru" (tautan non-Drive)
+  function modePreview(d) {
+    var url = String((d && d.url) || '');
+    if (!url) return 'luar';
+    if (jenisFile(d) === 'gambar') return 'gambar';
+    return driveEmbedUrl(url) ? 'embed' : 'luar';
   }
 
   // Nama ikon harus ada di css/lib/runeicons.css (hasil generate, bukan Font
@@ -124,6 +139,7 @@
     jenisFile: jenisFile,
     warnaFile: warnaFile,
     ikonFile: ikonFile,
+    modePreview: modePreview,
     nav: nav,
     skeleton: skeleton,
     empty: empty,

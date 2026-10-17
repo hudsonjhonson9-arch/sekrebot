@@ -50,6 +50,30 @@ test('extOf & jenisFile', () => {
   assert.equal(UI.jenisFile({ title: 'a.docx' }), 'lain');
 });
 
+test('extOf: url dipakai kalau judul tidak punya ekstensi', () => {
+  // Dulu url tidak pernah dilihat selama judul terisi -> PDF Drive berjudul
+  // "Laporan 2026" dikira 'lain' dan tidak pernah di-preview.
+  assert.equal(UI.extOf({ title: 'Laporan 2026', url: 'https://x/laporan.pdf' }), 'pdf');
+  assert.equal(UI.extOf({ title: 'Laporan 2026', url: 'https://drive.google.com/file/d/ABC/view' }), '');
+  assert.equal(UI.extOf({ title: 'SK 2026.pdf', url: 'https://x/laporan.docx' }), 'pdf');
+  assert.equal(UI.jenisFile({ title: 'Laporan 2026', url: 'https://x/laporan.jpeg' }), 'gambar');
+});
+
+test('modePreview: gambar->img, Drive->embed (semua jenis), sisanya->luar', () => {
+  assert.equal(UI.modePreview({ title: 'foto.jpg', url: 'https://x/f.jpg' }), 'gambar');
+  // Inti laporan "preview dokumen masih gagal": docx/xlsx di Drive tidak pernah
+  // masuk cabang embed karena ekstensinya 'lain'.
+  assert.equal(UI.modePreview({ title: 'Kajian 2024', url: 'https://drive.google.com/file/d/ABC/view' }), 'embed');
+  assert.equal(UI.modePreview({ title: 'Kajian 2024.docx', url: 'https://drive.google.com/file/d/ABC/view' }), 'embed');
+  assert.equal(UI.modePreview({ url: 'https://drive.google.com/uc?export=view&id=ABC' }), 'embed');
+  // Foto di Drive tetap lewat <img> (lebih ringan), bukan iframe.
+  assert.equal(UI.modePreview({ title: 'x.png', url: 'https://drive.google.com/file/d/ABC/view' }), 'gambar');
+  // Tautan non-Drive memang tidak bisa di-embed.
+  assert.equal(UI.modePreview({ title: 'a.docx', url: 'https://example.com/a.docx' }), 'luar');
+  assert.equal(UI.modePreview({ title: 'a.docx' }), 'luar');
+  assert.equal(UI.modePreview(null), 'luar');
+});
+
 test('warnaFile & ikonFile berubah per jenis', () => {
   assert.match(UI.warnaFile({ title: 'a.pdf' }), /^#/);
   assert.notEqual(UI.warnaFile({ title: 'a.pdf' }), UI.warnaFile({ title: 'a.xlsx' }));

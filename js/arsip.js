@@ -188,8 +188,8 @@ let meLoaded = false;
     const dl = $('arsipPreviewDl');
     if (dl) dl.href = url || '#';
 
-    const jenis = window.ArsipUI.jenisFile(d);
-    if (jenis === 'gambar' && url) {
+    const mode = window.ArsipUI.modePreview(d);
+    if (mode === 'gambar') {
       const thumb = window.ArsipUI.driveThumbUrl(url, 1000);
       body.innerHTML = `<img class="arsip-preview-img" alt="${escapeHtml(d.title || '')}">`;
       const img = body.firstElementChild;
@@ -199,11 +199,9 @@ let meLoaded = false;
         img.src = 'https://images.weserv.nl/?url=' + encodeURIComponent(thumb.replace(/^https?:\/\//, ''));
       };
       img.src = thumb;
-    } else if (jenis === 'pdf') {
+    } else if (mode === 'embed') {
       const emb = window.ArsipUI.driveEmbedUrl(url);
-      body.innerHTML = emb
-        ? `<iframe class="arsip-preview-frame" src="${escapeHtml(emb)}" title="${escapeHtml(d.title || '')}"></iframe>`
-        : pesanLuar(d);
+      body.innerHTML = `<iframe class="arsip-preview-frame" src="${escapeHtml(emb)}" title="${escapeHtml(d.title || '')}"></iframe>`;
     } else {
       body.innerHTML = pesanLuar(d);
     }
@@ -683,6 +681,11 @@ let meLoaded = false;
     if (listEl) listEl.addEventListener('click', onListClick);
     const homeEl = $('arsipHome');
     if (homeEl) homeEl.addEventListener('click', onListClick);
+    // #arsipDetail itu SIBLING #arsipList di dalam #arsipDokumen, bukan anaknya.
+    // Tombol "Lihat dokumen" (data-view) dan "Tutup" (data-close-detail) ada di
+    // dalamnya; tanpa ikatan ini keduanya diam total (klik tidak melakukan apa pun).
+    const detailEl = $('arsipDetail');
+    if (detailEl) detailEl.addEventListener('click', onListClick);
     const pvClose = $('arsipPreviewClose');
     if (pvClose) pvClose.addEventListener('click', closePreview);
     const pv = $('arsipPreview');

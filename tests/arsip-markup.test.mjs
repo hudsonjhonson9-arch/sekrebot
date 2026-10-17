@@ -183,3 +183,16 @@ test('modul Bank Data dimuat setelah arsip.js dan punya kontrak mount/unmount', 
   assert.match(css, /\.kk-tabel/, 'CSS tabel bank data hilang');
   assert.match(css, /\.kk-label/, 'CSS form bank data hilang');
 });
+
+test('setiap wadah tempat data-view/data-detail muncul diikat ke onListClick', () => {
+  // Laporan pengguna: klik "Lihat dokumen" tidak melakukan apa pun di semua jenis
+  // berkas. Sebabnya data-view ada di dalam #arsipDetail, sedangkan onListClick
+  // hanya diikat ke #arsipList dan #arsipHome — jadi handler-nya hidup tapi tidak
+  // pernah dipanggil. Pola yang sama gampang terulang, jadi tiap wadah diuji.
+  for (const id of ['arsipList', 'arsipHome', 'arsipDetail']) {
+    const pola = new RegExp("\\$\\('" + id + "'\\)[\\s\\S]{0,90}?addEventListener\\('click', onListClick\\)");
+    assert.match(arsipJs, pola, '#' + id + ' tidak diikat ke onListClick');
+  }
+  assert.match(arsipJs, /closest\('\[data-view\]'\)/, 'cabang data-view hilang dari onListClick');
+  assert.match(arsipJs, /return openPreview\(vw\.dataset\.view\)/, 'data-view harus memanggil openPreview');
+});
