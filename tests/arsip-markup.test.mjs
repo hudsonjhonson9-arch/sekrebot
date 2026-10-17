@@ -210,3 +210,24 @@ test('apiSend meneruskan path apa adanya (tanpa prefix ganda /api/arsip)', () =>
     assert.ok(p.startsWith('/api/arsip/'), 'pemanggil harus mengirim path penuh: ' + p);
   }
 });
+
+test('kartu detail memuat pratinjau media + metadata lewat helper bersama', () => {
+  // Laporan: detail hanya teks, isinya baru keluar lewat overlay "Lihat dokumen".
+  // Media kini disematkan di kartu (dua kolom di desktop) memakai mediaHtml()
+  // yang sama dengan overlay, supaya keduanya tidak bisa beda perilaku.
+  assert.match(arsipUi, /function mediaHtml\(d\)/, 'mediaHtml() hilang dari arsip-ui.js');
+  assert.match(arsipUi, /mediaHtml: mediaHtml/, 'mediaHtml belum diekspor ke window.ArsipUI');
+  assert.match(arsipJs, /class="arsip-detail-grid"/, 'grid detail tidak dirender');
+  assert.match(arsipJs, /class="arsip-detail-media"/, 'wadah media di detail hilang');
+  assert.match(arsipJs, /class="arsip-detail-meta"/, 'kolom metadata di detail hilang');
+  assert.match(arsipJs, /window\.ArsipUI\.mediaHtml\(d\)/, 'openDetail tidak memakai mediaHtml');
+  assert.match(arsipJs, /box\.innerHTML = window\.ArsipUI\.mediaHtml\(d\)/, 'previewDoc harus memakai mediaHtml yang sama');
+  assert.match(arsipJs, /pasangFallbackGambar/, 'cadangan gambar weserv tidak dipasang');
+  // mediaHtml: gambar + embed Drive + fallback pesan
+  assert.match(arsipUi, /arsip-media arsip-media-img/, 'cabang gambar mediaHtml hilang');
+  assert.match(arsipUi, /arsip-media arsip-media-frame/, 'cabang embed mediaHtml hilang');
+  assert.match(arsipUi, /data-fallback/, 'cadangan weserv untuk gambar hilang');
+  assert.match(css, /\.arsip-detail-grid\s*\{/, 'CSS grid detail hilang');
+  assert.match(css, /grid-template-columns: minmax\(0, 1fr\) 320px/, 'layout dua kolom desktop hilang');
+  assert.match(css, /\.arsip-media-img/, 'CSS media bersama hilang');
+});

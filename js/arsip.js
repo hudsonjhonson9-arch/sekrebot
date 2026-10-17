@@ -176,6 +176,22 @@ let meLoaded = false;
       + ` <a class="arsip-act" href="${escapeHtml(d.url || '#')}" target="_blank" rel="noopener">Buka di tab baru</a></div>`;
   }
 
+  // Cadangan gambar Drive: proxy weserv, lalu pesan + tombol buka.
+  function pasangFallbackGambar(img, d) {
+    img.onerror = () => {
+      const fb = img.getAttribute('data-fallback');
+      img.onerror = () => { if (img.parentElement) img.parentElement.innerHTML = pesanLuar(d); };
+      if (fb) img.src = fb;
+    };
+  }
+
+  // Satu jalur render media dipakai overlay preview & kartu detail.
+  function tampilkanMedia(box, d) {
+    box.innerHTML = window.ArsipUI.mediaHtml(d);
+    const img = box.querySelector('img.arsip-media');
+    if (img) pasangFallbackGambar(img, d);
+  }
+
   function previewDoc(d) {
     const box = $('arsipPreview');
     const body = $('arsipPreviewBody');
@@ -188,23 +204,7 @@ let meLoaded = false;
     const dl = $('arsipPreviewDl');
     if (dl) dl.href = url || '#';
 
-    const mode = window.ArsipUI.modePreview(d);
-    if (mode === 'gambar') {
-      const thumb = window.ArsipUI.driveThumbUrl(url, 1000);
-      body.innerHTML = `<img class="arsip-preview-img" alt="${escapeHtml(d.title || '')}">`;
-      const img = body.firstElementChild;
-      // Dua cadangan: proxy gambar, lalu pesan + tombol buka.
-      img.onerror = () => {
-        img.onerror = () => { body.innerHTML = pesanLuar(d); };
-        img.src = 'https://images.weserv.nl/?url=' + encodeURIComponent(thumb.replace(/^https?:\/\//, ''));
-      };
-      img.src = thumb;
-    } else if (mode === 'embed') {
-      const emb = window.ArsipUI.driveEmbedUrl(url);
-      body.innerHTML = `<iframe class="arsip-preview-frame" src="${escapeHtml(emb)}" title="${escapeHtml(d.title || '')}"></iframe>`;
-    } else {
-      body.innerHTML = pesanLuar(d);
-    }
+    tampilkanMedia(body, d);
     box.style.display = '';
     document.body.classList.add('arsip-preview-open');
   }
@@ -278,26 +278,33 @@ let meLoaded = false;
       return;
     }
     const meta = [d.type, d.sector, d.bidang, d.year, d.versi ? 'v' + d.versi : ''].filter(Boolean).map((x) => escapeHtml(x)).join(' · ');
-    html += `<h4 style="margin:0;color:var(--white);font-size:14px">${escapeHtml(d.title)}</h4>
-      <div style="color:var(--muted);font-size:12px">${meta}</div>
-      <div style="color:var(--muted);font-size:11px;margin-top:4px">${escapeHtml([d.uploader, d.uploadDate].filter(Boolean).join(' · '))}</div>
-      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${badge(d.status)}${d.publik ? '<span class="arsip-badge">Publik</span>' : ''}</div>
-      ${(() => {
-        // metadata yang diisi lewat form unggah tapi sebelumnya tidak pernah tampil
-        const dok = [d.nomorDokumen ? 'No. ' + d.nomorDokumen : '', d.tanggalDokumen || '']
-          .filter(Boolean).map((x) => escapeHtml(x)).join(' &middot; ');
-        const tagList = Array.isArray(d.tags) ? d.tags
-          : (d.tagsRaw ? d.tagsRaw.split(',').map((t) => t.trim()).filter(Boolean) : []);
-        return (dok ? `<div style="color:var(--muted);font-size:11px;margin-top:4px">${dok}</div>` : '')
-          + (d.desc ? `<p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--white);white-space:pre-wrap">${escapeHtml(d.desc)}</p>` : '')
-          + (tagList.length ? `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${tagList.map((t) => `<span class="arsip-badge">${escapeHtml(t)}</span>`).join('')}</div>` : '');
-      })()}
-      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
-        <button class="arsip-act ok" data-view="${escapeHtml(d.id)}">Lihat dokumen</button>
-        <a class="arsip-act" href="${escapeHtml(d.url || '#')}" target="_blank" rel="noopener">Buka di tab baru</a>
+    html += `<div class="arsip-detail-grid">
+      <div class="arsip-detail-media">${window.ArsipUI.mediaHtml(d)}</div>
+      <div class="arsip-detail-meta">
+        <h4 style="margin:0;color:var(--white);font-size:14px">${escapeHtml(d.title)}</h4>
+        <div style="color:var(--muted);font-size:12px">${meta}</div>
+        <div style="color:var(--muted);font-size:11px;margin-top:4px">${escapeHtml([d.uploader, d.uploadDate].filter(Boolean).join(' · '))}</div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${badge(d.status)}${d.publik ? '<span class="arsip-badge">Publik</span>' : ''}</div>
+        ${(() => {
+          // metadata yang diisi lewat form unggah tapi sebelumnya tidak pernah tampil
+          const dok = [d.nomorDokumen ? 'No. ' + d.nomorDokumen : '', d.tanggalDokumen || '']
+            .filter(Boolean).map((x) => escapeHtml(x)).join(' &middot; ');
+          const tagList = Array.isArray(d.tags) ? d.tags
+            : (d.tagsRaw ? d.tagsRaw.split(',').map((t) => t.trim()).filter(Boolean) : []);
+          return (dok ? `<div style="color:var(--muted);font-size:11px;margin-top:4px">${dok}</div>` : '')
+            + (d.desc ? `<p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--white);white-space:pre-wrap">${escapeHtml(d.desc)}</p>` : '')
+            + (tagList.length ? `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${tagList.map((t) => `<span class="arsip-badge">${escapeHtml(t)}</span>`).join('')}</div>` : '');
+        })()}
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="arsip-act ok" data-view="${escapeHtml(d.id)}">Lihat dokumen</button>
+          <a class="arsip-act" href="${escapeHtml(d.url || '#')}" target="_blank" rel="noopener">Buka di tab baru</a>
+        </div>
+        <div id="arsipHistory" style="margin-top:10px;font-size:12px;color:var(--muted)">Memuat riwayat…</div>
       </div>
-      <div id="arsipHistory" style="margin-top:10px;font-size:12px;color:var(--muted)">Memuat riwayat…</div>`;
+    </div>`;
     detail.innerHTML = html;
+    const mimg = detail.querySelector('img.arsip-media');
+    if (mimg) pasangFallbackGambar(mimg, d);
     loadHistory(id);
   }
 

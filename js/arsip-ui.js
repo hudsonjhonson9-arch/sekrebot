@@ -68,6 +68,27 @@
     return driveEmbedUrl(url) ? 'embed' : 'luar';
   }
 
+  // HTML media untuk overlay preview DAN kartu detail — satu jalur saja supaya
+  // keduanya tidak bisa beda perilaku. Gambar membawa cadangan weserv lewat
+  // data-fallback (dipasang penangan error di js/arsip.js).
+  function mediaHtml(d) {
+    var url = String((d && d.url) || '');
+    var judul = esc((d && d.title) || 'Dokumen');
+    var mode = modePreview(d);
+    if (mode === 'gambar') {
+      var thumb = driveThumbUrl(url, 1200);
+      var weserv = 'https://images.weserv.nl/?url=' + encodeURIComponent(thumb.replace(/^https?:\/\//, ''));
+      return '<img class="arsip-media arsip-media-img" src="' + esc(thumb) + '" data-fallback="'
+        + esc(weserv) + '" alt="' + judul + '" loading="lazy">';
+    }
+    if (mode === 'embed') {
+      return '<iframe class="arsip-media arsip-media-frame" src="' + esc(driveEmbedUrl(url))
+        + '" title="' + judul + '" loading="lazy"></iframe>';
+    }
+    return '<div class="arsip-placeholder">Berkas ini tidak bisa ditampilkan di sini.'
+      + ' <a class="arsip-act" href="' + esc(url || '#') + '" target="_blank" rel="noopener">Buka di tab baru</a></div>';
+  }
+
   // Nama ikon harus ada di css/lib/runeicons.css (hasil generate, bukan Font
   // Awesome penuh) — ikon yang tidak terdaftar tampil kosong. Word & PPT tidak
   // punya glyph sendiri, jadi berbagi fa-file-alt dan dibedakan lewat warnaFile().
@@ -140,6 +161,7 @@
     warnaFile: warnaFile,
     ikonFile: ikonFile,
     modePreview: modePreview,
+    mediaHtml: mediaHtml,
     nav: nav,
     skeleton: skeleton,
     empty: empty,
