@@ -105,7 +105,9 @@ test('FAB hanya di view Dokumen; Kembali di semua view selain beranda', () => {
   assert.ok(iRender > iApply, 'fungsi tidak ditemukan urut — pola salah?');
   const blokApply = arsipJs.slice(iApply, iRender);
   assert.match(blokApply, /syncChrome\(\)/, 'applyView() harus memanggil syncChrome() di setiap navigasi');
-  assert.match(arsipJs, /view\.view !== 'home' \? 'flex' : 'none'/, 'Kembali harus tampil di semua view selain beranda');
+  assert.match(arsipJs, /view\.view !== 'home' && !bertabrakan/, 'Kembali harus tampil di semua view selain beranda');
+  // Di detail versi mobile bar aksi tetap menempati sudut kiri-bawah tombol Kembali.
+  assert.match(arsipJs, /view\.detail && window\.matchMedia\('\(max-width: 899px\)'\)\.matches/, 'Kembali tidak disembunyikan saat detail mobile');
   assert.match(arsipJs, /view\.view === 'dokumen' && !view\.detail/, 'FAB harus dikunci ke view Dokumen dan disembunyikan saat detail terbuka');
   assert.match(arsipJs, /IS_ADMIN\(\) && diDokumen/, 'FAB harus tetap untuk admin saja');
 });
@@ -218,16 +220,21 @@ test('kartu detail memuat pratinjau media + metadata lewat helper bersama', () =
   assert.match(arsipUi, /function mediaHtml\(d\)/, 'mediaHtml() hilang dari arsip-ui.js');
   assert.match(arsipUi, /mediaHtml: mediaHtml/, 'mediaHtml belum diekspor ke window.ArsipUI');
   assert.match(arsipJs, /class="arsip-detail-grid"/, 'grid detail tidak dirender');
-  assert.match(arsipJs, /class="arsip-detail-media"/, 'wadah media di detail hilang');
-  assert.match(arsipJs, /class="arsip-detail-meta"/, 'kolom metadata di detail hilang');
-  assert.match(arsipJs, /window\.ArsipUI\.mediaHtml\(d\)/, 'openDetail tidak memakai mediaHtml');
-  assert.match(arsipJs, /box\.innerHTML = window\.ArsipUI\.mediaHtml\(d\)/, 'previewDoc harus memakai mediaHtml yang sama');
+  assert.match(arsipJs, /class="arsip-detail-media( arsip-detail-media-klik)?/, 'wadah media di detail hilang');
+assert.match(arsipJs, /data-view="\$\{escapeHtml\(d\.id\)\}"/, 'tombol pratinjau (data-view) di detail hilang');
+assert.match(arsipJs, /class="arsip-detail-head"/, 'header identitas dokumen di detail hilang');
+assert.match(arsipJs, /class="arsip-detail-body"/, 'kolom metadata di detail hilang');
+assert.match(arsipJs, /window\.ArsipUI\.mediaHtml\(d\)/, 'openDetail tidak memakai mediaHtml');
+assert.match(arsipJs, /box\.innerHTML = window\.ArsipUI\.mediaHtml\(d\)/, 'previewDoc harus memakai mediaHtml yang sama');
   assert.match(arsipJs, /pasangFallbackGambar/, 'cadangan gambar weserv tidak dipasang');
   // mediaHtml: gambar + embed Drive + fallback pesan
   assert.match(arsipUi, /arsip-media arsip-media-img/, 'cabang gambar mediaHtml hilang');
   assert.match(arsipUi, /arsip-media arsip-media-frame/, 'cabang embed mediaHtml hilang');
   assert.match(arsipUi, /data-fallback/, 'cadangan weserv untuk gambar hilang');
   assert.match(css, /\.arsip-detail-grid\s*\{/, 'CSS grid detail hilang');
-  assert.match(css, /grid-template-columns: minmax\(0, 1fr\) 320px/, 'layout dua kolom desktop hilang');
-  assert.match(css, /\.arsip-media-img/, 'CSS media bersama hilang');
+assert.match(css, /grid-template-columns: minmax\(0, 1fr\) 320px/, 'layout dua kolom desktop hilang');
+assert.match(css, /grid-template-areas: "media head" "media body"/, 'area dua kolom desktop (media kiri) hilang');
+assert.match(css, /grid-template-areas: "head" "media" "body"/, 'urutan mobile: info - pratinjau - rincian hilang');
+assert.match(css, /\.arsip-detail-acts\s*\{\s*position: fixed/, 'bar aksi tetap di bawah untuk mobile hilang');
+assert.match(css, /\.arsip-media-img/, 'CSS media bersama hilang');
 });

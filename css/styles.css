@@ -7561,18 +7561,67 @@ body.arsip-preview-open { overflow: hidden; }
 .arsip-media-img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
 .arsip-media-frame { width: 100%; height: 100%; border: 0; display: block; background: var(--card-bg); }
 
-/* Kartu detail: pratinjau di kiri, metadata di kanan (desktop); bertumpuk di mobile. */
-.arsip-detail-grid { display: grid; gap: 14px; align-items: start; }
+/* Kartu detail — MOBILE: judul dulu, pratinjau ringkas, pratinjau di atas rincian,
+   aksi menempel di bawah (zona jempol). DESKTOP (>=900px): pratinjau besar di kiri,
+   sidebar info + aksi di kanan. Urutan mobile diatur grid-template-areas. */
+.arsip-detail-top { display: flex; justify-content: flex-end; padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.arsip-detail-grid {
+  display: grid; gap: 14px; align-items: start;
+  grid-template-areas: "head" "media" "body";
+}
 .arsip-detail-media {
-  display: grid; place-items: center; min-height: 200px;
+  grid-area: media; display: grid; place-items: center; min-height: 180px;
   padding: 8px; border: 1px solid var(--border); border-radius: 10px;
   background: var(--card-bg);
 }
+.arsip-detail-media-klik { cursor: zoom-in; }
+.arsip-detail-media-klik:hover { border-color: var(--gold); }
 .arsip-detail-media .arsip-media-frame { height: auto; aspect-ratio: 3 / 4; max-height: 68vh; border-radius: 8px; }
 .arsip-detail-media .arsip-media-img { max-height: 68vh; border-radius: 8px; }
-.arsip-detail-meta { min-width: 0; }
+.arsip-detail-head { grid-area: head; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+.arsip-detail-body { grid-area: body; min-width: 0; }
+.arsip-detail-headline { min-width: 0; }
+.arsip-detail-ico {
+  display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 auto;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg); font-size: 17px;
+}
+.arsip-detail-ext { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--muted); }
+.arsip-detail-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 3px; }
+.arsip-detail-title { margin: 0 0 10px; color: var(--white); font-size: 15px; font-weight: 700; line-height: 1.35; }
+.arsip-detail-dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px; margin: 0; font-size: 12px; }
+.arsip-detail-dl dt { color: var(--muted); white-space: nowrap; }
+.arsip-detail-dl dd { margin: 0; color: var(--white); overflow-wrap: anywhere; }
+.arsip-detail-desc { margin: 10px 0 0; font-size: 12px; line-height: 1.55; color: var(--white); white-space: pre-wrap; }
+.arsip-detail-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.arsip-detail-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.arsip-detail-acts .arsip-act { display: inline-flex; align-items: center; gap: 6px; }
+.arsip-detail-riwayat { margin-top: 12px; font-size: 12px; color: var(--muted); }
+.arsip-history-title { color: var(--white); font-weight: 700; margin-bottom: 6px; }
+.arsip-history-list { display: flex; flex-direction: column; gap: 6px; }
+.arsip-history-item { border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; color: var(--white); }
+.arsip-history-sub { font-size: 11px; color: var(--muted); }
 @media (min-width: 900px) {
-  .arsip-detail-grid { grid-template-columns: minmax(0, 1fr) 320px; }
+  .arsip-detail-grid {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-rows: auto 1fr;
+    grid-template-areas: "media head" "media body";
+  }
+  .arsip-detail-media .arsip-media-frame { aspect-ratio: 4 / 5; }
+}
+@media (max-width: 899px) {
+  /* Aksi pindah ke bar tetap di bawah supaya terjangkau jempol. */
+  .arsip-detail-media .arsip-media-frame { aspect-ratio: 4 / 5; max-height: 52vh; }
+  .arsip-detail-media .arsip-media-img { max-height: 52vh; }
+  .arsip-detail-body { padding-bottom: 76px; }
+  .arsip-detail-acts {
+    position: fixed; left: 0; right: 0; z-index: 1250; margin: 0;
+    bottom: calc(80px + max(var(--tg-safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px)));
+    padding: 10px 14px; flex-wrap: nowrap;
+    background: var(--card-bg); border-top: 1px solid var(--border);
+    box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.28);
+  }
+  .arsip-detail-acts .arsip-act { flex: 1 1 auto; justify-content: center; min-height: 44px; font-size: 12.5px; }
+  .arsip-detail-top .arsip-act { flex: 1 1 auto; justify-content: center; min-height: 44px; }
 }
 
 @media (max-width: 767px) {

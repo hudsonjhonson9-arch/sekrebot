@@ -41,7 +41,12 @@ let meLoaded = false;
       upBtn.style.display = (IS_ADMIN() && diDokumen) ? '' : 'none';
     }
     const backBtn = $('arsipBackBtn');
-    if (backBtn) backBtn.style.display = view.view !== 'home' ? 'flex' : 'none';
+    if (backBtn) {
+      // Di detail versi mobile, bar aksi tetap duduk di sudut kiri-bawah tempat
+      // tombol ini biasa berada; detail punya tombol "Tutup" sendiri.
+      const bertabrakan = !!view.detail && window.matchMedia('(max-width: 899px)').matches;
+      backBtn.style.display = (view.view !== 'home' && !bertabrakan) ? 'flex' : 'none';
+    }
   }
 
   // Modul Tahap 2/3 dipasang lewat kontrak mount/unmount. Kalau skripnya belum
@@ -144,8 +149,8 @@ let meLoaded = false;
       h.textContent = 'Belum ada riwayat.';
       return;
     }
-    h.innerHTML = '<div style="color:var(--white);margin-bottom:4px">Riwayat</div>'
-      + '<div style="display:flex;flex-direction:column;gap:6px">'
+    h.innerHTML = '<div class="arsip-history-title">Riwayat</div>'
+      + '<div class="arsip-history-list">'
       + rows.map((x) => {
           const t = x.created_at || x.waktu || x.date || '';
           const a = x.action || x.aksi || '';
@@ -153,10 +158,10 @@ let meLoaded = false;
           const to = x.to_status || '';
           const note = x.note || '';
           const actor = x.actor_name || x.actor || '';
-          return `<div style="border:1px solid var(--border);border-radius:8px;padding:6px 8px">
-            <div><strong>${escapeHtml(a)}</strong> ${from && to ? ('→ ' + escapeHtml(from) + ' → ' + escapeHtml(to)) : ''}</div>
-            <div style="font-size:11px;opacity:.8">${escapeHtml([actor, t].filter(Boolean).join(' · '))}</div>
-            ${note ? '<div style="font-size:11px;opacity:.8;margin-top:2px">' + escapeHtml(note) + '</div>' : ''}
+          return `<div class="arsip-history-item">
+            <div><strong>${escapeHtml(a)}</strong>${from && to ? ' ' + escapeHtml(from) + ' → ' + escapeHtml(to) : ''}</div>
+            <div class="arsip-history-sub">${escapeHtml([actor, t].filter(Boolean).join(' · '))}</div>
+            ${note ? `<div class="arsip-history-sub">${escapeHtml(note)}</div>` : ''}
           </div>`;
         }).join('')
       + '</div>';
@@ -277,29 +282,45 @@ let meLoaded = false;
       detail.innerHTML = html;
       return;
     }
-    const meta = [d.type, d.sector, d.bidang, d.year, d.versi ? 'v' + d.versi : ''].filter(Boolean).map((x) => escapeHtml(x)).join(' · ');
+    const iko = window.ArsipUI.ikonFile(d);
+    const warna = window.ArsipUI.warnaFile(d);
+    const ext = String(window.ArsipUI.extOf(d) || '').toUpperCase() || 'FILE';
+    const bisaLihat = window.ArsipUI.modePreview(d) !== 'luar';
+    const tagList = Array.isArray(d.tags) ? d.tags
+      : (d.tagsRaw ? d.tagsRaw.split(',').map((t) => t.trim()).filter(Boolean) : []);
+    const baris = (label, nilai) => (nilai ? `<dt>${label}</dt><dd>${escapeHtml(String(nilai))}</dd>` : '');
+    const rincian = '<dl class="arsip-detail-dl">'
+      + baris('Kategori', d.type)
+      + baris('Sektor', d.sector)
+      + baris('Bidang', d.bidang)
+      + baris('Tahun', d.year)
+      + baris('Versi', d.versi ? 'v' + d.versi : '')
+      + baris('Nomor', d.nomorDokumen)
+      + baris('Tanggal', d.tanggalDokumen)
+      + baris('Diunggah', [d.uploadDate, d.uploader].filter(Boolean).join(' · '))
+      + '</dl>';
+    const mediaBox = `<div class="arsip-detail-media${bisaLihat ? ' arsip-detail-media-klik' : ''}"`
+      + (bisaLihat ? ` data-view="${escapeHtml(d.id)}" title="Klik untuk pratinjau penuh"` : '')
+      + `>${window.ArsipUI.mediaHtml(d)}</div>`;
     html += `<div class="arsip-detail-grid">
-      <div class="arsip-detail-media">${window.ArsipUI.mediaHtml(d)}</div>
-      <div class="arsip-detail-meta">
-        <h4 style="margin:0;color:var(--white);font-size:14px">${escapeHtml(d.title)}</h4>
-        <div style="color:var(--muted);font-size:12px">${meta}</div>
-        <div style="color:var(--muted);font-size:11px;margin-top:4px">${escapeHtml([d.uploader, d.uploadDate].filter(Boolean).join(' · '))}</div>
-        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${badge(d.status)}${d.publik ? '<span class="arsip-badge">Publik</span>' : ''}</div>
-        ${(() => {
-          // metadata yang diisi lewat form unggah tapi sebelumnya tidak pernah tampil
-          const dok = [d.nomorDokumen ? 'No. ' + d.nomorDokumen : '', d.tanggalDokumen || '']
-            .filter(Boolean).map((x) => escapeHtml(x)).join(' &middot; ');
-          const tagList = Array.isArray(d.tags) ? d.tags
-            : (d.tagsRaw ? d.tagsRaw.split(',').map((t) => t.trim()).filter(Boolean) : []);
-          return (dok ? `<div style="color:var(--muted);font-size:11px;margin-top:4px">${dok}</div>` : '')
-            + (d.desc ? `<p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--white);white-space:pre-wrap">${escapeHtml(d.desc)}</p>` : '')
-            + (tagList.length ? `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${tagList.map((t) => `<span class="arsip-badge">${escapeHtml(t)}</span>`).join('')}</div>` : '');
-        })()}
-        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
-          <button class="arsip-act ok" data-view="${escapeHtml(d.id)}">Lihat dokumen</button>
-          <a class="arsip-act" href="${escapeHtml(d.url || '#')}" target="_blank" rel="noopener">Buka di tab baru</a>
+      ${mediaBox}
+      <div class="arsip-detail-head">
+        <span class="arsip-detail-ico" style="color:${warna}"><i class="fas ${iko}" aria-hidden="true"></i></span>
+        <div class="arsip-detail-headline">
+          <span class="arsip-detail-ext">${escapeHtml(ext)}</span>
+          <h4 class="arsip-detail-title">${escapeHtml(d.title)}</h4>
+          <span class="arsip-detail-badges">${badge(d.status)}${d.publik ? '<span class="arsip-badge">Publik</span>' : ''}</span>
         </div>
-        <div id="arsipHistory" style="margin-top:10px;font-size:12px;color:var(--muted)">Memuat riwayat…</div>
+      </div>
+      <div class="arsip-detail-body">
+        ${rincian}
+        ${tagList.length ? `<div class="arsip-detail-tags">${tagList.map((t) => `<span class="arsip-badge">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+        ${d.desc ? `<p class="arsip-detail-desc">${escapeHtml(d.desc)}</p>` : ''}
+        <div class="arsip-detail-acts">
+          <button class="arsip-act ok" data-view="${escapeHtml(d.id)}"><i class="fas fa-eye" aria-hidden="true"></i> Lihat dokumen</button>
+          <a class="arsip-act" href="${escapeHtml(d.url || '#')}" target="_blank" rel="noopener"><i class="fas fa-external-link-alt" aria-hidden="true"></i> Buka di tab baru</a>
+        </div>
+        <div id="arsipHistory" class="arsip-detail-riwayat">Memuat riwayat…</div>
       </div>
     </div>`;
     detail.innerHTML = html;
