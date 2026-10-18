@@ -41,12 +41,9 @@ let meLoaded = false;
       upBtn.style.display = (IS_ADMIN() && diDokumen) ? '' : 'none';
     }
     const backBtn = $('arsipBackBtn');
-    if (backBtn) {
-      // Di detail versi mobile, bar aksi tetap duduk di sudut kiri-bawah tempat
-      // tombol ini biasa berada; detail punya tombol "Tutup" sendiri.
-      const bertabrakan = !!view.detail && window.matchMedia('(max-width: 899px)').matches;
-      backBtn.style.display = (view.view !== 'home' && !bertabrakan) ? 'flex' : 'none';
-    }
+    // Di detail chip ini menumpuk kartu pratinjau; detail punya "Kembali ke Daftar"
+    // sendiri di dalam kartu (sama seperti arsipdigital).
+    if (backBtn) backBtn.style.display = (view.view !== 'home' && !view.detail) ? 'flex' : 'none';
   }
 
   // Modul Tahap 2/3 dipasang lewat kontrak mount/unmount. Kalau skripnya belum
@@ -149,7 +146,17 @@ let meLoaded = false;
       h.textContent = 'Belum ada riwayat.';
       return;
     }
-    h.innerHTML = '<div class="arsip-history-title">Riwayat</div>'
+    // Label/ikon aksi disalin dari "Riwayat Status" arsipdigital supaya riwayat
+    // terbaca sama di dua aplikasi (bukan kode mentah "upload").
+    const IKON_AKSI = { upload: 'fa-upload', approve: 'fa-check', reject: 'fa-times', version: 'fa-history' };
+    const LABEL_AKSI = {
+      upload: 'Dokumen Diunggah',
+      approve: 'Disetujui & Diarsipkan',
+      reject: 'Ditolak',
+      resubmit: 'Diajukan Ulang',
+      version: 'Versi Baru'
+    };
+    h.innerHTML = '<h3 class="arsip-detail-h3">Riwayat Status</h3>'
       + '<div class="arsip-history-list">'
       + rows.map((x) => {
           const t = x.created_at || x.waktu || x.date || '';
@@ -158,10 +165,15 @@ let meLoaded = false;
           const to = x.to_status || '';
           const note = x.note || '';
           const actor = x.actor_name || x.actor || '';
+          const alih = from && to ? from + ' → ' + to : '';
           return `<div class="arsip-history-item">
-            <div><strong>${escapeHtml(a)}</strong>${from && to ? ' ' + escapeHtml(from) + ' → ' + escapeHtml(to) : ''}</div>
-            <div class="arsip-history-sub">${escapeHtml([actor, t].filter(Boolean).join(' · '))}</div>
-            ${note ? `<div class="arsip-history-sub">${escapeHtml(note)}</div>` : ''}
+            <span class="arsip-history-ico"><i class="fas ${IKON_AKSI[a] || 'fa-history'}" aria-hidden="true"></i></span>
+            <div class="arsip-history-main">
+              <div class="arsip-history-name">${escapeHtml(LABEL_AKSI[a] || a || 'Aktivitas')}${actor ? `<span class="arsip-history-actor"> oleh ${escapeHtml(actor)}</span>` : ''}</div>
+              ${alih ? `<div class="arsip-history-sub">${escapeHtml(alih)}</div>` : ''}
+              ${note ? `<div class="arsip-history-sub">${escapeHtml(note)}</div>` : ''}
+              ${t ? `<div class="arsip-history-at">${escapeHtml(t)}</div>` : ''}
+            </div>
           </div>`;
         }).join('')
       + '</div>';
@@ -276,7 +288,12 @@ let meLoaded = false;
     if (!detail || !listEl) return;
     listEl.style.display = 'none';
     detail.style.display = 'block';
-    let html = `<div class="arsip-detail-top"><button class="arsip-act" data-close-detail>Tutup</button></div>`;
+    // Tata letak mengikuti halaman detail arsipdigital: tombol "Kembali ke Daftar"
+    // di kiri-atas, kartu identitas + aksi, lalu pratinjau (kiri) dengan kolom
+    // metadata yang menempel (kanan). Satu jalur tampilan untuk dua aplikasi.
+    let html = `<div class="arsip-detail-top">
+      <button class="arsip-act" data-close-detail><i class="fas fa-arrow-left" aria-hidden="true"></i> Kembali ke Daftar</button>
+    </div>`;
     if (!d) {
       html += '<div class="arsip-placeholder">Dokumen tidak ditemukan</div>';
       detail.innerHTML = html;
@@ -285,42 +302,56 @@ let meLoaded = false;
     const iko = window.ArsipUI.ikonFile(d);
     const warna = window.ArsipUI.warnaFile(d);
     const ext = String(window.ArsipUI.extOf(d) || '').toUpperCase() || 'FILE';
-    const bisaLihat = window.ArsipUI.modePreview(d) !== 'luar';
+    const mode = window.ArsipUI.modePreview(d);
+    const bisaLihat = mode !== 'luar';
     const tagList = Array.isArray(d.tags) ? d.tags
       : (d.tagsRaw ? d.tagsRaw.split(',').map((t) => t.trim()).filter(Boolean) : []);
-    const baris = (label, nilai) => (nilai ? `<dt>${label}</dt><dd>${escapeHtml(String(nilai))}</dd>` : '');
-    const rincian = '<dl class="arsip-detail-dl">'
-      + baris('Kategori', d.type)
+    // Label & urutan baris = urutan "Metadata Dokumen" arsipdigital.
+    const baris = (label, nilai) => (nilai ? `<div class="arsip-meta-row">
+        <div class="arsip-meta-label">${escapeHtml(label)}</div>
+        <div class="arsip-meta-value">${escapeHtml(String(nilai))}</div>
+      </div>` : '');
+    const rincian = '<h2 class="arsip-detail-h2">Metadata Dokumen</h2><div class="arsip-meta-list">'
+      + baris('Jenis Dokumen', d.type)
+      + baris('Tipe File', d.fileType)
       + baris('Sektor', d.sector)
       + baris('Bidang', d.bidang)
       + baris('Tahun', d.year)
-      + baris('Versi', d.versi ? 'v' + d.versi : '')
-      + baris('Nomor', d.nomorDokumen)
-      + baris('Tanggal', d.tanggalDokumen)
-      + baris('Diunggah', [d.uploadDate, d.uploader].filter(Boolean).join(' · '))
-      + '</dl>';
+      + baris('Nomor Dokumen', d.nomorDokumen)
+      + baris('Tanggal Dokumen', d.tanggalDokumen)
+      + baris('Versi', d.versi > 1 ? 'v' + d.versi : '')
+      + baris('Ukuran File', d.size || d.ukuran)
+      + baris('Jumlah Halaman', d.pages ? d.pages + ' halaman' : '')
+      + baris('Tanggal Upload', d.uploadDate)
+      + baris('Diunggah oleh', d.uploader)
+      + baris('Di-review oleh', d.reviewedBy)
+      + '</div>';
     const mediaBox = `<div class="arsip-detail-media${bisaLihat ? ' arsip-detail-media-klik' : ''}"`
       + (bisaLihat ? ` data-view="${escapeHtml(d.id)}" title="Klik untuk pratinjau penuh"` : '')
-      + `>${window.ArsipUI.mediaHtml(d)}</div>`;
-    html += `<div class="arsip-detail-grid">
-      ${mediaBox}
-      <div class="arsip-detail-head">
-        <span class="arsip-detail-ico" style="color:${warna}"><i class="fas ${iko}" aria-hidden="true"></i></span>
-        <div class="arsip-detail-headline">
-          <span class="arsip-detail-ext">${escapeHtml(ext)}</span>
-          <h4 class="arsip-detail-title">${escapeHtml(d.title)}</h4>
-          <span class="arsip-detail-badges">${badge(d.status)}${d.publik ? '<span class="arsip-badge">Publik</span>' : ''}</span>
-        </div>
+      + `>${window.ArsipUI.mediaHtml(d)}`
+      + (mode === 'embed'
+        ? '<div class="arsip-detail-note">Pratinjau via Google Docs Viewer — memerlukan URL file yang dapat diakses publik.</div>'
+        : '')
+      + '</div>';
+    html += `<div class="arsip-detail-head">
+      <span class="arsip-detail-ico" style="color:${warna}"><i class="fas ${iko}" aria-hidden="true"></i></span>
+      <div class="arsip-detail-headline">
+        <span class="arsip-detail-ext">${escapeHtml(ext)}</span>
+        <h4 class="arsip-detail-title">${escapeHtml(d.title)}</h4>
+        <span class="arsip-detail-badges">${badge(d.status)}${d.publik ? '<span class="arsip-badge">Publik</span>' : ''}</span>
       </div>
-      <div class="arsip-detail-body">
-        ${rincian}
-        ${tagList.length ? `<div class="arsip-detail-tags">${tagList.map((t) => `<span class="arsip-badge">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
-        ${d.desc ? `<p class="arsip-detail-desc">${escapeHtml(d.desc)}</p>` : ''}
-        <div class="arsip-detail-acts">
-          <button class="arsip-act ok" data-view="${escapeHtml(d.id)}"><i class="fas fa-eye" aria-hidden="true"></i> Lihat dokumen</button>
-          <a class="arsip-act" href="${escapeHtml(d.url || '#')}" target="_blank" rel="noopener"><i class="fas fa-external-link-alt" aria-hidden="true"></i> Buka di tab baru</a>
-        </div>
-        <div id="arsipHistory" class="arsip-detail-riwayat">Memuat riwayat…</div>
+      <div class="arsip-detail-acts">
+        <button class="arsip-act ok" data-view="${escapeHtml(d.id)}"><i class="fas fa-eye" aria-hidden="true"></i> Lihat dokumen</button>
+        <a class="arsip-act" href="${escapeHtml(d.url || '#')}" target="_blank" rel="noopener"><i class="fas fa-external-link-alt" aria-hidden="true"></i> Buka di tab baru</a>
+      </div>
+    </div>
+    <div class="arsip-detail-grid">
+      ${mediaBox}
+      <div class="arsip-detail-side">
+        <div class="arsip-detail-card">${rincian}</div>
+        ${tagList.length ? `<div class="arsip-detail-card"><div class="arsip-detail-tags">${tagList.map((t) => `<span class="arsip-badge">${escapeHtml(t)}</span>`).join('')}</div></div>` : ''}
+        ${d.desc ? `<div class="arsip-detail-card"><p class="arsip-detail-desc">${escapeHtml(d.desc)}</p></div>` : ''}
+        <div class="arsip-detail-card" id="arsipHistory">Memuat riwayat…</div>
       </div>
     </div>`;
     detail.innerHTML = html;
