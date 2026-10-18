@@ -10,6 +10,7 @@ const css = fs.readFileSync(path.join(ROOT, 'css', 'styles.css'), 'utf8');
 const arsipJs = fs.readFileSync(path.join(ROOT, 'js', 'arsip.js'), 'utf8');
 const arsipUi = fs.readFileSync(path.join(ROOT, 'js', 'arsip-ui.js'), 'utf8');
 const runeicons = fs.readFileSync(path.join(ROOT, 'css', 'lib', 'runeicons.css'), 'utf8');
+const uiJs = fs.readFileSync(path.join(ROOT, 'js', 'ui.js'), 'utf8');
 
 test('landmark beranda, section, dan overlay preview ada', () => {
   for (const id of [
@@ -241,5 +242,8 @@ assert.match(css, /\.arsip-detail-grid\s*\{\s*align-items: stretch; grid-templat
 assert.match(css, /\.arsip-detail-media \.arsip-media-frame\s*\{\s*aspect-ratio: auto; height: 100%; max-height: none/, 'pratinjau tidak diisi setinggi kartu di desktop');
 assert.match(css, /\.arsip-detail-media, \.arsip-detail-side\s*\{\s*max-height: calc\(100dvh - 260px\)/, 'kartu detail tidak dibatasi setinggi layar (iframe bisa menelan gulir halaman)');
 assert.match(css, /\.arsip-detail-side\s*\{\s*position: sticky; top: 20px; overflow-y: auto/, 'kolom metadata tidak menggulir sendiri di desktop');
+assert.match(uiJs, /classList\.toggle\('arsip-open', tab === 'arsip' && !window\._arsipFull\)/, 'kelas body arsip-open tidak dipasang saat tab arsip dibuka');
+assert.match(css, /body\.arsip-open \.app\s*\{\s*height: 100dvh/, 'panel arsip tidak dikunci setinggi layar di HP (daftar melar jadi halaman panjang)');
+assert.match(css, /body\.arsip-open \.panel\s*\{\s*min-height: 0/, '.panel tidak boleh menyusut sehingga .arsip-list gagal jadi penggulung di HP');
 assert.match(css, /\.arsip-media-img/, 'CSS media bersama hilang');
 });

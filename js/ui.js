@@ -228,6 +228,9 @@
       // Arsip native memakai bottom nav. Full-screen hanya untuk iframe "Aplikasi lengkap".
       if (tab !== 'arsip' && typeof closeFull === 'function') closeFull();
       document.body.classList.toggle('arsip-fs', tab === 'arsip' && !!window._arsipFull);
+      // .arsip-native/.arsip-list butuh tinggi terikat; di HP .app hanya min-height
+      // sehingga daftar dokumen melar jadi halaman panjang dan tak bisa digulir sendiri.
+      document.body.classList.toggle('arsip-open', tab === 'arsip' && !window._arsipFull);
 
       if (tab === 'absen') {
         updateClock(); // refresh notif & batas jam periode segera

@@ -7645,6 +7645,11 @@ body.arsip-preview-open { overflow: hidden; }
 }
 
 @media (max-width: 767px) {
+  /* Panel arsip dikunci setinggi layar. Tanpa ini .arsip-native (height:100%)
+     tidak punya acuan di HP sehingga .arsip-list melar jadi halaman 8000px+ dan
+     gulirannya pindah ke <body> (daftar terasa tidak bisa digulir). */
+  body.arsip-open .app { height: 100dvh; }
+  body.arsip-open .panel { min-height: 0; }
   .arsip-home { padding: 0 14px 12px; grid-template-columns: repeat(2, 1fr); }
   .arsip-section { padding: 0 14px 12px; }
   .arsip-fab { right: 14px; bottom: calc(80px + max(var(--tg-safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px))); }
