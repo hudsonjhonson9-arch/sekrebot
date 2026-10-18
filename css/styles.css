@@ -7627,8 +7627,11 @@ body.arsip-preview-open { overflow: hidden; }
 .arsip-history-at { margin-top: 2px; font-size: 11px; color: var(--muted); }
 @media (min-width: 900px) {
   .arsip-detail-grid { align-items: stretch; grid-template-columns: minmax(0, 1fr) 340px; grid-template-areas: "media side"; }
-  .arsip-detail-side { position: sticky; top: 20px; }
-  /* Pratinjau setinggi seluruh kartu (sejajar tinggi kolom kanan). */
+  /* Pratinjau = tinggi kartu, tapi kartu dibatasi setinggi layar dan kolom kanan
+     gulir sendiri. Tanpa batas ini iframe jadi lebih tinggi dari viewport sehingga
+     roda gulir di atasnya tidak menembus halaman (halaman terasa tidak bisa di-scroll). */
+  .arsip-detail-media, .arsip-detail-side { max-height: calc(100dvh - 260px); }
+  .arsip-detail-side { position: sticky; top: 20px; overflow-y: auto; }
   .arsip-detail-media { grid-template-rows: 1fr auto; }
   .arsip-detail-media .arsip-media-frame { aspect-ratio: auto; height: 100%; max-height: none; }
   .arsip-detail-media .arsip-media-img { max-height: 100%; }
