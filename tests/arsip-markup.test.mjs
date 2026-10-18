@@ -237,5 +237,7 @@ assert.match(css, /grid-template-areas: "media side"/, 'area dua kolom desktop (
 assert.match(css, /grid-template-areas: "media" "side"/, 'urutan mobile: pratinjau lalu kolom metadata hilang');
 assert.match(css, /\.arsip-meta-label\s*\{[\s\S]{0,160}?text-transform: uppercase/, 'label metadata huruf besar (gaya arsipdigital) hilang');
 assert.match(css, /\.arsip-detail-side\s*\{\s*position: sticky/, 'kolom metadata menempel di desktop hilang');
+assert.match(css, /\.arsip-detail-grid\s*\{\s*align-items: stretch; grid-template-columns: minmax\(0, 1fr\) 340px/, 'pratinjau tidak direntangkan setinggi kolom metadata di desktop');
+assert.match(css, /\.arsip-detail-media \.arsip-media-frame\s*\{\s*aspect-ratio: auto; height: 100%; max-height: none/, 'pratinjau tidak diisi setinggi kartu di desktop');
 assert.match(css, /\.arsip-media-img/, 'CSS media bersama hilang');
 });
