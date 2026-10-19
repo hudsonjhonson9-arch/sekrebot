@@ -91,7 +91,7 @@ test('USER: user-list dipaksa ke baris miliknya sendiri (bukan instansi/pegawai 
 });
 
 test('USER: dapat membaca jam-absen, jam-periode-list, kontrol-absen, lokasi-list, bidang-list', async () => {
-  for (const p of ['/api/jam-absen', '/api/jam-periode-list', '/api/kontrol-absen', '/api/lokasi-list', '/api/bidang-list']) {
+  for (const p of ['/api/jam-absen', '/api/jam-periode-list', '/api/kontrol-absen', '/api/peringatan-akumulasi', '/api/lokasi-list', '/api/bidang-list']) {
     const h = harness({ session: USER });
     const res = await get(h, p);
     assert.equal(res.status, 200, `${p} harus boleh dibaca pegawai biasa`);
@@ -113,6 +113,7 @@ test('USER: endpoint tulis master ditolak', async () => {
     ['POST', '/api/jam-absen', { masuk: '07:00', pulang: '15:00' }],
     ['POST', '/api/jam-periode-add', { nama: 'P', dari: '2026-01-01', sampai: '2026-12-31', masuk: '07:00', pulang: '15:00' }],
     ['POST', '/api/kontrol-absen', { enabled: true }],
+    ['POST', '/api/peringatan-akumulasi', { enabled: true }],
     ['POST', '/api/lokasi-add', { nama_lokasi: 'X', latitude: -1, longitude: 120, radius: 50 }],
     ['POST', '/api/libur-add', { tanggal: '2026-08-17', nama: 'Kemerdekaan' }],
   ];
@@ -233,6 +234,51 @@ test('lokasi-update: koordinat tidak valid atau sebagian ditolak 400 tanpa UPDAT
     assert.equal(res.status, 400, `${c.why}: harus 400, dapat ${res.status}`);
     assert.equal(ranUpdate, false, `${c.why}: UPDATE tidak boleh jalan`);
   }
+});
+
+// ── Peringatan akumulasi waktu (config scheduler, key='peringatan_akumulasi') ──
+
+test('peringatan-akumulasi: GET tanpa baris config -> default OFF (enabled:false, ambang 435)', async () => {
+  const q = async (text) => {
+    if (/FROM pengaturan/.test(text)) return { rows: [] };
+    return { rows: [] };
+  };
+  const h = harness({ session: ADMIN, query: q });
+  const res = await get(h, '/api/peringatan-akumulasi');
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.data.config.enabled, false, 'default wajib OFF — scheduler tidak boleh kirim tanpa admin mengaktifkan');
+  assert.equal(res.body.data.config.ambang_menit, 435);
+});
+
+test('peringatan-akumulasi: GET membaca config tersimpan (enabled + ambang)', async () => {
+  const q = async (text) => {
+    if (/FROM pengaturan/.test(text)) return { rows: [{ value: JSON.stringify({ enabled: true, ambang_menit: 300 }) }] };
+    return { rows: [] };
+  };
+  const h = harness({ session: ADMIN, query: q });
+  const res = await get(h, '/api/peringatan-akumulasi');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.config.enabled, true);
+  assert.equal(res.body.data.config.ambang_menit, 300);
+});
+
+test('peringatan-akumulasi: POST simpan enabled+ambang ke pengaturan (instansi pemanggil)', async () => {
+  let saved = null, sqlText = '';
+  const q = async (text, params) => {
+    if (/INSERT INTO pengaturan/.test(text)) {
+      saved = params; sqlText = text;
+      return { rows: [{ key: 'peringatan_akumulasi', value: params[0], instansi_id: params[1] }] };
+    }
+    return { rows: [] };
+  };
+  const h = harness({ session: ADMIN, query: q });
+  const res = await req(h, 'POST', '/api/peringatan-akumulasi', { enabled: true, ambang_menit: 300 });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.ok(sqlText.includes("'peringatan_akumulasi'"), sqlText);
+  const value = JSON.parse(saved[0]);
+  assert.equal(value.enabled, true);
+  assert.equal(value.ambang_menit, 300);
+  assert.equal(saved[1], 'bapperida', 'instansi default = milik pemanggil');
 });
 
 // BENDAHARA BARANG = admin aset saja. Jangan bocor ke daftar admin absensi

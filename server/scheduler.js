@@ -70,14 +70,20 @@ export function buildReminderPulang(p) {
     + `Batas jam pulang: 14:30 WITA.`;
 }
 
-export function buildAkumulasi(p, waktu) {
+// Default ambang (7j15m = 1 hari kerja). Bisa dioverride per instansi lewat
+// tabel pengaturan (key='peringatan_akumulasi', lihat /api/peringatan-akumulasi).
+export const AMBANG_AKUMULASI_DEFAULT = 435;
+
+const fmtAmbang = (m) => `${Math.floor(m / 60)} Jam ${m % 60} Menit (${m} Menit)`;
+
+export function buildAkumulasi(p, waktu, ambangMenit = AMBANG_AKUMULASI_DEFAULT) {
   return `🔔 *PERINGATAN AKUMULASI WAKTU*\n`
     + `───────────────────\n`
     + `Yth. Bapak/Ibu *${p.nama}*,\n\n`
     + `Melalui pesan otomatis ini, kami menginformasikan bahwa akumulasi waktu "Di Luar Jam" (Keterlambatan, Pulang Cepat & Tanpa Berita) Anda telah mencapai batas maksimum.\n\n`
     + `📊 *Detail Akumulasi:*\n`
     + `• Total Waktu: *${waktu}*\n`
-    + `• Ambang Batas: 7 Jam 15 Menit (435 Menit)\n\n`
+    + `• Ambang Batas: ${fmtAmbang(ambangMenit)}\n\n`
     + `Sesuai dengan peraturan yang berlaku, akumulasi ini setara dengan 1 hari kerja. Mohon segera melakukan konfirmasi ke bagian Kepegawaian untuk klarifikasi atau tindak lanjut administratif.\n\n`
     + `_Terima kasih atas perhatiannya._\n`
     + `───────────────────\n`
@@ -135,22 +141,48 @@ export function createScheduler({ query, sendTelegram, sendWhatsApp, logger = co
     }
   }
 
-  // 0 7 * * 1-5 — akumulasi "Di Luar Jam" >= 435 menit (7j15m) dari tabel agregat
-  // statistik_pegawai (dipelihara trigger trg_sync_statistik_pegawai di Log_Absen).
-  // Angka sudah termasuk Tanpa Berita (alpa) 450 menit/hari. Hanya pegawai AKTIF;
-  // kirim Telegram PM + WA pribadi (nomorhp user_list).
+  // 0 7 * * 1-5 — akumulasi "Di Luar Jam" dari tabel agregat statistik_pegawai
+  // (dipelihara trigger trg_sync_statistik_pegawai di Log_Absen). Ambang & on/off
+  // per instansi dibaca dari tabel pengaturan (key='peringatan_akumulasi').
+  // DEFAULT OFF: tanpa baris config, peringatan TIDAK dikirim — diaktifkan dari
+  // menu admin Panel → Peringatan Akumulasi (permintaan "matikan dulu").
+  // Hanya pegawai AKTIF; kirim Telegram PM + WA pribadi (nomorhp user_list).
   async function akumulasi() {
+    const cfg = {}; // instansi_id -> { enabled, ambang_menit }
+    const { rows: cfgRows } = await query(
+      `SELECT instansi_id, value FROM pengaturan WHERE "key"='peringatan_akumulasi'`,
+    );
+    for (const r of cfgRows) {
+      try {
+        const v = r.value ? JSON.parse(r.value) : {};
+        const ambang = Number.parseInt(v.ambang_menit, 10);
+        cfg[String(r.instansi_id || '')] = {
+          enabled: v.enabled === true,
+          ambang_menit: Number.isFinite(ambang) && ambang >= 30 ? ambang : AMBANG_AKUMULASI_DEFAULT,
+        };
+      } catch { /* baris rusak diabaikan -> instansi tanpa config = off */ }
+    }
+    if (!Object.values(cfg).some((c) => c.enabled)) {
+      logger.info('[sched/akumulasi] nonaktif di semua instansi (pengaturan peringatan_akumulasi), skip');
+      return;
+    }
     const { rows } = await query(
-      'SELECT u.id::text AS id, u.username, u.nomorhp, u."Status", '
+      'SELECT u.id::text AS id, u.username, u.nomorhp, u."Status", u.instansi_id, '
       + '(s.akum_menit_terlambat + s.akum_menit_lebih_awal) AS total '
       + 'FROM statistik_pegawai s JOIN user_list u ON u."NIP" = s.nip '
-      + 'WHERE (s.akum_menit_terlambat + s.akum_menit_lebih_awal) >= 435',
+      + 'WHERE (s.akum_menit_terlambat + s.akum_menit_lebih_awal) > 0',
     );
     for (const p of rows) {
       if (String(p.Status || '').toUpperCase() !== 'AKTIF') continue;
+      const c = cfg[String(p.instansi_id || '')] || cfg.all;
+      if (!c?.enabled) continue;
       const total = Number(p.total) || 0;
-      if (total < 435) continue;
-      const text = buildAkumulasi({ nama: p.username || '—' }, `${Math.floor(total / 60)}j ${total % 60}m`);
+      if (total < c.ambang_menit) continue;
+      const text = buildAkumulasi(
+        { nama: p.username || '—' },
+        `${Math.floor(total / 60)}j ${total % 60}m`,
+        c.ambang_menit,
+      );
       await tg(p.id, text);
       await wa(waChatId(p.nomorhp), text);
     }

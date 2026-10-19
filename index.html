@@ -2944,6 +2944,40 @@
           <button class="btn-admin" onclick="saveKkAdmin()" style="margin-top:12px"><i class="fas fa-save"></i> Simpan Kontrol Kehadiran</button>
         </div>
 
+        <!-- PERINGATAN AKUMULASI WAKTU (Admin) ══ -->
+        <div class="card" style="margin-top:12px">
+          <div style="font-size:11px;font-weight:800;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+            <i class="fas fa-bell"></i> PERINGATAN AKUMULASI WAKTU</div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
+              <div>
+                <div style="font-size:11px;font-weight:700;color:var(--white)">Aktifkan Peringatan</div>
+                <div style="font-size:9px;color:var(--muted)">Kirim Telegram PM + WA setiap pukul 07:00 WITA (hari kerja) ke pegawai yang akumulasinya mencapai ambang</div>
+              </div>
+              <div id="paSwitch" onclick="togglePaEnabled()" style="width:52px;height:28px;border-radius:14px;background:#6b7280;position:relative;cursor:pointer;flex-shrink:0">
+                <div id="paKnob" style="position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .3s"></div>
+              </div>
+            </div>
+            <div style="background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
+              <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:6px"><i class="fas fa-stopwatch"></i> Ambang Batas (menit)</div>
+              <div style="font-size:9px;color:var(--muted);margin-bottom:8px">Total menit "Di Luar Jam" (terlambat + pulang cepat + tanpa berita) yang memicu peringatan. Default 435 (7j15m = 1 hari kerja).</div>
+              <input id="paAmbang" type="number" min="30" max="1440" value="435" style="width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--white);font-size:11px;box-sizing:border-box">
+            </div>
+            <div style="background:rgba(255,255,255,.03);padding:12px;border:1px solid var(--border);border-radius:10px">
+              <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:6px"><i class="fas fa-building"></i> Instansi ID</div>
+              <input id="paInstansi" type="text" placeholder="bapperida" style="width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--white);font-size:11px;box-sizing:border-box">
+            </div>
+          </div>
+          <div id="paResult" style="display:none; margin-top:12px">
+            <div class="r-icon" id="paRIcon"><i class="fas fa-check"></i></div>
+            <div style="flex:1">
+              <div class="r-title" id="paRTitle">—</div>
+              <div class="r-msg" id="paRMsg">—</div>
+            </div>
+          </div>
+          <button class="btn-admin" onclick="savePaAdmin()" style="margin-top:12px"><i class="fas fa-save"></i> Simpan Peringatan Akumulasi</button>
+        </div>
+
         <!-- <i class="fas fa-landmark"></i> SUPERADMIN: DETAIL INSTANSI & HEADER EDITOR ══ -->
         <div class="card superadmin-section" style="margin-top:12px; display:none;" id="superadminHeaderCard">
           <div style="font-size:11px;font-weight:800;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border); display:flex; align-items:center; gap:6px;">
@@ -3294,7 +3328,7 @@
 
   <!-- ════ APP SCRIPTS (urutan load penting) ════ -->
   <!-- 1. Config & constants — harus pertama -->
-  <script src="js/config.js?v=20261016a"></script>
+  <script src="js/config.js?v=20261019a"></script>
   <script src="js/constants.js?v=20261011a"></script>
 
   <!-- 2. State global & Telegram init -->
@@ -3332,6 +3366,7 @@
   <script src="js/weather.js"></script>
   <script src="js/admin-face.js?v=20260706c"></script>
 <script src="js/admin-kontrol.js?v=20260811a"></script>
+<script src="js/admin-akumulasi.js?v=20261019a"></script>
   <!-- simapo-admin.js dihapus (dikonsolidasi ke simapo-ext.js) -->
   
   
@@ -3354,7 +3389,7 @@
   <script src="js/offline.js"></script>
   <script src="js/meja-handler.js?v=20260706a"></script>
   <script src="js/auth.js?v=20261008b"></script>
-  <script src="js/app.js?v=20261011e"></script>
+  <script src="js/app.js?v=20261019a"></script>
 
   <!-- 8. Service Worker Registration -->
   <script>

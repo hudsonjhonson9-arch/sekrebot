@@ -298,6 +298,7 @@ const P = {
   dokumenList: '/api/dokumen',
   jamAbsen: '/api/jam-absen',
   kontrolAbsen: '/api/kontrol-absen',
+  peringatanAkumulasi: '/api/peringatan-akumulasi',
   kirimRekap: '/api/kirim-rekap',
   ketList: '/api/keterangan',
   ketEdit: '/api/keterangan/edit',

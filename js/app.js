@@ -30,7 +30,8 @@
           typeof loadWeekHistory === 'function' ? loadWeekHistory() : Promise.resolve(),
           fetchJamPeriode(),
           typeof loadKontrolConfig === 'function' ? loadKontrolConfig() : Promise.resolve(),
-          typeof loadKkAdmin === 'function' ? loadKkAdmin() : Promise.resolve()
+          typeof loadKkAdmin === 'function' ? loadKkAdmin() : Promise.resolve(),
+          typeof loadPaAdmin === 'function' ? loadPaAdmin() : Promise.resolve()
         ]);
 
         updateClock();

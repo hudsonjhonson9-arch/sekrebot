@@ -123,9 +123,11 @@ test('sync-status: pegawai tak punya keterangan aktif di-reset ke AKTIF', async 
 
 test('akumulasi: total > 435 menit dari statistik_pegawai memicu peringatan', async () => {
   const tg = [];
-  const query = async (text) => (text.includes('FROM statistik_pegawai')
-    ? { rows: [{ id: '5', username: 'Cici', nomorhp: '081234567890', Status: 'AKTIF', total: 525 }] }
-    : { rows: [] });
+  const query = async (text) => {
+    if (text.includes('pengaturan')) return { rows: [{ instansi_id: 'bapperida', value: JSON.stringify({ enabled: true, ambang_menit: 435 }) }] };
+    if (text.includes('FROM statistik_pegawai')) return { rows: [{ id: '5', username: 'Cici', nomorhp: '081234567890', Status: 'AKTIF', instansi_id: 'bapperida', total: 525 }] };
+    return { rows: [] };
+  };
   const sched = createScheduler({ query, sendTelegram: (m) => { tg.push(m); return Promise.resolve(); }, logger: silent });
   await sched.tick(new Date(2026, 9, 5, 7, 0));
   assert.equal(tg[0].chatId, '5');
@@ -135,13 +137,14 @@ test('akumulasi: total > 435 menit dari statistik_pegawai memicu peringatan', as
 test('akumulasi: kirim WA pribadi (nomorhp) + Telegram; hanya Status AKTIF; ambang 435 menit sesuai teks', async () => {
   const tg = [], wa = [];
   const query = async (text) => {
+    if (text.includes('pengaturan')) return { rows: [{ instansi_id: 'bapperida', value: JSON.stringify({ enabled: true, ambang_menit: 435 }) }] };
     if (text.includes('FROM statistik_pegawai')) {
       return {
         rows: [
-          { id: '5', username: 'Cici', nomorhp: '081234567890', Status: 'AKTIF', total: 525 },
-          { id: '6', username: 'Dedi', nomorhp: '089999999999', Status: 'AKTIF', total: 75 },
-          { id: '7', username: 'Eka', nomorhp: '', Status: 'AKTIF', total: 525 },
-          { id: '8', username: 'Noni', nomorhp: '081111111111', Status: 'NONAKTIF', total: 900 },
+          { id: '5', username: 'Cici', nomorhp: '081234567890', Status: 'AKTIF', instansi_id: 'bapperida', total: 525 },
+          { id: '6', username: 'Dedi', nomorhp: '089999999999', Status: 'AKTIF', instansi_id: 'bapperida', total: 75 },
+          { id: '7', username: 'Eka', nomorhp: '', Status: 'AKTIF', instansi_id: 'bapperida', total: 525 },
+          { id: '8', username: 'Noni', nomorhp: '081111111111', Status: 'NONAKTIF', instansi_id: 'bapperida', total: 900 },
         ],
       };
     }
@@ -171,12 +174,82 @@ test('akumulasi: kirim WA pribadi (nomorhp) + Telegram; hanya Status AKTIF; amba
 
 test('akumulasi: tanpa sendWhatsApp (mis. WAHA mati) tetap kirim Telegram', async () => {
   const tg = [];
-  const query = async (text) => (text.includes('FROM statistik_pegawai')
-    ? { rows: [{ id: '5', username: 'Cici', nomorhp: '081234567890', Status: 'AKTIF', total: 525 }] }
-    : { rows: [] });
+  const query = async (text) => {
+    if (text.includes('pengaturan')) return { rows: [{ instansi_id: 'bapperida', value: JSON.stringify({ enabled: true, ambang_menit: 435 }) }] };
+    if (text.includes('FROM statistik_pegawai')) return { rows: [{ id: '5', username: 'Cici', nomorhp: '081234567890', Status: 'AKTIF', instansi_id: 'bapperida', total: 525 }] };
+    return { rows: [] };
+  };
   const sched = createScheduler({ query, sendTelegram: (m) => { tg.push(m); return Promise.resolve(); }, sendWhatsApp: null, logger: silent });
   await sched.tick(new Date(2026, 9, 5, 7, 0));
   assert.equal(tg.length, 1);
+});
+
+// ── Config pengaturan (tabel pengaturan, key='peringatan_akumulasi') ─────────
+// Default OFF: tanpa baris config, peringatan tidak dikirim sama sekali
+// (permintaan "matikan dulu" — diaktifkan manual dari menu admin panel).
+
+test('akumulasi: DEFAULT OFF — tanpa baris pengaturan tidak kirim apa pun', async () => {
+  const tg = [];
+  const query = async (text) => {
+    if (text.includes('pengaturan')) return { rows: [] };
+    if (text.includes('FROM statistik_pegawai')) return { rows: [{ id: '5', username: 'Cici', nomorhp: '081234567890', Status: 'AKTIF', instansi_id: 'bapperida', total: 900 }] };
+    return { rows: [] };
+  };
+  const sched = createScheduler({ query, sendTelegram: (m) => { tg.push(m); return Promise.resolve(); }, logger: silent });
+  await sched.tick(new Date(2026, 9, 5, 7, 0));
+  assert.equal(tg.length, 0, 'tanpa config aktif, peringatan tidak boleh terkirim');
+});
+
+test('akumulasi: enabled=false di pengaturan tetap skip meski total meledak', async () => {
+  const tg = [];
+  const query = async (text) => {
+    if (text.includes('pengaturan')) return { rows: [{ instansi_id: 'bapperida', value: JSON.stringify({ enabled: false, ambang_menit: 435 }) }] };
+    if (text.includes('FROM statistik_pegawai')) return { rows: [{ id: '5', username: 'Cici', nomorhp: '081234567890', Status: 'AKTIF', instansi_id: 'bapperida', total: 900 }] };
+    return { rows: [] };
+  };
+  const sched = createScheduler({ query, sendTelegram: (m) => { tg.push(m); return Promise.resolve(); }, logger: silent });
+  await sched.tick(new Date(2026, 9, 5, 7, 0));
+  assert.equal(tg.length, 0);
+});
+
+test('akumulasi: ambang_menit dari pengaturan dipakai (300) & teks ambang ikut', async () => {
+  const tg = [];
+  const query = async (text) => {
+    if (text.includes('pengaturan')) return { rows: [{ instansi_id: 'bapperida', value: JSON.stringify({ enabled: true, ambang_menit: 300 }) }] };
+    if (text.includes('FROM statistik_pegawai')) return { rows: [{ id: '5', username: 'Cici', nomorhp: '081234567890', Status: 'AKTIF', instansi_id: 'bapperida', total: 320 }] };
+    return { rows: [] };
+  };
+  const sched = createScheduler({ query, sendTelegram: (m) => { tg.push(m); return Promise.resolve(); }, logger: silent });
+  await sched.tick(new Date(2026, 9, 5, 7, 0));
+  assert.equal(tg.length, 1, 'total 320 >= ambang 300 harus terkirim');
+  assert.match(tg[0].text, /5 Jam 0 Menit \(300 Menit\)/);
+});
+
+test('akumulasi: per instansi — hanya instansi yang mengaktifkan yang dikirimi', async () => {
+  const tg = [];
+  const query = async (text) => {
+    if (text.includes('pengaturan')) {
+      return {
+        rows: [
+          { instansi_id: 'bapperida', value: JSON.stringify({ enabled: true, ambang_menit: 435 }) },
+          { instansi_id: 'dinkes', value: JSON.stringify({ enabled: false, ambang_menit: 435 }) },
+        ],
+      };
+    }
+    if (text.includes('FROM statistik_pegawai')) {
+      return {
+        rows: [
+          { id: '5', username: 'Cici', nomorhp: '08123', Status: 'AKTIF', instansi_id: 'bapperida', total: 525 },
+          { id: '6', username: 'Dedi', nomorhp: '08999', Status: 'AKTIF', instansi_id: 'dinkes', total: 525 },
+          { id: '7', username: 'Eka', nomorhp: '08111', Status: 'AKTIF', instansi_id: 'tanpa_config', total: 525 },
+        ],
+      };
+    }
+    return { rows: [] };
+  };
+  const sched = createScheduler({ query, sendTelegram: (m) => { tg.push(m); return Promise.resolve(); }, logger: silent });
+  await sched.tick(new Date(2026, 9, 5, 7, 0));
+  assert.deepEqual(tg.map((m) => m.chatId), ['5'], 'hanya pegawai instansi aktif yang dikirimi');
 });
 
 test('idempoten: tick dua kali di menit sama tidak menggandakan kiriman', async () => {
