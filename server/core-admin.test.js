@@ -180,6 +180,61 @@ test('lokasi-update: tidak menimpa instansi_id bila body tidak mengirimnya', asy
   assert.equal(updated[4], 'bapperida2', 'instansi_id lama dipertahankan');
 });
 
+test('lokasi-update: latitude/longitude dikirim ikut di-update (bug pin tak bisa diperbaiki)', async () => {
+  let updated = null;
+  let sqlText = '';
+  const q = async (text, params) => {
+    if (/SELECT instansi_id FROM lokasiabsen/.test(text)) return { rows: [{ instansi_id: 'bapperida' }] };
+    if (/UPDATE lokasiabsen/.test(text)) { updated = params; sqlText = text; return { rows: [{ id: 9 }] }; }
+    return { rows: [] };
+  };
+  const h = harness({ session: ADMIN, query: q });
+  const res = await req(h, 'POST', '/api/lokasi-update', {
+    id: '9', nama_lokasi: 'X', hari: 'senin', radius: 30,
+    latitude: -9.648769, longitude: 119.389232,
+  });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.match(sqlText, /latitude=\$7/);
+  assert.match(sqlText, /longitude=\$8/);
+  assert.equal(updated[6], -9.648769, 'latitude masuk $7');
+  assert.equal(updated[7], 119.389232, 'longitude masuk $8');
+  assert.equal(updated[4], 'bapperida', 'posisi instansi_id tidak bergeser');
+});
+
+test('lokasi-update: tanpa latitude/longitude, kolom koordinat tidak disentuh', async () => {
+  let sqlText = '';
+  const q = async (text) => {
+    if (/SELECT instansi_id FROM lokasiabsen/.test(text)) return { rows: [{ instansi_id: 'bapperida' }] };
+    if (/UPDATE lokasiabsen/.test(text)) { sqlText = text; return { rows: [{ id: 9 }] }; }
+    return { rows: [] };
+  };
+  const h = harness({ session: ADMIN, query: q });
+  const res = await req(h, 'POST', '/api/lokasi-update', { id: '9', nama_lokasi: 'X', hari: 'senin', radius: 30 });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.doesNotMatch(sqlText, /latitude=/);
+});
+
+test('lokasi-update: koordinat tidak valid atau sebagian ditolak 400 tanpa UPDATE', async () => {
+  const cases = [
+    { latitude: 999, longitude: 119.389232, why: 'latitude di luar rentang' },
+    { latitude: 'abc', longitude: 119.389232, why: 'latitude bukan angka' },
+    { latitude: -9.648769, why: 'longitude hilang' },
+    { longitude: 119.389232, why: 'latitude hilang' },
+  ];
+  for (const c of cases) {
+    let ranUpdate = false;
+    const q = async (text) => {
+      if (/SELECT instansi_id FROM lokasiabsen/.test(text)) return { rows: [{ instansi_id: 'bapperida' }] };
+      if (/UPDATE lokasiabsen/.test(text)) { ranUpdate = true; return { rows: [{ id: 9 }] }; }
+      return { rows: [] };
+    };
+    const h = harness({ session: ADMIN, query: q });
+    const res = await req(h, 'POST', '/api/lokasi-update', { id: '9', nama_lokasi: 'X', hari: 'senin', radius: 30, ...c });
+    assert.equal(res.status, 400, `${c.why}: harus 400, dapat ${res.status}`);
+    assert.equal(ranUpdate, false, `${c.why}: UPDATE tidak boleh jalan`);
+  }
+});
+
 // BENDAHARA BARANG = admin aset saja. Jangan bocor ke daftar admin absensi
 // (admin_ids → ADMIN_NIPS frontend → IS_ADMIN → tab admin absensi ikut terbuka).
 test('jam-absen: query admin mengecualikan BENDAHARA BARANG', async () => {

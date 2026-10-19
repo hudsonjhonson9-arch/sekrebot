@@ -39,7 +39,11 @@ function ipInCidr(ip, cidr) {
   }
 }
 
-const tolak = (kodeTolak, keterangan) => ({ ok: false, kodeTolak, keterangan });
+// diag (opsional) berisi metrik penolakan (jarak ke pin, dsb.) untuk log audit
+// di router — tidak pernah diteruskan ke klien.
+const tolak = (kodeTolak, keterangan, diag) => ({
+  ok: false, kodeTolak, keterangan, ...(diag ? { diag } : {}),
+});
 const terima = (jenisAbsen, namaLokasi, keterangan) => ({ ok: true, jenisAbsen, namaLokasi, keterangan });
 
 function toMenit(v) {
@@ -133,9 +137,31 @@ export function validateAbsen({ payload = {}, serverTime, employee = {}, setting
     if (!Number.isFinite(la) || !Number.isFinite(lo)) return false;
     const r = Number(l.radius);
     if (!Number.isFinite(r) || r <= 0) return true;
-    return haversine(lat, lng, la, lo) <= r;
+    // Paritas n8n "Validasi Absen": radius diberi toleransi akurasi GPS,
+    // dibatasi 50 m. Tanpa ini pegawai yang berdiri di kantor dengan sinyal
+    // GPS indoor (error puluhan meter) ditolak LOKASI_TIDAK_VALID padahal
+    // fisiknya di dalam radius — penyebab utama gagal absen sejak port native.
+    return haversine(lat, lng, la, lo) <= r + Math.min(accuracy, 50);
   });
-  if (!near) return tolak('LOKASI_TIDAK_VALID', 'Anda berada di luar radius lokasi kantor.');
+  if (!near) {
+    // Metrik untuk log audit penolakan di router: jarak ke pin TERDEKAT supaya
+    // kelihatan apakah gagal karena radius terlalu ketat atau GPS memang jauh.
+    let dekat = null;
+    for (const l of hariLokasi) {
+      const la = Number(l.latitude);
+      const lo = Number(l.longitude);
+      if (!Number.isFinite(la) || !Number.isFinite(lo)) continue;
+      const jarak = haversine(lat, lng, la, lo);
+      if (!dekat || jarak < dekat.jarak) dekat = { jarak, radius: l.radius, nama: l.Nama_Lokasi };
+    }
+    return tolak('LOKASI_TIDAK_VALID', 'Anda berada di luar radius lokasi kantor.',
+      dekat && {
+        jarak_m: Math.round(dekat.jarak),
+        radius_m: Number.isFinite(Number(dekat.radius)) ? Number(dekat.radius) : null,
+        toleransi_m: Math.round(Math.min(accuracy, 50)),
+        pin: String(dekat.nama || ''),
+      });
+  }
 
   if (!isWFH(near)) {
     const ranges = String(near.ip_range || '').split(',').map((s) => s.trim()).filter(Boolean);

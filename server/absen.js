@@ -55,6 +55,29 @@ function clientIp(req) {
 const tolak = (kode, keterangan) =>
   ({ validasi: { is_valid: false, kode_tolak: kode, keterangan } });
 
+// ── Audit penolakan ──
+// Log_Absen hanya menyaratkan absen sukses, jadi tanpa baris ini frekuensi
+// tiap kode_tolak (mis. LOKASI_TIDAK_VALID) mustahil dipantau dari mana pun.
+// Satu baris JSON per penolakan → mudah di-grep/di-agregasi dari log container:
+//   grep '\[absen-tolak\]' | jq -r .kode | sort | uniq -c
+function logTolak({ employee = {}, serverTime = {}, payload = {}, kode = '', diag = null }) {
+  try {
+    console.warn('[absen-tolak]', JSON.stringify({
+      kode,
+      nip: employee.nip || '',
+      user_id: employee.id ?? '',
+      tanggal: serverTime.tanggal || '',
+      jam: serverTime.jam || '',
+      jenis_client: payload.jenis_absen || '',
+      source: payload.source || '',
+      latitude: payload.latitude ?? null,
+      longitude: payload.longitude ?? null,
+      accuracy: payload.horizontal_accuracy ?? null,
+      ...(diag || {}),
+    }));
+  } catch { /* logging tidak boleh menggagalkan request */ }
+}
+
 // ── Konfirmasi absen ke Telegram ──
 // Format mempertahankan teks node n8n "Format Konfirmasi Absen" (V5.2), tapi
 // dibangun dari data yang sudah divalidasi native (jenis absen + batas jam
@@ -214,8 +237,14 @@ export function createAbsenRouter({ query, verifyInitData, botToken, notifyAbsen
         employeeId: employee.id,
         rows: logs.rows,
       });
-      if (gate) return res.json(tolak(gate.kodeTolak, gate.keterangan));
-      if (!v.ok) return res.json(tolak(v.kodeTolak, v.keterangan));
+      if (gate) {
+        logTolak({ employee, serverTime, payload, kode: gate.kodeTolak });
+        return res.json(tolak(gate.kodeTolak, gate.keterangan));
+      }
+      if (!v.ok) {
+        logTolak({ employee, serverTime, payload, kode: v.kodeTolak, diag: v.diag || null });
+        return res.json(tolak(v.kodeTolak, v.keterangan));
+      }
 
       const koordinat = Number.isFinite(Number(payload.latitude)) && Number.isFinite(Number(payload.longitude))
         ? `${payload.latitude},${payload.longitude}`

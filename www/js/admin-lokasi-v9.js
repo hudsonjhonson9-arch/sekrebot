@@ -273,8 +273,10 @@ document.addEventListener('click', function(e) {
           const cntBadge = $('lokasiCountBadge');
           if (cntBadge) { cntBadge.textContent = list.length + ' lokasi'; cntBadge.style.display = list.length ? 'inline' : 'none'; }
           el.innerHTML = list.map((l, idx) => {
-            const lat = parseFloat(l.latitude || l.lat || 0).toFixed(5);
-            const lng = parseFloat(l.longitude || l.lng || 0).toFixed(5);
+            const latNum = parseFloat(l.latitude || l.lat || 0);
+            const lngNum = parseFloat(l.longitude || l.lng || 0);
+            const lat = latNum.toFixed(5);
+            const lng = lngNum.toFixed(5);
             const id = l.id || l.ID || '';
             const radius = l.radius || 100;
             const ipVal = (l.ip_range || l.IP_Range || '');
@@ -315,6 +317,15 @@ document.addEventListener('click', function(e) {
                 style="width:74px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:4px 8px;color:var(--white);font-family:'JetBrains Mono',monospace;font-size:11px;outline:none;transition:border-color .2s"
                 onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"/>
               <span style="font-size:10px;color:var(--muted)">meter</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;width:48px;flex-shrink:0"><i class="fas fa-map-marked-alt"></i> Titik</span>
+              <input type="number" step="any" id="lat-input-${id}" value="${Number.isFinite(latNum) ? latNum : 0}" placeholder="latitude"
+                style="flex:1;min-width:0;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:4px 8px;color:var(--white);font-family:'JetBrains Mono',monospace;font-size:10px;outline:none;transition:border-color .2s"
+                onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"/>
+              <input type="number" step="any" id="lng-input-${id}" value="${Number.isFinite(lngNum) ? lngNum : 0}" placeholder="longitude"
+                style="flex:1;min-width:0;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:4px 8px;color:var(--white);font-family:'JetBrains Mono',monospace;font-size:10px;outline:none;transition:border-color .2s"
+                onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"/>
             </div>
             <div style="display:flex;align-items:center;gap:8px">
               <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;width:48px;flex-shrink:0"><i class="fas fa-globe"></i> IP</span>
@@ -397,6 +408,11 @@ document.addEventListener('click', function(e) {
       const ipInp = $(`ip-input-${id}`);
       const radius = parseInt(radiusInp?.value || 100);
       const ip_range = (ipInp?.value || '').trim();
+
+      const latInp = $(`lat-input-${id}`);
+      const lngInp = $(`lng-input-${id}`);
+      const latitude = parseFloat(latInp?.value);
+      const longitude = parseFloat(lngInp?.value);
       
       let instansi_id = 'all';
       if (isSuperAdminUser() && $(`instansi-grid-${id}`)) {
@@ -412,6 +428,13 @@ document.addEventListener('click', function(e) {
         if (btn) { btn.disabled = false; if (txtEl) txtEl.textContent = 'Simpan Perubahan'; }
         return;
       }
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+        [latInp, lngInp].forEach(el => {
+          if (el) { el.style.borderColor = 'var(--danger)'; setTimeout(() => { el.style.borderColor = 'rgba(255,255,255,.12)'; }, 1500); }
+        });
+        if (btn) { btn.disabled = false; if (txtEl) txtEl.textContent = 'Simpan Perubahan'; }
+        return;
+      }
       if (!namaBaru) {
         if (namaInp) { namaInp.style.borderBottomColor = 'var(--danger)'; setTimeout(() => { namaInp.style.borderBottomColor = 'rgba(255,255,255,.2)'; }, 1500); }
         if (btn) { btn.disabled = false; if (txtEl) txtEl.textContent = 'Simpan Perubahan'; }
@@ -423,12 +446,15 @@ document.addEventListener('click', function(e) {
       try {
         await apiPost(P.lokasiUpdate, { 
           id, nama_lokasi: namaBaru, radius, hari: hariStr, ip_range, instansi_id,
+          latitude, longitude,
           diubah_oleh: MY_ID,
           nip: localStorage.getItem('MY_NIP') || ''
         });
         if (lok) {
           lok.radius = radius;
           lok.nama = namaBaru;
+          lok.lat = latitude;
+          lok.lng = longitude;
         }
         Object.keys(LOK_DEF).forEach(k => delete LOK_DEF[k]);
         jadwalLokData.forEach(l => { (l.hari || []).forEach(h => { if (!LOK_DEF[h]) LOK_DEF[h] = []; if (!LOK_DEF[h].includes(l.nama)) LOK_DEF[h].push(l.nama); }); });

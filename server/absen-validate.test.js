@@ -86,6 +86,32 @@ test('koordinat tepat di dalam radius diterima', () => {
   assert.equal(run({}).ok, true);
 });
 
+// ── Accuracy buffer (paritas n8n "Validasi Absen": radius + min(accuracy, 50)) ──
+
+test('accuracy buffer: koordinat ~44 m lolos saat accuracy 50', () => {
+  // Regresi port native: tanpa buffer, radius 30 m menolak pegawai yang
+  // berdiri di kantor saat GPS indoor error puluhan meter.
+  const r = run({ latitude: -9.6004, longitude: 120.1000, accuracy: 50 });
+  assert.equal(r.ok, true);
+});
+
+test('accuracy buffer dibatasi 50 m: accuracy 400 tidak meloloskan jarak ~100 m', () => {
+  const r = run({ latitude: -9.6009, longitude: 120.1000, accuracy: 400 });
+  assert.equal(r.ok, false);
+  assert.equal(r.kodeTolak, 'LOKASI_TIDAK_VALID');
+});
+
+test('penolakan radius menyertakan diag jarak/akurasi untuk log audit', () => {
+  const r = run({ latitude: -9.6004, longitude: 120.1000, accuracy: 5 });
+  assert.equal(r.ok, false);
+  assert.equal(r.kodeTolak, 'LOKASI_TIDAK_VALID');
+  assert.ok(r.diag, 'tolak LOKASI_TIDAK_VALID wajib membawa diag');
+  assert.ok(r.diag.jarak_m >= 40 && r.diag.jarak_m <= 48, `jarak ~44 m, dapat ${r.diag.jarak_m}`);
+  assert.equal(r.diag.radius_m, 30);
+  assert.equal(r.diag.toleransi_m, 5);
+  assert.equal(r.diag.pin, 'Kantor Bapperida');
+});
+
 // ── Meja Absen (T3): nilai token divalidasi, bukan hanya keberadaan ──
 
 test('meja_token salah ditolak', () => {

@@ -442,3 +442,71 @@ test('absen yang ditolak gate tidak mengirim konfirmasi', async () => {
 
   assert.equal(h.notifyCalls.length, 0);
 });
+
+// --- audit penolakan ----------------------------------------------------------
+// Log_Absen hanya berisi absen sukses; tanpa baris [absen-tolak] ini frekuensi
+// tiap kode_tolak (mis. LOKASI_TIDAK_VALID) mustahil dipantau dari log container.
+
+test('penolakan radius ditulis ke log audit [absen-tolak] beserta jarak ke pin', async () => {
+  const h = harness();
+  const lines = [];
+  const origWarn = console.warn;
+  console.warn = (...args) => lines.push(args.join(' '));
+  let r;
+  try {
+    // Koordinat Jakarta: ~1000 km dari pin kantor, jauh melampaui radius+buffer.
+    r = await post(h, { ...GOOD_BODY, latitude: -6.2088, longitude: 106.8456 });
+  } finally {
+    console.warn = origWarn;
+  }
+
+  assert.equal(r.status, 200);
+  assert.equal(r.body.validasi.is_valid, false);
+  assert.equal(r.body.validasi.kode_tolak, 'LOKASI_TIDAK_VALID');
+
+  const line = lines.find((l) => l.startsWith('[absen-tolak]'));
+  assert.ok(line, `log audit wajib ada, dapat: ${JSON.stringify(lines)}`);
+  const entry = JSON.parse(line.replace(/^\[absen-tolak\]\s*/, ''));
+  assert.equal(entry.kode, 'LOKASI_TIDAK_VALID');
+  assert.equal(entry.nip, SESSION.nip);
+  assert.equal(entry.user_id, SESSION.id);
+  assert.equal(entry.tanggal, TANGGAL);
+  assert.ok(entry.jam.startsWith(JAM), `jam server penuh, dapat ${entry.jam}`);
+  assert.equal(entry.accuracy, 5);
+  assert.equal(entry.pin, 'KANTOR');
+  assert.equal(entry.radius_m, 30);
+  assert.ok(entry.jarak_m > 1e6, `jarak ke pin harus ikut tercatat, dapat ${entry.jarak_m}m`);
+});
+
+test('penolakan gate juga ikut tercatat di log audit', async () => {
+  // Jam 06:00 supaya tidak kena gate DUPLIKAT (±1 menit dari jam server 07:10).
+  stub.log = [{ ID: SESSION.id, Tanggal: TANGGAL, Jam: '06:00', 'Jenis Absen': 'MASUK' }];
+  const h = harness();
+  const lines = [];
+  const origWarn = console.warn;
+  console.warn = (...args) => lines.push(args.join(' '));
+  try {
+    await post(h, GOOD_BODY);
+  } finally {
+    console.warn = origWarn;
+  }
+
+  const line = lines.find((l) => l.startsWith('[absen-tolak]'));
+  assert.ok(line, `log audit wajib ada, dapat: ${JSON.stringify(lines)}`);
+  const entry = JSON.parse(line.replace(/^\[absen-tolak\]\s*/, ''));
+  assert.equal(entry.kode, 'SUDAH_ABSEN');
+  assert.equal(entry.nip, SESSION.nip);
+});
+
+test('absen sukses TIDAK menulis log [absen-tolak]', async () => {
+  const h = harness();
+  const lines = [];
+  const origWarn = console.warn;
+  console.warn = (...args) => lines.push(args.join(' '));
+  try {
+    await post(h, GOOD_BODY);
+  } finally {
+    console.warn = origWarn;
+  }
+  assert.equal(lines.filter((l) => l.startsWith('[absen-tolak]')).length, 0);
+});
