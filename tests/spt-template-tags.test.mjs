@@ -134,8 +134,8 @@ test('E2E: SPPD & SPT merender pilihan ttd/paraf (nama + jabatan, tepat 3 baris 
       { nama: 'PARAF C', jabatan: 'JABATAN C' }
     ]
   };
-  const baris = [['PARAF A', 'JABATAN A'], ['PARAF B', 'JABATAN B'], ['PARAF C', 'JABATAN C']];
-  const hitung = t => t.split('\n').filter(l => /^\s*PARAF [ABC]$/.test(l)).length;
+  const baris = ['JABATAN A', 'JABATAN B', 'JABATAN C'];
+  const hitung = t => t.split('\n').filter(l => /^\s*JABATAN [ABC]$/.test(l)).length;
 
   // SPPD: Kepala Bidang + NIP, sel KTU + NIP, blok paraf 3 baris.
   const sppd = flatten(renderDocx('sppd_template.docx', T.bangunTagsSPPD(grup.items[0], grup, p, master)).xml);
@@ -145,13 +145,13 @@ test('E2E: SPPD & SPT merender pilihan ttd/paraf (nama + jabatan, tepat 3 baris 
   assert.ok(ktu.includes('KTU UJI') && ktu.includes('NIP. 444'), 'SPPD: sel KTU + NIP kosong');
   assert.ok(ktu.includes('KTU UJI\nNIP. 444'), 'SPPD: sel KTU harus nama lalu baris NIP. (dipisah <w:br/>)');
   const pSp = sppd.slice(sppd.indexOf('Paraf Hirarki'));
-  baris.forEach(([n, j], i) => assert.ok(pSp.includes(n + '\n' + j), `SPPD paraf baris ${i + 1} bukan nama lalu jabatan`));
+  baris.forEach((j, i) => assert.ok(pSp.includes(j), `SPPD paraf baris ${i + 1} bukan jabatan`));
   assert.equal(hitung(pSp), 3, 'SPPD harus tepat 3 baris paraf');
 
-  // SPT: Paraf1..3 = nama lalu jabatan, dua baris.
+  // SPT: Paraf1..3 = jabatan saja, satu baris.
   const spt = flatten(renderDocx('spt_template.docx', T.bangunTagsSPT(grup, p, master)).xml);
   assert.ok(!spt.includes('{') && !spt.includes('}'), 'SPT menyisakan kurung kurawal');
   const pSt = spt.slice(spt.indexOf('Paraf Hirarki'));
-  baris.forEach(([n, j], i) => assert.ok(pSt.includes(n + '\n' + j), `SPT paraf baris ${i + 1} bukan nama lalu jabatan`));
+  baris.forEach((j, i) => assert.ok(pSt.includes(j), `SPT paraf baris ${i + 1} bukan jabatan`));
   assert.equal(hitung(pSt), 3, 'SPT harus tepat 3 baris paraf');
 });

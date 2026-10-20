@@ -146,8 +146,8 @@
     return kurang;
   }
 
-  // Satu baris bila cuma jabatan (perilaku lama), dua baris bila ada nama.
-  function parafTeks(e) { const x = e || {}; return [x.nama, x.jabatan].filter(Boolean).join('\n'); }
+  // Paraf pakai jabatan saja (permintaan user); fallback nama bila jabatan kosong.
+  function parafTeks(e) { const x = e || {}; return x.jabatan || x.nama || ''; }
 
   function personTag(row, masterIndex) {
     const m = (masterIndex && masterIndex[String(row.nip)]) || {};

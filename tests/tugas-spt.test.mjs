@@ -82,7 +82,7 @@ test('bangunTagsSPT: nomor urut pelaksana, 3 slot paraf, Untuk dari keterangan',
   assert.equal(t.Paraf3, 'KTU BAPPERIDA');
 });
 
-test('bangunTagsSPT: paraf cetak nama + jabatan dua baris', () => {
+test('bangunTagsSPT: paraf cetak jabatan saja (bukan nama)', () => {
   const grup = { items: [{ tanggal: '2026-06-29', keterangan: 'Rakor', nip: '111', nama: 'A' }] };
   const t = T.bangunTagsSPT(grup, {
     tempatTujuan: 'Waingapu',
@@ -92,9 +92,9 @@ test('bangunTagsSPT: paraf cetak nama + jabatan dua baris', () => {
       { nip: '903', nama: 'Ktu Uji', jabatan: 'KTU' }
     ]
   }, {});
-  assert.equal(t.Paraf1, 'Sek Uji\nSekretaris');
+  assert.equal(t.Paraf1, 'Sekretaris');
   assert.equal(t.Paraf2, 'Kepala Bidang Ekonomi');
-  assert.equal(t.Paraf3, 'Ktu Uji\nKTU');
+  assert.equal(t.Paraf3, 'KTU');
 });
 
 test('bangunTagsSPPD: lama hari + nama pegawai dari baris', () => {
@@ -120,7 +120,7 @@ test('bangunTagsSPPD: Bidang & KTU masuk tag, paraf ikut', () => {
   assert.equal(t.BidangNIP, '902');
   assert.equal(t.KtuNama, 'Ktu Uji');
   assert.equal(t.KtuNIP, '903');
-  assert.equal(t.Paraf1, 'Sek Uji\nSekretaris');
+  assert.equal(t.Paraf1, 'Sekretaris');
 });
 
 test('DEFAULT_PERJADIN: bidang = nama keras template lama (anti-regresi SPPD)', () => {
