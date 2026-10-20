@@ -489,7 +489,11 @@ async function nativeFetch(path, opts = {}) {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       signal: ctrl.signal,
     });
-    if (res.status === 401) _handleAuthExpired();
+    // Arsip proxy (/api/arsip/*) balas 401 dari backend arsip ketika cookie
+    // arsip_session tidak dikenali — ini BUKAN sesi absensi expired. Jangan
+    // panggil _handleAuthExpired() untuk path arsip: itu menghapus token
+    // absensi yang masih valid dan memaksa user login ulang terus-menerus.
+    if (res.status === 401 && !path.startsWith('/api/arsip/')) _handleAuthExpired();
     return res;
   } finally {
     clearTimeout(tid);
