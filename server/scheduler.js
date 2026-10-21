@@ -46,8 +46,6 @@ export function matchCron(expr, date) {
   return f.slice(0, 5).every((spec, i) => fieldMatch(spec, v[i], RANGE[i][0], RANGE[i][1]));
 }
 
-const nama = (p) => p.username || p.Nama || '—';
-
 // 0 7 * * 1-5 — catat Log_Absen TUBEL harian untuk pegawai yang sedang bertugas
 // (pengganti hardcode dataKaryawan di workflow n8n "Absensi Bot V5.2"). Ini override
 // sementara per-orang: edit/hapus baris saat penugasannya berakhir.
@@ -55,20 +53,6 @@ const nama = (p) => p.username || p.Nama || '—';
 export const AUTO_TUBEL = [
   { ID: '2897', username: 'Angelina Kamila Lalo, S.Tr.I.P', NIP: '200104262023082002' },
 ];
-
-export function buildReminderMasuk(p, jam) {
-  return `⚠️ *PENGINGAT ABSENSI MASUK*\n\n`
-    + `Halo *${nama(p)}*,\n`
-    + `Hingga pukul *${jam}* WITA, Anda tercatat *BELUM melakukan absensi MASUK* hari ini.\n\n`
-    + `Mohon segera melakukan absensi melalui aplikasi.`;
-}
-
-export function buildReminderPulang(p) {
-  return `⚠️ *PENGINGAT ABSENSI PULANG*\n\n`
-    + `Halo *${nama(p)}*,\n`
-    + `Anda tercatat sudah hadir, namun *belum melakukan absensi PULANG*.\n`
-    + `Batas jam pulang: 14:30 WITA.`;
-}
 
 // Default ambang (7j15m = 1 hari kerja). Bisa dioverride per instansi lewat
 // tabel pengaturan (key='peringatan_akumulasi', lihat /api/peringatan-akumulasi).
@@ -108,7 +92,6 @@ export function buildTanpaBerita(item) {
 }
 
 const MASUK = ['MASUK', 'DI LUAR JAM MASUK'];
-const PULANG = ['PULANG', 'DI LUAR JAM PULANG', 'PULANG LUAR'];
 const KET = ['IZIN', 'SAKIT', 'TUGAS', 'TUBEL', 'CUTI', 'TANPA BERITA'];
 const has = (row, list) => list.includes(String(row['Jenis Absen'] || '').toUpperCase().trim());
 
@@ -188,33 +171,6 @@ export function createScheduler({ query, sendTelegram, sendWhatsApp, logger = co
     }
   }
 
-  // 50,55 6 * * 1-5 + 0,5,15 7 * * 1-5 — ingatkan yang belum absen MASUK.
-  async function reminderMasuk(date) {
-    const tanggal = ymd(date);
-    const jam = hm(date);
-    const { rows: logs } = await query(`SELECT "ID","Jenis Absen" FROM "Log_Absen" WHERE "Tanggal"=$1`, [tanggal]);
-    const sudah = new Set(logs.filter((l) => has(l, MASUK)).map((l) => String(l.ID)));
-    const { rows: peg } = await query(`SELECT id::text AS id, username, "nomorhp", "Status" FROM user_list`);
-    for (const p of peg) {
-      if (String(p.Status || '').toUpperCase() !== 'AKTIF' || sudah.has(String(p.id))) continue;
-      await tg(p.id, buildReminderMasuk(p, jam));
-    }
-  }
-
-  // 30..55 14 * * 1-5 + 0,5,10 15 * * 1-5 — ingatkan yang sudah masuk tapi belum PULANG.
-  async function reminderPulang(date) {
-    const tanggal = ymd(date);
-    const { rows: logs } = await query(`SELECT "ID","Jenis Absen" FROM "Log_Absen" WHERE "Tanggal"=$1`, [tanggal]);
-    const sudahMasuk = new Set(logs.filter((l) => has(l, MASUK)).map((l) => String(l.ID)));
-    const sudahPulang = new Set(logs.filter((l) => has(l, PULANG)).map((l) => String(l.ID)));
-    const { rows: peg } = await query(`SELECT id::text AS id, username, "nomorhp", "Status" FROM user_list`);
-    for (const p of peg) {
-      const id = String(p.id);
-      if (String(p.Status || '').toUpperCase() !== 'AKTIF' || !sudahMasuk.has(id) || sudahPulang.has(id)) continue;
-      await tg(p.id, buildReminderPulang(p));
-    }
-  }
-
   // 0 10 * * 1-5 — catat & beri tahu pegawai AKTIF tanpa absen/keterangan.
   async function tanpaBerita(date) {
     const tanggal = ymd(date);
@@ -265,8 +221,8 @@ export function createScheduler({ query, sendTelegram, sendWhatsApp, logger = co
   const jobs = [
     { name: 'auto-tubel', crons: ['0 7 * * 1-5'], run: autoTubel },
     { name: 'akumulasi', crons: ['0 7 * * 1-5'], run: () => akumulasi() },
-    { name: 'reminder-masuk', crons: ['50,55 6 * * 1-5', '0,5,15 7 * * 1-5'], run: reminderMasuk },
-    { name: 'reminder-pulang', crons: ['30,35,40,45,50,55 14 * * 1-5', '0,5,10 15 * * 1-5'], run: reminderPulang },
+    // reminder-masuk/reminder-pulang DIMATIKAN atas permintaan (2026-10-21):
+    // pesan "PENGINGAT ABSENSI MASUK/PULANG" ke Telegram tidak dikirim lagi.
     { name: 'tanpa-berita', crons: ['0 10 * * 1-5'], run: tanpaBerita },
     { name: 'sync-status', crons: ['5 0 * * *'], run: () => syncStatus() },
   ];

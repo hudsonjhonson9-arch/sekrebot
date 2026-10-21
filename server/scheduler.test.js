@@ -14,7 +14,7 @@ test('matchCron: 5-field, hanya hari kerja & menit yang cocok', () => {
   assert.equal(matchCron('5 0 * * *', new Date(2026, 9, 5, 0, 5)), true);
 });
 
-test('reminder-masuk: kirim Telegram ke pegawai AKTIF yang belum absen', async () => {
+test('reminder masuk/pulang DIMATIKAN: jam 06:50 & 14:30 tidak kirim Telegram', async () => {
   const tg = [];
   const query = async (text) => {
     if (text.includes('FROM "Log_Absen" WHERE')) return { rows: [] };
@@ -29,9 +29,8 @@ test('reminder-masuk: kirim Telegram ke pegawai AKTIF yang belum absen', async (
     logger: silent,
   });
   await sched.tick(new Date(2026, 9, 5, 6, 50));
-  assert.equal(tg.length, 1);
-  assert.equal(tg[0].chatId, '999');
-  assert.match(tg[0].text, /BELUM melakukan absensi MASUK/);
+  await sched.tick(new Date(2026, 9, 5, 14, 30));
+  assert.equal(tg.length, 0, 'pengingat absen masuk/pulang sudah dimatikan');
 });
 
 test('auto-tubel: catat Log_Absen TUBEL Angelina sekali per hari', async () => {
@@ -255,12 +254,13 @@ test('akumulasi: per instansi — hanya instansi yang mengaktifkan yang dikirimi
 test('idempoten: tick dua kali di menit sama tidak menggandakan kiriman', async () => {
   const tg = [];
   const query = async (text) => {
+    if (text.includes('libur_nasional')) return { rows: [] };
     if (text.includes('FROM "Log_Absen" WHERE')) return { rows: [] };
     if (text.includes('FROM user_list')) return { rows: [{ id: '1', username: 'X', nomorhp: '08', Status: 'AKTIF' }] };
     return { rows: [] };
   };
   const sched = createScheduler({ query, sendTelegram: (m) => { tg.push(m); return Promise.resolve(); }, logger: silent });
-  await sched.tick(new Date(2026, 9, 5, 7, 15));
-  await sched.tick(new Date(2026, 9, 5, 7, 15, 30));
+  await sched.tick(new Date(2026, 9, 5, 10, 0));
+  await sched.tick(new Date(2026, 9, 5, 10, 0, 30));
   assert.equal(tg.length, 1);
 });
