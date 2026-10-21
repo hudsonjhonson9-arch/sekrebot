@@ -205,7 +205,9 @@
       const iEl = $(iid), tEl = $(tid), mEl = $(mid);
       if (iEl) iEl.innerHTML = icon;
       if (tEl) tEl.textContent = title;
-      if (mEl) mEl.textContent = msg;
+      // msg memuat ikon <i class="fas ..."> — wajib innerHTML; \n tetap tampil
+      // sebagai baris baru lewat CSS .r-msg { white-space: pre-line }.
+      if (mEl) mEl.innerHTML = msg;
     }
     window.showResult = showResult;
     window.hideResult = () => {
