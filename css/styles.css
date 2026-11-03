@@ -7853,3 +7853,80 @@ body.arsip-preview-open { overflow: hidden; }
   #perjadinModal .perjadin-foot .btn-secondary,
   #perjadinModal .perjadin-foot .btn-primary{width:100%;flex:none}
 }
+
+/* ═══ Rekap Lembur — timeline ═══ */
+.lt-wrap{--lt-left:200px;--lt-col:46px;border:1px solid var(--border);border-radius:16px;background:var(--card-bg);overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.lt-inner{min-width:calc(var(--lt-left) + var(--lt-n) * var(--lt-col))}
+.lt-row{display:grid;grid-template-columns:var(--lt-left) repeat(var(--lt-n),minmax(var(--lt-col),1fr));min-height:60px;border-top:1px solid var(--border)}
+.lt-row.lt-head{border-top:0;min-height:64px;background:rgba(255,255,255,.03)}
+.lt-left{position:sticky;left:0;z-index:4;grid-column:1;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px 10px 14px;background:var(--card-bg);border-right:1px solid var(--border)}
+.lt-head .lt-left{justify-content:flex-start;gap:10px;background:#212c40}
+.lt-head-ico{font-size:15px;color:var(--muted)}
+.lt-head-t{font-size:13px;font-weight:700;color:var(--white)}
+.lt-head-s{font-size:10px;color:var(--muted);margin-top:2px}
+.lt-who{min-width:0}
+.lt-name{font-size:13px;font-weight:700;color:var(--white);line-height:1.25;overflow-wrap:anywhere}
+.lt-nip{font-size:10px;color:var(--muted);margin-top:3px;white-space:nowrap}
+.lt-total{flex-shrink:0;font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;border:1px solid var(--border);color:var(--muted)}
+.lt-total.has{color:var(--gold);border-color:var(--gold);background:var(--gold-dim)}
+.lt-h{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-left:1px solid rgba(148,163,184,.12)}
+.lt-dow{font-size:10px;font-weight:600;color:var(--muted)}
+.lt-num{font-size:12px;font-weight:700;color:var(--white);width:24px;height:24px;line-height:24px;text-align:center}
+.lt-today{font-size:12px;font-weight:700;color:#fff;background:var(--gold);width:24px;height:24px;line-height:24px;border-radius:50%;text-align:center}
+.lt-c{grid-row:1;border-left:1px solid rgba(148,163,184,.12)}
+.lt-we{background:rgba(255,255,255,.035)}
+.lt-off{background-image:repeating-linear-gradient(135deg,transparent 0 5px,rgba(148,163,184,.10) 5px 6px)}
+.lt-mo{border-left-color:rgba(148,163,184,.4)}
+.lt-c.lt-now{background-color:var(--gold-dim)}
+.lt-bar{grid-row:1;align-self:center;height:34px;margin:0 3px;padding:0 12px;z-index:1;display:block;text-align:left;font:inherit;font-size:11px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1.5px solid var(--c);border-radius:999px;background:var(--cbg);cursor:pointer}
+.lt-bar:hover{filter:brightness(1.15)}
+.lt-bar:focus-visible{outline:2px solid var(--white);outline-offset:2px}
+.lt-bar.sel{box-shadow:0 0 0 2px var(--navy),0 0 0 4px var(--c)}
+.lt-detail{margin-top:10px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.03);font-size:11px;color:var(--muted);line-height:1.6}
+.lt-det-h{color:var(--white);font-size:12px;margin-bottom:4px}
+.lt-det-i{padding:2px 0}
+@media (max-width:600px){
+  .lt-wrap{--lt-left:132px;--lt-col:42px}
+  .lt-left{flex-direction:column;align-items:flex-start;justify-content:center;gap:6px;padding:8px 8px 8px 10px}
+  .lt-head .lt-left{flex-direction:row;align-items:center}
+  .lt-head-ico{display:none}
+}
+@media (prefers-reduced-motion:no-preference){.lt-bar{transition:filter .15s}}
+/* ═══ Rekap Lembur — timeline ═══ */
+.lt-wrap{--lt-left:200px;--lt-col:46px;border:1px solid var(--border);border-radius:16px;background:var(--card-bg);overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.lt-inner{min-width:calc(var(--lt-left) + var(--lt-n) * var(--lt-col))}
+.lt-row{display:grid;grid-template-columns:var(--lt-left) repeat(var(--lt-n),minmax(var(--lt-col),1fr));min-height:60px;border-top:1px solid var(--border)}
+.lt-row.lt-head{border-top:0;min-height:64px;background:rgba(255,255,255,.03)}
+.lt-left{position:sticky;left:0;z-index:4;grid-column:1;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px 10px 14px;background:var(--card-bg);border-right:1px solid var(--border)}
+.lt-head .lt-left{justify-content:flex-start;gap:10px;background:#212c40}
+.lt-head-ico{font-size:15px;color:var(--muted)}
+.lt-head-t{font-size:13px;font-weight:700;color:var(--white)}
+.lt-head-s{font-size:10px;color:var(--muted);margin-top:2px}
+.lt-who{min-width:0}
+.lt-name{font-size:13px;font-weight:700;color:var(--white);line-height:1.25;overflow-wrap:anywhere}
+.lt-nip{font-size:10px;color:var(--muted);margin-top:3px;white-space:nowrap}
+.lt-total{flex-shrink:0;font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;border:1px solid var(--border);color:var(--muted)}
+.lt-total.has{color:var(--gold);border-color:var(--gold);background:var(--gold-dim)}
+.lt-h{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-left:1px solid rgba(148,163,184,.12)}
+.lt-dow{font-size:10px;font-weight:600;color:var(--muted)}
+.lt-num{font-size:12px;font-weight:700;color:var(--white);width:24px;height:24px;line-height:24px;text-align:center}
+.lt-today{font-size:12px;font-weight:700;color:#fff;background:var(--gold);width:24px;height:24px;line-height:24px;border-radius:50%;text-align:center}
+.lt-c{grid-row:1;border-left:1px solid rgba(148,163,184,.12)}
+.lt-we{background:rgba(255,255,255,.035)}
+.lt-off{background-image:repeating-linear-gradient(135deg,transparent 0 5px,rgba(148,163,184,.10) 5px 6px)}
+.lt-mo{border-left-color:rgba(148,163,184,.4)}
+.lt-c.lt-now{background-color:var(--gold-dim)}
+.lt-bar{grid-row:1;align-self:center;height:34px;margin:0 3px;padding:0 12px;z-index:1;display:block;text-align:left;font:inherit;font-size:11px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1.5px solid var(--c);border-radius:999px;background:var(--cbg);cursor:pointer}
+.lt-bar:hover{filter:brightness(1.15)}
+.lt-bar:focus-visible{outline:2px solid var(--white);outline-offset:2px}
+.lt-bar.sel{box-shadow:0 0 0 2px var(--navy),0 0 0 4px var(--c)}
+.lt-detail{margin-top:10px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.03);font-size:11px;color:var(--muted);line-height:1.6}
+.lt-det-h{color:var(--white);font-size:12px;margin-bottom:4px}
+.lt-det-i{padding:2px 0}
+@media (max-width:600px){
+  .lt-wrap{--lt-left:132px;--lt-col:42px}
+  .lt-left{flex-direction:column;align-items:flex-start;justify-content:center;gap:6px;padding:8px 8px 8px 10px}
+  .lt-head .lt-left{flex-direction:row;align-items:center}
+  .lt-head-ico{display:none}
+}
+@media (prefers-reduced-motion:no-preference){.lt-bar{transition:filter .15s}}
