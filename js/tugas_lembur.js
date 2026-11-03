@@ -1844,6 +1844,157 @@
   /**
    * Render Results to UI
    */
+  /**
+   * Rekap Lembur — tampilan timeline (kolom kiri = pegawai, kolom kanan = tanggal).
+   * Hari berurutan dengan lembur/keterangan yang sama digabung jadi satu bar.
+   */
+  const LT_DAY_SHORT = ['Mg', 'Sn', 'Sl', 'Rb', 'Km', 'Jm', 'Sb'];
+  const LT_DAY_LONG = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+  const LT_MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+  function ltEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function ltPad(n) { return String(n).padStart(2, '0'); }
+  function ltKey(d) { return `${d.getFullYear()}-${ltPad(d.getMonth() + 1)}-${ltPad(d.getDate())}`; }
+  function ltParse(s) {
+    const [y, m, d] = String(s).slice(0, 10).split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  function ltCompact(min) {
+    if (min <= 0) return '—';
+    const h = Math.floor(min / 60), m = min % 60;
+    return h ? (m ? `${h}j ${m}m` : `${h}j`) : `${m}m`;
+  }
+  function ltHm(t) { return t ? String(t).slice(0, 5) : '—'; }
+
+  function buildLemburTimeline(data, ketStyle) {
+    const rows = data.filter(r => r && r.tanggal);
+    const selected = new Set(rows.map(r => String(r.tanggal).slice(0, 10)));
+    const sortedDates = [...selected].sort();
+    const first = ltParse(sortedDates[0]);
+    const last = ltParse(sortedDates[sortedDates.length - 1]);
+
+    // Semua hari kalender dari tanggal pertama sampai terakhir
+    const days = [];
+    for (let d = new Date(first); d <= last; d.setDate(d.getDate() + 1)) {
+      const dt = new Date(d);
+      days.push({ key: ltKey(dt), dow: dt.getDay(), date: dt.getDate(), month: dt.getMonth(), year: dt.getFullYear() });
+    }
+    const todayKey = ltKey(new Date());
+
+    // Kelompokkan per pegawai
+    const byNip = new Map();
+    rows.forEach(r => {
+      const nip = String(r.nip || '').trim();
+      if (!byNip.has(nip)) byNip.set(nip, { nip, nama: r.nama || nip, days: {} });
+      const ket = (r.keterangan_status || '').toString().toUpperCase().trim();
+      byNip.get(nip).days[String(r.tanggal).slice(0, 10)] = ket
+        ? { ket }
+        : { masuk: r.jam_masuk, pulang: r.jam_pulang, mins: calculateOvertime(r.jam_pulang) };
+    });
+    const emps = [...byNip.values()].sort((a, b) => String(a.nama).localeCompare(String(b.nama), 'id'));
+
+    const LEMBUR = { color: '#3B82F6', bg: 'rgba(59,130,246,0.20)' };
+    const runDetail = {};
+    let runId = 0;
+
+    const periode = `${first.getDate()} ${LT_MONTH[first.getMonth()]} – ${last.getDate()} ${LT_MONTH[last.getMonth()]} ${last.getFullYear()}`;
+
+    const headCells = days.map(d => {
+      const cls = ['lt-h'];
+      if (d.dow === 0 || d.dow === 6) cls.push('lt-we');
+      if (!selected.has(d.key)) cls.push('lt-off');
+      if (d.date === 1) cls.push('lt-mo');
+      const num = d.key === todayKey ? `<span class="lt-today">${d.date}</span>` : `<span class="lt-num">${d.date}</span>`;
+      return `<div class="${cls.join(' ')}" role="columnheader" title="${LT_DAY_LONG[d.dow]}, ${d.date} ${LT_MONTH[d.month]} ${d.year}">
+        <span class="lt-dow">${LT_DAY_SHORT[d.dow]}</span>${num}</div>`;
+    }).join('');
+
+    const head = `<div class="lt-row lt-head" role="row">
+      <div class="lt-left" role="columnheader">
+        <i class="fas fa-moon lt-head-ico" aria-hidden="true"></i>
+        <div><div class="lt-head-t">Rekap Lembur</div><div class="lt-head-s">${periode}</div></div>
+      </div>${headCells}</div>`;
+
+    const body = emps.map(emp => {
+      // Sel latar (akhir pekan / hari tidak dipilih)
+      const bg = days.map((d, i) => {
+        const cls = ['lt-c'];
+        if (d.dow === 0 || d.dow === 6) cls.push('lt-we');
+        if (!selected.has(d.key)) cls.push('lt-off');
+        if (d.date === 1) cls.push('lt-mo');
+        if (d.key === todayKey) cls.push('lt-now');
+        return `<div class="${cls.join(' ')}" style="grid-column:${i + 2}" role="gridcell"></div>`;
+      }).join('');
+
+      // Gabungkan hari berurutan jadi satu bar
+      let total = 0;
+      const bars = [];
+      let i = 0;
+      while (i < days.length) {
+        const cell = emp.days[days[i].key];
+        const type = !cell ? null : (cell.ket ? 'K:' + cell.ket : (cell.mins > 0 ? 'L' : null));
+        if (!type) { i++; continue; }
+        let j = i;
+        const items = [];
+        let mins = 0;
+        while (j < days.length) {
+          const c = emp.days[days[j].key];
+          const t = !c ? null : (c.ket ? 'K:' + c.ket : (c.mins > 0 ? 'L' : null));
+          if (t !== type) break;
+          items.push({ d: days[j], c });
+          if (type === 'L') mins += c.mins;
+          j++;
+        }
+        const span = j - i;
+        let st, label;
+        if (type === 'L') {
+          st = LEMBUR; total += mins;
+          label = span >= 3 ? `${ltCompact(mins)} · ${span} hari` : ltCompact(mins);
+        } else {
+          const ket = type.slice(2);
+          const ks = ketStyle[ket] || { color: '#94A3B8', bg: 'rgba(148,163,184,0.18)' };
+          st = ks; label = ket;
+        }
+        const id = `r${runId++}`;
+        runDetail[id] = `<div class="lt-det-h"><strong>${ltEsc(emp.nama)}</strong> · ${ltEsc(label)}</div>` +
+          items.map(({ d, c }) => c.ket
+            ? `<div class="lt-det-i">${LT_DAY_LONG[d.dow]}, ${d.date} ${LT_MONTH[d.month]} — ${ltEsc(c.ket)}</div>`
+            : `<div class="lt-det-i">${LT_DAY_LONG[d.dow]}, ${d.date} ${LT_MONTH[d.month]} — masuk ${ltHm(c.masuk)}, pulang ${ltHm(c.pulang)}, lembur ${ltCompact(c.mins)}</div>`
+          ).join('');
+        bars.push(`<button type="button" class="lt-bar" data-run="${id}" style="grid-column:${i + 2} / span ${span};--c:${st.color};--cbg:${st.bg}" aria-label="${ltEsc(emp.nama)}: ${ltEsc(label)}">${ltEsc(label)}</button>`);
+        i = j;
+      }
+
+      return `<div class="lt-row" role="row">
+        <div class="lt-left" role="rowheader">
+          <div class="lt-who">
+            <div class="lt-name">${ltEsc(emp.nama)}</div>
+            <div class="lt-nip"><i class="fas fa-id-card" aria-hidden="true"></i> ${ltEsc(emp.nip)}</div>
+          </div>
+          <span class="lt-total${total > 0 ? ' has' : ''}">${ltCompact(total)}</span>
+        </div>${bg}${bars.join('')}</div>`;
+    }).join('');
+
+    window._ltRunDetail = runDetail;
+    return `<div class="lt-wrap" style="--lt-n:${days.length}" role="table" aria-label="Rekap lembur ${periode}">
+        <div class="lt-inner">${head}${body}</div>
+      </div>
+      <div class="lt-detail" id="ltDetail" aria-live="polite">Ketuk bar untuk melihat rincian per hari.</div>`;
+  }
+
+  document.addEventListener('click', (e) => {
+    const bar = e.target.closest && e.target.closest('.lt-bar');
+    if (!bar) return;
+    const box = document.getElementById('ltDetail');
+    if (!box || !window._ltRunDetail) return;
+    document.querySelectorAll('.lt-bar.sel').forEach(b => b.classList.remove('sel'));
+    bar.classList.add('sel');
+    box.innerHTML = window._ltRunDetail[bar.dataset.run] || '';
+  });
+
   function renderLemburResults(data) {
     const listEl = $('lemburResultList');
     if (!listEl) return;
@@ -1893,69 +2044,7 @@
       'TUBEL':  { color: '#ec4899', bg: 'rgba(236,72,153,0.12)',  icon: '<i class="fas fa-graduation-cap"></i>', border: '#ec4899' },
     };
 
-    const items = data.map(r => {
-      const minutes = calculateOvertime(r.jam_pulang);
-      const ket = (r.keterangan_status || '').toString().toUpperCase().trim();
-      const ketStyle = KET_STYLE[ket];
-
-      // Determine card border color
-      let borderColor = ket && ketStyle ? ketStyle.border : (minutes > 0 ? 'var(--success)' : 'rgba(255,255,255,0.1)');
-
-      // Duration / status display
-      let durasiHtml;
-      if (ket && ketStyle) {
-        durasiHtml = `
-          <div style="font-size:9px; color:var(--muted)">STATUS</div>
-          <div style="
-            display:inline-flex; align-items:center; gap:4px;
-            background:${ketStyle.bg};
-            color:${ketStyle.color};
-            border:1px solid ${ketStyle.color}55;
-            border-radius:8px;
-            padding:3px 10px;
-            font-size:12px;
-            font-weight:900;
-            margin-top:2px;
-            letter-spacing:0.5px;
-          ">${ketStyle.icon} ${ket}</div>
-        `;
-      } else {
-        const dur = formatDuration(minutes);
-        const durColor = minutes > 0 ? 'var(--gold)' : 'var(--muted)';
-        durasiHtml = `
-          <div style="font-size:9px; color:var(--muted)">DURASI LEMBUR</div>
-          <div style="font-size:14px; font-weight:900; color:${durColor}">${dur}</div>
-        `;
-      }
-
-      return `
-        <div class="card glass-card" style="margin-bottom:12px; border-left:4px solid ${borderColor}">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start">
-            <div>
-              <div style="font-size:13px; font-weight:800; color:var(--white)">${r.nama}</div>
-              <div style="font-size:10px; color:var(--muted); margin-bottom:8px">NIP: ${r.nip} | Tanggal: ${r.tanggal}</div>
-              
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
-                <div style="background:rgba(255,255,255,0.03); padding:6px; border-radius:8px">
-                  <div style="font-size:8px; color:var(--muted)">MASUK</div>
-                  <div style="font-size:11px; font-weight:700; color:var(--success)">${r.jam_masuk || '—'}</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.03); padding:6px; border-radius:8px">
-                  <div style="font-size:8px; color:var(--muted)">PULANG</div>
-                  <div style="font-size:11px; font-weight:700; color:var(--info)">${r.jam_pulang || '—'}</div>
-                </div>
-              </div>
-            </div>
-            
-            <div style="text-align:right; min-width:90px">
-              ${durasiHtml}
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    listEl.innerHTML = header + items;
+    listEl.innerHTML = header + buildLemburTimeline(data, KET_STYLE);
   }
 
   // Close dropdowns on click outside
