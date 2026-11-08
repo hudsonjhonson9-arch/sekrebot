@@ -288,14 +288,8 @@ async function loadJamAbsen() {
       jam.admin_ids.forEach(id => ADMIN_NIPS.push(String(id)));
     }
 
-    // Update global IS_ADMIN
-    const myNip = String(userProfile?.nip || localStorage.getItem('MY_NIP') || '').trim();
-    const myRole = (userProfile?.role || localStorage.getItem('MY_ROLE') || '').toUpperCase();
-    window.IS_ADMIN = ADMIN_NIPS.includes(myNip) || 
-                      myRole === 'SUPERADMIN' || 
-                      myRole === 'ADMIN' ||
-                      myRole.includes('SUPER') ||
-                      myRole.includes('ADMIN');
+    // Update global IS_ADMIN — panel admin = boolean user_list.is_admin (BUKAN role / ADMIN_NIPS)
+    window.IS_ADMIN = typeof isLogAdmin === 'function' && isLogAdmin();
 
     _applyAdminUI();
     if (typeof _applyAdminUIExtended === 'function') _applyAdminUIExtended();

@@ -104,3 +104,32 @@ test('helper isLogAdmin ada di state.js dan dipakai admin-mgmt/rekap', () => {
   assert.ok(!rekap.includes("isAdminRaw = isSA || (window.userProfile?.role"),
     'tombol edit rekap tidak boleh dari role');
 });
+
+// Panel admin (.admin-only / tab admin / window.IS_ADMIN) = boolean user_list.is_admin.
+test('setter window.IS_ADMIN (ui/admin-mgmt/profil) pakai isLogAdmin, bukan role/NIP', () => {
+  const ui = fs.readFileSync(path.join(ROOT, 'js', 'ui.js'), 'utf8');
+  const adminMgmt = fs.readFileSync(path.join(ROOT, 'js', 'admin-mgmt.js'), 'utf8');
+  const profil = fs.readFileSync(path.join(ROOT, 'js', 'profil.js'), 'utf8');
+
+  const applyAdminVis = ui.slice(ui.indexOf('function applyAdminVisibility'),
+    ui.indexOf('window.applyAdminVisibility'));
+  assert.match(applyAdminVis, /typeof isLogAdmin === 'function' && isLogAdmin\(\)/);
+  assert.ok(!applyAdminVis.includes('ADMIN_NIPS.includes'),
+    'applyAdminVisibility tidak boleh dari ADMIN_NIPS');
+  assert.ok(!applyAdminVis.includes("myRole === 'ADMIN'"),
+    'applyAdminVisibility tidak boleh dari role');
+  assert.ok(!applyAdminVis.includes('!!window.IS_ADMIN'),
+    'applyAdminVisibility tidak boleh menahan flag lama');
+
+  const jamBlock = adminMgmt.slice(adminMgmt.indexOf('// Update global IS_ADMIN'),
+    adminMgmt.indexOf("localStorage.setItem('jam_absen_bapperida'"));
+  assert.match(jamBlock, /window\.IS_ADMIN = typeof isLogAdmin === 'function' && isLogAdmin\(\);/);
+  assert.ok(!jamBlock.includes('ADMIN_NIPS.includes'), 'loadJamAbsen tidak boleh dari ADMIN_NIPS');
+  assert.ok(!jamBlock.includes("myRole === 'ADMIN'"), 'loadJamAbsen tidak boleh dari role');
+
+  const profileBlock = profil.slice(profil.indexOf('// Recalculate IS_ADMIN'),
+    profil.indexOf('// Jika status admin berubah'));
+  assert.match(profileBlock, /window\.IS_ADMIN = typeof isLogAdmin === 'function' && isLogAdmin\(\);/);
+  assert.ok(!profileBlock.includes('ADMIN_NIPS.includes'), 'applyProfile tidak boleh dari ADMIN_NIPS');
+  assert.ok(!profileBlock.includes("myRole === 'ADMIN'"), 'applyProfile tidak boleh dari role');
+});

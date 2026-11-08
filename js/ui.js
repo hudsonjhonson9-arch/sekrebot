@@ -132,14 +132,10 @@
 
     // ── Update Admin Visibility ──
     function applyAdminVisibility() {
-      const myNip = String(localStorage.getItem('MY_NIP') || '').trim();
       const myRole = String(localStorage.getItem('MY_ROLE') || 'USER').toUpperCase();
-      const isAdmin = (typeof ADMIN_NIPS !== 'undefined' && ADMIN_NIPS.includes(myNip)) || 
-                        myRole === 'SUPERADMIN' || 
-                        myRole === 'ADMIN' || 
-                        myRole === 'ADMIN GUDANG' ||
-                        !!window.IS_ADMIN;
-      
+      // Panel admin = boolean user_list.is_admin (BUKAN role / ADMIN_NIPS) — fail-closed.
+      const isAdmin = typeof isLogAdmin === 'function' && isLogAdmin();
+
       // Update global flag if needed
       window.IS_ADMIN = isAdmin;
       window.MY_ROLE = myRole; // Store for logic

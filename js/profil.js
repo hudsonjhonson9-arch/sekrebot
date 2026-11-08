@@ -165,14 +165,8 @@
       if (MY_ID && p.role) {
         window._adminRoleMap[MY_ID] = p.role;
         
-        // Recalculate IS_ADMIN based on role and NIP
-        const myNip = String(p.nip || '').trim();
-        const myRole = (p.role || localStorage.getItem('MY_ROLE') || '').toUpperCase();
-        window.IS_ADMIN = (typeof ADMIN_NIPS !== 'undefined' && ADMIN_NIPS.includes(myNip)) || 
-                          myRole === 'SUPERADMIN' || 
-                          myRole === 'ADMIN' ||
-                          myRole.includes('SUPER') ||
-                          myRole.includes('ADMIN');
+        // Recalculate IS_ADMIN = boolean user_list.is_admin (BUKAN role / ADMIN_NIPS) — fail-closed
+        window.IS_ADMIN = typeof isLogAdmin === 'function' && isLogAdmin();
 
         // Jika status admin berubah, re-apply UI
         if (typeof _applyAdminUIExtended === 'function') _applyAdminUIExtended();
