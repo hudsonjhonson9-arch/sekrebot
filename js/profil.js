@@ -46,7 +46,9 @@
               instansi_id: cleanS(d.instansi_id || d.Instansi_Id || ''),
               bidang: cleanS(d.bidang || d.Bidang || ''),
               tgl_pangkat: d.tgl_pangkat || d.tgl_kenaikan_pangkat || null,
-              tgl_berkala: d.tgl_berkala || d.tgl_kenaikan_berkala || null
+              tgl_berkala: d.tgl_berkala || d.tgl_kenaikan_berkala || null,
+              // Boolean user_list — sumber izin tambah/edit log (bukan role)
+              is_admin: d.is_admin === true || d.is_admin === 'true' || Number(d.is_admin) === 1
             };
             // Persist role and full object for other modules
             if (userProfile.role) {

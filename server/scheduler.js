@@ -92,7 +92,9 @@ export function buildTanpaBerita(item) {
 }
 
 const MASUK = ['MASUK', 'DI LUAR JAM MASUK'];
-const KET = ['IZIN', 'SAKIT', 'TUGAS', 'TUBEL', 'CUTI', 'TANPA BERITA'];
+// Lengkap dgn DL/TB/ALPA: hari yang sudah punya keterangan apa pun jangan
+// ditimpa TANPA BERITA oleh cron jam 10:00.
+const KET = ['IZIN', 'SAKIT', 'TUGAS', 'DL', 'TUBEL', 'CUTI', 'TB', 'TANPA BERITA', 'ALPA'];
 const has = (row, list) => list.includes(String(row['Jenis Absen'] || '').toUpperCase().trim());
 
 export function createScheduler({ query, sendTelegram, sendWhatsApp, logger = console, now = () => new Date() }) {

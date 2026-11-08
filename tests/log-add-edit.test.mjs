@@ -68,3 +68,39 @@ test('cache-buster admin-log & rekap ikut di-bump', () => {
   assert.match(html, /js\/admin-log\.js\?v=\d{8}[a-z]?/);
   assert.match(html, /js\/rekap\.js\?v=\d{8}[a-z]?/);
 });
+
+// Izin tambah/edit log = boolean user_list.is_admin, bukan role/IS_ADMIN.
+test('gate frontend openLogEditor & saveLog pakai isLogAdmin (bukan role)', () => {
+  assert.match(openLogEditor, /typeof isLogAdmin === 'function' && isLogAdmin\(\)/);
+  assert.ok(!openLogEditor.includes('userProfile?.role?.toLowerCase().includes'),
+    'openLogEditor tidak boleh menentukan admin dari role');
+  assert.ok(!openLogEditor.includes('window.IS_ADMIN'),
+    'openLogEditor tidak boleh fallback ke window.IS_ADMIN');
+  assert.match(saveLog, /typeof isLogAdmin === 'function' && isLogAdmin\(\)/);
+  assert.ok(!saveLog.includes('userProfile?.role?.toLowerCase().includes'),
+    'saveLog tidak boleh menentukan admin dari role');
+});
+
+test('server /add & /edit gate is_admin, bukan MEDIA_ROLES', () => {
+  assert.match(logSrv, /if \(req\.user\?\.is_admin !== true\)/);
+  const addBody = logSrv.slice(logSrv.indexOf("router.post('/add'"), logSrv.indexOf("router.post('/edit'"));
+  const editBody = logSrv.slice(logSrv.indexOf("router.post('/edit'"));
+  assert.ok(!addBody.includes('MEDIA_ROLES.has'), '/add tidak boleh gate lewat role');
+  assert.ok(!editBody.includes('MEDIA_ROLES.has'), '/edit tidak boleh gate lewat role');
+  assert.match(logSrv, /const media = MEDIA_ROLES\.has/, 'GET tetap pakai MEDIA_ROLES');
+});
+
+test('helper isLogAdmin ada di state.js dan dipakai admin-mgmt/rekap', () => {
+  const state = fs.readFileSync(path.join(ROOT, 'js', 'state.js'), 'utf8');
+  const adminMgmt = fs.readFileSync(path.join(ROOT, 'js', 'admin-mgmt.js'), 'utf8');
+  const rekap = fs.readFileSync(path.join(ROOT, 'js', 'rekap.js'), 'utf8');
+  const wwwState = fs.readFileSync(path.join(ROOT, 'www', 'js', 'state.js'), 'utf8');
+  assert.match(state, /function isLogAdmin\(\)/);
+  assert.match(state, /window\.isLogAdmin = isLogAdmin/);
+  assert.equal(wwwState, state, 'www/js/state.js mirror');
+  assert.match(adminMgmt, /isLogAdmin\(\)/);
+  assert.ok(!adminMgmt.includes('canAddLog = IS_ADMIN'), 'btnTambahLog bukan dari IS_ADMIN');
+  assert.match(rekap, /typeof isLogAdmin === 'function' && isLogAdmin\(\)/);
+  assert.ok(!rekap.includes("isAdminRaw = isSA || (window.userProfile?.role"),
+    'tombol edit rekap tidak boleh dari role');
+});

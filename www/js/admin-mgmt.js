@@ -327,8 +327,9 @@ function _applyAdminUI() {
 
   // Update visibility of manual log button in Rekap tab
   // ponytail: hanya admin bapperida yang boleh tambah log
+  // Izin = boolean user_list.is_admin (bukan role IS_ADMIN)
   const myInstansi = (window.userProfile?.instansi_id || localStorage.getItem('MY_INSTANSI') || '').toLowerCase().trim();
-  const canAddLog = IS_ADMIN && myInstansi === 'bapperida';
+  const canAddLog = (typeof isLogAdmin === 'function' && isLogAdmin()) && myInstansi === 'bapperida';
   const btnLog = $('btnTambahLog');
   if (btnLog) btnLog.style.display = canAddLog ? 'inline-block' : 'none';
 

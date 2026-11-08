@@ -59,7 +59,7 @@ export function hashDeviceToken(token) {
 // menunggu token kedaluwarsa. revoked_at IS NULL writable di luar is_active supaya
 // token yang dicabut tidak bisa dihidupkan lagi dengan sekadar menggeser flag.
 export const DEVICE_LOOKUP_SQL =
-  'SELECT u.id::text AS id, u."NIP" AS nip, u.role, u.instansi_id ' +
+  'SELECT u.id::text AS id, u."NIP" AS nip, u.role, u.is_admin, u.instansi_id ' +
   'FROM device_sessions d ' +
   'JOIN user_list u ON u.id::text = d.user_id ' +
   'WHERE d.token_hash = $1 AND d.is_active AND d.revoked_at IS NULL ' +
@@ -82,7 +82,7 @@ export const DEVICE_LOOKUP_SQL =
 // ponytail: hash scan 47 baris per session, tidak masalah; kalau user_list jadi
 // ratusan ribu, pakai u.id = s.user_id::bigint plus index.
 export const SESSION_LOOKUP_SQL =
-  'SELECT u.id::text AS id, u."NIP" AS nip, u.role, u.instansi_id ' +
+  'SELECT u.id::text AS id, u."NIP" AS nip, u.role, u.is_admin, u.instansi_id ' +
   'FROM auth_sessions s ' +
   'JOIN user_list u ON u.id::text = s.user_id ' +
   'WHERE s.session_token = $1 AND s.is_active AND s.expires_at > now()';
@@ -134,7 +134,15 @@ export function requireRole(roles, deps = {}) {
     }
     // id tetap string (lihat ::text di SQL): Task 5 harus memakainya lewat String(),
     // jangan pernah `req.user.id === <number>`.
-    req.user = { id: row.id, nip: row.nip, role, instansi_id: row.instansi_id };
+    // is_admin: boolean user_list — satu-satunya sumber izin tambah/edit log
+    // (bukan role). Fail-closed: selain true dianggap false.
+    req.user = {
+      id: row.id,
+      nip: row.nip,
+      role,
+      instansi_id: row.instansi_id,
+      is_admin: row.is_admin === true || row.is_admin === 'true',
+    };
     req.authKind = kind;
     next();
   };

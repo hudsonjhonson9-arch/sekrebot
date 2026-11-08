@@ -2027,10 +2027,10 @@
                </select>
              </div>
 
-             <!-- Pegawai Selection (Searchable Dropdown) -->
+             <!-- Pegawai Selection (Searchable Dropdown — multi-select) -->
              <div class="admin-field-wrap">
               <label style="display:block; font-size:11px; font-weight:800; color:var(--gold); margin-bottom:8px; text-transform:uppercase; letter-spacing:1px">
-                 <i class="fas fa-user-tie" style="margin-right:6px"></i> Pilih Pegawai
+                 <i class="fas fa-user-tie" style="margin-right:6px"></i> Pilih Pegawai <span style="color:var(--muted); font-weight:600; letter-spacing:0">(boleh pilih lebih dari 1)</span>
               </label>
               <div class="custom-search-dropdown" id="adminKetPegawaiContainer">
                 <div class="dropdown-trigger" onclick="toggleAdminKetDropdown()">
@@ -2038,11 +2038,12 @@
                   <input type="text" id="adminKetSearchInput" placeholder="Ketik nama atau NIP pegawai..." autocomplete="off" oninput="filterAdminKetPegawai(this.value)">
                   <i class="fas fa-chevron-down arrow-icon"></i>
                 </div>
+                <div id="adminKetSelectedPills" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;"></div>
                 <div class="dropdown-list-wrap" id="adminKetOptionsList">
                    <!-- List items akan diinject via JS -->
                 </div>
-                <!-- Hidden input untuk menyimpan value yang dipilih -->
-                <select id="adminKetPegawai" style="display:none"></select>
+                <!-- Hidden input: semua value terpilih (multi-select) -->
+                <select id="adminKetPegawai" style="display:none" multiple></select>
               </div>
             </div>
             
@@ -3184,8 +3185,13 @@
           <option value="TUGAS">TUGAS</option>
           <option value="TUBEL">TUBEL</option>
           <option value="CUTI">CUTI</option>
+          <option value="DL">DL</option>
+          <option value="TB">TB</option>
+          <option value="TANPA BERITA">TANPA BERITA</option>
+          <option value="ALPA">ALPA</option>
           <option value="DI LUAR JAM MASUK">DI LUAR JAM MASUK</option>
           <option value="DI LUAR JAM PULANG">DI LUAR JAM PULANG</option>
+          <option value="PULANG LUAR">PULANG LUAR</option>
         </select>
       </div>
       <div class="form-group"><label class="form-label">Keterangan</label><input type="text" id="inLogKet" class="form-input"></div>
@@ -3214,7 +3220,7 @@
   <script src="js/constants.js?v=20261011a"></script>
 
   <!-- 2. State global & Telegram init -->
-  <script src="js/state.js"></script>
+  <script src="js/state.js?v=20261108"></script>
 
   <!-- 3. Error handling & DOM helpers — dipakai semua modul -->
   <script src="js/errors.js"></script>
@@ -3227,20 +3233,20 @@
   <script src="js/network.js"></script>
 
   <!-- 4. Feature modules -->
-  <script src="js/profil.js?v=20261013a"></script>
+  <script src="js/profil.js?v=20261108"></script>
   <script src="js/face.js?v=20260706a"></script>
   <script src="js/absen.js?v=20261021a"></script>
 <script src="js/kontrol.js?v=20260811c"></script>
   <script src="js/keterangan.js"></script>
   <script src="js/log.js?v=20261013c"></script>
-  <script src="js/rekap.js?v=20261017b"></script>
+  <script src="js/rekap.js?v=20261108"></script>
 
   <!-- 5. Admin modules (split by section) -->
   <script src="js/admin-libur.js"></script>
   <script src="js/admin-lokasi-v9.js?v=9993"></script>
   <script src="js/admin-pegawai.js"></script>
-  <script src="js/admin-log.js?v=20261014b"></script>
-  <script src="js/admin-mgmt.js?v=3"></script>
+  <script src="js/admin-log.js?v=20261108"></script>
+  <script src="js/admin-mgmt.js?v=4"></script>
   <script src="js/weather.js"></script>
   <script src="js/admin-face.js?v=20260706c"></script>
 <script src="js/admin-kontrol.js?v=20260811a"></script>
@@ -3256,7 +3262,7 @@
 
   <!-- 6. Supplementary features -->
 
-  <script src="js/desktop.js?v=9993"></script>
+  <script src="js/desktop.js?v=9994"></script>
   <script src="js/signature.js"></script>
   <script src="js/meja.js"></script>
   <script src="js/rekap-pdf.js?v=20261017b"></script>

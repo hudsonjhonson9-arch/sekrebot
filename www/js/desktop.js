@@ -217,6 +217,7 @@
     }
 
     let _allAdminPegawai = []; // Cache untuk pencarian
+    let _adminKetSelected = []; // Multi-select: [{id, nama, nip}]
 
     /**
      * Memuat daftar pegawai ke dalam dropdown Keterangan Admin (Ops).
@@ -266,18 +267,26 @@
     function renderAdminKetPegawaiList(list) {
       const el = $('adminKetOptionsList');
       if (!el) return;
-      
+
       if (list.length === 0) {
         el.innerHTML = '<div style="padding:15px; text-align:center; font-size:11px; color:var(--muted)"><i class="fas fa-search"></i> Tidak ada hasil yang cocok</div>';
         return;
       }
 
-      el.innerHTML = list.map(u => `
-        <div class="dropdown-item" onclick="selectAdminKetPegawai('${u.id}', '${u.nama.replace(/'/g, "\\'")}', '${u.nip}')">
-          <span class="item-name">${u.nama}</span>
-          <span class="item-nip"><i class="fas fa-id-card"></i> ${u.nip || '—'}</span>
+      el.innerHTML = list.map(u => {
+        const isSelected = _adminKetSelected.some(s => String(s.id) === String(u.id));
+        return `
+        <div class="dropdown-item ${isSelected ? 'selected' : ''}" onclick="selectAdminKetPegawai('${u.id}', '${u.nama.replace(/'/g, "\\'")}', '${u.nip}')">
+          <div style="display:flex; align-items:center; justify-content:space-between; width:100%">
+            <div>
+              <span class="item-name">${u.nama}</span>
+              <span class="item-nip"><i class="fas fa-id-card"></i> ${u.nip || '—'}</span>
+            </div>
+            ${isSelected ? '<i class="fas fa-check-circle" style="color:var(--success)"></i>' : ''}
+          </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
 
     function toggleAdminKetDropdown(forceClose = false) {
@@ -307,24 +316,51 @@
     }
 
     function selectAdminKetPegawai(id, nama, nip) {
-      const searchInput = $('adminKetSearchInput');
-      const hiddenSelect = $('adminKetPegawai');
-      
-      if (searchInput) searchInput.value = nama;
-      
-      // Update hidden select for existing logic compatibility
-      if (hiddenSelect) {
-        hiddenSelect.innerHTML = `<option value="${id}" data-nama="${nama}" data-nip="${nip}" selected>${nama}</option>`;
+      const idx = _adminKetSelected.findIndex(s => String(s.id) === String(id));
+      if (idx > -1) {
+        _adminKetSelected.splice(idx, 1);
+      } else {
+        _adminKetSelected.push({ id, nama, nip });
       }
-      
-      toggleAdminKetDropdown(true);
-      
+
+      renderAdminKetPills();
+      renderAdminKetPegawaiList(_allAdminPegawai);
+      syncAdminKetHiddenSelect();
+
+      // Multi-select: dropdown tetap terbuka, kosongkan pencarian
+      const searchInput = $('adminKetSearchInput');
+      if (searchInput) searchInput.value = '';
+      const container = $('adminKetPegawaiContainer');
+      if (container && !container.classList.contains('open')) container.classList.add('open');
+      if (searchInput) searchInput.focus();
+
       // Visual feedback
       const trigger = document.querySelector('#adminKetPegawaiContainer .dropdown-trigger');
       if (trigger) {
         trigger.style.borderColor = 'var(--success)';
         setTimeout(() => trigger.style.borderColor = '', 2000);
       }
+    }
+
+    // Sinkronkan hidden select dengan selection (kompatibilitas lama)
+    function syncAdminKetHiddenSelect() {
+      const hiddenSelect = $('adminKetPegawai');
+      if (!hiddenSelect) return;
+      hiddenSelect.innerHTML = _adminKetSelected.map(u =>
+        `<option value="${u.id}" data-nama="${u.nama}" data-nip="${u.nip}" selected>${u.nama}</option>`
+      ).join('');
+    }
+
+    function renderAdminKetPills() {
+      const el = $('adminKetSelectedPills');
+      if (!el) return;
+      if (_adminKetSelected.length === 0) { el.innerHTML = ''; return; }
+      el.innerHTML = _adminKetSelected.map(u => `
+        <div class="pegawai-pill">
+          <span>${u.nama.split(' ')[0]}</span>
+          <i class="fas fa-times-circle" onclick="event.stopPropagation(); selectAdminKetPegawai('${u.id}', '${u.nama.replace(/'/g, "\\'")}', '${u.nip || ''}')"></i>
+        </div>
+      `).join('');
     }
 
     // Close dropdown on click outside
@@ -390,27 +426,27 @@
 
     /**
      * Simpan keterangan pegawai (Izin, Sakit, Tugas) oleh Admin.
+     * Mendukung multi-pegawai: di-loop klien, bukti di-upload sekali lalu
+     * drive_link-nya dipakai ulang untuk pegawai berikutnya.
      */
     async function adminSimpanKeterangan() {
-      const sel = $('adminKetPegawai'), jns = $('adminKetJenis'), msg = $('adminKetPesan');
+      const jns = $('adminKetJenis'), msg = $('adminKetPesan');
       const tgl1 = $('adminKetTglMulai'), tgl2 = $('adminKetTglSelesai');
       const btn = $('btnAdminSimpanKet');
       const resEl = $('adminKetResult');
 
-      if (!sel || !sel.value || !jns || !msg || !tgl1.value) {
-        showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Data Belum Lengkap', 'Pilih pegawai, jenis, tgl mulai, dan alasan.');
+      if (!_adminKetSelected.length || !jns || !msg || !tgl1.value) {
+        showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Data Belum Lengkap', 'Pilih pegawai (boleh lebih dari 1), jenis, tgl mulai, dan alasan.');
         if (resEl) { resEl.style.display = 'block'; resEl.className = 'premium-toast r-warning'; }
         return;
       }
 
-      const opt = sel.options[sel.selectedIndex];
-      
-      // Validation for proof requirement (matching server-side logic)
+      // Validation for proof requirement (matching server-side logic) — cukup 1x
       const start = new Date(tgl1.value);
       const end = new Date(tgl2.value || tgl1.value);
       const durasi = Math.round((end - start) / (864e5)) + 1;
       const adaBukti = !!_adminKetFileBase64;
-      
+
       if (jns.value === 'TUGAS' && !adaBukti) {
         showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'warning', '<i class="fas fa-paperclip"></i>', 'Bukti Wajib', 'Surat Tugas / Dinas Luar wajib menyertakan lampiran bukti.');
         if (resEl) { resEl.style.display = 'block'; resEl.className = 'premium-toast r-warning'; }
@@ -422,55 +458,87 @@
         return;
       }
 
-      const payload = {
-        user_id: sel.value,
-        nip: opt.dataset.nip,
-        request_id: `admin_ket_${opt.dataset.nip}_${Date.now()}`,
-        user: {
-          id: sel.value,
-          nama: opt.dataset.nama,
-          nip: opt.dataset.nip
-        },
-        jenis: jns.value,
-        keterangan: msg.value,
-        tgl_mulai: tgl1.value,
-        tgl_selesai: tgl2.value || tgl1.value,
-        bukti_base64: _adminKetFileBase64,
-        bukti_mime: _adminKetFileMime,
-        bukti_nama: _adminKetFileName,
-        admin_id: MY_ID,
-        admin_nama: userProfile?.nama || userProfile?.username || 'Admin',
-        source: 'admin_panel',
-        timestamp: Math.floor(Date.now() / 1000)
-      };
-
+      const targets = _adminKetSelected.slice();
       if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> MENYIMPAN DATA...'; }
       if (resEl) resEl.style.display = 'none';
 
-      try {
-        const { ok, data } = await apiPost(P.keteranganAdd, payload);
-        if (ok && data?.ok !== false) {
-          showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'success', '<i class="fas fa-check"></i>', 'Berhasil Disimpan', `Keterangan ${jns.value} untuk ${payload.user.nama} telah masuk ke sistem.`);
-          if (resEl) { resEl.style.display = 'block'; resEl.className = 'premium-toast r-success'; }
-          
-          // Reset Form dengan Delay agar user sempat lihat status sukses
-          setTimeout(() => {
-             msg.value = ''; 
-             clearAdminKetFile();
-             if (resEl) resEl.style.display = 'none';
-          }, 3500);
+      const results = [];
+      let driveLink = ''; // Upload bukti terjadi di request pertama; sisanya pakai link ini
+      const ts = Date.now();
 
-          if (typeof loadKonfirmasiAdmin === 'function') loadKonfirmasiAdmin();
-        } else {
-          showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal Simpan', data?.message || 'Permintaan ditolak oleh server.');
-          if (resEl) { resEl.style.display = 'block'; resEl.className = 'premium-toast r-fail'; }
+      for (let i = 0; i < targets.length; i++) {
+        const p = targets[i];
+        const payload = {
+          user_id: p.id,
+          nip: p.nip,
+          request_id: `admin_ket_${p.nip || p.id}_${ts}_${i}`,
+          user: { id: p.id, nama: p.nama, nip: p.nip },
+          jenis: jns.value,
+          keterangan: msg.value,
+          tgl_mulai: tgl1.value,
+          tgl_selesai: tgl2.value || tgl1.value,
+          admin_id: MY_ID,
+          admin_nama: userProfile?.nama || userProfile?.username || 'Admin',
+          source: 'admin_panel',
+          timestamp: Math.floor(Date.now() / 1000)
+        };
+        if (driveLink) {
+          payload.drive_link = driveLink; // Reuse bukti yang sudah ter-upload
+        } else if (_adminKetFileBase64) {
+          payload.bukti_base64 = _adminKetFileBase64;
+          payload.bukti_mime = _adminKetFileMime;
+          payload.bukti_nama = _adminKetFileName;
         }
-      } catch (e) {
-        showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'fail', '<i class="fas fa-plug"></i>', 'Koneksi Bermasalah', 'Gagal menghubungi server. Periksa jaringan Anda.');
-        if (resEl) { resEl.style.display = 'block'; resEl.className = 'premium-toast r-fail'; }
-      } finally {
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px"></i> SIMPAN KETERANGAN'; }
+
+        try {
+          const { ok, data } = await apiPost(P.keteranganAdd, payload);
+          if (ok && data?.ok !== false) {
+            if (!driveLink && data?.data?.drive_link) driveLink = data.data.drive_link;
+            results.push({ id: p.id, nama: p.nama, ok: true });
+          } else {
+            results.push({ id: p.id, nama: p.nama, ok: false, message: data?.message || 'Permintaan ditolak oleh server.' });
+          }
+        } catch (e) {
+          results.push({ id: p.id, nama: p.nama, ok: false, message: 'Koneksi bermasalah.' });
+        }
       }
+
+      const sukses = results.filter(r => r.ok);
+      const gagal = results.filter(r => !r.ok);
+
+      if (gagal.length === 0) {
+        const namaStr = targets.length === 1 ? targets[0].nama : `${targets.length} pegawai`;
+        showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'success', '<i class="fas fa-check"></i>', 'Berhasil Disimpan', `Keterangan ${jns.value} untuk ${namaStr} telah masuk ke sistem.`);
+        if (resEl) { resEl.style.display = 'block'; resEl.className = 'premium-toast r-success'; }
+
+        // Reset Form dengan Delay agar user sempat lihat status sukses
+        setTimeout(() => {
+          msg.value = '';
+          clearAdminKetFile();
+          _adminKetSelected = [];
+          renderAdminKetPills();
+          syncAdminKetHiddenSelect();
+          renderAdminKetPegawaiList(_allAdminPegawai);
+          const si = $('adminKetSearchInput'); if (si) si.value = '';
+          if (resEl) resEl.style.display = 'none';
+        }, 3500);
+      } else if (sukses.length === 0) {
+        showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal Simpan', gagal[0].message);
+        if (resEl) { resEl.style.display = 'block'; resEl.className = 'premium-toast r-fail'; }
+      } else {
+        // Hasil parsial: sukses di-reset, yang gagal tetap terpilih agar bisa diulang
+        const gagalIds = new Set(gagal.map(g => String(g.id)));
+        _adminKetSelected = _adminKetSelected.filter(p => gagalIds.has(String(p.id)));
+        renderAdminKetPills();
+        syncAdminKetHiddenSelect();
+        renderAdminKetPegawaiList(_allAdminPegawai);
+        const siP = $('adminKetSearchInput'); if (siP) siP.value = '';
+        showResult('adminKetResult', 'adminKetRIcon', 'adminKetRTitle', 'adminKetRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Tersimpan Sebagian', `${sukses.length} berhasil, ${gagal.length} gagal (${gagal.map(g => g.nama).join(', ')}): ${gagal[0].message}`);
+        if (resEl) { resEl.style.display = 'block'; resEl.className = 'premium-toast r-warning'; }
+      }
+
+      if (typeof loadKonfirmasiAdmin === 'function') loadKonfirmasiAdmin();
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px"></i> SIMPAN KETERANGAN'; }
     }
 
     function initSuperadminAdminKetScoping() {

@@ -33,11 +33,11 @@
     let _logJenisDisentuh = false;
 
     async function openLogEditor(uid = '', date = '', log = null, hintJenis = '') {
-      const isSA = typeof _isSuperAdmin === 'function' && _isSuperAdmin();
-      const isAdmin = isSA || (window.userProfile?.role?.toLowerCase().includes('admin')) || !!window.IS_ADMIN;
+      // Izin = boolean user_list.is_admin (bukan role). Fail-closed via isLogAdmin().
+      const isAdmin = typeof isLogAdmin === 'function' && isLogAdmin();
 
       if (!isAdmin) {
-        alert('Maaf, hanya Admin atau Super Admin yang diizinkan untuk menambah atau mengedit log secara manual.');
+        alert('Maaf, hanya Admin yang diizinkan untuk menambah atau mengedit log secara manual.');
         return;
       }
 
@@ -63,12 +63,40 @@
       };
 
       $('inLogPegawai').value = uid;
-      $('inLogTanggal').value = date || fmtD(nowWITA());
+      // Bug A: tanggal harus dari baris log yang diedit, bukan `_dari` (awal
+      // periode rekap) — kalau tidak, UPDATE memindahkan log ke tanggal lain.
+      const tglLog = log ? String(log.Tanggal || log.tanggal || '').slice(0, 10) : '';
+      $('inLogTanggal').value = /^\d{4}-\d{2}-\d{2}$/.test(tglLog) ? tglLog : (date || fmtD(nowWITA()));
       $('inLogJam').value = log ? ((log.Jam || log.jam || '').substring(0, 5)) : '';
-      $('inLogJenis').value = log ? (log['Jenis Absen'] || log.jenis_absen || log.Jenis || 'MASUK') : (hintJenis || 'MASUK');
+      const jenisVal = log ? (log['Jenis Absen'] || log.jenis_absen || log.Jenis || 'MASUK') : (hintJenis || 'MASUK');
+      // Bug B: pastikan jenis yang diedit selalu punya opsi di dropdown,
+      // walau belum terdaftar di index.html (mis. DL, TANPA BERITA, ...).
+      const selJenis = $('inLogJenis');
+      if (jenisVal && selJenis && !Array.prototype.some.call(selJenis.options, o => o.value === jenisVal)) {
+        const optJenis = document.createElement('option');
+        optJenis.value = jenisVal;
+        optJenis.textContent = jenisVal;
+        selJenis.appendChild(optJenis);
+      }
+      selJenis.value = jenisVal || 'MASUK';
       // Edit / tombol + dengan hint = jenis sudah ditentukan; jangan diubah auto.
       _logJenisDisentuh = !!(log || hintJenis);
       $('inLogKet').value = log ? (log.Ket || log.ket || log.keterangan || '') : '';
+      // Bug C: subjek tak boleh diganti saat edit — server sengaja mengabaikan
+      // perubahan ID/Nama/NIP, jadi mengganti pegawai hanya menipu admin
+      // (tampak sukses padahal catatan tetap milik orang lama).
+      const ddWrap = $('inLogPegawaiDd');
+      const ddInput = ddWrap ? ddWrap.querySelector('input') : null;
+      if (ddInput) {
+        ddInput.disabled = !!existingId;
+        ddInput.style.cursor = existingId ? 'not-allowed' : '';
+        ddInput.title = existingId ? 'Pegawai tidak bisa diganti saat mengedit log' : '';
+      }
+      if (ddWrap) {
+        ddWrap.style.pointerEvents = existingId ? 'none' : '';
+        ddWrap.style.opacity = existingId ? '.6' : '';
+        if (existingId) ddWrap.classList.remove('open');
+      }
       dom.hide('logFormResult');
       applyMode();
 
@@ -157,11 +185,11 @@
     async function saveLog() {
       if (_isLogSubmitting) return; // Prevent double submission
 
-      const isSA = typeof _isSuperAdmin === 'function' && _isSuperAdmin();
-      const isAdmin = isSA || (window.userProfile?.role?.toLowerCase().includes('admin')) || !!window.IS_ADMIN;
+      // Izin = boolean user_list.is_admin (bukan role). Fail-closed via isLogAdmin().
+      const isAdmin = typeof isLogAdmin === 'function' && isLogAdmin();
 
       if (!isAdmin) {
-        alert('Maaf, hanya Admin atau Super Admin yang diizinkan untuk menyimpan log.');
+        alert('Maaf, hanya Admin yang diizinkan untuk menyimpan log.');
         return;
       }
       

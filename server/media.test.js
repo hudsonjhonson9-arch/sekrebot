@@ -418,7 +418,7 @@ test('requireRole meneruskan request dan menempelkan identitas untuk role yang d
   assert.equal(status, 0, 'tidak boleh membalas sendiri kalau sudah lolos');
   assert.equal(body, null);
   assert.equal(nexted, true);
-  assert.deepEqual(req.user, { id: '7', nip: '1990', role: 'ADMIN', instansi_id: 'bapperida' });
+  assert.deepEqual(req.user, { id: '7', nip: '1990', role: 'ADMIN', instansi_id: 'bapperida', is_admin: false });
   // Kontrak tipe id: STRING, bukan number. user_list.id itu bigint dan parser default
   // node-postgres (OID 20) sudah jadi string; ::text di SQL mengunci itu. Kalau ini
   // jadi number, `req.user.id === 7` di Task 5 diam-diam salah.
@@ -431,10 +431,11 @@ test('requireRole meneruskan request dan menempelkan identitas untuk role yang d
 });
 
 test('role hidup dari user_list menang atas snapshot role di baris sesi', () => {
-  // Bagian SQL: kolom yang dibaca adalah u.role, bukan s.role.
+  // Bagian SQL: kolom yang dibaca adalah u.role, bukan s.role. u.is_admin ikut
+  // di-select — gate /api/log/add|edit membaca boolean itu.
   assert.match(
     SESSION_LOOKUP_SQL,
-    /SELECT\s+u\.id::text AS id,\s*u\."NIP" AS nip,\s*u\.role,\s*u\.instansi_id/i,
+    /SELECT\s+u\.id::text AS id,\s*u\."NIP" AS nip,\s*u\.role,\s*u\.is_admin,\s*u\.instansi_id/i,
   );
   assert.doesNotMatch(SESSION_LOOKUP_SQL, /\bs\.role\b/, 'snapshot role sesi tidak boleh dipakai');
   // Join lewat user_id (primary key), bukan NIP: index user_list."NIP" NON-unique,

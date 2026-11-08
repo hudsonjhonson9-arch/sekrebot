@@ -77,9 +77,30 @@ test('lookup yang melempar jadi 500, bukan diloloskan sebagai otorisasi', async 
 test('sesi valid mengisi req.user dari user_list', async () => {
   const req = { headers: { authorization: `Bearer ${TOKEN}` } };
   const res = fakeRes();
-  const lookup = async () => ({ id: '7', nip: '77', role: 'user', instansi_id: 'bapperida' });
+  const lookup = async () => ({ id: '7', nip: '77', role: 'user', instansi_id: 'bapperida', is_admin: false });
   await requireRole(ABSEN_ROLES, { lookup })(req, res, () => {});
-  assert.deepEqual(req.user, { id: '7', nip: '77', role: 'USER', instansi_id: 'bapperida' });
+  assert.deepEqual(req.user, { id: '7', nip: '77', role: 'USER', instansi_id: 'bapperida', is_admin: false });
+});
+
+test('is_admin dari user_list dibawa ke req.user (bukan dari role)', async () => {
+  const req = { headers: { authorization: `Bearer ${TOKEN}` } };
+  const res = fakeRes();
+  // role USER sekalipun, is_admin=true harus diteruskan — gate /api/log/add|edit
+  // membaca boolean ini, bukan role.
+  const lookup = async () => ({ id: '7', nip: '77', role: 'USER', instansi_id: 'bapperida', is_admin: true });
+  await requireRole(ABSEN_ROLES, { lookup })(req, res, () => {});
+  assert.equal(req.user.is_admin, true);
+
+  // Fail-closed: selain true (undefined/null/'true' string yang bukan boolean) = false
+  const req2 = { headers: { authorization: `Bearer ${TOKEN}` } };
+  const lookup2 = async () => ({ id: '8', nip: '88', role: 'ADMIN', instansi_id: 'bapperida' });
+  await requireRole(ABSEN_ROLES, { lookup: lookup2 })(req2, fakeRes(), () => {});
+  assert.equal(req2.user.is_admin, false);
+});
+
+test('lookup SQL mengambil kolom is_admin dari user_list', () => {
+  assert.match(SESSION_LOOKUP_SQL, /u\.is_admin/);
+  assert.match(SESSION_LOOKUP_SQL, /SELECT\s+u\.id::text AS id, u\."NIP" AS nip, u\.role, u\.is_admin, u\.instansi_id/);
 });
 
 // BENDAHARA BARANG = admin aset saja: di SIMAPO_ROLES (mount /api/simapo) tapi

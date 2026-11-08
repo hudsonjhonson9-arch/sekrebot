@@ -12,6 +12,7 @@ const ADMIN = {
   nip: '198001012000011001',
   role: 'ADMIN',
   instansi_id: 'bapperida',
+  is_admin: true,
 };
 
 // Body dari frontend. `telegram_id` bernama misleading: isinya user_list.id,
@@ -104,10 +105,33 @@ test('menolak request tanpa bearer', async () => {
   assert.equal(r.status, 401);
 });
 
-test('menolak role non-media (USER)', async () => {
+test('menolak is_admin=false (apapun role)', async () => {
   reset();
-  const h = harness({ session: { ...ADMIN, role: 'USER' } });
+  const h = harness({ session: { ...ADMIN, is_admin: false } });
   const r = await post(h, '/api/log/add', BODY);
+  assert.equal(r.status, 403);
+});
+
+test('mengizinkan is_admin=true walau role USER', async () => {
+  reset();
+  const h = harness({ session: { ...ADMIN, role: 'USER', is_admin: true } });
+  const r = await post(h, '/api/log/add', BODY);
+  assert.equal(r.status, 200);
+  assert.ok(h.sql.some((s) => /INSERT INTO/i.test(s.text)), 'harus INSERT');
+});
+
+test('menolak role ADMIN dengan is_admin=false (bukan role yang menentukan)', async () => {
+  reset();
+  const h = harness({ session: { ...ADMIN, role: 'ADMIN', is_admin: false } });
+  const r = await post(h, '/api/log/edit', { ...BODY, ID_Log: '10355' });
+  assert.equal(r.status, 403);
+  assert.ok(!h.sql.some((s) => /UPDATE /i.test(s.text)), 'tidak boleh UPDATE');
+});
+
+test('/edit juga menjaga is_admin (bukan hanya /add)', async () => {
+  reset();
+  const h = harness({ session: { ...ADMIN, is_admin: false } });
+  const r = await post(h, '/api/log/edit', { ...BODY, ID_Log: '10355' });
   assert.equal(r.status, 403);
 });
 

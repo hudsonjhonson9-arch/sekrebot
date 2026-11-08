@@ -115,6 +115,25 @@ if (window.tg) {
 window.IS_ADMIN = false;
 let adminLoaded = false;
 
+// Izin jalur log (tambah/edit) = boolean user_list.is_admin, BUKAN role.
+// Sumber: userProfile (login userList / profil) atau cache login web (USER_OBJ).
+// Fail-closed: tanpa data dianggap false.
+function isLogAdmin() {
+  const truthy = (v) => v === true || String(v).toLowerCase() === 'true' || Number(v) === 1;
+  const p = window.userProfile;
+  if (p && p.is_admin !== undefined && p.is_admin !== null && p.is_admin !== '') {
+    return truthy(p.is_admin);
+  }
+  try {
+    const u = JSON.parse(localStorage.getItem('tg_user_obj_v5') || 'null');
+    if (u && u.is_admin !== undefined && u.is_admin !== null && u.is_admin !== '') {
+      return truthy(u.is_admin);
+    }
+  } catch (e) { /* cache rusak = false */ }
+  return false;
+}
+window.isLogAdmin = isLogAdmin;
+
 // Helper: Tunggu Telegram ID siap (tapi sekarang instan jika ada cache)
 async function waitForMyId() {
   if (window.MY_ID) return String(window.MY_ID);

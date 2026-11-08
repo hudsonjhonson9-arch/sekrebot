@@ -648,8 +648,8 @@ function renderRekap(pg) {
 
   _rekapFilteredPg = filteredPg;
 
-  const isSA = typeof _isSuperAdmin === 'function' && _isSuperAdmin();
-  const isAdminRaw = isSA || (window.userProfile?.role?.toLowerCase().includes('admin')) || !!window.IS_ADMIN;
+  // Izin tombol edit/tambah log = boolean user_list.is_admin (bukan role)
+  const isAdminRaw = typeof isLogAdmin === 'function' && isLogAdmin();
   // ponytail: hanya admin bapperida yang boleh tambah/edit log di rekap
   const myInstansi = (window.userProfile?.instansi_id || localStorage.getItem('MY_INSTANSI') || '').toLowerCase().trim();
   const isAdmin = isAdminRaw && myInstansi === 'bapperida';
@@ -781,7 +781,7 @@ function renderRekap(pg) {
         </div>
 
         <!-- ── CARD JAM MASUK / PULANG ── -->
-        ${isKet ? `
+        ${(isKet || (isAlpa && p._rawKetLog)) ? `
           <div style="background:${masukBg}; border:1px solid ${masukColor}33; border-radius:10px; padding:10px 12px; position:relative; overflow:hidden; margin-bottom:8px;">
             ${isAdmin && p._rawKetLog ? `
               <button onclick="event.stopPropagation(); openLogEditor('${p.id}', '${_dari}', ${JSON.stringify(p._rawKetLog).replace(/"/g, '&quot;')})" 

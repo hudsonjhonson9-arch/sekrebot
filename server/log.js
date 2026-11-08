@@ -35,6 +35,14 @@ export const UPDATE_SQL_INSTANSI =
 
 const PESAN_TIDAK_LENGKAP = 'Data tidak lengkap (ID, Tanggal, Jam, Jenis wajib).';
 
+// Kelompok jenis keterangan & alpa — per pegawai+tanggal hanya boleh ada
+// satu baris keterangan (keputusan: gantikan, jangan tumpuk).
+export const KET_GROUP = ['IZIN', 'SAKIT', 'TUGAS', 'DL', 'TUBEL', 'CUTI', 'TB', 'TANPA BERITA', 'ALPA'];
+const ALPA_GROUP = ['TB', 'TANPA BERITA', 'ALPA'];
+// Jenis berbasis waktu: keberadaannya membuktikan pegawai hadir, sehingga
+// baris TANPA BERITA/TB/ALPA di tanggal sama harus dibuang.
+const TIME_GROUP = ['MASUK', 'PULANG', 'DI LUAR JAM MASUK', 'DI LUAR JAM PULANG', 'PULANG LUAR'];
+
 const S = (v) => (v === undefined || v === null ? '' : String(v).trim());
 
 export function pickLog(body) {
@@ -103,7 +111,8 @@ export function createLogRouter({ query }) {
 
   router.post('/add', async (req, res) => {
     try {
-      if (!MEDIA_ROLES.has(String(req.user?.role || '').toUpperCase())) {
+      // Izin tulis = boolean user_list.is_admin (bukan role). Fail-closed.
+      if (req.user?.is_admin !== true) {
         return res.status(403).json({ ok: false, message: 'Forbidden' });
       }
       const v = pickLog(req.body || {});
@@ -121,13 +130,53 @@ export function createLogRouter({ query }) {
         return res.status(403).json({ ok: false, message: 'Forbidden' });
       }
 
+      const bebas = req.user?.role === 'SUPERADMIN';
+      const tgl = String(v.tanggal).slice(0, 10);
+
+      // ── 1 keterangan per pegawai+tanggal ──
+      // Jenis keterangan menimpa baris keterangan lain di tanggal yang sama
+      // (mis. TANPA BERITA → SAKIT), bukan INSERT baris kedua.
+      if (KET_GROUP.includes(v.jenis)) {
+        const params = [v.subjectId, tgl, KET_GROUP];
+        if (!bebas) params.push(req.user?.instansi_id);
+        const { rows: ketRows } = await query(
+          `SELECT "ID_Log" FROM "Log_Absen" WHERE "ID"::text=$1 AND "Tanggal"=$2 AND "Jenis Absen" = ANY($3::text[])`
+          + (bebas ? '' : ' AND instansi_id=$4')
+          + ' ORDER BY "ID_Log" DESC LIMIT 1',
+          params
+        );
+        if (ketRows[0]) {
+          const sql = bebas ? UPDATE_BY_KEYS : UPDATE_BY_KEYS_INSTANSI;
+          const upd = bebas
+            ? [v.tanggal, v.jam, v.jenis, v.ket, String(ketRows[0].ID_Log)]
+            : [v.tanggal, v.jam, v.jenis, v.ket, String(ketRows[0].ID_Log), req.user?.instansi_id];
+          await query(sql, upd);
+          return res.json({ ok: true, message: 'Log absen diperbarui.', updated: true });
+        }
+      } else if (TIME_GROUP.includes(v.jenis)) {
+        // Ada scan nyata → baris TANPA BERITA/TB/ALPA di tanggal itu salah
+        // dan harus dihapus, jangan hidup berdampingan dengan log masuk.
+        const params = [v.subjectId, tgl, ALPA_GROUP];
+        if (!bebas) params.push(req.user?.instansi_id);
+        const { rows: alpaRows } = await query(
+          `SELECT "ID_Log" FROM "Log_Absen" WHERE "ID"::text=$1 AND "Tanggal"=$2 AND "Jenis Absen" = ANY($3::text[])`
+          + (bebas ? '' : ' AND instansi_id=$4'),
+          params
+        );
+        for (const r of alpaRows) {
+          await query(
+            bebas ? 'DELETE FROM "Log_Absen" WHERE "ID_Log"=$1' : 'DELETE FROM "Log_Absen" WHERE "ID_Log"=$1 AND instansi_id=$2',
+            bebas ? [String(r.ID_Log)] : [String(r.ID_Log), req.user?.instansi_id],
+          );
+        }
+      }
+
       // Upsert: kalau pegawai+tanggal+jenis ini SUDAH punya log, artinya ini
       // koreksi/ulang — perbarui baris itu, jangan buat duplikat baru.
       const existingId = await resolveExistingLogId({
         req, subjectId: v.subjectId, tanggal: v.tanggal, jenis: v.jenis,
       });
       if (existingId) {
-        const bebas = req.user?.role === 'SUPERADMIN';
         const sql = bebas ? UPDATE_BY_KEYS : UPDATE_BY_KEYS_INSTANSI;
         const params = bebas
           ? [v.tanggal, v.jam, v.jenis, v.ket, existingId]
@@ -148,7 +197,8 @@ export function createLogRouter({ query }) {
 
   router.post('/edit', async (req, res) => {
     try {
-      if (!MEDIA_ROLES.has(String(req.user?.role || '').toUpperCase())) {
+      // Izin tulis = boolean user_list.is_admin (bukan role). Fail-closed.
+      if (req.user?.is_admin !== true) {
         return res.status(403).json({ ok: false, message: 'Forbidden' });
       }
       const v = pickLog(req.body || {});

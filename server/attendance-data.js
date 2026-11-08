@@ -268,7 +268,30 @@ async function rekapAbsenHandler(req, res, query) {
 
 async function qx(q, sql, params){ return typeof q === 'function' ? q(sql, params) : q.query(sql, params); }
 
+// Kelompok jenis keterangan: per pegawai+tanggal hanya boleh ada SATU baris.
+// Dipakai applyApprovedKeterangan supaya approve tidak menumpuk log baru di
+// atas baris yang sudah ada (mis. TANPA BERITA dari cron jam 10:00).
+const KET_GROUP = ['IZIN', 'SAKIT', 'TUGAS', 'DL', 'TUBEL', 'CUTI', 'TB', 'TANPA BERITA', 'ALPA'];
+
 async function applyApprovedKeterangan(queryLike,{row,dates,jenis,emp,requestId,ket,jam}){
   for(let i=0;i<dates.length;i++){
-    const t=dates[i];const rid=`${requestId||''}_${t.replace(/-/g,'')}${String(i+1).padStart(2,'0')}`;await qx(queryLike, `INSERT INTO "Log_Absen" ("Nama","NIP","Tanggal","Jam","Jenis Absen","Lokasi","Ket","koordinat","ID","request_id","instansi_id") VALUES ($1,$2,$3,$4,$5,'-',$6,'-',$7,$8,$9)`,[emp.username||row.Nama||'',emp.nip||row.NIP||'',t,jam,jenis,ket,String(emp.id),rid,emp.instansi_id]);if(jenis==='IZIN'&&toMinutes(String(row.Jam||jam).split('-').pop()?.trim())>=870){await qx(queryLike, `INSERT INTO "Log_Absen" ("Nama","NIP","Tanggal","Jam","Jenis Absen","Lokasi","Ket","koordinat","ID","request_id","instansi_id") VALUES ($1,$2,$3,$4,'PULANG','-',$5,'-',$6,$7,$8)`,[emp.username||row.Nama||'',emp.nip||row.NIP||'',t,String(row.Jam||jam).split('-').pop().trim(),`${ket} (Auto Pulang dari Izin Jam)`,String(emp.id),`${rid}_PLG`,emp.instansi_id]);}}
+    const t=dates[i];const rid=`${requestId||''}_${t.replace(/-/g,'')}${String(i+1).padStart(2,'0')}`;
+    // Gantikan baris keterangan yang sudah ada, jangan INSERT buta.
+    const exist=(await qx(queryLike,`SELECT "ID_Log" FROM "Log_Absen" WHERE "ID"::text=$1 AND "Tanggal"=$2 AND "Jenis Absen" = ANY($3::text[]) ORDER BY "ID_Log" DESC LIMIT 1`,[String(emp.id),t,KET_GROUP])).rows||[];
+    if(exist[0]){
+      await qx(queryLike,`UPDATE "Log_Absen" SET "Jenis Absen"=$1,"Jam"=$2,"Ket"=$3 WHERE "ID_Log"=$4`,[jenis,String(jam||''),ket,exist[0].ID_Log]);
+    }else{
+      await qx(queryLike, `INSERT INTO "Log_Absen" ("Nama","NIP","Tanggal","Jam","Jenis Absen","Lokasi","Ket","koordinat","ID","request_id","instansi_id") VALUES ($1,$2,$3,$4,$5,'-',$6,'-',$7,$8,$9)`,[emp.username||row.Nama||'',emp.nip||row.NIP||'',t,jam,jenis,ket,String(emp.id),rid,emp.instansi_id]);
+    }
+    if(jenis==='IZIN'&&toMinutes(String(row.Jam||jam).split('-').pop()?.trim())>=870){
+      // Auto-pulang juga harus idempoten: re-approve jangan menumpuk PULANG.
+      const plg=(await qx(queryLike,`SELECT "ID_Log" FROM "Log_Absen" WHERE "ID"::text=$1 AND "Tanggal"=$2 AND "Jenis Absen"='PULANG' ORDER BY "ID_Log" DESC LIMIT 1`,[String(emp.id),t])).rows||[];
+      const jamPlg=String(row.Jam||jam).split('-').pop().trim();
+      const ketPlg=`${ket} (Auto Pulang dari Izin Jam)`;
+      if(plg[0]){
+        await qx(queryLike,`UPDATE "Log_Absen" SET "Jam"=$1,"Ket"=$2 WHERE "ID_Log"=$3`,[jamPlg,ketPlg,plg[0].ID_Log]);
+      }else{
+        await qx(queryLike, `INSERT INTO "Log_Absen" ("Nama","NIP","Tanggal","Jam","Jenis Absen","Lokasi","Ket","koordinat","ID","request_id","instansi_id") VALUES ($1,$2,$3,$4,'PULANG','-',$5,'-',$6,$7,$8)`,[emp.username||row.Nama||'',emp.nip||row.NIP||'',t,jamPlg,ketPlg,String(emp.id),`${rid}_PLG`,emp.instansi_id]);
+      }
+    }}
 }
