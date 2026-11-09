@@ -69,7 +69,9 @@ export function createCoreAdminRouter({ query } = {}) {
   const USER_SELECT = `SELECT id::text AS id, username AS nama, username, "NIP" AS nip, "NIP",
     "Jabatan" AS jabatan, "Jabatan", pangkat, "Status" AS status, "Status",
     "no" AS no, bidang, nomorhp, role, COALESCE(is_admin,false) AS is_admin,
-    instansi_id, jam_masuk, jam_pulang, face_photo, face_descriptor, face_saved_at, face_model
+    instansi_id, jam_masuk, jam_pulang, face_photo, face_descriptor, face_saved_at, face_model,
+    COALESCE(status_aktif, true) AS status_aktif,
+    COALESCE(app_permissions, '{"absensi":{"enabled":true,"role":"PEGAWAI"},"simapo":{"enabled":true,"role":"PEGAWAI"},"satudata":{"enabled":false,"role":null},"perencanaan":{"enabled":false,"role":null},"webadmin":{"enabled":false,"role":null}}'::jsonb) AS app_permissions
     FROM user_list`;
 
   router.get('/user-list', async (req, res) => {
@@ -131,6 +133,58 @@ export function createCoreAdminRouter({ query } = {}) {
     if (requireMedia(req, res)) return;
     try{const id=s(req.body?.id);const old=(await query('SELECT id::text AS id,instansi_id FROM user_list WHERE id=$1::bigint',[id])).rows[0];if(!old)return fail(res,404,'Pegawai tidak ditemukan.');if(!sameInstansi(req.user,old.instansi_id))return fail(res,403,'Forbidden');const r=await query('DELETE FROM user_list WHERE id=$1::bigint RETURNING id::text AS id',[id]);return ok(res,{data:r.rows[0]},'Pegawai dihapus.');}
     catch(e){console.error('[user-delete]',e);return fail(res,500,'Gagal menghapus pegawai.');}
+  });
+
+  router.post('/user-permissions', async (req, res) => {
+    if (requireMedia(req, res)) return;
+    try {
+      const b = req.body || {};
+      const id = s(b.id);
+      if (!/^\d+$/.test(id)) return fail(res, 400, 'id tidak valid.');
+      const old = (await query('SELECT id::text AS id,instansi_id FROM user_list WHERE id=$1::bigint', [id])).rows[0];
+      if (!old || !sameInstansi(req.user, old.instansi_id)) return fail(res, 403, 'Forbidden');
+
+      const permissions = b.app_permissions && typeof b.app_permissions === 'object'
+        ? JSON.stringify(b.app_permissions)
+        : null;
+      if (!permissions) return fail(res, 400, 'app_permissions wajib berupa objek JSON.');
+
+      const statusAktif = b.status_aktif !== undefined ? Boolean(b.status_aktif) : null;
+
+      let sql, params;
+      if (statusAktif !== null) {
+        sql = 'UPDATE user_list SET app_permissions = $1::jsonb, status_aktif = $2 WHERE id = $3::bigint RETURNING id::text AS id, username AS nama, "NIP" AS nip, status_aktif, app_permissions';
+        params = [permissions, statusAktif, id];
+      } else {
+        sql = 'UPDATE user_list SET app_permissions = $1::jsonb WHERE id = $2::bigint RETURNING id::text AS id, username AS nama, "NIP" AS nip, status_aktif, app_permissions';
+        params = [permissions, id];
+      }
+      const r = await query(sql, params);
+      return ok(res, { data: r.rows[0] }, 'Wewenang SSO pegawai berhasil diperbarui.');
+    } catch (e) {
+      console.error('[user-permissions]', e);
+      return fail(res, 500, 'Gagal memperbarui wewenang pegawai.');
+    }
+  });
+
+  router.post('/user-reset-password', async (req, res) => {
+    if (requireMedia(req, res)) return;
+    try {
+      const b = req.body || {};
+      const id = s(b.id);
+      if (!/^\d+$/.test(id)) return fail(res, 400, 'id tidak valid.');
+      const old = (await query('SELECT id::text AS id,instansi_id FROM user_list WHERE id=$1::bigint', [id])).rows[0];
+      if (!old || !sameInstansi(req.user, old.instansi_id)) return fail(res, 403, 'Forbidden');
+
+      // Default password hash: BapperidaSB2026
+      const defaultHash = '$2a$10$qyVxAODHUx6WLLF0Tm/I7u/T1b.m0hZW2FD2ivm/6U7K.SRiIgjwq';
+      const sql = 'UPDATE user_list SET password_hash = $1 WHERE id = $2::bigint RETURNING id::text AS id, "NIP" AS nip';
+      const r = await query(sql, [defaultHash, id]);
+      return ok(res, { data: r.rows[0] }, 'Password berhasil direset ke default (BapperidaSB2026).');
+    } catch (e) {
+      console.error('[user-reset-password]', e);
+      return fail(res, 500, 'Gagal mereset password pegawai.');
+    }
   });
 
   // ── Admin list: derived from user_list, sehingga admin_list legacy tidak lagi dibutuhkan ──

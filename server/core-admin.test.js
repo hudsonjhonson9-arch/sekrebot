@@ -311,3 +311,74 @@ test('user-edit: role BENDAHARA BARANG diterima, is_admin di-set false', async (
   assert.ok(roleIdx !== -1, 'role BENDAHARA BARANG ikut di-UPDATE');
   assert.equal(updated[roleIdx + 1], false, 'is_admin=false (bukan media)');
 });
+
+// ── SSO Wewenang & Password Reset ──
+test('user-list: query menyertakan status_aktif dan app_permissions', async () => {
+  const h = harness();
+  const res = await get(h, '/api/user-list');
+  assert.equal(res.status, 200);
+  const q = h.sql.find((s) => /FROM user_list/.test(s.text));
+  assert.ok(q, 'harus ada query user_list');
+  assert.ok(q.text.includes('status_aktif'), 'query harus menyertakan status_aktif');
+  assert.ok(q.text.includes('app_permissions'), 'query harus menyertakan app_permissions');
+});
+
+test('user-permissions: admin bisa update app_permissions dan status_aktif', async () => {
+  let updatedParams = null;
+  const q = async (text, params) => {
+    if (/SELECT id::text AS id,instansi_id FROM user_list/.test(text)) {
+      return { rows: [{ id: '10', instansi_id: 'bapperida' }] };
+    }
+    if (/UPDATE user_list SET/.test(text)) {
+      updatedParams = params;
+      return { rows: [{ id: '10', username: 'Test', NIP: '19850101', status_aktif: true, app_permissions: params[0] }] };
+    }
+    return { rows: [] };
+  };
+  const h = harness({ session: ADMIN, query: q });
+  const permissions = {
+    absensi: { enabled: true, role: 'PEGAWAI' },
+    simapo: { enabled: true, role: 'BENDAHARA_BARANG' },
+    satudata: { enabled: true, role: 'KONTRIBUTOR' },
+    perencanaan: { enabled: false, role: null },
+    webadmin: { enabled: false, role: null }
+  };
+  const res = await req(h, 'POST', '/api/user-permissions', {
+    id: '10',
+    app_permissions: permissions,
+    status_aktif: true
+  });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.ok(updatedParams, 'query update harus terpanggil');
+  assert.deepEqual(JSON.parse(updatedParams[0]), permissions);
+  assert.equal(updatedParams[1], true);
+  assert.equal(updatedParams[2], '10');
+});
+
+test('user-permissions: ditolak jika bukan admin (403)', async () => {
+  const h = harness({ session: USER });
+  const res = await req(h, 'POST', '/api/user-permissions', {
+    id: '10',
+    app_permissions: {}
+  });
+  assert.equal(res.status, 403);
+});
+
+test('user-reset-password: admin bisa mereset password ke default BapperidaSB2026', async () => {
+  let updatedHash = null;
+  const q = async (text, params) => {
+    if (/SELECT id::text AS id,instansi_id FROM user_list/.test(text)) {
+      return { rows: [{ id: '10', instansi_id: 'bapperida' }] };
+    }
+    if (/UPDATE user_list SET password_hash/.test(text)) {
+      updatedHash = params[0];
+      return { rows: [{ id: '10', NIP: '19850101' }] };
+    }
+    return { rows: [] };
+  };
+  const h = harness({ session: ADMIN, query: q });
+  const res = await req(h, 'POST', '/api/user-reset-password', { id: '10' });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.ok(updatedHash, 'hash password harus diupdate');
+  assert.ok(updatedHash.startsWith('$2'), 'hash harus berbentuk bcrypt');
+});

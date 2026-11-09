@@ -6,7 +6,11 @@ import path from 'node:path';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const src = fs.readFileSync(path.join(ROOT, 'js/simapo-ext.js'), 'utf8');
-const wf = fs.readFileSync(path.join(ROOT, 'n8n/SIMAPO PKS — Program, Kegiatan, Subkegiatan.json'), 'utf8');
+const pksPath = [
+  path.join(ROOT, 'n8n/SIMAPO PKS \u2014 Program, Kegiatan, Subkegiatan.json'),
+  path.join(ROOT, 'n8n/SIMAPO PKS #U2014 Program, Kegiatan, Subkegiatan.json')
+].find(p => fs.existsSync(p));
+const wf = fs.readFileSync(pksPath, 'utf8');
 
 // pksOptionsHtml hanya butuh document.getElementById; stub minimal cukup.
 globalThis.document = { getElementById: () => null, addEventListener: () => {} };

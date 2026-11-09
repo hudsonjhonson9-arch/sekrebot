@@ -265,6 +265,36 @@ test('login tidak membaca init_data Telegram (pure NIP)', async (t) => {
   assert.equal(out.status, 404);
 });
 
+test('login ditolak 403 jika status_aktif false', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const query = async (sql) => {
+    if (/user_list/i.test(sql)) {
+      return userListRows(sql, { id: '9', NIP: '12345', status_aktif: false, role: 'USER', instansi_id: 'bapperida' });
+    }
+    return { rows: [] };
+  };
+  const r = createAuthSessionRouter({ query });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '12345' });
+  assert.equal(out.status, 403);
+  assert.match(out.body.message, /dinonaktifkan/i);
+});
+
+test('login sukses menyertakan app_permissions', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const perms = { absensi: { enabled: true, role: 'PEGAWAI' } };
+  const query = async (sql) => {
+    if (/user_list/i.test(sql)) {
+      return userListRows(sql, { id: '9', NIP: '12345', status_aktif: true, app_permissions: perms, role: 'USER', instansi_id: 'bapperida' });
+    }
+    if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'd'.repeat(192) }] };
+    return { rows: [] };
+  };
+  const r = createAuthSessionRouter({ query });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '12345' });
+  assert.equal(out.status, 200);
+  assert.deepEqual(out.body.user.app_permissions, perms);
+});
+
 // ── Error DB tidak boleh menjatuhkan proses ──
 // Sebelumnya tak ada try/catch: query yang melempar jadi unhandled rejection →
 // Node exit → SEMUA rute 502 termasuk /api/health. Kontrak baru: balas 500.

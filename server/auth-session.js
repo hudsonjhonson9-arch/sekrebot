@@ -96,6 +96,13 @@ export function createAuthSessionRouter({ query = realQuery, arsipSso } = {}) {
         });
       }
 
+      if (user.status_aktif === false) {
+        return res.status(403).json({
+          ok: false,
+          message: 'Akun Anda dinonaktifkan. Hubungi administrator.',
+        });
+      }
+
       const token = crypto.randomBytes(96).toString('hex');
       const ins = await query(INSERT_SESSION_SQL, [token, user.nip, user.id, user.role, user.instansi_id]);
       if (!ins.rows.length) return res.status(500).json({ ok: false, message: 'Gagal membuat sesi.' });

@@ -31,3 +31,7 @@ dist-ssr
 # n8n export & backup (mengandung token bot — jangan di-commit)
 n8n/backup/
 n8n/export/
+graphify-out/
+*.docx
+aset.db
+.superpowers/
