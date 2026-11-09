@@ -72,7 +72,10 @@ async function handleAbsen() {
   await cekJaringan();
 
   // ── Verifikasi Wajah & Seragam ──
-  const isMandatory = typeof MANDATORY_FACE_NIPS !== 'undefined' && MANDATORY_FACE_NIPS.includes(myNip);
+  const mandNips = (typeof window !== 'undefined' && Array.isArray(window.MANDATORY_FACE_NIPS))
+    ? window.MANDATORY_FACE_NIPS
+    : (typeof MANDATORY_FACE_NIPS !== 'undefined' ? MANDATORY_FACE_NIPS : []);
+  const isMandatory = mandNips.map(s => String(s).trim()).includes(String(myNip).trim());
   const useFace = (FACE_RECOGNITION_ENABLED || isMandatory) && navigator.onLine;
 
   console.log('[Absen] Face requirement:', { FACE_RECOGNITION_ENABLED, isMandatory, useFace, onLine: navigator.onLine });

@@ -360,7 +360,7 @@ export function createMediaRouter({ query, gasUpsert }) {
 
   router.get('/face-toggle', async (req, res) => {
     try {
-      const inst = req.query.instansi_id || req.user.instansi_id || '';
+      const inst = req.query.instansi_id || req.user?.instansi_id || 'bapperida';
       if (!sameInstansi(req.user, inst)) return fail(res, 403, 'Forbidden');
       const row = (await query(`SELECT value FROM pengaturan WHERE key='face_recognition' AND instansi_id=$1 LIMIT 1`, [inst])).rows[0];
       return ok(res, { enabled: row ? !['0','false','off'].includes(String(row.value).toLowerCase()) : true });
@@ -370,16 +370,44 @@ export function createMediaRouter({ query, gasUpsert }) {
   router.post('/face-toggle', async (req, res) => {
     if (!['ADMIN','SUPERADMIN','KEPALA','SEKRETARIS','KABID','IRBAN'].includes(req.user?.role)) return fail(res, 403, 'Forbidden');
     try {
-      const inst=req.body?.instansi_id || req.user.instansi_id || '';
-      if (!sameInstansi(req.user,inst)) return fail(res,403,'Forbidden');
-      const value=req.body?.enabled===true||String(req.body?.enabled).toLowerCase()==='true'?'1':'0';
-      await query(`INSERT INTO pengaturan (key,value,instansi_id) VALUES ('face_recognition',$1,$2) ON CONFLICT (key,instansi_id) DO UPDATE SET value=EXCLUDED.value`,[value,inst]);
-      return ok(res,{enabled:value==='1'});
-    } catch(e){console.error('[media/face-toggle/post]',e);return fail(res,500,'Gagal menyimpan pengaturan face recognition.');}
+      const inst = req.body?.instansi_id || req.user?.instansi_id || 'bapperida';
+      if (!sameInstansi(req.user, inst)) return fail(res, 403, 'Forbidden');
+      const value = req.body?.enabled === true || String(req.body?.enabled).toLowerCase() === 'true' ? '1' : '0';
+      await query(`INSERT INTO pengaturan (key,value,instansi_id) VALUES ('face_recognition',$1,$2) ON CONFLICT (key,instansi_id) DO UPDATE SET value=EXCLUDED.value`, [value, inst]);
+      return ok(res, { enabled: value === '1' });
+    } catch(e) { console.error('[media/face-toggle/post]', e); return fail(res, 500, 'Gagal menyimpan pengaturan face recognition.'); }
   });
 
-  router.get('/face-settings', async (req,res) => {
-    try { const inst=req.query.instansi_id || req.user.instansi_id || ''; if(!sameInstansi(req.user,inst))return fail(res,403,'Forbidden'); const rows=(await query(`SELECT key,value FROM pengaturan WHERE instansi_id=$1 AND key IN ('face_liveness_enabled','face_threshold','face_meja_threshold','face_liveness_score','face_mandatory_nips','face_recognition')`,[inst])).rows; const settings={liveness_enabled:true,face_threshold:0.55,meja_threshold:0.55,liveness_score:0.40,mandatory_nips:[]}; for(const x of rows){if(x.key==='face_liveness_enabled')settings.liveness_enabled=!['0','false','off'].includes(String(x.value).toLowerCase()); else if(x.key==='face_threshold')settings.face_threshold=parseFloat(x.value)||0.55; else if(x.key==='face_meja_threshold')settings.meja_threshold=parseFloat(x.value)||0.55; else if(x.key==='face_liveness_score')settings.liveness_score=parseFloat(x.value)||0.40; else if(x.key==='face_mandatory_nips'){try{settings.mandatory_nips=JSON.parse(x.value)||[];}catch{settings.mandatory_nips=[];}}} return ok(res,{settings}); } catch(e){console.error('[media/face-settings/get]',e);return fail(res,503,'Layanan tidak tersedia');}
+  router.get('/face-settings', async (req, res) => {
+    try {
+      const inst = req.query.instansi_id || req.user?.instansi_id || 'bapperida';
+      if (!sameInstansi(req.user, inst)) return fail(res, 403, 'Forbidden');
+      const rows = (await query(`SELECT key,value FROM pengaturan WHERE instansi_id=$1 AND key IN ('face_liveness_enabled','face_threshold','face_meja_threshold','face_liveness_score','face_mandatory_nips','face_recognition')`, [inst])).rows;
+      const settings = {
+        liveness_enabled: true,
+        face_threshold: 0.55,
+        meja_threshold: 0.55,
+        liveness_score: 0.40,
+        mandatory_nips: []
+      };
+      for (const x of rows) {
+        if (x.key === 'face_liveness_enabled') settings.liveness_enabled = !['0','false','off'].includes(String(x.value).toLowerCase());
+        else if (x.key === 'face_threshold') settings.face_threshold = parseFloat(x.value) || 0.55;
+        else if (x.key === 'face_meja_threshold') settings.meja_threshold = parseFloat(x.value) || 0.55;
+        else if (x.key === 'face_liveness_score') settings.liveness_score = parseFloat(x.value) || 0.40;
+        else if (x.key === 'face_mandatory_nips') {
+          try {
+            settings.mandatory_nips = JSON.parse(x.value) || [];
+          } catch {
+            settings.mandatory_nips = [];
+          }
+        }
+      }
+      return ok(res, { settings });
+    } catch(e) {
+      console.error('[media/face-settings/get]', e);
+      return fail(res, 503, 'Layanan tidak tersedia');
+    }
   });
 
   router.post('/face-settings', async (req,res) => {

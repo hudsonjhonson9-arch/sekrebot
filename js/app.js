@@ -7,9 +7,12 @@
 
         console.log('[Init] Starting application...');
 
+        // Siapkan role & visibilitas admin awal dari cache sesi agar tab admin tidak ter-reset
+        if (typeof applyAdminVisibility === 'function') applyAdminVisibility();
+
         // Pulihkan posisi tab SEBELUM muat data. Muat data di bawah ini bisa lama
         // atau gagal (mis. sesi native belum ada) — lokasi tab tidak boleh ikut tertunda,
-        // supaya refresh tetap membuka tab yang sama (mis. arsip).
+        // supaya refresh tetap membuka tab yang sama (mis. arsip atau admin).
         const lastTab = localStorage.getItem('absen_last_tab') || 'absen';
         switchTab(lastTab);
         if (typeof hideResult === 'function') hideResult();
@@ -19,6 +22,7 @@
         // Critical: Load role & face settings first
         await Promise.allSettled([
           typeof loadFaceSettingsGlobal === 'function' ? loadFaceSettingsGlobal() : Promise.resolve(),
+          typeof loadFaceSettings === 'function' ? loadFaceSettings() : Promise.resolve(),
           typeof loadFaceToggle === 'function' ? loadFaceToggle() : Promise.resolve(),
           typeof loadPasswordToggle === 'function' ? loadPasswordToggle() : Promise.resolve(),
           typeof loadJamAbsen === 'function' ? loadJamAbsen() : Promise.resolve()

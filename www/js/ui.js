@@ -49,9 +49,14 @@
         if (typeof initSuperadminPegawaiScoping === 'function') initSuperadminPegawaiScoping();
         loadAdminFaceReg();
       }
-      // Fix Leaflet Map rendering if switching to Config
-      if (sectionId === 'config' && typeof adminMap !== 'undefined' && adminMap) {
-        setTimeout(() => adminMap.invalidateSize(), 50);
+      // Fix Leaflet Map rendering if switching to Config & Load Settings
+      if (sectionId === 'config') {
+        if (typeof adminMap !== 'undefined' && adminMap) {
+          setTimeout(() => adminMap.invalidateSize(), 50);
+        }
+        if (typeof loadFaceToggle === 'function') loadFaceToggle();
+        if (typeof loadPasswordToggle === 'function') loadPasswordToggle();
+        if (typeof loadFaceSettings === 'function') loadFaceSettings();
       }
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -173,7 +178,8 @@
     /* ════ TABS ════ */
     function getAllTabs() { 
       const tabs = ['absen', 'ket', 'rekap', 'profil'];
-      if (IS_ADMIN) tabs.push('admin');
+      const isAdmin = window.IS_ADMIN || (typeof isLogAdmin === 'function' && isLogAdmin()) || ['ADMIN', 'SUPERADMIN'].includes((localStorage.getItem('MY_ROLE') || '').toUpperCase());
+      if (isAdmin) tabs.push('admin');
       // Always allow checking, visibility is handled via checkTugasLemburAccess
       tabs.push('tugas', 'lembur', 'simapo');
       // Arsip: selalu terdaftar; tombolnya .admin-only (disembunyikan applyAdminVisibility).
@@ -245,27 +251,31 @@
       if (tab === 'lembur') {
         if (typeof initSuperadminLemburScoping === 'function') initSuperadminLemburScoping();
       }
-      if (tab === 'admin' && IS_ADMIN) {
-        if (typeof initSuperadminAdminScoping === 'function') initSuperadminAdminScoping();
-        if (typeof initSuperadminPegawaiScoping === 'function') initSuperadminPegawaiScoping();
-        if (typeof initSuperadminAdminKetScoping === 'function') initSuperadminAdminKetScoping();
-        // Remove forced section reset to 'ops' to preserve user context
-        initAdminMap(); initJamAdminUI(); _initPeriodeListeners();
-        if (!adminLoaded) {
-          adminLoaded = true;
-          const myRole = (window.MY_ROLE || localStorage.getItem('MY_ROLE') || 'USER').toUpperCase();
-          const isGudangOnly = myRole === 'ADMIN GUDANG';
+      if (tab === 'admin') {
+        const isAdmin = window.IS_ADMIN || (typeof isLogAdmin === 'function' && isLogAdmin()) || ['ADMIN', 'SUPERADMIN'].includes((localStorage.getItem('MY_ROLE') || '').toUpperCase());
+        if (isAdmin) {
+          window.IS_ADMIN = true;
+          if (typeof initSuperadminAdminScoping === 'function') initSuperadminAdminScoping();
+          if (typeof initSuperadminPegawaiScoping === 'function') initSuperadminPegawaiScoping();
+          if (typeof initSuperadminAdminKetScoping === 'function') initSuperadminAdminKetScoping();
+          initAdminMap(); initJamAdminUI(); _initPeriodeListeners();
+          const lastSection = localStorage.getItem('absen_last_admin_section') || 'ops';
+          switchAdminSection(lastSection);
+          if (!adminLoaded) {
+            adminLoaded = true;
+            const myRole = (window.MY_ROLE || localStorage.getItem('MY_ROLE') || 'USER').toUpperCase();
+            const isGudangOnly = myRole === 'ADMIN GUDANG';
 
-          if (!isGudangOnly) {
-            loadKonfirmasiAdmin(); loadLiburAdmin();
-            loadJamPeriodeAdmin(); loadAdminMgmt();
-            setTimeout(() => switchFaceSigTab('data'), 300);
-            loadFaceStatusAdmin();
+            if (!isGudangOnly) {
+              loadKonfirmasiAdmin(); loadLiburAdmin();
+              loadJamPeriodeAdmin(); loadAdminMgmt();
+              setTimeout(() => switchFaceSigTab('data'), 300);
+              loadFaceStatusAdmin();
+            }
+
+            // Initialize Human.js Cache Check
+            checkHumanJsCache();
           }
-
-          // Initialize Human.js Cache Check
-          checkHumanJsCache();
-        }
         setTimeout(() => {
           const myRole = (window.MY_ROLE || localStorage.getItem('MY_ROLE') || 'USER').toUpperCase();
           if (myRole !== 'ADMIN GUDANG') {

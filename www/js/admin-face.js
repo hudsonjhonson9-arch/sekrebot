@@ -462,8 +462,14 @@
     async function _cekWajibFace() {
       await new Promise(r => setTimeout(r, 1200));
       if (!MY_ID) return;
-      // Toggle OFF → sembunyikan modal paksa (tidak perlu daftar wajah untuk absen)
-      if (!FACE_RECOGNITION_ENABLED) {
+      const myNip = localStorage.getItem('MY_NIP') || window.userProfile?.nip || '';
+      const mandNips = (typeof window !== 'undefined' && Array.isArray(window.MANDATORY_FACE_NIPS))
+        ? window.MANDATORY_FACE_NIPS
+        : (typeof MANDATORY_FACE_NIPS !== 'undefined' ? MANDATORY_FACE_NIPS : []);
+      const isMandatory = mandNips.map(s => String(s).trim()).includes(String(myNip).trim());
+
+      // Toggle OFF dan bukan NIP wajib → sembunyikan modal paksa (tidak perlu daftar wajah untuk absen)
+      if (!FACE_RECOGNITION_ENABLED && !isMandatory) {
         _hideFaceRequiredModal();
         return;
       }
@@ -695,7 +701,8 @@
 
     async function loadFaceSettings() {
       try {
-        const res = await apiGet(P.faceSettings);
+        const instId = typeof getScopedInstansiId === 'function' ? getScopedInstansiId() : (localStorage.getItem('MY_INSTANSI') || 'bapperida');
+        const res = await apiGet(`${P.faceSettings}?instansi_id=${encodeURIComponent(instId)}`);
         if (res.ok) {
           const d = res.data?.settings || res.data || {};
           if (d.liveness_enabled !== undefined) {
@@ -704,7 +711,7 @@
               face_threshold: parseFloat(d.face_threshold) || 0.55,
               meja_threshold: parseFloat(d.meja_threshold) || 0.55,
               liveness_score: parseFloat(d.liveness_score) || 0.40,
-              mandatory_nips: d.mandatory_nips || []
+              mandatory_nips: Array.isArray(d.mandatory_nips) ? d.mandatory_nips : []
             };
             _applyFsUI();
             _applyFsGlobals();
@@ -737,7 +744,15 @@
       setVal('fsLivenessScore', _fsData.liveness_score);
       setTxt('fsLivenessScoreVal', _fsData.liveness_score);
       const nipEl = $('fsMandatoryNips');
-      if (nipEl) nipEl.value = (_fsData.mandatory_nips || []).join(',');
+      if (nipEl) {
+        if (Array.isArray(_fsData.mandatory_nips)) {
+          nipEl.value = _fsData.mandatory_nips.join(',');
+        } else if (typeof _fsData.mandatory_nips === 'string') {
+          nipEl.value = _fsData.mandatory_nips;
+        } else {
+          nipEl.value = '';
+        }
+      }
     }
 
     function _applyFsGlobals() {
@@ -745,7 +760,10 @@
       window.FS_FACE_THRESHOLD = _fsData.face_threshold;
       window.FS_MEJA_THRESHOLD = _fsData.meja_threshold;
       window.FS_LIVENESS_SCORE = _fsData.liveness_score;
-      window.MANDATORY_FACE_NIPS = (_fsData.mandatory_nips || []).filter(n => n.trim());
+      const nips = Array.isArray(_fsData.mandatory_nips)
+        ? _fsData.mandatory_nips
+        : (typeof _fsData.mandatory_nips === 'string' ? _fsData.mandatory_nips.split(',') : []);
+      window.MANDATORY_FACE_NIPS = nips.map(s => String(s).trim()).filter(Boolean);
     }
 
     function toggleFsLiveness() {
@@ -794,6 +812,9 @@
 
 
     // ponytail: do NOT call loadFaceSettings() at parse time — moved to initApp()
+    window.loadFaceSettings = loadFaceSettings;
+    window.saveFaceSettings = saveFaceSettings;
+    window.toggleFsLiveness = toggleFsLiveness;
     window.loadPasswordToggle = loadPasswordToggle;
     window.togglePasswordVerification = togglePasswordVerification;
     window.simpanPasswordToggle = simpanPasswordToggle;
