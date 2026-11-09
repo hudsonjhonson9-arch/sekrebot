@@ -357,14 +357,11 @@
       const _cachedPos = _getCachedGPS();
       if (_cachedPos) {
         _applyLocPos(_cachedPos.lat, _cachedPos.lon);
-        // Tetap request fresh position di background (silent, tanpa blok UI)
+        // Cache hanya untuk tampilan instan; posisi segar SELALU diminta di bawah.
       }
 
-      // Jika cache hit DAN permission bukan 'prompt', skip re-request saat ini
-      if (_cachedPos && _permState === 'granted') return;
-
       _locWatchId = 1; // tandai sudah dijalankan agar tidak dipanggil ulang
-      navigator.geolocation.getCurrentPosition(
+      getFreshPosition(
         pos => {
           const { latitude, longitude } = pos.coords;
           _setCachedGPS(latitude, longitude); // simpan ke cache
@@ -379,7 +376,7 @@
           }
           // timeout/unavailable → badge tetap "Mendeteksi", tidak minta lagi
         },
-        { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+        { enableHighAccuracy: false, timeout: 15000, targetAccuracy: 200, settleMs: 3000, settleAccuracy: 1000 }
       );
     }
 

@@ -1,5 +1,5 @@
 import express from 'express';
-import { validateAbsen, evaluateGates } from './absen-validate.js';
+import { validateAbsen, evaluateGates, analisisRiwayatLokasi } from './absen-validate.js';
 import { witaNow, hariIndonesia } from './absen-util.js';
 
 // ── SQL ──
@@ -31,6 +31,19 @@ export const LOKASI_SQL =
 export const LOG_HARIAN_SQL =
   'SELECT "ID"::text AS "ID", "Tanggal", "Jam", "Jenis Absen" FROM "Log_Absen" '
   + 'WHERE "NIP" = $1 AND "Tanggal" = $2';
+
+// Penugasan/SPT hari ini (tabel penugasan, ditulis lewat /api/overtime/penugasan).
+// LEFT(...,10) supaya cocok baik kolom bertipe DATE, TEXT, maupun TIMESTAMP.
+export const PENUGASAN_HARI_INI_SQL =
+  'SELECT 1 FROM penugasan WHERE nip = $1 AND LEFT(tanggal::text, 10) = $2 '
+  + 'AND instansi_id = $3 LIMIT 1';
+
+// Koordinat absen sebelumnya, terbaru dulu, untuk analisis teleport/identik.
+// Urutan kondisi sengaja "Tanggal" dulu: jangan ditulis serupa LOG_HARIAN_SQL.
+export const RIWAYAT_LOKASI_SQL =
+  'SELECT "Tanggal"::text AS "Tanggal", "Jam", koordinat FROM "Log_Absen" '
+  + 'WHERE "Tanggal"::text >= $2 AND "NIP" = $1 AND koordinat IS NOT NULL AND koordinat <> \'\' '
+  + 'ORDER BY "Tanggal" DESC, "Jam" DESC LIMIT 5';
 
 export const REQUEST_ID_SQL =
   'SELECT 1 FROM "Log_Absen" WHERE request_id = $1 LIMIT 1';
@@ -137,7 +150,20 @@ async function sendTelegramMessage({ botToken, chatId, text }) {
   return d;
 }
 
-export function createAbsenRouter({ query, verifyInitData, botToken, notifyAbsen, now = () => new Date() }) {
+// teleportBlokKmh: ambang tolak kecepatan perpindahan (km/jam) dari absen sebelumnya.
+// 0 = hanya menandai di log [absen-curiga]. Aktifkan lewat ABSEN_TELEPORT_BLOK_KMH
+// setelah log beberapa minggu menunjukkan tidak ada false positive (mis. dinas
+// naik pesawat).
+//
+// pulangLuarWajibPenugasan: true = PULANG LUAR ditolak tanpa baris penugasan hari
+// ini (ABSEN_PULANG_LUAR_WAJIB_PENUGASAN=true). Default false ("tandai"): tetap
+// diterima tapi dicatat [absen-curiga] PULANG_LUAR_TANPA_PENUGASAN, untuk instansi
+// yang belum memakai menu Penugasan/SPT. Ubah ke true setelah penugasan rutin diinput.
+export function createAbsenRouter({
+  query, verifyInitData, botToken, notifyAbsen, now = () => new Date(),
+  teleportBlokKmh = Number(process.env.ABSEN_TELEPORT_BLOK_KMH) || 0,
+  pulangLuarWajibPenugasan = process.env.ABSEN_PULANG_LUAR_WAJIB_PENUGASAN === 'true',
+}) {
   const router = express.Router();
   // notifyAbsen bisa di-inject (test memakai spy, bukan jaringan). Default: kirim
   // ke Telegram memakai botToken; tanpa token, notifikasi dimatikan.
@@ -217,7 +243,17 @@ export function createAbsenRouter({ query, verifyInitData, botToken, notifyAbsen
         clientIp: clientIp(req),
       };
 
+      // Hanya PULANG LUAR yang membutuhkan penugasan, jadi query ini tidak
+      // menambah beban untuk absen biasa.
+      let penugasanHariIni = false;
+      if (body.jenis_absen === 'PULANG LUAR') {
+        const pg = await query(PENUGASAN_HARI_INI_SQL, [employee.nip, serverTime.tanggal, employee.instansi_id || '']);
+        penugasanHariIni = pg.rows.length > 0;
+      }
+
       const settings = {
+        penugasanHariIni,
+        wajibPenugasan: pulangLuarWajibPenugasan,
         hariIni: hari,
         jamMasuk: jamRow.masuk || '07:15',
         jamPulang: jamRow.pulang || '14:30',
@@ -249,6 +285,45 @@ export function createAbsenRouter({ query, verifyInitData, botToken, notifyAbsen
       const koordinat = Number.isFinite(Number(payload.latitude)) && Number.isFinite(Number(payload.longitude))
         ? `${payload.latitude},${payload.longitude}`
         : '';
+
+      // Analisis riwayat bersifat penasihat: kegagalan query-nya tidak boleh
+      // menggagalkan absen yang sudah lolos validasi.
+      const curiga = [...(v.peringatan || [])];
+      const catatCuriga = (blok) => {
+        if (!curiga.length) return;
+        console.warn('[absen-curiga]', JSON.stringify({
+          nip: employee.nip || '',
+          user_id: employee.id ?? '',
+          tanggal: serverTime.tanggal,
+          jam: serverTime.jam,
+          jenis: v.jenisAbsen,
+          flags: curiga,
+          blok,
+        }));
+      };
+      if (koordinat) {
+        try {
+          const batas = new Date(Date.parse(`${serverTime.tanggal}T00:00:00Z`) - 2 * 86400000)
+            .toISOString().slice(0, 10);
+          const rw = await query(RIWAYAT_LOKASI_SQL, [employee.nip, batas]);
+          const a = analisisRiwayatLokasi({
+            lat: Number(payload.latitude),
+            lng: Number(payload.longitude),
+            serverTime,
+            riwayat: rw.rows,
+            blokKmh: teleportBlokKmh,
+          });
+          curiga.push(...a.flags);
+          if (a.blok) {
+            catatCuriga(true);
+            logTolak({ employee, serverTime, payload, kode: 'GPS_TELEPORT', diag: a.teleport });
+            return res.json(tolak('GPS_TELEPORT', 'Perpindahan lokasi dari absen sebelumnya tidak masuk akal. Hubungi admin bila ini benar.'));
+          }
+        } catch (e) {
+          console.error('[absen] analisis riwayat lokasi dilewati:', e?.message || e);
+        }
+      }
+      catatCuriga(false);
 
       const ins = await query(INSERT_LOG_SQL, [
         String(employee.id),

@@ -153,7 +153,7 @@ async function _doAbsenWithGPS(initData, isTgX, camResult) {
   const _gpsT0 = Date.now(); // catat waktu mulai sebelum acquire
   
   await new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(
+    getFreshPosition(
       async (position) => {
         try {
           console.log('[Absen] GPS acquired:', position.coords.latitude, position.coords.longitude);
@@ -691,7 +691,7 @@ async function handlePulangLuar() {
   if (tSpan) tSpan.innerHTML = '<span class="spinner"></span> Mengambil GPS...';
 
   await new Promise((resolve) => {
-  navigator.geolocation.getCurrentPosition(
+  getFreshPosition(
     async ({ coords: { latitude, longitude, accuracy } }) => {
       if (accuracy > GPS_MAX_ACCURACY_M) {
         showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Sinyal GPS Lemah',

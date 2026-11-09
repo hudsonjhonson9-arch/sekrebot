@@ -445,7 +445,7 @@
 
         Swal.fire({ title: 'Mengecek Lokasi...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-        navigator.geolocation.getCurrentPosition(async (pos) => {
+        getFreshPosition(async (pos) => {
           const myLat = pos.coords.latitude;
           const myLon = pos.coords.longitude;
           
@@ -470,7 +470,7 @@
           }
         }, (err) => {
           Swal.fire(' Gagal', 'Gagal mendapatkan lokasi: ' + err.message, 'error');
-        }, { enableHighAccuracy: true });
+        }, { enableHighAccuracy: true, timeout: 20000 });
       }
     });
   };

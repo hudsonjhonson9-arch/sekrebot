@@ -44,10 +44,10 @@
     async function _getMejaGps() {
       return new Promise(resolve => {
         if (!navigator.geolocation) { resolve(null); return; }
-        navigator.geolocation.getCurrentPosition(
+        getFreshPosition(
           pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy }),
           () => resolve(null),
-          { timeout: 8000, maximumAge: 30000, enableHighAccuracy: true }
+          { timeout: 8000, enableHighAccuracy: true }
         );
       });
     }

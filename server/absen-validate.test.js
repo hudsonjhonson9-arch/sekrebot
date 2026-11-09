@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateAbsen } from './absen-validate.js';
+import { validateAbsen, analisisRiwayatLokasi } from './absen-validate.js';
 
 const EMP = { nip: '12345', role: 'USER', instansi_id: 'bapperida' };
 
@@ -21,6 +21,7 @@ const WFH = {
 };
 
 const FA = { // fakta server, sudah di-shape router
+  penugasanHariIni: true,
   serverTime: { tanggal: '2026-10-05', jam: '07:10:00' }, // Senin
   hariIni: 'senin',
   jamMasuk: '7:15',
@@ -66,6 +67,54 @@ test('PULANG LUAR tanpa keterangan tetap lolos dan default ke "Pulang dari lapan
   assert.equal(r.jenisAbsen, 'PULANG LUAR');
   assert.equal(r.namaLokasi, 'Lapangan');
   assert.equal(r.keterangan, 'Pulang dari lapangan');
+});
+
+// skip_radius_check dikirim klien; radius hanya boleh dilewati kalau server
+// mencatat penugasan hari ini (settings.penugasanHariIni, fail-closed).
+test('PULANG LUAR tanpa penugasan hari ini ditolak walau skip_radius_check=true', () => {
+  const r = run({ jenis_absen: 'PULANG LUAR', skip_radius_check: true, latitude: -9.9, longitude: 121.5 },
+    { ...FA, penugasanHariIni: false });
+  assert.equal(r.ok, false);
+  assert.equal(r.kodeTolak, 'PULANG_LUAR_TANPA_PENUGASAN');
+});
+
+test('PULANG LUAR: penugasanHariIni tidak diisi dianggap tidak ada (fail-closed)', () => {
+  const { penugasanHariIni, ...tanpa } = FA; // eslint-disable-line no-unused-vars
+  const r = run({ jenis_absen: 'PULANG LUAR', skip_radius_check: true }, tanpa);
+  assert.equal(r.ok, false);
+  assert.equal(r.kodeTolak, 'PULANG_LUAR_TANPA_PENUGASAN');
+});
+
+test('PULANG LUAR: nilai truthy selain true (mis. "true") tidak cukup', () => {
+  const r = run({ jenis_absen: 'PULANG LUAR', skip_radius_check: true }, { ...FA, penugasanHariIni: 'true' });
+  assert.equal(r.ok, false);
+});
+
+test('PULANG LUAR: wajibPenugasan=false (mode tandai) diterima dengan peringatan', () => {
+  const r = run({ jenis_absen: 'PULANG LUAR', skip_radius_check: true, latitude: -9.9, longitude: 121.5 },
+    { ...FA, penugasanHariIni: false, wajibPenugasan: false });
+  assert.equal(r.ok, true);
+  assert.equal(r.jenisAbsen, 'PULANG LUAR');
+  assert.deepEqual(r.peringatan, ['PULANG_LUAR_TANPA_PENUGASAN']);
+});
+
+test('PULANG LUAR: dengan penugasan tidak ada peringatan di kedua mode', () => {
+  for (const wajibPenugasan of [true, false]) {
+    const r = run({ jenis_absen: 'PULANG LUAR', skip_radius_check: true }, { ...FA, penugasanHariIni: true, wajibPenugasan });
+    assert.equal(r.ok, true);
+    assert.equal(r.peringatan, undefined);
+  }
+});
+
+test('wajibPenugasan hanya false persis yang melonggarkan (nilai lain tetap wajib)', () => {
+  for (const wajibPenugasan of [undefined, null, 0, '', 'false']) {
+    const r = run({ jenis_absen: 'PULANG LUAR', skip_radius_check: true }, { ...FA, penugasanHariIni: false, wajibPenugasan });
+    assert.equal(r.ok, false, `wajibPenugasan=${JSON.stringify(wajibPenugasan)} harus tetap menolak`);
+  }
+});
+
+test('absen biasa tidak butuh penugasan', () => {
+  assert.equal(run({}, { ...FA, penugasanHariIni: false }).ok, true);
 });
 
 test('PULANG LUAR tanpa skip_radius_check bukan jenis khusus, dihitung dari jam', () => {
@@ -291,4 +340,75 @@ test('IZIN wajib keterangan', () => {
   const r = run({ jenis_absen: 'IZIN', keterangan: '  ' });
   assert.equal(r.ok, false);
   assert.equal(r.kodeTolak, 'KETERANGAN_WAJIB');
+});
+
+// ── analisisRiwayatLokasi: teleport & koordinat identik dari Log_Absen ──
+
+const ST = { tanggal: '2026-10-05', jam: '07:10:00' };
+// 1 derajat lintang ~ 111,2 km.
+const LAT = -9.6;
+const LNG = 120.1;
+const rw = (tanggal, jam, lat = LAT, lng = LNG) => ({ Tanggal: tanggal, Jam: jam, koordinat: `${lat},${lng}` });
+const cek = (riwayat, extra = {}) => analisisRiwayatLokasi({ lat: LAT, lng: LNG, serverTime: ST, riwayat, ...extra });
+
+test('riwayat: tanpa riwayat tidak ada flag', () => {
+  assert.deepEqual(cek([]), { flags: [], teleport: null, blok: false });
+});
+
+test('riwayat: pindah 111 km dalam 10 menit ditandai TELEPORT', () => {
+  const r = cek([rw('2026-10-05', '07:00', LAT + 1)]);
+  assert.equal(r.flags.length, 1);
+  assert.match(r.flags[0], /^TELEPORT_\d+kmh_\d+m$/);
+  assert.ok(r.teleport.kmh > 600);
+  assert.equal(r.blok, false, 'tanpa blokKmh hanya menandai');
+});
+
+test('riwayat: blokKmh menolak bila kecepatan melewati ambang', () => {
+  assert.equal(cek([rw('2026-10-05', '07:00', LAT + 1)], { blokKmh: 500 }).blok, true);
+  assert.equal(cek([rw('2026-10-05', '07:00', LAT + 1)], { blokKmh: 5000 }).blok, false);
+});
+
+test('riwayat: pesawat 300 km dalam 1 jam ditandai tapi tidak diblok pada ambang 900', () => {
+  const r = cek([rw('2026-10-05', '06:10', LAT + 2.7)], { blokKmh: 900 });
+  assert.ok(r.teleport.kmh > 200 && r.teleport.kmh < 400);
+  assert.equal(r.blok, false);
+  assert.equal(r.flags.length, 1);
+});
+
+test('riwayat: selisih kecil (< 5 km) bukan teleport meski waktunya sangat dekat', () => {
+  // ~2,2 km dalam 1 menit = 133 km/j secara hitungan, tapi jitter GPS/jaringan.
+  const r = cek([rw('2026-10-05', '07:09', LAT + 0.02)]);
+  assert.deepEqual(r.flags, []);
+  assert.equal(r.teleport, null);
+});
+
+test('riwayat: perjalanan wajar (60 km dalam 3 jam) tidak ditandai', () => {
+  assert.deepEqual(cek([rw('2026-10-04', '16:10', LAT + 0.54)]).flags, []);
+});
+
+test('riwayat: lintas hari dihitung dengan benar (kemarin 16:00 ke hari ini 07:10)', () => {
+  const r = cek([rw('2026-10-04', '16:00', LAT + 1)]); // 111 km dalam ~15 jam = 7 km/j
+  assert.deepEqual(r.flags, []);
+});
+
+test('riwayat: koordinat identik 3x ditandai, 2x tidak', () => {
+  const sama = (j) => rw('2026-10-05', j);
+  assert.deepEqual(cek([sama('07:00'), sama('06:00')]).flags, []);
+  assert.deepEqual(cek([sama('07:00'), sama('06:00'), sama('05:00')]).flags, ['KOORDINAT_IDENTIK_3x']);
+});
+
+test('riwayat: baris rusak, kosong, atau di masa depan diabaikan', () => {
+  const r = cek([
+    { Tanggal: '2026-10-05', Jam: '07:00', koordinat: '' },
+    { Tanggal: '2026-10-05', Jam: '07:00', koordinat: 'abc' },
+    { Tanggal: '2026-10-05', Jam: '07:00', koordinat: '0,0' },
+    { Tanggal: 'bukan-tanggal', Jam: '07:00', koordinat: `${LAT + 1},${LNG}` },
+    rw('2026-10-06', '07:00', LAT + 1), // setelah serverTime
+  ]);
+  assert.deepEqual(r, { flags: [], teleport: null, blok: false });
+});
+
+test('riwayat: lat/lng saat ini tidak valid tidak melempar error', () => {
+  const r = analisisRiwayatLokasi({ lat: NaN, lng: LNG, serverTime: ST, riwayat: [rw('2026-10-05', '07:00')] });
+  assert.deepEqual(r.flags, []);
 });

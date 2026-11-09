@@ -29,10 +29,12 @@ const JAM = '07:10';
 // per test sebelumnya bisa saling tertukar: "SELECT request_id" dan "SELECT log
 // harian" sama-sama FROM "Log_Absen", jadi pencocokan berbasis nama tabel saja
 // diam-diam membuat salah satu membaca yang lain.
-const stub = { ins: [], reqId: [], jam: [], lokasi: [], pegawai: [] };
+const stub = { ins: [], reqId: [], jam: [], lokasi: [], pegawai: [], penugasan: [], riwayat: [] };
 
 function defaultQuery(text) {
   if (/INSERT INTO/i.test(text)) return { rows: stub.ins };
+  if (/FROM penugasan/i.test(text)) return { rows: stub.penugasan };
+  if (/koordinat IS NOT NULL/i.test(text)) return { rows: stub.riwayat };
   if (/request_id = \$1/i.test(text)) return { rows: stub.reqId };
   if (/"NIP" = \$1 AND "Tanggal"/i.test(text)) return { rows: stub.log };
   if (/FROM "jam_absen"/i.test(text)) return { rows: stub.jam };
@@ -72,7 +74,7 @@ const GOOD_BODY = {
   horizontal_accuracy: 5,
 };
 
-function harness({ auth = true, query, verify, at = NOW, session = SESSION, notifyAbsen } = {}) {
+function harness({ auth = true, query, verify, at = NOW, session = SESSION, notifyAbsen, teleportBlokKmh, pulangLuarWajibPenugasan } = {}) {
   const sql = [];
   const notifyCalls = [];
   const app = express();
@@ -96,6 +98,8 @@ function harness({ auth = true, query, verify, at = NOW, session = SESSION, noti
     // Fungsi, bukan Date: router mengambil waktu sekali per request supaya tanggal
     // dan jam tidak bisa berbeda bila request melewati tengah malam.
     now: () => at,
+    teleportBlokKmh,
+    pulangLuarWajibPenugasan,
   }));
   return { app, sql, notifyCalls };
 }
@@ -126,6 +130,8 @@ test.beforeEach(() => {
   stub.jam = [jamDefault()];
   stub.lokasi = [lokasiDefault()];
   stub.pegawai = [pegawaiDefault()];
+  stub.penugasan = [];
+  stub.riwayat = [];
 });
 
 // --- kontrak respons & jalur sukses -------------------------------------------
@@ -509,4 +515,170 @@ test('absen sukses TIDAK menulis log [absen-tolak]', async () => {
     console.warn = origWarn;
   }
   assert.equal(lines.filter((l) => l.startsWith('[absen-tolak]')).length, 0);
+});
+
+// --- PULANG LUAR hanya untuk pegawai yang punya penugasan ---------------------
+
+const PULANG_LUAR = {
+  ...GOOD_BODY,
+  request_id: 'req-pl',
+  jenis_absen: 'PULANG LUAR',
+  skip_radius_check: true,
+  latitude: -9.5, // jauh dari kantor: radius memang dilewati
+  longitude: 121.9,
+};
+
+const penugasanQ = (sql) => sql.filter((s) => /FROM penugasan/i.test(s.text));
+
+test('PULANG LUAR tanpa penugasan hari ini ditolak (mode wajib), tidak ada insert', async () => {
+  stub.penugasan = [];
+  const h = harness({ at: new Date('2026-10-05T07:00:00Z'), pulangLuarWajibPenugasan: true }); // WITA 15:00, sesudah jam pulang
+  const r = await post(h, PULANG_LUAR);
+
+  assert.equal(r.body.validasi.is_valid, false);
+  assert.equal(r.body.validasi.kode_tolak, 'PULANG_LUAR_TANPA_PENUGASAN');
+  assert.equal(inserts(h.sql).length, 0);
+});
+
+test('PULANG LUAR dengan penugasan hari ini lolos; query memakai tanggal server + NIP sesi', async () => {
+  stub.penugasan = [{ '?column?': 1 }];
+  stub.log = [{ ID: SESSION.id, Tanggal: '2026-10-05', Jam: '07:00', 'Jenis Absen': 'MASUK' }];
+  const h = harness({ at: new Date('2026-10-05T07:00:00Z'), pulangLuarWajibPenugasan: true });
+  const r = await post(h, { ...PULANG_LUAR, nip: '999', tanggal_iso: '1999-01-01' });
+
+  assert.equal(r.body.validasi.is_valid, true);
+  assert.equal(inserts(h.sql).length, 1);
+  assert.deepEqual(penugasanQ(h.sql)[0].params, [SESSION.nip, '2026-10-05', SESSION.instansi_id]);
+});
+
+test('absen biasa tidak menyentuh tabel penugasan', async () => {
+  const h = harness();
+  await post(h, GOOD_BODY);
+  assert.equal(penugasanQ(h.sql).length, 0);
+});
+
+test('skip_radius_check tanpa jenis_absen PULANG LUAR tidak membuka bypass', async () => {
+  stub.penugasan = [{ '?column?': 1 }];
+  const h = harness();
+  const r = await post(h, { ...GOOD_BODY, request_id: 'req-x', skip_radius_check: true, latitude: -9.5, longitude: 121.9 });
+  assert.equal(r.body.validasi.kode_tolak, 'LOKASI_TIDAK_VALID');
+});
+
+// --- analisis riwayat lokasi ---------------------------------------------------
+
+async function withWarnSpy(fn) {
+  const calls = [];
+  const orig = console.warn;
+  console.warn = (...a) => { calls.push(a); };
+  try { return { result: await fn(), calls }; } finally { console.warn = orig; }
+}
+
+// ~111 km dari GOOD_BODY, 10 menit sebelum NOW (07:10 WITA).
+const RIWAYAT_JAUH = { Tanggal: TANGGAL, Jam: '07:00', koordinat: '-8.9124,121.5124' };
+
+test('teleport: absen tetap diterima (default hanya menandai) dan [absen-curiga] tercatat', async () => {
+  stub.riwayat = [RIWAYAT_JAUH];
+  const h = harness();
+  const { result: r, calls } = await withWarnSpy(() => post(h, GOOD_BODY));
+
+  assert.equal(r.body.validasi.is_valid, true);
+  assert.equal(inserts(h.sql).length, 1);
+  const curiga = calls.find((c) => c[0] === '[absen-curiga]');
+  assert.ok(curiga, 'harus ada log [absen-curiga]');
+  const log = JSON.parse(curiga[1]);
+  assert.equal(log.nip, SESSION.nip);
+  assert.match(log.flags[0], /^TELEPORT_/);
+  assert.equal(log.blok, false);
+});
+
+test('teleport: dengan teleportBlokKmh absen ditolak GPS_TELEPORT dan tidak diinsert', async () => {
+  stub.riwayat = [RIWAYAT_JAUH];
+  const h = harness({ teleportBlokKmh: 500 });
+  const { result: r } = await withWarnSpy(() => post(h, GOOD_BODY));
+
+  assert.equal(r.body.validasi.is_valid, false);
+  assert.equal(r.body.validasi.kode_tolak, 'GPS_TELEPORT');
+  assert.equal(inserts(h.sql).length, 0);
+});
+
+test('riwayat bersih: tidak ada log [absen-curiga]', async () => {
+  stub.riwayat = [{ Tanggal: TANGGAL, Jam: '07:00', koordinat: '-9.9124,121.5124' }];
+  const h = harness({ teleportBlokKmh: 500 });
+  const { result: r, calls } = await withWarnSpy(() => post(h, GOOD_BODY));
+
+  assert.equal(r.body.validasi.is_valid, true);
+  assert.equal(calls.filter((c) => c[0] === '[absen-curiga]').length, 0);
+});
+
+test('riwayat dibaca dari NIP sesi dengan batas 2 hari ke belakang', async () => {
+  const h = harness();
+  await post(h, GOOD_BODY);
+  const q = h.sql.find((s) => /koordinat IS NOT NULL/i.test(s.text));
+  assert.deepEqual(q.params, [SESSION.nip, '2026-10-03']);
+});
+
+test('query riwayat gagal tidak menggagalkan absen yang sudah valid', async () => {
+  const h = harness({
+    query: (text) => {
+      if (/koordinat IS NOT NULL/i.test(text)) throw new Error('db down');
+      return defaultQuery(text);
+    },
+  });
+  const origErr = console.error;
+  console.error = () => {};
+  try {
+    const r = await post(h, GOOD_BODY);
+    assert.equal(r.body.validasi.is_valid, true);
+    assert.equal(inserts(h.sql).length, 1);
+  } finally { console.error = origErr; }
+});
+
+// Mode "tandai" (DEFAULT, untuk instansi yang belum memakai menu Penugasan/SPT):
+// PULANG LUAR tetap diterima, tapi tercatat supaya terlihat siapa yang belum
+// punya penugasan sebelum mode wajib dinyalakan.
+test('PULANG LUAR tanpa penugasan, mode default (tandai): diterima dan dicatat [absen-curiga]', async () => {
+  stub.penugasan = [];
+  stub.log = [{ ID: SESSION.id, Tanggal: '2026-10-05', Jam: '07:00', 'Jenis Absen': 'MASUK' }];
+  const h = harness({ at: new Date('2026-10-05T07:00:00Z') }); // tanpa opsi = default
+  const { result: r, calls } = await withWarnSpy(() => post(h, PULANG_LUAR));
+
+  assert.equal(r.body.validasi.is_valid, true);
+  assert.equal(inserts(h.sql).length, 1);
+  const curiga = calls.find((c) => c[0] === '[absen-curiga]');
+  assert.ok(curiga, 'harus ada log [absen-curiga]');
+  const log = JSON.parse(curiga[1]);
+  assert.deepEqual(log.flags, ['PULANG_LUAR_TANPA_PENUGASAN']);
+  assert.equal(log.nip, SESSION.nip);
+  assert.equal(log.jenis, 'PULANG LUAR');
+});
+
+test('mode tandai: dengan penugasan tidak ada log [absen-curiga]', async () => {
+  stub.penugasan = [{ '?column?': 1 }];
+  stub.log = [{ ID: SESSION.id, Tanggal: '2026-10-05', Jam: '07:00', 'Jenis Absen': 'MASUK' }];
+  const h = harness({ at: new Date('2026-10-05T07:00:00Z'), pulangLuarWajibPenugasan: false });
+  const { result: r, calls } = await withWarnSpy(() => post(h, PULANG_LUAR));
+
+  assert.equal(r.body.validasi.is_valid, true);
+  assert.equal(calls.filter((c) => c[0] === '[absen-curiga]').length, 0);
+});
+
+test('mode tandai: flag penugasan dan teleport digabung dalam satu log', async () => {
+  stub.penugasan = [];
+  // Sekarang 15:00 WITA; absen sebelumnya 14:50 dan ~111 km dari titik ini.
+  stub.riwayat = [{ ...RIWAYAT_JAUH, Jam: '14:50' }];
+  stub.log = [{ ID: SESSION.id, Tanggal: '2026-10-05', Jam: '06:00', 'Jenis Absen': 'MASUK' }];
+  const h = harness({ at: new Date('2026-10-05T07:00:00Z') });
+  const { calls } = await withWarnSpy(() => post(h, { ...PULANG_LUAR, latitude: -9.9124, longitude: 121.5124 }));
+
+  const logs = calls.filter((c) => c[0] === '[absen-curiga]');
+  assert.equal(logs.length, 1, 'satu baris log per absen');
+  const flags = JSON.parse(logs[0][1]).flags;
+  assert.ok(flags.includes('PULANG_LUAR_TANPA_PENUGASAN'));
+  assert.ok(flags.some((f) => f.startsWith('TELEPORT_')));
+});
+
+test('mode tandai tidak membuka bypass lain: skip_radius_check tanpa PULANG LUAR tetap ditolak radius', async () => {
+  const h = harness({ pulangLuarWajibPenugasan: false });
+  const r = await post(h, { ...GOOD_BODY, request_id: 'req-y', skip_radius_check: true, latitude: -9.5, longitude: 121.9 });
+  assert.equal(r.body.validasi.kode_tolak, 'LOKASI_TIDAK_VALID');
 });

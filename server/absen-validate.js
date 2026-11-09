@@ -62,7 +62,15 @@ const hariCocok = (l, hariIni) => {
 const BUTUH_KETERANGAN = ['IZIN', 'SAKIT', 'TUGAS'];
 
 export function validateAbsen({ payload = {}, serverTime, employee = {}, settings = {} }) {
-  const { hariIni = '', jamMasuk = '', jamPulang = '', tengahHari = TENGAH_HARI, lokasi = [] } = settings;
+  const {
+    hariIni = '', jamMasuk = '', jamPulang = '', tengahHari = TENGAH_HARI, lokasi = [],
+    // Fakta server: apakah pegawai punya baris penugasan hari ini. Harus persis
+    // true; undefined/false = tolak PULANG LUAR (fail-closed).
+    penugasanHariIni = false,
+    // Selain false persis, penugasan WAJIB (fail-closed). Router mengirim false
+    // hanya saat instansi belum memakai fitur Penugasan/SPT (mode "tandai").
+    wajibPenugasan = true,
+  } = settings;
   const ket = String(payload.keterangan || '').trim() ? String(payload.keterangan) : '';
 
   if (!employee?.nip) return tolak('NIP_REQUIRED', 'NIP tidak dikenali.');
@@ -122,7 +130,19 @@ export function validateAbsen({ payload = {}, serverTime, employee = {}, setting
   // Parity with n8n baris 246-249: field staff are away from the office by definition,
   // so office radius is not checked for PULANG LUAR. Canonical juga tidak mewajibkan
   // keterangan di sini — dia meng-default-nya (baris 248), jadi jangan diubah jadi tolak.
-  if (isPulangLuar) return terima('PULANG LUAR', 'Lapangan', ket || 'Pulang dari lapangan');
+  // skip_radius_check dikirim klien, jadi tanpa syarat ini siapa pun bisa absen
+  // pulang dari mana saja. Radius hanya boleh dilewati kalau server mencatat
+  // penugasan (tabel penugasan) untuk pegawai ini pada tanggal server hari ini.
+  if (isPulangLuar) {
+    const hasil = terima('PULANG LUAR', 'Lapangan', ket || 'Pulang dari lapangan');
+    if (penugasanHariIni === true) return hasil;
+    if (wajibPenugasan !== false) {
+      return tolak('PULANG_LUAR_TANPA_PENUGASAN',
+        'Absen pulang luar hanya untuk pegawai yang memiliki penugasan/SPT hari ini.');
+    }
+    // Mode tandai: diterima, tapi router mencatatnya di log [absen-curiga].
+    return { ...hasil, peringatan: ['PULANG_LUAR_TANPA_PENUGASAN'] };
+  }
 
   // ── Lokasi: hari wajib untuk semua, termasuk WFH ──
   const hariLokasi = lokasi.filter((l) => hariCocok(l, hariIni));
@@ -171,6 +191,78 @@ export function validateAbsen({ payload = {}, serverTime, employee = {}, setting
   }
 
   return terima(jenisAbsen, near.Nama_Lokasi, ket);
+}
+
+// ── Analisis riwayat lokasi (anti-fake GPS sisi server) ──
+//
+// Skor di klien (js/absen.js) dihitung dari prevLocData di localStorage, yang
+// bisa dihapus atau diubah pengguna. Di sini pembandingnya adalah koordinat absen
+// sebelumnya di Log_Absen, yang hanya bisa ditulis server. Fungsi ini murni:
+// router yang membaca riwayat dan memutuskan apa yang dilakukan dengan hasilnya.
+
+const JARAK_MIN_TELEPORT_M = 5000; // di bawah ini selisih GPS biasa, bukan teleport
+const KECEPATAN_CURIGA_KMH = 120;
+const KECEPATAN_TELEPORT_KMH = 200;
+const IDENTIK_M = 0.5;
+const IDENTIK_MIN_ULANG = 3;
+const RIWAYAT_MAKS = 5;
+
+function parseKoordinat(v) {
+  const parts = String(v ?? '').split(',');
+  if (parts.length !== 2) return null;
+  const lat = Number(parts[0]);
+  const lng = Number(parts[1]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) return null;
+  return { lat, lng };
+}
+
+// Tanggal + jam WITA -> milidetik. Kedua sisi selalu WITA, jadi selisihnya valid.
+function epochWita(tanggal, jam) {
+  const t = String(tanggal ?? '').trim().slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const m = toMenit(jam);
+  if (!t || !Number.isFinite(m)) return NaN;
+  return Date.UTC(Number(t[1]), Number(t[2]) - 1, Number(t[3]), 0, m);
+}
+
+/**
+ * @param riwayat baris Log_Absen terbaru dulu: { Tanggal, Jam, koordinat: "lat,lng" }
+ * @param blokKmh ambang tolak (km/jam); 0/undefined = hanya menandai, tidak menolak
+ * @returns { flags: string[], teleport: {kmh, jarakM}|null, blok: boolean }
+ *
+ * Penandaan, bukan penolakan, secara default: penerbangan dinas (Tambolaka ke
+ * Kupang) dan posisi jaringan yang di-cache perangkat bisa terlihat seperti
+ * teleport atau koordinat identik pada pegawai yang jujur.
+ */
+export function analisisRiwayatLokasi({ lat, lng, serverTime, riwayat = [], blokKmh = 0 }) {
+  const hasil = { flags: [], teleport: null, blok: false };
+  const sekarang = epochWita(serverTime?.tanggal, serverTime?.jam);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(sekarang)) return hasil;
+
+  const titik = riwayat.slice(0, RIWAYAT_MAKS).map((r) => {
+    const k = parseKoordinat(r.koordinat);
+    return k && { ...k, t: epochWita(r.Tanggal, r.Jam) };
+  }).filter((p) => p && Number.isFinite(p.t) && p.t <= sekarang);
+
+  let identik = 0;
+  for (const p of titik) {
+    const jarak = haversine(lat, lng, p.lat, p.lng);
+    if (jarak <= IDENTIK_M) identik += 1;
+    // Minimal 60 dtk: jam log hanya HH:MM, jadi selisih nol/semenit tidak boleh
+    // membuat kecepatan membengkak.
+    const detik = Math.max((sekarang - p.t) / 1000, 60);
+    const kmh = (jarak / detik) * 3.6;
+    if (jarak >= JARAK_MIN_TELEPORT_M && (!hasil.teleport || kmh > hasil.teleport.kmh)) {
+      hasil.teleport = { kmh: Math.round(kmh), jarakM: Math.round(jarak) };
+    }
+  }
+
+  if (hasil.teleport) {
+    if (hasil.teleport.kmh > KECEPATAN_TELEPORT_KMH) hasil.flags.push(`TELEPORT_${hasil.teleport.kmh}kmh_${hasil.teleport.jarakM}m`);
+    else if (hasil.teleport.kmh > KECEPATAN_CURIGA_KMH) hasil.flags.push(`KECEPATAN_TINGGI_${hasil.teleport.kmh}kmh`);
+    if (Number(blokKmh) > 0 && hasil.teleport.kmh >= Number(blokKmh)) hasil.blok = true;
+  }
+  if (identik >= IDENTIK_MIN_ULANG) hasil.flags.push(`KOORDINAT_IDENTIK_${identik}x`);
+  return hasil;
 }
 
 // ── Gate bisnis (node "Validasi Absen" canonical) ──
