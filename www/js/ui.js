@@ -289,6 +289,7 @@
         // Immediate check as well
         if (typeof _applyAdminUIExtended === 'function') _applyAdminUIExtended();
       }
+    }
       // Auto-load tanda tangan saat buka tab profil
       if (tab === 'profil') {
         if (typeof loadMySignature === 'function') loadMySignature();
