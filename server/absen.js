@@ -1,6 +1,7 @@
 import express from 'express';
 import { validateAbsen, evaluateGates, analisisRiwayatLokasi } from './absen-validate.js';
 import { witaNow, hariIndonesia } from './absen-util.js';
+import { sameInstansi } from './auth.js';
 
 // ── SQL ──
 // Semua nilai client masuk lewat $n. Canonical n8n menyisipkan string ke dalam
@@ -14,6 +15,10 @@ import { witaNow, hariIndonesia } from './absen-util.js';
 export const PEGAWAI_SQL =
   'SELECT id::text AS id, username, "NIP", "Status", "Jabatan", bidang, pangkat, nomorhp, instansi_id '
   + 'FROM "user_list" WHERE id = $1::bigint';
+
+export const PEGAWAI_BY_NIP_SQL =
+  'SELECT id::text AS id, username, "NIP", "Status", "Jabatan", bidang, pangkat, nomorhp, instansi_id '
+  + 'FROM "user_list" WHERE "NIP" = $1';
 
 // Masuk/pulang dibaca dari tabel jam_absen (node "Get Jam Absen"), bukan dari
 // jam_masuk/jam_pulang di user_list: kolom latter hanya default per-user saat
@@ -186,7 +191,8 @@ export function createAbsenRouter({
       // sesi (token 192-hex terbit lewat /api/auth/login). Fail-closed: selama
       // init_data ada TETAP diverifikasi (absen Telegram), fallback hanya berlaku
       // saat init_data kosong.
-      const webFallback = !init && body.source === 'telegram_x_fallback';
+      const isMejaAdmin = body.source === 'meja_absen' && (user.is_admin === true || ['ADMIN', 'SUPERADMIN', 'KEPALA', 'SEKRETARIS'].includes(String(user.role || '').toUpperCase()));
+      const webFallback = !init && (body.source === 'telegram_x_fallback' || isMejaAdmin);
       if (req.authKind !== 'device' && !webFallback) {
         const init1 = await verifyInitData(init, botToken);
         if (!init1?.ok) {
@@ -209,11 +215,20 @@ export function createAbsenRouter({
         return res.json({ ok: true, message: 'Data sudah tercatat (Idempotent)' });
       }
 
-      const peg = await query(PEGAWAI_SQL, [user.id]);
+      const isMeja = isMejaAdmin || req.authKind === 'device';
+      let peg;
+      if (isMeja && body.nip) {
+        peg = await query(PEGAWAI_BY_NIP_SQL, [String(body.nip).trim()]);
+      } else {
+        peg = await query(PEGAWAI_SQL, [user.id]);
+      }
       if (peg.rows.length !== 1) {
         return res.status(403).json({ ok: false, message: 'Data pegawai tidak dapat dipastikan' });
       }
       const row = peg.rows[0];
+      if (isMeja && !sameInstansi(user, row.instansi_id)) {
+        return res.status(403).json({ ok: false, message: 'Pegawai bukan dari instansi yang sama' });
+      }
       // validateAbsen memakai kunci huruf kecil; baris database capitalize.
       const employee = { ...row, nip: row.NIP, status: row.Status };
 
@@ -232,6 +247,7 @@ export function createAbsenRouter({
         init_data: init,
         source: body.source,
         meja_token: body.meja_token,
+        is_admin_meja: isMejaAdmin,
         lokasi_nama: body.lokasi_nama,
         jenis_absen: body.jenis_absen,
         keterangan: body.keterangan,

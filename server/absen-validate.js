@@ -77,9 +77,10 @@ export function validateAbsen({ payload = {}, serverTime, employee = {}, setting
   const status = String(employee.status || 'AKTIF').toUpperCase();
   if (status === 'NONAKTIF' || status === 'INACTIVE') return tolak('PEGAWAI_NONAKTIF', 'Akun pegawai ini dinonaktifkan.');
 
-  // Meja Absen: n8n only checks token presence; we check the value (T3).
+  // Meja Absen: n8n only checks token presence; we check the value (T3),
+  // atau sesi admin terotentikasi (is_admin_meja).
   if (payload.source === 'meja_absen') {
-    if (!isValidMejaToken(payload.meja_token, employee.instansi_id)) {
+    if (!payload.is_admin_meja && !isValidMejaToken(payload.meja_token, employee.instansi_id)) {
       return tolak('MEJA_TOKEN_INVALID', 'Akses Meja Absen ditolak (Token tidak valid/tidak ditemukan).');
     }
     return terima('MEJA', payload.lokasi_nama || 'Meja Absen', ket);

@@ -682,3 +682,39 @@ test('mode tandai tidak membuka bypass lain: skip_radius_check tanpa PULANG LUAR
   const r = await post(h, { ...GOOD_BODY, request_id: 'req-y', skip_radius_check: true, latitude: -9.5, longitude: 121.9 });
   assert.equal(r.body.validasi.kode_tolak, 'LOKASI_TIDAK_VALID');
 });
+
+test('Meja Absen: admin mengirim source meja_absen dengan NIP pegawai tanpa init_data berhasil di-insert untuk pegawai tersebut', async () => {
+  stub.ins = [{ id: 999 }];
+  stub.reqId = [];
+  stub.log = [];
+  stub.jam = [{ masuk: '07:15', pulang: '14:30' }];
+  stub.lokasi = [lokasiDefault()];
+  stub.pegawai = [{
+    id: '100',
+    username: 'Ani Staff',
+    NIP: '199505052020012001',
+    Status: 'AKTIF',
+    Jabatan: 'Staff',
+    bidang: 'Sekretariat',
+    pangkat: 'III/a',
+    nomorhp: '08123456789',
+    instansi_id: 'bapperida',
+  }];
+  const adminSession = { id: '1', nip: '19700101', role: 'ADMIN', is_admin: true, instansi_id: 'bapperida' };
+  const h = harness({ session: adminSession });
+  const r = await post(h, {
+    request_id: 'meja-req-1',
+    source: 'meja_absen',
+    nip: '199505052020012001',
+    latitude: -9.9124,
+    longitude: 121.5124,
+    horizontal_accuracy: 5,
+  });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.validasi?.is_valid, true);
+  const ins = h.sql.find((s) => /INSERT INTO "Log_Absen"/i.test(s.text));
+  assert.ok(ins, 'absen harus di-insert ke Log_Absen');
+  assert.equal(ins.params[0], '100', 'ID pegawai di log harus ID milik pegawai yang di-scan, bukan ID admin');
+  assert.equal(ins.params[1], 'Ani Staff');
+  assert.equal(ins.params[2], '199505052020012001');
+});

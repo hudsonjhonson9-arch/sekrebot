@@ -1,5 +1,6 @@
 import express from 'express';
 import crypto from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import { verifyInitData } from './telegram.js';
 import { query as realQuery } from './db.js';
 import { singleSessionRow } from './auth.js';
@@ -103,9 +104,44 @@ export function createAuthSessionRouter({ query = realQuery, arsipSso } = {}) {
         });
       }
 
+      // Cek apakah instansi mewajibkan verifikasi kata sandi
+      const pwdSetting = await query(
+        `SELECT value FROM pengaturan WHERE key='require_password' AND (instansi_id=$1 OR instansi_id='all') ORDER BY CASE WHEN instansi_id=$1 THEN 0 ELSE 1 END LIMIT 1`,
+        [user.instansi_id || 'bapperida']
+      );
+      const isPasswordRequired = pwdSetting?.rows?.[0] ? ['1', 'true', 'on'].includes(String(pwdSetting.rows[0].value).toLowerCase()) : false;
+
+      if (isPasswordRequired) {
+        const password = String(req.body?.password || '');
+        if (!password) {
+          return res.status(401).json({
+            ok: false,
+            require_password: true,
+            message: 'Kata sandi wajib diisi.',
+          });
+        }
+        if (!user.password_hash) {
+          return res.status(401).json({
+            ok: false,
+            message: 'Akun belum memiliki kata sandi. Hubungi administrator untuk reset sandi.',
+          });
+        }
+        const match = await bcrypt.compare(password, user.password_hash);
+        if (!match) {
+          return res.status(401).json({
+            ok: false,
+            require_password: true,
+            message: 'Kata sandi salah.',
+          });
+        }
+      }
+
       const token = crypto.randomBytes(96).toString('hex');
       const ins = await query(INSERT_SESSION_SQL, [token, user.nip, user.id, user.role, user.instansi_id]);
       if (!ins.rows.length) return res.status(500).json({ ok: false, message: 'Gagal membuat sesi.' });
+
+      delete user.password_hash;
+      delete user.pin_hash;
 
       setCookieArsip(res, user.nip);
       return res.status(200).json({ ok: true, session_token: ins.rows[0].session_token, user });

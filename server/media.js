@@ -384,7 +384,27 @@ export function createMediaRouter({ query, gasUpsert }) {
 
   router.post('/face-settings', async (req,res) => {
     if (!['ADMIN','SUPERADMIN','KEPALA','SEKRETARIS','KABID','IRBAN'].includes(req.user?.role)) return fail(res,403,'Forbidden');
-    try { const inst=req.body?.instansi_id || req.user.instansi_id || ''; if(!sameInstansi(req.user,inst))return fail(res,403,'Forbidden'); const s=req.body?.settings||{}; const fields=[['face_liveness_enabled',s.liveness_enabled],['face_threshold',s.face_threshold],['face_meja_threshold',s.meja_threshold],['face_liveness_score',s.liveness_score],['face_mandatory_nips',Array.isArray(s.mandatory_nips)?JSON.stringify(s.mandatory_nips):s.mandatory_nips]]; for(const [key,val] of fields){if(val!==undefined&&val!==null)await query(`INSERT INTO pengaturan (key,value,instansi_id) VALUES ($1,$2,$3) ON CONFLICT (key,instansi_id) DO UPDATE SET value=EXCLUDED.value`,[key,String(val),inst]);} return ok(res,{updated:fields.filter(([,v])=>v!==undefined&&v!==null).map(([k])=>k)}); }catch(e){console.error('[media/face-settings/post]',e);return fail(res,500,'Gagal menyimpan pengaturan face.');}
+    try {
+      const inst = req.body?.instansi_id || req.user.instansi_id || 'bapperida';
+      if (!sameInstansi(req.user, inst)) return fail(res,403,'Forbidden');
+      const s = req.body?.settings || {};
+      const fields = [
+        ['face_liveness_enabled', s.liveness_enabled],
+        ['face_threshold', s.face_threshold],
+        ['face_meja_threshold', s.meja_threshold],
+        ['face_liveness_score', s.liveness_score],
+        ['face_mandatory_nips', Array.isArray(s.mandatory_nips) ? JSON.stringify(s.mandatory_nips) : s.mandatory_nips]
+      ];
+      for (const [key, val] of fields) {
+        if (val !== undefined && val !== null) {
+          await query(`INSERT INTO pengaturan (key,value,instansi_id) VALUES ($1,$2,$3) ON CONFLICT (key,instansi_id) DO UPDATE SET value=EXCLUDED.value`, [key, String(val), inst]);
+        }
+      }
+      return ok(res, { updated: fields.filter(([,v]) => v !== undefined && v !== null).map(([k]) => k) });
+    } catch(e) {
+      console.error('[media/face-settings/post]', e);
+      return fail(res, 500, 'Gagal menyimpan pengaturan face.');
+    }
   });
 
   router.get('/signature', async (req, res) => {

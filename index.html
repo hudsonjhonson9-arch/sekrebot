@@ -2842,8 +2842,43 @@
             <div id="faceToggleDesc" style="font-size:9px;color:var(--muted);line-height:1.4">Memuat deskripsi status...
             </div>
           </div>
-          <div id="faceToggleResult" style="display:none; margin-top:12px"></div>
-          <button class="btn-admin" onclick="simpanFaceToggle()" style="margin-top:12px"><i class="fas fa-save"></i> Terapkan Perubahan</button>
+          <div class="result-card" id="faceToggleResult" style="display:none; margin-top:12px">
+            <div class="r-icon" id="faceToggleRIcon"></div>
+            <div style="flex:1">
+              <div class="r-title" id="faceToggleRTitle">—</div>
+              <div class="r-msg" id="faceToggleRMsg">—</div>
+            </div>
+          </div>
+          <button class="btn-admin" id="btnSimpanFaceToggle" onclick="simpanFaceToggle()" style="margin-top:12px"><i class="fas fa-save"></i> <span id="btnFaceToggleText">Terapkan Perubahan</span></button>
+        </div>
+
+        <!-- <i class="fas fa-lock"></i> PASSWORD VERIFICATION ══ -->
+        <div id="passwordToggleCard" class="card" style="margin-top:12px">
+          <div
+            style="font-size:11px;font-weight:800;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+            <i class="fas fa-lock"></i> PASSWORD VERIFICATION SWITCH</div>
+          <div
+            style="display:flex;flex-direction:column;gap:12px;background:rgba(255,255,255,.03);padding:14px;border:1px solid var(--border);border-radius:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div id="passwordToggleLabel" style="font-size:12px;font-weight:700">Memuat status...</div>
+              <div id="passwordToggleSwitch" onclick="togglePasswordVerification()"
+                style="width:52px;height:28px;border-radius:14px;background:#6b7280;position:relative;cursor:pointer">
+                <div id="passwordToggleKnob"
+                  style="position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .3s">
+                </div>
+              </div>
+            </div>
+            <div id="passwordToggleDesc" style="font-size:9px;color:var(--muted);line-height:1.4">Memuat deskripsi status...
+            </div>
+          </div>
+          <div class="result-card" id="passwordToggleResult" style="display:none; margin-top:12px">
+            <div class="r-icon" id="pwdToggleRIcon"></div>
+            <div style="flex:1">
+              <div class="r-title" id="pwdToggleRTitle">—</div>
+              <div class="r-msg" id="pwdToggleRMsg">—</div>
+            </div>
+          </div>
+          <button class="btn-admin" id="btnSimpanPasswordToggle" onclick="simpanPasswordToggle()" style="margin-top:12px"><i class="fas fa-save"></i> <span id="btnPasswordToggleText">Terapkan Perubahan</span></button>
         </div>
 
         <!-- <i class="fas fa-cog"></i> FACE SETTINGS (Admin) ══ -->
@@ -2901,7 +2936,13 @@
               <input id="fsMandatoryNips" type="text" placeholder="contoh: 199603202025212001,198501152010012003" style="width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--white);font-size:11px;box-sizing:border-box">
             </div>
           </div>
-          <div id="fsResult" style="display:none; margin-top:12px"></div>
+          <div class="result-card" id="fsResult" style="display:none; margin-top:12px">
+            <div class="r-icon" id="fsRIcon"></div>
+            <div style="flex:1">
+              <div class="r-title" id="fsRTitle">—</div>
+              <div class="r-msg" id="fsRMsg">—</div>
+            </div>
+          </div>
           <button class="btn-admin" onclick="saveFaceSettings()" style="margin-top:12px"><i class="fas fa-save"></i> Simpan Settings</button>
         </div>
 
@@ -3122,6 +3163,9 @@
       </div>
       <div id="formLogin">
         <input type="text" id="loginNip" class="form-input-auth" placeholder="Masukkan NIP / NISN / NIM / ID" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9a-zA-Z]/g, '')">
+        <div id="loginPasswordWrapper" style="display:none; margin-top:8px">
+          <input type="password" id="loginPassword" class="form-input-auth" placeholder="Masukkan Kata Sandi (Default: BapperidaSB2026)" autocomplete="current-password">
+        </div>
         <button id="btnLogin" class="btn-auth" onclick="handleAuthAction('login')">Masuk Sekarang <i class="fas fa-rocket"></i></button>
       </div>
       <div id="formRegister" style="display:none">

@@ -47,16 +47,31 @@
           if (!nip) throw new Error('Silakan masukkan NIP');
           if (nip.length < 3) throw new Error('ID / NIP minimal terdiri dari 3 karakter');
 
+          const pwdInput = $('loginPassword');
+          const password = pwdInput ? pwdInput.value : '';
+
           // Login NIP (web, non-Telegram): satu panggilan menerbitkan sesi native
           // dan mengembalikan baris user; tidak lagi butuh /api/user-list (yang
           // berada di balik requireRole dan tak terjangkau sebelum punya token).
           const loginRes = await fetch(API_BASE + P.webLogin, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nip }),
+            body: JSON.stringify({ nip, password }),
           });
           const loginBody = await loginRes.json().catch(() => ({}));
-          if (!loginRes.ok) throw new Error(loginBody?.message || 'Login gagal. Coba lagi.');
+          if (!loginRes.ok) {
+            if (loginBody?.require_password) {
+              const wrapper = $('loginPasswordWrapper');
+              if (wrapper) wrapper.style.display = 'block';
+              if (pwdInput) {
+                pwdInput.focus();
+                if (!password) {
+                  throw new Error('Verifikasi sandi aktif. Masukkan kata sandi (Default: BapperidaSB2026).');
+                }
+              }
+            }
+            throw new Error(loginBody?.message || 'Login gagal. Coba lagi.');
+          }
 
           const user = loginBody.user;
           if (!user || !user.id) throw new Error('Data pegawai tidak lengkap. Hubungi admin.');

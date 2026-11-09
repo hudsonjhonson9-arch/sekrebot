@@ -313,6 +313,7 @@ const P = {
   faceRegister: '/api/media/face',
   faceGet: '/api/media/face',
   faceToggle: '/api/media/face-toggle',
+  passwordToggle: '/api/password-toggle',
   faceGetAll: '/api/media/faces',
   faceSettings: '/api/media/face-settings',
   mejaAbsen: '/api/absen',

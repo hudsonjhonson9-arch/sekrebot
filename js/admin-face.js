@@ -286,6 +286,78 @@
       }
     }
 
+    /* ════ PASSWORD VERIFICATION TOGGLE ════ */
+    let PASSWORD_VERIFICATION_ENABLED = false;
+    let _passwordTogglePending = null;
+
+    function _applyPasswordToggleUI(enabled) {
+      const sw = $('passwordToggleSwitch');
+      const knob = $('passwordToggleKnob');
+      const label = $('passwordToggleLabel');
+      const desc = $('passwordToggleDesc');
+      if (!sw || !knob) return;
+
+      if (enabled) {
+        if (sw) sw.style.background = '#22c55e'; // Green
+        if (knob) knob.style.left = '27px';    // Right
+        if (label) label.innerHTML = '<i class="fas fa-circle"></i> Verifikasi Sandi Aktif';
+        if (desc) desc.textContent = 'Pegawai wajib memasukkan kata sandi saat login';
+      } else {
+        if (sw) sw.style.background = '#6b7280'; // Grey
+        if (knob) knob.style.left = '3px';     // Left
+        if (label) label.innerHTML = '<i class="fas fa-circle"></i> Verifikasi Sandi Nonaktif';
+        if (desc) desc.textContent = 'Login bebas kata sandi (cukup NIP / verifikasi wajah)';
+      }
+      const card = $('passwordToggleCard');
+      if (card) card.style.display = _isSuperAdmin() ? 'block' : 'none';
+    }
+
+    async function loadPasswordToggle(instansi_id) {
+      const inst = instansi_id || getScopedInstansiId();
+      try {
+        const res = await apiGet(P.passwordToggle, { instansi_id: inst });
+        if (!res.ok) throw 0;
+        PASSWORD_VERIFICATION_ENABLED = res.enabled === true || res.data?.enabled === true;
+      } catch {
+        PASSWORD_VERIFICATION_ENABLED = false;
+      }
+      _passwordTogglePending = PASSWORD_VERIFICATION_ENABLED;
+      _applyPasswordToggleUI(PASSWORD_VERIFICATION_ENABLED);
+    }
+
+    function togglePasswordVerification() {
+      _passwordTogglePending = !(_passwordTogglePending ?? PASSWORD_VERIFICATION_ENABLED);
+      _applyPasswordToggleUI(_passwordTogglePending);
+      const rc = $('passwordToggleResult');
+      if (rc) rc.style.display = 'none';
+    }
+
+    async function simpanPasswordToggle() {
+      const enabled = _passwordTogglePending ?? PASSWORD_VERIFICATION_ENABLED;
+      const btn = $('btnSimpanPasswordToggle');
+      if (btn) { btn.disabled = true; dom.setHTML('btnPasswordToggleText', '<i class="fas fa-save"></i> Menyimpan...'); }
+      const rc = $('passwordToggleResult');
+      if (rc) rc.style.display = 'flex';
+      try {
+        const instId = getScopedInstansiId();
+        await apiPost(P.passwordToggle, { enabled, instansi_id: instId });
+        PASSWORD_VERIFICATION_ENABLED = enabled;
+        _applyPasswordToggleUI(enabled);
+        showResult('passwordToggleResult', 'pwdToggleRIcon', 'pwdToggleRTitle', 'pwdToggleRMsg', 'success', '<i class="fas fa-check"></i>',
+          enabled ? 'Verifikasi Sandi Diaktifkan' : 'Verifikasi Sandi Dinonaktifkan',
+          enabled
+            ? 'Semua pegawai wajib memasukkan kata sandi saat login.'
+            : 'Login absensi dapat dilakukan tanpa kata sandi (cukup NIP).'
+        );
+      } catch {
+        PASSWORD_VERIFICATION_ENABLED = enabled;
+        showResult('passwordToggleResult', 'pwdToggleRIcon', 'pwdToggleRTitle', 'pwdToggleRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal Simpan',
+          'Gagal menyimpan pengaturan verifikasi sandi ke server.');
+      } finally {
+        if (btn) { setTimeout(() => { btn.disabled = false; dom.setText('btnPasswordToggleText', 'Terapkan Perubahan'); }, 2500); }
+      }
+    }
+
     /* ════ AUTO INIT ════ */
     // Load lokasi dari server saat startup agar tab Absen langsung menampilkan lokasi
     async function loadLokasiPublik() {
@@ -692,7 +764,9 @@
       // Save to server
       let serverOk = false;
       try {
+        const instId = typeof getScopedInstansiId === 'function' ? getScopedInstansiId() : (localStorage.getItem('MY_INSTANSI') || 'bapperida');
         const res = await apiPost(P.faceSettings, {
+          instansi_id: instId,
           settings: {
             liveness_enabled: _fsData.liveness_enabled,
             face_threshold: _fsData.face_threshold,
@@ -701,7 +775,7 @@
             mandatory_nips: _fsData.mandatory_nips
           }
         });
-        serverOk = res.ok;
+        serverOk = res && res.ok;
       } catch {}
 
       // Also save to localStorage as fallback
@@ -720,4 +794,7 @@
 
 
     // ponytail: do NOT call loadFaceSettings() at parse time — moved to initApp()
+    window.loadPasswordToggle = loadPasswordToggle;
+    window.togglePasswordVerification = togglePasswordVerification;
+    window.simpanPasswordToggle = simpanPasswordToggle;
 

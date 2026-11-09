@@ -382,3 +382,39 @@ test('user-reset-password: admin bisa mereset password ke default BapperidaSB202
   assert.ok(updatedHash, 'hash password harus diupdate');
   assert.ok(updatedHash.startsWith('$2'), 'hash harus berbentuk bcrypt');
 });
+
+test('GET /password-toggle: membaca status dari pengaturan', async () => {
+  const q = async (text) => {
+    if (/FROM pengaturan WHERE key='require_password'/i.test(text)) {
+      return { rows: [{ value: '1' }] };
+    }
+    return { rows: [] };
+  };
+  const h = harness({ session: USER, query: q });
+  const res = await req(h, 'GET', '/api/password-toggle');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.enabled, true);
+  assert.equal(res.body.value, '1');
+});
+
+test('POST /password-toggle: admin bisa menyimpan status require_password', async () => {
+  let savedVal = null;
+  const q = async (text, params) => {
+    if (/INSERT INTO pengaturan/i.test(text)) {
+      savedVal = params[0];
+      return { rows: [{ key: 'require_password', value: params[0] }] };
+    }
+    return { rows: [] };
+  };
+  const h = harness({ session: ADMIN, query: q });
+  const res = await req(h, 'POST', '/api/password-toggle', { enabled: true, instansi_id: 'bapperida' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.enabled, true);
+  assert.equal(savedVal, '1');
+});
+
+test('POST /password-toggle: non-admin ditolak 403', async () => {
+  const h = harness({ session: USER });
+  const res = await req(h, 'POST', '/api/password-toggle', { enabled: true });
+  assert.equal(res.status, 403);
+});

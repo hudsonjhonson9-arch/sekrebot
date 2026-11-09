@@ -12,6 +12,7 @@
         await Promise.allSettled([
           typeof loadFaceSettingsGlobal === 'function' ? loadFaceSettingsGlobal() : Promise.resolve(),
           typeof loadFaceToggle === 'function' ? loadFaceToggle() : Promise.resolve(),
+          typeof loadPasswordToggle === 'function' ? loadPasswordToggle() : Promise.resolve(),
           typeof loadJamAbsen === 'function' ? loadJamAbsen() : Promise.resolve()
         ]);
 

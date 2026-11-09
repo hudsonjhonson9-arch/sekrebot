@@ -426,3 +426,94 @@ test('arsip-cookie: token bentuk salah ditolak 400 tanpa menyentuh DB', async ()
   }
   assert.equal(called, 0, 'SQL tidak boleh jalan untuk token tidak valid');
 });
+
+test('login NIP meminta password saat require_password aktif di pengaturan', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({
+    query: async (sql) => {
+      if (/FROM user_list/i.test(sql)) {
+        return {
+          rows: [{
+            id: '42',
+            NIP: '199001012010011001',
+            username: 'budi',
+            role: 'USER',
+            instansi_id: 'bapperida',
+            status_aktif: true,
+            password_hash: '$2a$10$qyVxAODHUx6WLLF0Tm/I7u/T1b.m0hZW2FD2ivm/6U7K.SRiIgjwq',
+          }],
+        };
+      }
+      if (/FROM pengaturan/i.test(sql)) {
+        return { rows: [{ value: '1' }] };
+      }
+      return { rows: [] };
+    },
+  });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '199001012010011001' });
+  assert.equal(out.status, 401);
+  assert.equal(out.body.require_password, true);
+  assert.match(out.body.message, /Kata sandi wajib diisi/);
+});
+
+test('login NIP dengan password salah ditolak 401 saat require_password aktif', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({
+    query: async (sql) => {
+      if (/FROM user_list/i.test(sql)) {
+        return {
+          rows: [{
+            id: '42',
+            NIP: '199001012010011001',
+            username: 'budi',
+            role: 'USER',
+            instansi_id: 'bapperida',
+            status_aktif: true,
+            password_hash: '$2a$10$qyVxAODHUx6WLLF0Tm/I7u/T1b.m0hZW2FD2ivm/6U7K.SRiIgjwq',
+          }],
+        };
+      }
+      if (/FROM pengaturan/i.test(sql)) {
+        return { rows: [{ value: '1' }] };
+      }
+      return { rows: [] };
+    },
+  });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '199001012010011001', password: 'WrongPassword' });
+  assert.equal(out.status, 401);
+  assert.equal(out.body.require_password, true);
+  assert.match(out.body.message, /Kata sandi salah/);
+});
+
+test('login NIP dengan password benar sukses saat require_password aktif', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({
+    query: async (sql) => {
+      if (/FROM user_list/i.test(sql)) {
+        return {
+          rows: [{
+            id: '42',
+            NIP: '199001012010011001',
+            username: 'budi',
+            role: 'USER',
+            instansi_id: 'bapperida',
+            status_aktif: true,
+            password_hash: '$2a$10$qyVxAODHUx6WLLF0Tm/I7u/T1b.m0hZW2FD2ivm/6U7K.SRiIgjwq',
+          }],
+        };
+      }
+      if (/FROM pengaturan/i.test(sql)) {
+        return { rows: [{ value: '1' }] };
+      }
+      if (/INSERT INTO auth_sessions/i.test(sql)) {
+        return { rows: [{ session_token: 'f'.repeat(192) }] };
+      }
+      return { rows: [] };
+    },
+  });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '199001012010011001', password: 'BapperidaSB2026' });
+  assert.equal(out.status, 200);
+  assert.equal(out.body.ok, true);
+  assert.equal(out.body.session_token, 'f'.repeat(192));
+  assert.equal(out.body.user.password_hash, undefined, 'password_hash tidak boleh bocor ke client');
+});
