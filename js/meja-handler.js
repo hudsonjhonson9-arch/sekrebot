@@ -143,6 +143,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
       _moStatus.style.background = 'rgba(245,158,11,0.2)';
       _moDetail.textContent = 'Izin lokasi GPS pada browser perangkat Meja Absen belum aktif.';
       _playMejaChime('warning');
+      _speakMeja('Lokasi perangkat belum terdeteksi');
       _setMejaStatus('active', '<i class="fas fa-map-marker-alt"></i>', 'GPS Belum Siap', 'Aktifkan GPS browser perangkat');
       setCamStatus('warn', '<i class="fas fa-map-marker-alt"></i>', user.nama, 'GPS Meja Belum Siap');
       return;
@@ -192,6 +193,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
     } else {
       _mejaCnt.gagal++;
       _playMejaChime('warning');
+      _speakMeja(`Maaf, ${st.title.toLowerCase()}`);
     }
 
     _moIcon.innerHTML = st.icon;
