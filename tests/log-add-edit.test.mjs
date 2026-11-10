@@ -55,13 +55,12 @@ test('server /add: upsert exact (pegawai+tanggal+jenis), bukan fuzzy', () => {
   assert.match(logSrv, /UPDATE "Log_Absen" SET "Tanggal"=\$1, "Jam"=\$2, "Jenis Absen"=\$3, "Ket"=\$4\s*\n\s*WHERE "ID_Log" = \$5/);
 });
 
-test('_autoJenisLog: jenis eksplisit (hint tombol / pilihan admin) tidak boleh ditimpa auto', () => {
-  const auto = fnBody(adminLog, 'function _autoJenisLog', "document.getElementById('inLogJam')");
-  assert.match(auto, /if \(_logJenisDisentuh\) return;/, 'guard flag eksplisit di baris pertama');
+test('_autoJenisLog: pada log add dan edit, jenis absen langsung otomatis ditentukan dari jam', () => {
+  const auto = fnBody(adminLog, 'function _autoJenisLog', "['input', 'change']");
+  assert.match(auto, /sel\.value = tot <= jm \? 'MASUK' : tot < 720 \? 'DI LUAR JAM MASUK' : tot < jp \? 'DI LUAR JAM PULANG' : 'PULANG';/);
   const open = fnBody(adminLog, 'async function openLogEditor', 'function closeLogEditor');
-  assert.match(open, /_logJenisDisentuh = !!\(log \|\| hintJenis\);/, 'edit & tambah-dengan-hint menandai jenis eksplisit');
-  assert.match(adminLog, /getElementById\('inLogJenis'\)\?\.addEventListener\('change', function \(\) \{ _logJenisDisentuh = true; \}\)/,
-    'pilihan manual admin menandai jenis eksplisit');
+  assert.match(open, /_autoJenisLog\(\)/, 'openLogEditor memanggil _autoJenisLog saat jam terisi');
+  assert.match(adminLog, /addEventListener\(evt, _autoJenisLog\)/, 'event listener input dan change terpasang untuk auto-jenis');
 });
 
 test('cache-buster admin-log & rekap ikut di-bump', () => {

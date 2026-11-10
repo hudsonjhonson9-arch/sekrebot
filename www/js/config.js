@@ -410,6 +410,9 @@ function getScopedInstansiId() {
       } else if (activeAdminSect === 'ops') {
         const adminKetSelect = document.getElementById('adminKetInstansiSelect');
         if (adminKetSelect && adminKetSelect.value) return adminKetSelect.value;
+      } else if (activeAdminSect === 'config') {
+        const configSelect = document.getElementById('configInstansiSelect');
+        if (configSelect && configSelect.value) return configSelect.value;
       }
       const adminSelect = document.getElementById('inEditInstansiSelect') || document.getElementById('adminInstansiSelect');
       if (adminSelect && adminSelect.value) return adminSelect.value;

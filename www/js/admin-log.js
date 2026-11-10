@@ -27,11 +27,6 @@
      * @param {string} hintJenis - Hint jenis absen ('MASUK' | 'PULANG' | ...)
      * @returns {Promise<void>}
      */
-    // Jenis yang dipilih admin atau dikirim hint tombol (MASUK/PULANG) bersifat
-    // eksplisit. Dulu _autoJenisLog menimpanya diam-diam: admin membuka "tambah
-    // masuk", mengisi jam 15:23, jenis melompat jadi PULANG lalu log masuk hilang.
-    let _logJenisDisentuh = false;
-
     async function openLogEditor(uid = '', date = '', log = null, hintJenis = '') {
       // Izin = boolean user_list.is_admin (bukan role). Fail-closed via isLogAdmin().
       const isAdmin = typeof isLogAdmin === 'function' && isLogAdmin();
@@ -79,8 +74,10 @@
         selJenis.appendChild(optJenis);
       }
       selJenis.value = jenisVal || 'MASUK';
-      // Edit / tombol + dengan hint = jenis sudah ditentukan; jangan diubah auto.
-      _logJenisDisentuh = !!(log || hintJenis);
+      // Auto-set jenis langsung dari jam pada add dan edit jika jam terisi
+      if ($('inLogJam')?.value) {
+        _autoJenisLog();
+      }
       $('inLogKet').value = log ? (log.Ket || log.ket || log.keterangan || '') : '';
       // Bug C: subjek tak boleh diganti saat edit — server sengaja mengabaikan
       // perubahan ID/Nama/NIP, jadi mengganti pegawai hanya menipu admin
@@ -122,26 +119,21 @@
       dom.hide('logModal');
     }
 
-    // ── Auto-set Jenis Absen dari jam (sekali attach, bukan per-buka modal) ──
+    // ── Auto-set Jenis Absen langsung dari jam pada add dan edit ──
     function _autoJenisLog() {
-      if (_logJenisDisentuh) return; // pilihan eksplisit admin/hint menang
       const jam = $('inLogJam')?.value, tgl = $('inLogTanggal')?.value, sel = $('inLogJenis');
       if (!jam || !tgl || !sel) return;
-      // Hanya overwrite jika jenis masih tipe waktu (bukan IZIN/SAKIT/dll yang dipilih manual)
-      const TIME_TYPES = ['MASUK', 'PULANG', 'DI LUAR JAM MASUK', 'DI LUAR JAM PULANG'];
-      if (!TIME_TYPES.includes(sel.value)) return;
       const tot = toMenitStr(jam);
       if (tot == null) return;
-      const j = getJamForTanggal(tgl);
-      const jm = toMenitStr(j.masuk) ?? JAM_MASUK_MENIT;
-      const jp = toMenitStr(j.pulang) ?? JAM_PULANG_MENIT;
+      const j = typeof getJamForTanggal === 'function' ? getJamForTanggal(tgl) : {};
+      const jm = toMenitStr(j?.masuk) ?? (typeof JAM_MASUK_MENIT !== 'undefined' ? JAM_MASUK_MENIT : 435);
+      const jp = toMenitStr(j?.pulang) ?? (typeof JAM_PULANG_MENIT !== 'undefined' ? JAM_PULANG_MENIT : 870);
       sel.value = tot <= jm ? 'MASUK' : tot < 720 ? 'DI LUAR JAM MASUK' : tot < jp ? 'DI LUAR JAM PULANG' : 'PULANG';
     }
-    document.getElementById('inLogJam')?.addEventListener('change', _autoJenisLog);
-    document.getElementById('inLogTanggal')?.addEventListener('change', _autoJenisLog);
-    // Admin mengubah jenis lewat dropdown = pilihan eksplisit (set.value manual
-    // dari kode tidak men-trigger event change, jadi tidak menyalakan flag sendiri).
-    document.getElementById('inLogJenis')?.addEventListener('change', function () { _logJenisDisentuh = true; });
+    ['input', 'change'].forEach(evt => {
+      document.getElementById('inLogJam')?.addEventListener(evt, _autoJenisLog);
+      document.getElementById('inLogTanggal')?.addEventListener(evt, _autoJenisLog);
+    });
 
     let _pegawaiListCache = null;
     async function loadLogPegawaiList() {

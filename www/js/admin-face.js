@@ -699,9 +699,9 @@
       };
     }
 
-    async function loadFaceSettings() {
+    async function loadFaceSettings(instansi_id) {
       try {
-        const instId = typeof getScopedInstansiId === 'function' ? getScopedInstansiId() : (localStorage.getItem('MY_INSTANSI') || 'bapperida');
+        const instId = instansi_id || (typeof getScopedInstansiId === 'function' ? getScopedInstansiId() : (localStorage.getItem('MY_INSTANSI') || 'bapperida'));
         const res = await apiGet(`${P.faceSettings}?instansi_id=${encodeURIComponent(instId)}`);
         if (res.ok) {
           const d = res.data?.settings || res.data || {};
@@ -772,6 +772,13 @@
     }
 
     async function saveFaceSettings() {
+      const btn = $('btnSaveFaceSettings');
+      const btnText = $('btnSaveFaceSettingsText');
+      if (btn) btn.disabled = true;
+      if (btnText) btnText.innerHTML = '<i class="fas fa-save"></i> Menyimpan...';
+      const rc = $('fsResult');
+      if (rc) rc.style.display = 'flex';
+
       _fsData.liveness_enabled = _fsData.liveness_enabled ?? true;
       _fsData.face_threshold = parseFloat($('fsThreshold')?.value) || 0.55;
       _fsData.meja_threshold = parseFloat($('fsMejaThreshold')?.value) || 0.55;
@@ -806,6 +813,12 @@
       } else {
         showResult('fsResult', 'fsRIcon', 'fsRTitle', 'fsRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Tersimpan Lokal',
           'Gagal sync ke server. Pastikan webhook face-settings aktif di n8n.');
+      }
+      if (btn) {
+        setTimeout(() => {
+          btn.disabled = false;
+          if (btnText) btnText.textContent = 'Simpan Settings';
+        }, 1200);
       }
     }
 

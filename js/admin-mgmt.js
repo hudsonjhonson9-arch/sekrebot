@@ -499,6 +499,10 @@ async function onConfigInstansiChange() {
       localStorage.setItem('MY_INSTANSI', instId);
       if (window.userProfile) window.userProfile.instansi_id = instId;
     }
+
+    if (typeof loadFaceToggle === 'function') loadFaceToggle(instId);
+    if (typeof loadPasswordToggle === 'function') loadPasswordToggle(instId);
+    if (typeof loadFaceSettings === 'function') loadFaceSettings(instId);
   } catch (e) {
     console.error('[Config Scoping] Failed to load jam for instansi:', instId, e);
   }

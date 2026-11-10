@@ -54,6 +54,7 @@
         if (typeof adminMap !== 'undefined' && adminMap) {
           setTimeout(() => adminMap.invalidateSize(), 50);
         }
+        if (typeof initSuperadminConfigScoping === 'function') initSuperadminConfigScoping();
         if (typeof loadFaceToggle === 'function') loadFaceToggle();
         if (typeof loadPasswordToggle === 'function') loadPasswordToggle();
         if (typeof loadFaceSettings === 'function') loadFaceSettings();
