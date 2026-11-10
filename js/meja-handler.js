@@ -156,35 +156,24 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
     const { ok: mejaOk, data: d } = await apiPost(targetPath, payload);
     console.log('[Meja] Server Response:', { mejaOk, data: d });
 
-    if (mejaOk && d && d.ok !== false && d.validasi?.is_valid !== false) {
-      const jenis = d.jenis_absen || d.validasi?.jenis_absen || 'ABSEN BERHASIL';
-      const ismasuk = jenis.toUpperCase().includes('MASUK');
-      if (ismasuk) _mejaCnt.masuk++; else _mejaCnt.pulang++;
-
-      _moIcon.innerHTML = '<i class="fas fa-check"></i>';
-      _moStatus.textContent = jenis.toUpperCase();
-      _moStatus.style.color = '#4ade80';
-      _moStatus.style.background = 'rgba(74,222,128,0.2)';
-      _moDetail.textContent = d.validasi?.keterangan || 'Data tercatat di server.';
-      _setMejaStatus('active', '<i class="fas fa-check"></i>', `${user.nama} — ${jenis}`, 'Siap scan berikutnya...');
-    } else {
-      let errMsg = (d && (d.message || d.error)) || 'Ditolak Server';
-      if (d && d.validasi && d.validasi.keterangan) errMsg = d.validasi.keterangan;
-
-      const isSudah = errMsg.toLowerCase().includes('sudah');
-
-      _moIcon.innerHTML = isSudah ? 'ℹ' : '<i class="fas fa-times"></i>';
-      _moStatus.textContent = isSudah ? 'SUDAH ABSEN' : 'GAGAL';
-      _moStatus.style.color = isSudah ? '#60a5fa' : '#f87171';
-      _moStatus.style.background = isSudah ? 'rgba(96,165,250,0.2)' : 'rgba(248,113,113,0.2)';
-      _moDetail.textContent = errMsg;
-
-      if (!isSudah) _mejaCnt.gagal++;
-      _setMejaStatus('active', isSudah ? 'ℹ' : '<i class="fas fa-exclamation-triangle"></i>', user.nama, errMsg);
+    const st = _formatMejaStatus(mejaOk, d, user);
+    if (st.isSuccess) {
+      if (st.isMasuk) _mejaCnt.masuk++; else _mejaCnt.pulang++;
+    } else if (!st.isInfo) {
+      _mejaCnt.gagal++;
     }
+
+    _moIcon.innerHTML = st.icon;
+    _moIcon.style.color = st.color;
+    _moStatus.textContent = st.title;
+    _moStatus.style.color = st.color;
+    _moStatus.style.background = st.bg;
+    _moDetail.textContent = st.detail;
+    _setMejaStatus('active', st.icon, `${user.nama} — ${st.title}`, st.isSuccess ? 'Siap scan berikutnya...' : st.detail);
   } catch (e) {
     console.error('[Meja] Submission Fatal Error:', e);
     _moIcon.innerHTML = '<i class="fas fa-plug"></i>';
+    _moIcon.style.color = '#f87171';
     _moStatus.textContent = 'GAGAL PROSES';
     _moStatus.style.color = '#f87171';
     _moStatus.style.background = 'rgba(248,113,113,0.2)';
@@ -234,6 +223,169 @@ function adminCaptureSignatureFor(uid, name) {
   });
   const titleEl = $('sigOverlayTitle');
   if (titleEl) titleEl.innerHTML = `<i class="fas fa-pen"></i> TTD: ${name}`;
+}
+
+// ── Format Status Meja Absen (Bervariasi sesuai respon server) ──
+function _formatMejaStatus(mejaOk, d, user) {
+  if (mejaOk && d && d.ok !== false && d.validasi?.is_valid !== false) {
+    const rawJenis = String(d.jenis_absen || d.validasi?.jenis_absen || '').trim().toUpperCase();
+    if (rawJenis === 'MASUK') {
+      return {
+        isSuccess: true,
+        isMasuk: true,
+        icon: '<i class="fas fa-check-circle"></i>',
+        title: 'MASUK TEPAT WAKTU',
+        color: '#22c55e',
+        bg: 'rgba(34,197,94,0.2)',
+        detail: d.validasi?.keterangan || 'Presensi masuk berhasil dicatat tepat waktu.'
+      };
+    }
+    if (rawJenis.includes('MASUK') && rawJenis.includes('LUAR')) {
+      return {
+        isSuccess: true,
+        isMasuk: true,
+        icon: '<i class="fas fa-clock"></i>',
+        title: 'DI LUAR JAM MASUK',
+        color: '#eab308',
+        bg: 'rgba(234,179,8,0.2)',
+        detail: d.validasi?.keterangan || 'Presensi masuk dicatat di luar batas waktu normal.'
+      };
+    }
+    if (rawJenis === 'PULANG') {
+      return {
+        isSuccess: true,
+        isMasuk: false,
+        icon: '<i class="fas fa-home"></i>',
+        title: 'PULANG TEPAT WAKTU',
+        color: '#06b6d4',
+        bg: 'rgba(6,182,212,0.2)',
+        detail: d.validasi?.keterangan || 'Presensi pulang berhasil dicatat. Selamat beristirahat.'
+      };
+    }
+    if (rawJenis.includes('PULANG')) {
+      return {
+        isSuccess: true,
+        isMasuk: false,
+        icon: '<i class="fas fa-running"></i>',
+        title: 'DI LUAR JAM PULANG',
+        color: '#f97316',
+        bg: 'rgba(249,115,22,0.2)',
+        detail: d.validasi?.keterangan || 'Presensi pulang dicatat di luar batas waktu normal.'
+      };
+    }
+    return {
+      isSuccess: true,
+      isMasuk: rawJenis.includes('MASUK'),
+      icon: '<i class="fas fa-check-circle"></i>',
+      title: rawJenis || 'ABSEN BERHASIL',
+      color: '#10b981',
+      bg: 'rgba(16,185,129,0.2)',
+      detail: d.validasi?.keterangan || 'Presensi berhasil dicatat di server.'
+    };
+  }
+
+  // Kasus Ditolak / Keterangan Khusus
+  let errMsg = String((d && (d.message || d.error)) || (d && d.validasi && d.validasi.keterangan) || 'Ditolak Server').trim();
+  const errLower = errMsg.toLowerCase();
+
+  if (errLower.includes('sudah') && (errLower.includes('pulang') || errLower.includes('lengkap'))) {
+    return {
+      isSuccess: false,
+      isInfo: true,
+      icon: '<i class="fas fa-clipboard-check"></i>',
+      title: 'KEHADIRAN LENGKAP',
+      color: '#a855f7',
+      bg: 'rgba(168,85,247,0.2)',
+      detail: errMsg || 'Absen masuk dan pulang hari ini sudah lengkap.'
+    };
+  }
+  if (errLower.includes('sudah') && errLower.includes('masuk')) {
+    return {
+      isSuccess: false,
+      isInfo: true,
+      icon: '<i class="fas fa-clipboard-check"></i>',
+      title: 'SUDAH ABSEN MASUK',
+      color: '#3b82f6',
+      bg: 'rgba(59,130,246,0.2)',
+      detail: errMsg || 'Pegawai sudah tercatat absen masuk hari ini.'
+    };
+  }
+  if (errLower.includes('sudah')) {
+    return {
+      isSuccess: false,
+      isInfo: true,
+      icon: '<i class="fas fa-clipboard-check"></i>',
+      title: 'SUDAH ABSEN HARI INI',
+      color: '#60a5fa',
+      bg: 'rgba(96,165,250,0.2)',
+      detail: errMsg
+    };
+  }
+  if (errLower.includes('izin') || errLower.includes('cuti') || errLower.includes('tubel')) {
+    return {
+      isSuccess: false,
+      isInfo: true,
+      icon: '<i class="fas fa-calendar-alt"></i>',
+      title: 'TERCATAT IZIN / CUTI',
+      color: '#c084fc',
+      bg: 'rgba(192,132,252,0.2)',
+      detail: errMsg
+    };
+  }
+  if (errLower.includes('sakit')) {
+    return {
+      isSuccess: false,
+      isInfo: true,
+      icon: '<i class="fas fa-user-sick"></i>',
+      title: 'TERCATAT SAKIT',
+      color: '#fb7185',
+      bg: 'rgba(251,113,133,0.2)',
+      detail: errMsg
+    };
+  }
+  if (errLower.includes('dinas') || errLower.includes('tugas') || errLower.includes('dl')) {
+    return {
+      isSuccess: false,
+      isInfo: true,
+      icon: '<i class="fas fa-briefcase"></i>',
+      title: 'TERCATAT TUGAS LUAR',
+      color: '#38bdf8',
+      bg: 'rgba(56,189,248,0.2)',
+      detail: errMsg
+    };
+  }
+  if (errLower.includes('radius') || errLower.includes('jarak') || errLower.includes('lokasi')) {
+    return {
+      isSuccess: false,
+      isInfo: false,
+      icon: '<i class="fas fa-map-marker-alt"></i>',
+      title: 'DI LUAR RADIUS KANTOR',
+      color: '#f43f5e',
+      bg: 'rgba(244,63,94,0.2)',
+      detail: errMsg || 'Koordinat GPS Meja Absen berada di luar radius lokasi kantor.'
+    };
+  }
+  if (errLower.includes('wajah') || errLower.includes('face')) {
+    return {
+      isSuccess: false,
+      isInfo: false,
+      icon: '<i class="fas fa-question"></i>',
+      title: 'WAJAH TIDAK COCOK',
+      color: '#f87171',
+      bg: 'rgba(248,113,113,0.2)',
+      detail: errMsg
+    };
+  }
+
+  return {
+    isSuccess: false,
+    isInfo: false,
+    icon: '<i class="fas fa-times-circle"></i>',
+    title: 'GAGAL ABSEN',
+    color: '#f87171',
+    bg: 'rgba(248,113,113,0.2)',
+    detail: errMsg
+  };
 }
 
 // Auto-init Desktop Mode jika di layar laptop/PC

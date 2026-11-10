@@ -3334,8 +3334,8 @@
       <input type="hidden" id="editLogId">
       <div class="form-group"><label class="form-label">Pegawai</label><select id="inLogPegawai" class="form-input"><option value="">— Pilih Pegawai —</option></select></div>
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:12px">
-        <div class="form-group"><label class="form-label">Tanggal</label><input type="date" id="inLogTanggal" class="form-input"></div>
-        <div class="form-group"><label class="form-label">Jam</label><input type="time" id="inLogJam" class="form-input"></div>
+        <div class="form-group"><label class="form-label">Tanggal</label><input type="date" id="inLogTanggal" class="form-input" oninput="typeof _autoJenisLog === 'function' && _autoJenisLog()" onchange="typeof _autoJenisLog === 'function' && _autoJenisLog()"></div>
+        <div class="form-group"><label class="form-label">Jam</label><input type="time" id="inLogJam" class="form-input" oninput="typeof _autoJenisLog === 'function' && _autoJenisLog()" onchange="typeof _autoJenisLog === 'function' && _autoJenisLog()"></div>
       </div>
       <div class="form-group">
         <label class="form-label">Jenis Absen</label>

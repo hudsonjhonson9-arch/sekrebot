@@ -846,6 +846,8 @@
       const overlay = $('camOverlay');
       if (overlay) {
         overlay.classList.remove('hidden');
+        if (isMeja) overlay.classList.add('meja-kiosk');
+        else overlay.classList.remove('meja-kiosk');
         overlay.style.pointerEvents = 'auto';
       }
       $('modelLoading').style.display = 'block';
@@ -1014,6 +1016,7 @@
       const overlay = $('camOverlay');
       if (overlay) {
           overlay.classList.add('hidden');
+          overlay.classList.remove('meja-kiosk');
           overlay.style.pointerEvents = 'none';
       }
       setBtnL('btnAbsen', false, 'Kirim Lokasi & Absen');

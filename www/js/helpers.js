@@ -200,7 +200,7 @@
         console.warn(`[showResult] Element not found: ${cid}. Title: ${title}, Msg: ${msg}`);
         return;
       }
-      el.className = `result-card r-${type} show`;
+      el.className = `result-card r-${type} ${type} show`;
       el.style.display = 'flex'; // Force show
       const iEl = $(iid), tEl = $(tid), mEl = $(mid);
       if (iEl) iEl.innerHTML = icon;

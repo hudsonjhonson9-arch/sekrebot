@@ -703,20 +703,30 @@
       try {
         const instId = instansi_id || (typeof getScopedInstansiId === 'function' ? getScopedInstansiId() : (localStorage.getItem('MY_INSTANSI') || 'bapperida'));
         const res = await apiGet(`${P.faceSettings}?instansi_id=${encodeURIComponent(instId)}`);
-        if (res.ok) {
+        if (res.ok && (res.data?.settings || res.data)) {
           const d = res.data?.settings || res.data || {};
-          if (d.liveness_enabled !== undefined) {
-            _fsData = {
-              liveness_enabled: d.liveness_enabled !== false,
-              face_threshold: parseFloat(d.face_threshold) || 0.55,
-              meja_threshold: parseFloat(d.meja_threshold) || 0.55,
-              liveness_score: parseFloat(d.liveness_score) || 0.40,
-              mandatory_nips: Array.isArray(d.mandatory_nips) ? d.mandatory_nips : []
-            };
-            _applyFsUI();
-            _applyFsGlobals();
-            return;
+          const defaults = _loadFsDefaults();
+          let nips = d.mandatory_nips !== undefined ? d.mandatory_nips : defaults.mandatory_nips;
+          if (typeof nips === 'string') {
+            try {
+              if (nips.startsWith('[')) nips = JSON.parse(nips);
+              else nips = nips.split(',').map(s => s.trim()).filter(Boolean);
+            } catch {
+              nips = nips.split(',').map(s => s.trim()).filter(Boolean);
+            }
           }
+          if (!Array.isArray(nips)) nips = [];
+          _fsData = {
+            liveness_enabled: d.liveness_enabled !== undefined ? (d.liveness_enabled !== false && d.liveness_enabled !== '0' && d.liveness_enabled !== 0) : defaults.liveness_enabled,
+            face_threshold: parseFloat(d.face_threshold) || defaults.face_threshold,
+            meja_threshold: parseFloat(d.meja_threshold) || defaults.meja_threshold,
+            liveness_score: parseFloat(d.liveness_score) || defaults.liveness_score,
+            mandatory_nips: nips
+          };
+          try { localStorage.setItem('face_admin_settings', JSON.stringify(_fsData)); } catch (_) {}
+          _applyFsUI();
+          _applyFsGlobals();
+          return;
         }
       } catch {}
       // Fallback: localStorage
@@ -776,8 +786,6 @@
       const btnText = $('btnSaveFaceSettingsText');
       if (btn) btn.disabled = true;
       if (btnText) btnText.innerHTML = '<i class="fas fa-save"></i> Menyimpan...';
-      const rc = $('fsResult');
-      if (rc) rc.style.display = 'flex';
 
       _fsData.liveness_enabled = _fsData.liveness_enabled ?? true;
       _fsData.face_threshold = parseFloat($('fsThreshold')?.value) || 0.55;
@@ -801,18 +809,21 @@
           }
         });
         serverOk = res && res.ok;
-      } catch {}
+      } catch (err) {
+        console.error('[saveFaceSettings] Error:', err);
+      }
 
-      // Also save to localStorage as fallback
-      localStorage.setItem('face_admin_settings', JSON.stringify(_fsData));
+      // Also save to localStorage as sync cache
+      try { localStorage.setItem('face_admin_settings', JSON.stringify(_fsData)); } catch (_) {}
       _applyFsGlobals();
+      _applyFsUI();
 
       if (serverOk) {
         showResult('fsResult', 'fsRIcon', 'fsRTitle', 'fsRMsg', 'success', '<i class="fas fa-check"></i>', 'Tersimpan ke Server',
           `Liveness: ${_fsData.liveness_enabled ? 'ON' : 'OFF'} · Absen: ${_fsData.face_threshold} · Meja: ${_fsData.meja_threshold} · Liveness Min: ${_fsData.liveness_score} · NIP Wajib: ${_fsData.mandatory_nips.length}`);
       } else {
         showResult('fsResult', 'fsRIcon', 'fsRTitle', 'fsRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Tersimpan Lokal',
-          'Gagal sync ke server. Pastikan webhook face-settings aktif di n8n.');
+          'Tersimpan di browser lokal. Sinkronisasi ke server sedang offline atau tidak terjangkau.');
       }
       if (btn) {
         setTimeout(() => {

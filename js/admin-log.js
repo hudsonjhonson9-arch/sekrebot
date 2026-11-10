@@ -128,8 +128,16 @@
       const j = typeof getJamForTanggal === 'function' ? getJamForTanggal(tgl) : {};
       const jm = toMenitStr(j?.masuk) ?? (typeof JAM_MASUK_MENIT !== 'undefined' ? JAM_MASUK_MENIT : 435);
       const jp = toMenitStr(j?.pulang) ?? (typeof JAM_PULANG_MENIT !== 'undefined' ? JAM_PULANG_MENIT : 870);
+      const targetVal = tot <= jm ? 'MASUK' : tot < 720 ? 'DI LUAR JAM MASUK' : tot < jp ? 'DI LUAR JAM PULANG' : 'PULANG';
+      if (!Array.from(sel.options).some(o => o.value === targetVal)) {
+        const opt = document.createElement('option');
+        opt.value = targetVal;
+        opt.textContent = targetVal;
+        sel.appendChild(opt);
+      }
       sel.value = tot <= jm ? 'MASUK' : tot < 720 ? 'DI LUAR JAM MASUK' : tot < jp ? 'DI LUAR JAM PULANG' : 'PULANG';
     }
+    window._autoJenisLog = _autoJenisLog;
     ['input', 'change'].forEach(evt => {
       document.getElementById('inLogJam')?.addEventListener(evt, _autoJenisLog);
       document.getElementById('inLogTanggal')?.addEventListener(evt, _autoJenisLog);
