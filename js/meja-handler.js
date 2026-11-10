@@ -45,7 +45,15 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
   const _moNama = $('moNama');
   const _moStatus = $('moStatus');
   const _moDetail = $('moDetail');
-  overlay.style.display = 'flex';
+  if (overlay) {
+    overlay.style.display = 'flex';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '50%';
+    overlay.style.left = '50%';
+    overlay.style.transform = 'translate(-50%, -50%)';
+    overlay.style.zIndex = '35000';
+    overlay.style.margin = '0';
+  }
 
   // JIKA WAJAH TIDAK DIKENAL
   if (telegramId === 'unknown') {

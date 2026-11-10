@@ -3122,7 +3122,7 @@
         <div class="cam-face-badge" id="camFaceBadge" style="display:none"><i class="fas fa-user"></i> Mendeteksi...</div>
       </div>
       <!-- Meja Absen Overlay Result Modal (Tengah Layar Bebas dari Batasan Video) -->
-      <div id="mejaOverlayResult" style="display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+      <div id="mejaOverlayResult" style="display:none; position:fixed !important; top:50% !important; left:50% !important; transform:translate(-50%, -50%) !important; z-index:35000 !important; width:90% !important; max-width:480px !important; box-sizing:border-box !important; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px 32px; border-radius:24px; background:rgba(15, 23, 42, 0.96); border:1.5px solid rgba(255, 255, 255, 0.18); box-shadow:0 25px 60px -15px rgba(0, 0, 0, 0.85); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);">
         <div id="moIcon" style="font-size:50px; margin-bottom:10px;"><i class="fas fa-check"></i></div>
         <div id="moNama" style="font-size:18px; font-weight:800; color:var(--gold);">NAMA</div>
         <div id="moStatus" style="font-size:14px; font-weight:700; color:#fff; margin-top:5px; padding:4px 10px; border-radius:6px; background:rgba(255,255,255,0.1);">BERHASIL</div>
@@ -3317,7 +3317,7 @@
 
   <!-- 7. Runtime & entry point -->
   <script src="js/offline.js"></script>
-  <script src="js/meja-handler.js?v=20261111a"></script>
+  <script src="js/meja-handler.js?v=20261111b"></script>
   <script src="js/auth.js?v=20261008b"></script>
   <script src="js/app.js?v=20261110"></script>
 
