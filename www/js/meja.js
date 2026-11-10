@@ -88,63 +88,72 @@
       if ($('livenessMini')) $('livenessMini').style.display = 'block'; // Tampilkan instruksi kedip
       if ($('camHeaderTitle')) $('camHeaderTitle').innerHTML = '<i class="fas fa-desktop"></i> Menyiapkan Meja Absen...';
 
-      // 2. FETCH GPS DAN DATA WAJAH (Try Cache First)
-      const loadData = async () => {
-      const gps = await _getMejaGps();
-      _mejaGpsLocation = gps;
-      const locEl = $('mejaLocVal'), accEl = $('mejaLocAccuracy');
-      if (_mejaGpsLocation && locEl) {
-        locEl.textContent = `${_mejaGpsLocation.lat.toFixed(6)}, ${_mejaGpsLocation.lng.toFixed(6)}`;
-        if (accEl) accEl.textContent = `±${Math.round(_mejaGpsLocation.acc)}m`;
-      }
-
-      // Try load from local IDB first for instant startup
-      try {
-        const cached = await idb.get('master_data', 'all_face_descriptors');
-        if (cached && cached.data && Array.isArray(cached.data) && cached.data.length > 0) {
-          console.log(`[Meja] Memuat ${cached.data.length} wajah dari cache lokal...`);
-          _allFaceDescriptors = cached.data;
-          if (cached.userMap) window._mejaUserMap = cached.userMap;
-          _setMejaStatus('active', '<i class="fas fa-search"></i>', `Siap Scan (${_allFaceDescriptors.length} Pegawai - Cache)`, 'Menjalankan Kamera...');
-        }
-      } catch (e) { console.warn('[Meja] Gagal baca cache:', e); }
-
-      // Fetch descriptors dari userList (include face_histogram)
-      // ponytail: face-get-all CORS blocked, pakai userList?format=full sebagai fallback
-      try {
-        const ur = await apiGet(P.userList + '?format=full');
-        if (ur.ok) {
-          const ud = (ur.rows?.length ?? 0) ? ur.rows : parseApiResponse(ur.data);
-          const users = Array.isArray(ud) ? ud : (ud?.data || []);
-          const descs = [];
-          const userMap = {};
-          for (const u of users) {
-            const uid = String(u.ID || u.id || u.telegram_id || '');
-            const nama = u.Nama || u.nama || u.username || uid;
-            const histRaw = u.face_histogram || u.descriptor || u.face_descriptor;
-            if (!histRaw || histRaw === '' || histRaw === '[]') continue;
-            let arr;
-            try { arr = typeof histRaw === 'string' ? JSON.parse(histRaw) : histRaw; } catch { continue; }
-            if (!Array.isArray(arr) || arr.length < 128) continue;
-            descs.push({ id: uid, descriptor: arr });
-            userMap[uid] = { nama, nip: u.nip || u.NIP || '' };
+      // 2. FETCH GPS DAN DATA WAJAH SECARA PARALEL (Non-blocking)
+      const loadGps = async () => {
+        try {
+          const gps = await _getMejaGps();
+          _mejaGpsLocation = gps;
+          const locEl = $('mejaLocVal'), accEl = $('mejaLocAccuracy');
+          if (_mejaGpsLocation && locEl) {
+            locEl.textContent = `${_mejaGpsLocation.lat.toFixed(6)}, ${_mejaGpsLocation.lng.toFixed(6)}`;
+            if (accEl) accEl.textContent = `±${Math.round(_mejaGpsLocation.acc)}m`;
           }
-          if (descs.length > 0) {
-            _allFaceDescriptors = descs;
-            window._mejaUserMap = userMap;
-            _setMejaStatus('active', '<i class="fas fa-search"></i>', `Siap Scan (${descs.length} Pegawai)`, 'Menjalankan Kamera...');
-            // Cache ke IDB supaya startup berikutnya lebih cepat
-            await idb.set('master_data', { key: 'all_face_descriptors', data: descs, userMap, updated: Date.now() });
-            console.log(`[Meja] Loaded ${descs.length} face descriptors from userList`);
-          } else {
-            console.warn('[Meja] Tidak ada face descriptor ditemukan di userList');
-            _setMejaStatus('active', '<i class="fas fa-exclamation-triangle"></i>', 'Database Wajah Kosong', 'Daftarkan wajah pegawai terlebih dahulu');
-          }
+        } catch (e) {
+          console.warn('[Meja] GPS fetch error:', e);
         }
-      } catch (e) { console.warn('[Meja] Gagal fetch face descriptors:', e); }
       };
 
-      loadData();
+      const loadDescriptors = async () => {
+        // A. Coba muat dari IDB cache lokal terlebih dahulu
+        try {
+          const cached = await idb.get('master_data', 'all_face_descriptors');
+          if (cached && cached.data && Array.isArray(cached.data) && cached.data.length > 0) {
+            console.log(`[Meja] Memuat ${cached.data.length} wajah dari cache lokal...`);
+            _allFaceDescriptors = cached.data;
+            window._allFaceDescriptors = cached.data;
+            if (cached.userMap) window._mejaUserMap = cached.userMap;
+            _setMejaStatus('active', '<i class="fas fa-search"></i>', `Siap Scan (${_allFaceDescriptors.length} Pegawai - Cache)`, 'Posisikan wajah di depan kamera');
+            if ($('camHeaderTitle')) $('camHeaderTitle').innerHTML = '<i class="fas fa-desktop"></i> Meja Absen — Siap Scan';
+          }
+        } catch (e) { console.warn('[Meja] Gagal baca cache:', e); }
+
+        // B. Fetch descriptors terbaru dari server userList (include face_histogram & face_descriptor)
+        try {
+          const ur = await apiGet(P.userList + '?format=full');
+          if (ur.ok) {
+            const ud = (ur.rows?.length ?? 0) ? ur.rows : parseApiResponse(ur.data);
+            const users = Array.isArray(ud) ? ud : (ud?.data || []);
+            const descs = [];
+            const userMap = {};
+            for (const u of users) {
+              const uid = String(u.ID || u.id || u.telegram_id || '');
+              const nama = u.Nama || u.nama || u.username || uid;
+              const histRaw = u.face_histogram || u.face_descriptor || u.descriptor;
+              if (!histRaw || histRaw === '' || histRaw === '[]') continue;
+              let arr;
+              try { arr = typeof histRaw === 'string' ? JSON.parse(histRaw) : histRaw; } catch { continue; }
+              if (!Array.isArray(arr) || arr.length < 128) continue;
+              descs.push({ id: uid, descriptor: arr });
+              userMap[uid] = { nama, nip: u.nip || u.NIP || '' };
+            }
+            if (descs.length > 0) {
+              _allFaceDescriptors = descs;
+              window._allFaceDescriptors = descs;
+              window._mejaUserMap = userMap;
+              _setMejaStatus('active', '<i class="fas fa-search"></i>', `Siap Scan (${descs.length} Pegawai)`, 'Posisikan wajah di depan kamera');
+              if ($('camHeaderTitle')) $('camHeaderTitle').innerHTML = '<i class="fas fa-desktop"></i> Meja Absen — Siap Scan';
+              await idb.set('master_data', { key: 'all_face_descriptors', data: descs, userMap, updated: Date.now() });
+              console.log(`[Meja] Loaded ${descs.length} face descriptors from userList`);
+            } else {
+              console.warn('[Meja] Tidak ada face descriptor ditemukan di userList');
+              _setMejaStatus('active', '<i class="fas fa-exclamation-triangle"></i>', 'Database Wajah Kosong', 'Daftarkan wajah pegawai terlebih dahulu');
+            }
+          }
+        } catch (e) { console.warn('[Meja] Gagal fetch face descriptors:', e); }
+      };
+
+      loadGps();
+      loadDescriptors();
     }
 
     /**

@@ -69,7 +69,7 @@ export function createCoreAdminRouter({ query } = {}) {
   const USER_SELECT = `SELECT id::text AS id, username AS nama, username, "NIP" AS nip, "NIP",
     "Jabatan" AS jabatan, "Jabatan", pangkat, "Status" AS status, "Status",
     "no" AS no, bidang, nomorhp, role, COALESCE(is_admin,false) AS is_admin,
-    instansi_id, jam_masuk, jam_pulang, face_photo, face_descriptor, face_saved_at, face_model,
+    instansi_id, jam_masuk, jam_pulang, face_photo, COALESCE(face_descriptor, face_histogram) AS face_descriptor, face_histogram, face_saved_at, face_model,
     COALESCE(status_aktif, true) AS status_aktif,
     COALESCE(app_permissions, '{"absensi":{"enabled":true,"role":"PEGAWAI"},"simapo":{"enabled":true,"role":"PEGAWAI"},"satudata":{"enabled":false,"role":null},"perencanaan":{"enabled":false,"role":null},"webadmin":{"enabled":false,"role":null}}'::jsonb) AS app_permissions
     FROM user_list`;

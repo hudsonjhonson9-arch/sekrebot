@@ -293,14 +293,21 @@
      * @returns {Promise<{id: string, score: number}|null>} ID pegawai terbaik & skor kemiripan
      */
         async function matchMejaCandidate(capturedDesc) {
-      if (!capturedDesc || !_allFaceDescriptors.length) return { id: 'unknown', score: 0 };
+      const allDescriptors = (window._allFaceDescriptors && window._allFaceDescriptors.length)
+        ? window._allFaceDescriptors
+        : (typeof _allFaceDescriptors !== 'undefined' && _allFaceDescriptors.length ? _allFaceDescriptors : []);
+
+      if (!capturedDesc || !allDescriptors.length) return { id: 'unknown', score: 0 };
 
       let bestMatch = { id: 'unknown', score: 0 };
       const capDim = capturedDesc.length;
-      const engine = window._aiEngine || 'faceapi';
+      const engine = window._aiEngine || 'human';
 
-      for (const ref of _allFaceDescriptors) {
-        const refDesc = ref.descriptor;
+      for (const ref of allDescriptors) {
+        let refDesc = ref.descriptor;
+        if (typeof refDesc === 'string') {
+          try { refDesc = JSON.parse(refDesc); } catch (_) { continue; }
+        }
         const refDim = (refDesc && Array.isArray(refDesc)) ? refDesc.length : 0;
         let similarity = 0;
 
@@ -549,11 +556,13 @@
     let _matchSessionToken = 0; // Token untuk memvalidasi async result agar tidak leak
     let _matchStabilityCount = 0; // Menghitung berapa frame ID yang sama terdeteksi
     let _mejaStartTime = 0; // Waktu mulai Meja Absen untuk startup delay
+    let _mejaLiveSince = 0; // Waktu pertama kali liveness disetujui untuk fallback
     let _camZoomLevel = 1.0;
     window._camVideoTrack = null;
 
     function _forceResetAiState(includeProcessing = true) {
       _isDetecting = false;
+      _mejaLiveSince = 0;
       if (includeProcessing) {
         _aiProcessing = false;
         window._isSubmitting = false;
@@ -1252,84 +1261,89 @@
             // Selalu gunakan Human liveness score
             _isLive = detection._isHumanLive;
 
+            const allDesc = (window._allFaceDescriptors && window._allFaceDescriptors.length)
+              ? window._allFaceDescriptors
+              : (typeof _allFaceDescriptors !== 'undefined' && _allFaceDescriptors.length ? _allFaceDescriptors : []);
+
             if (_isLive) {
-                setCamStatus('ok', '<i class="fas fa-shield-alt"></i>', 'Liveness Approved', window._isMejaMode ? 'Mencocokkan Identitas...' : 'Posisikan wajah & Tekan tombol');
               if (window._isMejaMode) {
-                _getLsIcon().innerHTML = '<i class="fas fa-shield-alt"></i>';
-                _getLsText().textContent = 'Wajah Terverifikasi Asli';
-                _getLsText().style.color = 'var(--success)';
+                if (allDesc.length === 0) {
+                  setCamStatus('warn', '<i class="fas fa-hourglass-half"></i>', 'Memuat Database Wajah...', 'Menghubungkan ke database pegawai');
+                } else if (!_lastMatchedId) {
+                  setCamStatus('ok', '<i class="fas fa-search"></i>', 'Mencocokkan Identitas...', 'Posisikan wajah di dalam bingkai');
+                }
+              } else {
+                setCamStatus('ok', '<i class="fas fa-shield-alt"></i>', 'Liveness Approved', 'Posisikan wajah & Tekan tombol');
               }
             } else {
               setCamStatus('ok', '<i class="fas fa-hourglass-half"></i>', 'Verifikasi Keaslian...', 'Mohon tetap diam sejenak');
-              if (window._isMejaMode) {
-                _getLsIcon().innerHTML = '<i class="fas fa-search"></i>';
-                _getLsText().textContent = `Mengecek Keaslian Wajah... (Score: ${window._lastHumanScore || '0.00'})`;
-                _getLsText().style.color = 'var(--gold)';
-              }
             }
 
             if (window._isMejaMode) {
               // --- LIVE MATCHING ON VIDEO STREAM ---
-              if (!_autoCaptured && _modelsReady && detection.descriptor) {
+              if (!_autoCaptured && _modelsReady) {
                 // STARTUP DELAY: Jangan identifikasi jika baru saja kamera terbuka (menunggu sensor stabil)
-                if (Date.now() - _mejaStartTime < 1500) return;
+                if (Date.now() - _mejaStartTime >= 1000) {
+                  if (detection.descriptor) {
+                    const currentToken = _matchSessionToken;
+                    matchMejaCandidate(detection.descriptor).then(match => {
+                      if (currentToken !== _matchSessionToken) return;
 
-                const currentToken = _matchSessionToken;
-                // Perform matching asynchronously to not lag the preview
-                matchMejaCandidate(detection.descriptor).then(match => {
-                  // VALIDASI: Hanya proses jika sesi masih sama (wajah tidak hilang/berubah)
-                  if (currentToken !== _matchSessionToken) return;
+                      if (match && match.id !== 'unknown') {
+                        if (match.id === _lastMatchedId) {
+                          _matchStabilityCount++;
+                        } else {
+                          _lastMatchedId = match.id;
+                          _matchStabilityCount = 1;
+                        }
 
-                  if (match && match.id !== 'unknown') {
-                    // STABILITY CHECK: ID harus sama selama beberapa frame berturut-turut
-                    if (match.id === _lastMatchedId) {
-                      _matchStabilityCount++;
-                    } else {
-                      _lastMatchedId = match.id;
-                      _matchStabilityCount = 1;
-                      return; // Baru satu frame, jangan tampilkan dulu
-                    }
+                        const profile = window._mejaUserMap ? window._mejaUserMap[match.id] : null;
+                        const nama = profile ? profile.nama : match.id;
+                        const score = Math.round(match.score * 100);
 
-                    const profile = window._mejaUserMap ? window._mejaUserMap[match.id] : null;
-                    const nama = profile ? profile.nama : match.id;
-                    const score = Math.round(match.score * 100);
+                        setCamStatus('ok', '<i class="fas fa-check-circle"></i>', nama, `Wajah Cocok (${score}%) — Memproses presensi...`);
 
-                    // Update UI with identified person
-                    if (_getLsText()) {
-                      _getLsIcon().innerHTML = '<i class="fas fa-check"></i>';
-                      _getLsText().textContent = `ID Ditemukan: ${nama} (${score}%)`;
-                      _getLsText().style.color = '#4ade80';
-                    }
+                        const requiredStability = 2;
+                        if (_matchStabilityCount < requiredStability) return;
 
-                    // Stability count check (3 frames are enough for Meja Mode)
-                    const requiredStability = 3;
-                    if (_matchStabilityCount < requiredStability) return;
+                        if (_isLive && !_autoCaptured && _livenessState.faceOk) {
+                          _autoCaptured = true;
+                          console.log(`[AI] Match Confirmed: ${nama} (Score: ${score}%). Finalizing...`);
+                          setTimeout(() => {
+                            if (currentToken === _matchSessionToken && _livenessState.faceOk && match.id === _lastMatchedId) {
+                              doCapture(match.id, detection.descriptor, match.score);
+                            } else {
+                              _autoCaptured = false;
+                            }
+                          }, 200);
+                        }
+                      } else {
+                        _lastMatchedId = null;
+                        _matchStabilityCount = 0;
+                      }
+                    });
+                  }
 
-                    // If liveness is also approved, trigger final capture
-                    if (_isLive && !_autoCaptured && _livenessState.faceOk) {
+                  // Fallback: Jika liveness sudah disetujui stabil >= 1.2 detik dan belum auto-captured,
+                  // tangkap frame canvas resolusi penuh untuk ekstraksi & pencocokan akurat.
+                  if (_isLive && !_autoCaptured && _livenessState.faceOk) {
+                    if (!_mejaLiveSince) _mejaLiveSince = Date.now();
+                    if (Date.now() - _mejaLiveSince >= 1200) {
                       _autoCaptured = true;
-                      console.log(`[AI] Match Confirmed: ${nama} (Stability: ${_matchStabilityCount}). Finalizing...`);
+                      console.log('[AI] Liveness Approved (1.2s timeout fallback). Auto-capturing frame...');
+                      setCamStatus('ok', '<i class="fas fa-camera"></i>', 'Memproses Presensi...', 'Mencocokkan identitas wajah...');
                       setTimeout(() => {
-                        if (currentToken === _matchSessionToken && _livenessState.faceOk && match.id === _lastMatchedId) {
-                          doCapture(match.id, detection.descriptor, match.score);
+                        if (_livenessState.faceOk && !$('camOverlay').classList.contains('hidden')) {
+                          doCapture(null, detection.descriptor);
                         } else {
                           _autoCaptured = false;
                         }
-                      }, 300);
+                      }, 200);
                     }
                   } else {
-                    _lastMatchedId = null;
-                    _matchStabilityCount = 0;
-                    
-                    // Reset UI jika tidak ada match
-                    if (_isLive) {
-                      const isDataLoading = !_allFaceDescriptors || _allFaceDescriptors.length === 0;
-                      _getLsIcon().innerHTML = isDataLoading ? '<i class="fas fa-hourglass-half"></i>' : '<i class="fas fa-search"></i>';
-                      _getLsText().textContent = isDataLoading ? 'Memuat Database Wajah...' : 'Mencari Identitas di Database...';
-                      _getLsText().style.color = 'var(--gold)';
-                    }
+                    _mejaLiveSince = 0;
                   }
-                });
+                }
               }
             } else {
               if (!_autoCaptured && _modelsReady && _isLive) {
