@@ -134,9 +134,21 @@ function isLogAdmin() {
 }
 window.isLogAdmin = isLogAdmin;
 
-// Helper: Tunggu Telegram ID siap (tapi sekarang instan jika ada cache)
+// Helper: Tunggu Telegram ID siap (tapi sekarang instan jika ada cache / session SSO)
 async function waitForMyId() {
   if (window.MY_ID) return String(window.MY_ID);
+  try {
+    const cachedId = localStorage.getItem(STORAGE_KEYS.USER_ID);
+    if (cachedId) {
+      window.MY_ID = String(cachedId);
+      return window.MY_ID;
+    }
+    const profId = window.userProfile?.id || window.userProfile?.telegram_id;
+    if (profId) {
+      window.MY_ID = String(profId);
+      return window.MY_ID;
+    }
+  } catch (_) {}
   for (let i = 0; i < 15; i++) {
     const cur = window.Telegram?.WebApp?.initDataUnsafe?.user;
     if (cur?.id) {

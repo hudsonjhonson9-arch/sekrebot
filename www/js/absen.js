@@ -522,8 +522,9 @@ async function _doAbsenWithGPS(initData, isTgX, camResult) {
         const d = absenData || {};
         const ket = d?.message || d?.validasi?.keterangan || 'Data absen diterima';
         let lokNm = d?.validasi?.nama_lokasi || d?.lokasi || null;
-        const isValid = (d?.validasi?.is_valid === true) || (d?.ok === true);
         const kode_tolak = d?.validasi?.kode_tolak || '';
+        const isIdempotent = d?.idempotent === true || kode_tolak === 'SUDAH_ABSEN';
+        const isValid = !isIdempotent && (d?.validasi ? d.validasi.is_valid === true : (d?.ok === true && !d?.idempotent));
 
         // Jika backend bilang WFH tapi GPS user dalam radius lokasi kantor, tampilkan nama lokasi kantor
         if (lokNm && lokNm.toUpperCase() === 'WFH' && window._lokasiCoords?.length) {
@@ -554,7 +555,7 @@ async function _doAbsenWithGPS(initData, isTgX, camResult) {
           logLoaded = false;
           if (typeof autoUpdateStatusAktif === 'function') autoUpdateStatusAktif();
           setTimeout(loadTodayHistory, 2000);
-          if (window.tg) setTimeout(() => window.tg.close(), 3500);
+          if (window.tg?.initDataUnsafe?.user?.id) setTimeout(() => window.tg.close(), 3500);
 
           Swal.fire({
             title: '<i class="fas fa-check"></i> Absen Berhasil!',
@@ -564,21 +565,25 @@ async function _doAbsenWithGPS(initData, isTgX, camResult) {
             showConfirmButton: true,
             confirmButtonText: 'OK'
           });
-        } else if (kode_tolak === 'SUDAH_ABSEN') {
-          showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', 'ℹ', 'Sudah Absen',
-            `${ket}\n\nRiwayat HADIR hari ini sudah tercatat. Tidak perlu absen ulang.`);
+        } else if (isIdempotent || kode_tolak === 'SUDAH_ABSEN') {
+          const titleSudah = d.message && d.message.toLowerCase().includes('pulang') ? 'Sudah Absen Pulang' : (d.message && d.message.toLowerCase().includes('masuk') ? 'Sudah Absen Masuk' : 'Sudah Absen');
+          const detailSudah = d.message || ket || 'Riwayat kehadiran hari ini sudah tercatat. Tidak perlu absen ulang.';
+
+          showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'warning', '<i class="fas fa-clipboard-check"></i>', titleSudah,
+            `${detailSudah}\n\nRiwayat HADIR hari ini sudah tercatat.`);
           setBtnL('btnAbsen', false, '<i class="fas fa-check"></i> Sudah Tercatat');
           $('btnAbsen').disabled = true;
           logLoaded = false;
           setTimeout(loadTodayHistory, 1500);
-          if (window.tg) setTimeout(() => window.tg.close(), 3500);
+          if (window.tg?.initDataUnsafe?.user?.id) setTimeout(() => window.tg.close(), 3500);
 
           Swal.fire({
-            title: 'ℹ Sudah Absen',
-            text: 'Riwayat HADIR hari ini sudah tercatat. Tidak perlu absen ulang.',
+            title: `<i class="fas fa-clipboard-check"></i> ${titleSudah}`,
+            text: detailSudah,
             icon: 'info',
-            timer: 3000,
-            showConfirmButton: true
+            timer: 4000,
+            showConfirmButton: true,
+            confirmButtonText: 'Tutup'
           });
         } else {
           showResult('resultCard', 'rIcon', 'rTitle', 'rMsg', 'fail', '<i class="fas fa-times"></i>', 'Absen Ditolak',

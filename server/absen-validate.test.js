@@ -170,12 +170,12 @@ test('meja_token salah ditolak', () => {
   assert.equal(r.kodeTolak, 'MEJA_TOKEN_INVALID');
 });
 
-test('meja_token benar diterima dan menghitung jenisAbsen dari jam', () => {
+test('meja_token benar diterima dan menghitung jenisAbsen dari jam dalam radius kantor', () => {
   process.env.MEJA_TOKENS = JSON.stringify({ bapperida: ['BENAR'] });
   const r = run({ source: 'meja_absen', meja_token: 'BENAR' });
   assert.equal(r.ok, true);
   assert.equal(r.jenisAbsen, 'MASUK');
-  assert.equal(r.namaLokasi, 'Meja Absen');
+  assert.equal(r.namaLokasi, 'Kantor Bapperida');
 });
 
 test('Meja Absen: jam sore menghasilkan jenisAbsen PULANG', () => {
@@ -185,10 +185,18 @@ test('Meja Absen: jam sore menghasilkan jenisAbsen PULANG', () => {
   assert.equal(r.jenisAbsen, 'PULANG');
 });
 
-test('Meja Absen tidak diminta koordinat', () => {
+test('Meja Absen tanpa koordinat valid ditolak LOKASI_INVALID', () => {
   process.env.MEJA_TOKENS = JSON.stringify({ bapperida: ['BENAR'] });
   const r = run({ source: 'meja_absen', meja_token: 'BENAR', latitude: 'abc', accuracy: 0 });
-  assert.equal(r.ok, true);
+  assert.equal(r.ok, false);
+  assert.equal(r.kodeTolak, 'LOKASI_INVALID');
+});
+
+test('Meja Absen di luar radius ditolak LOKASI_TIDAK_VALID', () => {
+  process.env.MEJA_TOKENS = JSON.stringify({ bapperida: ['BENAR'] });
+  const r = run({ source: 'meja_absen', meja_token: 'BENAR', latitude: -9.8, longitude: 120.5 });
+  assert.equal(r.ok, false);
+  assert.equal(r.kodeTolak, 'LOKASI_TIDAK_VALID');
 });
 
 // ── Hari kerja ──

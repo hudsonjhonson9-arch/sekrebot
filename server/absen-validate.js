@@ -79,13 +79,52 @@ export function validateAbsen({ payload = {}, serverTime, employee = {}, setting
 
   // Meja Absen: n8n only checks token presence; we check the value (T3),
   // atau sesi admin terotentikasi (is_admin_meja).
-  // Meja Absen berada di kantor, sehingga tidak memerlukan radius GPS / IP.
-  // Namun jenisAbsen tetap dihitung dari jam server (MASUK / DI LUAR JAM MASUK / DI LUAR JAM PULANG / PULANG),
+  // Meja Absen WAJIB berada di radius kantor dan diverifikasi lokasinya.
+  // JenisAbsen dihitung dari jam server (MASUK / DI LUAR JAM MASUK / DI LUAR JAM PULANG / PULANG),
   // kecuali payload.jenis_absen ditentukan eksplisit.
   if (payload.source === 'meja_absen') {
     if (!payload.is_admin_meja && !isValidMejaToken(payload.meja_token, employee.instansi_id)) {
       return tolak('MEJA_TOKEN_INVALID', 'Akses Meja Absen ditolak (Token tidak valid/tidak ditemukan).');
     }
+
+    // ── Validasi Lokasi Meja Absen ──
+    const latMeja = Number(payload.latitude);
+    const lngMeja = Number(payload.longitude);
+    const accMeja = Number(payload.horizontal_accuracy) || Number(payload.accuracy) || 0;
+    if (!Number.isFinite(latMeja) || !Number.isFinite(lngMeja) || (latMeja === 0 && lngMeja === 0)) {
+      return tolak('LOKASI_INVALID', 'Lokasi GPS Meja Absen tidak valid atau belum terdeteksi. Pastikan GPS aktif.');
+    }
+    const hariLokasiMeja = lokasi.filter((l) => hariCocok(l, hariIni));
+    if (hariLokasiMeja.length === 0) {
+      return tolak('BUKAN_HARI_KERJA', 'Absensi Meja Absen hanya pada hari kerja lokasi yang terdaftar.');
+    }
+    const nearMeja = hariLokasiMeja.find((l) => {
+      if (isWFH(l)) return true;
+      const la = Number(l.latitude);
+      const lo = Number(l.longitude);
+      if (!Number.isFinite(la) || !Number.isFinite(lo)) return false;
+      const r = Number(l.radius);
+      if (!Number.isFinite(r) || r <= 0) return true;
+      return haversine(latMeja, lngMeja, la, lo) <= r + Math.min(accMeja, 50);
+    });
+    if (!nearMeja) {
+      let dekat = null;
+      for (const l of hariLokasiMeja) {
+        const la = Number(l.latitude);
+        const lo = Number(l.longitude);
+        if (!Number.isFinite(la) || !Number.isFinite(lo)) continue;
+        const jarak = haversine(latMeja, lngMeja, la, lo);
+        if (!dekat || jarak < dekat.jarak) dekat = { jarak, radius: l.radius, nama: l.Nama_Lokasi };
+      }
+      return tolak('LOKASI_TIDAK_VALID', 'Perangkat Meja Absen berada di luar radius kantor.',
+        dekat && {
+          jarak_m: Math.round(dekat.jarak),
+          radius_m: Number.isFinite(Number(dekat.radius)) ? Number(dekat.radius) : null,
+          toleransi_m: Math.round(Math.min(accMeja, 50)),
+          pin: String(dekat.nama || ''),
+        });
+    }
+
     const menitMeja = toMenit(serverTime?.jam);
     const mMasukMeja = toMenit(jamMasuk);
     const mPulangMeja = toMenit(jamPulang);
@@ -105,7 +144,7 @@ export function validateAbsen({ payload = {}, serverTime, employee = {}, setting
       jAbsenMeja = 'PULANG';
     }
 
-    return terima(jAbsenMeja, payload.lokasi_nama || 'Meja Absen', ket);
+    return terima(jAbsenMeja, nearMeja.Nama_Lokasi || payload.lokasi_nama || 'Meja Absen', ket);
   }
 
   // ── Anti-fake GPS ──

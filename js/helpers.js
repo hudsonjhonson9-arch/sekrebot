@@ -27,13 +27,15 @@
                   <div class="shimmer" style="height:32px;border-radius:8px"></div>`;
       try {
         const todayStr = fmtD(nowWITA());
-        const { ok: logOk, rows } = await apiGet(P.log, { user_id: uid || '', tanggal: todayStr });
+        const myNip = localStorage.getItem('MY_NIP') || window.userProfile?.nip || '';
+        const { ok: logOk, rows } = await apiGet(P.log, { user_id: uid || '', nip: myNip || '', tanggal: todayStr });
         if (!logOk) throw 0;
-        let rowsMut = rows;
+        let rowsMut = rows || [];
         rowsMut = rowsMut.filter(r => {
-          const rowUid = Number(getField(r, 'ID', 'id'));
-          const tgl = getField(r, 'Tanggal', 'tanggal');
-          const byMe = uid ? (Number(rowUid) === Number(uid)) : true;
+          const rowUid = String(getField(r, 'ID', 'id') || '').trim();
+          const rowNip = String(getField(r, 'NIP', 'nip') || '').trim();
+          const tgl = String(getField(r, 'Tanggal', 'tanggal') || '').trim();
+          const byMe = (uid && rowUid === String(uid).trim()) || (myNip && rowNip === String(myNip).trim());
           return byMe && tgl === todayStr;
         });
         rowsMut.sort((a, b) => {
@@ -42,7 +44,7 @@
         });
         renderTodayHistory(rowsMut);
       } catch (e) {
-        el.innerHTML = `<div class="today-empty"><i class="fas fa-plug"></i> Gagal memuat. Pastikan n8n aktif.</div>`;
+        if (el) el.innerHTML = `<div class="today-empty"><i class="fas fa-plug"></i> Gagal memuat log hari ini.</div>`;
       } finally {
         _todayLoading = false;
       }
@@ -112,10 +114,12 @@
       const GRP_KETERANGAN = ['IZIN', 'SAKIT', 'TUGAS', 'CUTI', 'DL', 'TUBEL', 'TANPA BERITA', 'ALPA', 'TB'];
       const ketRow = rows.find(r => GRP_KETERANGAN.includes((getField(r, 'Jenis Absen', 'jenis', 'Jenis') || '').toUpperCase().trim()));
 
-      const sudahAbsen = (isSkrgMasuk && sudahMasuk) || (isSkrgPulang && sudahPulang);
-      const pesanTolak = sudahMasuk && isSkrgMasuk
-        ? 'Absen masuk hari ini sudah tercatat.'
-        : 'Absen pulang hari ini sudah tercatat.';
+      const sudahAbsen = (sudahMasuk && sudahPulang) || (isSkrgMasuk && sudahMasuk) || (isSkrgPulang && sudahPulang);
+      const pesanTolak = (sudahMasuk && sudahPulang)
+        ? 'Kehadiran hari ini sudah lengkap (Sudah absen masuk dan pulang).'
+        : (sudahMasuk && isSkrgMasuk
+          ? 'Absen masuk hari ini sudah tercatat.'
+          : 'Absen pulang hari ini sudah tercatat.');
 
       const btn = $('btnAbsen');
       if (!btn) return;
@@ -133,6 +137,12 @@
           const tSpan = $('btnPulangLuarText');
           if (tSpan) tSpan.innerHTML = `<i class="fas fa-ban"></i> Status: ${nmKet}`;
         }
+      } else if (sudahMasuk && sudahPulang) {
+        btn.disabled = true;
+        btn.dataset.manualDisabled = '1';
+        setBtnL('btnAbsen', false, '<i class="fas fa-check"></i> Kehadiran Lengkap');
+        const bpl = $('btnPulangLuar');
+        if (bpl) bpl.disabled = true;
       } else if (sudahAbsen) {
         btn.disabled = true;
         btn.dataset.manualDisabled = '1';

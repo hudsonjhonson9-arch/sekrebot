@@ -125,6 +125,29 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
     const idKey = user.nip || user.telegram_id || 'anon';
     const rid = `absen_${idKey}_${tanggalISO}_${typeKey}`;
 
+    // Cek kesiapan GPS Meja Absen
+    if (!_mejaGpsLocation || (!_mejaGpsLocation.lat && !_mejaGpsLocation.lng)) {
+      if (typeof _getMejaGps === 'function') {
+        try {
+          const freshGps = await _getMejaGps();
+          if (freshGps) _mejaGpsLocation = freshGps;
+        } catch (_) {}
+      }
+    }
+
+    if (!_mejaGpsLocation || (!_mejaGpsLocation.lat && !_mejaGpsLocation.lng)) {
+      _moIcon.innerHTML = '<i class="fas fa-map-marker-alt"></i>';
+      _moIcon.style.color = '#f59e0b';
+      _moStatus.textContent = 'GPS BELUM SIAP';
+      _moStatus.style.color = '#f59e0b';
+      _moStatus.style.background = 'rgba(245,158,11,0.2)';
+      _moDetail.textContent = 'Izin lokasi GPS pada browser perangkat Meja Absen belum aktif.';
+      _playMejaChime('warning');
+      _setMejaStatus('active', '<i class="fas fa-map-marker-alt"></i>', 'GPS Belum Siap', 'Aktifkan GPS browser perangkat');
+      setCamStatus('warn', '<i class="fas fa-map-marker-alt"></i>', user.nama, 'GPS Meja Belum Siap');
+      return;
+    }
+
     const payload = {
       request_id: rid, // <--- TAMBAHKAN REQUEST ID DI SINI
       telegram_id: user.telegram_id || '', // Tetap kirim telegram_id jika ada

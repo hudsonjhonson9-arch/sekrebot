@@ -4801,8 +4801,10 @@
       }
     }
 
+    #mejaOverlayResult,
     body.desktop-mode .cam-overlay.meja-kiosk #mejaOverlayResult,
-    .cam-overlay.meja-kiosk #mejaOverlayResult {
+    .cam-overlay.meja-kiosk #mejaOverlayResult,
+    .cam-overlay #mejaOverlayResult {
       position: fixed !important;
       top: 50% !important;
       left: 50% !important;
@@ -4818,23 +4820,26 @@
       box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.85) !important;
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      z-index: 1000 !important;
+      z-index: 30000 !important;
       box-sizing: border-box !important;
       animation: mejaModalPop 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
     }
 
+    #moIcon,
     body.desktop-mode .cam-overlay.meja-kiosk #moIcon,
     .cam-overlay.meja-kiosk #moIcon {
       font-size: 64px !important;
       margin-bottom: 14px !important;
     }
 
+    #moNama,
     body.desktop-mode .cam-overlay.meja-kiosk #moNama,
     .cam-overlay.meja-kiosk #moNama {
       font-size: 24px !important;
       font-weight: 800 !important;
     }
 
+    #moStatus,
     body.desktop-mode .cam-overlay.meja-kiosk #moStatus,
     .cam-overlay.meja-kiosk #moStatus {
       font-size: 15px !important;
@@ -4845,6 +4850,7 @@
       letter-spacing: 0.5px;
     }
 
+    #moDetail,
     body.desktop-mode .cam-overlay.meja-kiosk #moDetail,
     .cam-overlay.meja-kiosk #moDetail {
       font-size: 13px !important;
