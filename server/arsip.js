@@ -94,6 +94,7 @@ export function createArsipRouter(deps = {}) {
       /^\/api\/kertas-kerja$/, /^\/api\/kertas-kerja\/[^/]+$/,
       /^\/api\/kertas-kerja\/periode\/[^/]+\/kandidat$/,
       /^\/api\/bankdata$/, /^\/api\/bankdata\/tahun$/,
+      /^\/api\/agenda(\/.*)?$/,
       // master data untuk dropdown unggah (hanya baca)
       /^\/api\/kategori-dokumen$/, /^\/api\/sektor$/, /^\/api\/bidang$/,
     ],
@@ -105,18 +106,22 @@ export function createArsipRouter(deps = {}) {
       /^\/api\/kertas-kerja\/[^/]+\/(generate|sinkron-wajib|pengingat)$/,
       /^\/api\/kertas-kerja\/periode\/[^/]+\/tautan$/,
       /^\/api\/bankdata\/[a-z]+$/,
+      /^\/api\/agenda(\/.*)?$/,
     ],
     PUT: [
       /^\/api\/docs\/[^/]+$/, /^\/api\/pks\/[a-z-]+\/[^/]+$/,
       /^\/api\/kertas-kerja\/[^/]+$/, /^\/api\/bankdata\/[a-z]+\/[^/]+$/,
+      /^\/api\/agenda(\/.*)?$/,
     ],
     PATCH: [
       /^\/api\/docs\/[^/]+\/(status|publik)$/, /^\/api\/kertas-kerja\/periode\/[^/]+$/,
       /^\/api\/bankdata\/[a-z]+(\/[^/]+)*$/,
+      /^\/api\/agenda(\/.*)?$/,
     ],
     DELETE: [
       /^\/api\/docs\/[^/]+$/, /^\/api\/docs\/[^/]+\/shares\/[^/]+$/, /^\/api\/pks\/[a-z-]+\/[^/]+$/,
       /^\/api\/kertas-kerja\/[^/]+$/, /^\/api\/bankdata\/[a-z]+\/[^/]+$/, /^\/api\/bankdata\/tahun\/[^/]+$/,
+      /^\/api\/agenda(\/.*)?$/,
     ],
   };
 

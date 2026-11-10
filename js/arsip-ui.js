@@ -113,7 +113,7 @@
     var a = String(action == null ? '' : action);
     if (a.indexOf('tile:') === 0) {
       var v = a.slice(5);
-      if (['dokumen', 'kk', 'bd', 'app'].indexOf(v) === -1) return s;
+      if (['dokumen', 'kk', 'bd', 'agenda', 'sppd', 'app'].indexOf(v) === -1) return s;
       return { view: v, folder: null, detail: null };
     }
     if (a === 'home') return { view: 'home', folder: null, detail: null };

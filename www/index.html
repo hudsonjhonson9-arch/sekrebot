@@ -416,8 +416,135 @@
 
     <!-- ══ TAB ARSIP ══ -->
 <div class="panel" id="panel-arsip">
-<button class="arsip-back" onclick="switchTab(window._arsipPrevTab || 'absen')"><i class="fas fa-arrow-left" aria-hidden="true"></i> Kembali</button>
-<iframe id="arsipFrame" class="arsip-frame" title="Arsip Digital" loading="lazy"></iframe>
+<button class="arsip-back" id="arsipBackBtn" onclick="arsipBack()"><i class="fas fa-arrow-left" aria-hidden="true"></i> Kembali</button>
+<div class="arsip-native" id="arsipNative">
+
+  <!-- beranda: grid tile (dulu menu, baru daftar) -->
+  <div class="arsip-head">
+    <div class="arsip-h1">Arsip</div>
+    <div class="arsip-sub" id="arsipCount">Memuat dokumen…</div>
+  </div>
+  <div id="arsipHome" class="arsip-home">
+    <button class="arsip-tile" data-tile="dokumen">
+      <span class="arsip-tile-ico"><i class="fas fa-folder-open" aria-hidden="true"></i></span>
+      <span class="arsip-tile-name">Dokumen</span>
+      <em id="arsipTileCount">—</em>
+    </button>
+    <button class="arsip-tile" data-tile="kk">
+      <span class="arsip-tile-ico"><i class="fas fa-clipboard-list" aria-hidden="true"></i></span>
+      <span class="arsip-tile-name">Kertas Kerja</span>
+      <em id="arsipTileKK">—</em>
+    </button>
+    <button class="arsip-tile" data-tile="bd">
+      <span class="arsip-tile-ico"><i class="fas fa-chart-bar" aria-hidden="true"></i></span>
+      <span class="arsip-tile-name">Bank Data</span>
+      <em id="arsipTileBD">—</em>
+    </button>
+    <button class="arsip-tile" data-tile="agenda">
+      <span class="arsip-tile-ico"><i class="fas fa-envelope-open-text" aria-hidden="true"></i></span>
+      <span class="arsip-tile-name">Agenda Surat</span>
+      <em id="arsipTileAgenda">—</em>
+    </button>
+    <button class="arsip-tile" data-tile="sppd">
+      <span class="arsip-tile-ico"><i class="fas fa-car" aria-hidden="true"></i></span>
+      <span class="arsip-tile-name">Register SPPD</span>
+      <em id="arsipTileSPPD">—</em>
+    </button>
+    <button class="arsip-tile" data-tile="app">
+      <span class="arsip-tile-ico"><i class="fas fa-external-link-alt" aria-hidden="true"></i></span>
+      <span class="arsip-tile-name">Aplikasi Lengkap</span>
+      <em>arsipdigital</em>
+    </button>
+  </div>
+
+  <!-- dokumen: folder per bidang -> list -> detail -->
+  <div id="arsipDokumen" class="arsip-dokumen" style="display:none">
+    <div class="arsip-toolbar">
+      <input id="arsipQuery" class="arsip-search" placeholder="Cari judul / bidang / tahun…" aria-label="Cari dokumen" />
+      <select id="arsipStatus" class="arsip-search arsip-filter" aria-label="Filter status">
+        <option value="">Semua</option>
+        <option>Diarsipkan</option>
+        <option>Menunggu Review</option>
+        <option>Ditolak</option>
+      </select>
+      <button class="arsip-full" id="arsipFullBtn" title="Buka seluruh menu arsip (aplikasi web)">
+        <i class="fas fa-external-link-alt" aria-hidden="true"></i><span>Aplikasi lengkap</span>
+      </button>
+    </div>
+    <div id="arsipList" class="arsip-list"><div class="arsip-placeholder">Memuat dokumen…</div></div>
+    <div id="arsipDetail" class="arsip-detail" style="display:none"></div>
+  </div>
+
+  <!-- tahap 2 & 3 -->
+  <div id="arsipKK" class="arsip-section" style="display:none"></div>
+  <div id="arsipBD" class="arsip-section" style="display:none"></div>
+  <div id="arsipAgenda" class="arsip-section" style="display:none"></div>
+  <div id="arsipSppd" class="arsip-section" style="display:none"></div>
+
+  <!-- tombol unggah: FAB, id lama dipertahankan supaya listener lama tetap jalan -->
+  <button class="arsip-upload arsip-fab" id="arsipUploadBtn" style="display:none" title="Unggah dokumen baru" aria-label="Unggah dokumen baru">
+    <i class="fas fa-plus" aria-hidden="true"></i>
+  </button>
+
+  <!-- overlay preview: di dalam panel, jadi tidak pernah pindah tab -->
+  <div id="arsipPreview" class="arsip-preview" style="display:none">
+    <div class="arsip-preview-bar">
+      <strong id="arsipPreviewTitle">Dokumen</strong>
+      <div class="arsip-preview-acts">
+        <a id="arsipPreviewOpen" class="arsip-act" target="_blank" rel="noopener">Buka</a>
+        <a id="arsipPreviewDl" class="arsip-act" target="_blank" rel="noopener">Unduh</a>
+        <button class="arsip-act" id="arsipPreviewClose">Tutup</button>
+      </div>
+    </div>
+    <div id="arsipPreviewBody" class="arsip-preview-body"></div>
+  </div>
+
+  <div id="arsipUploadModal" class="arsip-modal" style="display:none">
+    <div class="arsip-modal-box">
+      <div class="arsip-modal-head"><strong>Unggah Dokumen</strong><button class="arsip-act" data-upload-close>Tutup</button></div>
+      <form id="arsipUploadForm" class="arsip-form">
+        <div class="arsip-form-sec">Informasi Dokumen</div>
+        <div class="arsip-grid">
+          <label class="span2">Judul <span class="arsip-req">*</span>
+            <input name="title" required maxlength="200" placeholder="Contoh: Kajian Potensi Pembangunan Sumba Barat 2024" />
+          </label>
+          <label>Kategori <input name="type" list="arsipKategoriList" placeholder="mis. SK, Laporan" maxlength="80" /></label>
+          <label>Sektor <input name="sector" list="arsipSektorList" placeholder="mis. Ekonomi" maxlength="80" /></label>
+          <label>Bidang <input name="bidang" placeholder="mis. Perencanaan" maxlength="80" /></label>
+          <label>Nomor Dokumen <input name="nomor_dokumen" placeholder="005/XXXX/2024" maxlength="80" /></label>
+          <label>Tanggal Dokumen <input name="tanggal_dokumen" type="date" /></label>
+          <label>Tag / Kata Kunci <input name="tags" maxlength="300" placeholder="pertanian, kajian, 2024 (pisah koma)" /></label>
+          <label class="span2">Deskripsi
+            <textarea name="desc" rows="3" maxlength="1000" placeholder="Ringkasan isi dan tujuan dokumen ini..."></textarea>
+          </label>
+        </div>
+        <datalist id="arsipKategoriList"></datalist>
+        <datalist id="arsipSektorList"></datalist>
+
+        <div class="arsip-divider"></div>
+
+        <div class="arsip-form-sec">File Dokumen</div>
+        <label class="arsip-lbl-req">Berkas <span class="arsip-req">*</span></label>
+        <input id="arsipUploadFile" name="file" type="file" required
+               accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp" />
+        <div class="arsip-drop" id="arsipDrop">
+          <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
+          <button type="button" class="arsip-act ok" id="arsipPick">Pilih Berkas</button>
+          <div class="arsip-drop-hint">atau seret file ke kotak ini</div>
+          <div class="arsip-drop-sub">PDF, DOCX, XLSX, JPG, PNG, WEBP</div>
+          <ul class="arsip-drop-list" id="arsipDropList"></ul>
+        </div>
+
+        <div id="arsipUploadMsg" class="arsip-form-msg"></div>
+        <div class="arsip-form-acts">
+          <button type="submit" class="arsip-act ok" id="arsipUploadSubmit">Unggah</button>
+          <button type="button" class="arsip-act" data-upload-close>Batal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<iframe id="arsipFrame" class="arsip-frame" title="Arsip Digital" loading="lazy" style="display:none"></iframe>
     </div>
 
     <!-- ══ TAB ABSEN ══ -->
@@ -3271,6 +3398,12 @@
   <script src="js/errors.js"></script>
   <script src="js/dom.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/arsip-ui.js?v=4"></script>
+  <script src="js/arsip.js?v=27"></script>
+  <script src="js/arsip-kk.js?v=3"></script>
+  <script src="js/arsip-bd.js?v=4"></script>
+  <script src="js/arsip-agenda.js?v=1"></script>
+  <script src="js/arsip-sppd.js?v=1"></script>
 
   <!-- 4. Core utilities -->
   <script src="js/ui.js?v=20261109"></script>

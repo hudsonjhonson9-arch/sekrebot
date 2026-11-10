@@ -84,7 +84,11 @@ let meLoaded = false;
       else closeFull();
     }
     pasangModul('arsipKK', 'kk', 'Kertas Kerja', () => window.ArsipKK);
+    tampil('arsipAgenda', view.view === 'agenda');
+    tampil('arsipSppd', view.view === 'sppd');
     pasangModul('arsipBD', 'bd', 'Bank Data', () => window.ArsipBD);
+    pasangModul('arsipAgenda', 'agenda', 'Agenda Surat', () => window.ArsipAgenda);
+    pasangModul('arsipSppd', 'sppd', 'Register SPPD', () => window.ArsipSPPD);
     if (view.detail) openDetail(view.detail);
     else if (view.view === 'dokumen') {
       const listEl = $('arsipList');

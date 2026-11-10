@@ -14,7 +14,7 @@ const uiJs = fs.readFileSync(path.join(ROOT, 'js', 'ui.js'), 'utf8');
 
 test('landmark beranda, section, dan overlay preview ada', () => {
   for (const id of [
-    'arsipHome', 'arsipDokumen', 'arsipKK', 'arsipBD',
+    'arsipHome', 'arsipDokumen', 'arsipKK', 'arsipBD', 'arsipAgenda', 'arsipSppd',
     'arsipPreview', 'arsipPreviewTitle', 'arsipPreviewBody',
     'arsipPreviewOpen', 'arsipPreviewDl', 'arsipPreviewClose', 'arsipTileCount',
   ]) {
@@ -22,10 +22,10 @@ test('landmark beranda, section, dan overlay preview ada', () => {
   }
 });
 
-test('empat tile sesuai keputusan: Dokumen, Kertas Kerja, Bank Data, Aplikasi Lengkap', () => {
+test('enam tile sesuai keputusan: Dokumen, Kertas Kerja, Bank Data, Agenda Surat, Register SPPD, Aplikasi Lengkap', () => {
   const tiles = [...html.matchAll(/data-tile="([a-z]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(tiles, ['dokumen', 'kk', 'bd', 'app']);
-  for (const label of ['Dokumen', 'Kertas Kerja', 'Bank Data', 'Aplikasi Lengkap']) {
+  assert.deepEqual(tiles, ['dokumen', 'kk', 'bd', 'agenda', 'sppd', 'app']);
+  for (const label of ['Dokumen', 'Kertas Kerja', 'Bank Data', 'Agenda Surat', 'Register SPPD', 'Aplikasi Lengkap']) {
     assert.ok(html.includes(label), 'label tile hilang: ' + label);
   }
 });
