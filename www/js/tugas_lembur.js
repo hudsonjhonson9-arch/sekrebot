@@ -305,8 +305,9 @@
 
     let actionBtn = '';
     if (status === 'AKTIF') {
+      const safeId = String(r.id || r.ID || '');
       actionBtn = `
-        <button onclick='handleKerjakanTugas(${JSON.stringify(r)})' class="btn-sm" style="background:linear-gradient(135deg, var(--gold) 0%, #d4af37 100%); color:#000; border:none; padding:8px 16px; border-radius:10px; font-size:11px; font-weight:800; cursor:pointer; box-shadow: 0 4px 15px rgba(212,175,55,0.3); transition:all 0.3s ease">
+        <button onclick="handleKerjakanTugas('${safeId}')" class="btn-sm" style="background:linear-gradient(135deg, var(--gold) 0%, #d4af37 100%); color:#000; border:none; padding:8px 16px; border-radius:10px; font-size:11px; font-weight:800; cursor:pointer; box-shadow: 0 4px 15px rgba(212,175,55,0.3); transition:all 0.3s ease">
           <i class="fas fa-rocket"></i> Kerjakan Tugas
         </button>
       `;
@@ -413,6 +414,11 @@
    * Action: Kerjakan Tugas
    */
   window.handleKerjakanTugas = function(r) {
+    if (typeof r !== 'object' || r === null) {
+      const found = (_activeMyTasks || []).find(t => String(t.id || t.ID) === String(r));
+      if (found) r = found;
+      else r = {};
+    }
     if ((r.status || '').toUpperCase() === 'SELESAI') {
       Swal.fire('Info', 'Perjalanan dinas ini sudah diselesaikan.', 'info');
       return;
