@@ -59,6 +59,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
     _mejaCnt.gagal++;
     _updateMejaCnt();
     _setMejaStatus('active', '<i class="fas fa-exclamation-triangle"></i>', 'Wajah Tak Dikenal', 'Pegawai tidak terdaftar di sistem');
+    setCamStatus('bad', '<i class="fas fa-question"></i>', 'Tidak Dikenal', 'Wajah belum terdaftar');
 
     setTimeout(() => {
       overlay.style.display = 'none';
@@ -82,6 +83,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
     _mejaCnt.gagal++;
     _updateMejaCnt();
     _setMejaStatus('active', '<i class="fas fa-exclamation-triangle"></i>', 'GPS Tidak Terdeteksi', 'Pindah ke area terbuka untuk mendapatkan sinyal GPS');
+    setCamStatus('warn', '<i class="fas fa-map-marker-alt"></i>', 'GPS Tidak Terdeteksi', 'Pindah ke area terbuka');
     setTimeout(() => {
       _forceResetAiState(true);
       window._mejaProcessing = false;
@@ -176,6 +178,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
     _moStatus.style.background = st.bg;
     _moDetail.textContent = st.detail;
     _setMejaStatus('active', st.icon, `${user.nama} — ${st.title}`, st.isSuccess ? 'Siap scan berikutnya...' : st.detail);
+    setCamStatus(st.isSuccess ? 'ok' : (st.isInfo ? 'warn' : 'bad'), st.icon, user.nama, st.title);
   } catch (e) {
     console.error('[Meja] Submission Fatal Error:', e);
     _moIcon.innerHTML = '<i class="fas fa-plug"></i>';
@@ -186,6 +189,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
     _moDetail.textContent = e.message || 'Terjadi kesalahan sistem';
     _mejaCnt.gagal++;
     _setMejaStatus('active', '<i class="fas fa-plug"></i>', 'System Error', e.message);
+    setCamStatus('bad', '<i class="fas fa-plug"></i>', 'Gagal Proses', e.message || 'Kesalahan sistem');
   } finally {
     clearTimeout(safetyTimer); 
     window._isSubmitting = false; 

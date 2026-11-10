@@ -4790,36 +4790,53 @@
       object-fit: cover;
     }
 
-    body.desktop-mode .cam-overlay.meja-kiosk #mejaOverlayResult {
-      position: absolute;
-      inset: auto !important;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 90%;
-      max-width: 520px;
-      padding: 32px 36px !important;
-      border-radius: 24px !important;
-      background: rgba(15, 23, 42, 0.94) !important;
-      border: 2px solid rgba(255, 255, 255, 0.15) !important;
-      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8) !important;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      z-index: 50;
-      animation: slideUp 0.35s ease;
+    @keyframes mejaModalPop {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -46%) scale(0.96);
+      }
+      100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
     }
 
-    body.desktop-mode .cam-overlay.meja-kiosk #moIcon {
+    body.desktop-mode .cam-overlay.meja-kiosk #mejaOverlayResult,
+    .cam-overlay.meja-kiosk #mejaOverlayResult {
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      bottom: auto !important;
+      right: auto !important;
+      transform: translate(-50%, -50%) !important;
+      width: 90% !important;
+      max-width: 480px !important;
+      padding: 30px 32px !important;
+      border-radius: 24px !important;
+      background: rgba(15, 23, 42, 0.96) !important;
+      border: 1.5px solid rgba(255, 255, 255, 0.18) !important;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.85) !important;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 1000 !important;
+      box-sizing: border-box !important;
+      animation: mejaModalPop 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    }
+
+    body.desktop-mode .cam-overlay.meja-kiosk #moIcon,
+    .cam-overlay.meja-kiosk #moIcon {
       font-size: 64px !important;
       margin-bottom: 14px !important;
     }
 
-    body.desktop-mode .cam-overlay.meja-kiosk #moNama {
+    body.desktop-mode .cam-overlay.meja-kiosk #moNama,
+    .cam-overlay.meja-kiosk #moNama {
       font-size: 24px !important;
       font-weight: 800 !important;
     }
 
-    body.desktop-mode .cam-overlay.meja-kiosk #moStatus {
+    body.desktop-mode .cam-overlay.meja-kiosk #moStatus,
+    .cam-overlay.meja-kiosk #moStatus {
       font-size: 15px !important;
       font-weight: 800 !important;
       padding: 6px 16px !important;
@@ -4828,7 +4845,8 @@
       letter-spacing: 0.5px;
     }
 
-    body.desktop-mode .cam-overlay.meja-kiosk #moDetail {
+    body.desktop-mode .cam-overlay.meja-kiosk #moDetail,
+    .cam-overlay.meja-kiosk #moDetail {
       font-size: 13px !important;
       color: rgba(255, 255, 255, 0.75) !important;
       margin-top: 12px !important;
@@ -4991,49 +5009,7 @@
         object-fit: cover;
       }
 
-      .cam-overlay.meja-kiosk #mejaOverlayResult {
-        position: absolute;
-        inset: auto !important;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 90%;
-        max-width: 520px;
-        padding: 32px 36px !important;
-        border-radius: 24px !important;
-        background: rgba(15, 23, 42, 0.94) !important;
-        border: 2px solid rgba(255, 255, 255, 0.15) !important;
-        box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8) !important;
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        z-index: 50;
-        animation: slideUp 0.35s ease;
-      }
 
-      .cam-overlay.meja-kiosk #moIcon {
-        font-size: 64px !important;
-        margin-bottom: 14px !important;
-      }
-
-      .cam-overlay.meja-kiosk #moNama {
-        font-size: 24px !important;
-        font-weight: 800 !important;
-      }
-
-      .cam-overlay.meja-kiosk #moStatus {
-        font-size: 15px !important;
-        font-weight: 800 !important;
-        padding: 6px 16px !important;
-        border-radius: 10px !important;
-        margin-top: 10px !important;
-        letter-spacing: 0.5px;
-      }
-
-      .cam-overlay.meja-kiosk #moDetail {
-        font-size: 13px !important;
-        color: rgba(255, 255, 255, 0.75) !important;
-        margin-top: 12px !important;
-      }
 
       .cam-overlay.meja-kiosk .cam-status {
         position: absolute;
