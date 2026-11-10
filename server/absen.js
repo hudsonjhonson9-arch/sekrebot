@@ -51,7 +51,7 @@ export const RIWAYAT_LOKASI_SQL =
   + 'ORDER BY "Tanggal" DESC, "Jam" DESC LIMIT 5';
 
 export const REQUEST_ID_SQL =
-  'SELECT 1 FROM "Log_Absen" WHERE request_id = $1 LIMIT 1';
+  'SELECT "Jenis Absen", "Jam", "Tanggal", "Lokasi" FROM "Log_Absen" WHERE request_id = $1 LIMIT 1';
 
 // Kolom mengikuti node "Simpan Log" canonical. client_jam sengaja belum ikut:
 // migration 008 belum diterapkan ke database, dan menyebut kolom yang belum ada
@@ -212,7 +212,22 @@ export function createAbsenRouter({
       // walau gate sudah berubah karena log ikut bertambah.
       const dup = await query(REQUEST_ID_SQL, [requestId]);
       if (dup.rows.length) {
-        return res.json({ ok: true, message: 'Data sudah tercatat (Idempotent)' });
+        const prev = dup.rows[0];
+        const jA = String(prev['Jenis Absen'] || '').toUpperCase();
+        const isPulang = ['PULANG', 'DI LUAR JAM PULANG', 'PULANG LUAR'].includes(jA);
+        const isMasuk = ['MASUK', 'DI LUAR JAM MASUK'].includes(jA);
+        let msg = 'Data sudah tercatat (Idempotent)';
+        if (isPulang) msg = 'Pegawai sudah melakukan absen pulang hari ini.';
+        else if (isMasuk) msg = 'Pegawai sudah melakukan absen masuk hari ini.';
+
+        return res.json({
+          ok: true,
+          idempotent: true,
+          message: msg,
+          jenis_absen: prev['Jenis Absen'],
+          jam: prev['Jam'],
+          lokasi: prev['Lokasi'],
+        });
       }
 
       const isMeja = isMejaAdmin || req.authKind === 'device';

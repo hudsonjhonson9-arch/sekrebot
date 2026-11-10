@@ -4862,6 +4862,123 @@
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
+    body.desktop-mode .face-oval {
+      max-width: 290px;
+      max-height: 390px;
+    }
+
+    /* ── Desktop Kiosk Biometric Face Guide & Target Frame ── */
+    body.desktop-mode .cam-overlay.meja-kiosk .face-guide,
+    .cam-overlay.meja-kiosk .face-guide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    body.desktop-mode .cam-overlay.meja-kiosk .face-oval,
+    .cam-overlay.meja-kiosk .face-oval {
+      width: 320px !important;
+      height: 440px !important;
+      max-width: 85vw !important;
+      max-height: 62vh !important;
+      aspect-ratio: unset !important;
+      border-radius: 44px !important;
+      border: 2px dashed rgba(59, 130, 246, 0.5) !important;
+      box-shadow: 0 0 0 9999px rgba(10, 15, 29, 0.45) !important;
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    /* 4 Corner Targeting HUD Accents */
+    body.desktop-mode .cam-overlay.meja-kiosk .face-oval::before,
+    .cam-overlay.meja-kiosk .face-oval::before {
+      content: '';
+      position: absolute;
+      inset: -12px;
+      border-radius: 54px;
+      border: 3px solid transparent;
+      border-top-color: rgba(59, 130, 246, 0.85);
+      border-bottom-color: rgba(59, 130, 246, 0.85);
+      pointer-events: none;
+      transition: all 0.3s ease;
+    }
+
+    /* Target Guideline Tag */
+    body.desktop-mode .cam-overlay.meja-kiosk .face-oval::after,
+    .cam-overlay.meja-kiosk .face-oval::after {
+      content: 'POSISIKAN WAJAH DI SINI';
+      position: absolute;
+      bottom: -36px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.9);
+      background: rgba(15, 23, 42, 0.8);
+      padding: 5px 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      white-space: nowrap;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+      transition: all 0.3s ease;
+    }
+
+    /* Target Success State */
+    body.desktop-mode .cam-overlay.meja-kiosk .cam-video-wrap.face-ok .face-oval,
+    .cam-overlay.meja-kiosk .cam-video-wrap.face-ok .face-oval {
+      border: 2.5px solid #22c55e !important;
+      border-style: solid !important;
+      box-shadow: 0 0 0 9999px rgba(10, 15, 29, 0.4), 0 0 25px rgba(34, 197, 94, 0.35) !important;
+    }
+
+    body.desktop-mode .cam-overlay.meja-kiosk .cam-video-wrap.face-ok .face-oval::before,
+    .cam-overlay.meja-kiosk .cam-video-wrap.face-ok .face-oval::before {
+      border-top-color: #22c55e;
+      border-bottom-color: #22c55e;
+    }
+
+    body.desktop-mode .cam-overlay.meja-kiosk .cam-video-wrap.face-ok .face-oval::after,
+    .cam-overlay.meja-kiosk .cam-video-wrap.face-ok .face-oval::after {
+      content: 'WAJAH TERDETEKSI';
+      color: #22c55e;
+      border-color: rgba(34, 197, 94, 0.4);
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    /* Target Warning State */
+    body.desktop-mode .cam-overlay.meja-kiosk .cam-video-wrap.face-warn .face-oval,
+    .cam-overlay.meja-kiosk .cam-video-wrap.face-warn .face-oval {
+      border-color: #eab308 !important;
+    }
+
+    /* Target Error State */
+    body.desktop-mode .cam-overlay.meja-kiosk .cam-video-wrap.face-bad .face-oval,
+    .cam-overlay.meja-kiosk .cam-video-wrap.face-bad .face-oval {
+      border-color: #ef4444 !important;
+    }
+
+    /* Contained Scan Line */
+    body.desktop-mode .cam-overlay.meja-kiosk .cam-scan-line,
+    .cam-overlay.meja-kiosk .cam-scan-line {
+      left: 50% !important;
+      right: auto !important;
+      width: 290px !important;
+      transform: translateX(-50%);
+      border-radius: 2px;
+      z-index: 12;
+    }
+
     @media (min-width: 768px) {
       .cam-overlay.meja-kiosk {
         position: fixed;
@@ -7832,7 +7949,99 @@ body.arsip-fs .arsip-fab { display: none !important; }
 .arsip-preview-frame { width: 100%; height: 100%; border: 0; display: block; background: var(--card-bg); }
 body.arsip-preview-open { overflow: hidden; }
 
+/* ── Media dokumen: dipakai overlay preview & kartu detail (satu wadah) ── */
+.arsip-media-img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.arsip-media-frame { width: 100%; height: 100%; border: 0; display: block; background: var(--card-bg); }
+
+/* Kartu detail — disamakan dengan halaman detail arsipdigital: "Kembali ke Daftar"
+   di kiri-atas, kartu identitas + aksi, lalu pratinjau (kiri) berdampingan dengan
+   kolom metadata yang menempel (kanan, >=900px). Urutan mobile diatur grid-areas. */
+.arsip-detail-top { display: flex; margin-bottom: 12px; }
+.arsip-detail-top .arsip-act { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+.arsip-detail-grid {
+  display: grid; gap: 14px; align-items: start;
+  grid-template-areas: "media" "side";
+}
+.arsip-detail-media {
+  grid-area: media; display: grid; overflow: hidden; min-height: 180px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--card-bg);
+}
+.arsip-detail-media-klik { cursor: zoom-in; }
+.arsip-detail-media-klik:hover { border-color: var(--gold); }
+.arsip-detail-media .arsip-media-frame { height: auto; aspect-ratio: 3 / 4; max-height: 68vh; border-radius: 0; }
+.arsip-detail-media .arsip-media-img { max-height: 68vh; border-radius: 0; }
+.arsip-detail-note { padding: 8px 14px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); }
+.arsip-detail-head {
+  display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap;
+  padding: 14px; margin-bottom: 14px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--card-bg);
+}
+.arsip-detail-head .arsip-detail-acts { margin-left: auto; }
+.arsip-detail-side { grid-area: side; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.arsip-detail-card { padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--card-bg); }
+.arsip-detail-headline { min-width: 0; flex: 1 1 200px; }
+.arsip-detail-ico {
+  display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 auto;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg); font-size: 17px;
+}
+.arsip-detail-ext { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--muted); }
+.arsip-detail-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 3px; }
+.arsip-detail-title { margin: 0 0 6px; color: var(--white); font-size: 15px; font-weight: 700; line-height: 1.35; }
+.arsip-detail-h2 { margin: 0 0 16px; color: var(--white); font-size: 15px; font-weight: 700; }
+.arsip-detail-h3 {
+  margin: 0 0 14px; color: var(--white); font-size: 13px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.arsip-meta-list { display: flex; flex-direction: column; gap: 8px; }
+.arsip-meta-row { padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: rgba(148, 163, 184, 0.08); }
+.arsip-meta-label {
+  margin-bottom: 2px; font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.arsip-meta-value { font-size: 13px; font-weight: 500; color: var(--white); overflow-wrap: anywhere; }
+.arsip-detail-desc { margin: 0; font-size: 13px; line-height: 1.6; color: var(--white); white-space: pre-wrap; }
+.arsip-detail-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.arsip-detail-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.arsip-detail-acts .arsip-act { display: inline-flex; align-items: center; gap: 6px; }
+.arsip-history-list { display: flex; flex-direction: column; gap: 8px; }
+.arsip-history-item {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 10px;
+}
+.arsip-history-ico {
+  display: grid; place-items: center; width: 26px; height: 26px; flex: 0 0 auto;
+  border-radius: 8px; background: rgba(148, 163, 184, 0.14); color: var(--gold); font-size: 12px;
+}
+.arsip-history-main { flex: 1 1 auto; min-width: 0; }
+.arsip-history-name { font-size: 13px; font-weight: 600; color: var(--white); }
+.arsip-history-actor { font-weight: 400; color: var(--muted); }
+.arsip-history-sub { font-size: 12px; color: var(--muted); }
+.arsip-history-at { margin-top: 2px; font-size: 11px; color: var(--muted); }
+@media (min-width: 900px) {
+  .arsip-detail-grid { align-items: stretch; grid-template-columns: minmax(0, 1fr) 340px; grid-template-areas: "media side"; }
+  /* Pratinjau = tinggi kartu, tapi kartu dibatasi setinggi layar dan kolom kanan
+     gulir sendiri. Tanpa batas ini iframe jadi lebih tinggi dari viewport sehingga
+     roda gulir di atasnya tidak menembus halaman (halaman terasa tidak bisa di-scroll). */
+  .arsip-detail-media, .arsip-detail-side { max-height: calc(100dvh - 260px); }
+  .arsip-detail-side { position: sticky; top: 20px; overflow-y: auto; }
+  .arsip-detail-media { grid-template-rows: 1fr auto; }
+  .arsip-detail-media .arsip-media-frame { aspect-ratio: auto; height: 100%; max-height: none; }
+  .arsip-detail-media .arsip-media-img { max-height: 100%; }
+}
+@media (max-width: 899px) {
+  .arsip-detail-media .arsip-media-frame { aspect-ratio: 4 / 5; max-height: 52vh; }
+  .arsip-detail-media .arsip-media-img { max-height: 52vh; }
+  .arsip-detail-head { padding: 12px; }
+  .arsip-detail-head .arsip-detail-acts { margin-left: 0; width: 100%; }
+  .arsip-detail-acts .arsip-act { flex: 1 1 auto; justify-content: center; min-height: 44px; }
+}
+
 @media (max-width: 767px) {
+  /* Panel arsip dikunci setinggi layar. Tanpa ini .arsip-native (height:100%)
+     tidak punya acuan di HP sehingga .arsip-list melar jadi halaman 8000px+ dan
+     gulirannya pindah ke <body> (daftar terasa tidak bisa digulir). */
+  body.arsip-open .app { height: 100dvh; }
+  body.arsip-open .panel { min-height: 0; }
   .arsip-home { padding: 0 14px 12px; grid-template-columns: repeat(2, 1fr); }
   .arsip-section { padding: 0 14px 12px; }
   .arsip-fab { right: 14px; bottom: calc(80px + max(var(--tg-safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px))); }
@@ -8036,3 +8245,80 @@ body.arsip-preview-open { overflow: hidden; }
   #perjadinModal .perjadin-foot .btn-secondary,
   #perjadinModal .perjadin-foot .btn-primary{width:100%;flex:none}
 }
+
+/* ═══ Rekap Lembur — timeline ═══ */
+.lt-wrap{--lt-left:200px;--lt-col:46px;border:1px solid var(--border);border-radius:16px;background:var(--card-bg);overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.lt-inner{min-width:calc(var(--lt-left) + var(--lt-n) * var(--lt-col))}
+.lt-row{display:grid;grid-template-columns:var(--lt-left) repeat(var(--lt-n),minmax(var(--lt-col),1fr));min-height:60px;border-top:1px solid var(--border)}
+.lt-row.lt-head{border-top:0;min-height:64px;background:rgba(255,255,255,.03)}
+.lt-left{position:sticky;left:0;z-index:4;grid-column:1;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px 10px 14px;background:var(--card-bg);border-right:1px solid var(--border)}
+.lt-head .lt-left{justify-content:flex-start;gap:10px;background:#212c40}
+.lt-head-ico{font-size:15px;color:var(--muted)}
+.lt-head-t{font-size:13px;font-weight:700;color:var(--white)}
+.lt-head-s{font-size:10px;color:var(--muted);margin-top:2px}
+.lt-who{min-width:0}
+.lt-name{font-size:13px;font-weight:700;color:var(--white);line-height:1.25;overflow-wrap:anywhere}
+.lt-nip{font-size:10px;color:var(--muted);margin-top:3px;white-space:nowrap}
+.lt-total{flex-shrink:0;font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;border:1px solid var(--border);color:var(--muted)}
+.lt-total.has{color:var(--gold);border-color:var(--gold);background:var(--gold-dim)}
+.lt-h{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-left:1px solid rgba(148,163,184,.12)}
+.lt-dow{font-size:10px;font-weight:600;color:var(--muted)}
+.lt-num{font-size:12px;font-weight:700;color:var(--white);width:24px;height:24px;line-height:24px;text-align:center}
+.lt-today{font-size:12px;font-weight:700;color:#fff;background:var(--gold);width:24px;height:24px;line-height:24px;border-radius:50%;text-align:center}
+.lt-c{grid-row:1;border-left:1px solid rgba(148,163,184,.12)}
+.lt-we{background:rgba(255,255,255,.035)}
+.lt-off{background-image:repeating-linear-gradient(135deg,transparent 0 5px,rgba(148,163,184,.10) 5px 6px)}
+.lt-mo{border-left-color:rgba(148,163,184,.4)}
+.lt-c.lt-now{background-color:var(--gold-dim)}
+.lt-bar{grid-row:1;align-self:center;height:34px;margin:0 3px;padding:0 12px;z-index:1;display:block;text-align:left;font:inherit;font-size:11px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1.5px solid var(--c);border-radius:999px;background:var(--cbg);cursor:pointer}
+.lt-bar:hover{filter:brightness(1.15)}
+.lt-bar:focus-visible{outline:2px solid var(--white);outline-offset:2px}
+.lt-bar.sel{box-shadow:0 0 0 2px var(--navy),0 0 0 4px var(--c)}
+.lt-detail{margin-top:10px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.03);font-size:11px;color:var(--muted);line-height:1.6}
+.lt-det-h{color:var(--white);font-size:12px;margin-bottom:4px}
+.lt-det-i{padding:2px 0}
+@media (max-width:600px){
+  .lt-wrap{--lt-left:132px;--lt-col:42px}
+  .lt-left{flex-direction:column;align-items:flex-start;justify-content:center;gap:6px;padding:8px 8px 8px 10px}
+  .lt-head .lt-left{flex-direction:row;align-items:center}
+  .lt-head-ico{display:none}
+}
+@media (prefers-reduced-motion:no-preference){.lt-bar{transition:filter .15s}}
+/* ═══ Rekap Lembur — timeline ═══ */
+.lt-wrap{--lt-left:200px;--lt-col:46px;border:1px solid var(--border);border-radius:16px;background:var(--card-bg);overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.lt-inner{min-width:calc(var(--lt-left) + var(--lt-n) * var(--lt-col))}
+.lt-row{display:grid;grid-template-columns:var(--lt-left) repeat(var(--lt-n),minmax(var(--lt-col),1fr));min-height:60px;border-top:1px solid var(--border)}
+.lt-row.lt-head{border-top:0;min-height:64px;background:rgba(255,255,255,.03)}
+.lt-left{position:sticky;left:0;z-index:4;grid-column:1;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px 10px 14px;background:var(--card-bg);border-right:1px solid var(--border)}
+.lt-head .lt-left{justify-content:flex-start;gap:10px;background:#212c40}
+.lt-head-ico{font-size:15px;color:var(--muted)}
+.lt-head-t{font-size:13px;font-weight:700;color:var(--white)}
+.lt-head-s{font-size:10px;color:var(--muted);margin-top:2px}
+.lt-who{min-width:0}
+.lt-name{font-size:13px;font-weight:700;color:var(--white);line-height:1.25;overflow-wrap:anywhere}
+.lt-nip{font-size:10px;color:var(--muted);margin-top:3px;white-space:nowrap}
+.lt-total{flex-shrink:0;font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;border:1px solid var(--border);color:var(--muted)}
+.lt-total.has{color:var(--gold);border-color:var(--gold);background:var(--gold-dim)}
+.lt-h{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-left:1px solid rgba(148,163,184,.12)}
+.lt-dow{font-size:10px;font-weight:600;color:var(--muted)}
+.lt-num{font-size:12px;font-weight:700;color:var(--white);width:24px;height:24px;line-height:24px;text-align:center}
+.lt-today{font-size:12px;font-weight:700;color:#fff;background:var(--gold);width:24px;height:24px;line-height:24px;border-radius:50%;text-align:center}
+.lt-c{grid-row:1;border-left:1px solid rgba(148,163,184,.12)}
+.lt-we{background:rgba(255,255,255,.035)}
+.lt-off{background-image:repeating-linear-gradient(135deg,transparent 0 5px,rgba(148,163,184,.10) 5px 6px)}
+.lt-mo{border-left-color:rgba(148,163,184,.4)}
+.lt-c.lt-now{background-color:var(--gold-dim)}
+.lt-bar{grid-row:1;align-self:center;height:34px;margin:0 3px;padding:0 12px;z-index:1;display:block;text-align:left;font:inherit;font-size:11px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1.5px solid var(--c);border-radius:999px;background:var(--cbg);cursor:pointer}
+.lt-bar:hover{filter:brightness(1.15)}
+.lt-bar:focus-visible{outline:2px solid var(--white);outline-offset:2px}
+.lt-bar.sel{box-shadow:0 0 0 2px var(--navy),0 0 0 4px var(--c)}
+.lt-detail{margin-top:10px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.03);font-size:11px;color:var(--muted);line-height:1.6}
+.lt-det-h{color:var(--white);font-size:12px;margin-bottom:4px}
+.lt-det-i{padding:2px 0}
+@media (max-width:600px){
+  .lt-wrap{--lt-left:132px;--lt-col:42px}
+  .lt-left{flex-direction:column;align-items:flex-start;justify-content:center;gap:6px;padding:8px 8px 8px 10px}
+  .lt-head .lt-left{flex-direction:row;align-items:center}
+  .lt-head-ico{display:none}
+}
+@media (prefers-reduced-motion:no-preference){.lt-bar{transition:filter .15s}}

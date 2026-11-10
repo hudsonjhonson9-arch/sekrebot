@@ -170,11 +170,19 @@ test('meja_token salah ditolak', () => {
   assert.equal(r.kodeTolak, 'MEJA_TOKEN_INVALID');
 });
 
-test('meja_token benar diterima', () => {
+test('meja_token benar diterima dan menghitung jenisAbsen dari jam', () => {
   process.env.MEJA_TOKENS = JSON.stringify({ bapperida: ['BENAR'] });
   const r = run({ source: 'meja_absen', meja_token: 'BENAR' });
   assert.equal(r.ok, true);
-  assert.equal(r.jenisAbsen, 'MEJA');
+  assert.equal(r.jenisAbsen, 'MASUK');
+  assert.equal(r.namaLokasi, 'Meja Absen');
+});
+
+test('Meja Absen: jam sore menghasilkan jenisAbsen PULANG', () => {
+  process.env.MEJA_TOKENS = JSON.stringify({ bapperida: ['BENAR'] });
+  const r = run({ source: 'meja_absen', meja_token: 'BENAR' }, jam('15:00:00'));
+  assert.equal(r.ok, true);
+  assert.equal(r.jenisAbsen, 'PULANG');
 });
 
 test('Meja Absen tidak diminta koordinat', () => {

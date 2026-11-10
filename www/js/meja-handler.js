@@ -159,8 +159,14 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
     const st = _formatMejaStatus(mejaOk, d, user);
     if (st.isSuccess) {
       if (st.isMasuk) _mejaCnt.masuk++; else _mejaCnt.pulang++;
-    } else if (!st.isInfo) {
+      _playMejaChime('success');
+      _speakMeja(`Terima kasih, ${user.nama.split(' ')[0]}`);
+    } else if (st.isInfo) {
+      _playMejaChime('info');
+      _speakMeja(`${user.nama.split(' ')[0]}, ${st.title.toLowerCase()}`);
+    } else {
       _mejaCnt.gagal++;
+      _playMejaChime('warning');
     }
 
     _moIcon.innerHTML = st.icon;
@@ -225,8 +231,110 @@ function adminCaptureSignatureFor(uid, name) {
   if (titleEl) titleEl.innerHTML = `<i class="fas fa-pen"></i> TTD: ${name}`;
 }
 
+// ── Audio Chime & Speech Feedback untuk Meja Absen (Web Audio API) ──
+function _playMejaChime(type = 'success') {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (!_playMejaChime._ctx) _playMejaChime._ctx = new AudioCtx();
+    const ctx = _playMejaChime._ctx;
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const now = ctx.currentTime;
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+
+    if (type === 'success') {
+      // Melodi D5 (587Hz) -> A5 (880Hz)
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(587.33, now);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(880, now + 0.12);
+
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      osc1.start(now);
+      osc1.stop(now + 0.12);
+      osc2.start(now + 0.12);
+      osc2.stop(now + 0.5);
+    } else if (type === 'info') {
+      // Nada lembut informasi / sudah absen: C5 (523Hz) -> G5 (784Hz)
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, now);
+      osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.22);
+
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+
+      osc.connect(gain);
+      osc.start(now);
+      osc.stop(now + 0.55);
+    } else {
+      // Nada peringatan / penolakan
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(329.63, now);
+      osc.frequency.linearRampToValueAtTime(220, now + 0.25);
+
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+
+      osc.connect(gain);
+      osc.start(now);
+      osc.stop(now + 0.38);
+    }
+  } catch (e) {
+    console.warn('[MejaAudio] Chime failed:', e);
+  }
+}
+
+function _speakMeja(text) {
+  try {
+    if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') return;
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'id-ID';
+    utt.rate = 1.05;
+    utt.pitch = 1.0;
+    window.speechSynthesis.speak(utt);
+  } catch (_) { }
+}
+
 // ── Format Status Meja Absen (Bervariasi sesuai respon server) ──
 function _formatMejaStatus(mejaOk, d, user) {
+  // 1. Kasus Idempotent (Sudah tercatat sebelumnya di server hari ini)
+  if (d && (d.idempotent === true || (d.message && String(d.message).toLowerCase().includes('idempotent')))) {
+    const rawJenis = String(d.jenis_absen || '').toUpperCase();
+    const isPulang = rawJenis.includes('PULANG') || String(d.message || '').toLowerCase().includes('pulang');
+    if (isPulang) {
+      return {
+        isSuccess: false,
+        isInfo: true,
+        icon: '<i class="fas fa-clipboard-check"></i>',
+        title: 'SUDAH ABSEN PULANG',
+        color: '#a855f7',
+        bg: 'rgba(168,85,247,0.2)',
+        detail: d.message || 'Pegawai sudah melakukan absen pulang hari ini.'
+      };
+    }
+    return {
+      isSuccess: false,
+      isInfo: true,
+      icon: '<i class="fas fa-clipboard-check"></i>',
+      title: 'SUDAH ABSEN MASUK',
+      color: '#3b82f6',
+      bg: 'rgba(59,130,246,0.2)',
+      detail: d.message || 'Pegawai sudah melakukan absen masuk hari ini.'
+    };
+  }
+
+  // 2. Kasus Sukses Absen Baru
   if (mejaOk && d && d.ok !== false && d.validasi?.is_valid !== false) {
     const rawJenis = String(d.jenis_absen || d.validasi?.jenis_absen || '').trim().toUpperCase();
     if (rawJenis === 'MASUK') {
@@ -279,21 +387,21 @@ function _formatMejaStatus(mejaOk, d, user) {
       icon: '<i class="fas fa-check-circle"></i>',
       title: rawJenis || 'ABSEN BERHASIL',
       color: '#10b981',
-      bg: 'rgba(168,85,247,0.2)',
+      bg: 'rgba(16,185,129,0.2)',
       detail: d.validasi?.keterangan || 'Presensi berhasil dicatat di server.'
     };
   }
 
-  // Kasus Ditolak / Keterangan Khusus
+  // 3. Kasus Ditolak / Keterangan Khusus
   let errMsg = String((d && (d.message || d.error)) || (d && d.validasi && d.validasi.keterangan) || 'Ditolak Server').trim();
   const errLower = errMsg.toLowerCase();
 
-  if (errLower.includes('sudah') && (errLower.includes('pulang') || errLower.includes('lengkap'))) {
+  if (errLower.includes('lengkap') || (errLower.includes('sudah') && errLower.includes('pulang'))) {
     return {
       isSuccess: false,
       isInfo: true,
       icon: '<i class="fas fa-clipboard-check"></i>',
-      title: 'KEHADIRAN LENGKAP',
+      title: errLower.includes('lengkap') ? 'KEHADIRAN LENGKAP' : 'SUDAH ABSEN PULANG',
       color: '#a855f7',
       bg: 'rgba(168,85,247,0.2)',
       detail: errMsg || 'Absen masuk dan pulang hari ini sudah lengkap.'
@@ -308,6 +416,17 @@ function _formatMejaStatus(mejaOk, d, user) {
       color: '#3b82f6',
       bg: 'rgba(59,130,246,0.2)',
       detail: errMsg || 'Pegawai sudah tercatat absen masuk hari ini.'
+    };
+  }
+  if (errLower.includes('belum') && errLower.includes('masuk')) {
+    return {
+      isSuccess: false,
+      isInfo: true,
+      icon: '<i class="fas fa-exclamation-triangle"></i>',
+      title: 'BELUM ABSEN MASUK',
+      color: '#f59e0b',
+      bg: 'rgba(245,158,11,0.2)',
+      detail: errMsg || 'Pegawai belum melakukan presensi masuk hari ini.'
     };
   }
   if (errLower.includes('sudah')) {

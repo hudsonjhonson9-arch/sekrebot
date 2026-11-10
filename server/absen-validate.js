@@ -79,11 +79,33 @@ export function validateAbsen({ payload = {}, serverTime, employee = {}, setting
 
   // Meja Absen: n8n only checks token presence; we check the value (T3),
   // atau sesi admin terotentikasi (is_admin_meja).
+  // Meja Absen berada di kantor, sehingga tidak memerlukan radius GPS / IP.
+  // Namun jenisAbsen tetap dihitung dari jam server (MASUK / DI LUAR JAM MASUK / DI LUAR JAM PULANG / PULANG),
+  // kecuali payload.jenis_absen ditentukan eksplisit.
   if (payload.source === 'meja_absen') {
     if (!payload.is_admin_meja && !isValidMejaToken(payload.meja_token, employee.instansi_id)) {
       return tolak('MEJA_TOKEN_INVALID', 'Akses Meja Absen ditolak (Token tidak valid/tidak ditemukan).');
     }
-    return terima('MEJA', payload.lokasi_nama || 'Meja Absen', ket);
+    const menitMeja = toMenit(serverTime?.jam);
+    const mMasukMeja = toMenit(jamMasuk);
+    const mPulangMeja = toMenit(jamPulang);
+
+    let jAbsenMeja;
+    if (payload.jenis_absen && ['MASUK', 'PULANG', 'DI LUAR JAM MASUK', 'DI LUAR JAM PULANG'].includes(payload.jenis_absen)) {
+      jAbsenMeja = payload.jenis_absen;
+    } else if (!Number.isFinite(mMasukMeja) || !Number.isFinite(mPulangMeja)) {
+      jAbsenMeja = 'MASUK';
+    } else if (menitMeja <= mMasukMeja) {
+      jAbsenMeja = 'MASUK';
+    } else if (menitMeja <= tengahHari) {
+      jAbsenMeja = 'DI LUAR JAM MASUK';
+    } else if (menitMeja < mPulangMeja) {
+      jAbsenMeja = 'DI LUAR JAM PULANG';
+    } else {
+      jAbsenMeja = 'PULANG';
+    }
+
+    return terima(jAbsenMeja, payload.lokasi_nama || 'Meja Absen', ket);
   }
 
   // ── Anti-fake GPS ──
@@ -309,18 +331,26 @@ export function evaluateGates({ jenisAbsen, serverTime, tanggal, employeeId, row
     return tolak('SUDAH_ADA_KETERANGAN', `Anda tidak bisa melakukan absen karena sudah tercatat memiliki keterangan: ${norm(ket['Jenis Absen'])}`);
   }
 
+  const hasMasuk = hariIni.some((r) => GRP_MASUK.includes(norm(r['Jenis Absen'])));
+  const hasPulang = hariIni.some((r) => GRP_PULANG.includes(norm(r['Jenis Absen'])));
+
+  // Kehadiran lengkap: jika sudah ada masuk DAN pulang hari ini, tolak absen reguler tambahan
+  if (jA !== 'KONTROL' && hasMasuk && hasPulang) {
+    return tolak('SUDAH_ABSEN', 'Kehadiran hari ini sudah lengkap (Sudah absen masuk dan pulang).');
+  }
+
   if (GRP_MASUK.includes(jA)) {
-    if (hariIni.some((r) => GRP_MASUK.includes(norm(r['Jenis Absen'])))) {
+    if (hasMasuk) {
       return tolak('SUDAH_ABSEN', 'Pegawai sudah melakukan absen masuk hari ini.');
     }
   }
   if (GRP_PULANG.includes(jA)) {
-    if (hariIni.some((r) => GRP_PULANG.includes(norm(r['Jenis Absen'])))) {
+    if (hasPulang) {
       return tolak('SUDAH_ABSEN', 'Pegawai sudah melakukan absen pulang hari ini.');
     }
     // KONTROL sengaja tidak ada di GRP_PULANG: device absen kontrol boleh tanpa
     // absen masuk, jadi tidak ikut memicu BELUM_MASUK.
-    if (!hariIni.some((r) => GRP_MASUK.includes(norm(r['Jenis Absen'])))) {
+    if (!hasMasuk) {
       return tolak('BELUM_MASUK', 'Pegawai belum melakukan absen masuk hari ini.');
     }
   }

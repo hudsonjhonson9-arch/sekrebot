@@ -389,6 +389,16 @@ test('evaluateGates: PULANG tanpa MASUK ditolak', () => {
   assert.equal(evaluateGates({ ...basis([]), jenisAbsen: 'PULANG' }).kodeTolak, 'BELUM_MASUK');
 });
 
+test('evaluateGates: bila sudah ada MASUK dan PULANG hari ini, ditolak SUDAH_ABSEN (kehadiran lengkap)', () => {
+  const rows = [
+    { ID: SESSION.id, Tanggal: TANGGAL, Jam: '07:05', 'Jenis Absen': 'MASUK' },
+    { ID: SESSION.id, Tanggal: TANGGAL, Jam: '14:35', 'Jenis Absen': 'PULANG' },
+  ];
+  const r = evaluateGates({ ...basis(rows), jenisAbsen: 'PULANG', serverTime: { jam: '15:00:00' } });
+  assert.equal(r.kodeTolak, 'SUDAH_ABSEN');
+  assert.match(r.keterangan, /lengkap/i);
+});
+
 test('evaluateGates: baris tanggal lain tidak ikut terhitung', () => {
   const rows = [{ ID: SESSION.id, Tanggal: '2026-10-04', Jam: '07:10', 'Jenis Absen': 'MASUK' }];
   assert.equal(evaluateGates(basis(rows)), null);
