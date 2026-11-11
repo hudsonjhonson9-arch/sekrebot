@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  /* global escapeHtml, apiFetch, apiGet */
+  /* global escapeHtml, apiGet, makeSearchDd */
 
   const PROXY = '/api/arsip/p/api/agenda';
   let el = null;
@@ -79,43 +79,46 @@
     const esc = (v) => (typeof escapeHtml === 'function' ? escapeHtml(v) : (v || ''));
     const isDD = jenisAktif === 'DALAM_DAERAH';
     const currentList = isDD ? itemsDD : itemsLD;
+    const totalReg = totalDD + totalLD;
+    const totalBiaya = currentList.reduce((acc, curr) => acc + (Number(curr.total_biaya) || 0), 0);
 
     let html = `
-      <div class="arsip-section-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-        <div>
-          <h2 style="font-size:18px; font-weight:800; color:var(--white); margin:0;">Buku Register Perjalanan Dinas (SPPD)</h2>
-          <div style="font-size:12px; color:var(--muted); margin-top:2px;">Monitoring penugasan lapangan, biaya SBM, dan bukti SPJ pegawai</div>
-        </div>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <select id="sppdTahunSel" class="arsip-search" style="width:auto; padding:6px 12px; font-weight:700;">
-            <option value="2026" ${tahun === 2026 ? 'selected' : ''}>Tahun 2026</option>
-            <option value="2025" ${tahun === 2025 ? 'selected' : ''}>Tahun 2025</option>
-          </select>
-        </div>
+      <div class="kk-head">
+        <h3 class="kk-judul">Register SPPD</h3>
+        <select id="sppdTahunSel" class="arsip-search kk-tahun" aria-label="Tahun">
+          <option value="2026" ${tahun === 2026 ? 'selected' : ''}>2026</option>
+          <option value="2025" ${tahun === 2025 ? 'selected' : ''}>2025</option>
+          <option value="2024" ${tahun === 2024 ? 'selected' : ''}>2024</option>
+        </select>
+        <button type="button" id="btnReloadSppd" class="arsip-act" title="Muat ulang"><i class="fas fa-sync" aria-hidden="true"></i></button>
       </div>
 
-      <!-- Sub Tabs -->
-      <div style="display:flex; gap:8px; border-bottom:1px solid rgba(255,255,255,0.1); margin-bottom:16px;">
-        <button id="btnTabDD" class="arsip-act" style="background:${isDD ? 'var(--gold)' : 'transparent'}; color:${isDD ? '#000' : 'var(--white)'}; font-weight:700; border-radius:8px 8px 0 0; padding:8px 18px;">
-          <i class="fas fa-map-marker-alt" style="margin-right:6px;"></i> Dalam Daerah (${totalDD})
+      <div class="kk-ringkas">
+        <div class="kk-stat"><b>${totalDD}</b><span>Dalam Daerah</span></div>
+        <div class="kk-stat"><b>${totalLD}</b><span>Luar Daerah</span></div>
+        <div class="kk-stat"><b>${totalReg}</b><span>Total SPPD</span></div>
+        <div class="kk-stat"><b>${fmtRupiah(totalBiaya)}</b><span>Total Biaya</span></div>
+      </div>
+
+      <div class="dok-tabs">
+        <button type="button" id="btnTabDD" class="dok-tab ${isDD ? 'active' : ''}">
+          <i class="fas fa-car" aria-hidden="true" style="margin-right:6px"></i> Dalam Daerah (${totalDD})
         </button>
-        <button id="btnTabLD" class="arsip-act" style="background:${!isDD ? 'var(--gold)' : 'transparent'}; color:${!isDD ? '#000' : 'var(--white)'}; font-weight:700; border-radius:8px 8px 0 0; padding:8px 18px;">
-          <i class="fas fa-map-marked-alt" style="margin-right:6px;"></i> Luar Daerah (${totalLD})
+        <button type="button" id="btnTabLD" class="dok-tab ${!isDD ? 'active' : ''}">
+          <i class="fas fa-map-marked-alt" aria-hidden="true" style="margin-right:6px"></i> Luar Daerah (${totalLD})
         </button>
       </div>
 
-      <!-- Filter Toolbar -->
-      <div class="arsip-toolbar" style="margin-bottom:16px;">
-        <input id="sppdSearch" class="arsip-search" placeholder="Cari nama pelaksana / tujuan / nomor SPT…" value="${esc(query)}" />
-        <button id="btnSearchSppd" class="arsip-act ok"><i class="fas fa-search"></i> Cari</button>
+      <div class="arsip-toolbar" style="margin-bottom:12px">
+        <input id="sppdSearch" class="arsip-search" placeholder="Cari nama pelaksana, tujuan, nomor SPT…" value="${esc(query)}" autocomplete="off">
+        <button type="button" id="btnSearchSppd" class="arsip-act ok"><i class="fas fa-search" aria-hidden="true"></i> Cari</button>
       </div>
     `;
 
     if (isLoading) {
       html += `
-        <div style="padding:24px; text-align:center; color:var(--muted);">
-          <div style="font-size:24px; margin-bottom:8px;"><i class="fas fa-sync"></i></div>
-          <div style="font-size:12px;">Memuat register SPPD…</div>
+        <div class="arsip-placeholder">
+          <i class="fas fa-sync fa-spin" style="margin-right:8px" aria-hidden="true"></i> Memuat register SPPD…
         </div>
       `;
       el.innerHTML = html;
@@ -125,67 +128,55 @@
 
     if (!currentList.length) {
       html += `
-        <div class="arsip-placeholder" style="text-align:center; padding:32px 16px;">
-          <div style="font-size:32px; margin-bottom:8px; color:var(--muted);"><i class="fas fa-map"></i></div>
+        <div class="arsip-placeholder">
+          <div style="font-size:32px; margin-bottom:10px; opacity:0.6;"><i class="fas ${isDD ? 'fa-car' : 'fa-map-marked-alt'}" aria-hidden="true"></i></div>
           <div style="font-weight:700; color:var(--white);">Belum ada register SPPD ${isDD ? 'Dalam Daerah' : 'Luar Daerah'} tahun ${tahun}</div>
-          <div style="font-size:12px; color:var(--muted); margin-top:4px;">SPT & SPPD yang diterbitkan otomatis tersinkronisasi di register ini.</div>
+          <div style="font-size:11px; color:var(--muted); margin-top:4px;">SPT & SPPD yang diterbitkan otomatis tersinkronisasi di register ini.</div>
         </div>
       `;
     } else {
-      html += `
-        <div style="overflow-x:auto;">
-          <table class="arsip-table" style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
-            <thead>
-              <tr style="border-bottom:1px solid rgba(255,255,255,0.15); color:var(--muted);">
-                <th style="padding:8px 12px; font-weight:700;">No. Register</th>
-                <th style="padding:8px 12px; font-weight:700;">Pelaksana Utama</th>
-                <th style="padding:8px 12px; font-weight:700;">Maksud Perjalanan</th>
-                <th style="padding:8px 12px; font-weight:700;">Tempat Tujuan</th>
-                <th style="padding:8px 12px; font-weight:700;">Waktu & Hari</th>
-                <th style="padding:8px 12px; font-weight:700; text-align:right;">Total Biaya</th>
-                <th style="padding:8px 12px; font-weight:700;">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
+      html += `<div class="arsip-sppd-list">`;
       for (const it of currentList) {
-        const badgeBg = it.status === 'Selesai' ? 'rgba(34,197,94,0.2)' : (it.status === 'Laporan Masuk' ? 'rgba(59,130,246,0.2)' : 'rgba(245,158,11,0.2)');
-        const badgeColor = it.status === 'Selesai' ? '#4ade80' : (it.status === 'Laporan Masuk' ? '#60a5fa' : '#fbbf24');
+        const badgeCls = (it.status === 'Selesai' || it.status === 'Laporan Masuk') ? 'ok' : 'waiting';
         html += `
-          <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
-            <td style="padding:10px 12px;">
-              <div style="font-family:monospace; font-weight:700; color:var(--gold); font-variant-numeric:tabular-nums;">${esc(it.nomor_register)}</div>
-              <div style="font-size:10px; color:var(--muted); font-variant-numeric:tabular-nums;">SPT: ${esc(it.nomor_spt)}</div>
-            </td>
-            <td style="padding:10px 12px;">
-              <div style="font-weight:700; color:var(--white);">${esc(it.pelaksana_nama)}</div>
-              <div style="font-size:11px; color:var(--muted); font-family:monospace; font-variant-numeric:tabular-nums;">NIP: ${esc(it.pelaksana_nip)}</div>
-            </td>
-            <td style="padding:10px 12px; max-width:260px; line-height:1.4;">${esc(it.maksud_perjalanan)}</td>
-            <td style="padding:10px 12px; font-weight:600; color:var(--white);">
-              ${esc(it.tempat_tujuan)}
-              ${it.provinsi_tujuan ? `<div style="font-size:10px; color:var(--muted); font-weight:normal;">Prov. ${esc(it.provinsi_tujuan)}</div>` : ''}
-            </td>
-            <td style="padding:10px 12px; font-variant-numeric:tabular-nums;">
-              <div style="font-weight:600;">${esc(it.tanggal_berangkat)} s/d ${esc(it.tanggal_kembali)}</div>
-              <div style="font-size:11px; color:var(--gold);">${esc(it.lama_hari)} Hari Dinas</div>
-            </td>
-            <td style="padding:10px 12px; font-weight:700; text-align:right; font-family:monospace; font-variant-numeric:tabular-nums; color:var(--white);">
-              ${fmtRupiah(it.total_biaya)}
-            </td>
-            <td style="padding:10px 12px;">
-              <span style="display:inline-block; padding:3px 8px; border-radius:6px; font-size:10px; font-weight:700; background:${badgeBg}; color:${badgeColor};">
-                ${esc(it.status || 'Pengajuan')}
+          <div class="arsip-item-wrap" style="align-items:flex-start; margin-bottom:10px;">
+            <div class="arsip-row" style="align-items:flex-start;">
+              <span class="arsip-ico" style="--ic:${isDD ? 'var(--gold)' : 'var(--warning)'}; margin-top:2px;">
+                <i class="fas ${isDD ? 'fa-car' : 'fa-map-marked-alt'}" aria-hidden="true"></i>
               </span>
-            </td>
-          </tr>
+              <div class="arsip-item-body">
+                <div class="arsip-item-top">
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span style="font-family:monospace; font-weight:700; color:var(--gold); font-size:12px;">Reg #${esc(it.nomor_register)}</span>
+                    ${it.nomor_spt ? `<span style="font-size:11px; color:var(--muted); font-family:monospace;">(SPT: ${esc(it.nomor_spt)})</span>` : ''}
+                  </div>
+                  <span class="arsip-badge ${badgeCls}">${esc(it.status || 'Pengajuan')}</span>
+                </div>
+                <div style="font-size:14px; font-weight:700; color:var(--white); margin:5px 0 2px;">
+                  ${esc(it.pelaksana_nama || 'Pegawai')}
+                  ${it.pelaksana_nip ? `<span style="font-size:11px; font-weight:normal; color:var(--muted); font-family:monospace; margin-left:6px;">NIP. ${esc(it.pelaksana_nip)}</span>` : ''}
+                </div>
+                <div style="font-size:12px; color:var(--white); margin:4px 0 8px; line-height:1.4;">
+                  ${esc(it.maksud_perjalanan || '—')}
+                </div>
+                <div class="arsip-item-meta" style="display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center;">
+                  <span><i class="fas fa-map-marker-alt" style="color:var(--danger); margin-right:4px;"></i> <b>${esc(it.tempat_tujuan || '—')}</b> ${it.provinsi_tujuan ? `(Prov. ${esc(it.provinsi_tujuan)})` : ''}</span>
+                  <span><i class="fas fa-calendar-alt" style="color:var(--gold); margin-right:4px;"></i> ${esc(it.tanggal_berangkat || '—')} s/d ${esc(it.tanggal_kembali || '—')} (${esc(it.lama_hari || 1)} Hari)</span>
+                  <span><i class="fas fa-money-bill-wave" style="color:var(--success); margin-right:4px;"></i> <b style="color:var(--white); font-family:monospace;">${fmtRupiah(it.total_biaya)}</b></span>
+                </div>
+              </div>
+            </div>
+          </div>
         `;
       }
-      html += `</tbody></table></div>`;
+      html += `</div>`;
     }
 
     el.innerHTML = html;
     bindEvents();
+    if (typeof makeSearchDd === 'function' && $x('#sppdTahunSel')) {
+      makeSearchDd('sppdTahunSel', { ph: 'Tahun', h: 38, noIcon: true });
+    }
   }
 
   function bindEvents() {
@@ -193,6 +184,14 @@
     if (selThn) {
       selThn.onchange = (e) => {
         tahun = parseInt(e.target.value, 10);
+        if (jenisAktif === 'DALAM_DAERAH') fetchDD();
+        else fetchLD();
+      };
+    }
+
+    const btnReload = $x('#btnReloadSppd');
+    if (btnReload) {
+      btnReload.onclick = () => {
         if (jenisAktif === 'DALAM_DAERAH') fetchDD();
         else fetchLD();
       };

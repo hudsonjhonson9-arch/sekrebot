@@ -84,22 +84,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
   // JIKA WAJAH DIKENAL (telegramId sekarang berisi NIP dari meja.js)
   if (!window._mejaUserMap) window._mejaUserMap = {};
   const user = window._mejaUserMap[telegramId] || { nama: 'Pegawai', nip: telegramId };
-  
-  // ── CEK GPS VALIDASI SEBELUM ABSEN ──
-  // Jika GPS belum stabil (koordinat 0,0), tolak absen dan minta user pindah area
-  if (!_mejaGpsLocation || _mejaGpsLocation.lat === 0 || _mejaGpsLocation.lng === 0) {
-    _mejaCnt.gagal++;
-    _updateMejaCnt();
-    _setMejaStatus('active', '<i class="fas fa-exclamation-triangle"></i>', 'GPS Tidak Terdeteksi', 'Pindah ke area terbuka untuk mendapatkan sinyal GPS');
-    setCamStatus('warn', '<i class="fas fa-map-marker-alt"></i>', 'GPS Tidak Terdeteksi', 'Pindah ke area terbuka');
-    setTimeout(() => {
-      _forceResetAiState(true);
-      window._mejaProcessing = false;
-      setCamStatus('ok', '<i class="fas fa-search"></i>', 'Siap Scan...', 'Posisikan wajah pegawai selanjutnya');
-    }, 3000);
-    return;
-  }
-  
+
   const score = Math.max(0, Math.round((distance || 0) * 100));
 
   if (_moIcon) _moIcon.innerHTML = '<i class="fas fa-hourglass-half"></i>';
@@ -133,7 +118,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
     const idKey = user.nip || user.telegram_id || 'anon';
     const rid = `absen_${idKey}_${tanggalISO}_${typeKey}`;
 
-    // Cek kesiapan GPS Meja Absen
+    // Pengecekan GPS dinonaktifkan untuk Meja Absen (opsional jika tersedia)
     if (!_mejaGpsLocation || (!_mejaGpsLocation.lat && !_mejaGpsLocation.lng)) {
       if (typeof _getMejaGps === 'function') {
         try {
@@ -141,20 +126,6 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
           if (freshGps) _mejaGpsLocation = freshGps;
         } catch (_) {}
       }
-    }
-
-    if (!_mejaGpsLocation || (!_mejaGpsLocation.lat && !_mejaGpsLocation.lng)) {
-      _moIcon.innerHTML = '<i class="fas fa-map-marker-alt"></i>';
-      _moIcon.style.color = '#f59e0b';
-      _moStatus.textContent = 'GPS BELUM SIAP';
-      _moStatus.style.color = '#f59e0b';
-      _moStatus.style.background = 'rgba(245,158,11,0.2)';
-      _moDetail.textContent = 'Izin lokasi GPS pada browser perangkat Meja Absen belum aktif.';
-      _playMejaChime('warning');
-      _speakMeja('Lokasi perangkat belum terdeteksi');
-      _setMejaStatus('active', '<i class="fas fa-map-marker-alt"></i>', 'GPS Belum Siap', 'Aktifkan GPS browser perangkat');
-      setCamStatus('warn', '<i class="fas fa-map-marker-alt"></i>', user.nama, 'GPS Meja Belum Siap');
-      return;
     }
 
     const payload = {

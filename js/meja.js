@@ -79,7 +79,7 @@
       window._aiEngine = 'human'; // Force Human-AI for matching accuracy
       _isMejaAbsen = true;
 
-      _setMejaStatus('processing', '<i class="fas fa-hourglass-half"></i>', 'Memuat Database & GPS...', 'Membuka kamera');
+      _setMejaStatus('processing', '<i class="fas fa-hourglass-half"></i>', 'Memuat Database...', 'Membuka kamera');
 
       // 1. LANGSUNG BUKA KAMERA (Non-Blocking)
       // Kamera butuh waktu 1-3 detik untuk menyala di HP, jadi kita lakukan paralel dengan fetch data
@@ -88,18 +88,19 @@
       if ($('livenessMini')) $('livenessMini').style.display = 'block'; // Tampilkan instruksi kedip
       if ($('camHeaderTitle')) $('camHeaderTitle').innerHTML = '<i class="fas fa-desktop"></i> Menyiapkan Meja Absen...';
 
-      // 2. FETCH GPS DAN DATA WAJAH SECARA PARALEL (Non-blocking)
+      // 2. FETCH GPS (OPSIONAL) DAN DATA WAJAH SECARA PARALEL (Non-blocking)
       const loadGps = async () => {
         try {
+          const locEl = $('mejaLocVal'), accEl = $('mejaLocAccuracy');
+          if (locEl) locEl.textContent = 'Meja Absen (Tanpa Cek GPS)';
           const gps = await _getMejaGps();
           _mejaGpsLocation = gps;
-          const locEl = $('mejaLocVal'), accEl = $('mejaLocAccuracy');
           if (_mejaGpsLocation && locEl) {
             locEl.textContent = `${_mejaGpsLocation.lat.toFixed(6)}, ${_mejaGpsLocation.lng.toFixed(6)}`;
             if (accEl) accEl.textContent = `±${Math.round(_mejaGpsLocation.acc)}m`;
           }
         } catch (e) {
-          console.warn('[Meja] GPS fetch error:', e);
+          console.warn('[Meja] GPS fetch error (bypassed):', e);
         }
       };
 

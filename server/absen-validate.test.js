@@ -185,18 +185,18 @@ test('Meja Absen: jam sore menghasilkan jenisAbsen PULANG', () => {
   assert.equal(r.jenisAbsen, 'PULANG');
 });
 
-test('Meja Absen tanpa koordinat valid ditolak LOKASI_INVALID', () => {
+test('Meja Absen tanpa koordinat valid tetap diterima (GPS bypass)', () => {
   process.env.MEJA_TOKENS = JSON.stringify({ bapperida: ['BENAR'] });
   const r = run({ source: 'meja_absen', meja_token: 'BENAR', latitude: 'abc', accuracy: 0 });
-  assert.equal(r.ok, false);
-  assert.equal(r.kodeTolak, 'LOKASI_INVALID');
+  assert.equal(r.ok, true);
+  assert.equal(r.jenisAbsen, 'MASUK');
 });
 
-test('Meja Absen di luar radius ditolak LOKASI_TIDAK_VALID', () => {
+test('Meja Absen di luar radius tetap diterima (GPS bypass)', () => {
   process.env.MEJA_TOKENS = JSON.stringify({ bapperida: ['BENAR'] });
   const r = run({ source: 'meja_absen', meja_token: 'BENAR', latitude: -9.8, longitude: 120.5 });
-  assert.equal(r.ok, false);
-  assert.equal(r.kodeTolak, 'LOKASI_TIDAK_VALID');
+  assert.equal(r.ok, true);
+  assert.equal(r.jenisAbsen, 'MASUK');
 });
 
 // ── Hari kerja ──
