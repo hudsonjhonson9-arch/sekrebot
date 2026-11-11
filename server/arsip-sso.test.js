@@ -84,9 +84,12 @@ test('pasangArsipCookie: fail-open tanpa secret valid', () => {
 test('lepasArsipCookie: clearCookie dengan domain + path', () => {
   const res = resMock();
   lepasArsipCookie(res);
-  assert.equal(res.cookies.length, 1);
+  assert.equal(res.cookies.length, 2);
   assert.equal(res.cookies[0].name, NAMA_COOKIE);
   assert.equal(res.cookies[0].cleared, true);
   assert.equal(res.cookies[0].opts.domain, '.mindcloud.my.id');
   assert.equal(res.cookies[0].opts.path, '/');
+  assert.equal(res.cookies[1].name, NAMA_COOKIE);
+  assert.equal(res.cookies[1].cleared, true);
+  assert.equal(res.cookies[1].opts.path, '/');
 });

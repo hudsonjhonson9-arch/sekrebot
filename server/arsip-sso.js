@@ -58,4 +58,5 @@ export function pasangArsipCookie(res, nip, { secret, ttlMs = MASA_JAM * 3600 * 
 
 export function lepasArsipCookie(res) {
   res.clearCookie(NAMA_COOKIE, { domain: DOMAIN, path: '/' });
+  res.clearCookie(NAMA_COOKIE, { path: '/' });
 }
