@@ -329,51 +329,55 @@
 
     <!-- Bottom Navigation Bar (Sidebar on Desktop) -->
     <nav class="bottom-nav" id="tabsBar">
-      <button class="nav-item" onclick="switchTab('ket', true)" data-tab="ket">
+      <button type="button" class="sidebar-toggle-btn desktop-only" id="sidebarToggleBtn" onclick="toggleSidebarCollapse()" title="Kecilkan / Perlebar Sidebar" aria-label="Toggle Sidebar">
+        <i class="fas fa-arrow-left" id="sidebarToggleIcon"></i>
+      </button>
+      <div class="sidebar-resizer desktop-only" id="sidebarResizer" title="Geser untuk mengubah ukuran sidebar (klik ganda untuk minimize/maximize)"></div>
+
+      <button class="nav-item" onclick="switchTab('ket', true)" data-tab="ket" data-label="Keterangan" title="Keterangan">
         <i class="fas fa-file-alt"></i>
         <span>Keterangan</span>
       </button>
-      <button class="nav-item" onclick="switchTab('rekap', true)" data-tab="rekap">
+      <button class="nav-item" onclick="switchTab('rekap', true)" data-tab="rekap" data-label="Rekap" title="Rekap">
         <i class="fas fa-chart-bar"></i>
         <span>Rekap</span>
       </button>
 
       <!-- MAIN CENTER BUTTON (Mobile) / Regular Button (Desktop) -->
-      <button class="nav-item nav-main" onclick="switchTab('absen', true)" data-tab="absen">
+      <button class="nav-item nav-main" onclick="switchTab('absen', true)" data-tab="absen" data-label="Absen" title="Absen">
         <i class="fas fa-map-marker-alt"></i>
         <span>Absen</span>
       </button>
 
-      <button class="nav-item" onclick="switchTab('profil', true)" data-tab="profil">
+      <button class="nav-item" onclick="switchTab('profil', true)" data-tab="profil" data-label="Profil" title="Profil">
         <i class="fas fa-user"></i>
         <span>Profil</span>
       </button>
 
       <!-- Desktop Only Items (Show in sidebar) -->
-      <button class="nav-item desktop-only" id="nav-tugas-desk" onclick="switchTab('tugas', true)" data-tab="tugas">
+      <button class="nav-item desktop-only" id="nav-tugas-desk" onclick="switchTab('tugas', true)" data-tab="tugas" data-label="Perjalanan Dinas" title="Perjalanan Dinas">
         <i class="fas fa-tasks"></i>
         <span>Perjalanan Dinas</span>
       </button>
-      <button class="nav-item desktop-only" id="nav-lembur-desk" onclick="switchTab('lembur', true)" data-tab="lembur">
+      <button class="nav-item desktop-only" id="nav-lembur-desk" onclick="switchTab('lembur', true)" data-tab="lembur" data-label="Rekap Lembur" title="Rekap Lembur">
         <i class="fas fa-user-clock"></i>
         <span>Rekap Lembur</span>
       </button>
-      <button class="nav-item desktop-only" id="nav-simapo-desk" onclick="switchTab('simapo', true)" data-tab="simapo">
+      <button class="nav-item desktop-only" id="nav-simapo-desk" onclick="switchTab('simapo', true)" data-tab="simapo" data-label="Aset" title="Aset">
         <i class="fas fa-boxes"></i>
         <span>Aset</span>
       </button>
-      <button class="nav-item desktop-only" id="nav-arsip-desk" onclick="switchTab('arsip', true)" data-tab="arsip">
+      <button class="nav-item desktop-only" id="nav-arsip-desk" onclick="switchTab('arsip', true)" data-tab="arsip" data-label="Arsip" title="Arsip">
         <i class="fas fa-box-archive"></i>
         <span>Arsip</span>
       </button>
-      <button class="nav-item desktop-only admin-only" id="nav-admin-desk" onclick="switchTab('admin', true)" data-tab="admin">
+      <button class="nav-item desktop-only admin-only" id="nav-admin-desk" onclick="switchTab('admin', true)" data-tab="admin" data-label="Panel Admin" title="Panel Admin">
         <i class="fas fa-user-shield"></i>
         <span>Panel Admin</span>
       </button>
 
-
       <!-- Theme Toggle (Desktop Only) -->
-      <button class="nav-item desktop-only theme-toggle-desk" id="themeToggleBtnDesk" onclick="toggleTheme()" style="margin-top: auto !important;">
+      <button class="nav-item desktop-only theme-toggle-desk" id="themeToggleBtnDesk" onclick="toggleTheme()" data-label="Tema" title="Ganti Tema" style="margin-top: auto !important;">
         <i class="fas fa-sun" id="themeIconDesk"></i>
         <span id="themeTextDesk">Tema Terang</span>
       </button>

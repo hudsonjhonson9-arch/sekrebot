@@ -666,3 +666,136 @@
       }
       makeSearchDd('adminKetJenis', { ph: 'Pilih jenis', h: 45 });
     });
+
+/* ════ DESKTOP SIDEBAR: RESIZABLE & ICON-ONLY COLLAPSE LOGIC ════ */
+(function() {
+  const MIN_WIDTH = 68;
+  const SNAP_COLLAPSE_THRESHOLD = 115;
+  const DEFAULT_WIDTH = 260;
+  const MAX_WIDTH = 380;
+  const STORAGE_KEY_WIDTH = 'hadir_sidebar_w';
+  const STORAGE_KEY_COLLAPSED = 'hadir_sidebar_collapsed';
+
+  function applySidebarState(width, isCollapsed) {
+    const tabsBar = document.getElementById('tabsBar');
+    if (!tabsBar) return;
+
+    if (isCollapsed || width <= SNAP_COLLAPSE_THRESHOLD) {
+      document.body.classList.add('sidebar-collapsed');
+      tabsBar.classList.add('collapsed');
+      document.documentElement.style.setProperty('--sidebar-w', `${MIN_WIDTH}px`);
+    } else {
+      document.body.classList.remove('sidebar-collapsed');
+      tabsBar.classList.remove('collapsed');
+      const safeWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, width || DEFAULT_WIDTH));
+      document.documentElement.style.setProperty('--sidebar-w', `${safeWidth}px`);
+    }
+  }
+
+  function toggleSidebarCollapse() {
+    const tabsBar = document.getElementById('tabsBar');
+    if (!tabsBar) return;
+
+    const isCurrentlyCollapsed = document.body.classList.contains('sidebar-collapsed') || tabsBar.classList.contains('collapsed');
+    const targetCollapsed = !isCurrentlyCollapsed;
+
+    let targetWidth = DEFAULT_WIDTH;
+    if (targetCollapsed) {
+      targetWidth = MIN_WIDTH;
+    } else {
+      try {
+        const savedW = parseInt(localStorage.getItem(STORAGE_KEY_WIDTH), 10);
+        if (!isNaN(savedW) && savedW > SNAP_COLLAPSE_THRESHOLD) {
+          targetWidth = savedW;
+        }
+      } catch (_) {}
+    }
+
+    applySidebarState(targetWidth, targetCollapsed);
+
+    try {
+      localStorage.setItem(STORAGE_KEY_COLLAPSED, targetCollapsed ? '1' : '0');
+      if (!targetCollapsed) {
+        localStorage.setItem(STORAGE_KEY_WIDTH, String(targetWidth));
+      }
+    } catch (_) {}
+  }
+
+  function initSidebarResize() {
+    const resizer = document.getElementById('sidebarResizer');
+    const tabsBar = document.getElementById('tabsBar');
+    if (!tabsBar) return;
+
+    // 1. Restore saved state from localStorage
+    let savedCollapsed = false;
+    let savedWidth = DEFAULT_WIDTH;
+    try {
+      savedCollapsed = localStorage.getItem(STORAGE_KEY_COLLAPSED) === '1';
+      const w = parseInt(localStorage.getItem(STORAGE_KEY_WIDTH), 10);
+      if (!isNaN(w) && w >= MIN_WIDTH && w <= MAX_WIDTH) {
+        savedWidth = w;
+      }
+    } catch (_) {}
+
+    applySidebarState(savedWidth, savedCollapsed);
+
+    if (!resizer) return;
+
+    // 2. Drag to resize
+    let isDragging = false;
+    let startX = 0;
+    let startWidth = DEFAULT_WIDTH;
+
+    resizer.addEventListener('mousedown', (e) => {
+      if (window.innerWidth < 768) return;
+      isDragging = true;
+      startX = e.clientX;
+      startWidth = tabsBar.getBoundingClientRect().width;
+      document.body.classList.add('sidebar-resizing');
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - startX;
+      let newWidth = startWidth + dx;
+
+      if (newWidth < SNAP_COLLAPSE_THRESHOLD) {
+        applySidebarState(MIN_WIDTH, true);
+      } else {
+        newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth));
+        applySidebarState(newWidth, false);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      document.body.classList.remove('sidebar-resizing');
+
+      const currentWidth = tabsBar.getBoundingClientRect().width;
+      const isCollapsed = currentWidth <= SNAP_COLLAPSE_THRESHOLD;
+
+      try {
+        localStorage.setItem(STORAGE_KEY_COLLAPSED, isCollapsed ? '1' : '0');
+        if (!isCollapsed) {
+          localStorage.setItem(STORAGE_KEY_WIDTH, String(Math.round(currentWidth)));
+        }
+      } catch (_) {}
+    });
+
+    // 3. Double-click on resizer to quickly toggle collapse
+    resizer.addEventListener('dblclick', () => {
+      toggleSidebarCollapse();
+    });
+  }
+
+  window.toggleSidebarCollapse = toggleSidebarCollapse;
+  window.initSidebarResize = initSidebarResize;
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSidebarResize);
+  } else {
+    initSidebarResize();
+  }
+})();
