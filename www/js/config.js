@@ -100,7 +100,11 @@ const isTest = false;
 // Syaratnya: reverse proxy meneruskan /api/* ke Express. Tanpa itu akan 404.
 // ponytail: kalau Express pindah ke origin lain, isi API_BASE dengan URL-nya
 // (mis. 'https://api.domain.kamu') DAN tambahkan CORS di server/index.js.
-const API_BASE = '';
+// Jika diakses melalui reverse-proxy portal utama di subpath /absen, sesuaikan API_BASE ke '/absen'
+// sehingga endpoint /api/* diteruskan ke /absen/api/* tanpa bertabrakan dengan /api portal utama.
+const API_BASE = (typeof window !== 'undefined' && window.__API_BASE__ !== undefined)
+  ? window.__API_BASE__
+  : ((typeof window !== 'undefined' && window.location?.pathname?.startsWith('/absen')) ? '/absen' : '');
 // Sesi native diterbitkan oleh /api/auth/session dari init_data Telegram, format
 // 192 hex. Berbeda dari token legacy n8n, jadi disimpan terpisah supaya ~50
 // endpoint n8n yang masih berjalan tidak ikut menerima bearer yang tak dikenal.
