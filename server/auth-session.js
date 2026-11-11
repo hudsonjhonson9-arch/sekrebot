@@ -143,6 +143,34 @@ export function createAuthSessionRouter({ query = realQuery, arsipSso } = {}) {
       delete user.password_hash;
       delete user.pin_hash;
 
+      // Cek apakah NIP ini terdaftar wajib face recognition
+      const inst = user.instansi_id || 'bapperida';
+      let isMandatoryFace = false;
+      try {
+        const mandRes = await query(
+          `SELECT value FROM pengaturan WHERE key='face_mandatory_nips' AND (instansi_id=$1 OR instansi_id IS NULL) ORDER BY CASE WHEN instansi_id=$1 THEN 0 ELSE 1 END LIMIT 1`,
+          [inst]
+        );
+        if (mandRes?.rows?.length && mandRes.rows[0]?.value) {
+          const rawVal = mandRes.rows[0].value;
+          let list = [];
+          if (Array.isArray(rawVal)) {
+            list = rawVal;
+          } else if (typeof rawVal === 'string') {
+            try {
+              const parsed = JSON.parse(rawVal);
+              list = Array.isArray(parsed) ? parsed : [parsed];
+            } catch {
+              list = rawVal.split(',').map(s => s.trim());
+            }
+          }
+          isMandatoryFace = list.map(s => String(s).trim()).includes(String(user.nip).trim());
+        }
+      } catch (err) {
+        console.warn('[auth/login] periksa face_mandatory_nips error:', err.message);
+      }
+      user.is_mandatory_face = isMandatoryFace;
+
       setCookieArsip(res, user.nip);
       return res.status(200).json({ ok: true, session_token: ins.rows[0].session_token, user });
     } catch {

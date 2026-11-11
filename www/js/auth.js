@@ -110,6 +110,27 @@
           }
           // Ponytail: API error/timeout → safe default = OFF, no face required
 
+          // Cek apakah NIP ini wajib face recognition
+          let isMandatoryFace = user.is_mandatory_face === true;
+          if (!isMandatoryFace && typeof window !== 'undefined' && Array.isArray(window.MANDATORY_FACE_NIPS)) {
+            isMandatoryFace = window.MANDATORY_FACE_NIPS.map(s => String(s).trim()).includes(userNip);
+          }
+          if (!isMandatoryFace) {
+            try {
+              const fsRes = await apiGet(P.faceSettings, { instansi_id: (user.instansi_id || user.Instansi_Id || '').trim() || 'bapperida' });
+              if (fsRes?.ok) {
+                const sett = fsRes.data?.settings || fsRes.data || {};
+                const list = sett.mandatory_nips || [];
+                if (Array.isArray(list)) {
+                  window.MANDATORY_FACE_NIPS = list;
+                  isMandatoryFace = list.map(s => String(s).trim()).includes(userNip);
+                }
+              }
+            } catch (_) {}
+          }
+
+          const requireFace = isFaceEnabled || isMandatoryFace;
+
           const hasFace = !!(user.face_histogram && user.face_histogram !== '[]' && user.face_histogram !== '')
             || !!(user.face_photo && user.face_photo !== '' && user.face_photo !== 'null')
             || !!(user.foto_base64 && user.foto_base64 !== '')
@@ -130,7 +151,16 @@
             location.reload();
           };
 
-          if (isFaceEnabled && typeof openCamOverlay === 'function') {
+          if (requireFace) {
+             if (typeof openCamOverlay !== 'function') {
+               if (isMandatoryFace) {
+                 setNativeToken(null);
+                 throw new Error('NIP Anda wajib verifikasi wajah, namun modul kamera face recognition belum siap. Silakan muat ulang halaman atau hubungi admin.');
+               }
+               // Jika hanya toggle instansi tapi modul kamera tidak tersedia, lanjutkan
+               await finalizeLogin();
+               return;
+             }
              // Sembunyikan form login
              const overlayEl = document.getElementById('authOverlay');
              if (overlayEl) overlayEl.style.display = 'none';
@@ -141,12 +171,16 @@
              
              if (!hasFace) {
                  // REGISTRASI WAJAH PERTAMA KALI
-                 alert('Wajah Anda belum terdaftar.\nSilakan daftarkan wajah Anda ke sistem sekarang untuk mengamankan akun (Passwordless).');
+                 alert(isMandatoryFace
+                   ? 'NIP Anda diwajibkan melakukan verifikasi wajah.\nWajah Anda belum terdaftar di sistem. Silakan rekam wajah Anda sekarang untuk melanjutkan.'
+                   : 'Wajah Anda belum terdaftar.\nSilakan daftarkan wajah Anda ke sistem sekarang untuk mengamankan akun (Passwordless).'
+                 );
                  openCamOverlay({
                     isRegister: true,
                     onDone: async (camResult) => {
                        if (!camResult || !camResult.dataUrl) {
                           alert('Gagal mengambil data wajah.');
+                          setNativeToken(null);
                           if (overlayEl) overlayEl.style.display = 'flex';
                           btn.disabled = false;
                           btn.innerHTML = originalText;
@@ -160,12 +194,14 @@
                           finalizeLogin();
                        } catch (err) {
                           alert(' ' + err.message);
+                          setNativeToken(null);
                           if (overlayEl) overlayEl.style.display = 'flex';
                           btn.disabled = false;
                           btn.innerHTML = originalText;
                        }
                     },
                     onCancel: () => {
+                       setNativeToken(null);
                        window.MY_ID = null; // revert
                        window.tgUser = {};
                        if (overlayEl) overlayEl.style.display = 'flex';
@@ -174,7 +210,8 @@
                     }
                  });
              } else {
-                openCamOverlay(async (camResult) => {
+                openCamOverlay({
+                    onDone: async (camResult) => {
                     let similarity = 0;
                     let failReason = "Wajah tidak cocok. Silakan coba lagi.";
 
@@ -257,18 +294,28 @@
                        await finalizeLogin();
                     } else {
                        alert(`Verifikasi Gagal!\n${failReason}`);
+                       setNativeToken(null);
                        window.MY_ID = null; // Revert
                        window.tgUser = {};
                        if (overlayEl) overlayEl.style.display = 'flex';
                        btn.disabled = false;
                        btn.innerHTML = originalText;
                    }
-                });
+                },
+                onCancel: () => {
+                   setNativeToken(null);
+                   window.MY_ID = null; // Revert
+                   window.tgUser = {};
+                   if (overlayEl) overlayEl.style.display = 'flex';
+                   btn.disabled = false;
+                   btn.innerHTML = originalText;
+                }
+             });
              }
              // Biarkan tombol disable selagi kamera aktif
              return; 
            } else {
-              // Jika Face Recognition didisable dari admin, login normal
+              // Jika Face Recognition didisable dari admin dan bukan NIP wajib face, login normal
               await finalizeLogin();
               return;
            }

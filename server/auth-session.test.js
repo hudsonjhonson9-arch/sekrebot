@@ -517,3 +517,45 @@ test('login NIP dengan password benar sukses saat require_password aktif', async
   assert.equal(out.body.session_token, 'f'.repeat(192));
   assert.equal(out.body.user.password_hash, undefined, 'password_hash tidak boleh bocor ke client');
 });
+
+test('login NIP menyertakan is_mandatory_face=true saat NIP terdaftar di face_mandatory_nips', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const query = async (sql) => {
+    if (/user_list/i.test(sql)) {
+      return userListRows(sql, { id: '10', NIP: '198505052010011005', role: 'USER', instansi_id: 'bapperida', username: 'Pegawai Wajib Face' });
+    }
+    if (/FROM pengaturan/i.test(sql) && /face_mandatory_nips/i.test(sql)) {
+      return { rows: [{ value: JSON.stringify(['198505052010011005', '199001012010011001']) }] };
+    }
+    if (/INSERT INTO auth_sessions/i.test(sql)) {
+      return { rows: [{ session_token: 'a'.repeat(192) }] };
+    }
+    return { rows: [] };
+  };
+  const r = createAuthSessionRouter({ query });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '198505052010011005' });
+  assert.equal(out.status, 200);
+  assert.equal(out.body.ok, true);
+  assert.equal(out.body.user.is_mandatory_face, true);
+});
+
+test('login NIP menyertakan is_mandatory_face=false saat NIP tidak ada di face_mandatory_nips', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const query = async (sql) => {
+    if (/user_list/i.test(sql)) {
+      return userListRows(sql, { id: '11', NIP: '199912312022011009', role: 'USER', instansi_id: 'bapperida', username: 'Pegawai Bebas' });
+    }
+    if (/FROM pengaturan/i.test(sql) && /face_mandatory_nips/i.test(sql)) {
+      return { rows: [{ value: JSON.stringify(['198505052010011005']) }] };
+    }
+    if (/INSERT INTO auth_sessions/i.test(sql)) {
+      return { rows: [{ session_token: 'b'.repeat(192) }] };
+    }
+    return { rows: [] };
+  };
+  const r = createAuthSessionRouter({ query });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '199912312022011009' });
+  assert.equal(out.status, 200);
+  assert.equal(out.body.ok, true);
+  assert.equal(out.body.user.is_mandatory_face, false);
+});
