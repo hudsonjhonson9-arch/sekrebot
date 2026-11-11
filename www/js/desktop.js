@@ -145,7 +145,7 @@
       }
     }
 
-    function adminCaptureFaceFor(uid, nama, callback) {
+    function adminCaptureFaceFor(uid, nama, callback, nip) {
       _adminFaceTargetId = uid;
       _adminFaceTargetNama = nama;
 
@@ -157,12 +157,32 @@
         isRegister: true,
         onDone: async (cap) => {
           if (!cap?.dataUrl) return;
-          const ok = await saveFaceRefFor(uid, cap.dataUrl, cap.descriptor, nama);
+          const ok = await saveFaceRefFor(uid, cap.dataUrl, cap.descriptor, nama, nip);
           if (ok) {
             loadAdminFaceReg();
             if (typeof loadFaceStatusAdmin === 'function') loadFaceStatusAdmin();
             if (typeof callback === 'function') callback(cap.dataUrl);
-            setTimeout(() => closeCamOverlay(false), 1500); // Tutup setelah 1.5 detik agar user bisa lihat tanda centang/sukses
+            if (typeof _playMejaChime === 'function') _playMejaChime('success');
+            setTimeout(() => {
+              closeCamOverlay(false);
+              if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Foto Wajah Tersimpan',
+                  text: `Foto wajah dan biometrik untuk ${nama} berhasil disimpan.`,
+                  timer: 3500,
+                  showConfirmButton: true
+                });
+              }
+            }, 1200);
+          } else {
+            if (typeof Swal !== 'undefined') {
+              Swal.fire({
+                icon: 'error',
+                title: 'Gagal Menyimpan Wajah',
+                text: window._lastAiError || 'Wajah tidak terdeteksi jelas atau server tidak merespons.'
+              });
+            }
           }
         },
         onCancel: () => {
@@ -183,21 +203,28 @@
       const uid = selectEl.value;
       const opt = selectEl.options[selectEl.selectedIndex];
       const nama = opt ? (opt.dataset.nama || opt.text) : uid;
-      adminCaptureFaceFor(uid, nama);
+      const nip = opt ? (opt.dataset.nip || '') : '';
+      adminCaptureFaceFor(uid, nama, null, nip);
     }
 
-    async function saveFaceRefFor(uid, dataUrl, descriptor, nama) {
+    async function saveFaceRefFor(uid, dataUrl, descriptor, nama, nip) {
       try {
         const savedAt = new Date().toISOString();
 
         // Safety check: Face MUST be detected
         if (!descriptor) {
-          alert(" Wajah tidak terdeteksi dengan jelas. Harap posisikan wajah lurus ke kamera dan ambil foto lagi.");
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Wajah Tidak Terdeteksi',
+              text: 'Harap posisikan wajah lurus ke kamera dan ambil foto lagi.'
+            });
+          }
           return false;
         }
         const descriptorArray = Array.from(descriptor);
 
-        const ok = await syncFaceToServer(uid, dataUrl, descriptorArray, nama, savedAt);
+        const ok = await syncFaceToServer(uid, dataUrl, descriptorArray, nama, savedAt, nip);
 
         showResult('adminFaceRegResult', 'adminFaceRegRIcon', 'adminFaceRegRTitle', 'adminFaceRegRMsg',
           ok ? 'success' : 'warning',

@@ -296,16 +296,21 @@
     function openFaceCaptureAdmin() {
       const uid = $('editPegawaiId').value;
       const nama = $('inPegawaiNama').value;
-      if (!uid) return alert('Pilih pegawai dulu');
+      const nip = $('inPegawaiNip') ? $('inPegawaiNip').value.replace(/\s/g, '') : '';
+      if (!uid) {
+        if (typeof showToast === 'function') showToast('Pilih pegawai terlebih dahulu', 'warning');
+        else if (typeof Swal !== 'undefined') Swal.fire({ icon: 'warning', title: 'Pilih Pegawai', text: 'Pilih pegawai terlebih dahulu' });
+        return;
+      }
       // Trigger pendaftaran wajah spesifik
       if (typeof adminCaptureFaceFor === 'function') {
         adminCaptureFaceFor(uid, nama, (newFace) => {
           if (newFace) {
              $('previewWajahAdmin').innerHTML = `<img src="${newFace}" style="width:100%; height:100%; object-fit:cover; border-radius:50%">`;
           }
-        });
+        }, nip);
       } else {
-        alert('Modul kamera belum siap');
+        if (typeof showToast === 'function') showToast('Modul kamera belum siap', 'warning');
       }
     }
 

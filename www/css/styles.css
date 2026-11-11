@@ -4797,34 +4797,38 @@
     @keyframes mejaModalPop {
       0% {
         opacity: 0;
-        transform: translate(-50%, -46%) scale(0.96);
+        transform: scale(0.92);
       }
       100% {
         opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
+        transform: scale(1);
       }
     }
 
     #mejaOverlayResult,
+    body.desktop-mode #mejaOverlayResult,
     body.desktop-mode .cam-overlay.meja-kiosk #mejaOverlayResult,
     .cam-overlay.meja-kiosk #mejaOverlayResult,
     .cam-overlay #mejaOverlayResult {
       position: fixed !important;
-      top: 50% !important;
-      left: 50% !important;
-      bottom: auto !important;
-      right: auto !important;
-      transform: translate(-50%, -50%) !important;
+      inset: 0 !important;
+      margin: auto !important;
+      top: 0 !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
       width: 90% !important;
-      max-width: 480px !important;
-      padding: 30px 32px !important;
+      max-width: 460px !important;
+      height: fit-content !important;
+      max-height: 85vh !important;
+      padding: 28px 24px !important;
       border-radius: 24px !important;
       background: rgba(15, 23, 42, 0.96) !important;
       border: 1.5px solid rgba(255, 255, 255, 0.18) !important;
       box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.85) !important;
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      z-index: 30000 !important;
+      z-index: 50000 !important;
       box-sizing: border-box !important;
       animation: mejaModalPop 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
     }

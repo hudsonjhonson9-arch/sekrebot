@@ -2120,12 +2120,29 @@
             if (status) { status.textContent = 'Wajah berhasil didaftarkan!'; status.style.color = 'var(--success)'; }
             updateFaceRegUI();
             updateProfilFaceUI();
-            await new Promise(r => setTimeout(r, 1200));
+            if (typeof _playMejaChime === 'function') _playMejaChime('success');
+            await new Promise(r => setTimeout(r, 1000));
             _hideFaceRequiredModal();
+            if (typeof Swal !== 'undefined') {
+              Swal.fire({
+                icon: 'success',
+                title: 'Pendaftaran Wajah Berhasil',
+                text: 'Wajah Anda berhasil didaftarkan. Anda sekarang dapat melakukan presensi kehadiran.',
+                timer: 3500,
+                showConfirmButton: true
+              });
+            }
           } else {
             if (status) { status.textContent = 'Gagal menyimpan. Coba lagi.'; status.style.color = 'var(--danger)'; }
             if (btn) btn.disabled = false;
             if (txt) txt.textContent = 'Daftarkan Wajah Sekarang';
+            if (typeof Swal !== 'undefined') {
+              Swal.fire({
+                icon: 'error',
+                title: 'Gagal Menyimpan Wajah',
+                text: window._lastAiError || 'Wajah tidak terdeteksi jelas atau server tidak merespons.'
+              });
+            }
           }
         }, onCancel: () => {
           if (btn) btn.disabled = false;

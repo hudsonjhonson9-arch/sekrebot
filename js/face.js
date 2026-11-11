@@ -139,7 +139,7 @@
       return null;
     }
 
-    async function syncFaceToServer(uid, dataUrl, descriptorArray, nama, savedAt) {
+    async function syncFaceToServer(uid, dataUrl, descriptorArray, nama, savedAt, targetNip) {
       if (!uid || uid === 'null' || uid === '') return false;
 
       // Kompresi sudah dilakukan di doCapture, tidak perlu diulang di sini
@@ -147,12 +147,17 @@
       const dLen = (descriptorArray && Array.isArray(descriptorArray)) ? descriptorArray.length : 0;
       const actualModel = dLen >= 512 ? 'human' : 'faceapi';
 
+      const effectiveNip = targetNip || (window._mejaUserMap && window._mejaUserMap[uid] && window._mejaUserMap[uid].nip) || localStorage.getItem('MY_NIP') || '';
+
       const payload = {
         user_id: uid,
-        nip: localStorage.getItem('MY_NIP') || '',
+        id: uid,
+        nip: effectiveNip,
         nama: nama || 'Pegawai',
         foto_base64: dataUrl,
+        face_photo: dataUrl,
         face_descriptor: descriptorArray,
+        face_histogram: descriptorArray,
         face_model: actualModel, // Detect from dimension to avoid fallback-induced mismatch
         saved_at: savedAt || new Date().toISOString(),
         savedBy: MY_ID,
@@ -447,12 +452,24 @@
             updateFaceRegUI();
             updateProfilFaceUI();
             setCamStatus('ok', '<i class="fas fa-brain"></i>', 'Data Wajah AI Tersimpan!', 'Wajah Anda berhasil didaftarkan dengan Face AI');
+            if (typeof _playMejaChime === 'function') _playMejaChime('success');
             // Biarkan tombol Ambil Foto berubah jadi Selesai atau Tutup
             const btn = $('btnCapture');
             if (btn) {
               btn.disabled = false;
               btn.innerHTML = '<i class="fas fa-check"></i> Selesai';
-              btn.onclick = () => closeCamOverlay(false);
+              btn.onclick = () => {
+                closeCamOverlay(false);
+                if (typeof Swal !== 'undefined') {
+                  Swal.fire({
+                    icon: 'success',
+                    title: 'Foto Wajah Berhasil Diperbarui',
+                    text: 'Data foto wajah dan biometrik Anda telah berhasil disimpan.',
+                    timer: 3500,
+                    showConfirmButton: true
+                  });
+                }
+              };
             }
           } else {
             // Error sudah dihandle oleh saveFaceRef via setCamStatus
@@ -461,6 +478,13 @@
               btn.disabled = false;
               btn.innerHTML = '<i class="fas fa-camera"></i> Coba Lagi';
               btn.onclick = () => doCapture();
+            }
+            if (typeof Swal !== 'undefined') {
+              Swal.fire({
+                icon: 'error',
+                title: 'Gagal Memperbarui Foto Wajah',
+                text: window._lastAiError || 'Wajah tidak terdeteksi jelas atau server tidak merespons.'
+              });
             }
           }
         }, onCancel: () => { }, isRegister: true

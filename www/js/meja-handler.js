@@ -48,11 +48,9 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
   if (overlay) {
     overlay.style.display = 'flex';
     overlay.style.position = 'fixed';
-    overlay.style.top = '50%';
-    overlay.style.left = '50%';
-    overlay.style.transform = 'translate(-50%, -50%)';
-    overlay.style.zIndex = '35000';
-    overlay.style.margin = '0';
+    overlay.style.inset = '0';
+    overlay.style.margin = 'auto';
+    overlay.style.zIndex = '50000';
   }
 
   // JIKA WAJAH TIDAK DIKENAL

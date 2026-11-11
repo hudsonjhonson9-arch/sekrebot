@@ -52,3 +52,4 @@ test('js/desktop.js dan www/js/desktop.js mengekspos toggleSidebarCollapse dan i
     assert.ok(js.includes('window.initSidebarResize = initSidebarResize'), `${file} harus mengekspos initSidebarResize`);
   }
 });
+
