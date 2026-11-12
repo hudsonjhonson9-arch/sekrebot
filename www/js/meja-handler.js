@@ -58,7 +58,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance,
     const ambig = !!opts.ambiguous;
     _moIcon.innerHTML = '<i class="fas fa-question"></i>';
     _moNama.textContent = ambig ? 'TERLALU MIRIP' : 'TIDAK DIKENAL';
-    _moStatus.textContent = ambig ? 'WAJAH MENYERUPAI PEGAWA LAIN' : 'WAJAH BELUM TERDAFTAR';
+    _moStatus.textContent = ambig ? 'WAJAH MENYERUPAI PEGAWAI LAIN' : 'WAJAH BELUM TERDAFTAR';
     _moStatus.style.color = 'var(--danger)';
     _moStatus.style.background = 'rgba(239,68,68,0.2)';
     _moDetail.textContent = ambig ? 'Coba lagi dengan sudut/pencahayaan berbeda…' : 'Mulai ulang scan dalam 3 detik...';

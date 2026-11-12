@@ -912,7 +912,6 @@
       if (_pvUse) _pvUse.onclick = _previewUse;
       if (_pvRetry) _pvRetry.onclick = _previewRetry;
 
-      clearTimeout(_gateForceTimer);
       _gateForceTimer = setTimeout(() => {
         if (window._isMejaMode) return;
         const b = $('btnCapture');
@@ -1580,6 +1579,7 @@
         // stream tetap hidup sampai overlay ditutup (preview Pakai/Ulang butuh stream)
 
         try {
+          if ($('camOverlay').classList.contains('hidden')) return; // overlay ditutup selama burst → batalkan hasil; finally tetap lepas kunci
           if (window._isMejaMode) {
             let bestMatch = { id: matchId, score: preScore };
             
@@ -1669,7 +1669,17 @@
         _autoCaptured = false;
       } else {
         const b = $('btnCapture');
-        if (b) { b.style.display = 'flex'; b.disabled = !_gate.pass; b.innerHTML = '<i class="fas fa-camera"></i> Ambil Foto & Lanjutkan'; }
+        if (b) {
+          b.style.display = 'flex'; b.disabled = !_gate.pass; b.innerHTML = '<i class="fas fa-camera"></i> Ambil Foto & Lanjutkan';
+          clearTimeout(_gateForceTimer);
+          _gateForceTimer = setTimeout(() => {
+            if (b.disabled) {
+              b.disabled = false;
+              b.innerHTML = '<i class="fas fa-bolt"></i> Tetap Ambil';
+              setCamStatus('warn', '<i class="fas fa-bolt"></i>', 'Kualitas Belum Ideal', 'Boleh tetap ambil foto');
+            }
+          }, 10000);
+        }
       }
       startDetectLoop();
     }

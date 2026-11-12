@@ -178,7 +178,7 @@ test('ambigu: runner-up + pesan + signature handler', () => {
   for (const f of ['js/meja-handler.js', 'www/js/meja-handler.js']) {
     const js = fs.readFileSync(path.join(ROOT, f), 'utf8');
     assert.ok(js.includes('opts = {}'), f + ': parameter opsional ke-5');
-    assert.ok(js.includes('WAJAH MENYERUPAI PEGAWA LAIN'), f + ': teks unknown-karena-ambigu');
+    assert.ok(js.includes('WAJAH MENYERUPAI PEGAWAI LAIN'), f + ': teks unknown-karena-ambigu');
   }
 });
 
@@ -190,5 +190,26 @@ test('threshold hint: teks panduan di bawah dua slider di dua index.html', () =>
     const seg1 = html.slice(i1, i1 + 600), seg2 = html.slice(i2, i2 + 600);
     assert.ok(seg1.includes('0.55 seimbang'), f + ': hint threshold wajah');
     assert.ok(seg2.includes('0.55 seimbang'), f + ': hint threshold meja');
+  }
+});
+
+test('fix review: force timer re-armed di retry + doCapture batal bila overlay tertutup + bump tag', () => {
+  for (const f of ['js/face.js', 'www/js/face.js']) {
+    const js = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    const retry = js.slice(js.indexOf('function _previewRetry'), js.indexOf('function closeCamByUser'));
+    assert.ok(retry.includes('_gateForceTimer = setTimeout'), f + ': retry re-arm force 10 detik');
+    const cap = js.slice(js.indexOf('async function doCapture'), js.indexOf('async function skipVerifikasi'));
+    assert.ok(cap.includes("classList.contains('hidden')) return"), f + ': guard overlay tertutup di tail doCapture');
+    const close = js.slice(js.indexOf('function closeCamOverlay'), js.indexOf('function stopCamStream'));
+    assert.ok(close.includes('clearTimeout(_gateForceTimer)'), f + ': force dibersihkan saat tutup');
+  }
+  for (const f of ['js/meja-handler.js', 'www/js/meja-handler.js']) {
+    const js = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    assert.ok(!js.includes('PEGAWA LAIN'), f + ': typo PEGAWA sudah diperbaiki');
+  }
+  for (const f of ['index.html', 'www/index.html']) {
+    const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    assert.ok(html.includes('css/styles.css?v=20261112c'), f + ': bump styles.css');
+    assert.ok(html.includes('js/meja-handler.js?v=20261112a'), f + ': bump meja-handler.js');
   }
 });
