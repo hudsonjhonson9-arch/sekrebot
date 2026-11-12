@@ -1513,44 +1513,54 @@
         const cnv = $('camCanvas');
         if (!vid || vid.videoWidth === 0) throw new Error('Kamera belum siap, silakan coba lagi.');
 
-        console.log('[AI] Phase 1: Drawing Frame...');
         const ctx = cnv.getContext('2d');
         cnv.width = vid.videoWidth;
         cnv.height = vid.videoHeight;
 
         // Mirroring agar hasil searah dengan preview
-        ctx.save();
-        ctx.translate(cnv.width, 0);
-        ctx.scale(-1, 1);
-        ctx.drawImage(vid, 0, 0);
-        ctx.restore();
+        const drawFrame = () => {
+          ctx.save();
+          ctx.translate(cnv.width, 0);
+          ctx.scale(-1, 1);
+          ctx.drawImage(vid, 0, 0);
+          ctx.restore();
+        };
+        const compress = async () => await compressImage(cnv.toDataURL('image/jpeg', 0.9), 640, 0.7);
 
-        // Gunakan compressImage helper yang lebih stabil
-        const dataUrl = await compressImage(cnv.toDataURL('image/jpeg', 0.9), 640, 0.7);
-        
-        // Safety check: Jika gambar terlalu kecil, kemungkinan besar hitam/corrupt
-        if (dataUrl.length < 5000) {
-           throw new Error('Gagal mengambil gambar yang jelas. Pastikan cahaya cukup.');
+        const shots = [];
+        const deadline = Date.now() + 3000;
+        for (let i = 1; i <= 3; i++) {
+          if (Date.now() > deadline) break;
+          setCamStatus('ok', '<i class="fas fa-camera"></i>', `Menangkap ${i}/3...`, 'Diam sejenak');
+          drawFrame();
+          const dataUrl = await compress();
+          if (dataUrl.length < 5000) { if (i < 3) await new Promise(r => setTimeout(r, 700)); continue; }
+          const desc = await getFaceDescriptor(cnv);
+          if (desc) shots.push({ dataUrl, desc, bright: _sampleBrightness(cnv) });
+          if (i < 3) await new Promise(r => setTimeout(r, 700));
         }
 
-        _captureData = { dataUrl };
-
-        if (!window._isMejaMode) stopCamStream();
-
-        let descriptor = preDescriptor;
-        if (!descriptor) {
-          console.log('[AI] Phase 2: Extracting Face Features (AI)...');
-          descriptor = await getFaceDescriptor(cnv);
-        }
-
-        if (!descriptor) {
-          _forceResetAiState(true);
-          setCamStatus('bad', '<i class="fas fa-exclamation-triangle"></i>', 'Gagal Ekstraksi', 'Wajah tidak terdeteksi jelas');
-          if (!window._isMejaMode) startDetectLoop();
-          return;
+        let dataUrl, descriptor;
+        if (shots.length) {
+          // frame terbaik: brightness paling dekat 128 (spec), bukan yang terbuka/tergelap
+          shots.sort((a, b) => Math.abs(a.bright - 128) - Math.abs(b.bright - 128));
+          dataUrl = shots[0].dataUrl;
+          descriptor = (window.FaceQuality && shots.length > 1)
+            ? window.FaceQuality.mergeDescriptors(shots.map(s => s.desc))
+            : shots[0].desc;
+        } else if (preDescriptor) {
+          // meja: frame burst gagal, pakai descriptor loop yang sudah ada
+          drawFrame();
+          dataUrl = await compress();
+          if (dataUrl.length < 5000) throw new Error('Gagal mengambil gambar yang jelas. Pastikan cahaya cukup.');
+          descriptor = preDescriptor;
+        } else {
+          throw new Error('Gagal mengambil gambar yang jelas. Pastikan cahaya cukup.');
         }
 
         console.log('[AI] Phase 3: Features extracted. Length:', descriptor?.length);
+        _captureData = { dataUrl };
+        // stream tetap hidup sampai overlay ditutup (preview Pakai/Ulang butuh stream)
 
         try {
           if (window._isMejaMode) {
@@ -1566,22 +1576,8 @@
             console.log(`[AI] Match Result: ${bestMatch.id} (score: ${bestMatch.score.toFixed(4)})`);
             await _onMejaAbsenMatchFound(bestMatch.id, descriptor, dataUrl, bestMatch.score);
           } else {
-            console.log('[AI] Phase 4: Manual Capture / Personal Mode.');
-            const cb = _absenCallbackAfterCam;
-            closeCamOverlay(false);
-            if (cb) {
-              const result = { 
-                dataUrl, 
-                descriptor,
-                faceOk: _livenessState.faceOk || !!descriptor,
-                livenessOk: _isLive || false
-              };
-              if (typeof cb === 'function') {
-                await cb(result);
-              } else if (cb.onDone) {
-                await cb.onDone(result);
-              }
-            }
+            console.log('[AI] Phase 4: Preview menunggu konfirmasi Pengguna.');
+            // Task 5 menaruh preview DI SINI
           }
         } finally {
           _forceResetAiState(true); // Lepas kunci setelah proses selesai

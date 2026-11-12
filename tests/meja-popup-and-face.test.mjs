@@ -133,3 +133,17 @@ test('gate: wiring kualitas di face.js (dua mirror identik)', () => {
     assert.ok(js.includes('livenessEnabled: window.FS_LIVENESS_MOBILE !== false'), f + ': honor toggle liveness');
   }
 });
+
+test('burst: doCapture menangkap 3 frame, merge, tanpa stop stream dini', () => {
+  for (const f of ['js/face.js', 'www/js/face.js']) {
+    const js = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    const start = js.indexOf('async function doCapture');
+    const body = js.slice(start, js.indexOf('async function skipVerifikasi'));
+    assert.ok(body.includes('Menangkap ${i}/3'), f + ': status progres');
+    assert.ok(body.includes('mergeDescriptors'), f + ': merge 3 descriptor');
+    assert.ok(body.includes('setTimeout(r, 700)'), f + ': jeda 700ms');
+    assert.ok(body.includes('Date.now() + 3000'), f + ': deadline 3 detik');
+    assert.ok(!body.includes('stopCamStream()'), f + ': stream TIDAK di-stop di doCapture (preview/Ulang butuh stream)');
+    assert.ok(!body.includes('closeCamOverlay'), f + ': tutup overlay dipindah ke Pakai (Task 5)');
+  }
+});
