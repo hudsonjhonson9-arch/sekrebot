@@ -49,7 +49,8 @@ const grup = {
 };
 const master = {
   [NIP1]: { nip: NIP1, nama: 'AAA', pangkat: 'PEMBINATK1', jabatan: 'KEPALABIDANGX' },
-  [NIP2]: { nip: NIP2, nama: 'BBB', pangkat: 'PENATATK1', jabatan: 'ANALISX' }
+  [NIP2]: { nip: NIP2, nama: 'BBB', pangkat: 'PENATATK1', jabatan: 'ANALISX' },
+  '333': { nip: '333', nama: 'BIDANG UJI', pangkat: 'PEMBINATK2', jabatan: 'JABATAN PPTK' }
 };
 const perjadin = {
   nomor: 'BP4D.011.7/69/53.12/ST/01/2026', nomorSPPD: '001/SPPD/2026',
@@ -93,7 +94,7 @@ test('sppd_template: tag ttd/paraf baru ada, nama keras hilang, 3 salinan identi
   const isi = berkas.map(b => fs.readFileSync(path.join(ROOT, b)));
   assert.ok(isi[0].equals(isi[1]) && isi[0].equals(isi[2]), 'tiga salinan sppd_template.docx harus identik');
   const xml = new PizZip(isi[0]).file('word/document.xml').asText();
-  for (const tag of ['{BidangNama}', '{BidangNIP}', '{Paraf1}', '{Paraf2}', '{Paraf3}'])
+  for (const tag of ['{BidangNama}', '{BidangNIP}', '{PPTKJabatan}', '{Paraf1}', '{Paraf2}', '{Paraf3}'])
     assert.ok(xml.includes(tag), 'tag hilang: ' + tag);
   assert.ok(!xml.includes('BERLIAN MAGU WERU'), 'nama keras masih ada');
   assert.ok(!xml.includes('Nip. 19690619'), 'NIP keras masih ada');
@@ -164,10 +165,11 @@ test('E2E: SPPD & SPT merender pilihan ttd/paraf (nama + jabatan, tepat 3 baris 
   const baris = ['JABATAN A', 'JABATAN B', 'JABATAN C'];
   const hitung = t => t.split('\n').filter(l => /^\s*JABATAN [ABC]$/.test(l)).length;
 
-  // SPPD: Kepala Bidang + NIP, blok paraf 3 baris.
+  // SPPD: PPTK (jabatan orang terpilih) + NIP, blok paraf 3 baris.
   const sppd = flatten(renderDocx('sppd_template.docx', T.bangunTagsSPPD(grup.items[0], grup, p, master)).xml);
   assert.ok(!sppd.includes('{') && !sppd.includes('}'), 'SPPD menyisakan kurung kurawal');
-  assert.ok(sppd.includes('BIDANG UJI') && sppd.includes('NIP. 333'), 'SPPD: Kepala Bidang + NIP kosong');
+  assert.ok(sppd.includes('BIDANG UJI') && sppd.includes('NIP. 333'), 'SPPD: PPTK + NIP kosong');
+  assert.ok(sppd.includes('JABATAN PPTK'), 'SPPD: judul blok I harus jabatan PPTK terpilih');
   assert.ok(!sppd.includes('KTU Bapperida'), 'SPPD: baris KTU sudah dihapus dari format baru');
   const pSp = sppd.slice(sppd.indexOf('Paraf Hirarki'));
   baris.forEach((j, i) => assert.ok(pSp.includes(j), `SPPD paraf baris ${i + 1} bukan jabatan`));

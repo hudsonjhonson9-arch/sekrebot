@@ -159,6 +159,15 @@
     };
   }
 
+  // Judul blok "I. Berangkat dari…" (SPPD) = jabatan PPTK dari dropdown bidang:
+  // mengikuti orang yang dipilih, bukan nama keras.
+  function pptkJabatan(p, masterIndex) {
+    const bd = (p && p.bidang) || {};
+    const nip = String(bd.nip || '');
+    const m = (masterIndex && (masterIndex[nip] || masterIndex[nip.replace(/\s+/g, '')])) || null;
+    return String((m && m.jabatan) || bd.jabatan || '').trim();
+  }
+
   function susunUntuk(p, grup) {
     let u = p.maksud || (grup.items[0] && grup.items[0].keterangan) || '';
     if (p.tempatTujuan) u += ' di ' + p.tempatTujuan;
@@ -226,6 +235,7 @@
       SekretarisNIP: p.sekretaris.nip,
       BidangNama: (p.bidang || {}).nama || '',
       BidangNIP: (p.bidang || {}).nip || '',
+      PPTKJabatan: pptkJabatan(p, masterIndex),
       KtuNama: (p.ktu || {}).nama || '',
       KtuNIP: (p.ktu || {}).nip || '',
       Paraf1: parafTeks(p.paraf[0]),
@@ -338,6 +348,10 @@
     if (kosong.length && typeof showToast === 'function') {
       showToast('Pangkat/jabatan belum lengkap: ' + kosong.join(', '), 'info');
     }
+    // Judul blok I SPPD = jabatan PPTK; kosong jangan dicetak diam-diam.
+    if (String((perjadin.bidang || {}).nip || '') && !pptkJabatan(perjadin, idx) && typeof showToast === 'function') {
+      showToast('Jabatan PPTK belum tersedia di master pegawai.', 'info');
+    }
     // Nama berkas dipakai juga sebagai entri di dalam .zip -> buang ':' (ilegal di Windows).
     const tglKunci = String((grup.items[0] && grup.items[0].tanggal) || '').replace(/[^\w.-]+/g, '_');
     const tagsSPT = bangunTagsSPT(grup, perjadin, idx);
@@ -406,7 +420,8 @@
     const b = pegawaiByNip(g('bidangNip')), t = pegawaiByNip(g('ktuNip'));
     p.kepala = { nama: (k && k.nama) || p.kepala.nama, pangkat: g('kepalaPangkat') || p.kepala.pangkat, nip: (k && k.nip) || p.kepala.nip };
     p.sekretaris = { nama: (s && s.nama) || p.sekretaris.nama, nip: (s && s.nip) || p.sekretaris.nip };
-    p.bidang = { nama: (b && b.nama) || p.bidang.nama, nip: (b && b.nip) || p.bidang.nip };
+    p.bidang = { nama: (b && b.nama) || p.bidang.nama, nip: (b && b.nip) || p.bidang.nip,
+      jabatan: (b && b.jabatan) || (p.bidang || {}).jabatan || '' };
     p.ktu = { nama: (t && t.nama) || p.ktu.nama, nip: (t && t.nip) || p.ktu.nip };
     p.paraf = [
       parafDariForm(g('paraf1'), p.paraf[0]),

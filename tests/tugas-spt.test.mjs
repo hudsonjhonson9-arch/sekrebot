@@ -115,12 +115,20 @@ test('bangunTagsSPPD: Bidang & KTU masuk tag, paraf ikut', () => {
   const t = T.bangunTagsSPPD({ nip: '111', nama: 'A' }, grup,
     { tanggalBerangkat: '2026-06-29', tanggalKembali: '2026-07-02', tempatTujuan: 'Kupang',
       bidang: { nama: 'Kabid Uji', nip: '902' }, ktu: { nama: 'Ktu Uji', nip: '903' },
-      paraf: [{ nip: '901', nama: 'Sek Uji', jabatan: 'Sekretaris' }] }, {});
+      paraf: [{ nip: '901', nama: 'Sek Uji', jabatan: 'Sekretaris' }] },
+    { 902: { nip: '902', nama: 'Kabid Uji', jabatan: 'Kepala Bidang Ekonomi' } });
   assert.equal(t.BidangNama, 'Kabid Uji');
   assert.equal(t.BidangNIP, '902');
+  assert.equal(t.PPTKJabatan, 'Kepala Bidang Ekonomi', 'judul blok I harus ikut jabatan PPTK terpilih');
   assert.equal(t.KtuNama, 'Ktu Uji');
   assert.equal(t.KtuNIP, '903');
   assert.equal(t.Paraf1, 'Sekretaris');
+});
+
+test('bangunTagsSPPD: PPTKJabatan kosong bila NIP tak ada di master (bukan nama keras)', () => {
+  const t = T.bangunTagsSPPD({ nip: '111', nama: 'A' }, { items: [{ nip: '111', nama: 'A', tanggal: '2026-06-29' }] },
+    { tanggalBerangkat: '2026-06-29', tanggalKembali: '2026-06-29' }, {});
+  assert.equal(t.PPTKJabatan, '');
 });
 
 test('DEFAULT_PERJADIN: bidang = nama keras template lama (anti-regresi SPPD)', () => {

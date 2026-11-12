@@ -76,7 +76,7 @@ const SPPD_WHOLE = {
   132: '{TempatBerangkat}',
   135: '{TempatTujuan}',
   137: '{TanggalBerangkat}',
-  139: 'KEPALA BIDANG PERENCANAAN, PENGENDALIAN DAN EVALUASI PEMBANGUNAN DAERAH,',
+  139: '{PPTKJabatan}',
   145: '{BidangNama}',
   146: 'NIP. {BidangNIP}',
   153: '{TempatTujuan}',
@@ -106,7 +106,7 @@ const SPPD_TAGS = [
   '{TempatBerangkat}', '{TempatTujuan}', '{LamaHari}', '{TanggalBerangkat}',
   '{TanggalKembali}', '{Instansi}', '{MataAnggaran}', '{DitetapkanDi}',
   '{TanggalPenetapan}', '{KepalaNama}', '{KepalaPangkat}', '{KepalaNIP}',
-  '{BidangNama}', '{BidangNIP}', '{Paraf1}', '{Paraf2}', '{Paraf3}',
+  '{BidangNama}', '{BidangNIP}', '{PPTKJabatan}', '{Paraf1}', '{Paraf2}', '{Paraf3}',
   '{SekretarisNama}', '{SekretarisNIP}'
 ];
 
@@ -120,7 +120,8 @@ const FORBID_SPPD = [
   'CHARLES HERMANA WERU', 'Imanuel M. Kalegotana', '72/SPPD/202666',
   'Dalam Rangka Evaluasi Konsistensi', '21 September 2026',
   '24 September 2026', '17 September 2026', 'Kupang', 'Pesawat',
-  'KASUBAG UMUM DAN KEPEGAWAIAN', 'Yohanes Bergmans', '2024', '2025'
+  'KASUBAG UMUM DAN KEPEGAWAIAN', 'Yohanes Bergmans', '2024', '2025',
+  'KEPALA BIDANG PERENCANAAN, PENGENDALIAN DAN EVALUASI PEMBANGUNAN DAERAH'
 ];
 
 // ── alat struktural ────────────────────────────────────────────────
