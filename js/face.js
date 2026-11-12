@@ -165,10 +165,11 @@
       };
 
       try {
-        const { ok: faceRegOk, data: res } = await apiPost(P.faceRegister, payload);
-        
-        console.log(`[AI] Sync Response Status: ${200}`);
-        
+        // ponytail: upload foto Drive bisa >15s (gasUpsert budget 45s, nginx 60s).
+        const { ok: faceRegOk, data: res, status } = await apiPost(P.faceRegister, payload, { timeout: 50000 });
+
+        console.log(`[AI] Sync Response Status: ${status}`);
+
         if (faceRegOk) {
           try {
             const json = res;
@@ -187,13 +188,9 @@
             return true;
           }
         } else {
-          try {
-            const errJson = res;
-            console.error('[AI] Sync Failed Detail:', errJson);
-            window._lastAiError = errJson.message || errJson.error || `HTTP ${200}`;
-          } catch (_) {
-            window._lastAiError = `Server Error (HTTP ${200})`;
-          }
+          console.error('[AI] Sync Failed Detail:', res);
+          window._lastAiError = (res && (res.message || res.error))
+            || (status ? `HTTP ${status}` : 'Server tidak merespons (jaringan/timeout)');
           return false;
         }
       } catch (e) {

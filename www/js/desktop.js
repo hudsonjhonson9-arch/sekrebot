@@ -157,6 +157,9 @@
         isRegister: true,
         onDone: async (cap) => {
           if (!cap?.dataUrl) return;
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({ title: 'Menyimpan Wajah...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+          }
           const ok = await saveFaceRefFor(uid, cap.dataUrl, cap.descriptor, nama, nip);
           if (ok) {
             loadAdminFaceReg();

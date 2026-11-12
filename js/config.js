@@ -489,7 +489,9 @@ async function nativeFetch(path, opts = {}) {
   if (!token) throw new Error('Sesi native tidak tersedia: login Telegram atau token perangkat.');
 
   const ctrl = new AbortController();
-  const tid = setTimeout(() => ctrl.abort(), 15000);
+  // ponytail: default 15s buat panggilan biasa; upload wajah pakai opts.timeout
+  // (50s) supaya selalu > budget server gas (45s) dan < proxy_read_timeout (60s).
+  const tid = setTimeout(() => ctrl.abort(), opts.timeout || 15000);
   try {
     const res = await fetch(API_BASE + path, {
       method: opts.method || 'GET',

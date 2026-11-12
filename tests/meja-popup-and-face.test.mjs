@@ -65,3 +65,37 @@ test('Face registration flows trigger Swal notifications', () => {
     assert.ok(js.includes('Pendaftaran Wajah Berhasil'), `${file} daftarWajahPaksa should show success alert`);
   }
 });
+
+test('Update wajah menampilkan loading sebelum save, dan timeout rantai konsisten', () => {
+  for (const file of ['js/desktop.js', 'www/js/desktop.js']) {
+    const js = fs.readFileSync(path.join(ROOT, file), 'utf-8');
+    const start = js.indexOf('function adminCaptureFaceFor');
+    assert.ok(start > -1, `${file} should define adminCaptureFaceFor`);
+    const end = js.indexOf('function adminCaptureFace', start + 10);
+    const slice = js.slice(start, end > start ? end : start + 1500);
+    const loading = slice.indexOf('Swal.showLoading()');
+    const save = slice.indexOf('saveFaceRefFor(');
+    assert.ok(loading > -1, `${file} adminCaptureFaceFor should show a loading indicator`);
+    assert.ok(save > loading, `${file} loading must open before saveFaceRefFor (before=${loading}, save=${save})`);
+  }
+
+  for (const file of ['js/config.js', 'www/js/config.js']) {
+    const js = fs.readFileSync(path.join(ROOT, file), 'utf-8');
+    assert.ok(js.includes('opts.timeout || 15000'), `${file} nativeFetch should honour opts.timeout`);
+  }
+
+  for (const file of ['js/api.js', 'www/js/api.js']) {
+    const js = fs.readFileSync(path.join(ROOT, file), 'utf-8');
+    assert.ok(js.includes('async function apiPost(endpoint, body, opts = {})'), `${file} apiPost should accept opts`);
+  }
+
+  for (const file of ['js/face.js', 'www/js/face.js']) {
+    const js = fs.readFileSync(path.join(ROOT, file), 'utf-8');
+    assert.ok(js.includes('{ timeout: 50000 }'), `${file} face upload must outlive the 45s gasUpsert budget`);
+    assert.ok(!js.includes('${200}'), `${file} must not hardcode HTTP 200 in the error message`);
+  }
+
+  const nginx = fs.readFileSync(path.join(ROOT, 'nginx.conf'), 'utf-8');
+  const m = nginx.match(/proxy_read_timeout\s+(\d+)s/);
+  assert.ok(m && Number(m[1]) >= 60, `nginx proxy_read_timeout must cover the 45s gas budget, got: ${m && m[1]}`);
+});
