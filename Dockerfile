@@ -21,6 +21,11 @@ RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit
 # tersaring .dockerignore dan TIDAK akan masuk image.
 COPY server/ ./server/
 
+# js/face-quality.js di-import server/media.js sebagai ../js/face-quality.js
+# untuk deteksi wajah ganda (similarityOf). File ini murni logika tanpa
+# dependensi browser, jadi aman disalin ke /app/js/.
+COPY js/face-quality.js ./js/
+
 # Statis untuk nginx. Disalin LANGSUNG ke document root nginx, bukan ke /app,
 # karena nginx.conf menunjuk root /usr/share/nginx/html. Menyalin ke /app lalu
 # memindahkan root-nya akan bocor juga source server/ lewat HTTP.
