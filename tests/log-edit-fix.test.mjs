@@ -82,7 +82,8 @@ test('cache-buster admin-log, rekap & desktop ikut di-bump di kedua index.html',
   for (const h of [html, wwwHtml]) {
     assert.match(h, /js\/admin-log\.js\?v=20261108/);
     assert.match(h, /js\/rekap\.js\?v=20261108/);
-    assert.match(h, /js\/desktop\.js\?v=9994/);
+    assert.match(h, /js\/desktop\.js\?v=9995/);
+    assert.match(h, /css\/styles\.css\?v=20261112/);
     assert.match(h, /js\/state\.js\?v=(?:20261108|20261111a)/);
     assert.match(h, /js\/profil\.js\?v=20261109/);
     assert.match(h, /js\/admin-mgmt\.js\?v=5/);
