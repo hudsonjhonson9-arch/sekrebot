@@ -588,6 +588,8 @@
     let _mejaLiveSince = 0; // Waktu pertama kali liveness disetujui untuk fallback
     let _gate = { pass: false, boxHist: [] };
     let _gateForceTimer = null, _previewIdleTimer = null, _pendingCapture = null, _ambigSince = 0;
+    const ENROLL_SHOTS = 3;
+    let _enrollShots = 0, _enrollTaken = []; // 0 = non-enrolmen; direset tiap buka overlay
     let _gateCnv = null;
     let _camZoomLevel = 1.0;
     window._camVideoTrack = null;
@@ -900,13 +902,17 @@
       $('camPreview').classList.remove('show');
       _gate = { pass: false, boxHist: [] };
       clearTimeout(_gateForceTimer);
+      _enrollShots = onDone?.isRegister ? ENROLL_SHOTS : 0;
+      _enrollTaken = [];
 
       // Tampilkan/sembunyikan tombol capture
       const btnCap = $('btnCapture');
       if (btnCap) {
         btnCap.style.display = isMeja ? 'none' : 'flex';
         btnCap.disabled = true;
-        btnCap.innerHTML = '<i class="fas fa-camera"></i> Ambil Foto & Lanjutkan';
+        btnCap.innerHTML = _enrollShots > 1
+          ? '<i class="fas fa-camera"></i> Ambil Foto (1)/' + _enrollShots
+          : '<i class="fas fa-camera"></i> Ambil Foto & Lanjutkan';
       }
       const _pvUse = $('camPreviewUse'), _pvRetry = $('camPreviewRetry');
       if (_pvUse) _pvUse.onclick = _previewUse;
@@ -1659,6 +1665,36 @@
       _hidePreview();
       if (!p) return Promise.resolve();
       if (p.kind === 'meja') return _onMejaAbsenMatchFound(p.meja.id, p.meja.descriptor, p.meja.dataUrl, p.meja.score, { ambiguous: false });
+      if (_enrollShots > 0) {
+        const step = window.FaceQuality.nextEnrollShot(_enrollTaken, p.result, _enrollShots);
+        _enrollTaken = step.shots;
+        if (!step.done) {
+          setCamStatus(step.skipped ? 'warn' : 'ok', '<i class="fas fa-camera"></i>',
+            step.skipped ? 'Wajah Tidak Terbaca' : `Foto ${_enrollTaken.length}/${_enrollShots} Tersimpan`,
+            step.skipped ? 'Coba ambil lagi' : 'Geser sedikit posisi, ambil foto berikutnya');
+          // re-arm persis pola _previewRetry: video sudah tampil (_hidePreview),
+          // reset _gate, label `Ambil Foto (n+1)/3` + disabled ikuti _gate.pass,
+          // force-timer 10 dtk 'Tetap Ambil'
+          _gate = { pass: false, boxHist: [] };
+          const b = $('btnCapture');
+          if (b) {
+            b.style.display = 'flex';
+            b.disabled = !_gate.pass;
+            b.innerHTML = '<i class="fas fa-camera"></i> Ambil Foto (' + (_enrollTaken.length + 1) + ')/' + _enrollShots;
+            clearTimeout(_gateForceTimer);
+            _gateForceTimer = setTimeout(() => {
+              if (b.disabled) {
+                b.disabled = false;
+                b.innerHTML = '<i class="fas fa-bolt"></i> Tetap Ambil';
+                setCamStatus('warn', '<i class="fas fa-bolt"></i>', 'Kualitas Belum Ideal', 'Boleh tetap ambil foto');
+              }
+            }, 10000);
+          }
+          startDetectLoop();
+          return;
+        }
+        return _finishUserCapture({ ...p.result, descriptor: step.descriptor, dataUrl: step.dataUrl });
+      }
       return _finishUserCapture(p.result);
     }
     function _previewRetry() {
@@ -1670,7 +1706,10 @@
       } else {
         const b = $('btnCapture');
         if (b) {
-          b.style.display = 'flex'; b.disabled = !_gate.pass; b.innerHTML = '<i class="fas fa-camera"></i> Ambil Foto & Lanjutkan';
+          b.style.display = 'flex'; b.disabled = !_gate.pass;
+          b.innerHTML = _enrollShots > 1
+            ? '<i class="fas fa-camera"></i> Ambil Foto (' + (_enrollTaken.length + 1) + ')/' + _enrollShots
+            : '<i class="fas fa-camera"></i> Ambil Foto & Lanjutkan';
           clearTimeout(_gateForceTimer);
           _gateForceTimer = setTimeout(() => {
             if (b.disabled) {
