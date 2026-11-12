@@ -578,6 +578,9 @@
     let _matchStabilityCount = 0; // Menghitung berapa frame ID yang sama terdeteksi
     let _mejaStartTime = 0; // Waktu mulai Meja Absen untuk startup delay
     let _mejaLiveSince = 0; // Waktu pertama kali liveness disetujui untuk fallback
+    let _gate = { pass: false, boxHist: [] };
+    let _gateForceTimer = null, _previewIdleTimer = null, _pendingCapture = null, _ambigSince = 0;
+    let _gateCnv = null;
     let _camZoomLevel = 1.0;
     window._camVideoTrack = null;
 
@@ -887,6 +890,8 @@
       $('camStatus').style.display = 'none';
       $('faceRegCard').style.display = 'none';
       $('camPreview').classList.remove('show');
+      _gate = { pass: false, boxHist: [] };
+      clearTimeout(_gateForceTimer);
 
       // Tampilkan/sembunyikan tombol capture
       const btnCap = $('btnCapture');
@@ -895,6 +900,17 @@
         btnCap.disabled = true;
         btnCap.innerHTML = '<i class="fas fa-camera"></i> Ambil Foto & Lanjutkan';
       }
+
+      clearTimeout(_gateForceTimer);
+      _gateForceTimer = setTimeout(() => {
+        if (window._isMejaMode) return;
+        const b = $('btnCapture');
+        if (b && b.disabled) {
+          b.disabled = false;
+          b.innerHTML = '<i class="fas fa-bolt"></i> Tetap Ambil';
+          setCamStatus('warn', '<i class="fas fa-bolt"></i>', 'Kualitas Belum Ideal', 'Boleh tetap ambil foto');
+        }
+      }, 10000);
 
       const livenessUI = $('livenessMini');
       if (livenessUI) livenessUI.style.display = isMeja ? 'block' : 'none';
@@ -1033,6 +1049,9 @@
     }
 
     function closeCamOverlay(triggeredByUser) {
+      clearTimeout(_gateForceTimer);
+      clearTimeout(_previewIdleTimer);
+      _pendingCapture = null;
       if (window._isMejaMode) {
         stopMejaAbsen();
         return;
@@ -1190,6 +1209,50 @@
       }
     }
 
+    function _sampleBrightness(src) {
+      if (!_gateCnv) { _gateCnv = document.createElement('canvas'); _gateCnv.width = 32; _gateCnv.height = 32; }
+      const cx = _gateCnv.getContext('2d', { willReadFrequently: true });
+      cx.drawImage(src, 0, 0, 32, 32);
+      const d = cx.getImageData(0, 0, 32, 32).data;
+      let s = 0;
+      for (let i = 0; i < d.length; i += 4) s += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      return Math.round(s / (d.length / 4));
+    }
+    // ponytail: gate fail-open — bila module belum ter-load, lewatkan (jangan blokir kamera)
+    function _gateEvaluate(vid, box) {
+      const now = Date.now();
+      const hist = _gate.boxHist;
+      let stabilityMs = 0;
+      if (box) {
+        const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+        hist.push({ t: now, cx, cy });
+        while (hist.length && now - hist[0].t > 800) hist.shift();
+        const last = hist[hist.length - 1];
+        let t0 = last.t;
+        for (let i = hist.length - 1; i >= 0; i--) {
+          const dx = Math.abs(hist[i].cx - last.cx) / vid.videoWidth;
+          const dy = Math.abs(hist[i].cy - last.cy) / vid.videoHeight;
+          if (dx > 0.03 || dy > 0.03) break;
+          t0 = hist[i].t;
+        }
+        stabilityMs = now - t0;
+      }
+      const metrics = {
+        faceRatioH: box ? box.height / vid.videoHeight : 0,
+        centerOffset: box ? Math.max(
+          Math.abs((box.x + box.width / 2) / vid.videoWidth - 0.5) * 2,
+          Math.abs((box.y + box.height / 2) / vid.videoHeight - 0.5) * 2) : 1,
+        brightness: _sampleBrightness(vid),
+        stabilityMs,
+        livenessScore: parseFloat(_lastHumanScore) || 0,
+      };
+      if (!window.FaceQuality) return { pass: true, reason: null };
+      return window.FaceQuality.evaluateFrameQuality(metrics, {
+        livenessThreshold: typeof FS_LIVENESS_SCORE !== 'undefined' ? FS_LIVENESS_SCORE : 0.4,
+        livenessEnabled: window.FS_LIVENESS_MOBILE !== false,
+      });
+    }
+
     /* ── Loop deteksi wajah (rAF) ── */
     function startDetectLoop() {
       const vid = $('camVideo');
@@ -1202,11 +1265,7 @@
       _livenessHistory = [];
       _lastLandmarks = null;
       _isLive = false;
-
-      // Munculkan tombol capture manual lebih cepat (3 detik) untuk mode Daftar Wajah/Absen biasa
-      setTimeout(() => {
-        if ($('btnCapture') && !window._isMejaMode) $('btnCapture').disabled = false;
-      }, 3000);
+      _gate.boxHist.length = 0;
 
       _isLoopEnabled = true;
       const loop = async () => {
@@ -1253,6 +1312,7 @@
               detection = {
                 landmarks: { positions: f.landmarks || [] },
                 descriptor: f.embedding || null,
+                box: f.box,
                 _isHumanLive: isLive
               };
             }
@@ -1300,6 +1360,15 @@
               setCamStatus('ok', '<i class="fas fa-hourglass-half"></i>', 'Verifikasi Keaslian...', 'Mohon tetap diam sejenak');
             }
 
+            const gateR = _gateEvaluate(vid, detection.box || null);
+            if (!_gate.pass && gateR.pass) {
+              _gate.pass = true;
+              if ($('btnCapture') && !window._isMejaMode) $('btnCapture').disabled = false;
+            }
+            if (!gateR.pass && !window._isMejaMode) {
+              setCamStatus('warn', '<i class="fas fa-exclamation-triangle"></i>', 'Kualitas Foto Kurang', gateR.reason);
+            }
+
             if (window._isMejaMode) {
               // --- LIVE MATCHING ON VIDEO STREAM ---
               if (!_autoCaptured && _modelsReady) {
@@ -1327,7 +1396,7 @@
                         const requiredStability = 2;
                         if (_matchStabilityCount < requiredStability) return;
 
-                        if (_isLive && !_autoCaptured && _livenessState.faceOk) {
+                        if (_isLive && !_autoCaptured && _livenessState.faceOk && gateR.pass) {
                           _autoCaptured = true;
                           console.log(`[AI] Match Confirmed: ${nama} (Score: ${score}%). Finalizing...`);
                           setTimeout(() => {
@@ -1347,7 +1416,7 @@
 
                   // Fallback: Jika liveness sudah disetujui stabil >= 1.2 detik dan belum auto-captured,
                   // tangkap frame canvas resolusi penuh untuk ekstraksi & pencocokan akurat.
-                  if (_isLive && !_autoCaptured && _livenessState.faceOk) {
+                  if (_isLive && !_autoCaptured && _livenessState.faceOk && gateR.pass) {
                     if (!_mejaLiveSince) _mejaLiveSince = Date.now();
                     if (Date.now() - _mejaLiveSince >= 1200) {
                       _autoCaptured = true;
@@ -1367,7 +1436,7 @@
                 }
               }
             } else {
-              if (!_autoCaptured && _modelsReady && _isLive) {
+              if (!_autoCaptured && _modelsReady && _isLive && gateR.pass) {
                 _autoCaptured = true;
                 setTimeout(() => {
                   if (_livenessState.faceOk && !$('camOverlay').classList.contains('hidden')) {
@@ -1535,6 +1604,7 @@
       // Ambil foto lewati liveness check
       _livenessState = { faceOk: true, ch1: true, ch2: true };
       _isLive = true;
+      _lastHumanScore = '1.00';
       await doCapture();
     }
 

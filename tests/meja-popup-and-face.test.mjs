@@ -120,3 +120,16 @@ test('face-quality: style tombol preview ada di dua styles.css', () => {
     assert.ok(css.includes('#camPreviewUse'));
   }
 });
+
+test('gate: wiring kualitas di face.js (dua mirror identik)', () => {
+  for (const f of ['js/face.js', 'www/js/face.js']) {
+    const js = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    assert.ok(js.includes('box: f.box'), f + ': box dibawa dari Human');
+    assert.ok(js.includes('window.FaceQuality.evaluateFrameQuality'), f + ': panggil gate');
+    assert.ok(js.includes('_gateForceTimer'), f + ': timer force 10 detik');
+    assert.ok(js.includes('Tetap Ambil'), f + ': label force');
+    assert.ok(js.includes("_lastHumanScore = '1.00'"), f + ': skipVerifikasi set skor liveness');
+    assert.ok(!js.includes('Munculkan tombol capture manual lebih cepat'), f + ': timer 3 detik lama dihapus');
+    assert.ok(js.includes('livenessEnabled: window.FS_LIVENESS_MOBILE !== false'), f + ': honor toggle liveness');
+  }
+});
