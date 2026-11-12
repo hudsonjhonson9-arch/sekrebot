@@ -147,3 +147,19 @@ test('burst: doCapture menangkap 3 frame, merge, tanpa stop stream dini', () => 
     assert.ok(!body.includes('closeCamOverlay'), f + ': tutup overlay dipindah ke Pakai (Task 5)');
   }
 });
+
+test('preview: show/cleanup/idle-15s di dua mirror', () => {
+  for (const f of ['js/face.js', 'www/js/face.js']) {
+    const js = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    assert.ok(js.includes("_pendingCapture = { kind: 'user'"), f + ': pending non-meja');
+    assert.ok(js.includes("_pendingCapture = { kind: 'meja'"), f + ': pending meja');
+    assert.ok(js.includes("$('camPreview').classList.add('show')"), f + ': tampilkan preview');
+    assert.ok(js.includes('}, 15000)'), f + ': auto-Pakai 15 detik');
+    assert.ok(js.includes('onclick = _previewUse'), f + ': wire tombol Pakai');
+    assert.ok(js.includes("$('camPreviewUse').click()"), f + ': timer memicu Pakai');
+    const close = js.slice(js.indexOf('function closeCamOverlay'), js.indexOf('function stopCamStream'));
+    assert.ok(close.includes('clearTimeout(_previewIdleTimer)'), f + ': timer dibersihkan saat tutup');
+    assert.ok(close.includes('_pendingCapture = null'), f + ': pending dibersihkan saat tutup');
+    assert.ok(close.indexOf('clearTimeout') < close.indexOf('window._isMejaMode'), f + ': cleanup sebelum cabang meja');
+  }
+});

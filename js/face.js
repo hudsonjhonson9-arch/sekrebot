@@ -900,6 +900,9 @@
         btnCap.disabled = true;
         btnCap.innerHTML = '<i class="fas fa-camera"></i> Ambil Foto & Lanjutkan';
       }
+      const _pvUse = $('camPreviewUse'), _pvRetry = $('camPreviewRetry');
+      if (_pvUse) _pvUse.onclick = _previewUse;
+      if (_pvRetry) _pvRetry.onclick = _previewRetry;
 
       clearTimeout(_gateForceTimer);
       _gateForceTimer = setTimeout(() => {
@@ -1052,6 +1055,7 @@
       clearTimeout(_gateForceTimer);
       clearTimeout(_previewIdleTimer);
       _pendingCapture = null;
+      _hidePreview();
       if (window._isMejaMode) {
         stopMejaAbsen();
         return;
@@ -1574,10 +1578,29 @@
             }
             
             console.log(`[AI] Match Result: ${bestMatch.id} (score: ${bestMatch.score.toFixed(4)})`);
-            await _onMejaAbsenMatchFound(bestMatch.id, descriptor, dataUrl, bestMatch.score);
+            if (bestMatch.id && bestMatch.id !== 'unknown' && !bestMatch.ambiguous) {
+              const profile = window._mejaUserMap ? window._mejaUserMap[bestMatch.id] : null;
+              _pendingCapture = { kind: 'meja', meja: { id: bestMatch.id, descriptor, dataUrl, score: bestMatch.score } };
+              $('camPreviewImg').src = dataUrl;
+              $('camPreviewMeta').innerHTML = '<span class="cam-preview-badge cpb-ok"><i class="fas fa-check-circle"></i> COCOK ' + Math.round(bestMatch.score * 100) + '%</span> ' + (profile ? profile.nama : bestMatch.id);
+              $('camPreview').classList.add('show');
+              $('camVideoWrap').style.display = 'none';
+              setCamStatus('ok', '<i class="fas fa-check-circle"></i>', 'Periksa Foto', 'Pakai foto ini atau ambil ulang (15 detik)');
+              clearTimeout(_previewIdleTimer);
+              _previewIdleTimer = setTimeout(() => { if (_pendingCapture && _pendingCapture.kind === 'meja') $('camPreviewUse').click(); }, 15000);
+            } else {
+              await _onMejaAbsenMatchFound(bestMatch.id, descriptor, dataUrl, bestMatch.score, { ambiguous: !!bestMatch.ambiguous });
+            }
           } else {
             console.log('[AI] Phase 4: Preview menunggu konfirmasi Pengguna.');
-            // Task 5 menaruh preview DI SINI
+            _pendingCapture = { kind: 'user', result: { dataUrl, descriptor, faceOk: _livenessState.faceOk || !!descriptor, livenessOk: _isLive || false } };
+            $('camPreviewImg').src = dataUrl;
+            $('camPreviewMeta').textContent = 'Periksa foto sebelum melanjutkan';
+            $('camPreview').classList.add('show');
+            $('camVideoWrap').style.display = 'none';
+            const capBtn = $('btnCapture');
+            if (capBtn) capBtn.style.display = 'none';
+            setCamStatus('ok', '<i class="fas fa-check"></i>', 'Periksa Foto', 'Pakai foto ini atau ambil ulang');
           }
         } finally {
           _forceResetAiState(true); // Lepas kunci setelah proses selesai
@@ -1602,6 +1625,40 @@
       _isLive = true;
       _lastHumanScore = '1.00';
       await doCapture();
+    }
+
+    function _hidePreview() {
+      $('camPreview').classList.remove('show');
+      $('camPreviewImg').src = '';
+      $('camPreviewMeta').innerHTML = '';
+      $('camVideoWrap').style.display = 'block';
+    }
+    function _finishUserCapture(result) {
+      const cb = _absenCallbackAfterCam;
+      closeCamOverlay(false);
+      if (!cb) return;
+      if (typeof cb === 'function') return cb(result);
+      if (cb.onDone) return cb.onDone(result);
+    }
+    function _previewUse() {
+      clearTimeout(_previewIdleTimer);
+      const p = _pendingCapture; _pendingCapture = null;
+      _hidePreview();
+      if (!p) return Promise.resolve();
+      if (p.kind === 'meja') return _onMejaAbsenMatchFound(p.meja.id, p.meja.descriptor, p.meja.dataUrl, p.meja.score, { ambiguous: false });
+      return _finishUserCapture(p.result);
+    }
+    function _previewRetry() {
+      clearTimeout(_previewIdleTimer);
+      const p = _pendingCapture; _pendingCapture = null;
+      _hidePreview();
+      if (p && p.kind === 'meja') {
+        _autoCaptured = false;
+      } else {
+        const b = $('btnCapture');
+        if (b) { b.style.display = 'flex'; b.disabled = !_gate.pass; b.innerHTML = '<i class="fas fa-camera"></i> Ambil Foto & Lanjutkan'; }
+      }
+      startDetectLoop();
     }
 
     /* ── Tutup overlay manual oleh pengguna (tombol <i class="fas fa-times"></i>) ── */
