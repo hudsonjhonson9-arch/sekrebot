@@ -33,19 +33,23 @@ mengubah masing-masing alur.
 
 ### 2.2 Opt-in per pemanggil (bukan global)
 
-`openCamOverlay` menerima varian objek baru: `openCamOverlay({ onDone, shots: N })`.
+Pembeda enrolmen-vs-verifikasi **sudah ada di kode**: `openCamOverlay({ isRegister: true, onDone })`.
+`openCamOverlay` menurunkan `_enrollShots` dari bendera itu — tanpa menyentuh
+punca pemanggil mana pun:
 
-- State: `_enrollShots` (default `1`) dan `_enrollTaken` (array descriptor +
+- State: `_enrollShots` (0 = non-enrolmen) dan `_enrollTaken` (array descriptor +
   kandidat dataUrl) — di-reset di `openCamOverlay` seperti `_gate`.
-- Pemanggil enrolmen melewatkan `shots: 3`:
-  1. `auth.js` login-regen (`onDone` sekitar baris 180)
-  2. `auth.js` pendaftaran (`onDone` sekitar baris 356)
-  3. `face.js` panel wajah / alur register internal (pemanggilan
-     `openCamOverlay` yang non-meja untuk enrolmen)
-  4. `adminCaptureFaceFor` (dipakai `admin-pegawai.js:306`)
-- Pemanggil verifikasi/absen/bukti **tidak diubah** (tetap tembak tunggal).
-  Form `cb` lama (function / `'meja'` / `{onDone}` tanpa `shots`) tetap valid —
-  backward compatible.
+- Enam pemanggil yang sudah membawa `isRegister: true` (otomatis dapat 3 foto):
+  1. `auth.js` login-regen (`:179`)
+  2. `auth.js` pendaftaran (`:355`)
+  3. `face.js` `registerFaceFromPreview` (`:495`)
+  4. `desktop.js` `adminCaptureFaceFor` (`:157`)
+  5. `admin-face.js` daftar wajah admin (`:501`)
+  6. `admin.js` daftar wajah admin (`:2110`)
+- Pemanggil verifikasi/absen/bukti **tidak punya bendera itu** dan tidak diubah:
+  `auth.js` verifikasi login (`:213`), `absen.js`, `meja.js`, bukti overlay.
+  Form callback lama (function / `'meja'` / `{onDone}` tanpa `isRegister`)
+  tetap valid — backward compatible.
 
 ### 2.3 Loop capture
 
@@ -56,8 +60,8 @@ Pada `_previewUse` mode enrolmen (`_enrollShots > 1`):
 1. Simpan `p.result.descriptor` + `p.result.dataUrl` ke `_enrollTaken`.
 2. Bila `_enrollTaken.length < _enrollShots`:
    - sembunyikan preview, tampilkan lagi video,
-   - perbarui progres pada status kamera: `Foto n/3 terkunci — ambil lagi,
-     geser sedikit posisi` (hint pose lewat copy saja),
+   - perbarui progres pada status kamera: judul `Foto n/3 Tersimpan`, sub
+     `Geser sedikit posisi, ambil foto berikutnya` (hint pose lewat copy saja),
    - re-arm gate (`_gate = {pass:false}`, tombol + force-timer 10 dtk seperti
      `_previewRetry` lakukan hari ini),
    - set `btnCapture` label `Ambil Foto (n+1)/3`.
