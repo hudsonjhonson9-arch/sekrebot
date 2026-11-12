@@ -93,7 +93,7 @@ test('sppd_template: tag ttd/paraf baru ada, nama keras hilang, 3 salinan identi
   const isi = berkas.map(b => fs.readFileSync(path.join(ROOT, b)));
   assert.ok(isi[0].equals(isi[1]) && isi[0].equals(isi[2]), 'tiga salinan sppd_template.docx harus identik');
   const xml = new PizZip(isi[0]).file('word/document.xml').asText();
-  for (const tag of ['{BidangNama}', '{BidangNIP}', '{KtuNama}', '{KtuNIP}', '{Paraf1}', '{Paraf2}', '{Paraf3}'])
+  for (const tag of ['{BidangNama}', '{BidangNIP}', '{Paraf1}', '{Paraf2}', '{Paraf3}'])
     assert.ok(xml.includes(tag), 'tag hilang: ' + tag);
   assert.ok(!xml.includes('BERLIAN MAGU WERU'), 'nama keras masih ada');
   assert.ok(!xml.includes('Nip. 19690619'), 'NIP keras masih ada');
@@ -106,12 +106,27 @@ test('sppd_template: tag ttd/paraf baru ada, nama keras hilang, 3 salinan identi
   assert.equal(d.nested, 0, 'sppd_template punya ' + d.nested + ' paragraf bersarang');
 });
 
-test('SPPD: render mengisi slot bidang/KTU/paraf yang baru', () => {
+test('SPPD: render mengisi slot bidang/paraf yang baru', () => {
   const base = T.bangunTagsSPPD(grup.items[0], grup, perjadin, master);
-  const tags = { ...base, KtuNama: 'KTU UJI', KtuNIP: '333' };
-  const { text } = renderDocx('sppd_template.docx', tags);
-  for (const s of [base.BidangNama, base.BidangNIP, 'KTU UJI', '333', base.Paraf1, base.Paraf2, base.Paraf3])
+  const { text } = renderDocx('sppd_template.docx', base);
+  for (const s of [base.BidangNama, base.BidangNIP, base.Paraf1, base.Paraf2, base.Paraf3])
     assert.ok(s && text.includes(s), 'SPPD slot baru kosong: ' + s);
+});
+
+test('spt_template: tag dasar/pelaksana baru ada, nama keras hilang, 3 salinan identik', () => {
+  const berkas = ['spt_template.docx', 'www/spt_template.docx', 'public/spt_template.docx'];
+  const isi = berkas.map(b => fs.readFileSync(path.join(ROOT, b)));
+  assert.ok(isi[0].equals(isi[1]) && isi[0].equals(isi[2]), 'tiga salinan spt_template.docx harus identik');
+  const xml = new PizZip(isi[0]).file('word/document.xml').asText();
+  for (const tag of ['{#dasarRows}', '{No}', '{Teks}', '{/dasarRows}', '{KepadaLabel}', '{TitikLabel}',
+    '{#pelaksana}', '{/pelaksana}', '{Paraf1}', '{Paraf2}', '{Paraf3}', 'NIP. {KepalaNIP}'])
+    assert.ok(xml.includes(tag), 'tag hilang: ' + tag);
+  for (const s of ['Imanuel M. Kalegotana', 'CHARLES HERMANA WERU', 'Nota Dinas Sekretaris Daerah', 'BERLIAN MAGU WERU'])
+    assert.ok(!xml.includes(s), 'data contoh masih ada: ' + s);
+  assert.ok(xml.indexOf('{Paraf1}') < xml.lastIndexOf('<w:sectPr'), 'blok paraf harus sebelum <w:sectPr>');
+  const d = pDepth(xml);
+  assert.equal(d.max, 1, 'spt_template punya <w:p> bersarang (max depth ' + d.max + ')');
+  assert.equal(d.nested, 0, 'spt_template punya ' + d.nested + ' paragraf bersarang');
 });
 
 // Flatten XML ke teks baris-demi-baris: <w:br/> jadi baris baru, paragraf & baris tabel juga.
@@ -120,7 +135,19 @@ function flatten(xml) {
     .replace(/<\/w:tc>/g, '\t').replace(/<\/w:tr>/g, '\n').replace(/<[^>]+>/g, '');
 }
 
-// E2E: pakai builder nyata + template nyata, semua orang dipilih (kepala/sekretaris/bidang/KTU + 3 paraf).
+test('SPT: dasar multi-baris jadi baris terpisah, label "Kepada" hanya di baris pertama', () => {
+  const p = {
+    ...perjadin,
+    dasar: 'Nota Dinas Sekretaris Daerah Nomor 1/2026\nDPA Bapperida TA 2026'
+  };
+  const flat = flatten(renderDocx('spt_template.docx', T.bangunTagsSPT(grup, p, master)).xml);
+  assert.equal(flat.split('Kepada').length - 1, 1, 'label "Kepada" harus muncul tepat sekali');
+  assert.ok(flat.includes('Nota Dinas Sekretaris Daerah Nomor 1/2026'), 'dasar baris 1 hilang');
+  assert.ok(flat.includes('DPA Bapperida TA 2026'), 'dasar baris 2 hilang');
+  assert.ok(!flat.includes('{') && !flat.includes('}'), 'SPT menyisakan kurung kurawal');
+});
+
+// E2E: pakai builder nyata + template nyata, semua orang dipilih (kepala/sekretaris/bidang + 3 paraf).
 test('E2E: SPPD & SPT merender pilihan ttd/paraf (nama + jabatan, tepat 3 baris paraf)', () => {
   const p = {
     ...perjadin,
@@ -137,13 +164,11 @@ test('E2E: SPPD & SPT merender pilihan ttd/paraf (nama + jabatan, tepat 3 baris 
   const baris = ['JABATAN A', 'JABATAN B', 'JABATAN C'];
   const hitung = t => t.split('\n').filter(l => /^\s*JABATAN [ABC]$/.test(l)).length;
 
-  // SPPD: Kepala Bidang + NIP, sel KTU + NIP, blok paraf 3 baris.
+  // SPPD: Kepala Bidang + NIP, blok paraf 3 baris.
   const sppd = flatten(renderDocx('sppd_template.docx', T.bangunTagsSPPD(grup.items[0], grup, p, master)).xml);
   assert.ok(!sppd.includes('{') && !sppd.includes('}'), 'SPPD menyisakan kurung kurawal');
   assert.ok(sppd.includes('BIDANG UJI') && sppd.includes('NIP. 333'), 'SPPD: Kepala Bidang + NIP kosong');
-  const ktu = sppd.slice(sppd.indexOf('KTU Bapperida'), sppd.indexOf('Berangkat dari'));
-  assert.ok(ktu.includes('KTU UJI') && ktu.includes('NIP. 444'), 'SPPD: sel KTU + NIP kosong');
-  assert.ok(ktu.includes('KTU UJI\nNIP. 444'), 'SPPD: sel KTU harus nama lalu baris NIP. (dipisah <w:br/>)');
+  assert.ok(!sppd.includes('KTU Bapperida'), 'SPPD: baris KTU sudah dihapus dari format baru');
   const pSp = sppd.slice(sppd.indexOf('Paraf Hirarki'));
   baris.forEach((j, i) => assert.ok(pSp.includes(j), `SPPD paraf baris ${i + 1} bukan jabatan`));
   assert.equal(hitung(pSp), 3, 'SPPD harus tepat 3 baris paraf');

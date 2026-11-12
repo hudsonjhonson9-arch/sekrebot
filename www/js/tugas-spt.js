@@ -167,12 +167,23 @@
     return u;
   }
 
+  // Dasar multi-baris -> loop {#dasarRows} di template (satu baris = satu dasar,
+  // penomoran "1.", "2.", … dihasilkan template; No berupa angka murni).
+  function splitDasar(s) {
+    return String(s || '').split(/\r?\n/).map(x => x.trim()).filter(Boolean)
+      .map((t, i) => ({ No: i + 1, Teks: t }));
+  }
+
   function bangunTagsSPT(grup, perjadin, masterIndex) {
     const p = merge(perjadin);
-    const items = grup.items.map((r, i) => Object.assign({ No: i + 1 }, personTag(r, masterIndex)));
+    // "Kepada"/":" hanya di baris pertama; baris pelaksana berikutnya label kosong
+    // (di template label ikut terduplikasi per orang -> dikosongkan lewat tag).
+    const items = grup.items.map((r, i) => Object.assign(
+      { No: i + 1, KepadaLabel: i === 0 ? 'Kepada' : '', TitikLabel: i === 0 ? ':' : '' },
+      personTag(r, masterIndex)));
     return {
       Nomor: p.nomor,
-      Dasar: p.dasar,
+      dasarRows: splitDasar(p.dasar),
       pelaksana: items,
       Untuk: susunUntuk(p, grup),
       DitetapkanDi: p.ditetapkanDi,

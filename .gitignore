@@ -33,5 +33,7 @@ n8n/backup/
 n8n/export/
 graphify-out/
 *.docx
+# sumber resmi generator SPT/SPPD tetap di-commit agar build bisa diulang
+!docs/format-spt-sppd-2026.docx
 aset.db
 .superpowers/
