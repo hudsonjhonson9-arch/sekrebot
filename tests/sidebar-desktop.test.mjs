@@ -53,3 +53,15 @@ test('js/desktop.js dan www/js/desktop.js mengekspos toggleSidebarCollapse dan i
   }
 });
 
+
+test('tombol toggle selalu statis terpusat (konsisten di expanded & collapsed)', () => {
+  const css = fs.readFileSync(path.join(ROOT, 'css', 'styles.css'), 'utf8');
+  const i = css.indexOf('.sidebar-toggle-btn {');
+  assert.ok(i > 0, 'rule dasar .sidebar-toggle-btn harus ada');
+  const block = css.slice(i, css.indexOf('}', i));
+  assert.ok(!block.includes('position: absolute'),
+    'jangan absolut pojok kanan-atas: posisi berbeda antar state = tidak konsisten');
+  assert.ok(block.includes('margin: 0 auto 16px auto'), 'harus terpusat (margin auto)');
+  assert.ok(!/\.bottom-nav\.collapsed \.sidebar-toggle-btn,\s*body\.sidebar-collapsed \.sidebar-toggle-btn \{\s*position: static/.test(css),
+    'override position khusus collapsed tidak diperlukan lagi');
+});

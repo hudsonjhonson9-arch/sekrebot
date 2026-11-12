@@ -8338,13 +8338,13 @@ body.sidebar-collapsed {
   }
 
   /* Sidebar Toggle Collapse Button */
+  /* Posisi konsisten di SEMUA state: statis, terpusat di bawah brand.
+     (Dulu expanded = absolut pojok kanan-atas, collapsed = terpusat.) */
   .sidebar-toggle-btn {
     display: flex !important;
     align-items: center;
     justify-content: center;
-    position: absolute;
-    top: 12px;
-    right: 12px;
+    margin: 0 auto 16px auto;
     width: 26px;
     height: 26px;
     border-radius: 8px;
@@ -8353,7 +8353,7 @@ body.sidebar-collapsed {
     color: var(--muted);
     cursor: pointer;
     transition: all 0.2s ease;
-    z-index: 1005;
+    flex: 0 0 auto;
   }
 
   .sidebar-toggle-btn:hover {
@@ -8365,12 +8365,6 @@ body.sidebar-collapsed {
   .sidebar-toggle-btn i {
     font-size: 12px;
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .bottom-nav.collapsed .sidebar-toggle-btn,
-  body.sidebar-collapsed .sidebar-toggle-btn {
-    position: static !important;
-    margin: 0 auto 16px auto !important;
   }
 
   .bottom-nav.collapsed .sidebar-toggle-btn i,
