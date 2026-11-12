@@ -1,7 +1,7 @@
 /* ════ MEJA MATCH HANDLER & ADMIN OVERRIDES ════ */
 let _lastMejaTime = 0;
 
-async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance) {
+async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance, opts = {}) {
   const sekarang = Date.now();
 
   // 1. SISTEM ANTI-SPAM (COOLDOWN)
@@ -55,17 +55,18 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance)
 
   // JIKA WAJAH TIDAK DIKENAL
   if (telegramId === 'unknown') {
+    const ambig = !!opts.ambiguous;
     _moIcon.innerHTML = '<i class="fas fa-question"></i>';
-    _moNama.textContent = 'TIDAK DIKENAL';
-    _moStatus.textContent = 'WAJAH BELUM TERDAFTAR';
+    _moNama.textContent = ambig ? 'TERLALU MIRIP' : 'TIDAK DIKENAL';
+    _moStatus.textContent = ambig ? 'WAJAH MENYERUPAI PEGAWA LAIN' : 'WAJAH BELUM TERDAFTAR';
     _moStatus.style.color = 'var(--danger)';
     _moStatus.style.background = 'rgba(239,68,68,0.2)';
-    _moDetail.textContent = 'Mulai ulang scan dalam 3 detik...';
+    _moDetail.textContent = ambig ? 'Coba lagi dengan sudut/pencahayaan berbeda…' : 'Mulai ulang scan dalam 3 detik...';
 
     _mejaCnt.gagal++;
     _updateMejaCnt();
-    _setMejaStatus('active', '<i class="fas fa-exclamation-triangle"></i>', 'Wajah Tak Dikenal', 'Pegawai tidak terdaftar di sistem');
-    setCamStatus('bad', '<i class="fas fa-question"></i>', 'Tidak Dikenal', 'Wajah belum terdaftar');
+    _setMejaStatus('active', '<i class="fas fa-exclamation-triangle"></i>', ambig ? 'Wajah Terlalu Mirip' : 'Wajah Tak Dikenal', ambig ? 'Menyerupai lebih dari satu pegawai' : 'Pegawai tidak terdaftar di sistem');
+    setCamStatus('bad', '<i class="fas fa-question"></i>', ambig ? 'Wajah Terlalu Mirip' : 'Tidak Dikenal', ambig ? 'Coba lagi dengan sudut berbeda' : 'Wajah belum terdaftar');
 
     setTimeout(() => {
       overlay.style.display = 'none';

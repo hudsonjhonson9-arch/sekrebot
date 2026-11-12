@@ -302,6 +302,7 @@
       if (!capturedDesc || !allDescriptors.length) return { id: 'unknown', score: 0 };
 
       let bestMatch = { id: 'unknown', score: 0 };
+      let second = 0;
       const capDim = capturedDesc.length;
       const engine = window._aiEngine || 'human';
 
@@ -327,7 +328,10 @@
         }
 
         if (similarity > bestMatch.score) {
+          second = bestMatch.score;
           bestMatch = { id: ref.id, score: similarity };
+        } else if (similarity > second) {
+          second = similarity;
         }
       }
 
@@ -338,6 +342,10 @@
       
       if (bestMatch.score < threshold) {
         return { id: 'unknown', score: bestMatch.score };
+      }
+
+      if (second > 0 && bestMatch.score - second < (window.FaceQuality ? window.FaceQuality.THRESHOLDS.ambiguousDelta : 0.05)) {
+        return { id: 'unknown', score: bestMatch.score, ambiguous: true };
       }
 
       return bestMatch;
@@ -1354,7 +1362,7 @@
               if (window._isMejaMode) {
                 if (allDesc.length === 0) {
                   setCamStatus('warn', '<i class="fas fa-hourglass-half"></i>', 'Memuat Database Wajah...', 'Menghubungkan ke database pegawai');
-                } else if (!_lastMatchedId) {
+                } else if (!_lastMatchedId && !(_ambigSince && Date.now() - _ambigSince < 2000)) {
                   setCamStatus('ok', '<i class="fas fa-search"></i>', 'Mencocokkan Identitas...', 'Posisikan wajah di dalam bingkai');
                 }
               } else {
@@ -1384,6 +1392,7 @@
                       if (currentToken !== _matchSessionToken) return;
 
                       if (match && match.id !== 'unknown') {
+                        _ambigSince = 0;
                         if (match.id === _lastMatchedId) {
                           _matchStabilityCount++;
                         } else {
@@ -1412,6 +1421,10 @@
                           }, 200);
                         }
                       } else {
+                        if (match && match.ambiguous) {
+                          _ambigSince = Date.now();
+                          setCamStatus('bad', '<i class="fas fa-exclamation-triangle"></i>', 'Wajah Terlalu Mirip', 'Menyerupai lebih dari satu pegawai — coba lagi dengan sudut berbeda');
+                        }
                         _lastMatchedId = null;
                         _matchStabilityCount = 0;
                       }

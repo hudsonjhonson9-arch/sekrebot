@@ -163,3 +163,21 @@ test('preview: show/cleanup/idle-15s di dua mirror', () => {
     assert.ok(close.indexOf('clearTimeout') < close.indexOf('window._isMejaMode'), f + ': cleanup sebelum cabang meja');
   }
 });
+
+test('ambigu: runner-up + pesan + signature handler', () => {
+  for (const f of ['js/face.js', 'www/js/face.js']) {
+    const js = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    const m = js.slice(js.indexOf('async function matchMejaCandidate'), js.indexOf('/**', js.indexOf('async function matchMejaCandidate')));
+    assert.ok(m.includes('second'), f + ': tracking runner-up');
+    assert.ok(m.includes('ambiguous: true'), f + ': flag ambigu');
+    assert.ok(m.includes('- second') || m.includes('bestMatch.score - second'), f + ': delta best-second');
+    assert.ok(js.includes('Wajah Terlalu Mirip'), f + ': pesan ambigu');
+    assert.ok(js.includes('opts.ambiguous') || js.includes('{ ambiguous: !!bestMatch.ambiguous }'), f + ': kirim ke handler');
+    assert.ok(js.includes('_ambigSince'), f + ': tahan pesan ambigu 2 detik');
+  }
+  for (const f of ['js/meja-handler.js', 'www/js/meja-handler.js']) {
+    const js = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    assert.ok(js.includes('opts = {}'), f + ': parameter opsional ke-5');
+    assert.ok(js.includes('WAJAH MENYERUPAI PEGAWA LAIN'), f + ': teks unknown-karena-ambigu');
+  }
+});
