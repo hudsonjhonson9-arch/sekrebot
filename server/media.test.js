@@ -912,6 +912,42 @@ test('face: Apps Script gagal -> 502 dan database tetap bersih', async () => {
   assert.equal(h.sql.length, 1, 'hanya resolusi target');
 });
 
+test('face: update fileId lama di Drive gagal -> fallback buat file baru berhasil (200)', async () => {
+  const h = harness({
+    userRow: row({ face_photo: 'https://drive.google.com/file/d/OLD_DELETED_FILE/view' }),
+    gasUpsert: async (arg) => {
+      if (arg.fileId === 'OLD_DELETED_FILE') {
+        throw new Error('gagal menyimpan file');
+      }
+      return { fileId: 'NEW_RECOVERED_FILE', url: 'https://drive.google.com/file/d/NEW_RECOVERED_FILE/view' };
+    },
+  });
+  const res = await post(h, '/api/media/face', { ...FACE });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.fileId, 'NEW_RECOVERED_FILE');
+  assert.equal(h.gas.length, 2, 'pertama coba fileId lama, kedua fallback fileId null');
+  assert.equal(h.gas[0].fileId, 'OLD_DELETED_FILE');
+  assert.equal(h.gas[1].fileId, null);
+});
+
+test('signature: update fileId lama di Drive gagal -> fallback buat file baru berhasil (200)', async () => {
+  const h = harness({
+    userRow: row({ signature: 'https://drive.google.com/file/d/OLD_SIG_FILE/view' }),
+    gasUpsert: async (arg) => {
+      if (arg.fileId === 'OLD_SIG_FILE') {
+        throw new Error('gagal menyimpan file');
+      }
+      return { fileId: 'NEW_SIG_FILE', url: 'https://drive.google.com/file/d/NEW_SIG_FILE/view' };
+    },
+  });
+  const res = await post(h, '/api/media/signature', { ...SIG });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.fileId, 'NEW_SIG_FILE');
+  assert.equal(h.gas.length, 2, 'pertama coba fileId lama, kedua fallback fileId null');
+  assert.equal(h.gas[0].fileId, 'OLD_SIG_FILE');
+  assert.equal(h.gas[1].fileId, null);
+});
+
 test('face: user_id tidak ada -> 404 dan Drive tidak dipanggil', async () => {
   const h = harness({ query: async () => ({ rows: [] }) });
   const res = await post(h, '/api/media/face', { ...FACE, user_id: 999 });

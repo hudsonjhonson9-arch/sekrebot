@@ -229,19 +229,23 @@
 
         const ok = await syncFaceToServer(uid, dataUrl, descriptorArray, nama, savedAt, nip);
 
-        showResult('adminFaceRegResult', 'adminFaceRegRIcon', 'adminFaceRegRTitle', 'adminFaceRegRMsg',
-          ok ? 'success' : 'warning',
-          ok ? '<i class="fas fa-check"></i>' : '<i class="fas fa-exclamation-triangle"></i>',
-          ok ? 'Wajah Tersimpan!' : 'Gagal Simpan',
-          ok ? `Wajah ${nama} berhasil didaftarkan.` : 'Terjadi kesalahan saat menyimpan di server.');
-        dom.show('adminFaceRegResult', 'flex');
+        if ($('adminFaceRegResult')) {
+          showResult('adminFaceRegResult', 'adminFaceRegRIcon', 'adminFaceRegRTitle', 'adminFaceRegRMsg',
+            ok ? 'success' : 'warning',
+            ok ? '<i class="fas fa-check"></i>' : '<i class="fas fa-exclamation-triangle"></i>',
+            ok ? 'Wajah Tersimpan!' : 'Gagal Simpan',
+            ok ? `Wajah ${nama} berhasil didaftarkan.` : 'Terjadi kesalahan saat menyimpan di server.');
+          dom.show('adminFaceRegResult', 'flex');
+        }
 
         return ok;
       } catch (e) {
         console.error('Registration error:', e);
-        showResult('adminFaceRegResult', 'adminFaceRegRIcon', 'adminFaceRegRTitle', 'adminFaceRegRMsg',
-          'warning', '<i class="fas fa-plug"></i>', 'Koneksi Gagal', 'Gagal menghubungi server pendaftaran wajah.');
-        dom.show('adminFaceRegResult', 'flex');
+        if ($('adminFaceRegResult')) {
+          showResult('adminFaceRegResult', 'adminFaceRegRIcon', 'adminFaceRegRTitle', 'adminFaceRegRMsg',
+            'warning', '<i class="fas fa-plug"></i>', 'Koneksi Gagal', 'Gagal menghubungi server pendaftaran wajah.');
+          dom.show('adminFaceRegResult', 'flex');
+        }
         return false;
       }
     }

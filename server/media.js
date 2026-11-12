@@ -237,8 +237,23 @@ export function createMediaRouter({ query, gasUpsert }) {
           fileId: previous,
         });
       } catch (e) {
-        console.error('[media/face] gasUpsert gagal', e);
-        return fail(res, 502, 'Layanan penyimpanan sedang bermasalah');
+        if (previous) {
+          console.warn('[media/face] update fileId lama gagal, mencoba upload baru:', previous, e.message);
+          try {
+            uploaded = await upload(gasUpsert, {
+              filename,
+              mimeType: image.mimeType,
+              buffer: image.buffer,
+              fileId: null,
+            });
+          } catch (e2) {
+            console.error('[media/face] gasUpsert fallback gagal', e2);
+            return fail(res, 502, 'Layanan penyimpanan sedang bermasalah');
+          }
+        } else {
+          console.error('[media/face] gasUpsert gagal', e);
+          return fail(res, 502, 'Layanan penyimpanan sedang bermasalah');
+        }
       }
 
       try {
@@ -305,8 +320,23 @@ export function createMediaRouter({ query, gasUpsert }) {
           fileId: previous,
         });
       } catch (e) {
-        console.error('[media/signature] gasUpsert gagal', e);
-        return fail(res, 502, 'Layanan penyimpanan sedang bermasalah');
+        if (previous) {
+          console.warn('[media/signature] update fileId lama gagal, mencoba upload baru:', previous, e.message);
+          try {
+            uploaded = await upload(gasUpsert, {
+              filename,
+              mimeType: image.mimeType,
+              buffer: image.buffer,
+              fileId: null,
+            });
+          } catch (e2) {
+            console.error('[media/signature] gasUpsert fallback gagal', e2);
+            return fail(res, 502, 'Layanan penyimpanan sedang bermasalah');
+          }
+        } else {
+          console.error('[media/signature] gasUpsert gagal', e);
+          return fail(res, 502, 'Layanan penyimpanan sedang bermasalah');
+        }
       }
 
       try {
