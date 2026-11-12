@@ -247,7 +247,7 @@ function ambilSectPr(xml) {
 }
 
 // ── build ──────────────────────────────────────────────────────────
-function buildSPT(chunk, sectPr, epilog) {
+function buildSPT(chunk, sectPr, epilog, prolog) {
   let paras = loadParagraphs(chunk);
   let out = spliceInto(chunk, paras, applyByIndex(paras, SPT_WHOLE, {}, []));
 
@@ -283,10 +283,10 @@ function buildSPT(chunk, sectPr, epilog) {
     out = hapusBaris(out, ranges, iFrom, iTo);
     out = hapusBaris(out, ranges, iDasar2, iDasar2);
   }
-  return out + sectPr + epilog;
+  return prolog + out + sectPr + epilog;
 }
 
-function buildSPPD(chunk, sectPr, epilog) {
+function buildSPPD(chunk, sectPr, epilog, prolog) {
   let paras = loadParagraphs(chunk);
   let out = spliceInto(chunk, paras, applyByIndex(paras, SPPD_WHOLE, SPPD_PATCHES, []));
 
@@ -295,14 +295,19 @@ function buildSPPD(chunk, sectPr, epilog) {
   assertText(paras, 114, '2.');
   assertText(paras, 115, '{Paraf2}');
   out = dupParafRow(out, paras, 115);
-  return out + sectPr + epilog;
+  return prolog + out + sectPr + epilog;
 }
 
 function cek(xml, tags, forbid, label) {
   assertPlaceholders(xml, tags);
+  // forbid dicek di body saja: prolog memuat namespace URI (mis. .../word/2024/...)
+  const bi = xml.indexOf('<w:body>');
+  const body = bi < 0 ? xml : xml.slice(bi + '<w:body>'.length);
   for (const s of forbid) {
-    if (xml.includes(s)) {
-      console.error(`[FAIL] ${label}: data contoh masih ada:`, s);
+    const i = body.indexOf(s);
+    if (i >= 0) {
+      console.error(`[FAIL] ${label}: data contoh masih ada:`, s,
+        '| @' + i, JSON.stringify(body.slice(Math.max(0, i - 160), i + 80)));
       process.exit(1);
     }
   }
@@ -322,6 +327,7 @@ const spans = bodySpans(docXml, b0, bodyEnd);
 const i1 = spans.findIndex(x => hits[1] >= x.s && hits[1] < x.e);
 const i2 = spans.findIndex(x => hits[2] >= x.s && hits[2] < x.e);
 if (i1 < 0 || i2 <= i1) throw new Error('segmen surat tidak terpetakan');
+const prolog = docXml.slice(0, b0); // <?xml?> + <w:document> + <w:body>
 const epilog = docXml.slice(bodyEnd);
 const sectPr = ambilSectPr(docXml);
 
@@ -330,8 +336,8 @@ const chunkSPPD = docXml.slice(spans[i1].s, spans[i2].s);
 if (!chunkSPT.includes('SURAT PERINTAH TUGAS')) throw new Error('chunk SPT salah');
 if (!chunkSPPD.includes('SURAT PERJALANAN DINAS (SPD)')) throw new Error('chunk SPPD salah');
 
-const sptXml = buildSPT(chunkSPT, sectPr, epilog);
-const sppdXml = buildSPPD(chunkSPPD, sectPr, epilog);
+const sptXml = buildSPT(chunkSPT, sectPr, epilog, prolog);
+const sppdXml = buildSPPD(chunkSPPD, sectPr, epilog, prolog);
 cek(sptXml, SPT_TAGS, FORBID_SPT, 'spt_template');
 cek(sppdXml, SPPD_TAGS, FORBID_SPPD, 'sppd_template');
 
