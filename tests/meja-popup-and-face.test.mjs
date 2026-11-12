@@ -181,3 +181,14 @@ test('ambigu: runner-up + pesan + signature handler', () => {
     assert.ok(js.includes('WAJAH MENYERUPAI PEGAWA LAIN'), f + ': teks unknown-karena-ambigu');
   }
 });
+
+test('threshold hint: teks panduan di bawah dua slider di dua index.html', () => {
+  for (const f of ['index.html', 'www/index.html']) {
+    const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    const i1 = html.indexOf('id="fsThreshold"'), i2 = html.indexOf('id="fsMejaThreshold"');
+    assert.ok(i1 > -1 && i2 > -1, f + ': slider ada');
+    const seg1 = html.slice(i1, i1 + 600), seg2 = html.slice(i2, i2 + 600);
+    assert.ok(seg1.includes('0.55 seimbang'), f + ': hint threshold wajah');
+    assert.ok(seg2.includes('0.55 seimbang'), f + ': hint threshold meja');
+  }
+});
