@@ -99,3 +99,24 @@ test('Update wajah menampilkan loading sebelum save, dan timeout rantai konsiste
   const m = nginx.match(/proxy_read_timeout\s+(\d+)s/);
   assert.ok(m && Number(m[1]) >= 60, `nginx proxy_read_timeout must cover the 45s gas budget, got: ${m && m[1]}`);
 });
+
+test('face-quality: markup preview + tag module + bump di dua index.html', () => {
+  for (const f of ['index.html', 'www/index.html']) {
+    const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    assert.ok(html.includes('id="camPreviewUse"'), f + ': tombol Pakai');
+    assert.ok(html.includes('id="camPreviewRetry"'), f + ': tombol Ulang');
+    assert.ok(html.includes('id="camPreviewMeta"'), f + ': meta preview');
+    assert.ok(html.includes('js/face-quality.js?v=20261112a'), f + ': tag module');
+    assert.ok(html.includes('js/face.js?v=20261112b'), f + ': bump face.js');
+    const tag = html.indexOf('js/face-quality.js'), face = html.indexOf('js/face.js?v=');
+    assert.ok(tag > -1 && face > -1 && tag < face, f + ': tag module sebelum face.js');
+  }
+});
+
+test('face-quality: style tombol preview ada di dua styles.css', () => {
+  for (const f of ['css/styles.css', 'www/css/styles.css']) {
+    const css = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    assert.ok(css.includes('.cam-preview-actions'));
+    assert.ok(css.includes('#camPreviewUse'));
+  }
+});

@@ -1609,6 +1609,11 @@
       color: var(--warning)
     }
 
+    .cam-preview-actions { display: flex; gap: 8px; padding: 8px 10px; background: rgba(30, 41, 59, .9) }
+    .cam-preview-actions button { flex: 1; padding: 9px 8px; border: 0; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer }
+    #camPreviewUse { background: var(--success, #22c55e); color: #04140a }
+    #camPreviewRetry { background: transparent; color: #e2e8f0; border: 1px solid var(--border, #334155) }
+
     /* Loading model */
     .model-loading {
       text-align: center;
