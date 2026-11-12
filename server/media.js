@@ -1,6 +1,7 @@
 import express from 'express';
 import { decodeDataUrl, fileIdFromDriveUrl } from './media-payload.js';
 import { sameInstansi } from './auth.js';
+import { similarityOf } from '../js/face-quality.js';
 
 // Router ini dipasang di server/index.js pada /api/media, di belakang
 // requireRole(ABSEN_ROLES) yang mengisi req.user. Handler tetap checking req.user
@@ -195,6 +196,25 @@ export function createMediaRouter({ query, gasUpsert }) {
         const result = await query(`UPDATE "user_list" SET "face_histogram"='[]', "face_photo"='', "face_saved_at"=NULL, "face_model"='faceapi' WHERE id=$1::bigint AND (COALESCE("instansi_id",'') IS NOT DISTINCT FROM $2 OR $3::boolean) RETURNING id::text AS id`, [targetId, norm(req.user.instansi_id), req.user.role === 'SUPERADMIN']);
         if (!result.rows.length) return fail(res, 500, 'Gagal mereset data wajah');
         return ok(res, { message: 'Data wajah berhasil direset.' });
+      }
+
+      const newDesc = Array.isArray(req.body?.face_descriptor) ? req.body.face_descriptor : null;
+      // ponytail: gate panjang (128/≥512) sebelum query — similarityOf memang null
+      // untuk dim lain, tapi SELECT twin+pengaturan tetap terhitung di h.sql test lama.
+      const descComparable = newDesc && (newDesc.length === 128 || newDesc.length >= 512);
+      if (descComparable && String(targetId) !== String(req.user.id)) {
+        // /* face-twin */ — anchor untuk test stub
+        const twinRows = (await query(`/* face-twin */ SELECT id, nip, nama, face_histogram FROM "user_list" WHERE id <> $1::bigint AND COALESCE(instansi_id,'') IS NOT DISTINCT FROM COALESCE($2,'') AND COALESCE(face_histogram,'') NOT IN ('','[]','null')`, [targetId, target.instansi_id ?? null])).rows;
+        const thRow = (await query(`SELECT value FROM pengaturan WHERE key='face_threshold' AND instansi_id=$1 LIMIT 1`, [target.instansi_id ?? null])).rows[0];
+        const threshold = thRow ? (parseFloat(thRow.value) || 0.55) : 0.55;
+        for (const r of twinRows) {
+          let fd = r.face_histogram;
+          try { fd = typeof fd === 'string' ? JSON.parse(fd) : fd; } catch (_) { continue; }
+          const sim = similarityOf(newDesc, fd);
+          if (sim !== null && sim >= threshold) {
+            return fail(res, 409, `Wajah ini mirip dengan data wajah ${r.nama} (NIP ${r.nip}) — wajah tidak boleh terdaftar ganda`);
+          }
+        }
       }
 
       let image;

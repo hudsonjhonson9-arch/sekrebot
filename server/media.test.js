@@ -757,6 +757,91 @@ test("face: user tanpa ('') instansi hanya boleh dirinya sendiri", async () => {
   assert.equal(other.gas.length, 0);
 });
 
+// --- T7: collision check antar-pegawai -----------------------------------------
+const D512 = Array(512).fill(0.01);            // descriptor 512-dim "baru"
+const D512_DUP = [...D512];                    // identik -> similarity 1
+const twinSql = (text) => /face-twin/.test(text);
+
+test('face: dup kembar >= threshold -> 409, TANPA upload Drive', async () => {
+  const h = harness({
+    query: async (text) => {
+      if (twinSql(text)) return { rows: [{ id: '7', nip: '111', nama: 'Budi', face_histogram: JSON.stringify(D512_DUP) }] };
+      if (/FROM pengaturan WHERE key='face_threshold'/.test(text)) return { rows: [] };   // default 0.55
+      if (/FROM "user_list"/i.test(text)) return { rows: [row({ id: '77', nip: '77', instansi_id: 'bapperida' })] };
+      if (/UPDATE "user_list"/i.test(text)) return { rows: [{ id: '77' }] };
+      return { rows: [] };
+    },
+  });
+  const res = await post(h, '/api/media/face', { ...FACE, user_id: 77, face_descriptor: D512 });
+  assert.equal(res.status, 409);
+  assert.equal(res.body.ok, false);
+  assert.match(res.body.message, /Budi/);
+  assert.equal(h.gas.length, 0, 'upload Drive tidak boleh terjadi');
+});
+
+test('face: dup di bawah threshold -> lanjut 200', async () => {
+  // +0.6 di satu dimensi -> sum=0.36 -> dist=9 -> sim ter-clamp 1 (bukan "jauh di bawah").
+  // +15 -> sum=225 -> sim 0.08 < 0.55 (lihat rumus humanSimilarity, face-quality.js:36).
+  const near = [...D512]; near[0] += 15;
+  const h = harness({
+    query: async (text) => {
+      if (twinSql(text)) return { rows: [{ id: '7', nip: '111', nama: 'Budi', face_histogram: JSON.stringify(near) }] };
+      if (/FROM pengaturan WHERE key='face_threshold'/.test(text)) return { rows: [] };
+      if (/FROM "user_list"/i.test(text)) return { rows: [row({ id: '77', nip: '77' })] };
+      if (/UPDATE "user_list"/i.test(text)) return { rows: [{ id: '77' }] };
+      return { rows: [] };
+    },
+  });
+  const res = await post(h, '/api/media/face', { ...FACE, user_id: 77, face_descriptor: D512 });
+  assert.equal(res.status, 200);
+  assert.equal(h.gas.length, 1);
+});
+
+test('face: update milik sendiri (uid sama) -> lolos dari cek duplikat', async () => {
+  const h = harness({
+    query: async (text) => {
+      if (twinSql(text)) return { rows: [{ id: '7', nip: '111', nama: 'Budi', face_histogram: JSON.stringify(D512_DUP) }] };
+      if (/FROM pengaturan WHERE key='face_threshold'/.test(text)) return { rows: [] };
+      if (/FROM "user_list"/i.test(text)) return { rows: [row()] };                      // target = pemanggil (ME 42)
+      if (/UPDATE "user_list"/i.test(text)) return { rows: [{ id: '42' }] };
+      return { rows: [] };
+    },
+  });
+  const res = await post(h, '/api/media/face', { ...FACE, face_descriptor: D512 }); // user_id 42 = ME
+  assert.equal(res.status, 200);
+  assert.equal(h.gas.length, 1);
+});
+
+test('face: threshold pengaturan instansi dipakai (0.90 -> skor 0.92 tetap ditolak)', async () => {
+  const b = Array(512).fill(0); b[0] = 5;      // similarity Human = 0.92 (lihat Task 1)
+  const h = harness({
+    query: async (text) => {
+      if (twinSql(text)) return { rows: [{ id: '7', nip: '111', nama: 'Ani', face_histogram: JSON.stringify(b) }] };
+      if (/FROM pengaturan WHERE key='face_threshold'/.test(text)) return { rows: [{ value: '0.90' }] };
+      if (/FROM "user_list"/i.test(text)) return { rows: [row({ id: '77', nip: '77' })] };
+      if (/UPDATE "user_list"/i.test(text)) return { rows: [{ id: '77' }] };
+      return { rows: [] };
+    },
+  });
+  const res = await post(h, '/api/media/face', { ...FACE, user_id: 77, face_descriptor: [...Array(512).fill(0)] });
+  assert.equal(res.status, 409);               // 0.92 >= 0.90
+});
+
+test('face: descriptor 2-dim / beda panjang -> cek dilewati (regresi test lama tetap 200)', async () => {
+  const h = harness({
+    query: async (text) => {
+      if (twinSql(text)) return { rows: [{ id: '7', nip: '111', nama: 'Budi', face_histogram: JSON.stringify(D512_DUP) }] };
+      if (/FROM pengaturan WHERE key='face_threshold'/.test(text)) return { rows: [] };
+      if (/FROM "user_list"/i.test(text)) return { rows: [row({ id: '77', nip: '77' })] };
+      if (/UPDATE "user_list"/i.test(text)) return { rows: [{ id: '77' }] };
+      return { rows: [] };
+    },
+  });
+  const res = await post(h, '/api/media/face', { ...FACE, user_id: 77, face_descriptor: [0.1, 0.2] });
+  assert.equal(res.status, 200);
+  assert.equal(h.gas.length, 1);
+});
+
 test('face: target dengan instansi_id NULL -> 403, bukan lolos sebagai "tanpa filter"', async () => {
   // Kolomnya nullable, dan sameInstansi memakai null sebagai "panggil tidak membatasi"
   // (untuk endpoint global). Tanpa normalisasi ke '', user mana pun yang lolos
