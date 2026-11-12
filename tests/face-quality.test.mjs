@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluateFrameQuality, mergeDescriptors, similarityOf, THRESHOLDS } from '../js/face-quality.js';
+import { evaluateFrameQuality, mergeDescriptors, nextEnrollShot, similarityOf, THRESHOLDS } from '../js/face-quality.js';
 
 const okMetrics = { faceRatioH: 0.5, centerOffset: 0.05, brightness: 120, stabilityMs: 500, livenessScore: 0.6 };
+const D512 = n => Array(512).fill(n);
 
 test('gate: semua kriteria lolos -> pass tanpa reason', () => {
   const r = evaluateFrameQuality(okMetrics, { livenessThreshold: 0.4 });
@@ -50,6 +51,29 @@ test('similarityOf 512-dim: formula Human (rounding dikunci)', () => {
   assert.equal(similarityOf(a, b), 0.92);
   assert.equal(similarityOf(a, a), 1);
 });
+test('nextEnrollShot: <3 shot -> done false, shot terkunci bertambah', () => {
+  const r1 = nextEnrollShot([], { descriptor: D512(1), dataUrl: 'A' }, 3);
+  assert.equal(r1.done, false); assert.equal(r1.shots.length, 1); assert.ok(!r1.skipped);
+  const r2 = nextEnrollShot(r1.shots, { descriptor: D512(2), dataUrl: 'B' }, 3);
+  assert.equal(r2.done, false); assert.equal(r2.shots.length, 2);
+});
+
+test('nextEnrollShot: shot ke-3 -> done, descriptor = rata-rata 512-dim, dataUrl = shot pertama', () => {
+  const shots = [1, 2, 3].map(n => ({ descriptor: D512(n), dataUrl: 'S' + n }));
+  const r = nextEnrollShot(shots.slice(0, 2), shots[2], 3);
+  assert.equal(r.done, true);
+  assert.equal(r.descriptor.length, 512);
+  assert.ok(Math.abs(r.descriptor[0] - 2) < 1e-9); // mean(1,2,3)
+  assert.equal(r.dataUrl, 'S1');
+});
+
+test('nextEnrollShot: descriptor null / bukan 512 -> skipped, tak menambah count', () => {
+  const taken = [{ descriptor: D512(1), dataUrl: 'A' }];
+  const r = nextEnrollShot(taken, { descriptor: null, dataUrl: 'X' }, 3);
+  assert.equal(r.skipped, true); assert.equal(r.done, false);
+  assert.equal(r.shots.length, 1); assert.equal(r.shots[0].dataUrl, 'A');
+});
+
 test('similarityOf: dimensi campur/kosong/tidak sama -> null (skip, jangan crash)', () => {
   assert.equal(similarityOf([0.1, 0.2], [0.1, 0.2]), null);
   assert.equal(similarityOf(Array(512).fill(0), Array(128).fill(0)), null);

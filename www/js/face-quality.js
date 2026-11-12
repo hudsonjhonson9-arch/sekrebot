@@ -27,6 +27,19 @@ export function mergeDescriptors(list) {
   return out;
 }
 
+export function nextEnrollShot(taken, shot, need) {
+  if (!shot || !Array.isArray(shot.descriptor) || shot.descriptor.length !== 512) {
+    return { shots: taken, done: false, skipped: true };
+  }
+  const shots = [...taken, shot];
+  if (shots.length < need) return { shots, done: false };
+  return {
+    shots, done: true,
+    descriptor: mergeDescriptors(shots.map(s => s.descriptor)),
+    dataUrl: shots[0].dataUrl,
+  };
+}
+
 function euclid(a, b) { let s = 0; for (let i = 0; i < a.length; i++) { const d = a[i] - b[i]; s += d * d; } return Math.sqrt(s); }
 
 // Salinan persis Human.match.similarity (human.esm.js:44526-44550; order 2, multiplier 25, min .2, max .8)
@@ -46,4 +59,4 @@ export function similarityOf(a, b) {
   return null;
 }
 
-if (typeof window !== 'undefined') window.FaceQuality = { THRESHOLDS, evaluateFrameQuality, mergeDescriptors, similarityOf };
+if (typeof window !== 'undefined') window.FaceQuality = { THRESHOLDS, evaluateFrameQuality, mergeDescriptors, nextEnrollShot, similarityOf };
