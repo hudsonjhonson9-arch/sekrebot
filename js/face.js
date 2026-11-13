@@ -875,6 +875,10 @@
     /* ── Buka overlay kamera ── */
     async function openCamOverlay(onDone) {
       const isMeja = onDone === 'meja';
+      // ponytail: guard dobel-buka — klik ganda buang call kedua; stream lama wajib dilepas dulu
+      const _ov0 = $('camOverlay');
+      if (_ov0 && !_ov0.classList.contains('hidden')) return;
+      stopCamStream();
       _forceResetAiState(); // Reset total sebelum mulai
 
       // Optimasi: Reset UI Meja secara eksplisit & Tambah Stability Delay
@@ -898,6 +902,8 @@
       if ($('mlHint')) $('mlHint').textContent = _modelsReady ? 'Mengaktifkan sensor perangkat, harap tunggu...' : 'Harap tunggu sebentar...';
       $('camVideoWrap').style.display = 'none';
       $('camStatus').style.display = 'none';
+      // reset teks status — kalau tidak, warning sesi lama ("Terlalu kecil") masih tampil saat loop skip
+      setCamStatus('idle', '<i class="fas fa-camera"></i>', 'Menyiapkan Kamera...', 'Posisikan wajah di dalam bingkai');
       $('faceRegCard').style.display = 'none';
       $('camPreview').classList.remove('show');
       _gate = { pass: false, boxHist: [] };

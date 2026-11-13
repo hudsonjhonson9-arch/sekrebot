@@ -189,7 +189,7 @@
           }
         },
         onCancel: () => {
-          const title = $('camTitle');
+          const title = $('camHeaderTitle');
           if (title) title.innerHTML = '<i class="fas fa-camera"></i> Verifikasi Wajah';
         }
       });
