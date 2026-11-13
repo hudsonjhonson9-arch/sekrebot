@@ -779,6 +779,23 @@ test('face: dup kembar >= threshold -> 409, TANPA upload Drive', async () => {
   assert.equal(h.gas.length, 0, 'upload Drive tidak boleh terjadi');
 });
 
+test('face: SQL twin memakai kolom user_list yang ada (username AS nama, "NIP" AS nip)', async () => {
+  let twinText = '';
+  const h = harness({
+    query: async (text) => {
+      if (twinSql(text)) { twinText = text; return { rows: [] }; }
+      if (/FROM pengaturan WHERE key='face_threshold'/.test(text)) return { rows: [] };
+      if (/FROM "user_list"/i.test(text)) return { rows: [row({ id: '77', nip: '77' })] };
+      if (/UPDATE "user_list"/i.test(text)) return { rows: [{ id: '77' }] };
+      return { rows: [] };
+    },
+  });
+  await post(h, '/api/media/face', { ...FACE, user_id: 77, face_descriptor: D512 });
+  assert.ok(twinText, 'SQL twin harus dieksekusi (update antar-pegawai)');
+  assert.match(twinText, /username\s+AS\s+nama/i, 'user_list tidak punya kolom nama; wajib alias username AS nama');
+  assert.match(twinText, /"NIP"\s+AS\s+nip/i, 'kolom user_list bernama NIP (huruf besar); nip lowercase akan melempar');
+});
+
 test('face: dup di bawah threshold -> lanjut 200', async () => {
   // +0.6 di satu dimensi -> sum=0.36 -> dist=9 -> sim ter-clamp 1 (bukan "jauh di bawah").
   // +15 -> sum=225 -> sim 0.08 < 0.55 (lihat rumus humanSimilarity, face-quality.js:36).
@@ -986,6 +1003,23 @@ test('face: descriptor, model, dan saved_at diteruskan apa adanya', async () => 
   // sameInstansi() tetap terkunci oleh klausa WHERE-nya sendiri.
   assert.match(upd.text, /"instansi_id"/i);
   assert.match(upd.text, /OR\s+\$7::boolean/i);
+});
+
+test('face & signature: UPDATE/INSERT tulis RETURNING — tanpa itu rows selalu [] dan sukses jadi 500', async () => {
+  // Bug produksi: FACE_UPDATE_SQL & SIGNATURE_UPSERT_SQL tanpa RETURNING, jadi
+  // result.rows selalu [] walau UPDATE/INSERT sukses — cek rows.length===0 di
+  // handler selalu 500 "Gagal menyimpan foto" SETELAH data tersimpan.
+  const hf = harness();
+  await post(hf, '/api/media/face', { ...FACE });
+  const upd = hf.sql.find((s) => /UPDATE\s+"user_list"/i.test(s.text));
+  assert.ok(upd, 'UPDATE user_list harus dieksekusi');
+  assert.match(upd.text, /RETURNING/i, 'FACE_UPDATE_SQL wajib RETURNING supaya rows.length mencerminkan baris yang kena');
+
+  const hs = harness();
+  await post(hs, '/api/media/signature', { ...SIG });
+  const ins = hs.sql.find((s) => /INSERT\s+INTO\s+"tanda_tangan"/i.test(s.text));
+  assert.ok(ins, 'INSERT tanda_tangan harus dieksekusi');
+  assert.match(ins.text, /RETURNING/i, 'SIGNATURE_UPSERT_SQL wajib RETURNING supaya rows.length mencerminkan baris yang kena');
 });
 
 test('face: nama file Drive memakai NIP dari user_list, bukan dari body', async () => {
