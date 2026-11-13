@@ -1411,9 +1411,14 @@
                         const nama = profile ? profile.nama : match.id;
                         const score = Math.round(match.score * 100);
 
-                        setCamStatus('ok', '<i class="fas fa-check-circle"></i>', nama, `Wajah Cocok (${score}%) — Memproses presensi...`);
-
                         const requiredStability = 2;
+                        const blockers = [];
+                        if (!_isLive) blockers.push('liveness ' + (_lastHumanScore || '0'));
+                        if (!gateR.pass && gateR.reason) blockers.push(gateR.reason);
+                        if (_matchStabilityCount < requiredStability) blockers.push('stabil ' + _matchStabilityCount + '/' + requiredStability);
+                        setCamStatus('ok', '<i class="fas fa-check-circle"></i>', nama,
+                          blockers.length ? `Wajah Cocok (${score}%) — ${blockers.join(' · ')}` : `Wajah Cocok (${score}%) — Memproses presensi...`);
+
                         if (_matchStabilityCount < requiredStability) return;
 
                         if (_isLive && !_autoCaptured && _livenessState.faceOk && gateR.pass) {
