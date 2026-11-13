@@ -28,7 +28,7 @@ export function mergeDescriptors(list) {
 }
 
 export function nextEnrollShot(taken, shot, need) {
-  if (!shot || !Array.isArray(shot.descriptor) || shot.descriptor.length !== 512) {
+  if (!shot || !Array.isArray(shot.descriptor) || shot.descriptor.length < 512) {
     return { shots: taken, done: false, skipped: true };
   }
   const shots = [...taken, shot];

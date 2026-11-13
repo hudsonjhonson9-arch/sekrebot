@@ -74,6 +74,15 @@ test('nextEnrollShot: descriptor null / bukan 512 -> skipped, tak menambah count
   assert.equal(r.shots.length, 1); assert.equal(r.shots[0].dataUrl, 'A');
 });
 
+test('nextEnrollShot: descriptor 1024-dim (Human faceres) diterima, bukan skipped', () => {
+  const D1024 = n => Array(1024).fill(n);
+  const r1 = nextEnrollShot([], { descriptor: D1024(1), dataUrl: 'A' }, 3);
+  assert.ok(!r1.skipped); assert.equal(r1.done, false); assert.equal(r1.shots.length, 1);
+  const shots = [1, 2, 3].map(n => ({ descriptor: D1024(n), dataUrl: 'S' + n }));
+  const r2 = nextEnrollShot(shots.slice(0, 2), shots[2], 3);
+  assert.equal(r2.done, true); assert.equal(r2.descriptor.length, 1024);
+});
+
 test('similarityOf: dimensi campur/kosong/tidak sama -> null (skip, jangan crash)', () => {
   assert.equal(similarityOf([0.1, 0.2], [0.1, 0.2]), null);
   assert.equal(similarityOf(Array(512).fill(0), Array(128).fill(0)), null);
