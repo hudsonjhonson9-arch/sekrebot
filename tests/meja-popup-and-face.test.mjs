@@ -107,7 +107,7 @@ test('face-quality: markup preview + tag module + bump di dua index.html', () =>
     assert.ok(html.includes('id="camPreviewRetry"'), f + ': tombol Ulang');
     assert.ok(html.includes('id="camPreviewMeta"'), f + ': meta preview');
     assert.ok(html.includes('js/face-quality.js?v=20261112b'), f + ': tag module');
-    assert.ok(html.includes('js/face.js?v=20261112d'), f + ': bump face.js');
+    assert.ok(html.includes('js/face.js?v=20261112e'), f + ': bump face.js');
     const tag = html.indexOf('js/face-quality.js'), face = html.indexOf('js/face.js?v=');
     assert.ok(tag > -1 && face > -1 && tag < face, f + ': tag module sebelum face.js');
   }
@@ -124,7 +124,10 @@ test('face-quality: style tombol preview ada di dua styles.css', () => {
 test('gate: wiring kualitas di face.js (dua mirror identik)', () => {
   for (const f of ['js/face.js', 'www/js/face.js']) {
     const js = fs.readFileSync(path.join(ROOT, f), 'utf8');
-    assert.ok(js.includes('box: f.box'), f + ': box dibawa dari Human');
+    // Human box = [x,y,w,h] piksel tensor, BUKAN objek piksel video — wajib konversi via boxRaw (fraksi frame)
+    assert.ok(js.includes('f.boxRaw'), f + ': box dari boxRaw Human');
+    assert.ok(/box: \{ x: raw\[0\]/.test(js), f + ': box dikonversi ke piksel video');
+    assert.ok(!js.includes('box: f.box,'), f + ': array tensor tidak dibawa mentah');
     assert.ok(js.includes('window.FaceQuality.evaluateFrameQuality'), f + ': panggil gate');
     assert.ok(js.includes('_gateForceTimer'), f + ': timer force 10 detik');
     assert.ok(js.includes('Tetap Ambil'), f + ': label force');

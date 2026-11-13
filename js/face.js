@@ -1326,10 +1326,12 @@
               _lastHumanScore = Math.max(liveScore, realScore, genericScore).toFixed(2);
               const isLiveThreshold = typeof FS_LIVENESS_SCORE !== 'undefined' ? FS_LIVENESS_SCORE : 0.4;
               const isLive = liveScore > isLiveThreshold || realScore > isLiveThreshold || genericScore > isLiveThreshold;
+              // Human box = [x,y,w,h] piksel tensor BUKAN objek piksel video; boxRaw = fraksi frame
+              const raw = f.boxRaw || [0, 0, 0, 0];
               detection = {
                 landmarks: { positions: f.landmarks || [] },
                 descriptor: f.embedding || null,
-                box: f.box,
+                box: { x: raw[0] * vid.videoWidth, y: raw[1] * vid.videoHeight, width: raw[2] * vid.videoWidth, height: raw[3] * vid.videoHeight },
                 _isHumanLive: isLive
               };
             }
