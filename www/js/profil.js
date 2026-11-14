@@ -339,10 +339,16 @@
 
         if (hasB64) window._dokCache[cacheKey] = { b64, mime, nama };
 
+        const idEsc = escapeHtml(String(id).replace(/'/g, "\\'"));
+        const cacheKeyEsc = escapeHtml(String(cacheKey).replace(/'/g, "\\'"));
+        const namaAttrEsc = escapeHtml(String(nama).replace(/'/g, "\\'"));
+        const mimeEsc = escapeHtml(String(mime).replace(/'/g, "\\'"));
+        const linkEsc = escapeHtml(String(link).replace(/'/g, "\\'"));
+
         const openAttr = (hasB64 || id)
-          ? `onclick="_openDokumen('${id}', '${cacheKey}', '${namaEsc}', '${mime}', '${link}')"`
-          : (link && link !== '#' && link !== 'null')
-            ? `href="${link}" target="_blank" rel="noopener"`
+          ? `onclick="_openDokumen('${idEsc}', '${cacheKeyEsc}', '${namaAttrEsc}', '${mimeEsc}', '${linkEsc}')"`
+          : (link && link !== '#' && link !== 'null' && /^https?:\/\//i.test(link))
+            ? `href="${escapeHtml(link)}" target="_blank" rel="noopener"`
             : `onclick="alert('Dokumen belum memiliki file atau link.')"`;
 
         const typeLabel = isPdf ? 'PDF' : isImg ? 'Image' : (link ? 'Link' : 'File');
@@ -356,11 +362,11 @@
               <span class="dok-type-tag">${typeLabel}</span>
             </div>
             <div class="dok-content">
-              <div class="dok-title">${nama}</div>
+              <div class="dok-title">${escapeHtml(nama)}</div>
               <div class="dok-sub">
-                <span class="dok-tag">${jenis}</span>
+                <span class="dok-tag">${escapeHtml(jenis)}</span>
                 <span class="dok-dot"></span>
-                <span class="dok-date">${tanggal ? tanggal.split('T')[0] : '—'}</span>
+                <span class="dok-date">${escapeHtml(tanggal ? tanggal.split('T')[0] : '—')}</span>
               </div>
             </div>
             <div class="dok-action-view">
@@ -368,7 +374,7 @@
             </div>
           </div>
           <div class="dok-card-side">
-            <button class="dok-btn-del" onclick="hapusDokumen('${id}','${namaEsc}')" title="Hapus">
+            <button class="dok-btn-del" onclick="hapusDokumen('${idEsc}','${namaAttrEsc}')" title="Hapus">
               <i class="fas fa-trash-alt"></i>
             </button>
           </div>

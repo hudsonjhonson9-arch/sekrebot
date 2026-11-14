@@ -78,8 +78,19 @@ export function createAttendanceDataRouter({ query, withTransaction, notify, gas
           driveLink=up.url;
         }catch(e){console.error('[keterangan/bukti] gasUpsert gagal',e);return fail(res,502,'Gagal mengunggah bukti ke Google Drive.');}
       }
-      const result=await query(`INSERT INTO ket_temp ("ID_Ket","ID_Pegawai","Nama","NIP","Tanggal","tgl_mulai","tgl_selesai","Jam","Jenis Absen","Ket","Status",${driveLink?'"drive_link",':''}"request_id","instansi_id") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,${driveLink?'$12,':''}$${driveLink?13:12},$${driveLink?14:13}) RETURNING *`, driveLink?[idKet,emp.id,emp.username||'—',emp.nip||'',tglRange,start,end,jam,jenis,ket,status,driveLink,requestId,emp.instansi_id]:[idKet,emp.id,emp.username||'—',emp.nip||'',tglRange,start,end,jam,jenis,ket,status,requestId,emp.instansi_id]);
-      if(status==='DISETUJUI') await applyApprovedKeterangan(query,{row:result.rows[0],dates,jenis,emp,requestId,ket,jam});
+      const insertSql = `INSERT INTO ket_temp ("ID_Ket","ID_Pegawai","Nama","NIP","Tanggal","tgl_mulai","tgl_selesai","Jam","Jenis Absen","Ket","Status",${driveLink?'"drive_link",':''}"request_id","instansi_id") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,${driveLink?'$12,':''}$${driveLink?13:12},$${driveLink?14:13}) ON CONFLICT ("ID_Ket") DO UPDATE SET "Tanggal"=EXCLUDED."Tanggal","tgl_mulai"=EXCLUDED."tgl_mulai","tgl_selesai"=EXCLUDED."tgl_selesai","Jam"=EXCLUDED."Jam","Jenis Absen"=EXCLUDED."Jenis Absen","Ket"=EXCLUDED."Ket","Status"=EXCLUDED."Status",${driveLink?'"drive_link"=EXCLUDED."drive_link",':''}"request_id"=EXCLUDED."request_id" RETURNING *`;
+      const insertParams = driveLink?[idKet,emp.id,emp.username||'—',emp.nip||'',tglRange,start,end,jam,jenis,ket,status,driveLink,requestId,emp.instansi_id]:[idKet,emp.id,emp.username||'—',emp.nip||'',tglRange,start,end,jam,jenis,ket,status,requestId,emp.instansi_id];
+      let result;
+      if(status==='DISETUJUI' && typeof withTransaction==='function'){
+        result = await withTransaction(async client => {
+          const r = await qx(client, insertSql, insertParams);
+          await applyApprovedKeterangan(client,{row:r.rows[0],dates,jenis,emp,requestId,ket,jam});
+          return r;
+        });
+      } else {
+        result = await query(insertSql, insertParams);
+        if(status==='DISETUJUI') await applyApprovedKeterangan(query,{row:result.rows[0],dates,jenis,emp,requestId,ket,jam});
+      }
       if(notify){const arg={jenis,emp,ket,tglRange,durasi,driveLink,media,instansi_id:emp.instansi_id};(status==='DISETUJUI'?notify({kind:'auto',...arg}):notify({kind:'admin_pending',...arg})).catch(e=>console.error('[keterangan/notify]',e));}
       return ok(res,{message:status==='PENDING'?'Pengajuan berhasil dikirim dan menunggu persetujuan.':'Keterangan berhasil dicatat.',data:result.rows[0]});
     }catch(e){ console.error('[keterangan/add]',e); return fail(res,500,'Gagal menyimpan keterangan.'); }

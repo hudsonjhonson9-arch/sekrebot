@@ -418,3 +418,64 @@ test('POST /password-toggle: non-admin ditolak 403', async () => {
   const res = await req(h, 'POST', '/api/password-toggle', { enabled: true });
   assert.equal(res.status, 403);
 });
+
+test('user-list: sesi perangkat Meja Absen (authKind=device) boleh menarik daftar pegawai se-instansi walau role USER', async () => {
+  const sql = [];
+  const app = express();
+  app.use(express.json());
+  app.use('/api', (req, _res, next) => {
+    req.user = { ...USER };
+    req.authKind = 'device';
+    next();
+  });
+  app.use('/api', createCoreAdminRouter({
+    query: async (text, params) => {
+      sql.push({ text, params });
+      return { rows: [{ id: '1', NIP: '111', instansi_id: 'bapperida' }, { id: '2', NIP: '222', instansi_id: 'bapperida' }] };
+    },
+  }));
+  const res = await get({ app, sql }, '/api/user-list?format=full');
+  assert.equal(res.status, 200);
+  const q = sql.find((s) => /FROM user_list/.test(s.text));
+  assert.ok(q, 'user-list query dijalankan');
+  assert.match(q.text, /instansi_id=\$1/, 'device token harus menarik satu instansi penuh, bukan hanya id sendiri');
+  assert.deepEqual(q.params, ['bapperida']);
+});
+
+test('GET /dev/health: admin menerima status kesehatan subsistem backend & DB', async () => {
+  const h = harness({
+    session: ADMIN,
+    query: async (text) => {
+      if (/SELECT 1/i.test(text)) return { rows: [{ '?column?': 1 }] };
+      return { rows: [] };
+    },
+  });
+  const res = await req(h, 'GET', '/api/dev/health');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.db.ok, true);
+  assert.equal(typeof res.body.db.latencyMs, 'number');
+  assert.equal(typeof res.body.uptime, 'number');
+  assert.ok(res.body.memory && typeof res.body.memory.heapUsed === 'number');
+});
+
+test('GET /dev/health: non-admin ditolak 403', async () => {
+  const h = harness({ session: USER });
+  const res = await req(h, 'GET', '/api/dev/health');
+  assert.equal(res.status, 403);
+});
+
+test('GET /dev/health: bila DB gagal, db.ok bernilai false', async () => {
+  const h = harness({
+    session: ADMIN,
+    query: async (text) => {
+      if (/SELECT 1/i.test(text)) throw new Error('DB Connection Timeout');
+      return { rows: [] };
+    },
+  });
+  const res = await req(h, 'GET', '/api/dev/health');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.db.ok, false);
+  assert.equal(typeof res.body.db.latencyMs, 'number');
+});

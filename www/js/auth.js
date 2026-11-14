@@ -66,7 +66,7 @@
               if (pwdInput) {
                 pwdInput.focus();
                 if (!password) {
-                  throw new Error('Verifikasi sandi aktif. Masukkan kata sandi (Default: BapperidaSB2026).');
+                  throw new Error('Verifikasi sandi aktif. Masukkan kata sandi akun Anda.');
                 }
               }
             }
@@ -337,13 +337,6 @@
           if (payload.nip.length < 3) throw new Error('ID / NIP minimal terdiri dari 3 karakter');
           if (payload.no_hp && payload.no_hp.length < 10) throw new Error('Nomor WhatsApp minimal 10 digit');
 
-          // Cek apakah NIP sudah terdaftar
-          const cek = await apiGet(`${P.userList}?nip=${payload.nip}`);
-          if (cek.ok) {
-            const ada = cek.rows.find(u => String(u.nip || '').trim() === payload.nip);
-            if (ada) throw new Error('NIP ' + payload.nip + ' sudah terdaftar. Silakan login.');
-          }
-
           // Sembunyikan form pendaftaran sementara untuk scan wajah
           const overlayEl = document.getElementById('authOverlay');
           if (overlayEl) overlayEl.style.display = 'none';
@@ -366,31 +359,42 @@
               btn.innerHTML = '<span class="spin-sm"></span> Menyimpan Akun...';
 
               try {
-                // 1. Simpan user ke database
-                const { ok: regOk, data: d } = await apiPost(P.userAdd || P.faceRegister, payload);
-                if (!regOk || d?.ok === false) throw new Error(d?.message || 'Pendaftaran user gagal');
+                // 1. Daftarkan akun & terbitkan sesi native melalui /api/auth/register
+                const regRes = await fetch(API_BASE + (P.webRegister || '/api/auth/register'), {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload),
+                });
+                const d = await regRes.json().catch(() => ({}));
+                if (!regRes.ok || d?.ok === false || !d?.session_token) {
+                  throw new Error(d?.message || 'Pendaftaran user gagal');
+                }
 
-                // 2. Simpan wajah ke server
-                window.MY_ID = payload.id;
+                const regToken = d.session_token;
+                const registeredId = String(d.user?.id || payload.id);
+                setNativeToken(regToken);
+
+                // 2. Simpan wajah ke server menggunakan sesi native yang baru terbit
+                window.MY_ID = registeredId;
                 window.tgUser = { first_name: payload.nama, username: payload.nip };
                 
-                const faceOk = await syncFaceToServer(payload.id, camResult.dataUrl, camResult.descriptor, payload.nama, new Date().toISOString());
+                const faceOk = await syncFaceToServer(registeredId, camResult.dataUrl, camResult.descriptor, payload.nama, new Date().toISOString());
                 if (!faceOk) throw new Error('Gagal menyimpan data wajah ke server. Hubungi Admin.');
 
-                // 3. Simple token — tidak perlu server-side session
-                const regToken = 'usr_' + payload.id + '_' + Date.now();
+                // 3. Simpan sesi ke state lokal
                 setSession(regToken, { nip: payload.nip, role: 'USER', instansi_id: payload.instansi_id || '' });
                 localStorage.setItem(STORAGE_KEYS.USER_ID, String(window.MY_ID));
                 localStorage.setItem('MY_NIP', String(payload.nip));
                 localStorage.setItem('MY_ROLE', 'USER');
                 localStorage.setItem('MY_NAME', String(payload.nama));
-                localStorage.setItem(STORAGE_KEYS.USER_OBJ, JSON.stringify(payload));
+                localStorage.setItem(STORAGE_KEYS.USER_OBJ, JSON.stringify(d.user || payload));
                 if (payload.instansi_id) localStorage.setItem('MY_INSTANSI', payload.instansi_id);
 
                 alert('Pendaftaran berhasil! Wajah Anda telah terdaftar.');
                 location.reload();
               } catch (err) {
                 alert(' ' + err.message);
+                setNativeToken(null);
                 window.MY_ID = null;
                 window.tgUser = {};
                 if (overlayEl) overlayEl.style.display = 'flex';
@@ -419,8 +423,20 @@
     async function handleLogout() {
       if (!confirm('Apakah Anda yakin ingin keluar dari akun ini?')) return;
       console.log('[Auth] Logging out user...');
+      const activeToken = (typeof _nativeToken !== 'undefined' && _nativeToken) || localStorage.getItem('_native_token') || window._session?.token;
+      if (activeToken && /^[0-9a-f]{192}$/.test(activeToken)) {
+        try {
+          await fetch(API_BASE + '/api/auth/logout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_token: activeToken }),
+          });
+        } catch (_) {}
+      }
+      setNativeToken(null);
       clearSession();
       // Hapus auth-related keys saja, simpan face data + preferences
+      localStorage.removeItem('_native_token');
       localStorage.removeItem(STORAGE_KEYS.USER_ID);
       localStorage.removeItem(STORAGE_KEYS.USER_OBJ);
       localStorage.removeItem('MY_NIP');

@@ -102,3 +102,14 @@ test('buat penugasan baru menyimpan nomor_surat', async (t) => {
   assert.match(ins.sql, /\([^)]*nomor_surat[^)]*\)/, 'nomor_surat ada di daftar kolom INSERT');
   assert.ok(ins.params.includes(nomor_surat), 'nilai nomor_surat ikut dikirim sebagai parameter');
 });
+
+test('perjadin tidak menjalankan ALTER TABLE berulang-ulang pada setiap request berikutnya', async (t) => {
+  const { calls, query } = recorder();
+  const { port, close } = await listen(stubApp(ADMIN, query));
+  t.after(close);
+  await post(port, '/api/penugasan/perjadin', { ids: [1], perjadin: {}, nomor_surat: 'A' });
+  await post(port, '/api/penugasan/perjadin', { ids: [2], perjadin: {}, nomor_surat: 'B' });
+
+  const alterCalls = calls.filter((c) => /ALTER TABLE penugasan/.test(c.sql));
+  assert.equal(alterCalls.length, 2, 'ALTER TABLE hanya boleh jalan sekali saat inisialisasi pertama, bukan di setiap request');
+});

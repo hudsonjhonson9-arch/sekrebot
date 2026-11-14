@@ -128,14 +128,19 @@
             const userMap = {};
             for (const u of users) {
               const uid = String(u.ID || u.id || u.telegram_id || '');
+              const nip = String(u.nip || u.NIP || '').trim();
+              if (!uid && !nip) continue;
               const nama = u.Nama || u.nama || u.username || uid;
               const histRaw = u.face_histogram || u.face_descriptor || u.descriptor;
               if (!histRaw || histRaw === '' || histRaw === '[]') continue;
               let arr;
               try { arr = typeof histRaw === 'string' ? JSON.parse(histRaw) : histRaw; } catch { continue; }
               if (!Array.isArray(arr) || arr.length < 128) continue;
-              descs.push({ id: uid, descriptor: arr });
-              userMap[uid] = { nama, nip: u.nip || u.NIP || '' };
+              const matchKey = nip || uid;
+              descs.push({ id: matchKey, descriptor: arr });
+              const info = { nama, nip, telegram_id: uid, pangkat: u.pangkat || '' };
+              userMap[matchKey] = info;
+              if (uid) userMap[uid] = info;
             }
             if (descs.length > 0) {
               _allFaceDescriptors = descs;

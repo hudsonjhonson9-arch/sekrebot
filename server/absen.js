@@ -262,7 +262,7 @@ export function createAbsenRouter({
         init_data: init,
         source: body.source,
         meja_token: body.meja_token,
-        is_admin_meja: isMejaAdmin,
+        is_admin_meja: isMeja,
         lokasi_nama: body.lokasi_nama,
         jenis_absen: body.jenis_absen,
         keterangan: body.keterangan,

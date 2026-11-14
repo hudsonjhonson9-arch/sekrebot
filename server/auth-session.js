@@ -104,12 +104,14 @@ export function createAuthSessionRouter({ query = realQuery, arsipSso } = {}) {
         });
       }
 
-      // Cek apakah instansi mewajibkan verifikasi kata sandi
+      // Cek apakah instansi mewajibkan verifikasi kata sandi atau akun berprivilese sudah memiliki password_hash
       const pwdSetting = await query(
         `SELECT value FROM pengaturan WHERE key='require_password' AND (instansi_id=$1 OR instansi_id='all') ORDER BY CASE WHEN instansi_id=$1 THEN 0 ELSE 1 END LIMIT 1`,
         [user.instansi_id || 'bapperida']
       );
-      const isPasswordRequired = pwdSetting?.rows?.[0] ? ['1', 'true', 'on'].includes(String(pwdSetting.rows[0].value).toLowerCase()) : false;
+      const isToggleOn = pwdSetting?.rows?.[0] ? ['1', 'true', 'on'].includes(String(pwdSetting.rows[0].value).toLowerCase()) : false;
+      const isPrivilegedWithHash = Boolean(user.password_hash) && String(user.role || 'USER').toUpperCase() !== 'USER';
+      const isPasswordRequired = isToggleOn || isPrivilegedWithHash;
 
       if (isPasswordRequired) {
         const password = String(req.body?.password || '');
@@ -211,6 +213,44 @@ export function createAuthSessionRouter({ query = realQuery, arsipSso } = {}) {
       setCookieArsip(res, row.nip);
       return res.status(200).json({ ok: true });
     } catch {
+      return dbError(res);
+    }
+  });
+
+  router.post('/api/auth/register', async (req, res) => {
+    try {
+      const b = req.body || {};
+      const nama = String(b.nama || '').trim();
+      const nip = String(b.nip || '').trim().replace(/\s/g, '');
+      if (!nama || !nip || nip.length < 3) {
+        return res.status(400).json({ ok: false, message: 'Nama dan NIP (min. 3 karakter) wajib diisi.' });
+      }
+      const rawId = String(b.id || '').trim();
+      const uid = /^\d+$/.test(rawId) ? rawId : String(Date.now());
+      const inst = String(b.instansi_id || 'bapperida').trim() || 'bapperida';
+
+      const existing = await query(`SELECT 1 FROM user_list WHERE "NIP" = $1 OR id = $2::bigint LIMIT 1`, [nip, uid]);
+      if (existing.rows?.length) {
+        return res.status(409).json({ ok: false, message: 'NIP atau ID sudah terdaftar. Silakan login.' });
+      }
+
+      const insUser = await query(
+        `INSERT INTO user_list (id, username, "NIP", "Jabatan", bidang, "Status", pangkat, nomorhp, role, instansi_id, is_admin)
+         VALUES ($1::bigint, $2, $3, $4, $5, 'AKTIF', $6, $7, 'USER', $8, false)
+         RETURNING id::text AS id, username AS nama, "NIP" AS nip, role, instansi_id`,
+        [uid, nama, nip, String(b.jabatan || '').trim(), String(b.bidang || '').trim(), String(b.pangkat || '').trim(), String(b.no_hp || b.nomorhp || '').trim(), inst]
+      );
+      const user = insUser.rows?.[0];
+      if (!user) return res.status(500).json({ ok: false, message: 'Gagal mendaftarkan pengguna.' });
+
+      const token = crypto.randomBytes(96).toString('hex');
+      const insSess = await query(INSERT_SESSION_SQL, [token, user.nip, user.id, 'USER', user.instansi_id]);
+      if (!insSess.rows?.length) return res.status(500).json({ ok: false, message: 'Gagal membuat sesi.' });
+
+      setCookieArsip(res, user.nip);
+      return res.status(201).json({ ok: true, session_token: insSess.rows[0].session_token, user });
+    } catch (e) {
+      if (e?.code === '23505') return res.status(409).json({ ok: false, message: 'NIP atau ID sudah terdaftar.' });
       return dbError(res);
     }
   });

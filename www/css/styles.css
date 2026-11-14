@@ -8430,3 +8430,337 @@ body.sidebar-resizing .arsip-back {
   transition: none !important;
 }
 
+/* ══════════════════════════════════════════════════════════
+   DESKTOP SIDEBAR REDESIGN (UI/UX PRO MAX)
+   Subtle category groups, clean indicator, anti-slop
+══════════════════════════════════════════════════════════ */
+.sidebar-section-label {
+  display: none !important;
+}
+
+@media (min-width: 768px) {
+  .sidebar-section-label.desktop-only {
+    display: block !important;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(148, 163, 184, 0.65);
+    margin: 14px 10px 4px 12px;
+    padding: 0;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  .sidebar-section-label:first-of-type {
+    margin-top: 4px;
+  }
+
+  html.light-theme .sidebar-section-label.desktop-only {
+    color: #64748b;
+  }
+
+  /* In collapsed mode, hide labels completely */
+  .bottom-nav.collapsed .sidebar-section-label,
+  body.sidebar-collapsed .bottom-nav .sidebar-section-label {
+    display: none !important;
+  }
+
+  /* Modernized desktop nav items with crisp borders and subtle feedback */
+  .bottom-nav .nav-item {
+    font-size: 13.5px;
+    font-weight: 500;
+    border-radius: 10px !important;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
+  }
+
+  .bottom-nav .nav-item:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+  }
+
+  html.light-theme .bottom-nav .nav-item:hover {
+    background: rgba(29, 78, 216, 0.06) !important;
+  }
+
+  .bottom-nav .nav-item.active {
+    background: rgba(59, 130, 246, 0.12) !important;
+    border-color: rgba(59, 130, 246, 0.25) !important;
+  }
+
+  html.light-theme .bottom-nav .nav-item.active {
+    background: rgba(29, 78, 216, 0.08) !important;
+    border-color: rgba(29, 78, 216, 0.2) !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   ADMIN MENU GRID & DEVELOPER TOOLS (UI/UX PRO MAX)
+   Anti-slop, clean visual hierarchy, grouped grid navigation
+══════════════════════════════════════════════════════════ */
+.admin-grid-view {
+  display: block;
+  animation: fadeIn 0.3s ease;
+  padding-bottom: 24px;
+}
+
+.admin-grid-group {
+  margin-bottom: 24px;
+}
+
+.admin-group-header {
+  margin-bottom: 12px;
+}
+
+.admin-group-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-group-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.admin-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.admin-menu-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.admin-menu-card:hover {
+  border-color: var(--gold);
+  background: rgba(59, 130, 246, 0.06);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.admin-menu-card:active {
+  transform: translateY(0);
+}
+
+.admin-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.admin-menu-card:hover .admin-card-icon {
+  transform: scale(1.05);
+}
+
+.admin-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 3px;
+  line-height: 1.3;
+}
+
+.admin-card-desc {
+  font-size: 10.5px;
+  color: var(--muted);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.admin-card-arrow {
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0.5;
+  transition: transform 0.2s ease, opacity 0.2s ease, color 0.2s ease;
+  margin-left: 4px;
+}
+
+.admin-menu-card:hover .admin-card-arrow {
+  transform: translateX(3px);
+  opacity: 1;
+  color: var(--gold);
+}
+
+/* Detail Drill-down Header Bar */
+.admin-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-admin-back-grid {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 14px;
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.btn-admin-back-grid:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.admin-detail-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.admin-detail-crumb-group {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.admin-detail-crumb-sep {
+  color: var(--border);
+  font-size: 11px;
+}
+
+.admin-detail-crumb-title {
+  color: var(--white);
+  font-weight: 800;
+}
+
+/* Developer Diagnostics Matrix & Log Styles */
+.dev-health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.dev-health-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.dev-log-viewer {
+  max-height: 420px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+.dev-log-entry {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dev-log-entry:last-child {
+  border-bottom: none;
+}
+
+/* ════ Arsip In-Flow Navigation Header (UI/UX Pro Max) ════ */
+.arsip-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  gap: 10px;
+}
+
+.arsip-btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 12px;
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.arsip-btn-back:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.arsip-section-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--white);
+}
+
+/* Hanya tampilkan floating .arsip-back pada mode fullscreen iframe (body.arsip-fs).
+   Pada mode native, navigasi kembali memakai header in-flow .arsip-section-head */
+body:not(.arsip-fs) .arsip-back {
+  display: none !important;
+}

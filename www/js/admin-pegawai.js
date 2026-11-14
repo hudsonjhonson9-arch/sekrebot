@@ -58,32 +58,36 @@
           const status = (u.status || u.Status || 'AKTIF').toUpperCase();
           const isAktif = status === 'AKTIF';
 
+          const uidAttr = escapeHtml(uid.replace(/'/g, "\\'"));
+          const namaAttr = escapeHtml(String(nama).replace(/'/g, "\\'"));
+          const nipAttr = escapeHtml(String(nip).replace(/'/g, "\\'"));
+
           html += `
             <tr style="border-bottom:1px solid rgba(255,255,255,0.03); transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
               <td style="padding:12px; text-align:center; color:var(--muted)">${idx + 1}</td>
               <td style="padding:12px">
-                <div style="font-weight:700">${nama}</div>
-                <div style="font-size:9px; color:var(--muted)">NIP. ${nip}</div>
+                <div style="font-weight:700">${escapeHtml(nama)}</div>
+                <div style="font-size:9px; color:var(--muted)">NIP. ${escapeHtml(nip)}</div>
               </td>
               <td style="padding:12px">
-                <div>${jab}</div>
-                <div style="font-size:9px; color:var(--gold); opacity:0.7">${bid}</div>
+                <div>${escapeHtml(jab)}</div>
+                <div style="font-size:9px; color:var(--gold); opacity:0.7">${escapeHtml(bid)}</div>
               </td>
-              <td style="padding:12px; color:var(--muted)">${pnk}</td>
+              <td style="padding:12px; color:var(--muted)">${escapeHtml(pnk)}</td>
               <td style="padding:12px">
-                <div style="font-size:9px; color:var(--muted)">ID: ${uid}</div>
-                <div style="color:var(--gold)"><i class="fas fa-mobile-alt"></i> ${hp}</div>
+                <div style="font-size:9px; color:var(--muted)">ID: ${escapeHtml(uid)}</div>
+                <div style="color:var(--gold)"><i class="fas fa-mobile-alt"></i> ${escapeHtml(hp)}</div>
               </td>
               <td style="padding:12px; text-align:center">
                 <span style="padding:3px 8px; border-radius:20px; font-size:8px; font-weight:800; background:${isAktif ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'}; color:${isAktif ? '#4ade80' : '#f87171'}; border:1px solid ${isAktif ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}">
-                  ${status}
+                  ${escapeHtml(status)}
                 </span>
               </td>
               <td style="padding:12px; text-align:center">
                 <div style="display:flex; gap:6px; justify-content:center">
-                  <button onclick="bukaModalSSO('${escapeHtml(uid)}')" class="btn-sm-admin" title="Wewenang SSO & Akun" style="background:rgba(245,158,11,0.12); color:#fbbf24; border-color:rgba(245,158,11,0.25)"><i class="fas fa-user-shield"></i> SSO</button>
-                  <button onclick="editPegawai('${escapeHtml(nip)}', event)" class="btn-sm-admin" style="background:rgba(96,165,250,0.1); color:#60a5fa; border-color:rgba(96,165,250,0.2)"><i class="fas fa-pen"></i> Edit</button>
-                  <button onclick="deletePegawai('${escapeHtml(uid)}', '${escapeHtml(nama)}', '${escapeHtml(nip)}')" class="btn-sm-admin" style="background:rgba(239,68,68,0.1); color:#f87171; border-color:rgba(239,68,68,0.2)"><i class="fas fa-trash"></i></button>
+                  <button onclick="bukaModalSSO('${uidAttr}')" class="btn-sm-admin" title="Wewenang SSO & Akun" style="background:rgba(245,158,11,0.12); color:#fbbf24; border-color:rgba(245,158,11,0.25)"><i class="fas fa-user-shield"></i> SSO</button>
+                  <button onclick="editPegawai('${nipAttr}', event)" class="btn-sm-admin" style="background:rgba(96,165,250,0.1); color:#60a5fa; border-color:rgba(96,165,250,0.2)"><i class="fas fa-pen"></i> Edit</button>
+                  <button onclick="deletePegawai('${uidAttr}', '${namaAttr}', '${nipAttr}')" class="btn-sm-admin" style="background:rgba(239,68,68,0.1); color:#f87171; border-color:rgba(239,68,68,0.2)"><i class="fas fa-trash"></i></button>
                 </div>
               </td>
             </tr>

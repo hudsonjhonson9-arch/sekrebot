@@ -2,10 +2,62 @@
 
 
     /**
-     * Aktifkan section dalam panel admin.
-     * @param {string} sectionId - ID section: 'ops' | 'libur' | 'lokasi' | 'jam' | dll
+     * Tampilkan Menu Grid Admin (UI/UX Pro Max)
      */
-        function switchAdminSection(sectionId) {
+    function showAdminGrid() {
+      const gridEl = $('admin-grid-view');
+      const headEl = $('admin-detail-head');
+      if (gridEl) gridEl.style.display = 'block';
+      if (headEl) headEl.style.display = 'none';
+      document.querySelectorAll('.admin-section').forEach(s => {
+        if (s) s.style.display = 'none';
+      });
+      localStorage.setItem('absen_last_admin_section', 'grid');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /**
+     * Buka kartu modul admin tertentu (drill-down dari grid)
+     */
+    function openAdminCard(cardKey) {
+      const meta = {
+        'konfirmasi': { section: 'ops', group: 'Operasional & Kehadiran', title: 'Konfirmasi Keterangan', target: 'konfirmasiAdminList' },
+        'ket':        { section: 'ops', group: 'Operasional & Kehadiran', title: 'Input Keterangan Pegawai', target: 'adminKetCard' },
+        'meja':       { section: 'ops', group: 'Operasional & Kehadiran', title: 'Terminal Meja Absen', target: 'mejaAbsenCard' },
+        'pegawai':    { section: 'user', group: 'Manajemen Kepegawaian', title: 'Master Pegawai & Face AI', target: 'adminFaceRegCard' },
+        'admin':      { section: 'user', group: 'Manajemen Kepegawaian', title: 'Kelola Administrator', target: 'adminMgmtCard' },
+        'lokasi':     { section: 'config', group: 'Konfigurasi Sistem', title: 'Geofencing & Lokasi Absen', target: 'adminMap' },
+        'jam':        { section: 'config', group: 'Konfigurasi Sistem', title: 'Jam Kerja & Periode Khusus', target: 'periodeAdminList' },
+        'libur':      { section: 'config', group: 'Konfigurasi Sistem', title: 'Hari Libur & Cuti Bersama', target: 'liburAdminList' },
+        'seragam':    { section: 'config', group: 'Konfigurasi Sistem', title: 'Mode Seragam Pegawai', target: 'seragamAdminList' },
+        'telegram':   { section: 'config', group: 'Konfigurasi Sistem', title: 'Notifikasi Telegram', target: 'telegramNotifCard' },
+        'instansi':   { section: 'config', group: 'Konfigurasi Sistem', title: 'Identitas Instansi (Superadmin)', target: 'superadminHeaderCard' },
+        'desktop':    { section: 'config', group: 'Konfigurasi Sistem', title: 'Tampilan Mode Desktop', target: 'desktopModeCard' },
+        'dev-health': { section: 'dev', group: 'Developer & Diagnostik', title: 'Status Kesehatan Seluruh Fitur', target: 'devHealthCard' },
+        'dev-test':   { section: 'dev', group: 'Developer & Diagnostik', title: 'Pengujian Fitur Otomatis', target: 'devTestCard' },
+        'dev-log':    { section: 'dev', group: 'Developer & Diagnostik', title: 'Log Aktivitas & Error', target: 'devLogCard' },
+      }[cardKey] || { section: 'ops', group: 'Operasional & Kehadiran', title: 'Operasional', target: null };
+
+      const groupEl = $('adminDetailGroup');
+      const titleEl = $('adminDetailTitle');
+      if (groupEl) groupEl.textContent = meta.group;
+      if (titleEl) titleEl.textContent = meta.title;
+
+      switchAdminSection(meta.section);
+
+      if (meta.target && $(meta.target)) {
+        setTimeout(() => {
+          const el = $(meta.target);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+      }
+    }
+
+    /**
+     * Aktifkan section dalam panel admin.
+     * @param {string} sectionId - ID section: 'grid' | 'ops' | 'user' | 'config' | 'dev'
+     */
+    function switchAdminSection(sectionId) {
       const myRole = String(localStorage.getItem('MY_ROLE') || 'USER').toUpperCase();
       const isAdminGudang = myRole === 'ADMIN GUDANG';
       
@@ -16,11 +68,38 @@
         return;
       }
 
-      if (!sectionId) sectionId = localStorage.getItem('absen_last_admin_section') || 'ops';
+      if (sectionId === 'grid') {
+        showAdminGrid();
+        return;
+      }
+
+      if (!sectionId) sectionId = localStorage.getItem('absen_last_admin_section') || 'grid';
+      if (sectionId === 'grid') {
+        showAdminGrid();
+        return;
+      }
+
       // 'simapo-admin' sudah dihapus; guard juga terhadap nilai basi di localStorage
       if (sectionId === 'simapo-admin' || !$('admin-section-' + sectionId)) sectionId = 'ops';
 
       localStorage.setItem('absen_last_admin_section', sectionId);
+
+      // Hide grid view and show detail nav head
+      const gridEl = $('admin-grid-view');
+      const headEl = $('admin-detail-head');
+      if (gridEl) gridEl.style.display = 'none';
+      if (headEl) headEl.style.display = 'flex';
+
+      const groupEl = $('adminDetailGroup');
+      const titleEl = $('adminDetailTitle');
+      const defaultTitles = {
+        ops: { group: 'Operasional & Kehadiran', title: 'Operasional' },
+        user: { group: 'Manajemen Kepegawaian', title: 'Kepegawaian' },
+        config: { group: 'Konfigurasi Sistem', title: 'Konfigurasi' },
+        dev: { group: 'Developer & Diagnostik', title: 'Developer & Diagnostik' }
+      }[sectionId] || { group: 'Panel Admin', title: 'Detail Modul' };
+      if (groupEl && !groupEl.textContent) groupEl.textContent = defaultTitles.group;
+      if (titleEl && !titleEl.textContent) titleEl.textContent = defaultTitles.title;
 
       // Hide all sections
       document.querySelectorAll('.admin-section').forEach(s => {
@@ -59,9 +138,17 @@
         if (typeof loadPasswordToggle === 'function') loadPasswordToggle();
         if (typeof loadFaceSettings === 'function') loadFaceSettings();
       }
+      if (sectionId === 'dev') {
+        if (typeof renderDevHealthMatrix === 'function') renderDevHealthMatrix();
+        if (typeof renderDevLogTable === 'function') renderDevLogTable();
+      }
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+
+    window.showAdminGrid = showAdminGrid;
+    window.openAdminCard = openAdminCard;
+    window.switchAdminSection = switchAdminSection;
 
 
 
@@ -260,7 +347,7 @@
           if (typeof initSuperadminPegawaiScoping === 'function') initSuperadminPegawaiScoping();
           if (typeof initSuperadminAdminKetScoping === 'function') initSuperadminAdminKetScoping();
           initAdminMap(); initJamAdminUI(); _initPeriodeListeners();
-          const lastSection = localStorage.getItem('absen_last_admin_section') || 'ops';
+          const lastSection = localStorage.getItem('absen_last_admin_section') || 'grid';
           switchAdminSection(lastSection);
           if (!adminLoaded) {
             adminLoaded = true;

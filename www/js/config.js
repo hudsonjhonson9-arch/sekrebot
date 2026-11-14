@@ -271,9 +271,12 @@ function clearSession() {
 // Sesi web/NIP: token 192 hex dari /api/auth/login disimpan sebagai _native_token
 // supaya nativeFetch memakainya, dan di localStorage supaya bertahan reload.
 function setNativeToken(token) {
-  _nativeToken = token;
+  _nativeToken = token || null;
   _authExpiredShown = false;
-  try { localStorage.setItem('_native_token', token); } catch { /* mode privat */ }
+  try {
+    if (token) localStorage.setItem('_native_token', token);
+    else localStorage.removeItem('_native_token');
+  } catch { /* mode privat */ }
 }
 
 function _getSessionRole() {
@@ -290,6 +293,7 @@ function _isSuperAdmin() {
 const P = {
   sessionLogin: '/api/auth/session',
   webLogin: '/api/auth/login',
+  webRegister: '/api/auth/register',
   instansiList: '/api/instansi-list',
   instansiUpdate: '/api/instansi-update',
   bidangList: '/api/bidang-list',

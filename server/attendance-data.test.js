@@ -28,7 +28,7 @@ function harness(query, deps = {}) {
   app.use('/api', requireRole(ABSEN_ROLES, { lookup: async () => ({ ...ADMIN }) }));
   app.use('/api', createAttendanceDataRouter({
     query: async (text, params) => query(text, params),
-    withTransaction: async () => {},
+    withTransaction: async (fn) => fn({ query: async (text, params) => query(text, params) }),
     ...deps,
   }));
   return app;
@@ -342,4 +342,33 @@ test('dateRange bebas timezone: TZ +8 tidak menggeser tanggal (bug keterangan 1 
   assert.deepEqual(multi, ['2026-10-11', '2026-10-12', '2026-10-13', '2026-10-14'], 'rentang harus persis dari s.d. tanpa geser');
   assert.deepEqual(future, ['2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16'], 'pengajuan tanggal lain tidak boleh menyertakan tanggal sebelumnya');
   assert.deepEqual(weekdays, [0, 1, 2], 'parseDate -> getUTCDay harus hari Minggu/Senin/Selasa (filter akhir pekan rekap)');
+});
+
+test('keterangan auto-approve memakai ON CONFLICT ("ID_Ket") DO UPDATE dan berjalan di dalam withTransaction bila tersedia', async () => {
+  const sqls = [];
+  let txUsed = false;
+  const q = async (text, params) => {
+    sqls.push({ text, params });
+    if (/FROM user_list/i.test(text)) return { rows: [{ ...PEGAWAI, nip: PEGAWAI.NIP }] };
+    if (/INSERT INTO ket_temp/i.test(text)) return { rows: [{ Nama: PEGAWAI.username, NIP: PEGAWAI.NIP }] };
+    return { rows: [] };
+  };
+  const r = await post(harness(q, {
+    withTransaction: async (fn) => {
+      txUsed = true;
+      return fn({ query: q });
+    },
+  }), '/api/keterangan', {
+    source: 'admin_panel',
+    user: { id: PEGAWAI.id },
+    jenis: 'SAKIT',
+    keterangan: 'Demam',
+    tgl_mulai: '2026-10-10',
+    tgl_selesai: '2026-10-10',
+  });
+  assert.equal(r.status, 200);
+  assert.equal(txUsed, true, 'auto-approve SAKIT/TUGAS wajib berjalan di dalam withTransaction');
+  const ins = sqls.find((s) => /INSERT INTO ket_temp/i.test(s.text));
+  assert.ok(ins, 'INSERT ket_temp dijalankan');
+  assert.match(ins.text, /ON CONFLICT\s*\("ID_Ket"\)\s*DO UPDATE/i, 'wajib memakai ON CONFLICT ("ID_Ket") DO UPDATE agar pengajuan ulang di tanggal yang sama tidak 500');
 });

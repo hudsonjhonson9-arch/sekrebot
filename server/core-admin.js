@@ -76,7 +76,7 @@ export function createCoreAdminRouter({ query } = {}) {
 
   router.get('/user-list', async (req, res) => {
     try {
-      const isMedia = MEDIA.has(String(req.user?.role || '').toUpperCase());
+      const isMedia = MEDIA.has(String(req.user?.role || '').toUpperCase()) || req.authKind === 'device';
       const q = req.query || {};
       const vals = []; let where = [];
       if (!isMedia) {
@@ -272,7 +272,37 @@ router.post('/lokasi-update', async(req,res)=>{if(requireMedia(req,res))return;t
     }
   });
 
+  // ── Developer Diagnostics & Health ──────────────────────────────────────────
+  router.get('/dev/health', async (req, res) => {
+    if (requireMedia(req, res)) return;
+    const t0 = Date.now();
+    let dbOk = false;
+    let latencyMs = 0;
+    try {
+      await query('SELECT 1', []);
+      dbOk = true;
+      latencyMs = Date.now() - t0;
+    } catch (e) {
+      latencyMs = Date.now() - t0;
+      console.error('[dev/health db check]', e);
+    }
 
+    const mem = process.memoryUsage ? process.memoryUsage() : {};
+    return ok(res, {
+      timestamp: new Date().toISOString(),
+      uptime: Math.floor(process.uptime ? process.uptime() : 0),
+      db: {
+        ok: dbOk,
+        latencyMs,
+      },
+      memory: {
+        heapUsed: mem.heapUsed || 0,
+        heapTotal: mem.heapTotal || 0,
+        rss: mem.rss || 0,
+      },
+      nodeVersion: process.version,
+    });
+  });
 
   return router;
 }

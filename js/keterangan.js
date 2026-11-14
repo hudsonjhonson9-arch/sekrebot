@@ -370,9 +370,9 @@
     </div>` : '';
         return `<div class="ket-item">
       <div class="ket-item-left">
-        <div class="ket-item-jenis">${emoji} ${jenis || '—'}</div>
-        <div class="ket-item-tgl"><i class="fas fa-calendar"></i> ${tgl}</div>
-        <div class="ket-item-ket">${ket || '—'}</div>
+        <div class="ket-item-jenis">${emoji} ${escapeHtml(jenis || '—')}</div>
+        <div class="ket-item-tgl"><i class="fas fa-calendar"></i> ${escapeHtml(tgl)}</div>
+        <div class="ket-item-ket">${escapeHtml(ket || '—')}</div>
       </div>
       <div class="ket-item-right">
         <span class="ket-badge ${badgeClass}">${badgeLabel}</span>
@@ -512,15 +512,17 @@
           const durasi = r.durasi || 1;
           const tglLabel = tglMulai === tglSelesai ? tglMulai : `${tglMulai} s.d. ${tglSelesai} (${durasi} hari)`;
           const ket = (r.keterangan || r.Ket || r.ket || '').trim();
-          const idKetEsc = String(idKet).replace(/'/g, "\\'");
-          const nipEsc = String(nip).replace(/'/g, "\\'");
-          return `<div class="konfirm-item" id="konfirm-${idKet}">
-        <div class="konfirm-nama">${em} ${nama} <span style="font-size:9px;color:var(--muted);font-weight:400">(IZIN)</span></div>
-        <div class="konfirm-detail"><i class="fas fa-id-card"></i> ${nip} · <i class="fas fa-calendar"></i> ${tglLabel}<br><i class="fas fa-edit"></i> ${ket || '—'}</div>
-        <div style="font-size:8px;color:var(--muted);font-family:monospace;margin:3px 0 6px;opacity:.6">${idKet}</div>
+          const idKetEsc = escapeHtml(String(idKet).replace(/'/g, "\\'"));
+          const nipEsc = escapeHtml(String(nip).replace(/'/g, "\\'"));
+          const jenisEsc = escapeHtml(String(jenis).replace(/'/g, "\\'"));
+          const tglMulaiEsc = escapeHtml(String(tglMulai).replace(/'/g, "\\'"));
+          return `<div class="konfirm-item" id="konfirm-${escapeHtml(idKet)}">
+        <div class="konfirm-nama">${em} ${escapeHtml(nama)} <span style="font-size:9px;color:var(--muted);font-weight:400">(${escapeHtml(jenis || 'IZIN')})</span></div>
+        <div class="konfirm-detail"><i class="fas fa-id-card"></i> ${escapeHtml(nip)} · <i class="fas fa-calendar"></i> ${escapeHtml(tglLabel)}<br><i class="fas fa-edit"></i> ${escapeHtml(ket || '—')}</div>
+        <div style="font-size:8px;color:var(--muted);font-family:monospace;margin:3px 0 6px;opacity:.6">${escapeHtml(idKet)}</div>
         <div class="konfirm-actions">
-          <button class="konfirm-btn-ok" onclick="handleKonfirmasi('${idKetEsc}','APPROVE','${jenis}','${tglMulai}','${nipEsc}')"><i class="fas fa-check"></i> Setujui</button>
-          <button class="konfirm-btn-no" onclick="handleKonfirmasi('${idKetEsc}','REJECT','${jenis}','${tglMulai}','${nipEsc}')"><i class="fas fa-times"></i> Tolak</button>
+          <button class="konfirm-btn-ok" onclick="handleKonfirmasi('${idKetEsc}','APPROVE','${jenisEsc}','${tglMulaiEsc}','${nipEsc}')"><i class="fas fa-check"></i> Setujui</button>
+          <button class="konfirm-btn-no" onclick="handleKonfirmasi('${idKetEsc}','REJECT','${jenisEsc}','${tglMulaiEsc}','${nipEsc}')"><i class="fas fa-times"></i> Tolak</button>
         </div>
       </div>`;
         }).filter(Boolean).join('');

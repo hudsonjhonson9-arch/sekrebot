@@ -143,7 +143,7 @@ async function _onMejaAbsenMatchFound(telegramId, descriptor, dataUrl, distance,
       face_match: score,
       timestamp: Math.floor(Date.now() / 1000),
       source: 'meja_absen',
-      meja_token: window._session?.token || ''
+      meja_token: (typeof _deviceToken !== 'undefined' && _deviceToken) || (typeof _nativeToken !== 'undefined' && _nativeToken) || window._session?.token || ''
     };
 
     // ── GENERATE SIGNATURE ANTI-SPOOFING ──

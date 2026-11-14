@@ -334,6 +334,8 @@
       </button>
       <div class="sidebar-resizer desktop-only" id="sidebarResizer" title="Geser untuk mengubah ukuran sidebar (klik ganda untuk minimize/maximize)"></div>
 
+      <div class="sidebar-section-label desktop-only">Menu Utama</div>
+
       <button class="nav-item" onclick="switchTab('ket', true)" data-tab="ket" data-label="Keterangan" title="Keterangan">
         <i class="fas fa-file-alt"></i>
         <span>Keterangan</span>
@@ -355,6 +357,8 @@
       </button>
 
       <!-- Desktop Only Items (Show in sidebar) -->
+      <div class="sidebar-section-label desktop-only">Layanan Kedinasan</div>
+
       <button class="nav-item desktop-only" id="nav-tugas-desk" onclick="switchTab('tugas', true)" data-tab="tugas" data-label="Perjalanan Dinas" title="Perjalanan Dinas">
         <i class="fas fa-tasks"></i>
         <span>Perjalanan Dinas</span>
@@ -371,6 +375,9 @@
         <i class="fas fa-box-archive"></i>
         <span>Arsip</span>
       </button>
+
+      <div class="sidebar-section-label desktop-only admin-only">Administrasi</div>
+
       <button class="nav-item desktop-only admin-only" id="nav-admin-desk" onclick="switchTab('admin', true)" data-tab="admin" data-label="Panel Admin" title="Panel Admin">
         <i class="fas fa-user-shield"></i>
         <span>Panel Admin</span>
@@ -463,6 +470,12 @@
 
   <!-- dokumen: folder per bidang -> list -> detail -->
   <div id="arsipDokumen" class="arsip-dokumen" style="display:none">
+    <div class="arsip-section-head">
+      <button type="button" class="arsip-btn-back" onclick="arsipBack()">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> <span>Kembali ke Beranda Arsip</span>
+      </button>
+      <div class="arsip-section-title">Dokumen Digital</div>
+    </div>
     <div class="arsip-toolbar">
       <input id="arsipQuery" class="arsip-search" placeholder="Cari judul / bidang / tahun…" aria-label="Cari dokumen" />
       <select id="arsipStatus" class="arsip-search arsip-filter" aria-label="Filter status">
@@ -2105,14 +2118,192 @@
         </select>
       </div>
 
-      <!-- Sub-Navigasi Admin -->
-      <div class="admin-nav">
+      <!-- Sub-Navigasi Admin (Disembunyikan, digantikan Menu Grid UI/UX Pro Max) -->
+      <div class="admin-nav" id="adminNavTabs" style="display:none">
         <button class="admin-nav-btn active" id="btn-nav-ops" onclick="switchAdminSection('ops')"><i class="fas fa-cog"></i> Operasional</button>
         <button class="admin-nav-btn" id="btn-nav-user" onclick="switchAdminSection('user')"><i class="fas fa-users"></i> Kepegawaian</button>
         <button class="admin-nav-btn" id="btn-nav-config" onclick="switchAdminSection('config')"><i class="fas fa-tools"></i> Konfigurasi</button>
+        <button class="admin-nav-btn" id="btn-nav-dev" onclick="switchAdminSection('dev')"><i class="fas fa-wrench"></i> Developer</button>
       </div>
 
-      <div id="admin-section-ops" class="admin-section">
+      <!-- Header Drill-Down Detail Modul -->
+      <div id="admin-detail-head" class="admin-detail-head" style="display:none">
+        <button type="button" class="btn-admin-back-grid" onclick="showAdminGrid()">
+          <i class="fas fa-arrow-left" aria-hidden="true"></i> <span>Kembali ke Menu Admin</span>
+        </button>
+        <div class="admin-detail-title-wrap">
+          <span class="admin-detail-crumb-group" id="adminDetailGroup">Operasional</span>
+          <span class="admin-detail-crumb-sep">/</span>
+          <strong class="admin-detail-crumb-title" id="adminDetailTitle">Konfirmasi Keterangan</strong>
+        </div>
+      </div>
+
+      <!-- ════ MENU GRID PER GRUP (UI/UX PRO MAX) ════ -->
+      <div id="admin-grid-view" class="admin-grid-view">
+
+        <!-- GRUP 1: OPERASIONAL & KEHADIRAN -->
+        <div class="admin-grid-group">
+          <div class="admin-group-header">
+            <div class="admin-group-title"><i class="fas fa-clipboard-list"></i> Operasional &amp; Kehadiran</div>
+            <div class="admin-group-desc">Persetujuan perizinan, input keterangan massal, dan terminal absensi kantor</div>
+          </div>
+          <div class="admin-cards-grid">
+            <button type="button" class="admin-menu-card" data-admin-card="konfirmasi" onclick="openAdminCard('konfirmasi')">
+              <div class="admin-card-icon"><i class="fas fa-clipboard-check"></i></div>
+              <div class="admin-card-body">
+                <div class="admin-card-title">Konfirmasi Keterangan</div>
+                <div class="admin-card-desc">Persetujuan izin, sakit, dan penugasan dinas pending</div>
+              </div>
+              <div class="admin-card-arrow">→</div>
+            </button>
+            <button type="button" class="admin-menu-card" data-admin-card="ket" onclick="openAdminCard('ket')">
+              <div class="admin-card-icon"><i class="fas fa-file-signature"></i></div>
+              <div class="admin-card-body">
+                <div class="admin-card-title">Input Keterangan Pegawai</div>
+                <div class="admin-card-desc">Pencatatan izin, sakit, cuti, atau tugas oleh administrator</div>
+              </div>
+              <div class="admin-card-arrow">→</div>
+            </button>
+            <button type="button" class="admin-menu-card" data-admin-card="meja" onclick="openAdminCard('meja')">
+              <div class="admin-card-icon"><i class="fas fa-mobile-alt"></i></div>
+              <div class="admin-card-body">
+                <div class="admin-card-title">Terminal Meja Absen</div>
+                <div class="admin-card-desc">Mode presensi tablet khusus kantor dengan token meja</div>
+              </div>
+              <div class="admin-card-arrow">→</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- GRUP 2: MANAJEMEN KEPEGAWAIAN -->
+        <div class="admin-grid-group">
+          <div class="admin-group-header">
+            <div class="admin-group-title"><i class="fas fa-users"></i> Manajemen Kepegawaian</div>
+            <div class="admin-group-desc">Registrasi biometrik wajah AI, spesimen tanda tangan, dan hak akses</div>
+          </div>
+          <div class="admin-cards-grid">
+            <button type="button" class="admin-menu-card" data-admin-card="pegawai" onclick="openAdminCard('pegawai')">
+              <div class="admin-card-icon"><i class="fas fa-id-card"></i></div>
+              <div class="admin-card-body">
+                <div class="admin-card-title">Master Pegawai &amp; Face AI</div>
+                <div class="admin-card-desc">Pendaftaran foto wajah multi-sudut, spesimen TTD, dan status pegawai</div>
+              </div>
+              <div class="admin-card-arrow">→</div>
+            </button>
+            <button type="button" class="admin-menu-card" data-admin-card="admin" onclick="openAdminCard('admin')">
+              <div class="admin-card-icon"><i class="fas fa-user-shield"></i></div>
+              <div class="admin-card-body">
+                <div class="admin-card-title">Kelola Administrator</div>
+                <div class="admin-card-desc">Manajemen akun admin, hak akses operasional, dan superadmin</div>
+              </div>
+              <div class="admin-card-arrow">→</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- GRUP 3: KONFIGURASI SISTEM -->
+        <div class="admin-grid-group">
+          <div class="admin-group-header">
+            <div class="admin-group-title"><i class="fas fa-cog"></i> Konfigurasi Sistem</div>
+            <div class="admin-group-desc">Geofencing lokasi, jadwal jam kerja, kalender hari libur, dan integrasi notifikasi</div>
+          </div>
+          <div class="admin-cards-grid">
+            <button type="button" class="admin-menu-card" data-admin-card="lokasi" onclick="openAdminCard('lokasi')">
+              <div class="admin-card-icon"><i class="fas fa-map-marked-alt"></i></div>
+              <div class="admin-card-body">
+                <div class="admin-card-title">Geofencing &amp; Lokasi Presensi</div>
+                <div class="admin-card-desc">Titik koordinat GPS kantor, buffer akurasi, dan radius presensi</div>
+              </div>
+              <div class="admin-card-arrow">→</div>
+            </button>
+            <button type="button" class="admin-menu-card" data-admin-card="jam" onclick="openAdminCard('jam')">
+              <div class="admin-card-icon"><i class="fas fa-clock"></i></div>
+              <div class="admin-card-body">
+                <div class="admin-card-title">Jam Kerja &amp; Periode Khusus</div>
+                <div class="admin-card-desc">Aturan jam masuk, batas toleransi, pulang, dan jam Ramadhan</div>
+              </div>
+              <div class="admin-card-arrow">→</div>
+            </button>
+            <button type="button" class="admin-menu-card" data-admin-card="libur" onclick="openAdminCard('libur')">
+              <div class="admin-card-icon"><i class="fas fa-calendar-alt"></i></div>
+              <div class="admin-card-body">
+                <div class="admin-card-title">Hari Libur &amp; Cuti Bersama</div>
+                <div class="admin-card-desc">Kalender libur nasional, hari libur daerah, dan cuti bersama</div>
+              </div>
+              <div class="admin-card-arrow">→</div>
+            </button>
+            <button type="button" class="admin-menu-card" data-admin-card="seragam" onclick="openAdminCard('seragam')">
+              <div class="admin-card-icon"><i class="fas fa-tshirt"></i></div>
+              <div class="admin-card-body">
+                <div class="admin-card-title">Mode Seragam Pegawai</div>
+                <div class="admin-card-desc">Aturan jadwal seragam dinas harian pegawai instansi</div>
+              </div>
+              <div class="admin-card-arrow">→</div>
+            </button>
+            <button type="button" class="admin-menu-card" data-admin-card="telegram" onclick="openAdminCard('telegram')">
+              <div class="admin-card-icon"><i class="fas fa-envelope-open-text"></i></div>
+              <div class="admin-card-body">
+                <div class="admin-card-title">Notifikasi Telegram</div>
+                <div class="admin-card-desc">Pengaturan bot Telegram, chat ID grup, dan rekap otomatis</div>
+              </div>
+              <div class="admin-card-arrow">→</div>
+            </button>
+            <button type="button" class="admin-menu-card" data-admin-card="instansi" onclick="openAdminCard('instansi')">
+              <div class="admin-card-icon"><i class="fas fa-building"></i></div>
+              <div class="admin-card-body">
+                <div class="admin-card-title">Identitas Instansi (Superadmin)</div>
+                <div class="admin-card-desc">Nama dinas/badan, logo resmi, kop surat, dan alamat kantor</div>
+              </div>
+              <div class="admin-card-arrow">→</div>
+            </button>
+            <button type="button" class="admin-menu-card" data-admin-card="desktop" onclick="openAdminCard('desktop')">
+              <div class="admin-card-icon"><i class="fas fa-desktop"></i></div>
+              <div class="admin-card-body">
+                <div class="admin-card-title">Tampilan Mode Desktop</div>
+                <div class="admin-card-desc">Pengaturan layout layar lebar dan sidebar responsif</div>
+              </div>
+              <div class="admin-card-arrow">→</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- GRUP 4: DEVELOPER & DIAGNOSTIK SISTEM -->
+        <div class="admin-grid-group">
+          <div class="admin-group-header">
+            <div class="admin-group-title"><i class="fas fa-tools"></i> Developer &amp; Diagnostik</div>
+            <div class="admin-group-desc">Pemantauan kesehatan seluruh subsistem, uji otomatis, dan log mendetail</div>
+          </div>
+          <div class="admin-cards-grid">
+            <button type="button" class="admin-menu-card" data-admin-card="dev-health" onclick="openAdminCard('dev-health')">
+              <div class="admin-card-icon" style="background:rgba(34,197,94,0.1);color:#22c55e"><i class="fas fa-shield-alt"></i></div>
+              <div class="admin-card-body">
+                <div class="admin-card-title">Status Kesehatan Seluruh Fitur</div>
+                <div class="admin-card-desc">Health matrix live untuk 8 subsistem: DB, API, Face AI, GPS, Storage, Media, Telegram, n8n</div>
+              </div>
+              <div class="admin-card-arrow">→</div>
+            </button>
+            <button type="button" class="admin-menu-card" data-admin-card="dev-test" onclick="openAdminCard('dev-test')">
+              <div class="admin-card-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6"><i class="fas fa-tasks"></i></div>
+              <div class="admin-card-body">
+                <div class="admin-card-title">Pengujian Fitur Otomatis</div>
+                <div class="admin-card-desc">Uji kelayakan fungsional sistem end-to-end dalam 1 klik dengan skor kelayakan</div>
+              </div>
+              <div class="admin-card-arrow">→</div>
+            </button>
+            <button type="button" class="admin-menu-card" data-admin-card="dev-log" onclick="openAdminCard('dev-log')">
+              <div class="admin-card-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b"><i class="fas fa-file-alt"></i></div>
+              <div class="admin-card-body">
+                <div class="admin-card-title">Log Aktivitas &amp; Error Mendetail</div>
+                <div class="admin-card-desc">Riwayat log runtime, stack trace error, filter level, dan ekspor JSON/TXT</div>
+              </div>
+              <div class="admin-card-arrow">→</div>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="admin-section-ops" class="admin-section" style="display:none">
         <!-- ══ KONFIRMASI KETERANGAN ══ -->
         <div class="card">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -3157,6 +3348,59 @@
         </div>
       </div>
 
+      <!-- SECTION: DEVELOPER TOOLS & DIAGNOSTIK -->
+      <div id="admin-section-dev" class="admin-section" style="display:none">
+        <!-- 1. Health Matrix -->
+        <div class="card" id="devHealthCard" style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-size:11px;font-weight:800;color:var(--white)"><i class="fas fa-shield-alt"></i> STATUS &amp; KESEHATAN SELURUH FITUR</div>
+            <button class="btn-sm-admin" onclick="runDevDiagnostics()"><i class="fas fa-sync"></i> Refresh Status</button>
+          </div>
+          <div class="radius-note" style="margin-bottom:12px">Pemantauan live terhadap 8 subsistem aplikasi (Database, API, AI Face, GPS, Storage, Notifikasi Telegram, Webhook n8n).</div>
+          <div id="devHealthMatrix" class="dev-health-grid">
+            <!-- Diinject via renderDevHealthMatrix() -->
+          </div>
+        </div>
+
+        <!-- 2. One-Click Diagnostic Runner -->
+        <div class="card" id="devTestCard" style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-size:11px;font-weight:800;color:var(--white)"><i class="fas fa-tasks"></i> UJI DIAGNOSTIK OTOMATIS</div>
+            <span id="devDiagScoreBadge" class="status-badge" style="background:rgba(34,197,94,0.15);color:#22c55e;font-weight:800">Skor: 100%</span>
+          </div>
+          <div class="radius-note" style="margin-bottom:12px">Jalankan pengujian diagnostik menyeluruh untuk mendeteksi potensi kegagalan fitur atau masalah jaringan secara otomatis.</div>
+          <button id="btnRunDevDiag" class="btn-primary-gradient" onclick="runDevDiagnostics()" style="width:100%;height:44px;border-radius:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+            <i class="fas fa-bolt"></i> <span>Jalankan Pengujian Fitur Otomatis</span>
+          </button>
+          <div id="devDiagSummary" style="margin-top:12px;display:none;font-size:12px;color:var(--white)"></div>
+        </div>
+
+        <!-- 3. Activity & Error Log Console -->
+        <div class="card" id="devLogCard" style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div style="font-size:11px;font-weight:800;color:var(--white)"><i class="fas fa-file-alt"></i> LOG AKTIVITAS &amp; ERROR MENDETAIL</div>
+            <div style="display:flex;gap:6px">
+              <button class="btn-sm-admin" onclick="exportDevLogs('json')" title="Unduh JSON"><i class="fas fa-download"></i> JSON</button>
+              <button class="btn-sm-admin" onclick="exportDevLogs('txt')" title="Unduh TXT"><i class="fas fa-file-alt"></i> TXT</button>
+              <button class="btn-sm-admin" onclick="clearDevLogs()" title="Bersihkan Log" style="color:var(--danger)"><i class="fas fa-trash"></i> Bersihkan</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <select id="devLogLevelFilter" class="form-input" style="width:110px;height:36px;font-size:11px" onchange="renderDevLogTable()">
+              <option value="ALL">Semua Level</option>
+              <option value="ERROR">ERROR</option>
+              <option value="WARN">WARN</option>
+              <option value="INFO">INFO</option>
+              <option value="DEBUG">DEBUG</option>
+            </select>
+            <input id="devLogSearchInput" type="text" class="form-input" placeholder="Cari modul, pesan, atau error..." style="flex:1;height:36px;font-size:11px" oninput="renderDevLogTable()">
+          </div>
+          <div id="devLogViewer" class="dev-log-viewer">
+            <!-- Diinject via renderDevLogTable() -->
+          </div>
+        </div>
+      </div>
+
       <!-- Compatibility Stubs -->
       <div id="faceStatusAdminCard" style="display:none">
         <div id="faceStatusAdminList"></div>
@@ -3441,6 +3685,7 @@
   <script src="js/admin-face.js?v=20261114a"></script>
 <script src="js/admin-kontrol.js?v=20260811a"></script>
 <script src="js/admin-akumulasi.js?v=20261019a"></script>
+<script type="module" src="js/dev-tools.js"></script>
   <!-- simapo-admin.js dihapus (dikonsolidasi ke simapo-ext.js) -->
   
   

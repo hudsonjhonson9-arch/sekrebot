@@ -559,3 +559,70 @@ test('login NIP menyertakan is_mandatory_face=false saat NIP tidak ada di face_m
   assert.equal(out.body.ok, true);
   assert.equal(out.body.user.is_mandatory_face, false);
 });
+
+test('login akun ADMIN yang sudah punya password_hash wajib verifikasi password walau require_password off', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({
+    query: async (sql) => {
+      if (/FROM user_list/i.test(sql)) {
+        return userListRows(sql, {
+          id: '77',
+          NIP: '198001012005011001',
+          username: 'Admin Utama',
+          role: 'ADMIN',
+          instansi_id: 'bapperida',
+          status_aktif: true,
+          password_hash: '$2a$10$qyVxAODHUx6WLLF0Tm/I7u/T1b.m0hZW2FD2ivm/6U7K.SRiIgjwq',
+        });
+      }
+      return { rows: [] };
+    },
+  });
+  const noPwd = await drive(r, 'POST', '/api/auth/login', { nip: '198001012005011001' });
+  assert.equal(noPwd.status, 401);
+  assert.equal(noPwd.body.require_password, true);
+});
+
+test('POST /api/auth/register mendaftarkan pegawai baru dengan role USER dan menerbitkan session_token 192 hex', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const seen = [];
+  const r = createAuthSessionRouter({
+    query: async (sql, params) => {
+      seen.push({ sql: String(sql), params });
+      if (/SELECT 1 FROM user_list/i.test(sql)) return { rows: [] };
+      if (/INSERT INTO user_list/i.test(sql)) {
+        return {
+          rows: [{
+            id: params[0],
+            nama: params[1],
+            nip: params[2],
+            role: 'USER',
+            instansi_id: params[8],
+          }],
+        };
+      }
+      if (/INSERT INTO auth_sessions/i.test(sql)) {
+        return { rows: [{ session_token: 'e'.repeat(192) }] };
+      }
+      return { rows: [] };
+    },
+  });
+  const out = await drive(r, 'POST', '/api/auth/register', {
+    id: '123456',
+    nama: 'Pegawai Baru',
+    nip: '199801012025011001',
+    jabatan: 'Staf',
+    bidang: 'Sekretariat',
+    pangkat: 'III/a',
+    no_hp: '081234567890',
+    instansi_id: 'bapperida',
+    role: 'SUPERADMIN', // injeksi role harus diabaikan → paksa USER
+  });
+  assert.equal(out.status, 201);
+  assert.equal(out.body.ok, true);
+  assert.match(out.body.session_token, /^[0-9a-f]{192}$/);
+  assert.equal(out.body.user.role, 'USER');
+  const insSession = seen.find((s) => /INSERT INTO auth_sessions/i.test(s.sql));
+  assert.ok(insSession.params.includes('USER'), 'sesi hasil register wajib role USER');
+});
+

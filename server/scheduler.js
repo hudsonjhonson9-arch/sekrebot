@@ -107,15 +107,25 @@ export function createScheduler({ query, sendTelegram, sendWhatsApp, logger = co
     ? Promise.resolve(sendWhatsApp({ chatId, text })).catch((e) => logger.error('[sched/wa]', chatId, e.message))
     : Promise.resolve());
 
-  // 0 7 * * 1-5 — catat TUBEL harian untuk AUTO_TUBEL, sekali per NIP per hari.
+  // 0 7 * * 1-5 — catat TUBEL harian untuk AUTO_TUBEL + pegawai berstatus TUBEL di user_list, sekali per NIP per hari.
   async function autoTubel(date) {
-    if (!AUTO_TUBEL.length) return;
     const tanggal = ymd(date);
     const jam = hm(date);
     const { rows: ada } = await query(`SELECT "NIP" FROM "Log_Absen" WHERE "Tanggal"=$1 AND "Jenis Absen"='TUBEL'`, [tanggal]);
     const done = new Set(ada.map((r) => String(r.NIP)));
-    for (const k of AUTO_TUBEL) {
+    const { rows: dbTubel } = await query(
+      `SELECT id::text AS id, username, "NIP" FROM user_list WHERE UPPER(TRIM("Status")) IN ('TUBEL','TUGAS BELAJAR')`,
+    ).catch(() => ({ rows: [] }));
+    const list = [...AUTO_TUBEL];
+    for (const r of dbTubel || []) {
+      const nip = String(r.NIP || '').trim();
+      if (nip && !list.some((x) => String(x.NIP) === nip)) {
+        list.push({ ID: String(r.id || '').trim(), username: r.username || '—', NIP: nip });
+      }
+    }
+    for (const k of list) {
       if (done.has(String(k.NIP))) continue;
+      done.add(String(k.NIP));
       await query(
         `INSERT INTO "Log_Absen" ("ID","Nama","NIP","Tanggal","Jam","Jenis Absen","Lokasi","Ket","koordinat","instansi_id")
          VALUES ($1,$2,$3,$4,$5,'TUBEL','-','TUBEL','-',
@@ -177,18 +187,33 @@ export function createScheduler({ query, sendTelegram, sendWhatsApp, logger = co
   async function tanpaBerita(date) {
     const tanggal = ymd(date);
     const jam = hm(date);
+    const dayOfWeek = date.getDay();
     const { rows: libur } = await query(`SELECT "tanggal" FROM libur_nasional WHERE "tanggal"=$1`, [tanggal]);
     if (libur.length) {
       logger.info(`[sched/tanpa-berita] ${tanggal} libur, skip`);
       return;
     }
+    const { rows: instRows } = await query(`SELECT id, workdays FROM instansi_list`).catch(() => ({ rows: [] }));
+    const workdaysByInst = new Map();
+    for (const r of instRows || []) {
+      let wd = r.workdays;
+      if (typeof wd === 'string') {
+        try { wd = JSON.parse(wd); } catch { wd = wd.split(',').map((x) => Number(x.trim())).filter(Number.isFinite); }
+      }
+      if (Array.isArray(wd) && wd.length) {
+        workdaysByInst.set(String(r.id || '').trim(), wd.map(Number));
+      }
+    }
     const { rows: logs } = await query(`SELECT "ID","Jenis Absen" FROM "Log_Absen" WHERE "Tanggal"=$1`, [tanggal]);
     const sudahMasuk = new Set(logs.filter((l) => has(l, MASUK)).map((l) => String(l.ID)));
     const sudahKet = new Set(logs.filter((l) => has(l, KET)).map((l) => String(l.ID)));
-    const { rows: peg } = await query(`SELECT id::text AS id, username, "NIP", "Status" FROM user_list`);
+    const { rows: peg } = await query(`SELECT id::text AS id, username, "NIP", "Status", instansi_id FROM user_list`);
     for (const p of peg) {
       const id = String(p.id || '').trim();
       if (!id || String(p.Status || '').toUpperCase().trim() !== 'AKTIF' || sudahMasuk.has(id) || sudahKet.has(id)) continue;
+      const instId = String(p.instansi_id || 'bapperida').trim();
+      const instWd = workdaysByInst.get(instId);
+      if (instWd && !instWd.includes(dayOfWeek)) continue;
       const nm = p.Nama || p.username || '—';
       const nip = p.NIP || '—';
       await query(

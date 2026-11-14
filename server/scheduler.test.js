@@ -264,3 +264,48 @@ test('idempoten: tick dua kali di menit sama tidak menggandakan kiriman', async 
   await sched.tick(new Date(2026, 9, 5, 10, 0, 30));
   assert.equal(tg.length, 1);
 });
+
+test('auto-tubel: selain AUTO_TUBEL, juga catat pegawai di user_list dengan Status TUBEL/TUGAS BELAJAR', async () => {
+  const inserts = [];
+  const query = async (text, params) => {
+    if (text.startsWith('INSERT INTO "Log_Absen"')) { inserts.push(params); return { rows: [] }; }
+    if (text.includes('FROM user_list')) {
+      return { rows: [{ id: '9001', username: 'Budi Tubel', NIP: '199501012020121001', Status: 'TUBEL' }] };
+    }
+    return { rows: [] };
+  };
+  const sched = createScheduler({ query, sendTelegram: null, logger: silent });
+  await sched.tick(new Date(2026, 9, 5, 7, 0));
+  assert.equal(inserts.length, 2, 'harus mencatat Angelina (AUTO_TUBEL) + Budi Tubel (user_list Status=TUBEL)');
+  assert.ok(inserts.some((p) => p[2] === '199501012020121001'));
+});
+
+test('tanpa-berita: hormati workdays per instansi (skip jika hari ini bukan hari kerja instansi tsb)', async () => {
+  const inserts = [];
+  const query = async (text, params) => {
+    if (text.startsWith('INSERT INTO "Log_Absen"')) { inserts.push(params); return { rows: [] }; }
+    if (text.includes('libur_nasional')) return { rows: [] };
+    if (text.includes('FROM "Log_Absen" WHERE')) return { rows: [] };
+    if (text.includes('FROM instansi_list')) {
+      return {
+        rows: [
+          { id: 'bapperida', workdays: [1, 2, 3, 4, 5] }, // Senin(1) kerja
+          { id: 'shift_khusus', workdays: [2, 3, 4, 5, 6] }, // Senin(1) libur
+        ],
+      };
+    }
+    if (text.includes('FROM user_list')) {
+      return {
+        rows: [
+          { id: '42', username: 'Ani', NIP: '123', Status: 'AKTIF', instansi_id: 'bapperida' },
+          { id: '43', username: 'Doni', NIP: '456', Status: 'AKTIF', instansi_id: 'shift_khusus' },
+        ],
+      };
+    }
+    return { rows: [] };
+  };
+  const sched = createScheduler({ query, sendTelegram: noop, logger: silent });
+  await sched.tick(new Date(2026, 9, 5, 10, 0)); // Senin (day=1)
+  assert.equal(inserts.length, 1, 'hanya Ani (bapperida) yang dicatat TANPA BERITA pada hari Senin');
+  assert.equal(inserts[0][0], '42');
+});

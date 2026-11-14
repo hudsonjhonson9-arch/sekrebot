@@ -324,3 +324,54 @@ test('bast-assign meneruskan nomorinventaris/kondisi/nilaiperolehan sebagai $14/
   assert.equal(calls[0].params[14], 'Baik', '$15 kondisi');
   assert.equal(calls[0].params[15], '500000', '$16 nilaiperolehan');
 });
+
+test('ttd-get menolak pengambilan tanda tangan pegawai dari instansi lain (403)', async () => {
+  const app = express();
+  app.use(express.json());
+  app.use((req, _res, next) => {
+    req.user = { id: '5', nip: '1990', role: 'ADMIN', instansi_id: 'dpmptsp' };
+    next();
+  });
+  app.use('/api/simapo', createSimapoNativeExtraRouter({
+    query: async (sql) => {
+      if (/FROM public\.user_list/i.test(sql)) return { rows: [{ instansi_id: 'bapperida' }] };
+      if (/FROM public\.tanda_tangan/i.test(sql)) return { rows: [{ signature: 'data:image/png;base64,SECRET' }] };
+      return { rows: [] };
+    },
+  }));
+  const { port, close } = await listen(app);
+  const r = await req(port, '/api/simapo/ttd-get?nip=19800101');
+  await close();
+  assert.equal(r.status, 403);
+  assert.equal(r.body.ok, false);
+});
+
+test('notify kirim-rekap menolak role USER (403)', async () => {
+  const { createNotifyRouter } = await import('./notify.js');
+  const app = express();
+  app.use(express.json());
+  app.use((req, _res, next) => {
+    req.user = { id: '42', nip: '1999', role: 'USER', instansi_id: 'bapperida' };
+    next();
+  });
+  app.use('/api', createNotifyRouter());
+  const { port, close } = await listen(app);
+  const r = await post(port, '/api/kirim-rekap', { chat_id: '12345', pesan: 'spoof' });
+  await close();
+  assert.equal(r.status, 403);
+  assert.equal(r.body.ok, false);
+});
+
+test('bast-list tidak menjalankan query user_list dua kali untuk pegawai dan penandatangan', async () => {
+  const calls = [];
+  const { port, close } = await listen(stubApp(async (sql) => {
+    calls.push(sql);
+    return { rows: [{ data: [{ id: '1', nama: 'Budi' }] }] };
+  }));
+  const r = await req(port, '/api/simapo/bast-list');
+  await close();
+  assert.equal(r.status, 200);
+  const empQueries = calls.filter((s) => /FROM public\.user_list/i.test(s));
+  assert.equal(empQueries.length, 1, 'query user_list cukup dijalankan 1 kali per request bast-list');
+  assert.deepEqual(r.body.data.pegawai, r.body.data.penandatangan);
+});

@@ -18,9 +18,23 @@
             let finalPayload = item.payload || item.data;
             
             const { ok: syncOk, data: res, status: syncStatus } = await apiPost(item.endpoint, finalPayload);
-            if (syncOk) {
+            const isRejected = res?.validasi?.is_valid === false || res?.ok === false;
+            if (syncOk && !isRejected) {
               await idb.delete('offline_queue', item.id);
               successCount++;
+            } else if (syncOk && isRejected) {
+              await idb.delete('offline_queue', item.id);
+              if (typeof showToast === 'function') {
+                showToast(res?.validasi?.keterangan || res?.message || 'Absen offline ditolak server', 'warning');
+              }
+            } else if (!syncOk && syncStatus >= 400 && syncStatus < 500 && syncStatus !== 401 && syncStatus !== 429) {
+              await idb.delete('offline_queue', item.id);
+              if (typeof showToast === 'function') {
+                showToast(res?.message || 'Data offline tidak valid dan dihapus dari antrean', 'warning');
+              }
+            } else {
+              // Gagal jaringan / 5xx / 401 / 429 -> hentikan sementara, coba lagi nanti
+              break;
             }
           } catch (err) {
             console.warn('Sync failed for item', item.id, err);

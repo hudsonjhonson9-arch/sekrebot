@@ -728,3 +728,48 @@ test('Meja Absen: admin mengirim source meja_absen dengan NIP pegawai tanpa init
   assert.equal(ins.params[1], 'Ani Staff');
   assert.equal(ins.params[2], '199505052020012001');
 });
+
+test('Meja Absen: sesi perangkat (dv_ token, role USER) diterima tanpa MEJA_TOKENS env', async () => {
+  stub.ins = [{ id: 1000 }];
+  stub.reqId = [];
+  stub.log = [];
+  stub.jam = [{ masuk: '07:15', pulang: '14:30' }];
+  stub.lokasi = [lokasiDefault()];
+  stub.pegawai = [{
+    id: '100',
+    username: 'Ani Staff',
+    NIP: '199505052020012001',
+    Status: 'AKTIF',
+    Jabatan: 'Staff',
+    bidang: 'Sekretariat',
+    pangkat: 'III/a',
+    nomorhp: '08123456789',
+    instansi_id: 'bapperida',
+  }];
+  const deviceToken = 'dv_' + 'b'.repeat(64);
+  const h = harness({ session: SESSION });
+  const server = await new Promise((resolve) => {
+    const s = h.app.listen(0, () => resolve(s));
+  });
+  let r;
+  try {
+    const res = await fetch(`http://127.0.0.1:${server.address().port}/api/absen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${deviceToken}` },
+      body: JSON.stringify({
+        request_id: 'meja-dev-1',
+        source: 'meja_absen',
+        nip: '199505052020012001',
+        latitude: -9.9124,
+        longitude: 121.5124,
+        horizontal_accuracy: 5,
+      }),
+    });
+    r = { status: res.status, body: await res.json() };
+  } finally {
+    server.close();
+    server.closeAllConnections?.();
+  }
+  assert.equal(r.status, 200);
+  assert.equal(r.body.validasi?.is_valid, true, `seharusnya valid, dapat: ${JSON.stringify(r.body.validasi)}`);
+});

@@ -76,8 +76,15 @@
     const currentList = isMasuk ? itemsMasuk : itemsKeluar;
 
     let html = `
+      <div class="arsip-section-head">
+        <button type="button" class="arsip-btn-back" onclick="arsipBack()">
+          <i class="fas fa-arrow-left" aria-hidden="true"></i> <span>Kembali ke Beranda Arsip</span>
+        </button>
+        <div class="arsip-section-title">Buku Agenda Surat</div>
+      </div>
+
       <div class="kk-head">
-        <h3 class="kk-judul">Agenda Surat</h3>
+        <h3 class="kk-judul">Buku Agenda Surat</h3>
         <select id="agendaTahunSel" class="arsip-search kk-tahun" aria-label="Tahun">
           <option value="2026" ${tahun === 2026 ? 'selected' : ''}>2026</option>
           <option value="2025" ${tahun === 2025 ? 'selected' : ''}>2025</option>

@@ -65,3 +65,20 @@ test('tombol toggle selalu statis terpusat (konsisten di expanded & collapsed)',
   assert.ok(!/\.bottom-nav\.collapsed \.sidebar-toggle-btn,\s*body\.sidebar-collapsed \.sidebar-toggle-btn \{\s*position: static/.test(css),
     'override position khusus collapsed tidak diperlukan lagi');
 });
+
+test('sidebar desktop memiliki label pengelompokan menu (Menu Utama, Layanan Kedinasan, Administrasi)', () => {
+  for (const file of ['index.html', 'www/index.html']) {
+    const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    assert.ok(html.includes('sidebar-section-label'), `${file} harus memiliki .sidebar-section-label`);
+    assert.ok(html.includes('Menu Utama'), `${file} harus memiliki label Menu Utama`);
+    assert.ok(html.includes('Layanan Kedinasan'), `${file} harus memiliki label Layanan Kedinasan`);
+    assert.ok(html.includes('Administrasi'), `${file} harus memiliki label Administrasi`);
+  }
+});
+
+test('css/styles.css memiliki gaya sidebar-section-label dan active indicator modern', () => {
+  const css = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
+  assert.ok(css.includes('.sidebar-section-label'), 'harus ada .sidebar-section-label di css');
+  assert.ok(css.includes('DESKTOP SIDEBAR REDESIGN'), 'harus ada blok desktop sidebar redesign di css');
+});
+
