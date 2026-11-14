@@ -460,8 +460,15 @@
        ============================================================ */
 
     async function _cekWajibFace() {
+      const _isAuthInvalid = () => {
+        if (!MY_ID || !window._session?.isLoggedIn || !window._session?.token) return true;
+        if (typeof _authExpiredShown !== 'undefined' && _authExpiredShown) return true;
+        const authEl = $('authOverlay');
+        return !!(authEl && authEl.style.display && authEl.style.display !== 'none');
+      };
+      if (_isAuthInvalid()) { _hideFaceRequiredModal(); return; }
       await new Promise(r => setTimeout(r, 1200));
-      if (!MY_ID) return;
+      if (_isAuthInvalid()) { _hideFaceRequiredModal(); return; }
       const myNip = localStorage.getItem('MY_NIP') || window.userProfile?.nip || '';
       const mandNips = (typeof window !== 'undefined' && Array.isArray(window.MANDATORY_FACE_NIPS))
         ? window.MANDATORY_FACE_NIPS

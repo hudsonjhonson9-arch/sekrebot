@@ -1,9 +1,9 @@
 /* ════ APP INIT ════ */
     async function initApp() {
       try {
-        fetchInstansiList(); // Pre-load instansi for registration
         console.log('[Init] Checking identity...');
         if (!await _checkIdentityOnLoad()) return; // Stop if not logged in
+        fetchInstansiList(); // Pre-load instansi after identity verified
 
         console.log('[Init] Starting application...');
 
@@ -44,7 +44,9 @@
 
         // Tertiary/Lazy: Background tasks that don't block the main UI
         setTimeout(async () => {
+          if (!window._session?.isLoggedIn || (typeof _authExpiredShown !== 'undefined' && _authExpiredShown)) return;
           await loadFaceFromServer();
+          if (!window._session?.isLoggedIn || (typeof _authExpiredShown !== 'undefined' && _authExpiredShown)) return;
           loadBidangList();
           // Optimasi Opsi B: Pre-warm Human.js di background setelah 3 detik.
           // Kamera akan terasa instan saat tombol Absen ditekan.

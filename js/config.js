@@ -192,11 +192,15 @@ async function ensureNativeSession() {
 
 async function _mintNativeSession() {
   // ponytail: Telegram WebApp kadang baru siap setelah skrip utama jalan. Tunggu
-  // sebentar sebelum menyerah, supaya load pertama tidak berakhir 401.
+  // sebentar sebelum menyerah — tapi hanya jika benar di dalam Telegram WebView
+  // dan sesi belum ditandai kedaluwarsa (hindari delay 2s di browser biasa).
   let initData = window.tg?.initData || window.Telegram?.WebApp?.initData || '';
-  for (let i = 0; i < 10 && !initData; i++) {
-    await new Promise(r => setTimeout(r, 200));
-    initData = window.tg?.initData || window.Telegram?.WebApp?.initData || '';
+  const inTgWebView = !!(window.Telegram?.WebApp?.platform && window.Telegram.WebApp.platform !== 'unknown');
+  if (!initData && inTgWebView && !_authExpiredShown) {
+    for (let i = 0; i < 10 && !initData; i++) {
+      await new Promise(r => setTimeout(r, 200));
+      initData = window.tg?.initData || window.Telegram?.WebApp?.initData || '';
+    }
   }
   console.info('[Native] init_data Telegram, panjang:', initData.length);
   if (!initData) {
@@ -480,6 +484,10 @@ function _handleAuthExpired() {
   const hasTg = !!(window.tg?.initData || window.Telegram?.WebApp?.initData);
   if (hasTg || _authExpiredShown) return;
   _authExpiredShown = true;
+  const faceModal = document.getElementById('faceRequiredModal');
+  if (faceModal) faceModal.style.display = 'none';
+  const splash = document.getElementById('appSplash');
+  if (splash) splash.remove();
   const overlay = document.getElementById('authOverlay');
   if (overlay) overlay.style.display = 'flex';
 }

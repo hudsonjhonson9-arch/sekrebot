@@ -107,7 +107,7 @@ test('face-quality: markup preview + tag module + bump di dua index.html', () =>
     assert.ok(html.includes('id="camPreviewRetry"'), f + ': tombol Ulang');
     assert.ok(html.includes('id="camPreviewMeta"'), f + ': meta preview');
     assert.ok(html.includes('js/face-quality.js?v=20261112c'), f + ': tag module');
-    assert.ok(html.includes('js/face.js?v=20261113a'), f + ': bump face.js');
+    assert.ok(html.includes('js/face.js?v=20261114a'), f + ': bump face.js');
     const tag = html.indexOf('js/face-quality.js'), face = html.indexOf('js/face.js?v=');
     assert.ok(tag > -1 && face > -1 && tag < face, f + ': tag module sebelum face.js');
   }

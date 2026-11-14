@@ -739,7 +739,7 @@
         // Langkah 2: Deteksi backend terbaik secara otomatis
         const bestBackend = await _detectBestBackend();
         const isMobile = _isMobileDevice();
-        const inputSize = isMobile ? 256 : 1024; // Optimasi 256 pada mobile untuk performa low-end
+        const inputSize = isMobile ? 256 : 512; // 512 di desktop cukup akurat & 4x lebih cepat dari 1024
         console.log(`[AI] Device: ${isMobile ? 'Mobile' : 'Desktop'} | Backend: ${bestBackend} | InputSize: ${inputSize}`);
 
         const config = {
@@ -964,8 +964,8 @@
         // membuat browser bernegosiasi terlalu lama dengan hardware (menambah delay 2-4 detik).
         // Jadi kita hanya request resolusi tinggi di desktop.
         if (!_isMobileDevice()) {
-          constraints.video.width = { ideal: isPortrait ? 768 : 1024 };
-          constraints.video.height = { ideal: isPortrait ? 1024 : 768 };
+          constraints.video.width = { ideal: isPortrait ? 480 : 640 };
+          constraints.video.height = { ideal: isPortrait ? 640 : 480 };
         }
         
         stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -989,7 +989,7 @@
         _camStream = stream;
         const vid = $('camVideo');
         vid.srcObject = _camStream;
-        await new Promise(r => { vid.onloadedmetadata = r; });
+        if (vid.readyState < 1) await new Promise(r => { vid.onloadedmetadata = r; });
         await vid.play();
         
         // STABILITY FIX: Baru set _mejaStartTime & _isStreamStable SETELAH video play
@@ -1142,7 +1142,7 @@
         });
         const vid = $('buktiVideo');
         vid.srcObject = _camStream;
-        await new Promise(r => { vid.onloadedmetadata = r; });
+        if (vid.readyState < 1) await new Promise(r => { vid.onloadedmetadata = r; });
         await vid.play();
         if (btnCap) btnCap.disabled = false;
       } catch (e) {

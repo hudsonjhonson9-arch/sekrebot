@@ -438,10 +438,14 @@
         if (splash) splash.remove();
         return false;
       }
-      // MY_ID ada tapi token tidak ada → auto-login dari Telegram ID
-      if (!window._session.token) {
-        const isTg = !!(window.Telegram?.WebApp?.initData || new URLSearchParams(window.location.search).has('id'));
-        if (isTg) {
+      const isTg = !!(window.Telegram?.WebApp?.initData || new URLSearchParams(window.location.search).has('id'));
+      const hasNativeOrDevice = !!(
+        (typeof _nativeToken !== 'undefined' && _nativeToken) ||
+        (typeof _deviceToken !== 'undefined' && _deviceToken)
+      );
+      // MY_ID ada tapi token sesi atau token native tidak ada → auto-login TG atau re-login
+      if (!window._session.token || (!isTg && !hasNativeOrDevice)) {
+        if (isTg && !window._session.token) {
           console.log('[Auth] Telegram user without session → auto-login from Telegram ID');
           // Simple token — tidak perlu server call
           const token = 'tg_' + window.MY_ID + '_' + Date.now();
@@ -449,8 +453,8 @@
           console.log('[Auth] Auto-login success:', { targetId: window.MY_ID, hasToken: !!window._session.token });
           return true;
         }
-        // Non-Telegram: force re-login
-        console.warn('[Auth] No session token → forcing re-login');
+        // Non-Telegram tanpa sesi valid: force re-login sebelum memanggil API
+        console.warn('[Auth] No valid session/native token → forcing re-login');
         localStorage.removeItem(STORAGE_KEYS.USER_ID);
         localStorage.removeItem(STORAGE_KEYS.USER_OBJ);
         localStorage.removeItem('MY_NIP');
@@ -458,6 +462,7 @@
         window.MY_ID = null;
         window.tgUser = {};
         window.userProfile = null;
+        try { clearSession(); } catch (_) {}
         $('authOverlay').style.display = 'flex';
         const splash = $('appSplash');
         if (splash) splash.remove();
