@@ -56,9 +56,8 @@
           _cekWajibFace();
         }, 1500);
 
-        if (IS_ADMIN) {
-          const lastSection = localStorage.getItem('absen_last_admin_section') || 'ops';
-          switchAdminSection(lastSection);
+        if (IS_ADMIN && typeof showAdminGrid === 'function') {
+          showAdminGrid();
         }
 
         // Initialize Tugas & Lembur Module

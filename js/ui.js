@@ -347,8 +347,9 @@
           if (typeof initSuperadminPegawaiScoping === 'function') initSuperadminPegawaiScoping();
           if (typeof initSuperadminAdminKetScoping === 'function') initSuperadminAdminKetScoping();
           initAdminMap(); initJamAdminUI(); _initPeriodeListeners();
-          const lastSection = localStorage.getItem('absen_last_admin_section') || 'grid';
-          switchAdminSection(lastSection);
+          if (typeof showAdminGrid === 'function') {
+            showAdminGrid();
+          }
           if (!adminLoaded) {
             adminLoaded = true;
             const myRole = (window.MY_ROLE || localStorage.getItem('MY_ROLE') || 'USER').toUpperCase();
