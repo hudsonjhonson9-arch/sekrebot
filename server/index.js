@@ -12,7 +12,7 @@ import { createSimapoNativeExtraRouter } from './simapo-native-extra.js';
 import { createArsipRouter } from './arsip.js';
 import { verifyInitData } from './telegram.js';
 import { createAttendanceDataRouter } from './attendance-data.js';
-import { createKeteranganNotify, telegramSender, wahaSender } from './keterangan-notify.js';
+import { createKeteranganNotify, openwaSender, telegramSender, wahaSender } from './keterangan-notify.js';
 import { createScheduler } from './scheduler.js';
 import { createOvertimeRouter } from './overtime.js';
 import { createNotifyRouter } from './notify.js';
@@ -83,15 +83,23 @@ export function createApp() {
   // setelah /api/auth agar catch-all /api middleware tidak memblokir penerbitan sesi.
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const sendTelegram = botToken ? telegramSender(botToken) : null;
-  const wahaCfg = process.env.WAHA_URL
+  const openwaCfg = process.env.OPENWA_URL
+    ? { url: process.env.OPENWA_URL, apiKey: process.env.OPENWA_API_KEY, session: process.env.OPENWA_SESSION || 'default' }
+    : null;
+  const wahaCfg = !openwaCfg && process.env.WAHA_URL
     ? { url: process.env.WAHA_URL, apiKey: process.env.WAHA_API_KEY, session: process.env.WAHA_SESSION }
     : null;
+  const waKetGroup = process.env.OPENWA_KET_GROUP || process.env.WAHA_KET_GROUP || '6281239788212-1551250724@g.us';
+  const sendWA = openwaCfg
+    ? openwaSender({ ...openwaCfg, chatId: waKetGroup })
+    : (wahaCfg ? wahaSender({ ...wahaCfg, chatId: waKetGroup }) : null);
+  const sendWhatsApp = openwaCfg
+    ? openwaSender(openwaCfg)
+    : (wahaCfg ? wahaSender(wahaCfg) : null);
   const notifyKeterangan = createKeteranganNotify({
     query,
     sendTelegram,
-    sendWA: wahaCfg
-      ? wahaSender({ ...wahaCfg, chatId: process.env.WAHA_KET_GROUP || '6281239788212-1551250724@g.us' })
-      : null,
+    sendWA,
   });
   // Jadwal cron pengganti workflow n8n "Notif Absensi". Hanya di-start saat server
   // jadi entrypoint (blok isMain), tidak saat test meng-import createApp. Reminder
@@ -101,7 +109,7 @@ export function createApp() {
   app.locals.scheduler = createScheduler({
     query,
     sendTelegram,
-    sendWhatsApp: wahaCfg ? wahaSender(wahaCfg) : null,
+    sendWhatsApp,
   });
   app.use('/api', requireRole(ABSEN_ROLES), createAttendanceDataRouter({ query, withTransaction, notify: notifyKeterangan, gasUpsert }));
   app.use('/api', requireRole(ABSEN_ROLES), createOvertimeRouter({ query }));

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildAutoText, buildApproveText, createKeteranganNotify, waChatId, wahaSender } from './keterangan-notify.js';
+import { buildAutoText, buildApproveText, createKeteranganNotify, openwaSender, waChatId, wahaSender } from './keterangan-notify.js';
 
 test('buildAutoText: label SAKIT vs TUGAS + link bukti opsional', () => {
   const sakit = buildAutoText({ jenis: 'SAKIT', nama: 'Budi', nip: '1', jabatan: 'Staf', ket: 'demam', tglRange: '2026-10-01', durasi: 1, instansi_id: 'bapperida' });
@@ -73,4 +73,64 @@ test('wahaSender: chatId bawaan (grup) bisa ditimpa per pesan', async () => {
   } finally {
     globalThis.fetch = real;
   }
+});
+
+test('openwaSender: resolve session UUID sekali + kirim text, image, dan document', async () => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = async (url, opts = {}) => {
+    const u = String(url);
+    if (u.endsWith('/api/sessions')) {
+      calls.push({ url: u, method: 'GET' });
+      return { ok: true, json: async () => [{ id: 'uuid-123', name: 'notifbapperida', status: 'ready' }] };
+    }
+    calls.push({ url: u, method: opts.method, headers: opts.headers, body: JSON.parse(opts.body) });
+    return { ok: true, json: async () => ({ messageId: 'm1' }) };
+  };
+  try {
+    const send = openwaSender({ url: 'https://openwa.test/', apiKey: 'key1', session: 'notifbapperida', chatId: 'grup@g.us' });
+    await send({ text: 'halo teks' });
+    await send({ text: 'caption gambar', media: { base64: 'data:image/png;base64,iVBORw==', mime: 'image/png', filename: 'foto.png' } });
+    await send({ text: 'caption pdf', chatId: '6282237174435@s.whatsapp.net', media: { base64: 'JVBERi0=', mime: 'application/pdf', filename: 'surat.pdf' } });
+
+    const sessionFetches = calls.filter(c => c.url.endsWith('/api/sessions'));
+    assert.equal(sessionFetches.length, 1, 'session UUID di-cache setelah lookup pertama');
+
+    assert.equal(calls[1].url, 'https://openwa.test/api/sessions/uuid-123/messages/send-text');
+    assert.deepEqual(calls[1].body, { chatId: 'grup@g.us', text: 'halo teks' });
+    assert.equal(calls[1].headers['X-Api-Key'], 'key1');
+
+    assert.equal(calls[2].url, 'https://openwa.test/api/sessions/uuid-123/messages/send-image');
+    assert.deepEqual(calls[2].body, {
+      chatId: 'grup@g.us',
+      base64: 'iVBORw==',
+      mimetype: 'image/png',
+      filename: 'foto.png',
+      caption: 'caption gambar',
+    });
+
+    assert.equal(calls[3].url, 'https://openwa.test/api/sessions/uuid-123/messages/send-document');
+    assert.deepEqual(calls[3].body, {
+      chatId: '6282237174435@s.whatsapp.net',
+      base64: 'JVBERi0=',
+      mimetype: 'application/pdf',
+      filename: 'surat.pdf',
+      caption: 'caption pdf',
+    });
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test('broadcast dengan media: meneruskan media ke sendWA', async () => {
+  const wa = [];
+  const notify = createKeteranganNotify({
+    query: async () => ({ rows: [] }),
+    sendTelegram: async () => {},
+    sendWA: async m => wa.push(m),
+  });
+  const media = { base64: 'JVBERi0=', mime: 'application/pdf', filename: 'st.pdf' };
+  await notify({ kind: 'auto', jenis: 'TUGAS', emp: { username: 'Budi', nip: '1', instansi_id: 'bapperida' }, ket: 'dinas', tglRange: '2026-10-01', durasi: 1, media });
+  assert.equal(wa.length, 1);
+  assert.deepEqual(wa[0].media, media);
 });

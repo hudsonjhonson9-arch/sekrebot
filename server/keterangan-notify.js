@@ -72,6 +72,67 @@ export function wahaSender({ url, apiKey, session = 'default', chatId }) {
   };
 }
 
+function stripDataUrl(b64) {
+  const s = String(b64 || '');
+  const idx = s.indexOf('base64,');
+  return idx !== -1 ? s.slice(idx + 7) : s;
+}
+
+// Pengirim WhatsApp via OpenWA (NestJS gateway: /api/sessions/:id/messages/send-*).
+// Mendukung pesan teks saja maupun lampiran gambar/dokumen (media: { base64|url, mime, filename }).
+export function openwaSender({ url, apiKey, session = 'default', chatId }) {
+  const base = String(url).replace(/\/$/, '');
+  const headers = { 'Content-Type': 'application/json', ...(apiKey ? { 'X-Api-Key': apiKey } : {}) };
+  let resolvedId = null;
+
+  async function resolveSessionId() {
+    if (resolvedId) return resolvedId;
+    const r = await fetch(`${base}/api/sessions`, { headers: apiKey ? { 'X-Api-Key': apiKey } : {} });
+    if (r.ok) {
+      const list = await r.json().catch(() => []);
+      const found = Array.isArray(list) ? list.find(s => s.id === session || s.name === session) : null;
+      if (found?.id) {
+        resolvedId = found.id;
+        return resolvedId;
+      }
+    }
+    return session;
+  }
+
+  return async ({ text, chatId: ke, media }) => {
+    const sid = await resolveSessionId();
+    const target = ke || chatId;
+    let endpoint = 'send-text';
+    let body;
+    if (media && (media.base64 || media.url)) {
+      const mime = String(media.mime || 'application/octet-stream');
+      const isImage = mime.startsWith('image/');
+      endpoint = isImage ? 'send-image' : 'send-document';
+      body = {
+        chatId: target,
+        ...(media.base64
+          ? { base64: stripDataUrl(media.base64), mimetype: mime }
+          : { url: media.url }),
+        ...(media.filename || !isImage ? { filename: media.filename || 'lampiran' } : {}),
+        ...(text ? { caption: text } : {}),
+      };
+    } else {
+      body = { chatId: target, text };
+    }
+    const r = await fetch(`${base}/api/sessions/${encodeURIComponent(sid)}/messages/${endpoint}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (r.status === 400 || r.status === 404) resolvedId = null;
+      throw new Error(d.message || `OpenWA HTTP ${r.status}`);
+    }
+    return d;
+  };
+}
+
 const ACTIVE = `UPPER(COALESCE("Status",'AKTIF')) NOT IN ('NONAKTIF','INACTIVE')`;
 
 // notify({kind, ...}):
@@ -89,9 +150,9 @@ export function createKeteranganNotify({ query, sendTelegram, sendWA, fallbackAd
     return ids.length ? ids : [fallbackAdmin];
   }
   const tg = (chatId, text) => (sendTelegram ? sendTelegram({ chatId, text }).catch(e => console.error('[ket-notify/tg]', chatId, e.message)) : Promise.resolve());
-  const wa = text => (sendWA ? sendWA({ text }).catch(e => console.error('[ket-notify/wa]', e.message)) : Promise.resolve());
+  const wa = (text, media) => (sendWA ? sendWA({ text, ...(media ? { media } : {}) }).catch(e => console.error('[ket-notify/wa]', e.message)) : Promise.resolve());
 
-  return async function notify({ kind, jenis, emp = {}, ket, tglRange, durasi, driveLink, instansi_id, nama, nip, jabatan, action }) {
+  return async function notify({ kind, jenis, emp = {}, ket, tglRange, durasi, driveLink, media, instansi_id, nama, nip, jabatan, action }) {
     const inst = instansi_id || emp.instansi_id || 'bapperida';
     const nm = nama || emp.username || '—';
     if (kind === 'admin_pending') {
@@ -104,6 +165,6 @@ export function createKeteranganNotify({ query, sendTelegram, sendWA, fallbackAd
       ? buildApproveText({ action, jenis, nama: nm, ket, tglRange, instansi_id: inst })
       : buildAutoText({ jenis, nama: nm, nip: nip || emp.nip || '—', jabatan: jabatan || emp.jabatan || '—', ket, tglRange, durasi, driveLink, instansi_id: inst });
     const ids = await pegawaiAktif(inst);
-    await Promise.all([wa(text), ...ids.map(id => tg(id, text))]);
+    await Promise.all([wa(text, media), ...ids.map(id => tg(id, text))]);
   };
 }

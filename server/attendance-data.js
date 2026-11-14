@@ -67,18 +67,20 @@ export function createAttendanceDataRouter({ query, withTransaction, notify, gas
       // ke Express langkah itu hilang sehingga bukti dibuang diam-diam. Upload di
       // sini memakai gasUpsert yang sama dengan foto wajah/tanda tangan.
       let driveLink=String(b.drive_link||'');
+      const buktiMime=String(b.bukti_mime||'image/jpeg');
+      const buktiExt=(buktiMime.split('/')[1]||'jpg').split('+')[0];
+      const buktiFilename=String(b.bukti_nama||`bukti-ket-${emp.nip||emp.id}_${start}_${end}_${jenis.toLowerCase()}.${buktiExt}`);
+      const media=b.bukti_base64?{base64:String(b.bukti_base64),mime:buktiMime,filename:buktiFilename}:null;
       if(!driveLink && b.bukti_base64){
         if(typeof gasUpsert!=='function') return fail(res,500,'Layanan upload bukti belum siap.');
-        const mime=String(b.bukti_mime||'image/jpeg');
-        const ext=(mime.split('/')[1]||'jpg').split('+')[0];
         try{
-          const up=await gasUpsert({filename:`bukti-ket-${emp.nip||emp.id}_${start}_${end}_${jenis.toLowerCase()}.${ext}`,mimeType:mime,dataBase64:String(b.bukti_base64)});
+          const up=await gasUpsert({filename:buktiFilename,mimeType:buktiMime,dataBase64:String(b.bukti_base64)});
           driveLink=up.url;
         }catch(e){console.error('[keterangan/bukti] gasUpsert gagal',e);return fail(res,502,'Gagal mengunggah bukti ke Google Drive.');}
       }
       const result=await query(`INSERT INTO ket_temp ("ID_Ket","ID_Pegawai","Nama","NIP","Tanggal","tgl_mulai","tgl_selesai","Jam","Jenis Absen","Ket","Status",${driveLink?'"drive_link",':''}"request_id","instansi_id") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,${driveLink?'$12,':''}$${driveLink?13:12},$${driveLink?14:13}) RETURNING *`, driveLink?[idKet,emp.id,emp.username||'—',emp.nip||'',tglRange,start,end,jam,jenis,ket,status,driveLink,requestId,emp.instansi_id]:[idKet,emp.id,emp.username||'—',emp.nip||'',tglRange,start,end,jam,jenis,ket,status,requestId,emp.instansi_id]);
       if(status==='DISETUJUI') await applyApprovedKeterangan(query,{row:result.rows[0],dates,jenis,emp,requestId,ket,jam});
-      if(notify){const arg={jenis,emp,ket,tglRange,durasi,driveLink,instansi_id:emp.instansi_id};(status==='DISETUJUI'?notify({kind:'auto',...arg}):notify({kind:'admin_pending',...arg})).catch(e=>console.error('[keterangan/notify]',e));}
+      if(notify){const arg={jenis,emp,ket,tglRange,durasi,driveLink,media,instansi_id:emp.instansi_id};(status==='DISETUJUI'?notify({kind:'auto',...arg}):notify({kind:'admin_pending',...arg})).catch(e=>console.error('[keterangan/notify]',e));}
       return ok(res,{message:status==='PENDING'?'Pengajuan berhasil dikirim dan menunggu persetujuan.':'Keterangan berhasil dicatat.',data:result.rows[0]});
     }catch(e){ console.error('[keterangan/add]',e); return fail(res,500,'Gagal menyimpan keterangan.'); }
   });
