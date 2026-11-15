@@ -179,6 +179,7 @@ export const MASTER_LIST_SQL =
             b.stok_saat_ini, b.minimumstok, b.hargasatuan, b.kategoriid,
             k.nama AS nama_kategori, b.isactive,
             TO_CHAR(b.createdat, 'YYYY-MM-DD') AS createdat,
+            (SELECT ua.nomorinventaris FROM "SIMAPO".unit_aset ua WHERE ua.barangid = b.id AND ua.nomorinventaris IS NOT NULL LIMIT 1) AS nomorinventaris,
             (SELECT MIN(ua.tahunperolehan) FROM "SIMAPO".unit_aset ua WHERE ua.barangid = b.id) AS tahun_mulai,
             (SELECT MAX(ua.tahunperolehan) FROM "SIMAPO".unit_aset ua WHERE ua.barangid = b.id) AS tahun_selesai
      FROM "SIMAPO".barang b

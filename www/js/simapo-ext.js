@@ -691,7 +691,15 @@ window.populateMutasiBarangSelect = async function() {
   const sel = document.getElementById('mutasiBarangId'); if (!sel) return;
   let data = window._allMasterData;
   if (!data.length) try { data = parseApiResponse(await (await apiFetch(P.simapoAdminMasterList)).json()); } catch { data=[]; }
-  sel.innerHTML = '<option value="">-- Pilih Barang --</option>' + data.map(b => `<option value="${b.id}">${b.nama} (${b.kodebarang})</option>`).join('');
+  sel.innerHTML = '<option value="">-- Pilih Barang --</option>' + data.map(b => {
+    const sub = [
+      b.nomorinventaris ? 'NIBAR: ' + b.nomorinventaris : '',
+      b.spesifikasi || b.merk || '',
+      b.nama_kategori ? 'Kat: ' + b.nama_kategori : '',
+      b.satuan ? 'Satuan: ' + b.satuan : ''
+    ].filter(Boolean).join(' · ');
+    return `<option value="${b.id}" data-sub="${sub}">${b.nama || 'Tanpa Nama'} (${b.kodebarang || '-'})</option>`;
+  }).join('');
   window._asetDd('mutasiBarangId', { ph: 'Cari barang...', h: 38 });
 };
 
@@ -1858,7 +1866,15 @@ window.populatePemeliharaanBarang = async function() {
   if (!sel) return;
   let data = window._allMasterData;
   if (!data.length) try { data = parseApiResponse(await (await apiFetch(P.simapoAdminMasterList)).json()); } catch { data=[]; }
-  sel.innerHTML = '<option value="">-- Pilih Aset --</option>' + data.map(b => `<option value="${b.id}">${b.nama} (${b.kodebarang})</option>`).join('');
+  sel.innerHTML = '<option value="">-- Pilih Aset --</option>' + data.map(b => {
+    const sub = [
+      b.nomorinventaris ? 'NIBAR: ' + b.nomorinventaris : '',
+      b.spesifikasi || b.merk || '',
+      b.nama_kategori ? 'Kat: ' + b.nama_kategori : '',
+      b.satuan ? 'Satuan: ' + b.satuan : ''
+    ].filter(Boolean).join(' · ');
+    return `<option value="${b.id}" data-sub="${sub}">${b.nama || 'Tanpa Nama'} (${b.kodebarang || '-'})</option>`;
+  }).join('');
   sel.onchange = window.onPmBarangChange;
   window._asetDd('pmBarangId', { ph: 'Cari aset...', h: 38 });
   window.populateKartuPemeliharaanBarangFilter();
@@ -1871,7 +1887,13 @@ window.populateKartuPemeliharaanBarangFilter = function() {
   const items = window._allMasterData || [];
   let html = '<option value="">-- Semua Barang (Cetak Semua Kartu) --</option>';
   items.forEach(function(b) {
-    html += '<option value="' + b.id + '">' + (b.nama || 'Tanpa Nama') + (b.kodebarang ? ' (' + b.kodebarang + ')' : '') + '</option>';
+    const sub = [
+      b.nomorinventaris ? 'NIBAR: ' + b.nomorinventaris : '',
+      b.spesifikasi || b.merk || '',
+      b.nama_kategori ? 'Kat: ' + b.nama_kategori : '',
+      b.satuan ? 'Satuan: ' + b.satuan : ''
+    ].filter(Boolean).join(' · ');
+    html += '<option value="' + b.id + '" data-sub="' + sub + '">' + (b.nama || 'Tanpa Nama') + (b.kodebarang ? ' (' + b.kodebarang + ')' : '') + '</option>';
   });
   sel.innerHTML = html;
   if (prevVal) sel.value = prevVal;

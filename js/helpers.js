@@ -487,10 +487,15 @@
       const cur = String(sel.value == null ? '' : sel.value);
       let html = '';
       for (const opt of sel.options) {
-        if (q && opt.text.toLowerCase().indexOf(q) === -1) continue;
+        const sub = (opt.dataset && opt.dataset.sub) || (typeof opt.getAttribute === 'function' ? opt.getAttribute('data-sub') : '') || '';
+        const fullText = (opt.text + ' ' + sub).toLowerCase();
+        if (q && fullText.indexOf(q) === -1) continue;
         html += '<div class="dropdown-item' + (String(opt.value) === cur ? ' selected' : '') +
           '" data-v="' + _ddEsc(opt.value) + '" onclick="window._ddPick(\'' + selId + '\', this)">' +
-          '<span class="item-name">' + _ddEsc(opt.text) + '</span></div>';
+          '<div style="display:flex;flex-direction:column;gap:2px;width:100%">' +
+            '<span class="item-name">' + _ddEsc(opt.text) + '</span>' +
+            (sub ? '<span class="item-sub" style="font-size:10px;color:var(--muted);line-height:1.2">' + _ddEsc(sub) + '</span>' : '') +
+          '</div></div>';
       }
       return html || '<div class="dropdown-item" style="color:var(--muted)">Tidak ditemukan</div>';
     }
@@ -603,9 +608,27 @@
       });
     }
 
+    function autoCustomDatePicker() {
+      if (typeof document.querySelectorAll !== 'function' || typeof window === 'undefined' || !window.flatpickr) return;
+      document.querySelectorAll('input[type="date"]').forEach(function (el) {
+        if (el.dataset && (el.dataset.nofp || el.dataset.fpReady)) return;
+        if (el._flatpickr) return;
+        if (el.dataset) el.dataset.fpReady = '1';
+        try {
+          window.flatpickr(el, {
+            dateFormat: 'Y-m-d',
+            disableMobile: true,
+            allowInput: true,
+          });
+        } catch (_) {}
+      });
+    }
+    window.autoCustomDatePicker = autoCustomDatePicker;
+
     function autoSearchDd() {
       if (typeof document.querySelectorAll !== 'function') return;
       document.querySelectorAll('select').forEach(_ddAutoOne);
+      autoCustomDatePicker();
     }
     window.autoSearchDd = autoSearchDd;
 
