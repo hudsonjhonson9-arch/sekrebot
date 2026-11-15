@@ -417,6 +417,13 @@ window.renderAdminSimapoMaster = function(data) {
   }).join('');
 };
 
+// Dropdown aset yang opsinya panjang (aset, pegawai, ruangan, kategori) pakai
+// pencarian custom dari helpers.js. Idempoten: aman dipanggil tiap repopulasi.
+window._asetDd = function (id, opts) {
+  if (typeof window.makeSearchDd === 'function') window.makeSearchDd(id, opts);
+  if (typeof window.syncSearchDdLabel === 'function') window.syncSearchDdLabel(id);
+};
+
 // Isi opsi dropdown filter (Kategori · Pemegang · Tahun) dari data unit yang
 // sudah dimuat; pilihan user dipertahankan kalau masih ada di opsi baru.
 window._fillMasterFilters = function() {
@@ -440,6 +447,8 @@ window._fillMasterFilters = function() {
   fill('saFilterTahun',
     [...new Set(units.map(u => String(u.tahunperolehan || '')).filter(Boolean))].sort().reverse().map(t => [t, t]),
     'Semua Tahun');
+  window._asetDd('saFilterKat', { ph: 'Cari kategori...', h: 38, st: 'flex:1;min-width:130px' });
+  window._asetDd('saFilterPeg', { ph: 'Cari pemegang...', h: 38, st: 'flex:1;min-width:130px' });
 };
 
 window._applyMasterFilters = function() {
@@ -469,6 +478,8 @@ window.filterSAMaster = function() {
 window.resetSAMasterFilter = function() {
   const s = document.getElementById('saSearchMaster'); if (s) s.value = '';
   for (const id of ['saFilterKat', 'saFilterPeg', 'saFilterTahun']) { const el = document.getElementById(id); if (el) el.value = ''; }
+  window._asetDd('saFilterKat');
+  window._asetDd('saFilterPeg');
   window._applyMasterFilters();
 };
 
@@ -566,6 +577,10 @@ window.showSimapoMasterForm = async function(id = null, unitId = null) {
       } catch { /* unit belum ada — biarkan kosong */ }
     }
   }
+
+  window._asetDd('smfKategori', { ph: 'Cari kategori...', h: 38, static: true });
+  window._asetDd('smfPegawai', { ph: 'Cari pegawai...', h: 38, static: true });
+  window._asetDd('smfRuangan', { ph: 'Cari ruangan...', h: 38, static: true });
 
   modal.style.display = 'flex';
   modal.style.opacity = '0';
@@ -677,6 +692,7 @@ window.populateMutasiBarangSelect = async function() {
   let data = window._allMasterData;
   if (!data.length) try { data = parseApiResponse(await (await apiFetch(P.simapoAdminMasterList)).json()); } catch { data=[]; }
   sel.innerHTML = '<option value="">-- Pilih Barang --</option>' + data.map(b => `<option value="${b.id}">${b.nama} (${b.kodebarang})</option>`).join('');
+  window._asetDd('mutasiBarangId', { ph: 'Cari barang...', h: 38 });
 };
 
 window.loadMutasiRiwayat = async function(force = false) {
@@ -692,6 +708,7 @@ window._simapoRetryMap['mutasiRiwayatList'] = window.loadMutasiRiwayat;
 
 window.resetMutasiForm = function() {
   const sel = document.getElementById('mutasiBarangId'); if (sel) sel.value = '';
+  window._asetDd('mutasiBarangId');
   const jenis = document.getElementById('mutasiJenis'); if (jenis) jenis.value = 'MASUK';
   const jumlah = document.getElementById('mutasiJumlah'); if (jumlah) jumlah.value = '1';
   const ket = document.getElementById('mutasiKet'); if (ket) ket.value = '';
@@ -1689,6 +1706,7 @@ window.populatePemeliharaanBarang = async function() {
   let data = window._allMasterData;
   if (!data.length) try { data = parseApiResponse(await (await apiFetch(P.simapoAdminMasterList)).json()); } catch { data=[]; }
   sel.innerHTML = '<option value="">-- Pilih Aset --</option>' + data.map(b => `<option value="${b.id}">${b.nama} (${b.kodebarang})</option>`).join('');
+  window._asetDd('pmBarangId', { ph: 'Cari aset...', h: 38 });
   window.populateKartuPemeliharaanBarangFilter();
 };
 
@@ -1703,6 +1721,7 @@ window.populateKartuPemeliharaanBarangFilter = function() {
   });
   sel.innerHTML = html;
   if (prevVal) sel.value = prevVal;
+  window._asetDd('kpFilterBarang', { ph: 'Cari barang...', h: 36 });
 };
 
 window.filterKartuPemeliharaan = function() {

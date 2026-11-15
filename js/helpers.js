@@ -542,6 +542,7 @@
       wrap.className = 'custom-search-dropdown';
       wrap.id = selId + 'Dd';
       wrap.dataset.ddSel = selId;
+      if (opts.st) wrap.setAttribute('style', opts.st);
       // ponytail: static = list ikut alur dokumen (untuk dalam modal Swal yang overflow:auto memotong absolute)
       const listStyle = opts.static ? ' style="position:relative;top:auto;left:auto;right:auto;max-height:170px;"' : '';
       wrap.innerHTML =

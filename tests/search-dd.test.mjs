@@ -96,3 +96,10 @@ test('loadBidangList memakai guard typeof — aman dipanggil sebelum helpers loa
   // jadi guard typeof wajib ada.
   assert.match(constants, /if \(typeof syncSearchDdLabel === 'function'\) syncSearchDdLabel\('rekapBidang'\)/);
 });
+
+test('aset: dropdown data panjang memakai makeSearchDd', () => {
+  const simapoExt = fs.readFileSync(path.join(ROOT, 'js/simapo-ext.js'), 'utf8');
+  for (const id of ['saFilterKat', 'saFilterPeg', 'mutasiBarangId', 'pmBarangId', 'kpFilterBarang', 'smfKategori', 'smfPegawai', 'smfRuangan']) {
+    assert.match(simapoExt, new RegExp("_asetDd\\('" + id + "'"), 'dropdown ' + id + ' harus pakai pencarian custom');
+  }
+});
