@@ -103,3 +103,16 @@ test('aset: dropdown data panjang memakai makeSearchDd', () => {
     assert.match(simapoExt, new RegExp("_asetDd\\('" + id + "'"), 'dropdown ' + id + ' harus pakai pencarian custom');
   }
 });
+
+test('sapuan otomatis: ambang 4 opsi, skip multiple/opt-out/tabel', () => {
+  const mk = (o) => Object.assign({ id: 's', multiple: false, dataset: {}, style: {}, options: { length: 5 }, closest: () => null }, o);
+  const wants = win._ddWants;
+  assert.equal(wants(mk({})), true, 'select biasa dengan >=4 opsi disapu');
+  assert.equal(wants(mk({ options: { length: 3 } })), false, '2-3 opsi tetap native');
+  assert.equal(wants(mk({ id: '' })), false, 'tanpa id tidak bisa dipasangi wrapper');
+  assert.equal(wants(mk({ multiple: true })), false, 'multi-select tidak didukung helper');
+  assert.equal(wants(mk({ style: { display: 'none' } })), false, 'select tersembunyi (pola pksDropdownHtml) jangan ditimpa');
+  assert.equal(wants(mk({ dataset: { nodd: '1' } })), false, 'data-nodd = opt-out');
+  assert.equal(wants(mk({ dataset: { ddReady: '1' } })), false, 'jangan init dua kali');
+  assert.equal(wants(mk({ closest: () => ({}) })), false, 'kontrol tabel/panel pengaturan dikecualikan');
+});

@@ -559,6 +559,68 @@
     }
     window.makeSearchDd = makeSearchDd;
 
+    /* ---------- SAPUAN OTOMATIS: semua <select> jadi dropdown cari ----------
+       ponytail: satu sapuan untuk seluruh aplikasi (termasuk select yang dibuat
+       runtime oleh modal/tabel), bukan puluhan pemanggilan per layar.
+       Ambang DD_MIN_OPTS: dropdown 2-3 opsi tetap native (kotak cari tak guna).
+       Opt-out: atribut data-nodd, atau berada di kontrol baris tabel / panel
+       pengaturan PDF / pemilih tahun arsip. */
+    const DD_MIN_OPTS = 4;
+    const DD_SKIP = '#pdfPreviewSidebar, td, th, .kk-tahun';
+
+    function _ddWants(sel) {
+      return !!(sel && sel.id && !sel.multiple && !sel.dataset.nodd && !sel.dataset.ddReady &&
+        sel.style.display !== 'none' &&
+        sel.options && sel.options.length >= DD_MIN_OPTS && !sel.closest(DD_SKIP));
+    }
+    window._ddWants = _ddWants;
+
+    function _ddInScrollBox(el) {
+      for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+        const oy = getComputedStyle(p).overflowY;
+        if (oy === 'auto' || oy === 'scroll') return true;
+      }
+      return false;
+    }
+
+    function _ddAutoOne(sel) {
+      if (sel.dataset.ddReady) {
+        // opsi bisa diganti runtime (loadRekap/loadBidangList) -> label ikut segar,
+        // tapi jangan sentuh input saat daftar sedang terbuka (user sedang mengetik).
+        const wrap = document.getElementById(sel.id + 'Dd');
+        if (wrap && !wrap.classList.contains('open')) syncSearchDdLabel(sel.id);
+        return;
+      }
+      if (!_ddWants(sel)) return;
+      let st = '';
+      if (sel.style.flex) st = 'flex:' + sel.style.flex + (sel.style.minWidth ? ';min-width:' + sel.style.minWidth : '');
+      else if (sel.style.width) st = 'width:' + sel.style.width;
+      makeSearchDd(sel.id, {
+        ph: sel.dataset.ph || 'Cari...',
+        h: parseInt(sel.style.height, 10) || undefined,
+        st: st || undefined,
+        static: _ddInScrollBox(sel),
+      });
+    }
+
+    function autoSearchDd() {
+      if (typeof document.querySelectorAll !== 'function') return;
+      document.querySelectorAll('select').forEach(_ddAutoOne);
+    }
+    window.autoSearchDd = autoSearchDd;
+
+    let _ddAutoQueued = false;
+    function _ddAutoSchedule() {
+      if (_ddAutoQueued) return;
+      _ddAutoQueued = true;
+      setTimeout(function () { _ddAutoQueued = false; autoSearchDd(); }, 120);
+    }
+    if (typeof MutationObserver === 'function' && document.documentElement) {
+      new MutationObserver(_ddAutoSchedule).observe(document.documentElement, { childList: true, subtree: true });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', autoSearchDd);
+    else autoSearchDd();
+
     document.addEventListener('click', function (e) {
       document.querySelectorAll('.custom-search-dropdown.open').forEach(function (el) {
         if (!el.contains(e.target)) {
