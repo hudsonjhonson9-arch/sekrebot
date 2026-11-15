@@ -96,6 +96,9 @@ export function openwaSender({ url, apiKey, session = 'default', chatId }) {
            || (list.length === 1 ? list[0] : null))
         : null;
       if (found?.id) {
+        if (found.status === 'stopped') {
+          await fetch(`${base}/api/sessions/${encodeURIComponent(found.id)}/start`, { method: 'POST', headers }).catch(() => null);
+        }
         resolvedId = found.id;
         return resolvedId;
       }
@@ -104,36 +107,48 @@ export function openwaSender({ url, apiKey, session = 'default', chatId }) {
   }
 
   return async ({ text, chatId: ke, media }) => {
-    const sid = await resolveSessionId();
-    const target = ke || chatId;
-    let endpoint = 'send-text';
-    let body;
-    if (media && (media.base64 || media.url)) {
-      const mime = String(media.mime || 'application/octet-stream');
-      const isImage = mime.startsWith('image/');
-      endpoint = isImage ? 'send-image' : 'send-document';
-      body = {
-        chatId: target,
-        ...(media.base64
-          ? { base64: stripDataUrl(media.base64), mimetype: mime }
-          : { url: media.url }),
-        ...(media.filename || !isImage ? { filename: media.filename || 'lampiran' } : {}),
-        ...(text ? { caption: text } : {}),
-      };
-    } else {
-      body = { chatId: target, text };
+    let lastErr;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const sid = await resolveSessionId();
+        const target = ke || chatId;
+        let endpoint = 'send-text';
+        let body;
+        if (media && (media.base64 || media.url)) {
+          const mime = String(media.mime || 'application/octet-stream');
+          const isImage = mime.startsWith('image/');
+          endpoint = isImage ? 'send-image' : 'send-document';
+          body = {
+            chatId: target,
+            ...(media.base64
+              ? { base64: stripDataUrl(media.base64), mimetype: mime }
+              : { url: media.url }),
+            ...(media.filename || !isImage ? { filename: media.filename || 'lampiran' } : {}),
+            ...(text ? { caption: text } : {}),
+          };
+        } else {
+          body = { chatId: target, text };
+        }
+        const r = await fetch(`${base}/api/sessions/${encodeURIComponent(sid)}/messages/${endpoint}`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          if (r.status === 400 || r.status === 404 || r.status >= 500) resolvedId = null;
+          throw new Error(d.message || `OpenWA HTTP ${r.status}`);
+        }
+        return d;
+      } catch (err) {
+        lastErr = err;
+        resolvedId = null;
+        if (attempt === 0) {
+          await new Promise(res => setTimeout(res, 1000));
+        }
+      }
     }
-    const r = await fetch(`${base}/api/sessions/${encodeURIComponent(sid)}/messages/${endpoint}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      if (r.status === 400 || r.status === 404) resolvedId = null;
-      throw new Error(d.message || `OpenWA HTTP ${r.status}`);
-    }
-    return d;
+    throw lastErr;
   };
 }
 
@@ -154,7 +169,26 @@ export function createKeteranganNotify({ query, sendTelegram, sendWA, fallbackAd
     return ids.length ? ids : [fallbackAdmin];
   }
   const tg = (chatId, text) => (sendTelegram ? sendTelegram({ chatId, text }).catch(e => console.error('[ket-notify/tg]', chatId, e.message)) : Promise.resolve());
-  const wa = (text, media) => (sendWA ? sendWA({ text, ...(media ? { media } : {}) }).catch(e => console.error('[ket-notify/wa]', e.message)) : Promise.resolve());
+  const wa = async (text, media, inst) => {
+    if (!sendWA) return;
+    try {
+      await sendWA({ text, ...(media ? { media } : {}) });
+    } catch (e) {
+      console.error('[ket-notify/wa]', e.message);
+      if (sendTelegram) {
+        try {
+          const ids = await adminList(inst);
+          const alertMsg = `⚠️ *PERINGATAN SISTEM ABSENSI*\n`
+            + `Notifikasi WhatsApp ke grup gagal terkirim!\n`
+            + `Kendala: ${e.message}\n`
+            + `Mohon periksa status koneksi OpenWA di dashboard.`;
+          await Promise.all(ids.map(id => sendTelegram({ chatId: id, text: alertMsg })));
+        } catch (tgErr) {
+          console.error('[ket-notify/wa-alert-fail]', tgErr.message);
+        }
+      }
+    }
+  };
 
   return async function notify({ kind, jenis, emp = {}, ket, tglRange, durasi, driveLink, media, instansi_id, nama, nip, jabatan, action }) {
     const inst = instansi_id || emp.instansi_id || 'bapperida';
@@ -169,6 +203,6 @@ export function createKeteranganNotify({ query, sendTelegram, sendWA, fallbackAd
       ? buildApproveText({ action, jenis, nama: nm, ket, tglRange, instansi_id: inst })
       : buildAutoText({ jenis, nama: nm, nip: nip || emp.nip || '—', jabatan: jabatan || emp.jabatan || '—', ket, tglRange, durasi, driveLink, instansi_id: inst });
     const ids = await pegawaiAktif(inst);
-    await Promise.all([wa(text, media), ...ids.map(id => tg(id, text))]);
+    await Promise.all([wa(text, media, inst), ...ids.map(id => tg(id, text))]);
   };
 }

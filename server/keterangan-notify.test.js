@@ -156,3 +156,17 @@ test('broadcast dengan media: meneruskan media ke sendWA', async () => {
   assert.equal(wa.length, 1);
   assert.deepEqual(wa[0].media, media);
 });
+
+test('notify: saat sendWA gagal, mengirim pesan peringatan ke admin via Telegram', async () => {
+  const tgAlerts = [];
+  const notify = createKeteranganNotify({
+    query: async sql => {
+      if (sql.includes('is_admin=true')) return { rows: [{ id: '999' }] };
+      return { rows: [{ id: '100' }] };
+    },
+    sendTelegram: async m => tgAlerts.push(m),
+    sendWA: async () => { throw new Error('OpenWA connection timeout'); },
+  });
+  await notify({ kind: 'auto', jenis: 'TUGAS', emp: { username: 'Budi', nip: '1', instansi_id: 'bapperida' }, ket: 'dinas', tglRange: '2026-10-01', durasi: 1 });
+  assert.ok(tgAlerts.some(m => m.chatId === '999' && m.text.includes('PERINGATAN SISTEM ABSENSI') && m.text.includes('OpenWA connection timeout')));
+});
