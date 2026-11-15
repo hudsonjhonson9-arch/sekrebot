@@ -5885,7 +5885,7 @@
         flex-shrink: 0;
         flex-direction: column;
         justify-content: flex-start;
-        padding: 40px 12px;
+        padding: 24px 12px;
         background: #0F172A;
         border-top: none;
         border-right: 1px solid rgba(255, 255, 255, 0.08);
@@ -5908,6 +5908,8 @@
         text-align: center;
         padding-bottom: 14px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        line-height: 26px;
+        height: 26px;
       }
 
       .nav-item {
@@ -8267,7 +8269,7 @@ body.sidebar-collapsed {
   body.sidebar-collapsed .bottom-nav {
     width: var(--sidebar-collapsed-w, 68px) !important;
     max-width: var(--sidebar-collapsed-w, 68px) !important;
-    padding: 30px 6px !important;
+    padding: 24px 6px !important;
     align-items: center !important;
   }
 
@@ -8277,6 +8279,8 @@ body.sidebar-collapsed {
     content: 'H' !important;
     font-size: 20px !important;
     letter-spacing: 0 !important;
+    line-height: 26px !important;
+    height: 26px !important;
     padding-bottom: 14px !important;
     margin-bottom: 24px !important;
     width: 100% !important;
@@ -8363,12 +8367,12 @@ body.sidebar-collapsed {
   .sidebar-toggle-btn {
     position: absolute !important;
     right: -13px !important;
-    top: 22px !important;
+    top: 24px !important;
     width: 26px !important;
     height: 26px !important;
     border-radius: 50% !important;
     background: #FFFFFF !important;
-    color: #0F172A !important;
+    color: #1E293B !important;
     border: 1px solid rgba(0, 0, 0, 0.12) !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
     display: flex !important;
@@ -8390,14 +8394,17 @@ body.sidebar-collapsed {
   }
 
   .sidebar-toggle-btn i {
-    font-size: 11px !important;
+    font-size: 9px !important;
+    width: 9px !important;
+    height: 9px !important;
     color: #1E293B !important;
+    transform: rotate(90deg) !important;
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
 
   .bottom-nav.collapsed .sidebar-toggle-btn i,
   body.sidebar-collapsed .sidebar-toggle-btn i {
-    transform: rotate(180deg) !important;
+    transform: rotate(-90deg) !important;
   }
 
   html.light-theme .sidebar-toggle-btn {
