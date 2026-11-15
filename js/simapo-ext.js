@@ -1565,7 +1565,7 @@ window.downloadExcelPermen47 = async function() {
   if (typeof ExcelJS !== 'undefined') {
     try {
       const wb = new ExcelJS.Workbook();
-      wb.creator = 'SIMAPO Absensi';
+      wb.creator = 'Aset Absensi';
       const ws = wb.addWorksheet("September'23");
       ws.addRow(['LAPORAN PENGADAAN BMD BERUPA ASET LANCAR PERSEDIAAN']);
       ws.addRow(['Pengguna Barang : BAPPELITBANGDA']);
@@ -1845,7 +1845,7 @@ window.downloadExcelKartuPemeliharaan = async function() {
   if (typeof ExcelJS !== 'undefined') {
     try {
       const wb = new ExcelJS.Workbook();
-      wb.creator = 'SIMAPO Absensi';
+      wb.creator = 'Aset Absensi';
       const ws = wb.addWorksheet('KARTU PEMELIHARAAN');
 
       const data = window._allPemeliharaanData || [];

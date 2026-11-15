@@ -18,6 +18,8 @@ import { createOvertimeRouter } from './overtime.js';
 import { createNotifyRouter } from './notify.js';
 import { createCoreAdminRouter } from './core-admin.js';
 import { createCoreUserRouter } from './core-user.js';
+import { createAbsenRolesRouter } from './absen-roles.js';
+import { initAbsenRolesTable } from './absen-roles-db.js';
 import { ABSEN_ROLES, SIMAPO_ROLES, requireRole } from './auth.js';
 
 // Endpoint SIMAPO yang aman untuk pegawai biasa (USER/INSPEKTUR): baca katalog &
@@ -172,6 +174,11 @@ export function createApp() {
   // ke API peta-ekonomi (PETA_API_URL). Token arsip di-mint server dari nip.
   app.use('/api/arsip', requireRole(ABSEN_ROLES), createArsipRouter());
 
+  // Role Management Absensi (terisolasi dari peta-ekonomi / sd_roles)
+  const absenRolesRouter = createAbsenRolesRouter({ query });
+  app.use('/api/admin/roles', requireRole(ABSEN_ROLES), absenRolesRouter);
+  app.use('/api/absen-roles', requireRole(ABSEN_ROLES), absenRolesRouter);
+
   return app;
 }
 
@@ -180,6 +187,7 @@ if (isMain) {
   const port = Number(process.env.PORT || 8081);
   const app = createApp();
   const server = app.listen(port, () => console.log(`[media] listening on :${port}`));
+  initAbsenRolesTable({ query }).catch((e) => console.error('[rbac] initAbsenRolesTable error:', e.message));
   // Pengganti cron n8n. Matikan dengan SCHEDULER=off (mis. saat debugging).
   if (process.env.SCHEDULER !== 'off') app.locals.scheduler.start();
   for (const sig of ['SIGINT', 'SIGTERM']) {

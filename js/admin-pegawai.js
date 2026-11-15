@@ -510,11 +510,11 @@
               </select>
             </div>
 
-            <!-- SIMAPO -->
+            <!-- ASET -->
             <div style="padding:8px 10px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center">
               <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600">
                 <input type="checkbox" id="sso_app_simapo" ${smp.enabled ? 'checked' : ''} style="width:15px; height:15px; accent-color:#f59e0b">
-                <span><i class="fas fa-boxes" style="color:#f59e0b; width:16px"></i> SIMAPO Aset</span>
+                <span><i class="fas fa-boxes" style="color:#f59e0b; width:16px"></i> Aset</span>
               </label>
               <select id="sso_role_simapo" style="padding:3px 6px; border-radius:6px; background:#1e293b; color:#fff; border:1px solid #334155; font-size:11px">
                 <option value="PEGAWAI" ${smp.role === 'PEGAWAI' ? 'selected' : ''}>Pegawai (Pinjam)</option>

@@ -179,3 +179,23 @@ test('path device persis /api/auth/devices, tanpa prefiks dobel', () => {
   const dobel = paths.filter((p) => p.includes('/api/auth/devices/api'));
   assert.deepEqual(dobel, [], `prefiks dobel: ${dobel.join(', ')}`);
 });
+
+test('/api/admin/roles dan /api/absen-roles ter-mount dengan benar', () => {
+  const paths = mountedPaths(createApp()._router.stack);
+  for (const prefix of ['/api/admin/roles', '/api/absen-roles']) {
+    for (const want of [
+      `${prefix}/ [get]`,
+      `${prefix}/ [post]`,
+      `${prefix}/permissions-list [get]`,
+      `${prefix}/:id [get]`,
+      `${prefix}/:id [put]`,
+      `${prefix}/:id [delete]`,
+      `${prefix}/assign [post]`,
+    ]) {
+      assert.ok(paths.includes(want), `route hilang: ${want}\nada: ${paths.join(', ')}`);
+    }
+  }
+  // Kritis: /api/roles root TIDAK boleh ter-mount (milik peta-ekonomi)
+  const petaRoles = paths.filter((p) => p.startsWith('/api/roles'));
+  assert.deepEqual(petaRoles, [], `KOLISI TERDETEKSI: /api/roles ter-mount: ${petaRoles.join(', ')}`);
+});

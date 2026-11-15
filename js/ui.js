@@ -26,6 +26,7 @@
         'meja':       { section: 'ops', group: 'Operasional & Kehadiran', title: 'Terminal Meja Absen', target: 'mejaAbsenCard' },
         'pegawai':    { section: 'user', group: 'Manajemen Kepegawaian', title: 'Master Pegawai & Face AI', target: 'adminFaceRegCard' },
         'admin':      { section: 'user', group: 'Manajemen Kepegawaian', title: 'Kelola Administrator', target: 'adminMgmtCard' },
+        'roles':      { section: 'user', group: 'Manajemen Kepegawaian', title: 'Kelola Role & Hak Akses', target: 'adminRolesCard' },
         'lokasi':     { section: 'config', group: 'Konfigurasi Sistem', title: 'Geofencing & Lokasi Absen', target: 'adminMap' },
         'jam':        { section: 'config', group: 'Konfigurasi Sistem', title: 'Jam Kerja & Periode Khusus', target: 'periodeAdminList' },
         'libur':      { section: 'config', group: 'Konfigurasi Sistem', title: 'Hari Libur & Cuti Bersama', target: 'liburAdminList' },
@@ -44,6 +45,10 @@
       if (titleEl) titleEl.textContent = meta.title;
 
       switchAdminSection(meta.section);
+
+      if (cardKey === 'roles' && typeof window.loadRolesList === 'function') {
+        window.loadRolesList();
+      }
 
       if (meta.target && $(meta.target)) {
         setTimeout(() => {
@@ -127,6 +132,7 @@
       if (sectionId === 'user') {
         if (typeof initSuperadminPegawaiScoping === 'function') initSuperadminPegawaiScoping();
         loadAdminFaceReg();
+        if (typeof window.loadRolesList === 'function') window.loadRolesList();
       }
       // Fix Leaflet Map rendering if switching to Config & Load Settings
       if (sectionId === 'config') {

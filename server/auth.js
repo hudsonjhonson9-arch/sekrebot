@@ -124,7 +124,15 @@ export function requireRole(roles, deps = {}) {
       row = await lookup(token, kind);
       if (!row) return unauthorized(res);
       role = String(row.role || '').trim().toUpperCase();
-      if (!roles.has(role)) {
+      let allowed = roles.has(role) || roles.has(role.replace(/_/g, ' ')) || roles.has(role.replace(/\s+/g, '_'));
+      if (!allowed && roles === ABSEN_ROLES && (deps.query || process.env.DATABASE_URL)) {
+        try {
+          const doQuery = deps.query || query;
+          const roleCheck = await doQuery('SELECT id FROM absen_roles WHERE id = $1', [role]);
+          if (roleCheck?.rows?.length > 0) allowed = true;
+        } catch {}
+      }
+      if (!allowed) {
         return res.status(403).json({ ok: false, message: 'Forbidden' });
       }
     } catch {
@@ -161,4 +169,65 @@ export function sameInstansi(user, targetInstansiId) {
   // tanpa instansi — kebocoran lintas instansi. Fail-closed.
   if (targetInstansiId === '') return false;
   return String(user?.instansi_id) === String(targetInstansiId);
+}
+
+export function hasPermission(userPermissions, requiredPermission) {
+  if (!Array.isArray(userPermissions)) return false;
+  if (userPermissions.includes('*')) return true;
+  if (userPermissions.includes(requiredPermission)) return true;
+  const [mod] = String(requiredPermission || '').split('.');
+  if (mod && userPermissions.includes(`${mod}.*`)) return true;
+  return false;
+}
+
+export function requirePermission(permission, deps = {}) {
+  const lookup = deps.lookup || defaultLookup;
+  const doQuery = deps.query || query;
+  return async function permissionMiddleware(req, res, next) {
+    const token = bearerToken(req);
+    const kind = isSessionToken(token) ? 'session' : isDeviceToken(token) ? 'device' : null;
+    if (!kind) return unauthorized(res);
+    let row;
+    let role;
+    try {
+      row = await lookup(token, kind);
+      if (!row) return unauthorized(res);
+      role = String(row.role || '').trim().toUpperCase();
+      if (role === 'SUPERADMIN') {
+        req.user = {
+          id: row.id,
+          nip: row.nip,
+          role,
+          instansi_id: row.instansi_id,
+          is_admin: true,
+          permissions: ['*'],
+        };
+        req.authKind = kind;
+        return next();
+      }
+
+      const roleRes = await doQuery('SELECT permissions FROM absen_roles WHERE id = $1', [role]);
+      const rolePerms = roleRes?.rows?.[0]?.permissions || [];
+      const permsArray = Array.isArray(rolePerms)
+        ? rolePerms
+        : (typeof rolePerms === 'string' ? JSON.parse(rolePerms) : []);
+
+      if (!hasPermission(permsArray, permission)) {
+        return res.status(403).json({ ok: false, message: 'Forbidden: Insufficient permissions' });
+      }
+
+      req.user = {
+        id: row.id,
+        nip: row.nip,
+        role,
+        instansi_id: row.instansi_id,
+        is_admin: row.is_admin === true || row.is_admin === 'true',
+        permissions: permsArray,
+      };
+      req.authKind = kind;
+      next();
+    } catch {
+      return res.status(500).json({ ok: false, message: 'Gagal memverifikasi izin' });
+    }
+  };
 }
