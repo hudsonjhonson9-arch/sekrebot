@@ -17,7 +17,8 @@
     "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.5",
     "express": "^4.22.3",
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "pizzip": "^3.3.0"
   },
   "devDependencies": {
     "@capacitor/android": "^8.5.2",
@@ -27,7 +28,6 @@
     "docxtemplater": "^3.71.0",
     "eslint": "^9.39.4",
     "globals": "^17.4.0",
-    "pizzip": "^3.1.4",
     "vite": "^8.0.4"
   }
 }
