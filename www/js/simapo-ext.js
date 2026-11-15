@@ -1668,6 +1668,99 @@ window.clearPenerimaanForm = function() {
 };
 
 /* ─── ADMIN: PEMELIHARAAN (KARTU PEMELIHARAAN SESUAI TEMPLATE) ─── */
+window.onPmBarangChange = function() {
+  const barangId = document.getElementById('pmBarangId')?.value;
+  const list = window._allMasterData || [];
+  const b = list.find(item => String(item.id) === String(barangId)) || {};
+  
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val || '';
+  };
+
+  setVal('pmPenggunaBarang', 'Kepala Badan');
+  setVal('pmKuasaPengguna', 'Kuasa Pengguna Barang');
+  setVal('pmKodeBarang', b.kodebarang || b.kode_barang || '');
+  setVal('pmNamaBarang', b.namabarang || b.nama_barang || b.uraian || '');
+  setVal('pmNibar', b.nomorinventaris || b.kodebarang || b.nibar || '-');
+  setVal('pmSpesifikasi', b.spesifikasi || b.merk || '-');
+};
+
+window.addPemeliharaanRow = function(initialData) {
+  const container = document.getElementById('pmRowsContainer');
+  if (!container) return;
+
+  const today = new Date().toISOString().split('T')[0];
+  const d = initialData || {};
+
+  const rowDiv = document.createElement('div');
+  rowDiv.className = 'pm-maintenance-row';
+  rowDiv.style.cssText = 'display:grid;grid-template-columns:140px 1fr 120px 140px 125px 1fr auto;gap:8px;align-items:center;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.06);padding:8px;border-radius:8px;';
+  
+  rowDiv.innerHTML = `
+    <div>
+      <input type="date" class="form-input pm-row-tgl" value="${d.tgl_pemeliharaan || d.tanggal || today}" style="height:36px;font-size:12px;" title="Tanggal Pemeliharaan">
+    </div>
+    <div>
+      <input type="text" class="form-input pm-row-jenis" value="${d.jenis_pemeliharaan || d.jenis || ''}" placeholder="Servis / Perbaikan..." style="height:36px;font-size:12px;" title="Jenis Pemeliharaan">
+    </div>
+    <div>
+      <input type="number" class="form-input pm-row-biaya" value="${d.biaya !== undefined ? d.biaya : ''}" min="0" placeholder="0" style="height:36px;font-size:12px;font-variant-numeric:tabular-nums;" oninput="window.updatePmTotalBiaya()" title="Biaya Rp">
+    </div>
+    <div>
+      <input type="text" class="form-input pm-row-penyedia" value="${d.nama_penyedia || d.penyedia || ''}" placeholder="Nama bengkel/vendor" style="height:36px;font-size:12px;" title="Nama Penyedia">
+    </div>
+    <div>
+      <input type="text" class="form-input pm-row-kontrak" value="${d.bentuk_kontrak || d.kontrak || ''}" placeholder="Swakelola / Kontrak" style="height:36px;font-size:12px;" title="Bentuk Kontrak">
+    </div>
+    <div>
+      <input type="text" class="form-input pm-row-ket" value="${d.keterangan || ''}" placeholder="Keterangan..." style="height:36px;font-size:12px;" title="Keterangan">
+    </div>
+    <div>
+      <button type="button" class="btn-sm-admin pm-row-del" onclick="window.removePemeliharaanRow(this)" style="height:36px;background:rgba(239,68,68,0.2);color:#ef4444;border:1px solid rgba(239,68,68,0.3);padding:0 10px;" title="Hapus Baris"><i class="fas fa-trash" aria-hidden="true"></i></button>
+    </div>
+  `;
+
+  container.appendChild(rowDiv);
+  window.updatePmRowDeleteButtons();
+  window.updatePmTotalBiaya();
+};
+
+window.removePemeliharaanRow = function(btn) {
+  const row = btn.closest('.pm-maintenance-row');
+  if (row) {
+    row.remove();
+    window.updatePmRowDeleteButtons();
+    window.updatePmTotalBiaya();
+  }
+};
+
+window.updatePmRowDeleteButtons = function() {
+  const container = document.getElementById('pmRowsContainer');
+  if (!container) return;
+  const rows = container.querySelectorAll('.pm-maintenance-row');
+  rows.forEach(r => {
+    const delBtn = r.querySelector('.pm-row-del');
+    if (delBtn) {
+      delBtn.style.display = rows.length > 1 ? 'inline-flex' : 'none';
+    }
+  });
+};
+
+window.updatePmTotalBiaya = function() {
+  const container = document.getElementById('pmRowsContainer');
+  if (!container) return;
+  let total = 0;
+  container.querySelectorAll('.pm-row-biaya').forEach(input => {
+    const val = parseFloat(input.value) || 0;
+    total += val;
+  });
+  const textEl = document.getElementById('pmTotalBiayaText');
+  if (textEl) {
+    textEl.textContent = total.toLocaleString('id-ID');
+  }
+};
+
 window.toggleFormPemeliharaan = function() {
   const wrap = document.getElementById('pemeliharaanFormWrap');
   const btn = document.getElementById('btnToggleFormPm');
@@ -1677,6 +1770,66 @@ window.toggleFormPemeliharaan = function() {
   if (btn) {
     btn.innerHTML = isHidden ? '<i class="fas fa-times" aria-hidden="true"></i> Tutup Form' : '<i class="fas fa-plus" aria-hidden="true"></i> Catat Pemeliharaan';
   }
+  if (isHidden) {
+    window.populatePemeliharaanBarang();
+    const container = document.getElementById('pmRowsContainer');
+    if (container) {
+      container.innerHTML = '';
+      window.addPemeliharaanRow();
+    }
+  }
+};
+
+window.savePemeliharaan = async function() {
+  const barangId = document.getElementById('pmBarangId')?.value || null;
+  const container = document.getElementById('pmRowsContainer');
+  const rows = [];
+
+  if (container) {
+    container.querySelectorAll('.pm-maintenance-row').forEach(r => {
+      const tgl = r.querySelector('.pm-row-tgl')?.value || new Date().toISOString().split('T')[0];
+      const jenis = r.querySelector('.pm-row-jenis')?.value?.trim() || '';
+      const biaya = parseFloat(r.querySelector('.pm-row-biaya')?.value) || 0;
+      const penyedia = r.querySelector('.pm-row-penyedia')?.value?.trim() || '';
+      const kontrak = r.querySelector('.pm-row-kontrak')?.value?.trim() || '';
+      const ket = r.querySelector('.pm-row-ket')?.value?.trim() || '';
+      
+      if (jenis) {
+        rows.push({
+          tgl_pemeliharaan: tgl,
+          jenis_pemeliharaan: jenis,
+          biaya: biaya,
+          nama_penyedia: penyedia,
+          bentuk_kontrak: kontrak,
+          keterangan: ket
+        });
+      }
+    });
+  }
+
+  if (!barangId) {
+    showToast('Pilih barang terlebih dahulu!', 'error');
+    return;
+  }
+  if (rows.length === 0) {
+    showToast('Isi minimal 1 jenis pemeliharaan!', 'error');
+    return;
+  }
+
+  const payload = {
+    barang_id: barangId,
+    items: rows
+  };
+
+  await window.simapoSubmit(P.simapoPemeliharaanSave, payload, {
+    successMsg: 'Data pemeliharaan berhasil disimpan',
+    errorMsg: 'Gagal menyimpan data pemeliharaan.',
+    onSuccess: () => {
+      window._simapoCache.clear('admin_pemeliharaan');
+      window.loadAdminPemeliharaan(true);
+      window.toggleFormPemeliharaan();
+    }
+  });
 };
 
 window.loadAdminPemeliharaan = async function(force = false) {
@@ -1706,6 +1859,7 @@ window.populatePemeliharaanBarang = async function() {
   let data = window._allMasterData;
   if (!data.length) try { data = parseApiResponse(await (await apiFetch(P.simapoAdminMasterList)).json()); } catch { data=[]; }
   sel.innerHTML = '<option value="">-- Pilih Aset --</option>' + data.map(b => `<option value="${b.id}">${b.nama} (${b.kodebarang})</option>`).join('');
+  sel.onchange = window.onPmBarangChange;
   window._asetDd('pmBarangId', { ph: 'Cari aset...', h: 38 });
   window.populateKartuPemeliharaanBarangFilter();
 };
@@ -1952,29 +2106,6 @@ window.toggleMenuAsetLainnya = function(btn) {
   if (btn) {
     btn.innerHTML = isShow ? '<i class="fas fa-arrow-up" aria-hidden="true"></i> Sembunyikan Menu Tambahan' : '<i class="fas fa-ellipsis-h" aria-hidden="true"></i> Menu Lainnya (Mutasi, Opname, dll)';
   }
-};
-
-window.savePemeliharaan = async function() {
-  const payload = {
-    barang_id: document.getElementById('pmBarangId')?.value || null,
-    tgl_pemeliharaan: document.getElementById('pmTgl')?.value,
-    jenis_pemeliharaan: document.getElementById('pmJenis')?.value.trim(),
-    biaya: parseFloat(document.getElementById('pmBiaya')?.value) || 0,
-    nama_penyedia: document.getElementById('pmPenyedia')?.value.trim() || null,
-    bentuk_kontrak: document.getElementById('pmKontrak')?.value.trim() || null,
-    keterangan: document.getElementById('pmKeterangan')?.value.trim() || '',
-  };
-  if (!payload.barang_id || !payload.jenis_pemeliharaan) { showToast('Pilih barang & isi jenis pemeliharaan!', 'error'); return; }
-  showToast('Menyimpan...', 'info');
-  await window.simapoSubmit(P.simapoPemeliharaanSave, payload, {
-    successMsg: 'Data pemeliharaan tersimpan',
-    errorMsg: 'Gagal menyimpan data pemeliharaan.',
-    onSuccess: () => {
-      window._simapoCache.clear('admin_pemeliharaan');
-      window.loadAdminPemeliharaan(true);
-      window.toggleFormPemeliharaan();
-    },
-  });
 };
 
 /* ─── ADMIN: BKU ──────────────────────────────────────────── */

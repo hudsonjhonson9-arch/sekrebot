@@ -2298,16 +2298,24 @@ html.light-theme .admin-detail-crumb-title {
               <div id="pemeliharaanForm" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
                 <div class="form-group" style="grid-column:1/-1;">
                   <label class="form-label">Pilih Barang</label>
-                  <select class="form-input" id="pmBarangId"><option value="">-- Pilih Aset --</option></select>
+                  <select class="form-input" id="pmBarangId" onchange="onPmBarangChange()"><option value="">-- Pilih Aset --</option></select>
                 </div>
-                <div class="form-group"><label class="form-label">Tanggal</label><input class="form-input" id="pmTgl" type="date"></div>
-                <div class="form-group"><label class="form-label">Jenis Pemeliharaan</label><input class="form-input" id="pmJenis" placeholder="Servis berkala / perbaikan"></div>
-                <div class="form-group"><label class="form-label">Biaya (Rp)</label><input class="form-input" id="pmBiaya" type="number" placeholder="0"></div>
-                <div class="form-group"><label class="form-label">Penyedia Jasa</label><input class="form-input" id="pmPenyedia" placeholder="Nama bengkel/vendor"></div>
-                <div class="form-group"><label class="form-label">Bentuk Kontrak</label><input class="form-input" id="pmKontrak" placeholder="Swakelola / Kontrak"></div>
-                <div class="form-group" style="grid-column:1/-1;">
-                  <label class="form-label">Keterangan</label>
-                  <textarea class="form-input" id="pmKeterangan" rows="2" placeholder="Deskripsi pekerjaan..."></textarea>
+                <div class="form-group"><label class="form-label">Pengguna Barang</label><input class="form-input" id="pmPenggunaBarang" value="Kepala Badan" readonly></div>
+                <div class="form-group"><label class="form-label">Kuasa Pengguna Barang</label><input class="form-input" id="pmKuasaPengguna" value="Kuasa Pengguna Barang" readonly></div>
+                <div class="form-group"><label class="form-label">Kode Barang</label><input class="form-input" id="pmKodeBarang" readonly></div>
+                <div class="form-group"><label class="form-label">Nama Barang</label><input class="form-input" id="pmNamaBarang" readonly></div>
+                <div class="form-group"><label class="form-label">NIBAR</label><input class="form-input" id="pmNibar" readonly></div>
+                <div class="form-group" style="grid-column:1/-1;"><label class="form-label">Spesifikasi Barang</label><input class="form-input" id="pmSpesifikasi" readonly></div>
+                
+                <div class="form-group" style="grid-column:1/-1;margin-top:8px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <label class="form-label" style="margin-bottom:0;">Daftar Pemeliharaan / Perbaikan</label>
+                    <button type="button" class="btn-sm-admin" id="btnAddPmRow" onclick="addPemeliharaanRow()" style="background:var(--primary);"><i class="fas fa-plus" aria-hidden="true"></i> Tambah Baris Pemeliharaan</button>
+                  </div>
+                  <div id="pmRowsContainer" style="display:flex;flex-direction:column;gap:8px;"></div>
+                  <div style="display:flex;justify-content:flex-end;margin-top:8px;font-size:13px;font-weight:700;color:var(--gold);">
+                    Total Biaya: Rp <span id="pmTotalBiayaText" style="font-variant-numeric:tabular-nums;margin-left:4px;">0</span>
+                  </div>
                 </div>
               </div>
               <button type="button" class="btn-primary" onclick="savePemeliharaan()" style="width:100%;">
@@ -4181,7 +4189,7 @@ html.light-theme .admin-detail-crumb-title {
   
   <script src="js/aset-screens.js?v=4"></script>
 <script src="js/aset-nav.js?v=20261115a"></script>
-  <script src="js/simapo-ext.js?v=20261115b"></script>
+  <script src="js/simapo-ext.js?v=20261115c"></script>
   <script src="js/simapo-bast.js?v=20261022"></script>
   <script src="js/tugas-spt.js?v=20261112"></script>
 

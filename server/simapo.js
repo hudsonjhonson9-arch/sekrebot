@@ -455,23 +455,62 @@ export function createSimapoRouter({ query, withTransaction }) {
   // ── Simpan pemeliharaan ──
   router.post('/pemeliharaan', async (req, res) => {
     const body = req.body || {};
-    if (!S(body.barang_id) || !S(body.jenis_pemeliharaan)) {
-      return res.status(400).json({ ok: false, message: 'barang_id dan jenis_pemeliharaan wajib diisi.' });
+    const barangId = body.barang_id;
+    if (!S(barangId)) {
+      return res.status(400).json({ ok: false, message: 'barang_id wajib diisi.' });
     }
+
+    let items = [];
+    if (Array.isArray(body.items) && body.items.length > 0) {
+      items = body.items;
+    } else if (body.jenis_pemeliharaan) {
+      items = [body];
+    } else {
+      return res.status(400).json({ ok: false, message: 'barang_id dan jenis_pemeliharaan atau items wajib diisi.' });
+    }
+
+    // Validate each item has jenis_pemeliharaan
+    for (const it of items) {
+      if (!S(it.jenis_pemeliharaan)) {
+        return res.status(400).json({ ok: false, message: 'Setiap item pemeliharaan harus memiliki jenis_pemeliharaan.' });
+      }
+    }
+
     try {
       const inst = instansiOtomatis(req, body.instansi_id);
-      const { rows } = await query(INSERT_PEMELIHARAAN_SQL, [
-        inst, S(body.barang_id), S(body.tgl_pemeliharaan), S(body.jenis_pemeliharaan),
-        BIAYA_MIN(body.biaya), S(body.nama_penyedia), S(body.bentuk_kontrak), S(body.keterangan),
-      ]);
-      return res.json({ ok: true, message: 'Pemeliharaan berhasil disimpan.', id: rows[0]?.id ?? null });
-    } catch {
+      let insertedCount = 0;
+      let lastId = null;
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      for (const it of items) {
+        const tgl = S(it.tgl_pemeliharaan) || todayStr;
+        const { rows } = await query(INSERT_PEMELIHARAAN_SQL, [
+          inst,
+          S(barangId),
+          tgl,
+          S(it.jenis_pemeliharaan),
+          BIAYA_MIN(it.biaya),
+          S(it.nama_penyedia || it.penyedia),
+          S(it.bentuk_kontrak || it.kontrak),
+          S(it.keterangan),
+        ]);
+        insertedCount++;
+        if (rows[0]?.id) lastId = rows[0].id;
+      }
+
+      return res.json({
+        ok: true,
+        message: 'Pemeliharaan berhasil disimpan.',
+        count: insertedCount,
+        id: lastId
+      });
+    } catch (err) {
+      console.error('[pemeliharaan/post]', err);
       return res.status(500).json({ ok: false, message: 'Gagal menyimpan pemeliharaan.' });
     }
   });
 
-  // ── Kartu Pemeliharaan (Download Excel .xlsx) ──
-  router.get('/kartu-pemeliharaan/xlsx', async (req, res) => {
+router.get('/kartu-pemeliharaan/xlsx', async (req, res) => {
     try {
       const inst = instansiOtomatis(req, req.query?.instansi_id);
       const barangId = S(req.query?.barang_id);

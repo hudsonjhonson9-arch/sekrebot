@@ -913,3 +913,90 @@ test('GET /kartu-pemeliharaan/xlsx menghasilkan file excel dengan header kartu y
   assert.equal(body[0], 0x50);
   assert.equal(body[1], 0x4b);
 });
+test('POST /api/simapo/pemeliharaan mendukung batch multi-row items', async () => {
+  let inserted = [];
+  const tx = stub({
+    rows: (sql, params) => {
+      if (sql.includes('INSERT INTO "SIMAPO".pemeliharaan')) {
+        inserted.push(params);
+        return [{ id: 'm-' + inserted.length }];
+      }
+      return [];
+    },
+  });
+  const a = app(tx, ADMIN);
+
+  const payload = {
+    barang_id: 'b-100',
+    items: [
+      { tgl_pemeliharaan: '2026-02-01', jenis_pemeliharaan: 'Servis Ringan', biaya: 150000, nama_penyedia: 'Bengkel A', bentuk_kontrak: 'Nota', keterangan: 'OK' },
+      { tgl_pemeliharaan: '2026-03-01', jenis_pemeliharaan: 'Ganti Oli', biaya: 75000, nama_penyedia: 'Bengkel B', bentuk_kontrak: 'Nota', keterangan: 'Ganti rutin' },
+    ]
+  };
+
+  const { status, body } = await call(a, 'POST', '/api/simapo/pemeliharaan', payload);
+  assert.equal(status, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.count, 2);
+  assert.equal(inserted.length, 2);
+  assert.equal(inserted[0][1], 'b-100');
+  assert.equal(inserted[0][3], 'Servis Ringan');
+  assert.equal(inserted[1][3], 'Ganti Oli');
+});
+
+test('POST /api/simapo/pemeliharaan mendukung backward compatibility single-item payload', async () => {
+  let inserted = [];
+  const tx = stub({
+    rows: (sql, params) => {
+      if (sql.includes('INSERT INTO "SIMAPO".pemeliharaan')) {
+        inserted.push(params);
+        return [{ id: 'm-legacy' }];
+      }
+      return [];
+    },
+  });
+  const a = app(tx, ADMIN);
+
+  const payload = {
+    barang_id: 'b-101',
+    jenis_pemeliharaan: 'Perbaikan Rem',
+    biaya: 200000,
+    nama_penyedia: 'Bengkel Rem',
+    bentuk_kontrak: 'Swakelola',
+    keterangan: 'Darurat'
+  };
+
+  const { status, body } = await call(a, 'POST', '/api/simapo/pemeliharaan', payload);
+  assert.equal(status, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.count, 1);
+  assert.equal(inserted.length, 1);
+  assert.equal(inserted[0][3], 'Perbaikan Rem');
+});
+
+test('POST /api/simapo/pemeliharaan menangani tanggal kosong secara aman (default ke hari ini)', async () => {
+  let inserted = [];
+  const tx = stub({
+    rows: (sql, params) => {
+      if (sql.includes('INSERT INTO "SIMAPO".pemeliharaan')) {
+        inserted.push(params);
+        return [{ id: 'm-date' }];
+      }
+      return [];
+    },
+  });
+  const a = app(tx, ADMIN);
+
+  const payload = {
+    barang_id: 'b-102',
+    items: [
+      { tgl_pemeliharaan: '', jenis_pemeliharaan: 'Pengecekan Rutin', biaya: 0 }
+    ]
+  };
+
+  const { status, body } = await call(a, 'POST', '/api/simapo/pemeliharaan', payload);
+  assert.equal(status, 200);
+  assert.equal(body.ok, true);
+  assert.equal(inserted.length, 1);
+  assert.ok(inserted[0][2]); // tgl_pemeliharaan defaults to today's date string
+});
