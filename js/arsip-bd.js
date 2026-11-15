@@ -151,7 +151,12 @@
       `<option value="${escapeHtml(y.tahun)}"${Number(y.tahun) === Number(tahun) ? ' selected' : ''}>${escapeHtml(y.tahun)}</option>`
     ).join('');
 
-    let isi = `<div class="kk-head">
+    let isi = `<div class="arsip-section-head">
+      <button type="button" class="arsip-btn-back" onclick="arsipBack()">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> <span>Kembali ke Beranda Arsip</span>
+      </button>
+    </div>
+    <div class="kk-head">
       <h3 class="kk-judul">Bank Data</h3>
       <select id="bdTahunSel" class="arsip-search kk-tahun" aria-label="Tahun">${opsiTahun || '<option value="">—</option>'}</select>
       ${isAdmin() ? '<button class="arsip-act" data-bd="tambah-tahun"><i class="fas fa-plus" aria-hidden="true"></i> Tahun</button>' : ''}

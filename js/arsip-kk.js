@@ -137,7 +137,12 @@
       `<option value="${escapeHtml(y)}"${String(y) === String(tahun) ? ' selected' : ''}>${escapeHtml(y)}</option>`
     ).join('');
 
-    let isi = `<div class="kk-head">
+    let isi = `<div class="arsip-section-head">
+      <button type="button" class="arsip-btn-back" onclick="arsipBack()">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> <span>Kembali ke Beranda Arsip</span>
+      </button>
+    </div>
+    <div class="kk-head">
       <h3 class="kk-judul">Kertas Kerja</h3>
       <select id="kkTahunSel" class="arsip-search kk-tahun" aria-label="Tahun">${opsiTahun || '<option value="">—</option>'}</select>
       <button class="arsip-act" data-kk="muat"><i class="fas fa-sync" aria-hidden="true"></i> Muat ulang</button>

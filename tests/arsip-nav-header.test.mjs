@@ -7,6 +7,8 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const agendaSrc = fs.readFileSync(path.join(ROOT, 'js/arsip-agenda.js'), 'utf8');
 const sppdSrc = fs.readFileSync(path.join(ROOT, 'js/arsip-sppd.js'), 'utf8');
+const kkSrc = fs.readFileSync(path.join(ROOT, 'js/arsip-kk.js'), 'utf8');
+const bdSrc = fs.readFileSync(path.join(ROOT, 'js/arsip-bd.js'), 'utf8');
 const arsipSrc = fs.readFileSync(path.join(ROOT, 'js/arsip.js'), 'utf8');
 
 const cssSrc = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
@@ -34,4 +36,9 @@ test('arsip-sppd.js memiliki header in-flow dengan tombol kembali, KPI cards, da
 
 test('arsipDokumen memiliki tombol kembali in-flow di toolbar/header', () => {
   assert.match(html, /id="arsipDokumen"[^>]*>[\s\S]*?arsipBack\(\)/, 'arsipDokumen harus memiliki tombol kembali');
+});
+
+test('arsip-kk.js dan arsip-bd.js memiliki header in-flow dengan tombol kembali', () => {
+  assert.match(kkSrc, /arsip-btn-back[\s\S]*?arsipBack\(\)/, 'Kertas Kerja harus memiliki tombol kembali in-flow');
+  assert.match(bdSrc, /arsip-btn-back[\s\S]*?arsipBack\(\)/, 'Bank Data harus memiliki tombol kembali in-flow');
 });

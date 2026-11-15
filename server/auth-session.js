@@ -110,8 +110,10 @@ export function createAuthSessionRouter({ query = realQuery, arsipSso } = {}) {
         [user.instansi_id || 'bapperida']
       );
       const isToggleOn = pwdSetting?.rows?.[0] ? ['1', 'true', 'on'].includes(String(pwdSetting.rows[0].value).toLowerCase()) : false;
-      const isPrivilegedWithHash = Boolean(user.password_hash) && String(user.role || 'USER').toUpperCase() !== 'USER';
-      const isPasswordRequired = isToggleOn || isPrivilegedWithHash;
+      // Saklar admin (pengaturan.require_password) satu-satunya penentu. Akun berprivilese
+      // yang punya password_hash TIDAK dipaksa sandi selama saklar mati — password absensi
+      // belum diaktifkan. ponytail: NIP saja untuk admin selama saklar mati; aktifkan saklar untuk mewajibkan sandi.
+      const isPasswordRequired = isToggleOn;
 
       if (isPasswordRequired) {
         const password = String(req.body?.password || '');

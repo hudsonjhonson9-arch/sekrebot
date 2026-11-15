@@ -560,7 +560,7 @@ test('login NIP menyertakan is_mandatory_face=false saat NIP tidak ada di face_m
   assert.equal(out.body.user.is_mandatory_face, false);
 });
 
-test('login akun ADMIN yang sudah punya password_hash wajib verifikasi password walau require_password off', async () => {
+test('login akun ADMIN yang punya password_hash TIDAK dipaksa sandi selama require_password off', async () => {
   const { createAuthSessionRouter } = await import('./auth-session.js');
   const r = createAuthSessionRouter({
     query: async (sql) => {
@@ -575,12 +575,16 @@ test('login akun ADMIN yang sudah punya password_hash wajib verifikasi password 
           password_hash: '$2a$10$qyVxAODHUx6WLLF0Tm/I7u/T1b.m0hZW2FD2ivm/6U7K.SRiIgjwq',
         });
       }
+      if (/INSERT INTO auth_sessions/i.test(sql)) {
+        return { rows: [{ session_token: 'e'.repeat(192) }] };
+      }
       return { rows: [] };
     },
   });
-  const noPwd = await drive(r, 'POST', '/api/auth/login', { nip: '198001012005011001' });
-  assert.equal(noPwd.status, 401);
-  assert.equal(noPwd.body.require_password, true);
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '198001012005011001' });
+  assert.equal(out.status, 200);
+  assert.equal(out.body.ok, true);
+  assert.equal(out.body.require_password, undefined);
 });
 
 test('POST /api/auth/register mendaftarkan pegawai baru dengan role USER dan menerbitkan session_token 192 hex', async () => {

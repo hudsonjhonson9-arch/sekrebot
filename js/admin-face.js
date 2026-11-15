@@ -309,7 +309,8 @@
         if (desc) desc.textContent = 'Login bebas kata sandi (cukup NIP / verifikasi wajah)';
       }
       const card = $('passwordToggleCard');
-      if (card) card.style.display = _isSuperAdmin() ? 'block' : 'none';
+      const isAdmin = _isSuperAdmin() || /ADMIN/i.test(String(_getSessionRole() || ''));
+      if (card) card.style.display = isAdmin ? 'block' : 'none';
     }
 
     async function loadPasswordToggle(instansi_id) {
