@@ -86,7 +86,7 @@ export function createApp() {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const sendTelegram = botToken ? telegramSender(botToken) : null;
   const openwaCfg = process.env.OPENWA_URL
-    ? { url: process.env.OPENWA_URL, apiKey: process.env.OPENWA_API_KEY, session: process.env.OPENWA_SESSION || 'default' }
+    ? { url: process.env.OPENWA_URL, apiKey: process.env.OPENWA_API_KEY, session: process.env.OPENWA_SESSION || 'notifbapperida' }
     : null;
   const wahaCfg = !openwaCfg && process.env.WAHA_URL
     ? { url: process.env.WAHA_URL, apiKey: process.env.WAHA_API_KEY, session: process.env.WAHA_SESSION }

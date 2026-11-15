@@ -122,6 +122,28 @@ test('openwaSender: resolve session UUID sekali + kirim text, image, dan documen
   }
 });
 
+test('openwaSender: fallback ke session status ready bila session name default tidak cocok', async () => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = async (url, opts = {}) => {
+    const u = String(url);
+    if (u.endsWith('/api/sessions')) {
+      calls.push({ url: u, method: 'GET' });
+      return { ok: true, json: async () => [{ id: 'uuid-ready-456', name: 'notifbapperida', status: 'ready' }] };
+    }
+    calls.push({ url: u, method: opts.method, headers: opts.headers, body: JSON.parse(opts.body) });
+    return { ok: true, json: async () => ({ messageId: 'm2' }) };
+  };
+  try {
+    const send = openwaSender({ url: 'https://openwa.test/', apiKey: 'k', session: 'default', chatId: 'grup@g.us' });
+    await send({ text: 'pesan fallback' });
+    assert.equal(calls[1].url, 'https://openwa.test/api/sessions/uuid-ready-456/messages/send-text');
+    assert.deepEqual(calls[1].body, { chatId: 'grup@g.us', text: 'pesan fallback' });
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
 test('broadcast dengan media: meneruskan media ke sendWA', async () => {
   const wa = [];
   const notify = createKeteranganNotify({

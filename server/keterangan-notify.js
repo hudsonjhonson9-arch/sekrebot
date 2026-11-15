@@ -90,7 +90,11 @@ export function openwaSender({ url, apiKey, session = 'default', chatId }) {
     const r = await fetch(`${base}/api/sessions`, { headers: apiKey ? { 'X-Api-Key': apiKey } : {} });
     if (r.ok) {
       const list = await r.json().catch(() => []);
-      const found = Array.isArray(list) ? list.find(s => s.id === session || s.name === session) : null;
+      const found = Array.isArray(list)
+        ? (list.find(s => s.id === session || s.name === session)
+           || list.find(s => s.status === 'ready')
+           || (list.length === 1 ? list[0] : null))
+        : null;
       if (found?.id) {
         resolvedId = found.id;
         return resolvedId;
