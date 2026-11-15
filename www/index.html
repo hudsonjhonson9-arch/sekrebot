@@ -1858,6 +1858,11 @@ html.light-theme .admin-detail-crumb-title {
       
 
       <div id="aset-grid" class="aset-grid"></div>
+      <div id="aset-grid-more-wrap" style="text-align:center;margin:-4px 0 14px;">
+        <button type="button" class="btn-sm-admin" onclick="window.toggleMenuAsetLainnya(this)" style="background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.12);font-size:11px;color:var(--muted);padding:5px 14px;border-radius:20px;cursor:pointer;">
+          <i class="fas fa-ellipsis-h" aria-hidden="true"></i> Menu Lainnya (Mutasi, Opname, dll)
+        </button>
+      </div>
 <div id="aset-screen-head" style="display:none;align-items:center;gap:10px;margin-bottom:12px;">
   <button class="btn-sm-admin" onclick="window.ASET_NAV.showGrid()" aria-label="Kembali ke daftar fitur Aset">
     <i class="fas fa-arrow-left"></i> Kembali</button>
@@ -1970,6 +1975,8 @@ html.light-theme .admin-detail-crumb-title {
 .aset-sect{display:none}
 @media(max-width:1100px){.aset-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:720px){.aset-grid{grid-template-columns:repeat(2,1fr)}}
+.aset-card[data-key="bku"],.aset-card[data-key="pks"],.aset-card[data-key="mutasi"],.aset-card[data-key="opname"],.aset-card[data-key="standar-harga"],.aset-card[data-key="bast"],.aset-card[data-key="tiket"],.aset-card[data-key="pinjaman-saya"],.aset-card[data-key="tiket-saya"]{display:none!important}
+.aset-grid.aset-grid-show-all .aset-card{display:flex!important}
 </style>
         <div id="aset-sect-pinjam" class="aset-sect">
           <div class="card glass-card">
@@ -1977,7 +1984,10 @@ html.light-theme .admin-detail-crumb-title {
               <span><i class="fas fa-clipboard-list" aria-hidden="true"></i> Permintaan Peminjaman</span>
               <button class="btn-sm-admin" onclick="loadAdminSimapoPinjam()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
             </div>
-            <button onclick="adminQRKembaliScan()" style="width:100%;margin:10px 0;padding:10px;background:rgba(100,180,255,0.12);color:#64b4ff;border:1px solid rgba(100,180,255,0.3);border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;"><i class="fas fa-camera" aria-hidden="true"></i> Scan QR Kembali</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;">
+              <button type="button" onclick="window.scanQRAset()" style="padding:10px;background:var(--gold-dim);color:var(--gold);border:1px solid var(--gold);border-radius:10px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;"><i class="fas fa-camera" aria-hidden="true"></i> Scan QR Pinjam</button>
+              <button type="button" onclick="adminQRKembaliScan()" style="padding:10px;background:rgba(100,180,255,0.12);color:#64b4ff;border:1px solid rgba(100,180,255,0.3);border-radius:10px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;"><i class="fas fa-undo" aria-hidden="true"></i> Scan QR Kembali</button>
+            </div>
             <div style="display:flex;gap:6px;margin:0 0 10px;flex-wrap:wrap;">
               <button onclick="filterSAPinjam('MENUNGGU',this)" class="sa-filter-btn active" data-filter="MENUNGGU"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Pending</button>
               <button onclick="filterSAPinjam('DISETUJUI',this)" class="sa-filter-btn"><i class="fas fa-check" aria-hidden="true"></i> Disetujui</button>
@@ -2132,102 +2142,170 @@ html.light-theme .admin-detail-crumb-title {
           </div>
         </div>
 
-        <!-- [TAB] PENERIMAAN BARANG -->
+        <!-- [TAB] PENERIMAAN BARANG / LAPORAN PERMEN 47 -->
         <div id="aset-sect-penerimaan" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span><i class="fas fa-download" aria-hidden="true"></i> Penerimaan Barang</span>
-              <button class="btn-sm-admin" onclick="loadAdminPenerimaan()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
+              <span><i class="fas fa-file-invoice" aria-hidden="true"></i> Laporan Pengadaan Pakai Habis (Permen 47)</span>
+              <button class="btn-sm-admin" onclick="loadAdminPenerimaan(true)" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
             </div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;">Rekapitulasi pengadaan persediaan barang pakai habis sesuai format Permendagri No. 47.</div>
 
-            <!-- Header Form -->
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:12px 0;">
-              <div class="form-group"><label class="form-label">No. Nota/Kwitansi</label><input class="form-input" id="ptNoNota" placeholder="cth: BKU 12/2025"></div>
-              <div class="form-group"><label class="form-label">Tanggal</label><input class="form-input" id="ptTgl" type="date"></div>
-              <div class="form-group"><label class="form-label">Bentuk Kontrak</label><input class="form-input" id="ptKontrak" placeholder="Swakelola / Langganan"></div>
-              <div class="form-group"><label class="form-label">Penyedia</label><input class="form-input" id="ptPenyedia" placeholder="CV. Sumber Karya Abadi"></div>
-              <div class="form-group"><label class="form-label">No. SP2D</label><input class="form-input" id="ptSp2d" placeholder="Nomor SP2D"></div>
-              <div class="form-group"><label class="form-label">Status SPJ</label>
-                <select class="form-input" id="ptStatusSpj">
-                  <option value="belum_dikumpulkan">Belum Dikumpulkan</option>
-                  <option value="sudah_di_map">Sudah di Map</option>
-                  <option value="sudah_lapor">Sudah Lapor</option>
+            <!-- Toolbar Filter & Aksi -->
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0;padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;">
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label class="form-label" style="margin:0;font-size:11px;">Periode</label>
+                <select id="permen47Periode" class="form-input" style="height:36px;min-width:160px;" onchange="loadLaporanPermen47()">
+                  <option value="TW1">Triwulan I (Jan - Mar)</option>
+                  <option value="TW2">Triwulan II (Apr - Jun)</option>
+                  <option value="TW3" selected>Triwulan III (Jul - Sep)</option>
+                  <option value="TW4">Triwulan IV (Okt - Des)</option>
+                  <option value="SM1">Semester I (Jan - Jun)</option>
+                  <option value="SM2">Semester II (Jul - Des)</option>
+                  <option value="TAHUNAN">Tahunan (Jan - Des)</option>
                 </select>
               </div>
-              <div class="form-group" style="grid-column:1/-1;">
-                <label class="form-label">Sub Kegiatan</label>
-                <input class="form-input" id="ptSubKeg" placeholder="cth: 5.01.01.2.09.0009 - Pemeliharaan Gedung Kantor">
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label class="form-label" style="margin:0;font-size:11px;">Tahun</label>
+                <select id="permen47Tahun" class="form-input" style="height:36px;min-width:100px;" onchange="loadLaporanPermen47()">
+                  <option value="2027">2027</option>
+                  <option value="2026">2026</option>
+                  <option value="2025" selected>2025</option>
+                  <option value="2024">2024</option>
+                </select>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:auto;flex-wrap:wrap;">
+                <button type="button" class="btn-sm-admin" onclick="loadLaporanPermen47()" style="height:36px;background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i> Pratinjau</button>
+                <button type="button" class="btn-sm-admin" onclick="downloadExcelPermen47()" style="height:36px;background:var(--success)"><i class="fas fa-file-excel" aria-hidden="true"></i> Unduh Excel (.xlsx)</button>
+                <button type="button" class="btn-sm-admin" id="btnToggleFormPenerimaan" onclick="toggleFormPenerimaan()" style="height:36px;background:rgba(255,255,255,0.08)"><i class="fas fa-plus" aria-hidden="true"></i> Catat Pengadaan Baru</button>
               </div>
             </div>
 
-            <!-- Detail Items Table -->
-            <div style="margin:14px 0;">
-              <div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:8px;"><i class="fas fa-clipboard-list" aria-hidden="true"></i> Daftar Barang</div>
-              <div style="display:grid;grid-template-columns:3fr 1fr 1.5fr 1fr 80px;gap:6px;align-items:end;margin-bottom:8px;">
-                <div class="form-group" style="margin:0;">
-                  <label class="form-label">Nama Barang</label>
-                  <input class="form-input" id="ptdNama" list="shItemList" placeholder="Ketik nama barang..." oninput="onStandarHargaItemInput(this.value)">
-                  <datalist id="shItemList"></datalist>
+            <!-- Form Input Collapsible (Catat Pengadaan Baru) -->
+            <div id="penerimaanFormWrap" style="display:none;margin:12px 0;padding:14px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;">
+              <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:10px;"><i class="fas fa-plus" aria-hidden="true"></i> Form Catat Pengadaan Barang Pakai Habis</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+                <div class="form-group"><label class="form-label">No. Nota/Kwitansi</label><input class="form-input" id="ptNoNota" placeholder="cth: BKU 12/2025"></div>
+                <div class="form-group"><label class="form-label">Tanggal</label><input class="form-input" id="ptTgl" type="date"></div>
+                <div class="form-group"><label class="form-label">Bentuk Kontrak</label><input class="form-input" id="ptKontrak" placeholder="Swakelola / Langganan"></div>
+                <div class="form-group"><label class="form-label">Penyedia</label><input class="form-input" id="ptPenyedia" placeholder="CV. Sumber Karya Abadi"></div>
+                <div class="form-group"><label class="form-label">No. SP2D</label><input class="form-input" id="ptSp2d" placeholder="Nomor SP2D"></div>
+                <div class="form-group"><label class="form-label">Status SPJ</label>
+                  <select class="form-input" id="ptStatusSpj">
+                    <option value="belum_dikumpulkan">Belum Dikumpulkan</option>
+                    <option value="sudah_di_map">Sudah di Map</option>
+                    <option value="sudah_lapor">Sudah Lapor</option>
+                  </select>
                 </div>
-                <div class="form-group" style="margin:0;">
-                  <label class="form-label">Jumlah</label>
-                  <input class="form-input" id="ptdJumlah" type="number" min="1" value="1">
+                <div class="form-group" style="grid-column:1/-1;">
+                  <label class="form-label">Sub Kegiatan</label>
+                  <input class="form-input" id="ptSubKeg" placeholder="cth: 5.01.01.2.09.0009 - Pemeliharaan Gedung Kantor">
                 </div>
-                <div class="form-group" style="margin:0;">
-                  <label class="form-label">Satuan</label>
-                  <input class="form-input" id="ptdSatuan" placeholder="Unit">
-                </div>
-                <div class="form-group" style="margin:0;">
-                  <label class="form-label">Harga Satuan</label>
-                  <input class="form-input" id="ptdHarga" type="number" placeholder="0">
-                </div>
-                <button class="btn-sm-admin" onclick="addPenerimaanItem()" style="background:var(--success);height:38px;align-self:end;"><i class="fas fa-plus" aria-hidden="true"></i></button>
               </div>
+
+              <!-- Detail Items Table -->
+              <div style="margin:14px 0;">
+                <div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:8px;"><i class="fas fa-clipboard-list" aria-hidden="true"></i> Daftar Barang</div>
+                <div style="display:grid;grid-template-columns:3fr 1fr 1.5fr 1fr 80px;gap:6px;align-items:end;margin-bottom:8px;">
+                  <div class="form-group" style="margin:0;">
+                    <label class="form-label">Nama Barang</label>
+                    <input class="form-input" id="ptdNama" list="shItemList" placeholder="Ketik nama barang..." oninput="onStandarHargaItemInput(this.value)">
+                    <datalist id="shItemList"></datalist>
+                  </div>
+                  <div class="form-group" style="margin:0;">
+                    <label class="form-label">Jumlah</label>
+                    <input class="form-input" id="ptdJumlah" type="number" min="1" value="1">
+                  </div>
+                  <div class="form-group" style="margin:0;">
+                    <label class="form-label">Satuan</label>
+                    <input class="form-input" id="ptdSatuan" placeholder="Unit">
+                  </div>
+                  <div class="form-group" style="margin:0;">
+                    <label class="form-label">Harga Satuan</label>
+                    <input class="form-input" id="ptdHarga" type="number" placeholder="0">
+                  </div>
+                  <button type="button" class="btn-sm-admin" onclick="addPenerimaanItem()" style="background:var(--success);height:38px;align-self:end;"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                </div>
+              </div>
+
+              <div id="penerimaanItemsContainer" style="margin-bottom:10px;">
+                <div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Belum ada item. Tambah barang di atas.</div>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0;padding:10px;background:rgba(0,0,0,0.2);border-radius:8px;">
+                <span style="font-size:12px;color:var(--muted);">Total Item: <span id="ptTotalItem">0</span></span>
+                <span style="font-size:16px;font-weight:800;color:var(--gold);">Rp <span id="ptTotalNilai">0</span></span>
+              </div>
+
+              <button type="button" class="btn-primary" onclick="savePenerimaan()" style="width:100%;">
+                <div class="btn-inner"><span><i class="fas fa-save" aria-hidden="true"></i></span> Simpan Penerimaan Barang</div>
+              </button>
             </div>
 
-            <div id="penerimaanItemsContainer" style="margin-bottom:10px;">
-              <div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Belum ada item. Tambah barang di atas.</div>
-            </div>
-
-            <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0;padding:10px;background:rgba(0,0,0,0.2);border-radius:8px;">
-              <span style="font-size:12px;color:var(--muted);">Total Item: <span id="ptTotalItem">0</span></span>
-              <span style="font-size:16px;font-weight:800;color:var(--gold);">Rp <span id="ptTotalNilai">0</span></span>
-            </div>
-
-            <button class="btn-primary" onclick="savePenerimaan()" style="width:100%;">
-              <div class="btn-inner"><span><i class="fas fa-save" aria-hidden="true"></i></span> Simpan Penerimaan Barang</div>
-            </button>
-            <div style="margin-top:14px;"><div id="adminPenerimaanList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div></div>
+            <!-- Tabel Pratinjau Permen 47 -->
+            <div id="permen47PreviewContainer" style="margin-top:12px;"></div>
+            <div id="adminPenerimaanList" style="display:none;"></div>
           </div>
         </div>
 
-        <!-- [TAB] PEMELIHARAAN -->
+        <!-- [TAB] PEMELIHARAAN (KARTU PEMELIHARAAN) -->
         <div id="aset-sect-pemeliharaan" class="aset-sect">
           <div class="card glass-card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span><i class="fas fa-wrench" aria-hidden="true"></i> Pemeliharaan Aset</span>
-              <button class="btn-sm-admin" onclick="loadAdminPemeliharaan()" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
+              <span><i class="fas fa-tools" aria-hidden="true"></i> Kartu Pemeliharaan Aset</span>
+              <button class="btn-sm-admin" onclick="loadAdminPemeliharaan(true)" style="background:var(--primary)"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;">Riwayat pemeliharaan barang milik daerah sesuai template Permendagri No. 47.</div>
+
+            <!-- Toolbar Filter & Aksi -->
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0;padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;">
+              <div style="display:flex;flex-direction:column;gap:4px;flex:1.5;min-width:200px;">
+                <label class="form-label" style="margin:0;font-size:11px;">Pilih Aset/Barang</label>
+                <select id="kpFilterBarang" class="form-input" style="height:36px;" onchange="filterKartuPemeliharaan()">
+                  <option value="">-- Semua Barang (Cetak Semua Kartu) --</option>
+                </select>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;width:110px;">
+                <label class="form-label" style="margin:0;font-size:11px;">Tahun</label>
+                <select id="kpFilterTahun" class="form-input" style="height:36px;" onchange="filterKartuPemeliharaan()">
+                  <option value="">Semua</option>
+                  <option value="2027">2027</option>
+                  <option value="2026">2026</option>
+                  <option value="2025" selected>2025</option>
+                  <option value="2024">2024</option>
+                </select>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:auto;flex-wrap:wrap;">
+                <button type="button" class="btn-sm-admin" onclick="downloadExcelKartuPemeliharaan()" style="height:36px;background:var(--success)"><i class="fas fa-file-excel" aria-hidden="true"></i> Unduh Excel (.xlsx)</button>
+                <button type="button" class="btn-sm-admin" onclick="cetakKartuPemeliharaan()" style="height:36px;background:rgba(255,255,255,0.08)"><i class="fas fa-print" aria-hidden="true"></i> Cetak Kartu</button>
+                <button type="button" class="btn-sm-admin" id="btnToggleFormPm" onclick="toggleFormPemeliharaan()" style="height:36px;background:rgba(255,255,255,0.08)"><i class="fas fa-plus" aria-hidden="true"></i> Catat Pemeliharaan</button>
+              </div>
             </div>
 
-            <!-- Form Input -->
-            <div id="pemeliharaanForm" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;">
-              <div class="form-group" style="grid-column:1/-1;">
-                <label class="form-label">Pilih Barang</label>
-                <select class="form-input" id="pmBarangId"><option value="">-- Pilih Aset --</option></select>
+            <!-- Form Input Collapsible -->
+            <div id="pemeliharaanFormWrap" style="display:none;margin:12px 0;padding:14px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;">
+              <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:10px;"><i class="fas fa-plus" aria-hidden="true"></i> Form Catat Riwayat Pemeliharaan</div>
+              <div id="pemeliharaanForm" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+                <div class="form-group" style="grid-column:1/-1;">
+                  <label class="form-label">Pilih Barang</label>
+                  <select class="form-input" id="pmBarangId"><option value="">-- Pilih Aset --</option></select>
+                </div>
+                <div class="form-group"><label class="form-label">Tanggal</label><input class="form-input" id="pmTgl" type="date"></div>
+                <div class="form-group"><label class="form-label">Jenis Pemeliharaan</label><input class="form-input" id="pmJenis" placeholder="Servis berkala / perbaikan"></div>
+                <div class="form-group"><label class="form-label">Biaya (Rp)</label><input class="form-input" id="pmBiaya" type="number" placeholder="0"></div>
+                <div class="form-group"><label class="form-label">Penyedia Jasa</label><input class="form-input" id="pmPenyedia" placeholder="Nama bengkel/vendor"></div>
+                <div class="form-group"><label class="form-label">Bentuk Kontrak</label><input class="form-input" id="pmKontrak" placeholder="Swakelola / Kontrak"></div>
+                <div class="form-group" style="grid-column:1/-1;">
+                  <label class="form-label">Keterangan</label>
+                  <textarea class="form-input" id="pmKeterangan" rows="2" placeholder="Deskripsi pekerjaan..."></textarea>
+                </div>
               </div>
-              <div class="form-group"><label class="form-label">Tanggal</label><input class="form-input" id="pmTgl" type="date"></div>
-              <div class="form-group"><label class="form-label">Jenis Pemeliharaan</label><input class="form-input" id="pmJenis" placeholder="Servis berkala / perbaikan"></div>
-              <div class="form-group"><label class="form-label">Biaya (Rp)</label><input class="form-input" id="pmBiaya" type="number" placeholder="0"></div>
-              <div class="form-group"><label class="form-label">Penyedia Jasa</label><input class="form-input" id="pmPenyedia" placeholder="Nama bengkel/vendor"></div>
-              <div class="form-group"><label class="form-label">Bentuk Kontrak</label><input class="form-input" id="pmKontrak" placeholder="Swakelola / Kontrak"></div>
-              <div class="form-group" style="grid-column:1/-1;">
-                <label class="form-label">Keterangan</label>
-                <textarea class="form-input" id="pmKeterangan" rows="2" placeholder="Deskripsi pekerjaan..."></textarea>
-              </div>
+              <button type="button" class="btn-primary" onclick="savePemeliharaan()" style="width:100%;">
+                <div class="btn-inner"><span><i class="fas fa-save" aria-hidden="true"></i></span> Simpan Pemeliharaan</div>
+              </button>
             </div>
-            <button class="btn-primary" onclick="savePemeliharaan()" style="width:100%;">
-              <div class="btn-inner"><span><i class="fas fa-save" aria-hidden="true"></i></span> Simpan Pemeliharaan</div>
-            </button>
+
+            <!-- List Kartu Pemeliharaan -->
             <div style="margin-top:14px;"><div id="adminPemeliharaanList"><div class="shimmer-wrapper"><div class="shimmer sh-line" style="height:50px;border-radius:8px"></div></div></div></div>
           </div>
         </div>
@@ -3986,9 +4064,9 @@ html.light-theme .admin-detail-crumb-title {
   <!-- simapo-admin.js dihapus (dikonsolidasi ke simapo-ext.js) -->
   
   
-  <script src="js/aset-screens.js?v=3"></script>
-<script src="js/aset-nav.js?v=20261013a"></script>
-  <script src="js/simapo-ext.js?v=20261014g"></script>
+  <script src="js/aset-screens.js?v=4"></script>
+<script src="js/aset-nav.js?v=20261115a"></script>
+  <script src="js/simapo-ext.js?v=20261115a"></script>
   <script src="js/simapo-bast.js?v=20261022"></script>
   <script src="js/tugas-spt.js?v=20261112"></script>
 

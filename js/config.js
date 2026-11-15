@@ -30,6 +30,7 @@ const DB_VERSION = 1;
 const idb = {
   db: null,
   async init() {
+    if (typeof indexedDB === 'undefined') return Promise.resolve();
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VERSION);
       req.onupgradeneeded = (e) => {
@@ -167,6 +168,9 @@ window._session = {
       window._session.role = localStorage.getItem('_sess_role') || 'USER';
       window._session.instansi_id = localStorage.getItem('_sess_inst') || '';
       window._session.isLoggedIn = true;
+      if (!_nativeToken && /^[0-9a-f]{192}$/.test(t)) {
+        setNativeToken(t);
+      }
     }
   } catch (_) {}
 })();
@@ -180,6 +184,11 @@ async function ensureNativeSession() {
   // Meja Absen/perangkat bersama memakai token dv_ yang diterbitkan SUPERADMIN
   // lewat /api/auth/devices. Token hanya disimpan di perangkat, bukan di source.
   if (_deviceToken && /^dv_[0-9a-f]{64}$/.test(_deviceToken)) return _deviceToken;
+  const sessToken = window._session?.token || (typeof localStorage !== 'undefined' ? localStorage.getItem('_sess_token') : null);
+  if (sessToken && /^[0-9a-f]{192}$/.test(sessToken)) {
+    setNativeToken(sessToken);
+    return sessToken;
+  }
   // ponytail: initApp memanggil banyak endpoint secara paralel. Tanpa janji
   // bersama, tiap request menerbitkan sesi sendiri dan satu 401 menghapus token
   // milik request lain lewat _handleAuthExpired → data kosong sampai user
@@ -238,6 +247,9 @@ function setSession(token, data) {
   window._session.instansi_id = data.instansi_id || '';
   window._session.isLoggedIn = true;
   _authExpiredShown = false;
+  if (token && /^[0-9a-f]{192}$/.test(token)) {
+    setNativeToken(token);
+  }
   try {
     localStorage.setItem('_sess_token', token);
     localStorage.setItem('_sess_nip', data.nip || '');
@@ -266,6 +278,7 @@ function clearSession() {
     localStorage.removeItem('_sess_role');
     localStorage.removeItem('_sess_inst');
   } catch (_) {}
+  setNativeToken(null);
 }
 
 // Sesi web/NIP: token 192 hex dari /api/auth/login disimpan sebagai _native_token
@@ -277,6 +290,13 @@ function setNativeToken(token) {
     if (token) localStorage.setItem('_native_token', token);
     else localStorage.removeItem('_native_token');
   } catch { /* mode privat */ }
+}
+
+if (typeof window !== 'undefined') {
+  window.ensureNativeSession = ensureNativeSession;
+  window.setSession = setSession;
+  window.clearSession = clearSession;
+  window.setNativeToken = setNativeToken;
 }
 
 function _getSessionRole() {

@@ -3,6 +3,7 @@ import { buatTokenArsip, bersihkanSecret } from './arsip-sso.js';
 import { query as queryDb } from './db.js';
 import { gasUpsert } from './gas.js';
 import { roleArsip, R_ADMIN } from './arsip-role.js';
+import { handleArsipDbRequest } from './arsip-db.js';
 
 // Proxy ke API arsipdigital (peta-ekonomi). Token arsip_session di-mint di sini
 // dari req.user.nip, bukan dari cookie browser — jadi panel arsip native tidak
@@ -20,6 +21,17 @@ export function createArsipRouter(deps = {}) {
   // dengan 'Admin'. BUKAN role absensi (user_list) — dua tabel itu memang tidak
   // sinkron, dan arsipdigital-lah yang jadi otoritas akhir. Fail-closed.
   const bolehTulis = (req) => roleArsip(doQuery, req.user?.nip).then((r) => r === R_ADMIN);
+
+  // Pastikan NIP pengguna terisi dari user_list jika sesi hanya membawa id
+  router.use(async (req, res, next) => {
+    if (req.user && !req.user.nip && req.user.id) {
+      try {
+        const { rows } = await doQuery('SELECT "NIP" AS nip FROM user_list WHERE id::text = $1 LIMIT 1', [String(req.user.id)]);
+        if (rows[0]?.nip) req.user.nip = rows[0].nip;
+      } catch (_) {}
+    }
+    next();
+  });
 
   // Role arsip si pengguna, untuk menentukan tombol admin di panel (FAB unggah,
   // aksi massal). Dipisah dari window.IS_ADMIN absensi karena sumbernya beda.
@@ -49,11 +61,24 @@ export function createArsipRouter(deps = {}) {
         },
         body: isWrite ? JSON.stringify(req.body ?? {}) : undefined,
       });
+
+      // Upstream 401 (auth cookie ditolak oleh arsipdigital, mis. secret mismatch atau
+      // sesi arsip kedaluwarsa) atau 502/503: fallback ke database PostgreSQL lokal
+      // agar pengguna absensi yang sesinya aktif tetap dapat mengakses data arsip.
+      if (r.status === 401 || r.status === 502 || r.status === 503) {
+        console.warn(`[arsip-proxy] Upstream returned ${r.status} for ${target}, fallback to db.`);
+        const handled = await handleArsipDbRequest(req, res, target, doQuery);
+        if (handled) return;
+      }
+
       const text = await r.text().catch(() => '');
       res.status(r.status || 502);
       if (text) res.type('application/json').send(text);
       else res.end();
     } catch {
+      // Upstream down atau network timeout: fallback ke query database langsung
+      const handled = await handleArsipDbRequest(req, res, target, doQuery);
+      if (handled) return;
       res.status(502).json({ ok: false, message: 'Gagal menghubungi server arsip' });
     }
   }

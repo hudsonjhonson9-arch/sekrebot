@@ -28,6 +28,10 @@ import {
   MUTASI_LIST_SQL,
   MUTASI_INSERT_SQL,
   MUTASI_STOK_SQL,
+  PEMELIHARAAN_SQL,
+  KARTU_PEMELIHARAAN_BARANG_SQL,
+  LAPORAN_PERMEN47_PENERIMAAN_SQL,
+  LAPORAN_PERMEN47_FALLBACK_SQL,
 } from './simapo.js';
 
 // Semua SQL yang dibungkus router, dipakai guard "tidak ada nilai user hardcoded".
@@ -36,6 +40,8 @@ const SEMUA_SQL = [
   KATEGORI_LIST_SQL, KATEGORI_SAVE_SQL, KATEGORI_DELETE_SQL,
   KATALOG_SQL, MASTER_LIST_SQL, MASTER_SAVE_SQL, MASTER_DELETE_SQL,
   MUTASI_LIST_SQL, MUTASI_INSERT_SQL, MUTASI_STOK_SQL,
+  PEMELIHARAAN_SQL, KARTU_PEMELIHARAAN_BARANG_SQL,
+  LAPORAN_PERMEN47_PENERIMAAN_SQL, LAPORAN_PERMEN47_FALLBACK_SQL,
 ];
 
 // ── stub ──
@@ -46,6 +52,10 @@ function stub({ rows = [], failAt = 0 } = {}) {
   const runner = async (sql, params) => {
     calls.push({ sql, params });
     if (failAt && calls.length === failAt) throw new Error('db exploded');
+    if (typeof rows === 'function') {
+      const res = await rows(sql, params, calls.length);
+      return { rows: Array.isArray(res) ? res : [res] };
+    }
     return { rows: Array.isArray(rows) ? rows : [rows] };
   };
 
@@ -89,15 +99,18 @@ const ADMIN = { id: '1', nip: '198704121994031005', role: 'ADMIN', instansi_id: 
 function call(a, method, url, body) {
   return new Promise((resolve) => {
     let err;
-    const done = () => resolve({ err, status: res.statusCode, body: res.body });
-    const req = { method, url, headers: { 'content-type': 'application/json' } };
     const res = {
-      statusCode: 0, body: null,
+      statusCode: 0,
+      body: null,
+      headers: {},
       status(c) { this.statusCode = c; return this; },
       json(p) { this.body = p; this.statusCode ||= 200; done(); return this; },
-      end() { this.statusCode ||= 200; done(); return this; },
-      setHeader() {},
+      end(b) { if (b) this.body = b; this.statusCode ||= 200; done(); return this; },
+      send(b) { if (b) this.body = b; this.statusCode ||= 200; done(); return this; },
+      setHeader(k, v) { this.headers[k.toLowerCase()] = v; },
     };
+    const done = () => resolve({ err, status: res.statusCode, body: res.body, headers: res.headers });
+    const req = { method, url, headers: { 'content-type': 'application/json' } };
     // Body harus diserialkan: stub req tidak punya stream seperti req Express asli.
     if (body !== undefined) req.body = body;
     a(req, res, (e) => { err = e; done(); });
@@ -691,4 +704,212 @@ test('nilai berbahaya pada mutasi tidak pernah masuk ke teks SQL', async () => {
   assert.equal(tx.calls.length, 3);
   for (const c of tx.calls) assert.ok(!c.sql.includes('DROP TABLE'), `SQL mengandung input mentah: ${c.sql}`);
   assert.ok(JSON.stringify(tx.calls.flatMap((c) => c.params)).includes('DROP TABLE'));
+});
+
+// ── Laporan Pengadaan Permen 47 ──
+test('GET /laporan-permen47 mengembalikan data berhirarki sesuai Permen 47', async () => {
+  const mockPenerimaan = [
+    {
+      barang_id: 'b-cat',
+      kodebarang: '1.1.7.01.01.01.006',
+      nama_barang: 'Cat Tembok 20 kg',
+      spesifikasi: 'Warna Putih',
+      satuan: 'Kaleng',
+      jumlah: 4,
+      harga_satuan: 500000,
+      total_nilai: 2000000,
+      sub_kegiatan: '5.01.01.2.09.0009',
+      tgl_nota: '2026-02-15',
+      nama_penyedia: 'CV Mandiri',
+      bentuk_kontrak: 'SPK',
+      dokumen_sumber: 'SP2D-001',
+      nama_kategori: 'Bahan Bangunan',
+    },
+  ];
+  const tx = stub({ rows: mockPenerimaan });
+  const a = app(tx, ADMIN);
+
+  const { status, body } = await call(a, 'GET', '/api/simapo/laporan-permen47?periode=TW1&tahun=2026');
+  assert.equal(status, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.data.periode, 'TW1');
+  assert.equal(body.data.tahun, 2026);
+  assert.equal(body.data.total_nilai, 2000000);
+
+  // Cek struktur hierarki: ASET -> ASET LANCAR -> PERSEDIAAN -> BARANG PAKAI HABIS -> Kategori -> Item
+  const rows = body.data.rows;
+  assert.ok(rows.length >= 6);
+  assert.equal(rows[0].nama, 'ASET');
+  assert.equal(rows[0].is_header, true);
+  assert.equal(rows[1].nama, 'ASET LANCAR');
+  assert.equal(rows[2].nama, 'PERSEDIAAN');
+  assert.equal(rows[3].nama, 'BARANG PAKAI HABIS');
+  assert.equal(rows[4].nama, 'BAHAN BANGUNAN');
+
+  const leaf = rows.find((r) => !r.is_header);
+  assert.ok(leaf);
+  assert.equal(leaf.nama_barang, 'Cat Tembok 20 kg');
+  assert.equal(leaf.jumlah, 4);
+  assert.equal(leaf.harga_satuan, 500000);
+  assert.equal(leaf.total_nilai, 2000000);
+  assert.equal(leaf.nilai_perolehan, 2000000);
+  assert.equal(leaf.biaya_atribusi, 0);
+
+  // Periksa rentang tanggal TW1 (01-01 s/d 03-31) diteruskan sebagai parameter SQL
+  assert.equal(tx.calls[0].params[1], '2026-01-01');
+  assert.equal(tx.calls[0].params[2], '2026-03-31');
+});
+
+test('GET /laporan-permen47 fallback ke SIMAPO.barang bila penerimaan kosong', async () => {
+  const mockBarang = [
+    {
+      barang_id: 'b-atk',
+      kodebarang: 'HP-ATK-001',
+      nama_barang: 'Kertas HVS A4',
+      spesifikasi: '75 gram',
+      satuan: 'Rim',
+      jumlah: 10,
+      harga_satuan: 60000,
+      total_nilai: 600000,
+      sub_kegiatan: '5.01.01.2.09.0001',
+      tgl_nota: '2026-01-10',
+      nama_penyedia: '',
+      bentuk_kontrak: '',
+      dokumen_sumber: '',
+      nama_kategori: 'Alat Tulis Kantor',
+    },
+  ];
+
+  // Query 1: penerimaan -> kosong; Query 2: fallback -> mockBarang
+  let queryCount = 0;
+  const tx = stub({
+    rows: () => {
+      queryCount++;
+      return queryCount === 1 ? [] : mockBarang;
+    },
+  });
+  const a = app(tx, ADMIN);
+
+  const { status, body } = await call(a, 'GET', '/api/simapo/laporan-permen47?periode=TAHUNAN&tahun=2026');
+  assert.equal(status, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.data.total_nilai, 600000);
+  assert.equal(tx.calls.length, 2);
+  assert.ok(tx.calls[1].sql.includes('SIMAPO".barang'));
+});
+
+test('GET /laporan-permen47/xlsx menghasilkan file excel biner valid', async () => {
+  const mockPenerimaan = [
+    {
+      barang_id: 'b-cat',
+      kodebarang: '1.1.7.01.01.01.006',
+      nama_barang: 'Cat Tembok 20 kg',
+      spesifikasi: 'Warna Putih',
+      satuan: 'Kaleng',
+      jumlah: 2,
+      harga_satuan: 550000,
+      total_nilai: 1100000,
+      sub_kegiatan: '5.01.01.2.09.0009',
+      tgl_nota: '2026-02-15',
+      nama_penyedia: 'CV Mandiri',
+      bentuk_kontrak: 'SPK',
+      dokumen_sumber: 'SP2D-001',
+      nama_kategori: 'Bahan Bangunan',
+    },
+  ];
+  const tx = stub({ rows: mockPenerimaan });
+  const a = app(tx, ADMIN);
+
+  const { status, body, headers } = await call(a, 'GET', '/api/simapo/laporan-permen47/xlsx?periode=TW2&tahun=2026');
+  assert.equal(status, 200);
+  assert.equal(headers['content-type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  assert.match(headers['content-disposition'], /Laporan_Pengadaan_Pakai_Habis_Permen47_TW2_2026\.xlsx/);
+  assert.ok(Buffer.isBuffer(body));
+  // Magic bytes untuk ZIP file (PK\x03\x04)
+  assert.equal(body[0], 0x50);
+  assert.equal(body[1], 0x4b);
+});
+
+// ── Kartu Pemeliharaan ──
+test('GET /pemeliharaan mengembalikan kodebarang, spesifikasi, satuan, dan nomorinventaris', async () => {
+  const tx = stub({
+    rows: [
+      {
+        id: 'p-1',
+        barang_id: 'b-printer',
+        nama_barang: 'Printer Epson L3110',
+        kodebarang: '1.3.2.02.01.04.005',
+        spesifikasi: 'Inkjet',
+        satuan: 'Unit',
+        nomorinventaris: 'AT-PRN-001',
+        tgl_pemeliharaan: '2026-02-03',
+        jenis_pemeliharaan: 'Servis Head',
+        biaya: '250000',
+        nama_penyedia: 'B.S. Computer',
+        bentuk_kontrak: 'SPK',
+        keterangan: 'Baik',
+      },
+    ],
+  });
+  const a = app(tx, ADMIN);
+
+  const { status, body } = await call(a, 'GET', '/api/simapo/pemeliharaan?barang_id=b-printer');
+  assert.equal(status, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.data.length, 1);
+  const it = body.data[0];
+  assert.equal(it.kodebarang, '1.3.2.02.01.04.005');
+  assert.equal(it.spesifikasi, 'Inkjet');
+  assert.equal(it.satuan, 'Unit');
+  assert.equal(it.nomorinventaris, 'AT-PRN-001');
+  assert.ok(PEMELIHARAAN_SQL.includes('b.kodebarang'));
+  assert.ok(PEMELIHARAAN_SQL.includes('b.spesifikasi'));
+  assert.ok(PEMELIHARAAN_SQL.includes('b.satuan'));
+  assert.ok(PEMELIHARAAN_SQL.includes('nomorinventaris'));
+});
+
+test('GET /kartu-pemeliharaan/xlsx menghasilkan file excel dengan header kartu yang sesuai', async () => {
+  let callIdx = 0;
+  const mockMaint = [
+    {
+      id: 'm-1',
+      barang_id: 'b-1',
+      nama_barang: 'Laptop ThinkPad',
+      kodebarang: '1.3.2.10.01.02.001',
+      spesifikasi: 'Core i7',
+      nomorinventaris: 'AT-NB-001',
+      tgl_pemeliharaan: '2026-01-15',
+      jenis_pemeliharaan: 'Ganti Keyboard',
+      biaya: 450000,
+      nama_penyedia: 'Service Center',
+      bentuk_kontrak: 'Nota',
+      keterangan: 'Selesai',
+    },
+  ];
+  const mockBarang = [
+    {
+      id: 'b-1',
+      nama_barang: 'Laptop ThinkPad',
+      kodebarang: '1.3.2.10.01.02.001',
+      spesifikasi: 'Core i7',
+      satuan: 'Unit',
+      nomorinventaris: 'AT-NB-001',
+    },
+  ];
+
+  const tx = stub({
+    rows: () => {
+      callIdx++;
+      return callIdx === 1 ? mockMaint : mockBarang;
+    },
+  });
+  const a = app(tx, ADMIN);
+
+  const { status, body, headers } = await call(a, 'GET', '/api/simapo/kartu-pemeliharaan/xlsx?barang_id=b-1&tahun=2026');
+  assert.equal(status, 200);
+  assert.equal(headers['content-type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  assert.match(headers['content-disposition'], /Kartu_Pemeliharaan_b-1_2026\.xlsx/);
+  assert.ok(Buffer.isBuffer(body));
+  assert.equal(body[0], 0x50);
+  assert.equal(body[1], 0x4b);
 });

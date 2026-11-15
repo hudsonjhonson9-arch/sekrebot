@@ -117,6 +117,8 @@
     });
     const grid = gridEl();
     if (grid) grid.style.display = '';
+    const more = document.getElementById('aset-grid-more-wrap');
+    if (more) more.style.display = '';
     const head = document.getElementById('aset-screen-head');
     if (head) head.style.display = 'none';
     renderGrid();
@@ -129,6 +131,8 @@
     window._asetCurrent = key;
     const grid = gridEl();
     if (grid) grid.style.display = 'none';
+    const more = document.getElementById('aset-grid-more-wrap');
+    if (more) more.style.display = 'none';
     screens().forEach(function (s) {
       const el = screenEl(s.key);
       if (el) el.style.display = s.key === key ? 'block' : 'none';

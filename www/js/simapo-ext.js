@@ -1344,8 +1344,7 @@ window.removePenerimaanItem = function(idx) {
 /* ─── ADMIN: PENERIMAAN BARANG ────────────────────────────── */
 window.loadAdminPenerimaan = async function(force = false) {
   const el = document.getElementById('adminPenerimaanList');
-  if (!el) return;
-  if (force) window.showAdminSimapoShimmer('adminPenerimaanList');
+  if (force && el) window.showAdminSimapoShimmer('adminPenerimaanList');
 
   let fetchError = false;
   const data = await window._simapoCache.getOrFetch('admin_penerimaan', async () => {
@@ -1356,32 +1355,255 @@ window.loadAdminPenerimaan = async function(force = false) {
     } catch (e) { fetchError = true; return null; }
   }, force);
 
-  if (fetchError) { window.simapoErrorState('adminPenerimaanList', 'Gagal memuat data penerimaan barang.'); return; }
-  if (!data || data.length === 0) {
-    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-download" aria-hidden="true"></i> Belum ada penerimaan barang.</div>`;
-    return;
+  window._allPenerimaanData = Array.isArray(data) ? data : [];
+
+  if (el) {
+    if (fetchError) {
+      window.simapoErrorState('adminPenerimaanList', 'Gagal memuat data penerimaan barang.');
+    } else if (!data || data.length === 0) {
+      el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px"><i class="fas fa-download" aria-hidden="true"></i> Belum ada penerimaan barang.</div>`;
+    } else {
+      el.innerHTML = data.map(item => {
+        const st = item.status_spj || '';
+        const stBadge = st === 'sudah_lapor' ? '<span style="color:var(--success)"><i class="fas fa-check" aria-hidden="true"></i> '+st+'</span>' : st === 'sudah_di_map' ? '<span style="color:#64b4ff"><i class="fas fa-folder" aria-hidden="true"></i> '+st+'</span>' : '<span style="color:var(--warning)"><i class="fas fa-hourglass-half" aria-hidden="true"></i> '+st+'</span>';
+        return `
+        <div style="padding:14px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+            <div>
+              <div style="font-weight:800;font-size:14px;color:var(--white)">${item.no_nota || '—'}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;"><i class="fas fa-building" aria-hidden="true"></i> ${item.penyedia || '—'}</div>
+              <div style="font-size:11px;color:var(--gold);margin-top:2px;">${item.total_nilai ? new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(item.total_nilai) : '—'}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:10px;color:var(--muted);">${item.tgl_nota || item.tanggal||'—'}</div>
+              <div style="font-size:10px;font-weight:700;margin-top:2px;">${stBadge}</div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"><i class="fas fa-file-alt" aria-hidden="true"></i> SP2D: ${item.no_sp2d || '—'} ${item.kontrak ? '· '+item.kontrak : ''}</div>
+        </div>`;
+      }).join('');
+    }
   }
-  el.innerHTML = data.map(item => {
-    const st = item.status_spj || '';
-    const stBadge = st === 'sudah_lapor' ? '<span style="color:var(--success)"><i class="fas fa-check" aria-hidden="true"></i> '+st+'</span>' : st === 'sudah_di_map' ? '<span style="color:#64b4ff"><i class="fas fa-folder" aria-hidden="true"></i> '+st+'</span>' : '<span style="color:var(--warning)"><i class="fas fa-hourglass-half" aria-hidden="true"></i> '+st+'</span>';
-    return `
-    <div style="padding:14px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-        <div>
-          <div style="font-weight:800;font-size:14px;color:var(--white)">${item.no_nota || '—'}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;"><i class="fas fa-building" aria-hidden="true"></i> ${item.penyedia || '—'}</div>
-          <div style="font-size:11px;color:var(--gold);margin-top:2px;">${item.total_nilai ? new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(item.total_nilai) : '—'}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:10px;color:var(--muted);">${item.tgl_nota || item.tanggal||'—'}</div>
-          <div style="font-size:10px;font-weight:700;margin-top:2px;">${stBadge}</div>
-        </div>
-      </div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"><i class="fas fa-file-alt" aria-hidden="true"></i> SP2D: ${item.no_sp2d || '—'} ${item.kontrak ? '· '+item.kontrak : ''}</div>
-    </div>`;
-  }).join('');
+
+  if (typeof window.loadLaporanPermen47 === 'function') {
+    window.loadLaporanPermen47(force);
+  }
 };
 window._simapoRetryMap['adminPenerimaanList'] = window.loadAdminPenerimaan;
+
+/* ─── LAPORAN PENGADAAN BARANG PAKAI HABIS (PERMENDAGRI 47) ─── */
+window.toggleFormPenerimaan = function() {
+  const wrap = document.getElementById('penerimaanFormWrap');
+  const btn = document.getElementById('btnToggleFormPenerimaan');
+  if (!wrap) return;
+  const isHidden = wrap.style.display === 'none' || !wrap.style.display;
+  wrap.style.display = isHidden ? 'block' : 'none';
+  if (btn) {
+    btn.innerHTML = isHidden ? '<i class="fas fa-times" aria-hidden="true"></i> Tutup Form' : '<i class="fas fa-plus" aria-hidden="true"></i> Catat Pengadaan Baru';
+  }
+};
+
+window.loadLaporanPermen47 = async function(force = false) {
+  const container = document.getElementById('permen47PreviewContainer');
+  if (!container) return;
+  const periodeSel = document.getElementById('permen47Periode');
+  const tahunSel = document.getElementById('permen47Tahun');
+  const periode = periodeSel ? periodeSel.value : 'TW3';
+  const tahun = tahunSel ? tahunSel.value : String(new Date().getFullYear());
+  const instansiId = (typeof getActiveInstansiId === 'function' ? getActiveInstansiId() : '') || (document.getElementById('simapoInstansiSelect')?.value || '');
+
+  container.innerHTML = '<div class="shimmer-wrapper" style="padding:24px"><div class="shimmer sh-line" style="height:120px;border-radius:10px"></div></div>';
+
+  let url = '/api/simapo/laporan-permen47?periode=' + encodeURIComponent(periode) + '&tahun=' + encodeURIComponent(tahun);
+  if (instansiId) url += '&instansi_id=' + encodeURIComponent(instansiId);
+
+  let rows = [];
+  let meta = { periode: periode, tahun: tahun };
+
+  try {
+    const res = await apiFetch(url);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.data) {
+        if (Array.isArray(json.data)) {
+          rows = json.data;
+        } else if (Array.isArray(json.data.items)) {
+          rows = json.data.items;
+          meta = Object.assign(meta, json.data);
+        }
+      } else if (Array.isArray(json)) {
+        rows = json;
+      }
+    }
+  } catch (e) {
+    console.warn('[Permen47] Gagal memuat dari API:', e);
+  }
+
+  // Fallback ke data penerimaan lokal jika endpoint server belum mengembalikan data
+  if ((!rows || rows.length === 0) && window._allPenerimaanData && window._allPenerimaanData.length > 0) {
+    rows = window._allPenerimaanData.filter(function(p) {
+      const tgl = String(p.tanggal || p.tgl || p.tgl_nota || '');
+      return !tahun || tgl.indexOf(tahun) >= 0;
+    });
+  }
+
+  window.renderPermen47Table(rows, meta);
+};
+
+window.renderPermen47Table = function(rows, meta) {
+  const container = document.getElementById('permen47PreviewContainer');
+  if (!container) return;
+  const pMap = {
+    'TW1': 'Triwulan I (Januari - Maret)',
+    'TW2': 'Triwulan II (April - Juni)',
+    'TW3': 'Triwulan III (Juli - September)',
+    'TW4': 'Triwulan IV (Oktober - Desember)',
+    'SM1': 'Semester I (Januari - Juni)',
+    'SM2': 'Semester II (Juli - Desember)',
+    'TAHUNAN': 'Tahunan (Januari - Desember)'
+  };
+  const labelPeriode = pMap[meta.periode] || meta.periode;
+  const fmt = function(n) {
+    return new Intl.NumberFormat('id-ID').format(Number(n) || 0);
+  };
+
+  if (!rows || rows.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:36px 16px;color:var(--muted);font-size:12px;">' +
+      '<div style="font-size:24px;opacity:0.3;margin-bottom:8px;"><i class="fas fa-file-invoice" aria-hidden="true"></i></div>' +
+      'Belum ada data pengadaan untuk ' + labelPeriode + ' Tahun ' + meta.tahun + '.<br>' +
+      'Klik <b>Catat Pengadaan Baru</b> di atas untuk menambahkan transaksi pengadaan barang pakai habis.' +
+      '</div>';
+    return;
+  }
+
+  let totalKeseluruhan = 0;
+  const trs = rows.map(function(r, idx) {
+    const jumlah = Number(r.jumlah || r.volume) || 1;
+    const harga = Number(r.harga_satuan || r.hargasatuan || r.harga) || 0;
+    const total = Number(r.total_nilai || r.total || (jumlah * harga)) || 0;
+    totalKeseluruhan += total;
+    return '<tr style="border-bottom:1px solid rgba(255,255,255,0.06);">' +
+      '<td style="padding:8px 6px;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums;">' + (idx + 1) + '</td>' +
+      '<td style="padding:8px 6px;font-family:monospace;font-size:11px;">' + (r.kode_barang || r.kodebarang || '—') + '</td>' +
+      '<td style="padding:8px 6px;font-weight:700;color:var(--white);">' + (r.nama_barang || r.nama || '—') + '</td>' +
+      '<td style="padding:8px 6px;color:var(--muted);">' + (r.spesifikasi || r.merek || '—') + '</td>' +
+      '<td style="padding:8px 6px;text-align:right;font-variant-numeric:tabular-nums;">' + fmt(jumlah) + '</td>' +
+      '<td style="padding:8px 6px;text-align:center;color:var(--muted);">' + (r.satuan || 'Unit') + '</td>' +
+      '<td style="padding:8px 6px;text-align:right;font-variant-numeric:tabular-nums;">' + fmt(harga) + '</td>' +
+      '<td style="padding:8px 6px;text-align:right;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;">' + fmt(total) + '</td>' +
+      '<td style="padding:8px 6px;color:var(--muted);">' + (r.bentuk_kontrak || r.kontrak || '—') + '</td>' +
+      '<td style="padding:8px 6px;color:var(--muted);">' + (r.nama_penyedia || r.penyedia || '—') + '</td>' +
+      '<td style="padding:8px 6px;color:var(--muted);">' + (r.no_bukti || r.no_nota || '—') + '</td>' +
+      '</tr>';
+  }).join('');
+
+  container.innerHTML = '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;margin-top:10px;overflow-x:auto;">' +
+    '<div style="text-align:center;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:12px;">' +
+      '<div style="font-size:14px;font-weight:800;color:var(--white);letter-spacing:0.5px;">LAPORAN PENGADAAN BMD BERUPA ASET LANCAR PERSEDIAAN</div>' +
+      '<div style="font-size:12px;font-weight:700;color:var(--gold);margin-top:3px;">Periode: ' + labelPeriode + ' Tahun ' + meta.tahun + '</div>' +
+      '<div style="font-size:11px;color:var(--muted);margin-top:2px;">Pemerintah Kabupaten Sumba Barat · Pengguna Barang: BAPPELITBANGDA</div>' +
+    '</div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:840px;">' +
+      '<thead>' +
+        '<tr style="background:rgba(255,255,255,0.04);border-bottom:2px solid rgba(255,255,255,0.12);color:var(--white);text-align:left;">' +
+          '<th style="padding:8px 6px;text-align:center;width:34px;">No.</th>' +
+          '<th style="padding:8px 6px;">Kode Barang</th>' +
+          '<th style="padding:8px 6px;">Nama Barang</th>' +
+          '<th style="padding:8px 6px;">Spesifikasi / Merek</th>' +
+          '<th style="padding:8px 6px;text-align:right;">Jumlah</th>' +
+          '<th style="padding:8px 6px;text-align:center;">Satuan</th>' +
+          '<th style="padding:8px 6px;text-align:right;">Harga Satuan (Rp)</th>' +
+          '<th style="padding:8px 6px;text-align:right;">Total Nilai (Rp)</th>' +
+          '<th style="padding:8px 6px;">Bentuk Kontrak</th>' +
+          '<th style="padding:8px 6px;">Penyedia</th>' +
+          '<th style="padding:8px 6px;">No. Bukti / Nota</th>' +
+        '</tr>' +
+      '</thead>' +
+      '<tbody>' + trs + '</tbody>' +
+      '<tfoot>' +
+        '<tr style="border-top:2px solid rgba(255,255,255,0.12);font-weight:800;">' +
+          '<td colspan="7" style="padding:10px 6px;text-align:right;color:var(--white);">TOTAL NILAI PENGADAAN:</td>' +
+          '<td style="padding:10px 6px;text-align:right;color:var(--gold);font-size:13px;font-variant-numeric:tabular-nums;">Rp ' + fmt(totalKeseluruhan) + '</td>' +
+          '<td colspan="3"></td>' +
+        '</tr>' +
+      '</tfoot>' +
+    '</table>' +
+  '</div>';
+};
+
+window.downloadExcelPermen47 = async function() {
+  const periodeSel = document.getElementById('permen47Periode');
+  const tahunSel = document.getElementById('permen47Tahun');
+  const periode = periodeSel ? periodeSel.value : 'TW3';
+  const tahun = tahunSel ? tahunSel.value : String(new Date().getFullYear());
+  const instansiId = (typeof getActiveInstansiId === 'function' ? getActiveInstansiId() : '') || (document.getElementById('simapoInstansiSelect')?.value || '');
+
+  let url = '/api/simapo/laporan-permen47/xlsx?periode=' + encodeURIComponent(periode) + '&tahun=' + encodeURIComponent(tahun);
+  if (instansiId) url += '&instansi_id=' + encodeURIComponent(instansiId);
+
+  showToast('Menyiapkan berkas Excel Permen 47...', 'info');
+  try {
+    const res = await apiFetch(url);
+    if (res.ok) {
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'Laporan_Pengadaan_Permen47_' + periode + '_' + tahun + '.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 1500);
+      showToast('Excel Permen 47 berhasil diunduh.', 'success');
+      return;
+    }
+  } catch (e) {
+    console.warn('[Permen47] Server XLSX fetch gagal, beralih ke generator lokal:', e);
+  }
+
+  // Fallback client-side ExcelJS generator jika server endpoint belum merespons
+  if (typeof ExcelJS !== 'undefined') {
+    try {
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'SIMAPO Absensi';
+      const ws = wb.addWorksheet("September'23");
+      ws.addRow(['LAPORAN PENGADAAN BMD BERUPA ASET LANCAR PERSEDIAAN']);
+      ws.addRow(['Pengguna Barang : BAPPELITBANGDA']);
+      ws.addRow(['Periode : ' + periode + ' Tahun ' + tahun]);
+      ws.addRow(['Provinsi : Nusa Tenggara Timur    Kabupaten : Sumba Barat']);
+      ws.addRow([]);
+      ws.addRow(['No.', 'Kode Barang', 'Nama Barang', 'Spesifikasi / Merek', 'Jumlah Barang', 'Satuan Barang', 'Harga Satuan (Rp)', 'Total Nilai (Rp)', 'Bentuk Kontrak', 'Nama Penyedia', 'No. Kuitansi/Nota']);
+
+      const rows = window._allPenerimaanData || [];
+      let total = 0;
+      rows.forEach(function(r, idx) {
+        const j = Number(r.jumlah || r.volume) || 1;
+        const h = Number(r.harga_satuan || r.hargasatuan || r.harga) || 0;
+        const tot = Number(r.total_nilai || r.total || (j * h)) || 0;
+        total += tot;
+        ws.addRow([idx + 1, r.kode_barang || '-', r.nama_barang || r.nama || '-', r.spesifikasi || '-', j, r.satuan || 'Unit', h, tot, r.bentuk_kontrak || r.kontrak || '-', r.nama_penyedia || r.penyedia || '-', r.no_bukti || r.no_nota || '-']);
+      });
+      ws.addRow(['TOTAL', '', '', '', '', '', '', total, '', '', '']);
+
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'Laporan_Pengadaan_Permen47_' + periode + '_' + tahun + '.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 1500);
+      showToast('Excel Permen 47 berhasil dibuat.', 'success');
+      return;
+    } catch (err) {
+      console.error('[Permen47] ExcelJS fallback error:', err);
+    }
+  }
+
+  showToast('Gagal mengunduh Excel Permen 47.', 'error');
+};
 
 window.savePenerimaan = async function() {
   const items = window._penerimaanItems;
@@ -1428,11 +1650,21 @@ window.clearPenerimaanForm = function() {
   renderPenerimaanItems();
 };
 
-/* ─── ADMIN: PEMELIHARAAN ─────────────────────────────────── */
+/* ─── ADMIN: PEMELIHARAAN (KARTU PEMELIHARAAN SESUAI TEMPLATE) ─── */
+window.toggleFormPemeliharaan = function() {
+  const wrap = document.getElementById('pemeliharaanFormWrap');
+  const btn = document.getElementById('btnToggleFormPm');
+  if (!wrap) return;
+  const isHidden = wrap.style.display === 'none' || !wrap.style.display;
+  wrap.style.display = isHidden ? 'block' : 'none';
+  if (btn) {
+    btn.innerHTML = isHidden ? '<i class="fas fa-times" aria-hidden="true"></i> Tutup Form' : '<i class="fas fa-plus" aria-hidden="true"></i> Catat Pemeliharaan';
+  }
+};
+
 window.loadAdminPemeliharaan = async function(force = false) {
   const el = document.getElementById('adminPemeliharaanList');
-  if (!el) return;
-  if (force) window.showAdminSimapoShimmer('adminPemeliharaanList');
+  if (force && el) window.showAdminSimapoShimmer('adminPemeliharaanList');
 
   let fetchError = false;
   const data = await window._simapoCache.getOrFetch('admin_pemeliharaan', async () => {
@@ -1443,35 +1675,264 @@ window.loadAdminPemeliharaan = async function(force = false) {
     } catch (e) { fetchError = true; return null; }
   }, force);
 
-  if (fetchError) { window.simapoErrorState('adminPemeliharaanList', 'Gagal memuat data pemeliharaan.'); return; }
-  if (!data || data.length === 0) {
-    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px"><i class="fas fa-wrench" aria-hidden="true"></i> Belum ada data pemeliharaan.</div>`;
-    return;
-  }
-  el.innerHTML = data.map(item => `
-    <div style="padding:14px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-        <div>
-          <div style="font-weight:800;font-size:14px;color:var(--white)">${item.nama_barang || item.namabarang || '—'}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;"><i class="fas fa-tools" aria-hidden="true"></i> ${item.jenis_pemeliharaan || item.jenis||'—'}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;"><i class="fas fa-store" aria-hidden="true"></i> ${item.nama_penyedia || item.penyedia||'—'}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:10px;color:var(--muted);">${item.tgl_pemeliharaan || item.tanggal||'—'}</div>
-          <div style="font-size:11px;color:var(--gold);margin-top:2px;">${item.biaya ? new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(item.biaya) : '—'}</div>
-        </div>
-      </div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"><i class="fas fa-file-alt" aria-hidden="true"></i> ${item.keterangan || ''}</div>
-    </div>
-  `).join('');
+  if (fetchError && el) { window.simapoErrorState('adminPemeliharaanList', 'Gagal memuat data pemeliharaan.'); return; }
+  window._allPemeliharaanData = Array.isArray(data) ? data : [];
+
+  window.populateKartuPemeliharaanBarangFilter();
+  window.filterKartuPemeliharaan();
 };
 window._simapoRetryMap['adminPemeliharaanList'] = window.loadAdminPemeliharaan;
 
 window.populatePemeliharaanBarang = async function() {
-  const sel = document.getElementById('pmBarangId'); if (!sel) return;
+  const sel = document.getElementById('pmBarangId');
+  if (!sel) return;
   let data = window._allMasterData;
   if (!data.length) try { data = parseApiResponse(await (await apiFetch(P.simapoAdminMasterList)).json()); } catch { data=[]; }
   sel.innerHTML = '<option value="">-- Pilih Aset --</option>' + data.map(b => `<option value="${b.id}">${b.nama} (${b.kodebarang})</option>`).join('');
+  window.populateKartuPemeliharaanBarangFilter();
+};
+
+window.populateKartuPemeliharaanBarangFilter = function() {
+  const sel = document.getElementById('kpFilterBarang');
+  if (!sel) return;
+  const prevVal = sel.value;
+  const items = window._allMasterData || [];
+  let html = '<option value="">-- Semua Barang (Cetak Semua Kartu) --</option>';
+  items.forEach(function(b) {
+    html += '<option value="' + b.id + '">' + (b.nama || 'Tanpa Nama') + (b.kodebarang ? ' (' + b.kodebarang + ')' : '') + '</option>';
+  });
+  sel.innerHTML = html;
+  if (prevVal) sel.value = prevVal;
+};
+
+window.filterKartuPemeliharaan = function() {
+  const el = document.getElementById('adminPemeliharaanList');
+  if (!el) return;
+  const data = window._allPemeliharaanData || [];
+  const selBarang = document.getElementById('kpFilterBarang');
+  const selTahun = document.getElementById('kpFilterTahun');
+  const barangId = selBarang ? selBarang.value : '';
+  const tahun = selTahun ? selTahun.value : '';
+
+  let filtered = data.slice();
+  if (barangId) {
+    filtered = filtered.filter(function(item) {
+      return String(item.barang_id || item.barangid) === String(barangId);
+    });
+  }
+  if (tahun) {
+    filtered = filtered.filter(function(item) {
+      const t = String(item.tgl_pemeliharaan || item.tanggal || '');
+      return t.indexOf(tahun) >= 0;
+    });
+  }
+
+  if (filtered.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:36px 16px;color:var(--muted);font-size:12px;">' +
+      '<div style="font-size:24px;opacity:0.3;margin-bottom:8px;"><i class="fas fa-tools" aria-hidden="true"></i></div>' +
+      'Belum ada catatan pemeliharaan' + (barangId ? ' untuk barang terpilih' : '') + (tahun ? ' pada tahun ' + tahun : '') + '.<br>' +
+      'Klik <b>Catat Pemeliharaan</b> di atas untuk menambahkan riwayat perawatan.' +
+      '</div>';
+    return;
+  }
+
+  // Kelompokkan per barang_id agar sesuai template 4. KARTU PEMELIHARAAN.xlsx
+  const groups = {};
+  filtered.forEach(function(item) {
+    const bId = item.barang_id || item.barangid || 'default';
+    if (!groups[bId]) groups[bId] = [];
+    groups[bId].push(item);
+  });
+
+  const cardsHtml = Object.keys(groups).map(function(bId) {
+    const list = groups[bId];
+    const bInfo = (window._allMasterData || []).find(function(x) { return String(x.id) === String(bId); }) || {};
+    const namaBarang = bInfo.nama || list[0].nama_barang || list[0].namabarang || 'Barang';
+    const kodeBarang = bInfo.kodebarang || list[0].kodebarang || '—';
+    const spesifikasi = bInfo.spesifikasi || bInfo.merk || 'Besi/Plastik';
+    const nibar = bInfo.nomorinventaris || '—';
+    const penggunaBarang = 'Kepala Badan';
+    const kuasaPenggunaBarang = 'Kuasa Pengguna Barang';
+
+    let totalBiaya = 0;
+    const rowsHtml = list.map(function(item, idx) {
+      const biaya = Number(item.biaya) || 0;
+      totalBiaya += biaya;
+      const tgl = item.tgl_pemeliharaan || item.tanggal || '—';
+      return '<tr style="border-bottom:1px solid rgba(255,255,255,0.06);">' +
+        '<td style="padding:8px 6px;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums;">' + (idx + 1) + '</td>' +
+        '<td style="padding:8px 6px;white-space:nowrap;font-variant-numeric:tabular-nums;">' + tgl + '</td>' +
+        '<td style="padding:8px 6px;font-weight:700;color:var(--white);">' + (item.jenis_pemeliharaan || item.jenis || '—') + '</td>' +
+        '<td style="padding:8px 6px;text-align:right;color:var(--gold);font-weight:700;font-variant-numeric:tabular-nums;">Rp ' + new Intl.NumberFormat('id-ID').format(biaya) + '</td>' +
+        '<td style="padding:8px 6px;color:var(--muted);">' + (item.nama_penyedia || item.penyedia || '—') + '</td>' +
+        '<td style="padding:8px 6px;color:var(--muted);">' + (item.bentuk_kontrak || item.kontrak || '—') + '</td>' +
+        '<td style="padding:8px 6px;color:var(--muted);">' + (item.keterangan || '—') + '</td>' +
+        '</tr>';
+    }).join('');
+
+    return '<div class="kartu-pm-card" style="margin-bottom:20px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px;">' +
+      '<div style="text-align:center;margin-bottom:16px;">' +
+        '<div style="font-size:14px;font-weight:800;color:var(--white);letter-spacing:1px;text-transform:uppercase;">KARTU PEMELIHARAAN</div>' +
+        '<div style="font-size:11px;color:var(--gold);font-family:monospace;margin-top:2px;">NIBAR: ' + nibar + '</div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:14px;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:12px;">' +
+        '<div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Pengguna Barang:</span><span style="font-weight:700;color:var(--white);">' + penggunaBarang + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Kuasa Pengguna Barang:</span><span style="font-weight:700;color:var(--white);">' + kuasaPenggunaBarang + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Kode Barang:</span><span style="font-weight:700;color:var(--gold);font-family:monospace;">' + kodeBarang + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Nama Barang:</span><span style="font-weight:800;color:var(--white);">' + namaBarang + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between;grid-column:1/-1;"><span style="color:var(--muted);">Spesifikasi Barang:</span><span style="font-weight:600;color:var(--white);">' + spesifikasi + '</span></div>' +
+      '</div>' +
+      '<div style="overflow-x:auto;">' +
+        '<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:700px;">' +
+          '<thead>' +
+            '<tr style="background:rgba(255,255,255,0.04);border-bottom:2px solid rgba(255,255,255,0.12);color:var(--white);text-align:left;">' +
+              '<th style="padding:8px 6px;text-align:center;width:34px;">No.</th>' +
+              '<th style="padding:8px 6px;width:130px;">Tanggal Pemeliharaan</th>' +
+              '<th style="padding:8px 6px;">Jenis Pemeliharaan</th>' +
+              '<th style="padding:8px 6px;text-align:right;width:140px;">Biaya Pemeliharaan (Rp)</th>' +
+              '<th style="padding:8px 6px;">Nama Penyedia</th>' +
+              '<th style="padding:8px 6px;">Bentuk Kontrak</th>' +
+              '<th style="padding:8px 6px;">Ket.</th>' +
+            '</tr>' +
+          '</thead>' +
+          '<tbody>' + rowsHtml + '</tbody>' +
+          '<tfoot>' +
+            '<tr style="border-top:2px solid rgba(255,255,255,0.12);font-weight:800;">' +
+              '<td colspan="3" style="padding:8px 6px;text-align:right;color:var(--white);">TOTAL BIAYA:</td>' +
+              '<td style="padding:8px 6px;text-align:right;color:var(--gold);font-variant-numeric:tabular-nums;">Rp ' + new Intl.NumberFormat('id-ID').format(totalBiaya) + '</td>' +
+              '<td colspan="3"></td>' +
+            '</tr>' +
+          '</tfoot>' +
+        '</table>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  el.innerHTML = cardsHtml;
+};
+
+window.downloadExcelKartuPemeliharaan = async function() {
+  const selBarang = document.getElementById('kpFilterBarang');
+  const selTahun = document.getElementById('kpFilterTahun');
+  const barangId = selBarang ? selBarang.value : '';
+  const tahun = selTahun ? selTahun.value : '';
+  const instansiId = (typeof getActiveInstansiId === 'function' ? getActiveInstansiId() : '') || (document.getElementById('simapoInstansiSelect')?.value || '');
+
+  let url = '/api/simapo/kartu-pemeliharaan/xlsx?barang_id=' + encodeURIComponent(barangId) + '&tahun=' + encodeURIComponent(tahun);
+  if (instansiId) url += '&instansi_id=' + encodeURIComponent(instansiId);
+
+  showToast('Menyiapkan berkas Excel Kartu Pemeliharaan...', 'info');
+  try {
+    const res = await apiFetch(url);
+    if (res.ok) {
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'Kartu_Pemeliharaan_' + (barangId ? 'Barang_' + barangId : 'Semua') + '_' + (tahun || 'Semua') + '.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 1500);
+      showToast('Excel Kartu Pemeliharaan berhasil diunduh.', 'success');
+      return;
+    }
+  } catch (e) {
+    console.warn('[KartuPemeliharaan] Server XLSX fetch gagal, beralih ke generator lokal:', e);
+  }
+
+  // Fallback client-side ExcelJS generator jika server belum ready
+  if (typeof ExcelJS !== 'undefined') {
+    try {
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'SIMAPO Absensi';
+      const ws = wb.addWorksheet('KARTU PEMELIHARAAN');
+
+      const data = window._allPemeliharaanData || [];
+      let filtered = data.slice();
+      if (barangId) filtered = filtered.filter(function(i) { return String(i.barang_id || i.barangid) === String(barangId); });
+      if (tahun) filtered = filtered.filter(function(i) { return String(i.tgl_pemeliharaan || i.tanggal || '').indexOf(tahun) >= 0; });
+
+      const groups = {};
+      filtered.forEach(function(i) {
+        const id = i.barang_id || i.barangid || '1';
+        if (!groups[id]) groups[id] = [];
+        groups[id].push(i);
+      });
+
+      const keys = Object.keys(groups);
+      if (keys.length === 0) {
+        showToast('Tidak ada data pemeliharaan untuk diekspor.', 'error');
+        return;
+      }
+
+      keys.forEach(function(id, gIdx) {
+        const items = groups[id];
+        const bInfo = (window._allMasterData || []).find(function(x) { return String(x.id) === String(id); }) || {};
+        if (gIdx > 0) ws.addRow([]);
+        ws.addRow(['KARTU PEMELIHARAAN']);
+        ws.addRow(['', '', '', '', '', 'NIBAR   :', bInfo.nomorinventaris || '-']);
+        ws.addRow(['Pengguna Barang                       :', '', '', '', '', 'Kepala Badan']);
+        ws.addRow(['Kuasa Pengguna Barang             :', '', '', '', '', 'Kuasa Pengguna Barang']);
+        ws.addRow(['Kode Barang                               :', '', '', '', '', bInfo.kodebarang || '-']);
+        ws.addRow(['Nama Barang                              :', '', '', '', '', bInfo.nama || items[0].nama_barang || '-']);
+        ws.addRow(['Spesifikasi Barang                      :', '', '', '', '', bInfo.spesifikasi || bInfo.merk || 'Besi/Plastik']);
+        ws.addRow(['No.', 'Tanggal Pemeliharaan', 'Jenis Pemeliharaan', 'Biaya Pemeliharaan (Rp)', 'Nama Penyedia', 'Bentuk Kontrak', 'Ket.']);
+
+        items.forEach(function(it, idx) {
+          const biaya = Number(it.biaya) || 0;
+          ws.addRow([idx + 1, it.tgl_pemeliharaan || it.tanggal || '-', it.jenis_pemeliharaan || it.jenis || '-', biaya, it.nama_penyedia || it.penyedia || '-', it.bentuk_kontrak || it.kontrak || '-', it.keterangan || '-']);
+        });
+      });
+
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'Kartu_Pemeliharaan_' + (barangId ? 'Barang_' + barangId : 'Semua') + '_' + (tahun || 'Semua') + '.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 1500);
+      showToast('Excel Kartu Pemeliharaan berhasil dibuat.', 'success');
+      return;
+    } catch (err) {
+      console.error('[KartuPemeliharaan] ExcelJS error:', err);
+    }
+  }
+
+  showToast('Gagal mengunduh Excel Kartu Pemeliharaan.', 'error');
+};
+
+window.cetakKartuPemeliharaan = function() {
+  const el = document.getElementById('adminPemeliharaanList');
+  if (!el || !el.innerHTML.trim() || el.innerHTML.includes('Belum ada')) {
+    showToast('Tidak ada kartu pemeliharaan untuk dicetak.', 'error');
+    return;
+  }
+  const content = el.innerHTML;
+  const w = window.open('', '_blank');
+  if (!w) { showToast('Pop-up terblokir peramban.', 'error'); return; }
+  w.document.write('<!DOCTYPE html><html><head><title>Kartu Pemeliharaan Barang</title>' +
+    '<style>' +
+      'body{font-family:Arial,sans-serif;color:#000;background:#fff;margin:20px;font-size:12px;}' +
+      '.kartu-pm-card{border:1px solid #000;padding:16px;margin-bottom:24px;page-break-after:always;border-radius:4px;}' +
+      'table{width:100%;border-collapse:collapse;margin-top:12px;font-size:11px;}' +
+      'th,td{border:1px solid #333;padding:6px 8px;text-align:left;}' +
+      'th{background:#eee;}' +
+      '@page{size:A4 portrait;margin:15mm;}' +
+    '</style></head><body>' + content + '<script>window.onload=function(){window.print();};<\/script></body></html>');
+  w.document.close();
+};
+
+window.toggleMenuAsetLainnya = function(btn) {
+  const grid = document.getElementById('aset-grid');
+  if (!grid) return;
+  const isShow = grid.classList.toggle('aset-grid-show-all');
+  if (btn) {
+    btn.innerHTML = isShow ? '<i class="fas fa-arrow-up" aria-hidden="true"></i> Sembunyikan Menu Tambahan' : '<i class="fas fa-ellipsis-h" aria-hidden="true"></i> Menu Lainnya (Mutasi, Opname, dll)';
+  }
 };
 
 window.savePemeliharaan = async function() {
@@ -1492,6 +1953,7 @@ window.savePemeliharaan = async function() {
     onSuccess: () => {
       window._simapoCache.clear('admin_pemeliharaan');
       window.loadAdminPemeliharaan(true);
+      window.toggleFormPemeliharaan();
     },
   });
 };

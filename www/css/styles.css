@@ -8873,3 +8873,34 @@ html.light-theme .btn-admin-back-grid {
 body:not(.arsip-fs) .arsip-back {
   display: none !important;
 }
+
+/* ════ ASET: Filter menu & tampilan kartu pemeliharaan / permen 47 ════ */
+.aset-card[data-key="bku"],
+.aset-card[data-key="pks"],
+.aset-card[data-key="mutasi"],
+.aset-card[data-key="opname"],
+.aset-card[data-key="standar-harga"],
+.aset-card[data-key="bast"],
+.aset-card[data-key="tiket"],
+.aset-card[data-key="pinjaman-saya"],
+.aset-card[data-key="tiket-saya"] {
+  display: none !important;
+}
+
+.aset-grid.aset-grid-show-all .aset-card {
+  display: flex !important;
+}
+
+.kartu-pm-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 20px;
+  transition: border-color 0.15s ease;
+}
+
+.kartu-pm-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+

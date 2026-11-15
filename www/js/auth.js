@@ -382,6 +382,7 @@
                 if (!faceOk) throw new Error('Gagal menyimpan data wajah ke server. Hubungi Admin.');
 
                 // 3. Simpan sesi ke state lokal
+                setNativeToken(regToken);
                 setSession(regToken, { nip: payload.nip, role: 'USER', instansi_id: payload.instansi_id || '' });
                 localStorage.setItem(STORAGE_KEYS.USER_ID, String(window.MY_ID));
                 localStorage.setItem('MY_NIP', String(payload.nip));

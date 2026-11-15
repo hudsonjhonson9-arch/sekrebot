@@ -39,3 +39,4 @@ aset.db
 *.db
 temp_qr*/
 .superpowers/
+~$*

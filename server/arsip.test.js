@@ -49,7 +49,7 @@ async function via(app, path, headers = {}, init = {}) {
 
 // roleDb = isi kolom user_credentials.role (tabel arsipdigital), karena gate tulis
 // dan /me tidak lagi membaca role absensi dari user_list.
-function harness({ fetchImpl, baseUrl = UPSTREAM, secret = SECRET, user = ME, roleDb = 'Admin' } = {}) {
+function harness({ fetchImpl, baseUrl = UPSTREAM, secret = SECRET, user = ME, roleDb = 'Admin', queryImpl } = {}) {
   const captured = [];
   const app = express();
   app.use(express.json());
@@ -59,7 +59,13 @@ function harness({ fetchImpl, baseUrl = UPSTREAM, secret = SECRET, user = ME, ro
     createArsipRouter({
       baseUrl,
       secret,
-      query: async () => ({ rows: roleDb ? [{ role: roleDb }] : [] }),
+      query: async (sql, params) => {
+        if (queryImpl) return queryImpl(sql, params);
+        if (typeof sql === 'string' && sql.includes('user_credentials')) {
+          return { rows: roleDb ? [{ role: roleDb }] : [] };
+        }
+        return { rows: [] };
+      },
       fetchImpl: async (url, opts) => {
         captured.push({ url, opts });
         if (fetchImpl) return fetchImpl(url, opts);
@@ -255,4 +261,163 @@ test('GET /api/arsip/me: role ternormalisasi dari user_credentials', async () =>
   const kosong = JSON.parse((await via(harness({ roleDb: '' }).app, '/api/arsip/me')).body);
   assert.equal(kosong.role, 'Staf');
   assert.equal(kosong.isAdmin, false);
+});
+
+test('upstream 401: GET /api/arsip/docs jatuh ke database lokal dan mengembalikan 200', async () => {
+  const { app } = harness({
+    fetchImpl: async () => ({ status: 401, text: async () => '{"error":"Sesi berakhir"}' }),
+    queryImpl: async (sql) => {
+      if (typeof sql === 'string' && sql.includes('bapperida_dokumen')) {
+        return {
+          rows: [
+            {
+              id: 99,
+              title: 'Dokumen Fallback',
+              type: 'Perencanaan',
+              files: '["file1.pdf"]',
+              tagsRaw: 'tag1, tag2',
+            },
+          ],
+        };
+      }
+      return { rows: [] };
+    },
+  });
+  const r = await via(app, '/api/arsip/docs');
+  assert.equal(r.status, 200);
+  const data = JSON.parse(r.body);
+  assert.equal(data.length, 1);
+  assert.equal(data[0].title, 'Dokumen Fallback');
+  assert.deepEqual(data[0].files, ['file1.pdf']);
+  assert.deepEqual(data[0].tags, ['tag1', 'tag2']);
+});
+
+test('upstream 401: GET /api/arsip/p/api/pks/tahun jatuh ke database lokal dan mengembalikan 200', async () => {
+  const { app } = harness({
+    fetchImpl: async () => ({ status: 401, text: async () => '{"error":"Sesi berakhir"}' }),
+    queryImpl: async (sql) => {
+      if (typeof sql === 'string' && sql.includes('pks_tahun')) {
+        return { rows: [{ tahun: 2026 }] };
+      }
+      return { rows: [] };
+    },
+  });
+  const r = await via(app, '/api/arsip/p/api/pks/tahun');
+  assert.equal(r.status, 200);
+  const data = JSON.parse(r.body);
+  assert.ok(Array.isArray(data));
+  assert.ok(data.includes(2026));
+});
+
+test('upstream 401: GET /api/arsip/p/api/bankdata/tahun jatuh ke database lokal dan mengembalikan 200', async () => {
+  const { app } = harness({
+    fetchImpl: async () => ({ status: 401, text: async () => '{"error":"Sesi berakhir"}' }),
+    queryImpl: async (sql) => {
+      if (typeof sql === 'string' && sql.includes('bank_data_tahun')) {
+        return { rows: [{ id: 1, tahun: 2026 }] };
+      }
+      return { rows: [] };
+    },
+  });
+  const r = await via(app, '/api/arsip/p/api/bankdata/tahun');
+  assert.equal(r.status, 200);
+  const data = JSON.parse(r.body);
+  assert.equal(data.length, 1);
+  assert.equal(data[0].tahun, 2026);
+});
+
+test('upstream 401: GET /api/arsip/p/api/agenda/* jatuh ke database lokal dan mengembalikan 200', async () => {
+  const { app } = harness({
+    fetchImpl: async () => ({ status: 401, text: async () => '{"error":"Sesi berakhir"}' }),
+    queryImpl: async (sql) => {
+      if (typeof sql === 'string' && sql.includes('agenda_surat_masuk')) {
+        if (sql.includes('COUNT(')) return { rows: [{ total: 1 }] };
+        return { rows: [{ id: 1, nomor_agenda: '001/SM/2026' }] };
+      }
+      if (typeof sql === 'string' && sql.includes('agenda_surat_keluar')) {
+        if (sql.includes('COUNT(')) return { rows: [{ total: 1 }] };
+        return { rows: [{ id: 2, nomor_surat: '002/SK/2026' }] };
+      }
+      if (typeof sql === 'string' && sql.includes('agenda_sppd')) {
+        if (sql.includes('COUNT(')) return { rows: [{ total: 1 }] };
+        return { rows: [{ id: 3, nomor_sppd: '003/SPPD/2026' }] };
+      }
+      return { rows: [] };
+    },
+  });
+
+  const r1 = await via(app, '/api/arsip/p/api/agenda/surat-masuk?tahun=2026');
+  assert.equal(r1.status, 200);
+  const d1 = JSON.parse(r1.body);
+  assert.equal(d1.ok, true);
+  assert.equal(d1.total, 1);
+  assert.equal(d1.items[0].nomor_agenda, '001/SM/2026');
+
+  const r2 = await via(app, '/api/arsip/p/api/agenda/surat-keluar?tahun=2026');
+  assert.equal(r2.status, 200);
+  const d2 = JSON.parse(r2.body);
+  assert.equal(d2.ok, true);
+  assert.equal(d2.total, 1);
+
+  const r3 = await via(app, '/api/arsip/p/api/agenda/sppd?jenis=DALAM_DAERAH&tahun=2026');
+  assert.equal(r3.status, 200);
+  const d3 = JSON.parse(r3.body);
+  assert.equal(d3.ok, true);
+  assert.equal(d3.total, 1);
+});
+
+test('upstream 401: GET /api/arsip/p/api/kategori-dokumen, sektor, bidang jatuh ke DB lokal', async () => {
+  const { app } = harness({
+    fetchImpl: async () => ({ status: 401, text: async () => '{"error":"Sesi berakhir"}' }),
+    queryImpl: async (sql) => {
+      if (typeof sql === 'string' && sql.includes('bapperida_kategori_dokumen')) {
+        return { rows: [{ id: 1, nama: 'Kajian' }] };
+      }
+      if (typeof sql === 'string' && sql.includes('bapperida_sektor')) {
+        return { rows: [{ id: 2, nama: 'Ekonomi' }] };
+      }
+      if (typeof sql === 'string' && sql.includes('bidang_list')) {
+        return { rows: [{ id: 3, nama: 'Bikor' }] };
+      }
+      return { rows: [] };
+    },
+  });
+
+  const r1 = await via(app, '/api/arsip/p/api/kategori-dokumen');
+  assert.equal(r1.status, 200);
+  assert.equal(JSON.parse(r1.body)[0].nama, 'Kajian');
+
+  const r2 = await via(app, '/api/arsip/p/api/sektor');
+  assert.equal(r2.status, 200);
+  assert.equal(JSON.parse(r2.body)[0].nama, 'Ekonomi');
+
+  const r3 = await via(app, '/api/arsip/p/api/bidang');
+  assert.equal(r3.status, 200);
+  assert.equal(JSON.parse(r3.body)[0].nama, 'Bikor');
+});
+
+test('req.user tanpa NIP otomatis diselesaikan dari user_list', async () => {
+  let queriedUserList = false;
+  const { app, captured } = harness({
+    user: { id: '77', nip: null, role: 'USER' },
+    roleDb: 'Admin',
+    queryImpl: async (sql, params) => {
+      if (typeof sql === 'string' && sql.includes('user_list') && sql.includes('"NIP"')) {
+        queriedUserList = true;
+        assert.equal(params[0], '77');
+        return { rows: [{ nip: '198501012010011005' }] };
+      }
+      if (typeof sql === 'string' && sql.includes('user_credentials')) {
+        return { rows: [{ role: 'Admin' }] };
+      }
+      return { rows: [] };
+    },
+  });
+
+  const r = await via(app, '/api/arsip/docs');
+  assert.equal(r.status, 200);
+  assert.equal(queriedUserList, true);
+  const cookie = captured[0].opts.headers.cookie;
+  const token = cookie.slice('arsip_session='.length);
+  assert.equal(verifikasi(token, SECRET)?.sub, '198501012010011005');
 });
