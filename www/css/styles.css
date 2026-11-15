@@ -5892,14 +5892,14 @@
       .bottom-nav::before {
         content: var(--agency-name, 'HADIR');
         display: block;
-        font-size: 18px;
-        font-weight: 900;
+        font-size: 16px;
+        font-weight: 800;
         color: var(--gold);
-        letter-spacing: 5px;
-        margin-bottom: 40px;
+        letter-spacing: 3px;
+        margin-bottom: 12px;
         text-align: center;
-        padding-bottom: 20px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding-bottom: 14px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       }
 
       .nav-item {
@@ -8343,33 +8343,60 @@ body.sidebar-collapsed {
   }
 
   /* Sidebar Toggle Collapse Button */
-  /* Posisi konsisten di SEMUA state: statis, terpusat di bawah brand.
-     (Dulu expanded = absolut pojok kanan-atas, collapsed = terpusat.) */
+  /* Posisi konsisten di SEMUA state: statis, terpusat di bawah brand. */
   .sidebar-toggle-btn {
     display: flex !important;
     align-items: center;
     justify-content: center;
+    gap: 8px;
     margin: 0 auto 16px auto;
-    width: 26px;
-    height: 26px;
+    width: calc(100% - 24px);
+    max-width: 210px;
+    height: 32px;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     flex: 0 0 auto;
+    box-sizing: border-box;
   }
 
   .sidebar-toggle-btn:hover {
-    background: rgba(255, 255, 255, 0.14);
+    background: rgba(59, 130, 246, 0.12);
     color: var(--gold);
-    border-color: var(--gold);
+    border-color: rgba(59, 130, 246, 0.3);
+    transform: translateY(-1px);
   }
 
   .sidebar-toggle-btn i {
-    font-size: 12px;
+    font-size: 11px;
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sidebar-toggle-label {
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bottom-nav.collapsed .sidebar-toggle-btn,
+  body.sidebar-collapsed .bottom-nav .sidebar-toggle-btn {
+    width: 36px !important;
+    height: 36px !important;
+    max-width: 36px !important;
+    padding: 0 !important;
+    border-radius: 9px !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  .bottom-nav.collapsed .sidebar-toggle-label,
+  body.sidebar-collapsed .bottom-nav .sidebar-toggle-label {
+    display: none !important;
   }
 
   .bottom-nav.collapsed .sidebar-toggle-btn i,
@@ -8378,15 +8405,20 @@ body.sidebar-collapsed {
   }
 
   html.light-theme .sidebar-toggle-btn {
-    background: rgba(0, 0, 0, 0.04);
-    border-color: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.08);
     color: #64748b;
   }
 
   html.light-theme .sidebar-toggle-btn:hover {
     background: rgba(29, 78, 216, 0.08);
     color: #1d4ed8;
-    border-color: #1d4ed8;
+    border-color: rgba(29, 78, 216, 0.25);
+  }
+
+  html.light-theme .bottom-nav.collapsed .sidebar-toggle-btn,
+  html.light-theme body.sidebar-collapsed .bottom-nav .sidebar-toggle-btn {
+    background: rgba(0, 0, 0, 0.04) !important;
   }
 
   /* Sidebar Draggable Resizer Handle */
@@ -8485,6 +8517,15 @@ body.sidebar-resizing .arsip-back {
   .bottom-nav .nav-item.active {
     background: rgba(59, 130, 246, 0.12) !important;
     border-color: rgba(59, 130, 246, 0.25) !important;
+  }
+
+  .bottom-nav .nav-item.active::after {
+    left: 4px !important;
+    top: 25% !important;
+    height: 50% !important;
+    width: 3px !important;
+    border-radius: 3px !important;
+    box-shadow: 0 0 8px var(--gold) !important;
   }
 
   html.light-theme .bottom-nav .nav-item.active {

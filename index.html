@@ -27,6 +27,63 @@
     })();
   </script>
 
+  <!-- Global Admin Grid Handlers (Immediate Fallback) -->
+  <script>
+    window.showAdminGrid = window.showAdminGrid || function() {
+      const gridEl = document.getElementById('admin-grid-view');
+      const headEl = document.getElementById('admin-detail-head');
+      if (gridEl) gridEl.style.display = 'block';
+      if (headEl) headEl.style.display = 'none';
+      document.querySelectorAll('.admin-section').forEach(function(s) { if (s) s.style.display = 'none'; });
+      try { localStorage.setItem('absen_last_admin_section', 'grid'); } catch(e) {}
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    window.openAdminCard = window.openAdminCard || function(cardKey) {
+      const meta = {
+        'konfirmasi': { section: 'ops', group: 'Operasional & Kehadiran', title: 'Konfirmasi Keterangan', target: 'konfirmasiAdminList' },
+        'ket':        { section: 'ops', group: 'Operasional & Kehadiran', title: 'Input Keterangan Pegawai', target: 'adminKetCard' },
+        'meja':       { section: 'ops', group: 'Operasional & Kehadiran', title: 'Terminal Meja Absen', target: 'mejaAbsenCard' },
+        'pegawai':    { section: 'user', group: 'Manajemen Kepegawaian', title: 'Master Pegawai & Face AI', target: 'adminFaceRegCard' },
+        'admin':      { section: 'user', group: 'Manajemen Kepegawaian', title: 'Kelola Administrator', target: 'adminMgmtCard' },
+        'lokasi':     { section: 'config', group: 'Konfigurasi Sistem', title: 'Geofencing & Lokasi Absen', target: 'adminMap' },
+        'jam':        { section: 'config', group: 'Konfigurasi Sistem', title: 'Jam Kerja & Periode Khusus', target: 'periodeAdminList' },
+        'libur':      { section: 'config', group: 'Konfigurasi Sistem', title: 'Hari Libur & Cuti Bersama', target: 'liburAdminList' },
+        'seragam':    { section: 'config', group: 'Konfigurasi Sistem', title: 'Mode Seragam Pegawai', target: 'seragamAdminList' },
+        'telegram':   { section: 'config', group: 'Konfigurasi Sistem', title: 'Notifikasi Telegram', target: 'telegramNotifCard' },
+        'instansi':   { section: 'config', group: 'Konfigurasi Sistem', title: 'Identitas Instansi (Superadmin)', target: 'superadminHeaderCard' },
+        'desktop':    { section: 'config', group: 'Konfigurasi Sistem', title: 'Tampilan Mode Desktop', target: 'desktopModeCard' },
+        'dev-health': { section: 'dev', group: 'Developer & Diagnostik', title: 'Status Kesehatan Seluruh Fitur', target: 'devHealthCard' },
+        'dev-test':   { section: 'dev', group: 'Developer & Diagnostik', title: 'Pengujian Fitur Otomatis', target: 'devTestCard' },
+        'dev-log':    { section: 'dev', group: 'Developer & Diagnostik', title: 'Log Aktivitas & Error', target: 'devLogCard' }
+      }[cardKey] || { section: 'ops', group: 'Operasional & Kehadiran', title: 'Operasional', target: null };
+
+      const groupEl = document.getElementById('adminDetailGroup');
+      const titleEl = document.getElementById('adminDetailTitle');
+      if (groupEl) groupEl.textContent = meta.group;
+      if (titleEl) titleEl.textContent = meta.title;
+
+      const gridEl = document.getElementById('admin-grid-view');
+      const headEl = document.getElementById('admin-detail-head');
+      if (gridEl) gridEl.style.display = 'none';
+      if (headEl) headEl.style.display = 'flex';
+
+      if (typeof switchAdminSection === 'function') {
+        switchAdminSection(meta.section);
+      } else {
+        document.querySelectorAll('.admin-section').forEach(function(s) { if (s) s.style.display = 'none'; });
+        const target = document.getElementById('admin-section-' + meta.section);
+        if (target) target.style.display = 'block';
+      }
+
+      if (meta.target && document.getElementById(meta.target)) {
+        setTimeout(function() {
+          const el = document.getElementById(meta.target);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+      }
+    };
+  </script>
+
   <!-- External Libraries -->
   <script src="js/lib/telegram-web-app.js"></script>
   <script src="js/lib/xlsx.full.min.js" defer></script>
@@ -589,6 +646,7 @@ html.light-theme .admin-detail-crumb-title {
     <nav class="bottom-nav" id="tabsBar">
       <button type="button" class="sidebar-toggle-btn desktop-only" id="sidebarToggleBtn" onclick="toggleSidebarCollapse()" title="Kecilkan / Perlebar Sidebar" aria-label="Toggle Sidebar">
         <i class="fas fa-arrow-left" id="sidebarToggleIcon"></i>
+        <span class="sidebar-toggle-label">Ciutkan Sidebar</span>
       </button>
       <div class="sidebar-resizer desktop-only" id="sidebarResizer" title="Geser untuk mengubah ukuran sidebar (klik ganda untuk minimize/maximize)"></div>
 
