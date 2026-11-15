@@ -6,6 +6,8 @@ import {
   sameInstansi,
   isSessionToken,
   MEDIA_ROLES,
+  SIMAPO_ROLES,
+  ABSEN_ROLES,
   SESSION_LOOKUP_SQL,
   singleSessionRow,
 } from './auth.js';
@@ -112,11 +114,11 @@ test('decodeDataUrl menolak input yang bukan data URL gambar', () => {
   assert.equal(fileIdFromDriveUrl('https://drive.google.com/file/d/abcde/view'), 'abcde');
 });
 
-test('decodeDataUrl menolak gambar melebihi 5 MB', () => {
-  const big = Buffer.alloc(5 * 1024 * 1024 + 1).toString('base64');
-  assert.throws(() => decodeDataUrl(`data:image/png;base64,${big}`), /5 MB/);
-  // batas pas 5 MB masih diterima; nilai ini harus sama dengan MAX_BYTES di Code.gs
-  assert.equal(MAX_IMAGE_BYTES, 5 * 1024 * 1024);
+test('decodeDataUrl menolak gambar melebihi 10 MB', () => {
+  const big = Buffer.alloc(10 * 1024 * 1024 + 1).toString('base64');
+  assert.throws(() => decodeDataUrl(`data:image/png;base64,${big}`), /10 MB/);
+  // batas pas 10 MB masih diterima; nilai ini harus sama dengan MAX_BYTES di Code.gs
+  assert.equal(MAX_IMAGE_BYTES, 10 * 1024 * 1024);
   const exact = decodeDataUrl(`data:image/png;base64,${Buffer.alloc(MAX_IMAGE_BYTES).toString('base64')}`);
   assert.equal(exact.buffer.length, MAX_IMAGE_BYTES);
   // base64 yang tidak menghasilkan byte apa pun -> buffer kosong
@@ -154,7 +156,8 @@ test('gasUpsert mengirim base64 dan mengembalikan fileId + url', async () => {
 
     const health = await gasHealth();
     assert.equal(health.ok, true);
-    assert.equal(calls[1].url, `${GAS_URL}/?action=health&token=${GAS_SECRET}`);
+    // tanpa '/' sebelum '?' — /exec/ (trailing slash) balas 404 dari Google
+    assert.equal(calls[1].url, `${GAS_URL}?action=health&token=${GAS_SECRET}`);
   } finally {
     restoreFetch();
   }
@@ -164,12 +167,12 @@ test('gasUpsert melempar error saat Apps Script menolak', async () => {
   stubFetch(async () => ({
     ok: false,
     status: 413,
-    json: async () => ({ ok: false, message: 'ukuran file melebihi 5 MB' }),
+    json: async () => ({ ok: false, message: 'ukuran file melebihi 10 MB' }),
   }));
   try {
     await assert.rejects(
       () => gasUpsert({ filename: 'a.png', mimeType: 'image/png', dataBase64: 'AAAA' }),
-      /5 MB/,
+      /10 MB/,
     );
 
     stubFetch(async () => okJson({ ok: true, fileId: 'F1' }));
@@ -291,6 +294,16 @@ test('MEDIA_ROLES memuat tepat enam peran yang diizinkan', () => {
   assert.ok(MEDIA_ROLES instanceof Set);
 });
 
+test('SIMAPO_ROLES = MEDIA_ROLES + BENDAHARA BARANG saja; BENDAHARA BARANG bukan media', () => {
+  assert.deepEqual(
+    [...SIMAPO_ROLES].sort(),
+    ['ADMIN', 'BENDAHARA BARANG', 'IRBAN', 'KABID', 'KEPALA', 'SEKRETARIS', 'SUPERADMIN'],
+  );
+  assert.equal(MEDIA_ROLES.has('BENDAHARA BARANG'), false, 'BENDAHARA BARANG tidak boleh menulis log media');
+  assert.ok(SIMAPO_ROLES.has('BENDAHARA BARANG'));
+  assert.ok(ABSEN_ROLES.has('BENDAHARA BARANG'), 'BENDAHARA BARANG tetap bisa absen & baca log sendiri');
+});
+
 test('isSessionToken hanya menerima 192 hex huruf kecil', () => {
   assert.equal(isSessionToken(TOKEN), true);
   assert.equal(isSessionToken('a'.repeat(191)), false, '191 hex');
@@ -405,7 +418,7 @@ test('requireRole meneruskan request dan menempelkan identitas untuk role yang d
   assert.equal(status, 0, 'tidak boleh membalas sendiri kalau sudah lolos');
   assert.equal(body, null);
   assert.equal(nexted, true);
-  assert.deepEqual(req.user, { id: '7', nip: '1990', role: 'ADMIN', instansi_id: 'bapperida' });
+  assert.deepEqual(req.user, { id: '7', nip: '1990', role: 'ADMIN', instansi_id: 'bapperida', is_admin: false });
   // Kontrak tipe id: STRING, bukan number. user_list.id itu bigint dan parser default
   // node-postgres (OID 20) sudah jadi string; ::text di SQL mengunci itu. Kalau ini
   // jadi number, `req.user.id === 7` di Task 5 diam-diam salah.
@@ -418,10 +431,11 @@ test('requireRole meneruskan request dan menempelkan identitas untuk role yang d
 });
 
 test('role hidup dari user_list menang atas snapshot role di baris sesi', () => {
-  // Bagian SQL: kolom yang dibaca adalah u.role, bukan s.role.
+  // Bagian SQL: kolom yang dibaca adalah u.role, bukan s.role. u.is_admin ikut
+  // di-select — gate /api/log/add|edit membaca boolean itu.
   assert.match(
     SESSION_LOOKUP_SQL,
-    /SELECT\s+u\.id::text AS id,\s*u\."NIP" AS nip,\s*u\.role,\s*u\.instansi_id/i,
+    /SELECT\s+u\.id::text AS id,\s*u\."NIP" AS nip,\s*u\.role,\s*u\.is_admin,\s*u\.instansi_id/i,
   );
   assert.doesNotMatch(SESSION_LOOKUP_SQL, /\bs\.role\b/, 'snapshot role sesi tidak boleh dipakai');
   // Join lewat user_id (primary key), bukan NIP: index user_list."NIP" NON-unique,
@@ -581,7 +595,7 @@ function harness({ user = ME, userRow = row(), auth = true, query, gasUpsert } =
     },
   };
   const app = express();
-  app.use(express.json({ limit: '8mb' }));
+  app.use(express.json({ limit: '16mb' }));
   if (auth) {
     app.use(requireRole(MEDIA_ROLES, { lookup: async () => ({ ...user }) }));
   }
@@ -743,6 +757,108 @@ test("face: user tanpa ('') instansi hanya boleh dirinya sendiri", async () => {
   assert.equal(other.gas.length, 0);
 });
 
+// --- T7: collision check antar-pegawai -----------------------------------------
+const D512 = Array(512).fill(0.01);            // descriptor 512-dim "baru"
+const D512_DUP = [...D512];                    // identik -> similarity 1
+const twinSql = (text) => /face-twin/.test(text);
+
+test('face: dup kembar >= threshold -> 409, TANPA upload Drive', async () => {
+  const h = harness({
+    query: async (text) => {
+      if (twinSql(text)) return { rows: [{ id: '7', nip: '111', nama: 'Budi', face_histogram: JSON.stringify(D512_DUP) }] };
+      if (/FROM pengaturan WHERE key='face_threshold'/.test(text)) return { rows: [] };   // default 0.55
+      if (/FROM "user_list"/i.test(text)) return { rows: [row({ id: '77', nip: '77', instansi_id: 'bapperida' })] };
+      if (/UPDATE "user_list"/i.test(text)) return { rows: [{ id: '77' }] };
+      return { rows: [] };
+    },
+  });
+  const res = await post(h, '/api/media/face', { ...FACE, user_id: 77, face_descriptor: D512 });
+  assert.equal(res.status, 409);
+  assert.equal(res.body.ok, false);
+  assert.match(res.body.message, /Budi/);
+  assert.equal(h.gas.length, 0, 'upload Drive tidak boleh terjadi');
+});
+
+test('face: SQL twin memakai kolom user_list yang ada (username AS nama, "NIP" AS nip)', async () => {
+  let twinText = '';
+  const h = harness({
+    query: async (text) => {
+      if (twinSql(text)) { twinText = text; return { rows: [] }; }
+      if (/FROM pengaturan WHERE key='face_threshold'/.test(text)) return { rows: [] };
+      if (/FROM "user_list"/i.test(text)) return { rows: [row({ id: '77', nip: '77' })] };
+      if (/UPDATE "user_list"/i.test(text)) return { rows: [{ id: '77' }] };
+      return { rows: [] };
+    },
+  });
+  await post(h, '/api/media/face', { ...FACE, user_id: 77, face_descriptor: D512 });
+  assert.ok(twinText, 'SQL twin harus dieksekusi (update antar-pegawai)');
+  assert.match(twinText, /username\s+AS\s+nama/i, 'user_list tidak punya kolom nama; wajib alias username AS nama');
+  assert.match(twinText, /"NIP"\s+AS\s+nip/i, 'kolom user_list bernama NIP (huruf besar); nip lowercase akan melempar');
+});
+
+test('face: dup di bawah threshold -> lanjut 200', async () => {
+  // +0.6 di satu dimensi -> sum=0.36 -> dist=9 -> sim ter-clamp 1 (bukan "jauh di bawah").
+  // +15 -> sum=225 -> sim 0.08 < 0.55 (lihat rumus humanSimilarity, face-quality.js:36).
+  const near = [...D512]; near[0] += 15;
+  const h = harness({
+    query: async (text) => {
+      if (twinSql(text)) return { rows: [{ id: '7', nip: '111', nama: 'Budi', face_histogram: JSON.stringify(near) }] };
+      if (/FROM pengaturan WHERE key='face_threshold'/.test(text)) return { rows: [] };
+      if (/FROM "user_list"/i.test(text)) return { rows: [row({ id: '77', nip: '77' })] };
+      if (/UPDATE "user_list"/i.test(text)) return { rows: [{ id: '77' }] };
+      return { rows: [] };
+    },
+  });
+  const res = await post(h, '/api/media/face', { ...FACE, user_id: 77, face_descriptor: D512 });
+  assert.equal(res.status, 200);
+  assert.equal(h.gas.length, 1);
+});
+
+test('face: update milik sendiri (uid sama) -> lolos dari cek duplikat', async () => {
+  const h = harness({
+    query: async (text) => {
+      if (twinSql(text)) return { rows: [{ id: '7', nip: '111', nama: 'Budi', face_histogram: JSON.stringify(D512_DUP) }] };
+      if (/FROM pengaturan WHERE key='face_threshold'/.test(text)) return { rows: [] };
+      if (/FROM "user_list"/i.test(text)) return { rows: [row()] };                      // target = pemanggil (ME 42)
+      if (/UPDATE "user_list"/i.test(text)) return { rows: [{ id: '42' }] };
+      return { rows: [] };
+    },
+  });
+  const res = await post(h, '/api/media/face', { ...FACE, face_descriptor: D512 }); // user_id 42 = ME
+  assert.equal(res.status, 200);
+  assert.equal(h.gas.length, 1);
+});
+
+test('face: threshold pengaturan instansi dipakai (0.90 -> skor 0.92 tetap ditolak)', async () => {
+  const b = Array(512).fill(0); b[0] = 5;      // similarity Human = 0.92 (lihat Task 1)
+  const h = harness({
+    query: async (text) => {
+      if (twinSql(text)) return { rows: [{ id: '7', nip: '111', nama: 'Ani', face_histogram: JSON.stringify(b) }] };
+      if (/FROM pengaturan WHERE key='face_threshold'/.test(text)) return { rows: [{ value: '0.90' }] };
+      if (/FROM "user_list"/i.test(text)) return { rows: [row({ id: '77', nip: '77' })] };
+      if (/UPDATE "user_list"/i.test(text)) return { rows: [{ id: '77' }] };
+      return { rows: [] };
+    },
+  });
+  const res = await post(h, '/api/media/face', { ...FACE, user_id: 77, face_descriptor: [...Array(512).fill(0)] });
+  assert.equal(res.status, 409);               // 0.92 >= 0.90
+});
+
+test('face: descriptor 2-dim / beda panjang -> cek dilewati (regresi test lama tetap 200)', async () => {
+  const h = harness({
+    query: async (text) => {
+      if (twinSql(text)) return { rows: [{ id: '7', nip: '111', nama: 'Budi', face_histogram: JSON.stringify(D512_DUP) }] };
+      if (/FROM pengaturan WHERE key='face_threshold'/.test(text)) return { rows: [] };
+      if (/FROM "user_list"/i.test(text)) return { rows: [row({ id: '77', nip: '77' })] };
+      if (/UPDATE "user_list"/i.test(text)) return { rows: [{ id: '77' }] };
+      return { rows: [] };
+    },
+  });
+  const res = await post(h, '/api/media/face', { ...FACE, user_id: 77, face_descriptor: [0.1, 0.2] });
+  assert.equal(res.status, 200);
+  assert.equal(h.gas.length, 1);
+});
+
 test('face: target dengan instansi_id NULL -> 403, bukan lolos sebagai "tanpa filter"', async () => {
   // Kolomnya nullable, dan sameInstansi memakai null sebagai "panggil tidak membatasi"
   // (untuk endpoint global). Tanpa normalisasi ke '', user mana pun yang lolos
@@ -792,12 +908,12 @@ test('face: payload bukan data URL image -> 400 dan tidak sampai ke Drive', asyn
   }
 });
 
-test('face: foto di atas 5 MB -> 400 dan tidak sampai ke Drive', async () => {
+test('face: foto di atas 10 MB -> 400 dan tidak sampai ke Drive', async () => {
   const big = `data:image/png;base64,${Buffer.alloc(MAX_IMAGE_BYTES + 1).toString('base64')}`;
   const h = harness();
   const res = await post(h, '/api/media/face', { ...FACE, foto_base64: big });
   assert.equal(res.status, 400);
-  assert.match(res.body.message, /5 MB/);
+  assert.match(res.body.message, /10 MB/);
   assert.equal(h.gas.length, 0);
 });
 
@@ -811,6 +927,42 @@ test('face: Apps Script gagal -> 502 dan database tetap bersih', async () => {
   assert.equal(res.status, 502);
   assert.equal(h.sql.filter((s) => /UPDATE/i.test(s.text)).length, 0, 'tidak ada query tulis');
   assert.equal(h.sql.length, 1, 'hanya resolusi target');
+});
+
+test('face: update fileId lama di Drive gagal -> fallback buat file baru berhasil (200)', async () => {
+  const h = harness({
+    userRow: row({ face_photo: 'https://drive.google.com/file/d/OLD_DELETED_FILE/view' }),
+    gasUpsert: async (arg) => {
+      if (arg.fileId === 'OLD_DELETED_FILE') {
+        throw new Error('gagal menyimpan file');
+      }
+      return { fileId: 'NEW_RECOVERED_FILE', url: 'https://drive.google.com/file/d/NEW_RECOVERED_FILE/view' };
+    },
+  });
+  const res = await post(h, '/api/media/face', { ...FACE });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.fileId, 'NEW_RECOVERED_FILE');
+  assert.equal(h.gas.length, 2, 'pertama coba fileId lama, kedua fallback fileId null');
+  assert.equal(h.gas[0].fileId, 'OLD_DELETED_FILE');
+  assert.equal(h.gas[1].fileId, null);
+});
+
+test('signature: update fileId lama di Drive gagal -> fallback buat file baru berhasil (200)', async () => {
+  const h = harness({
+    userRow: row({ signature: 'https://drive.google.com/file/d/OLD_SIG_FILE/view' }),
+    gasUpsert: async (arg) => {
+      if (arg.fileId === 'OLD_SIG_FILE') {
+        throw new Error('gagal menyimpan file');
+      }
+      return { fileId: 'NEW_SIG_FILE', url: 'https://drive.google.com/file/d/NEW_SIG_FILE/view' };
+    },
+  });
+  const res = await post(h, '/api/media/signature', { ...SIG });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.fileId, 'NEW_SIG_FILE');
+  assert.equal(h.gas.length, 2, 'pertama coba fileId lama, kedua fallback fileId null');
+  assert.equal(h.gas[0].fileId, 'OLD_SIG_FILE');
+  assert.equal(h.gas[1].fileId, null);
 });
 
 test('face: user_id tidak ada -> 404 dan Drive tidak dipanggil', async () => {
@@ -851,6 +1003,23 @@ test('face: descriptor, model, dan saved_at diteruskan apa adanya', async () => 
   // sameInstansi() tetap terkunci oleh klausa WHERE-nya sendiri.
   assert.match(upd.text, /"instansi_id"/i);
   assert.match(upd.text, /OR\s+\$7::boolean/i);
+});
+
+test('face & signature: UPDATE/INSERT tulis RETURNING — tanpa itu rows selalu [] dan sukses jadi 500', async () => {
+  // Bug produksi: FACE_UPDATE_SQL & SIGNATURE_UPSERT_SQL tanpa RETURNING, jadi
+  // result.rows selalu [] walau UPDATE/INSERT sukses — cek rows.length===0 di
+  // handler selalu 500 "Gagal menyimpan foto" SETELAH data tersimpan.
+  const hf = harness();
+  await post(hf, '/api/media/face', { ...FACE });
+  const upd = hf.sql.find((s) => /UPDATE\s+"user_list"/i.test(s.text));
+  assert.ok(upd, 'UPDATE user_list harus dieksekusi');
+  assert.match(upd.text, /RETURNING/i, 'FACE_UPDATE_SQL wajib RETURNING supaya rows.length mencerminkan baris yang kena');
+
+  const hs = harness();
+  await post(hs, '/api/media/signature', { ...SIG });
+  const ins = hs.sql.find((s) => /INSERT\s+INTO\s+"tanda_tangan"/i.test(s.text));
+  assert.ok(ins, 'INSERT tanda_tangan harus dieksekusi');
+  assert.match(ins.text, /RETURNING/i, 'SIGNATURE_UPSERT_SQL wajib RETURNING supaya rows.length mencerminkan baris yang kena');
 });
 
 test('face: nama file Drive memakai NIP dari user_list, bukan dari body', async () => {

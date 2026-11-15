@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stitch UI Showcase - Absensi Shift BAPPERIDA</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-xl shadow-md shadow-blue-500/20">
+          S
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-bold text-slate-900 tracking-tight">Stitch Design Showcase</h1>
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">19 Layar UI</span>
+          </div>
+          <p class="text-xs text-slate-500">Employee Shift Attendance App • Target: <code class="bg-slate-100 px-1 py-0.5 rounded text-blue-600">D:\Code\absensi</code></p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="../absensi-v2/index.html" class="px-4 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all shadow-md flex items-center gap-1.5">
+          <span>Buka Aplikasi Terpadu (Absensi v2)</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+    
+    <!-- Design System Highlight Banner -->
+    <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm mb-8">
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+          Design System Tokens: Vibrant Enterprise Attendance
+        </h2>
+        <a href="DESIGN.md" target="_blank" class="text-xs text-blue-600 font-semibold hover:underline flex items-center gap-1">
+          Buka Spesifikasi Lengkap (DESIGN.md) &rarr;
+        </a>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50/50">
+          <div class="w-full h-8 rounded-lg bg-[#2563EB] mb-2 shadow-sm"></div>
+          <p class="text-xs font-bold text-slate-800">Primary</p>
+          <p class="text-[11px] font-mono text-slate-500">#2563EB</p>
+        </div>
+        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50/50">
+          <div class="w-full h-8 rounded-lg bg-[#10B981] mb-2 shadow-sm"></div>
+          <p class="text-xs font-bold text-slate-800">Secondary (Valid)</p>
+          <p class="text-[11px] font-mono text-slate-500">#10B981</p>
+        </div>
+        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50/50">
+          <div class="w-full h-8 rounded-lg bg-[#F59E0B] mb-2 shadow-sm"></div>
+          <p class="text-xs font-bold text-slate-800">Tertiary (Warning)</p>
+          <p class="text-[11px] font-mono text-slate-500">#F59E0B</p>
+        </div>
+        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50/50">
+          <div class="w-full h-8 rounded-lg bg-[#EF4444] mb-2 shadow-sm"></div>
+          <p class="text-xs font-bold text-slate-800">Error (Late)</p>
+          <p class="text-[11px] font-mono text-slate-500">#EF4444</p>
+        </div>
+        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50/50">
+          <div class="w-full h-8 rounded-lg bg-[#64748B] mb-2 shadow-sm"></div>
+          <p class="text-xs font-bold text-slate-800">Neutral</p>
+          <p class="text-[11px] font-mono text-slate-500">#64748B</p>
+        </div>
+        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50/50">
+          <div class="w-full h-8 rounded-lg bg-[#0F172A] mb-2 shadow-sm"></div>
+          <p class="text-xs font-bold text-slate-800">Dark Mode BG</p>
+          <p class="text-[11px] font-mono text-slate-500">#0F172A</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-2 mb-6 scrollbar-none">
+      <button onclick="filterCategory('all')" class="cat-btn active px-4 py-2 rounded-xl text-xs font-bold transition-all bg-blue-600 text-white shadow-sm" data-cat="all">
+        Semua Layar (19)
+      </button>
+      <button onclick="filterCategory('mobile-light')" class="cat-btn px-4 py-2 rounded-xl text-xs font-medium transition-all bg-white text-slate-600 hover:bg-slate-100 border border-slate-200" data-cat="mobile-light">
+        📱 Mobile Light
+      </button>
+      <button onclick="filterCategory('mobile-dark')" class="cat-btn px-4 py-2 rounded-xl text-xs font-medium transition-all bg-white text-slate-600 hover:bg-slate-100 border border-slate-200" data-cat="mobile-dark">
+        🌙 Mobile Dark
+      </button>
+      <button onclick="filterCategory('desktop-admin')" class="cat-btn px-4 py-2 rounded-xl text-xs font-medium transition-all bg-white text-slate-600 hover:bg-slate-100 border border-slate-200" data-cat="desktop-admin">
+        🖥️ Desktop & Kiosk
+      </button>
+      <button onclick="filterCategory('bapperida')" class="cat-btn px-4 py-2 rounded-xl text-xs font-medium transition-all bg-white text-slate-600 hover:bg-slate-100 border border-slate-200" data-cat="bapperida">
+        🏛️ BAPPERIDA & Surat
+      </button>
+    </div>
+
+    <!-- Screen Cards Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5" id="gridContainer">
+      
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="mobile-light">
+      <a href="screens/02-riwayat-log-kehadiran.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/02-riwayat-log-kehadiran.png" alt="Riwayat & Log Kehadiran" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">MOBILE</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Mobile (Light Mode)</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">02. Riwayat & Log Kehadiran</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">780 x 2552 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/02-riwayat-log-kehadiran.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="desktop-admin">
+      <a href="screens/03-rekap-laporan-kehadiran-cetak-dokumen.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/03-rekap-laporan-kehadiran-cetak-dokumen.png" alt="Rekap Laporan Kehadiran & Cetak Dokumen" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-200">DESKTOP</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Desktop & Kiosk</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">03. Rekap Laporan Kehadiran & Cetak Dokumen</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">2560 x 5760 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/03-rekap-laporan-kehadiran-cetak-dokumen.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="bapperida">
+      <a href="screens/04-arsip-digital-kepegawaian-bapperida.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/04-arsip-digital-kepegawaian-bapperida.png" alt="Arsip Digital Kepegawaian - BAPPERIDA" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-200">DESKTOP</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">BAPPERIDA & Dokumen</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">04. Arsip Digital Kepegawaian - BAPPERIDA</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">2560 x 2596 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/04-arsip-digital-kepegawaian-bapperida.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="bapperida">
+      <a href="screens/05-layanan-kedinasan-sppd-aset-daerah.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/05-layanan-kedinasan-sppd-aset-daerah.png" alt="Layanan Kedinasan, SPPD & Aset Daerah" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-200">DESKTOP</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">BAPPERIDA & Dokumen</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">05. Layanan Kedinasan, SPPD & Aset Daerah</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">2560 x 2268 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/05-layanan-kedinasan-sppd-aset-daerah.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="mobile-dark">
+      <a href="screens/06-riwayat-rekap-mobile-dark-mode.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/06-riwayat-rekap-mobile-dark-mode.png" alt="Riwayat & Rekap Mobile (Dark Mode)" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">MOBILE</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Mobile (Dark Mode)</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">06. Riwayat & Rekap Mobile (Dark Mode)</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">780 x 2664 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/06-riwayat-rekap-mobile-dark-mode.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="bapperida">
+      <a href="screens/07-pratinjau-cetak-pdf-dokumen-tpp-pegawai.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/07-pratinjau-cetak-pdf-dokumen-tpp-pegawai.png" alt="Pratinjau Cetak PDF Dokumen TPP Pegawai" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-200">DESKTOP</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">BAPPERIDA & Dokumen</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">07. Pratinjau Cetak PDF Dokumen TPP Pegawai</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">2560 x 3292 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/07-pratinjau-cetak-pdf-dokumen-tpp-pegawai.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="desktop-admin">
+      <a href="screens/08-portal-presensi-absen-mandiri-pegawai.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/08-portal-presensi-absen-mandiri-pegawai.png" alt="Portal Presensi & Absen Mandiri Pegawai" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-200">DESKTOP</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Desktop & Kiosk</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">08. Portal Presensi & Absen Mandiri Pegawai</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">2560 x 3872 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/08-portal-presensi-absen-mandiri-pegawai.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="mobile-light">
+      <a href="screens/09-status-sukses-verifikasi-wajah.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/09-status-sukses-verifikasi-wajah.png" alt="Status Sukses Verifikasi Wajah" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">MOBILE</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Mobile (Light Mode)</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">09. Status Sukses Verifikasi Wajah</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">780 x 1820 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/09-status-sukses-verifikasi-wajah.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="desktop-admin">
+      <a href="screens/10-panel-administrator-konfigurasi-sistem.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/10-panel-administrator-konfigurasi-sistem.png" alt="Panel Administrator & Konfigurasi Sistem" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-200">DESKTOP</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Desktop & Kiosk</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">10. Panel Administrator & Konfigurasi Sistem</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">2560 x 3964 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/10-panel-administrator-konfigurasi-sistem.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="mobile-light">
+      <a href="screens/11-bukti-presensi-digital-e-slip.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/11-bukti-presensi-digital-e-slip.png" alt="Bukti Presensi Digital (E-Slip)" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">MOBILE</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Mobile (Light Mode)</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">11. Bukti Presensi Digital (E-Slip)</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">780 x 2048 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/11-bukti-presensi-digital-e-slip.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="mobile-dark">
+      <a href="screens/12-portal-presensi-mobile-dark-mode.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/12-portal-presensi-mobile-dark-mode.png" alt="Portal Presensi Mobile (Dark Mode)" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">MOBILE</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Mobile (Dark Mode)</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">12. Portal Presensi Mobile (Dark Mode)</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">780 x 3108 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/12-portal-presensi-mobile-dark-mode.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="bapperida">
+      <a href="screens/13-pratinjau-lembar-sk-kenaikan-pangkat-pegawai-bapperida.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/13-pratinjau-lembar-sk-kenaikan-pangkat-pegawai-bapperida.png" alt="Pratinjau Lembar SK Kenaikan Pangkat Pegawai - BAPPERIDA" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-200">DESKTOP</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">BAPPERIDA & Dokumen</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">13. Pratinjau Lembar SK Kenaikan Pangkat Pegawai - BAPPERIDA</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">2560 x 4582 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/13-pratinjau-lembar-sk-kenaikan-pangkat-pegawai-bapperida.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="bapperida">
+      <a href="screens/14-manajemen-aset-daerah-kir-bapperida.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/14-manajemen-aset-daerah-kir-bapperida.png" alt="Manajemen Aset Daerah (KIR) - BAPPERIDA" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-200">DESKTOP</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">BAPPERIDA & Dokumen</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">14. Manajemen Aset Daerah (KIR) - BAPPERIDA</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">2560 x 2886 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/14-manajemen-aset-daerah-kir-bapperida.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="mobile-dark">
+      <a href="screens/15-jadwal-shift-asn-dark-mode.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/15-jadwal-shift-asn-dark-mode.png" alt="Jadwal Shift ASN (Dark Mode)" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">MOBILE</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Mobile (Dark Mode)</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">15. Jadwal Shift ASN (Dark Mode)</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">780 x 2248 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/15-jadwal-shift-asn-dark-mode.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="mobile-dark">
+      <a href="screens/16-layanan-kedinasan-admin-dark-mode.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/16-layanan-kedinasan-admin-dark-mode.png" alt="Layanan Kedinasan & Admin (Dark Mode)" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">MOBILE</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Mobile (Dark Mode)</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">16. Layanan Kedinasan & Admin (Dark Mode)</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">780 x 3132 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/16-layanan-kedinasan-admin-dark-mode.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="mobile-light">
+      <a href="screens/17-presensi-dashboard-shift.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/17-presensi-dashboard-shift.png" alt="Presensi & Dashboard Shift" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">MOBILE</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Mobile (Light Mode)</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">17. Presensi & Dashboard Shift</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">780 x 2918 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/17-presensi-dashboard-shift.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="mobile-light">
+      <a href="screens/18-jadwal-shift-pegawai.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/18-jadwal-shift-pegawai.png" alt="Jadwal Shift Pegawai" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">MOBILE</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Mobile (Light Mode)</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">18. Jadwal Shift Pegawai</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">780 x 2016 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/18-jadwal-shift-pegawai.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="mobile-light">
+      <a href="screens/19-verifikasi-wajah-lokasi.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/19-verifikasi-wajah-lokasi.png" alt="Verifikasi Wajah & Lokasi" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">MOBILE</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Mobile (Light Mode)</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">19. Verifikasi Wajah & Lokasi</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">780 x 2060 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/19-verifikasi-wajah-lokasi.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="screen-card bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group" data-category="desktop-admin">
+      <a href="screens/20-mode-kiosk-lobi-terminal-meja-absen.html" target="_blank" class="relative overflow-hidden block">
+        <img src="screenshots/20-mode-kiosk-lobi-terminal-meja-absen.png" alt="Mode Kiosk Lobi - Terminal Meja Absen" class="w-full h-48 object-cover object-top border-b border-slate-100 group-hover:scale-[1.02] transition-transform duration-300" loading="lazy">
+        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Buka Layar
+          </span>
+        </div>
+      </a>
+      <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-200">DESKTOP</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Desktop & Kiosk</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">20. Mode Kiosk Lobi - Terminal Meja Absen</h3>
+          <p class="text-[11px] text-slate-400 font-mono mt-1">2560 x 2048 px</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <a href="screens/20-mode-kiosk-lobi-terminal-meja-absen.html" target="_blank" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span>Buka Layar Penuh</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    </div>
+
+  </main>
+
+  <script>
+    function filterCategory(cat) {
+      const cards = document.querySelectorAll('.screen-card');
+      const buttons = document.querySelectorAll('.cat-btn');
+
+      buttons.forEach(btn => {
+        if(btn.dataset.cat === cat) {
+          btn.className = "cat-btn active px-4 py-2 rounded-xl text-xs font-bold transition-all bg-blue-600 text-white shadow-sm";
+        } else {
+          btn.className = "cat-btn px-4 py-2 rounded-xl text-xs font-medium transition-all bg-white text-slate-600 hover:bg-slate-100 border border-slate-200";
+        }
+      });
+
+      cards.forEach(card => {
+        if (cat === 'all' || card.dataset.category === cat) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+  </script>
+</body>
+</html>

@@ -15,7 +15,7 @@
         window._pegawaiCache = users;
 
         if (!users.length) {
-          el.innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-icon" style="font-size:40px">👥</div><div class="empty-text">Belum ada data pegawai</div></div>`;
+          el.innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-icon" style="font-size:40px"><i class="fas fa-users"></i></div><div class="empty-text">Belum ada data pegawai</div></div>`;
           return;
         }
 
@@ -58,31 +58,36 @@
           const status = (u.status || u.Status || 'AKTIF').toUpperCase();
           const isAktif = status === 'AKTIF';
 
+          const uidAttr = escapeHtml(uid.replace(/'/g, "\\'"));
+          const namaAttr = escapeHtml(String(nama).replace(/'/g, "\\'"));
+          const nipAttr = escapeHtml(String(nip).replace(/'/g, "\\'"));
+
           html += `
             <tr style="border-bottom:1px solid rgba(255,255,255,0.03); transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
               <td style="padding:12px; text-align:center; color:var(--muted)">${idx + 1}</td>
               <td style="padding:12px">
-                <div style="font-weight:700">${nama}</div>
-                <div style="font-size:9px; color:var(--muted)">NIP. ${nip}</div>
+                <div style="font-weight:700">${escapeHtml(nama)}</div>
+                <div style="font-size:9px; color:var(--muted)">NIP. ${escapeHtml(nip)}</div>
               </td>
               <td style="padding:12px">
-                <div>${jab}</div>
-                <div style="font-size:9px; color:var(--gold); opacity:0.7">${bid}</div>
+                <div>${escapeHtml(jab)}</div>
+                <div style="font-size:9px; color:var(--gold); opacity:0.7">${escapeHtml(bid)}</div>
               </td>
-              <td style="padding:12px; color:var(--muted)">${pnk}</td>
+              <td style="padding:12px; color:var(--muted)">${escapeHtml(pnk)}</td>
               <td style="padding:12px">
-                <div style="font-size:9px; color:var(--muted)">ID: ${uid}</div>
-                <div style="color:var(--gold)">📱 ${hp}</div>
+                <div style="font-size:9px; color:var(--muted)">ID: ${escapeHtml(uid)}</div>
+                <div style="color:var(--gold)"><i class="fas fa-mobile-alt"></i> ${escapeHtml(hp)}</div>
               </td>
               <td style="padding:12px; text-align:center">
                 <span style="padding:3px 8px; border-radius:20px; font-size:8px; font-weight:800; background:${isAktif ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'}; color:${isAktif ? '#4ade80' : '#f87171'}; border:1px solid ${isAktif ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}">
-                  ${status}
+                  ${escapeHtml(status)}
                 </span>
               </td>
               <td style="padding:12px; text-align:center">
                 <div style="display:flex; gap:6px; justify-content:center">
-                  <button onclick="editPegawai('${escapeHtml(nip)}', event)" class="btn-sm-admin" style="background:rgba(96,165,250,0.1); color:#60a5fa; border-color:rgba(96,165,250,0.2)">✍️ Edit</button>
-                  <button onclick="deletePegawai('${escapeHtml(uid)}', '${escapeHtml(nama)}', '${escapeHtml(nip)}')" class="btn-sm-admin" style="background:rgba(239,68,68,0.1); color:#f87171; border-color:rgba(239,68,68,0.2)">🗑</button>
+                  <button onclick="bukaModalSSO('${uidAttr}')" class="btn-sm-admin" title="Wewenang SSO & Akun" style="background:rgba(245,158,11,0.12); color:#fbbf24; border-color:rgba(245,158,11,0.25)"><i class="fas fa-user-shield"></i> SSO</button>
+                  <button onclick="editPegawai('${nipAttr}', event)" class="btn-sm-admin" style="background:rgba(96,165,250,0.1); color:#60a5fa; border-color:rgba(96,165,250,0.2)"><i class="fas fa-pen"></i> Edit</button>
+                  <button onclick="deletePegawai('${uidAttr}', '${namaAttr}', '${nipAttr}')" class="btn-sm-admin" style="background:rgba(239,68,68,0.1); color:#f87171; border-color:rgba(239,68,68,0.2)"><i class="fas fa-trash"></i></button>
                 </div>
               </td>
             </tr>
@@ -93,14 +98,14 @@
         el.innerHTML = html;
         
       } catch (e) {
-        el.innerHTML = `<div class="empty-state" style="padding:20px">🔌 Gagal: ${escapeHtml(e.message)}</div>`;
+        el.innerHTML = `<div class="empty-state" style="padding:20px"><i class="fas fa-plug"></i> Gagal: ${escapeHtml(e.message)}</div>`;
       }
     }
 
     function showAddPegawai() {
       const f = $('pegawaiForm');
       if (!f) return;
-      dom.setText('pegawaiFormTitle', '➕ TAMBAH PEGAWAI BARU');
+      dom.setHTML('pegawaiFormTitle', '<i class="fas fa-plus"></i> TAMBAH PEGAWAI BARU');
       $('editPegawaiId').value = '';
       $('inPegawaiId').value = '';
       dom.setDisabled('inPegawaiId', false);
@@ -112,8 +117,8 @@
       $('inPegawaiStatus').value = 'AKTIF';
       $('inPegawaiJamMasuk').value = '';
       $('inPegawaiJamPulang').value = '';
-      $('previewWajahAdmin').innerHTML = '<span>👤</span>';
-      $('previewTTDAdmin').innerHTML = '<span>🖋️</span>';
+      $('previewWajahAdmin').innerHTML = '<span><i class="fas fa-user"></i></span>';
+      $('previewTTDAdmin').innerHTML = '<span><i class="fas fa-pen-fancy"></i></span>';
       dom.hide('pegawaiFormResult');
       f.style.display = 'block';
       f.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -158,7 +163,7 @@
 
         const uid = String(p.id || p.ID || '');
 
-        dom.setText('pegawaiFormTitle', '✍️ EDIT DATA PEGAWAI TERPADU');
+        dom.setHTML('pegawaiFormTitle', '<i class="fas fa-pen"></i> EDIT DATA PEGAWAI TERPADU');
         $('editPegawaiId').value = uid;
         $('inPegawaiId').value = uid;
         dom.setDisabled('inPegawaiId', true); 
@@ -172,10 +177,11 @@
         const faceSrc = p.face_photo || p.Face_Photo || p.foto_base64 || '';
         const previewEl = $('previewWajahAdmin');
         if (previewEl) {
-          if (faceSrc && faceSrc.length > 100) {
-            previewEl.innerHTML = `<img src="${escapeHtml(faceSrc)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; background:var(--bg-card)">`;
+          const faceUrl = typeof driveImgUrl === 'function' ? driveImgUrl(faceSrc, 200) : faceSrc;
+          if (faceUrl) {
+            previewEl.innerHTML = `<img src="${escapeHtml(faceUrl)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; background:var(--bg-card)">`;
           } else {
-            previewEl.innerHTML = '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); border-radius:50%; font-size:24px; opacity:0.5">👤</div>';
+            previewEl.innerHTML = '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); border-radius:50%; font-size:24px; opacity:0.5"><i class="fas fa-user"></i></div>';
           }
         }
 
@@ -185,13 +191,14 @@
            // Gunakan format full atau endpoint signature-get
            const sRes = await apiGet(P.signatureGet, { nip: p.nip || p.NIP });
            const sigData = (sRes.data?.signature || sRes.rows?.[0]?.signature || '');
-            if (sigData && sigData.length > 50) {
-               $('previewTTDAdmin').innerHTML = `<img src="${escapeHtml(sigData)}" style="width:100%; height:100%; object-fit:contain; filter:brightness(1.8) contrast(1.2)">`;
+           const sigUrl = typeof driveImgUrl === 'function' ? driveImgUrl(sigData, 400) : sigData;
+            if (sigUrl) {
+               $('previewTTDAdmin').innerHTML = `<img src="${escapeHtml(sigUrl)}" style="width:100%; height:100%; object-fit:contain; background:#fff">`;
            } else {
-              $('previewTTDAdmin').innerHTML = '<span style="font-size:24px; opacity:0.5">🖋️</span>';
+              $('previewTTDAdmin').innerHTML = '<span style="font-size:24px; opacity:0.5"><i class="fas fa-pen-fancy"></i></span>';
            }
         } catch(e) { 
-           $('previewTTDAdmin').innerHTML = '<span style="font-size:24px; opacity:0.5">🖋️</span>'; 
+           $('previewTTDAdmin').innerHTML = '<span style="font-size:24px; opacity:0.5"><i class="fas fa-pen-fancy"></i></span>'; 
         }
 
         // Tipe & Pangkat
@@ -212,7 +219,7 @@
         setTimeout(() => $('inPegawaiNama').focus(), 600);
         
       } catch (e) { 
-        alert('❌ Gagal: ' + e.message);
+        alert(' Gagal: ' + e.message);
       } finally {
         if (btn && btn.tagName === 'BUTTON') {
           btn.innerHTML = originalInner;
@@ -242,12 +249,12 @@
       }
 
       if (!id || !nama) {
-        showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'warning', '⚠️', 'Data Kurang', 'Nama wajib diisi.');
+        showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Data Kurang', 'Nama wajib diisi.');
         dom.show('pegawaiFormResult');
         return;
       }
 
-      dom.setText('btnSavePegawaiTxt', '💾 Menyimpan...');
+      dom.setHTML('btnSavePegawaiTxt', '<i class="fas fa-save"></i> Menyimpan...');
       try {
         const path = isEdit ? P.userEdit : P.userAdd;
         const mainPayload = { 
@@ -269,7 +276,7 @@
         const { ok: saveOk, data: d } = await apiPost(path, mainPayload);
 
         if (!saveOk || (d && d.ok === false)) {
-          showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'fail', '❌', 'Gagal', (d && d.message) || 'Gagal menyimpan.');
+          showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal', (d && d.message) || 'Gagal menyimpan.');
           dom.show('pegawaiFormResult');
         } else {
           // Sync Admin Role
@@ -278,31 +285,36 @@
             try { await apiPost(P.adminAdd, { telegram_id: Number(id), nip, nama, role: cleanRole, ditambahkan_oleh: Number(MY_ID) }); } catch (err) {}
           }
 
-          showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'success', '✅', 'Berhasil', 'Data pegawai telah disimpan.');
+          showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'success', '<i class="fas fa-check"></i>', 'Berhasil', 'Data pegawai telah disimpan.');
           dom.show('pegawaiFormResult');
           setTimeout(() => { hidePegawaiForm(); loadPegawaiMgmt(); }, 1500);
         }
       } catch (e) {
-        showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'fail', '🔌', 'Error', e.message);
+        showResult('pegawaiFormResult', 'pegawaiFormRIcon', 'pegawaiFormRTitle', 'pegawaiFormRMsg', 'fail', '<i class="fas fa-plug"></i>', 'Error', e.message);
         dom.show('pegawaiFormResult');
       }
-      dom.setText('btnSavePegawaiTxt', isEdit ? '💾 SIMPAN PERUBAHAN' : '💾 SIMPAN DATA');
+      dom.setHTML('btnSavePegawaiTxt', isEdit ? '<i class="fas fa-save"></i> SIMPAN PERUBAHAN' : '<i class="fas fa-save"></i> SIMPAN DATA');
     }
 
     /* ════ UNIFIED BIOMETRIC HANDLERS ════ */
     function openFaceCaptureAdmin() {
       const uid = $('editPegawaiId').value;
       const nama = $('inPegawaiNama').value;
-      if (!uid) return alert('Pilih pegawai dulu');
+      const nip = $('inPegawaiNip') ? $('inPegawaiNip').value.replace(/\s/g, '') : '';
+      if (!uid) {
+        if (typeof showToast === 'function') showToast('Pilih pegawai terlebih dahulu', 'warning');
+        else if (typeof Swal !== 'undefined') Swal.fire({ icon: 'warning', title: 'Pilih Pegawai', text: 'Pilih pegawai terlebih dahulu' });
+        return;
+      }
       // Trigger pendaftaran wajah spesifik
       if (typeof adminCaptureFaceFor === 'function') {
         adminCaptureFaceFor(uid, nama, (newFace) => {
           if (newFace) {
              $('previewWajahAdmin').innerHTML = `<img src="${newFace}" style="width:100%; height:100%; object-fit:cover; border-radius:50%">`;
           }
-        });
+        }, nip);
       } else {
-        alert('Modul kamera belum siap');
+        if (typeof showToast === 'function') showToast('Modul kamera belum siap', 'warning');
       }
     }
 
@@ -316,7 +328,7 @@
       if (typeof openSignaturePad === 'function') {
         openSignaturePad(nip, (newSig) => {
           if (newSig) {
-            $('previewTTDAdmin').innerHTML = `<img src="${newSig}" style="width:100%; height:100%; object-fit:contain; filter:brightness(1.8) contrast(1.2)">`;
+            $('previewTTDAdmin').innerHTML = `<img src="${newSig}" style="width:100%; height:100%; object-fit:contain; background:#fff">`;
           }
         });
       } else {
@@ -440,6 +452,254 @@
       if (typeof loadAdminSimapoMaster === 'function') loadAdminSimapoMaster();
     }
 
+    // ════════════════════════════════════════════════════════════════════════
+    // MANAJEMEN WEWENANG SSO MULTI-APLIKASI
+    // ════════════════════════════════════════════════════════════════════════
+    async function bukaModalSSO(userId) {
+      const users = window._pegawaiCache || [];
+      const u = users.find(x => String(x.id || x.ID) === String(userId));
+      if (!u) {
+        if (typeof showToast === 'function') showToast('Pegawai tidak ditemukan', 'warning');
+        return;
+      }
+
+      const nama = u.nama || u.Nama || '—';
+      const nip = u.nip || u.NIP || '—';
+      const jab = u.jabatan || u.Jabatan || '—';
+      const bid = u.bidang || u.Bidang || '—';
+      const isAktif = u.status_aktif !== false && (u.status || u.Status || '').toUpperCase() !== 'NONAKTIF';
+      const p = u.app_permissions || {};
+
+      const abs = p.absensi || { enabled: true, role: 'PEGAWAI' };
+      const smp = p.simapo || { enabled: true, role: 'PEGAWAI' };
+      const sd = p.satudata || { enabled: false, role: 'KONTRIBUTOR' };
+      const prc = p.perencanaan || { enabled: false, role: 'STAF' };
+      const web = p.webadmin || { enabled: false, role: 'EDITOR_BERITA' };
+
+      const modalHtml = `
+        <div style="text-align:left; font-size:12px; color:var(--white, #f8fafc)">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:rgba(255,255,255,0.04); border-radius:10px; border:1px solid rgba(255,255,255,0.08); margin-bottom:12px">
+            <div>
+              <div style="font-size:13px; font-weight:700; color:#fff">${escapeHtml(nama)}</div>
+              <div style="font-size:11px; color:var(--gold, #f59e0b); font-variant-numeric:tabular-nums">NIP. ${escapeHtml(nip)}</div>
+              <div style="font-size:10px; color:#94a3b8">${escapeHtml(jab)} &bull; ${escapeHtml(bid)}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:9px; color:#94a3b8; margin-bottom:2px">Status Akun</div>
+              <label style="display:inline-flex; align-items:center; cursor:pointer; gap:6px">
+                <input type="checkbox" id="sso_status_aktif" ${isAktif ? 'checked' : ''} style="width:16px; height:16px; accent-color:#22c55e">
+                <span id="sso_status_label" style="font-weight:700; font-size:11px; color:${isAktif ? '#4ade80' : '#f87171'}">${isAktif ? 'AKTIF' : 'NONAKTIF'}</span>
+              </label>
+            </div>
+          </div>
+
+          <div style="font-size:11px; font-weight:700; color:var(--gold, #f59e0b); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px">
+            <i class="fas fa-cubes"></i> Wewenang Akses Aplikasi
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px; max-height:270px; overflow-y:auto; padding-right:4px">
+            <!-- Absensi -->
+            <div style="padding:8px 10px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600">
+                <input type="checkbox" id="sso_app_absensi" ${abs.enabled ? 'checked' : ''} style="width:15px; height:15px; accent-color:#f59e0b">
+                <span><i class="fas fa-user-clock" style="color:#60a5fa; width:16px"></i> Absensi Digital</span>
+              </label>
+              <select id="sso_role_absensi" style="padding:3px 6px; border-radius:6px; background:#1e293b; color:#fff; border:1px solid #334155; font-size:11px">
+                <option value="PEGAWAI" ${abs.role === 'PEGAWAI' ? 'selected' : ''}>Pegawai</option>
+                <option value="ADMIN_ABSEN" ${abs.role === 'ADMIN_ABSEN' ? 'selected' : ''}>Admin Absen</option>
+              </select>
+            </div>
+
+            <!-- ASET -->
+            <div style="padding:8px 10px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600">
+                <input type="checkbox" id="sso_app_simapo" ${smp.enabled ? 'checked' : ''} style="width:15px; height:15px; accent-color:#f59e0b">
+                <span><i class="fas fa-boxes" style="color:#f59e0b; width:16px"></i> Aset</span>
+              </label>
+              <select id="sso_role_simapo" style="padding:3px 6px; border-radius:6px; background:#1e293b; color:#fff; border:1px solid #334155; font-size:11px">
+                <option value="PEGAWAI" ${smp.role === 'PEGAWAI' ? 'selected' : ''}>Pegawai (Pinjam)</option>
+                <option value="BENDAHARA_BARANG" ${smp.role === 'BENDAHARA_BARANG' ? 'selected' : ''}>Bendahara Barang</option>
+                <option value="ADMIN_ASET" ${smp.role === 'ADMIN_ASET' ? 'selected' : ''}>Admin Aset</option>
+              </select>
+            </div>
+
+            <!-- Satu Data -->
+            <div style="padding:8px 10px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600">
+                <input type="checkbox" id="sso_app_satudata" ${sd.enabled ? 'checked' : ''} style="width:15px; height:15px; accent-color:#f59e0b">
+                <span><i class="fas fa-chart-bar" style="color:#10b981; width:16px"></i> Satu Data Daerah</span>
+              </label>
+              <select id="sso_role_satudata" style="padding:3px 6px; border-radius:6px; background:#1e293b; color:#fff; border:1px solid #334155; font-size:11px">
+                <option value="KONTRIBUTOR" ${sd.role === 'KONTRIBUTOR' ? 'selected' : ''}>Kontributor OPD</option>
+                <option value="WALIDATA_ADMIN" ${sd.role === 'WALIDATA_ADMIN' ? 'selected' : ''}>Walidata Admin</option>
+              </select>
+            </div>
+
+            <!-- Perencanaan -->
+            <div style="padding:8px 10px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600">
+                <input type="checkbox" id="sso_app_perencanaan" ${prc.enabled ? 'checked' : ''} style="width:15px; height:15px; accent-color:#f59e0b">
+                <span><i class="fas fa-file-invoice" style="color:#818cf8; width:16px"></i> Perencanaan (PKS)</span>
+              </label>
+              <select id="sso_role_perencanaan" style="padding:3px 6px; border-radius:6px; background:#1e293b; color:#fff; border:1px solid #334155; font-size:11px">
+                <option value="STAF" ${prc.role === 'STAF' ? 'selected' : ''}>Staf Perencana</option>
+                <option value="REVIEWER_KABID" ${prc.role === 'REVIEWER_KABID' ? 'selected' : ''}>Reviewer Kabid</option>
+                <option value="ADMIN_PERENCANAAN" ${prc.role === 'ADMIN_PERENCANAAN' ? 'selected' : ''}>Admin Perencanaan</option>
+              </select>
+            </div>
+
+            <!-- Web Portal -->
+            <div style="padding:8px 10px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600">
+                <input type="checkbox" id="sso_app_webadmin" ${web.enabled ? 'checked' : ''} style="width:15px; height:15px; accent-color:#f59e0b">
+                <span><i class="fas fa-globe" style="color:#ec4899; width:16px"></i> Web Portal Bapperida</span>
+              </label>
+              <select id="sso_role_webadmin" style="padding:3px 6px; border-radius:6px; background:#1e293b; color:#fff; border:1px solid #334155; font-size:11px">
+                <option value="EDITOR_BERITA" ${web.role === 'EDITOR_BERITA' ? 'selected' : ''}>Editor Berita</option>
+                <option value="SUPERADMIN_PORTAL" ${web.role === 'SUPERADMIN_PORTAL' ? 'selected' : ''}>Superadmin Portal</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Reset Password Area -->
+          <div style="margin-top:12px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center">
+            <div>
+              <div style="font-size:11px; font-weight:600">Reset Sandi Pegawai</div>
+              <div style="font-size:9px; color:#94a3b8">Default: <code style="color:#fbbf24">BapperidaSB2026</code></div>
+            </div>
+            <button type="button" id="btn_reset_pwd_sso" class="btn-sm-admin" style="background:rgba(239,68,68,0.12); color:#f87171; border-color:rgba(239,68,68,0.3); padding:4px 8px; cursor:pointer; font-size:10px">
+              <i class="fas fa-lock"></i> Reset Sandi
+            </button>
+          </div>
+        </div>
+      `;
+
+      if (typeof Swal !== 'undefined') {
+        const result = await Swal.fire({
+          title: 'Hak Akses SSO Pegawai',
+          html: modalHtml,
+          showCancelButton: true,
+          confirmButtonText: '<i class="fas fa-save"></i> Simpan Wewenang',
+          cancelButtonText: 'Tutup',
+          confirmButtonColor: '#22c55e',
+          cancelButtonColor: '#475569',
+          background: '#0f172a',
+          color: '#f8fafc',
+          width: '480px',
+          didOpen: () => {
+            const chkAktif = document.getElementById('sso_status_aktif');
+            const lblAktif = document.getElementById('sso_status_label');
+            if (chkAktif && lblAktif) {
+              chkAktif.addEventListener('change', () => {
+                lblAktif.textContent = chkAktif.checked ? 'AKTIF' : 'NONAKTIF';
+                lblAktif.style.color = chkAktif.checked ? '#4ade80' : '#f87171';
+              });
+            }
+            const btnReset = document.getElementById('btn_reset_pwd_sso');
+            if (btnReset) {
+              btnReset.addEventListener('click', () => resetPasswordPegawai(userId, nip, nama));
+            }
+          },
+          preConfirm: () => {
+            return {
+              status_aktif: document.getElementById('sso_status_aktif')?.checked ?? true,
+              app_permissions: {
+                absensi: {
+                  enabled: document.getElementById('sso_app_absensi')?.checked ?? true,
+                  role: document.getElementById('sso_role_absensi')?.value || 'PEGAWAI',
+                },
+                simapo: {
+                  enabled: document.getElementById('sso_app_simapo')?.checked ?? true,
+                  role: document.getElementById('sso_role_simapo')?.value || 'PEGAWAI',
+                },
+                satudata: {
+                  enabled: document.getElementById('sso_app_satudata')?.checked ?? false,
+                  role: document.getElementById('sso_role_satudata')?.value || 'KONTRIBUTOR',
+                },
+                perencanaan: {
+                  enabled: document.getElementById('sso_app_perencanaan')?.checked ?? false,
+                  role: document.getElementById('sso_role_perencanaan')?.value || 'STAF',
+                },
+                webadmin: {
+                  enabled: document.getElementById('sso_app_webadmin')?.checked ?? false,
+                  role: document.getElementById('sso_role_webadmin')?.value || 'EDITOR_BERITA',
+                },
+              },
+            };
+          },
+        });
+
+        if (result.isConfirmed && result.value) {
+          await simpanWewenangSSO(userId, result.value.app_permissions, result.value.status_aktif);
+        }
+      }
+    }
+
+    async function simpanWewenangSSO(userId, app_permissions, status_aktif) {
+      try {
+        const res = await apiPost('/api/user-permissions', {
+          id: userId,
+          app_permissions,
+          status_aktif,
+        });
+        if (res && res.ok) {
+          if (typeof showToast === 'function') showToast('Wewenang SSO pegawai berhasil disimpan.', 'success');
+          // Update local cache
+          const u = (window._pegawaiCache || []).find(x => String(x.id || x.ID) === String(userId));
+          if (u) {
+            u.app_permissions = app_permissions;
+            u.status_aktif = status_aktif;
+            u.status = status_aktif ? 'AKTIF' : 'NONAKTIF';
+            u.Status = u.status;
+          }
+          loadPegawaiMgmt();
+        } else {
+          if (typeof showToast === 'function') showToast(res?.message || 'Gagal menyimpan wewenang.', 'error');
+        }
+      } catch (err) {
+        if (typeof showToast === 'function') showToast('Koneksi gagal: ' + err.message, 'error');
+      }
+    }
+
+    async function resetPasswordPegawai(userId, nip, nama) {
+      if (typeof Swal !== 'undefined') {
+        const confirm = await Swal.fire({
+          title: 'Reset Sandi Pegawai?',
+          text: `Sandi untuk ${nama} (NIP ${nip}) akan disetel ulang ke default: BapperidaSB2026`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Ya, Reset Sandi',
+          cancelButtonText: 'Batal',
+          confirmButtonColor: '#ef4444',
+          cancelButtonColor: '#475569',
+          background: '#0f172a',
+          color: '#f8fafc',
+        });
+        if (!confirm.isConfirmed) return;
+      }
+      try {
+        const res = await apiPost('/api/user-reset-password', { id: userId });
+        if (res && res.ok) {
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              title: 'Sandi Berhasil Direset',
+              text: 'Sandi pegawai kini kembali ke default: BapperidaSB2026',
+              icon: 'success',
+              background: '#0f172a',
+              color: '#f8fafc',
+            });
+          }
+        } else {
+          if (typeof showToast === 'function') showToast(res?.message || 'Gagal mereset sandi.', 'error');
+        }
+      } catch (err) {
+        if (typeof showToast === 'function') showToast('Koneksi gagal: ' + err.message, 'error');
+      }
+    }
+
     window.initSuperadminPegawaiScoping = initSuperadminPegawaiScoping;
     window.onPegawaiInstansiChange = onPegawaiInstansiChange;
+    window.bukaModalSSO = bukaModalSSO;
+    window.simpanWewenangSSO = simpanWewenangSSO;
+    window.resetPasswordPegawai = resetPasswordPegawai;
 

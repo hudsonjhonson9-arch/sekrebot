@@ -1,4 +1,11 @@
 import express from 'express';
+import { buatKodeAset } from './kode-aset.js';
+import {
+  resolvePeriode,
+  groupPermen47Rows,
+  generatePermen47Excel,
+  generateKartuPemeliharaanExcel,
+} from './simapo-excel.js';
 
 // ── SQL ──
 // Workflow n8n "SIMAPO Ext" menyisipkan nilai client ke teks SQL dengan
@@ -46,13 +53,61 @@ export const UPDATE_STOK_SQL =
    RETURNING b.id`;
 
 export const PEMELIHARAAN_SQL =
-  `SELECT p.id, p.barang_id, b.nama AS nama_barang, b.satuan, p.tgl_pemeliharaan,
-          p.jenis_pemeliharaan, p.biaya, p.nama_penyedia, p.bentuk_kontrak, p.keterangan
+  `SELECT p.id, p.barang_id, b.nama AS nama_barang, b.kodebarang, b.spesifikasi, b.satuan,
+          (SELECT ua.nomorinventaris FROM "SIMAPO".unit_aset ua WHERE ua.barangid = p.barang_id LIMIT 1) AS nomorinventaris,
+          p.tgl_pemeliharaan, p.jenis_pemeliharaan, p.biaya, p.nama_penyedia, p.bentuk_kontrak, p.keterangan
    FROM "SIMAPO".pemeliharaan p
    LEFT JOIN "SIMAPO".barang b ON b.id = p.barang_id
    WHERE p.instansi_id = $1 %FILTER%
    ORDER BY p.tgl_pemeliharaan DESC
    LIMIT 200`;
+
+export const KARTU_PEMELIHARAAN_BARANG_SQL =
+  `SELECT b.id, b.nama AS nama_barang, b.kodebarang, b.spesifikasi, b.satuan,
+          (SELECT ua.nomorinventaris FROM "SIMAPO".unit_aset ua WHERE ua.barangid = b.id LIMIT 1) AS nomorinventaris
+   FROM "SIMAPO".barang b
+   WHERE b.instansi_id = $1 %FILTER% AND b.isactive = true
+   ORDER BY b.nama ASC`;
+
+export const LAPORAN_PERMEN47_PENERIMAAN_SQL =
+  `SELECT b.id AS barang_id, COALESCE(b.kodebarang, '') AS kodebarang, b.nama AS nama_barang,
+          COALESCE(b.spesifikasi, '') AS spesifikasi, COALESCE(b.satuan, 'Unit') AS satuan,
+          dp.volume AS jumlah, dp.harga_satuan, dp.total_harga AS total_nilai,
+          COALESCE(pb.sub_kegiatan, b.koderekening, '') AS sub_kegiatan,
+          TO_CHAR(pb.tgl_nota, 'YYYY-MM-DD') AS tgl_nota,
+          COALESCE(pb.penyedia, '') AS nama_penyedia,
+          COALESCE(pb.kontrak, '') AS bentuk_kontrak,
+          COALESCE(pb.no_sp2d, pb.no_nota, '') AS dokumen_sumber,
+          COALESCE(kb.nama, '') AS nama_kategori
+   FROM "SIMAPO".penerimaan_barang pb
+   JOIN "SIMAPO".detail_penerimaan dp ON dp.penerimaan_id = pb.id
+   JOIN "SIMAPO".barang b ON b.id = dp.barang_id
+   LEFT JOIN "SIMAPO".kategori_barang kb ON kb.id = b.kategoriid
+   WHERE pb.instansi_id = $1
+     AND pb.tgl_nota BETWEEN $2::date AND $3::date
+   ORDER BY b.kodebarang, b.nama, pb.tgl_nota ASC`;
+
+export const LAPORAN_PERMEN47_FALLBACK_SQL =
+  `SELECT b.id AS barang_id, COALESCE(b.kodebarang, '') AS kodebarang, b.nama AS nama_barang,
+          COALESCE(b.spesifikasi, '') AS spesifikasi, COALESCE(b.satuan, 'Unit') AS satuan,
+          GREATEST(COALESCE(b.stok_saat_ini, 1), 1) AS jumlah,
+          COALESCE(b.hargasatuan, 0) AS harga_satuan,
+          (GREATEST(COALESCE(b.stok_saat_ini, 1), 1) * COALESCE(b.hargasatuan, 0)) AS total_nilai,
+          COALESCE(b.koderekening, '') AS sub_kegiatan,
+          TO_CHAR(COALESCE(b.createdat, NOW()), 'YYYY-MM-DD') AS tgl_nota,
+          '' AS nama_penyedia, '' AS bentuk_kontrak, '' AS dokumen_sumber,
+          COALESCE(kb.nama, '') AS nama_kategori
+   FROM "SIMAPO".barang b
+   LEFT JOIN "SIMAPO".kategori_barang kb ON kb.id = b.kategoriid
+   WHERE b.instansi_id = $1
+     AND b.isactive = true
+     AND (
+       b.jenisbarang ILIKE '%Pakai Habis%'
+       OR b.jenisbarang ILIKE '%Habis Pakai%'
+       OR b.kodebarang LIKE '1.1.7%'
+       OR b.kodebarang LIKE 'HP-%'
+     )
+   ORDER BY b.kodebarang, b.nama ASC`;
 
 export const INSERT_PEMELIHARAAN_SQL =
   `INSERT INTO "SIMAPO".pemeliharaan
@@ -123,7 +178,9 @@ export const MASTER_LIST_SQL =
      SELECT b.id, b.kodebarang, b.nama, b.jenisbarang, b.satuan, b.spesifikasi, b.foto,
             b.stok_saat_ini, b.minimumstok, b.hargasatuan, b.kategoriid,
             k.nama AS nama_kategori, b.isactive,
-            TO_CHAR(b.createdat, 'YYYY-MM-DD') AS createdat
+            TO_CHAR(b.createdat, 'YYYY-MM-DD') AS createdat,
+            (SELECT MIN(ua.tahunperolehan) FROM "SIMAPO".unit_aset ua WHERE ua.barangid = b.id) AS tahun_mulai,
+            (SELECT MAX(ua.tahunperolehan) FROM "SIMAPO".unit_aset ua WHERE ua.barangid = b.id) AS tahun_selesai
      FROM "SIMAPO".barang b
      LEFT JOIN "SIMAPO".kategori_barang k ON k.id = b.kategoriid
      WHERE b.isactive = true AND b.instansi_id = $1
@@ -315,6 +372,72 @@ export function createSimapoRouter({ query, withTransaction }) {
     }
   });
 
+  // ── Laporan Pengadaan Permen 47 (Data JSON) ──
+  router.get('/laporan-permen47', async (req, res) => {
+    try {
+      const inst = instansiOtomatis(req, req.query?.instansi_id);
+      const periode = S(req.query?.periode || 'TAHUNAN');
+      const tahun = req.query?.tahun || new Date().getFullYear();
+      const p = resolvePeriode(periode, tahun);
+
+      let { rows } = await query(LAPORAN_PERMEN47_PENERIMAAN_SQL, [inst, p.startDate, p.endDate]);
+      if (!rows || !rows.length) {
+        const fallback = await query(LAPORAN_PERMEN47_FALLBACK_SQL, [inst]);
+        rows = fallback.rows || [];
+      }
+
+      const grouped = groupPermen47Rows(rows);
+      return res.json({
+        ok: true,
+        data: {
+          periode: p.periode,
+          tahun: p.tahun,
+          instansi_id: inst,
+          rows: grouped.hierarchicalRows,
+          total_nilai: grouped.totalNilai,
+        },
+      });
+    } catch {
+      return res.status(500).json({ ok: false, message: 'Gagal memuat Laporan Pengadaan Permen 47.' });
+    }
+  });
+
+  // ── Laporan Pengadaan Permen 47 (Download Excel .xlsx) ──
+  router.get('/laporan-permen47/xlsx', async (req, res) => {
+    try {
+      const inst = instansiOtomatis(req, req.query?.instansi_id);
+      const periode = S(req.query?.periode || 'TAHUNAN');
+      const tahun = req.query?.tahun || new Date().getFullYear();
+      const p = resolvePeriode(periode, tahun);
+
+      let { rows } = await query(LAPORAN_PERMEN47_PENERIMAAN_SQL, [inst, p.startDate, p.endDate]);
+      if (!rows || !rows.length) {
+        const fallback = await query(LAPORAN_PERMEN47_FALLBACK_SQL, [inst]);
+        rows = fallback.rows || [];
+      }
+
+      const grouped = groupPermen47Rows(rows);
+      const buf = generatePermen47Excel({
+        periode: p.periode,
+        tahun: p.tahun,
+        instansi_id: inst,
+        rows: grouped.hierarchicalRows,
+        total_nilai: grouped.totalNilai,
+        instansi_nama: inst,
+      });
+
+      const filename = `Laporan_Pengadaan_Pakai_Habis_Permen47_${p.periode}_${p.tahun}.xlsx`;
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      if (typeof res.send === 'function') {
+        return res.send(buf);
+      }
+      return res.end(buf);
+    } catch {
+      return res.status(500).json({ ok: false, message: 'Gagal membuat file Excel Laporan Permen 47.' });
+    }
+  });
+
   // ── Riwayat pemeliharaan ──
   router.get('/pemeliharaan', async (req, res) => {
     try {
@@ -344,6 +467,93 @@ export function createSimapoRouter({ query, withTransaction }) {
       return res.json({ ok: true, message: 'Pemeliharaan berhasil disimpan.', id: rows[0]?.id ?? null });
     } catch {
       return res.status(500).json({ ok: false, message: 'Gagal menyimpan pemeliharaan.' });
+    }
+  });
+
+  // ── Kartu Pemeliharaan (Download Excel .xlsx) ──
+  router.get('/kartu-pemeliharaan/xlsx', async (req, res) => {
+    try {
+      const inst = instansiOtomatis(req, req.query?.instansi_id);
+      const barangId = S(req.query?.barang_id);
+      const tahun = req.query?.tahun ? Number(req.query.tahun) : null;
+
+      let maintFilter = '';
+      const maintParams = [inst];
+      if (barangId && barangId !== 'ALL') {
+        maintParams.push(barangId);
+        maintFilter += ` AND p.barang_id = $${maintParams.length}`;
+      }
+      if (tahun && Number.isInteger(tahun)) {
+        maintParams.push(tahun);
+        maintFilter += ` AND EXTRACT(YEAR FROM p.tgl_pemeliharaan) = $${maintParams.length}`;
+      }
+
+      const maintSql = PEMELIHARAAN_SQL.replace('%FILTER%', maintFilter);
+      const { rows: maintRows } = await query(maintSql, maintParams);
+
+      let barangFilter = '';
+      const barangParams = [inst];
+      if (barangId && barangId !== 'ALL') {
+        barangParams.push(barangId);
+        barangFilter += ` AND b.id = $${barangParams.length}`;
+      }
+      const barangSql = KARTU_PEMELIHARAAN_BARANG_SQL.replace('%FILTER%', barangFilter);
+      const { rows: barangRows } = await query(barangSql, barangParams);
+
+      const cardMap = new Map();
+      (barangRows || []).forEach((b) => {
+        cardMap.set(b.id, {
+          nama_barang: b.nama_barang,
+          kodebarang: b.kodebarang,
+          spesifikasi: b.spesifikasi,
+          nomorinventaris: b.nomorinventaris,
+          items: [],
+        });
+      });
+
+      (maintRows || []).forEach((m) => {
+        const bid = m.barang_id || 'UNKNOWN';
+        if (!cardMap.has(bid)) {
+          cardMap.set(bid, {
+            nama_barang: m.nama_barang,
+            kodebarang: m.kodebarang,
+            spesifikasi: m.spesifikasi,
+            nomorinventaris: m.nomorinventaris,
+            items: [],
+          });
+        }
+        cardMap.get(bid).items.push(m);
+      });
+
+      let cards = [];
+      if (barangId && barangId !== 'ALL') {
+        const c = cardMap.get(barangId);
+        cards = c ? [c] : [];
+      } else {
+        cards = Array.from(cardMap.values()).filter((c) => c.items.length > 0);
+        if (!cards.length) {
+          cards = Array.from(cardMap.values()).slice(0, 10);
+        }
+      }
+
+      const buf = generateKartuPemeliharaanExcel({
+        cards,
+        instansi_nama: inst,
+        tahun,
+      });
+
+      const filePrefix = barangId && barangId !== 'ALL' ? barangId : 'ALL';
+      const fileTahun = tahun || 'SEMUA';
+      const filename = `Kartu_Pemeliharaan_${filePrefix}_${fileTahun}.xlsx`;
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      if (typeof res.send === 'function') {
+        return res.send(buf);
+      }
+      return res.end(buf);
+    } catch {
+      return res.status(500).json({ ok: false, message: 'Gagal membuat file Excel Kartu Pemeliharaan.' });
     }
   });
 
@@ -490,6 +700,14 @@ export function createSimapoRouter({ query, withTransaction }) {
       if (!rows.length) {
         return res.status(404).json({ ok: false, message: 'Barang tidak ditemukan atau bukan milik instansi ini.' });
       }
+      // Best-effort: beri kode aset unik pada unit baru yang belum punya.
+      try {
+        const ka = buatKodeAset({
+          nama: S(body.nama), kodeBarang: S(body.kodebarang) || undefined,
+          tahun: new Date().getFullYear(), harga: N(body.hargasatuan),
+        });
+        await query(`UPDATE "SIMAPO".unit_aset SET kode_aset=$1 WHERE barangid=$2 AND (kode_aset IS NULL OR kode_aset='')`, [ka, rows[0].id]);
+      } catch { /* kode_aset diisi ulang oleh scripts/gen-kode-aset.mjs bila gagal */ }
       return res.json({ ok: true, message: 'Barang berhasil disimpan.', ...rows[0] });
     } catch {
       return res.status(500).json({ ok: false, message: 'Gagal menyimpan barang.' });

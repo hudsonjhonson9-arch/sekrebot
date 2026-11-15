@@ -11,14 +11,14 @@ const instScope = (req, requested) => {
   const inst = requested == null || requested === '' ? req.user?.instansi_id : requested;
   return { inst, allowed: sameInstansi(req.user, inst) };
 };
-function parseDate(s) { const d = new Date(`${s}T00:00:00`); return Number.isNaN(d.getTime()) ? null : d; }
-function dateRange(start, end) {
+export function parseDate(s) { const d = new Date(`${s}T00:00:00Z`); return Number.isNaN(d.getTime()) ? null : d; }
+export function dateRange(start, end) {
   const a = parseDate(start), b = parseDate(end); if (!a || !b || b < a) return [];
-  const out=[]; for (let d=new Date(a); d<=b; d.setDate(d.getDate()+1)) out.push(d.toISOString().slice(0,10)); return out;
+  const out=[]; for (let d=new Date(a); d<=b; d.setUTCDate(d.getUTCDate()+1)) out.push(d.toISOString().slice(0,10)); return out;
 }
 function toMinutes(v) { const m=/^(\d{1,2}):(\d{2})/.exec(String(v||'')); return m ? Number(m[1])*60+Number(m[2]) : null; }
 
-export function createAttendanceDataRouter({ query, withTransaction }) {
+export function createAttendanceDataRouter({ query, withTransaction, notify, gasUpsert }) {
   const router = express.Router();
 
   // KETERANGAN / IZIN
@@ -39,7 +39,10 @@ export function createAttendanceDataRouter({ query, withTransaction }) {
   router.post('/keterangan', async (req,res) => {
     try {
       const b=req.body||{}; const isAdmin=roleIsAdmin(req) && b.source==='admin_panel';
-      const targetId=isAdmin && b.user_id ? String(b.user_id) : String(req.user.id);
+      // Admin panel mengirim target di `user.id` (kontrak lama webhook n8n);
+      // terima juga `user_id` sebagai kanonik. Tanpa keduanya, target = diri sendiri.
+      const requestedId=String(b.user_id||b.user?.id||'').trim();
+      const targetId=isAdmin && requestedId ? requestedId : String(req.user.id);
       const emp=(await query(`SELECT id::text AS id, username, "NIP" AS nip, "Jabatan" AS jabatan, "Status" AS status, instansi_id FROM user_list WHERE id::text=$1 LIMIT 1`,[targetId])).rows[0];
       if(!emp) return fail(res,404,'Anda tidak terdaftar dalam sistem. Hubungi admin.');
       if(!sameInstansi(req.user,emp.instansi_id)) return fail(res,403,'Forbidden');
@@ -59,9 +62,36 @@ export function createAttendanceDataRouter({ query, withTransaction }) {
       const status=(jenis==='IZIN')?'PENDING':'DISETUJUI';
       const jam=(b.jam_mulai&&b.jam_selesai)?`${b.jam_mulai} - ${b.jam_selesai}`:new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Makassar',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());
       const tglRange=start===end?start:`${start} s.d. ${end}`;
-      const driveLink=String(b.drive_link||'');
-      const result=await query(`INSERT INTO ket_temp ("ID_Ket","ID_Pegawai","Nama","NIP","Tanggal","tgl_mulai","tgl_selesai","Jam","Jenis Absen","Ket","Status",${driveLink?'"drive_link",':''}"request_id","instansi_id") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,${driveLink?'$12,':''}$${driveLink?13:12},$${driveLink?14:13}) RETURNING *`, driveLink?[idKet,emp.id,emp.username||'—',emp.nip||'',tglRange,start,end,jam,jenis,ket,status,driveLink,requestId,emp.instansi_id]:[idKet,emp.id,emp.username||'—',emp.nip||'',tglRange,start,end,jam,jenis,ket,status,requestId,emp.instansi_id]);
-      if(status==='DISETUJUI') await applyApprovedKeterangan(query,{row:result.rows[0],dates,jenis,emp,requestId,ket,jam});
+      // Bukti dari klien berupa base64 (kompres 1280px di js/keterangan.js).
+      // Alur lama n8n mengupload ke Drive lalu menyimpan webViewLink; saat migrasi
+      // ke Express langkah itu hilang sehingga bukti dibuang diam-diam. Upload di
+      // sini memakai gasUpsert yang sama dengan foto wajah/tanda tangan.
+      let driveLink=String(b.drive_link||'');
+      const buktiMime=String(b.bukti_mime||'image/jpeg');
+      const buktiExt=(buktiMime.split('/')[1]||'jpg').split('+')[0];
+      const buktiFilename=String(b.bukti_nama||`bukti-ket-${emp.nip||emp.id}_${start}_${end}_${jenis.toLowerCase()}.${buktiExt}`);
+      const media=b.bukti_base64?{base64:String(b.bukti_base64),mime:buktiMime,filename:buktiFilename}:null;
+      if(!driveLink && b.bukti_base64){
+        if(typeof gasUpsert!=='function') return fail(res,500,'Layanan upload bukti belum siap.');
+        try{
+          const up=await gasUpsert({filename:buktiFilename,mimeType:buktiMime,dataBase64:String(b.bukti_base64)});
+          driveLink=up.url;
+        }catch(e){console.error('[keterangan/bukti] gasUpsert gagal',e);return fail(res,502,'Gagal mengunggah bukti ke Google Drive.');}
+      }
+      const insertSql = `INSERT INTO ket_temp ("ID_Ket","ID_Pegawai","Nama","NIP","Tanggal","tgl_mulai","tgl_selesai","Jam","Jenis Absen","Ket","Status",${driveLink?'"drive_link",':''}"request_id","instansi_id") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,${driveLink?'$12,':''}$${driveLink?13:12},$${driveLink?14:13}) ON CONFLICT ("ID_Ket") DO UPDATE SET "Tanggal"=EXCLUDED."Tanggal","tgl_mulai"=EXCLUDED."tgl_mulai","tgl_selesai"=EXCLUDED."tgl_selesai","Jam"=EXCLUDED."Jam","Jenis Absen"=EXCLUDED."Jenis Absen","Ket"=EXCLUDED."Ket","Status"=EXCLUDED."Status",${driveLink?'"drive_link"=EXCLUDED."drive_link",':''}"request_id"=EXCLUDED."request_id" RETURNING *`;
+      const insertParams = driveLink?[idKet,emp.id,emp.username||'—',emp.nip||'',tglRange,start,end,jam,jenis,ket,status,driveLink,requestId,emp.instansi_id]:[idKet,emp.id,emp.username||'—',emp.nip||'',tglRange,start,end,jam,jenis,ket,status,requestId,emp.instansi_id];
+      let result;
+      if(status==='DISETUJUI' && typeof withTransaction==='function'){
+        result = await withTransaction(async client => {
+          const r = await qx(client, insertSql, insertParams);
+          await applyApprovedKeterangan(client,{row:r.rows[0],dates,jenis,emp,requestId,ket,jam});
+          return r;
+        });
+      } else {
+        result = await query(insertSql, insertParams);
+        if(status==='DISETUJUI') await applyApprovedKeterangan(query,{row:result.rows[0],dates,jenis,emp,requestId,ket,jam});
+      }
+      if(notify){const arg={jenis,emp,ket,tglRange,durasi,driveLink,media,instansi_id:emp.instansi_id};(status==='DISETUJUI'?notify({kind:'auto',...arg}):notify({kind:'admin_pending',...arg})).catch(e=>console.error('[keterangan/notify]',e));}
       return ok(res,{message:status==='PENDING'?'Pengajuan berhasil dikirim dan menunggu persetujuan.':'Keterangan berhasil dicatat.',data:result.rows[0]});
     }catch(e){ console.error('[keterangan/add]',e); return fail(res,500,'Gagal menyimpan keterangan.'); }
   });
@@ -76,7 +106,7 @@ export function createAttendanceDataRouter({ query, withTransaction }) {
 
   router.post('/keterangan/approve', async(req,res)=>{
     if(!roleIsAdmin(req))return fail(res,403,'Forbidden');
-    try{const b=req.body||{};const id=String(b.id_ket||'').replace(/_\d{2}$/,'');const action=String(b.action||'').toUpperCase();const jenis=String(b.jenis||'').toUpperCase();if(!id||!['APPROVE','REJECT'].includes(action)||!jenis)return fail(res,400,'id_ket, action, dan jenis wajib diisi.');const row=(await query(`SELECT * FROM ket_temp WHERE "ID_Ket"=$1 LIMIT 1`,[id])).rows[0];if(!row)return fail(res,404,'Data tidak ditemukan di ket_temp.');if(!sameInstansi(req.user,row.instansi_id))return fail(res,403,'Forbidden');const dates=dateRange(row.tgl_mulai,row.tgl_selesai||row.tgl_mulai);const newStatus=action==='APPROVE'?'DISETUJUI':'DITOLAK';await withTransaction(async client=>{await client.query(`UPDATE ket_temp SET "Status"=$1,"Jenis Absen"=$2 WHERE "ID_Ket"=$3`,[newStatus,action==='APPROVE'?jenis:`${jenis} DITOLAK`,id]);if(action==='APPROVE'){await applyApprovedKeterangan(client,{row,dates,jenis,emp:{id:String(row.ID_Pegawai),username:row.Nama,nip:row.NIP,instansi_id:row.instansi_id},requestId:row.request_id,ket:row.Ket,jam:row.Jam});}});return ok(res,{message:action==='APPROVE'?'Keterangan disetujui.':'Keterangan ditolak.'});}catch(e){console.error('[keterangan/approve]',e);return fail(res,500,'Gagal memproses persetujuan.');}}
+    try{const b=req.body||{};const id=String(b.id_ket||'').replace(/_\d{2}$/,'');const action=String(b.action||'').toUpperCase();const jenis=String(b.jenis||'').toUpperCase();if(!id||!['APPROVE','REJECT'].includes(action)||!jenis)return fail(res,400,'id_ket, action, dan jenis wajib diisi.');const row=(await query(`SELECT * FROM ket_temp WHERE "ID_Ket"=$1 LIMIT 1`,[id])).rows[0];if(!row)return fail(res,404,'Data tidak ditemukan di ket_temp.');if(!sameInstansi(req.user,row.instansi_id))return fail(res,403,'Forbidden');const dates=dateRange(row.tgl_mulai,row.tgl_selesai||row.tgl_mulai);const newStatus=action==='APPROVE'?'DISETUJUI':'DITOLAK';await withTransaction(async client=>{await client.query(`UPDATE ket_temp SET "Status"=$1,"Jenis Absen"=$2 WHERE "ID_Ket"=$3`,[newStatus,action==='APPROVE'?jenis:`${jenis} DITOLAK`,id]);if(action==='APPROVE'){await applyApprovedKeterangan(client,{row,dates,jenis,emp:{id:String(row.ID_Pegawai),username:row.Nama,nip:row.NIP,instansi_id:row.instansi_id},requestId:row.request_id,ket:row.Ket,jam:row.Jam});}});if(notify)notify({kind:'approve',action,jenis,nama:row.Nama,nip:row.NIP,ket:row.Ket,tglRange:row.Tanggal||(row.tgl_mulai===row.tgl_selesai?row.tgl_mulai:`${row.tgl_mulai} s.d. ${row.tgl_selesai}`),instansi_id:row.instansi_id}).catch(e=>console.error('[keterangan/notify]',e));return ok(res,{message:action==='APPROVE'?'Keterangan disetujui.':'Keterangan ditolak.'});}catch(e){console.error('[keterangan/approve]',e);return fail(res,500,'Gagal memproses persetujuan.');}}
   );
 
   // DOKUMEN PEGAWAI
@@ -86,15 +116,195 @@ export function createAttendanceDataRouter({ query, withTransaction }) {
   router.get('/dokumen/file', async(req,res)=>{try{const nip=String(req.query.nip||req.user.nip||''),id=String(req.query.id||'');const target=(await query(`SELECT "NIP" AS nip,instansi_id FROM user_list WHERE "NIP"=$1 LIMIT 1`,[nip])).rows[0];if(!target||!sameInstansi(req.user,target.instansi_id))return fail(res,403,'Forbidden');const row=(await query(`SELECT file AS file_base64,'application/pdf' AS mime_type FROM dokumen_pegawai WHERE nama_dokumen=$1 AND nip=$2 LIMIT 1`,[id,nip])).rows[0];if(!row)return fail(res,404,'Dokumen tidak ditemukan.');return ok(res,row);}catch(e){console.error('[dokumen/file]',e);return fail(res,500,'Gagal mengambil dokumen.');}});
 
   // REKAP ABSENSI — port dari workflow Hitung Rekap.
-  router.get('/rekap-absen', async(req,res)=>{try{const dari=String(req.query.dari||''),sampai=String(req.query.sampai||'');if(!parseDate(dari)||!parseDate(sampai)||sampai<dari)return fail(res,400,'Periode rekap tidak valid.');const {inst,allowed}=instScope(req,req.query.instansi_id);if(!allowed)return fail(res,403,'Forbidden');const users=(await query(`SELECT id::text AS id,username,username AS nama,"NIP" AS nip,"Jabatan" AS jabatan,pangkat,bidang,nomorhp,"no" AS urutan,"Status" AS status FROM user_list WHERE instansi_id=$1 ORDER BY "no" ASC NULLS LAST`,[inst])).rows.filter(u=>String(u.status||'AKTIF').toUpperCase()!=='NONAKTIF');const logs=(await query(`SELECT * FROM "Log_Absen" WHERE "Tanggal" >= $1 AND "Tanggal" <= $2 AND instansi_id=$3 ORDER BY "Tanggal" ASC,"Jam" ASC`,[dari,sampai,inst])).rows;let libur=new Set();try{const q=String(req.query.libur||'');if(q){const a=JSON.parse(decodeURIComponent(q));if(Array.isArray(a))libur=new Set(a.map(String));}}catch{libur=new Set();}let periods=[];try{const q=String(req.query.jam_periode||'');if(q)periods=JSON.parse(decodeURIComponent(q));}catch{periods=[];}const stdIn=toMinutes(req.query.jam_masuk)||435,stdOut=toMinutes(req.query.jam_pulang)||870;const getJam=t=>{const p=periods.find(x=>{const a=parseDate(x.dari),b=parseDate(x.sampai);return a&&b&&parseDate(t)>=a&&parseDate(t)<=b&&x.masuk&&x.pulang});return p?{masuk:toMinutes(p.masuk)||stdIn,pulang:toMinutes(p.pulang)||stdOut}:{masuk:stdIn,pulang:stdOut};};const range=dateRange(dari,sampai).filter(t=>{const d=parseDate(t);return d.getDay()!==0&&d.getDay()!==6&&!libur.has(t)});const workDays=Math.max(1,range.length);const map=new Map(users.map(u=>[String(u.id),{...u,masuk:0,pulang:0,di_luar_masuk_periode:0,di_luar_pulang_periode:0,izin:0,sakit:0,tugas:0,tubel:0,cuti:0,alpa:0,menit_terlambat_periode:0,menit_lebih_awal_periode:0,hadir_dates:new Set(),excused_dates:new Set(),logByDate:{},jamMasuk:'-',jamPulang:'-'}]));for(const l of logs){const p=map.get(String(l.ID||l.id||''));if(!p)continue;const t=String(l.Tanggal||l.tanggal||'').slice(0,10),j=String(l.Jam||l.jam||'').slice(0,5),jm=toMinutes(j);if(!t||jm===null)continue;p.logByDate[t] ||= {};let jenis=String(l['Jenis Absen']||'').toUpperCase().trim();const batas=getJam(t);if(jenis==='MASUK'||jenis==='DI LUAR JAM MASUK'){if(jm>batas.masuk){p.di_luar_masuk_periode++;p.menit_terlambat_periode+=jm-batas.masuk;}else p.masuk++;p.jamMasuk=j;p.logByDate[t].masuk=jm;p.hadir_dates.add(t);}else if(['PULANG','DI LUAR JAM PULANG','PULANG LUAR'].includes(jenis)){if(jenis==='PULANG LUAR'||jm>=batas.pulang)p.pulang++;else{p.di_luar_pulang_periode++;p.menit_lebih_awal_periode+=batas.pulang-jm;}p.jamPulang=j;p.logByDate[t].pulang=jm;}else if(['IZIN','SAKIT','TUGAS','DL','TUBEL','CUTI','TB','TANPA BERITA','ALPA'].includes(jenis)){if(jenis==='IZIN')p.izin++;else if(jenis==='SAKIT')p.sakit++;else if(jenis==='TUBEL')p.tubel++;else if(jenis==='CUTI')p.cuti++;else if(['TB','TANPA BERITA','ALPA'].includes(jenis))p.alpa++;else p.tugas++;p.excused_dates.add(t);}}
-      const pegawai=users.map(u=>{const p=map.get(String(u.id));let hadirMenit=0;for(const t of range){const x=p.logByDate[t];if(x&&x.masuk!==undefined&&x.pulang!==undefined&&x.pulang>x.masuk)hadirMenit+=x.pulang-x.masuk;}const totalMasuk=p.masuk+p.di_luar_masuk_periode;const disiplin=totalMasuk?Math.max(0,Math.round(p.masuk/totalMasuk*100)):100;const sah=p.hadir_dates.size+p.tugas+p.sakit+p.tubel+p.cuti;const kehadiran=Math.min(100,Math.round(sah/workDays*100));return {...p,jamHadir:(hadirMenit/60).toFixed(1),lambat_count:p.di_luar_masuk_periode,pulang_cepat_count:p.di_luar_pulang_periode,menit_terlambat:p.menit_terlambat_periode,menit_lebih_awal:p.menit_lebih_awal_periode,disiplinPct:disiplin,kehadiranPct:kehadiran,totalAkkHHMM:`${Math.floor((p.menit_terlambat_periode+p.menit_lebih_awal_periode)/60)}:${String((p.menit_terlambat_periode+p.menit_lebih_awal_periode)%60).padStart(2,'0')}`,hadir_dates:[...p.hadir_dates],excused_dates:[...p.excused_dates]};});const sum=k=>pegawai.reduce((s,p)=>s+(Number(p[k])||0),0);return ok(res,{ringkasan:{masuk:sum('masuk'),pulang:sum('pulang'),luar:sum('lambat_count')+sum('pulang_cepat_count'),izin:sum('izin'),sakit:sum('sakit'),tugas:sum('tugas'),tubel:sum('tubel'),cuti:sum('cuti'),alpa:sum('alpa')},pegawai});}catch(e){console.error('[rekap]',e);return fail(res,500,'Gagal menghitung rekap absensi.');}});
+  router.get('/rekap-absen', (req, res) => rekapAbsenHandler(req, res, query));
 
   return router;
 }
 
+async function rekapAbsenHandler(req, res, query) {
+  try {
+    const dari = String(req.query.dari || ''), sampai = String(req.query.sampai || '');
+    if (!parseDate(dari) || !parseDate(sampai) || sampai < dari) return fail(res, 400, 'Periode rekap tidak valid.');
+    const { inst, allowed } = instScope(req, req.query.instansi_id);
+    if (!allowed) return fail(res, 403, 'Forbidden');
+    const users = (await query(
+      `SELECT id::text AS id, username, username AS nama, "NIP" AS nip, "Jabatan" AS jabatan, pangkat, bidang, nomorhp, "no" AS urutan, "Status" AS status FROM user_list WHERE instansi_id=$1 ORDER BY "no" ASC NULLS LAST`,
+      [inst],
+    )).rows.filter(u => String(u.status || 'AKTIF').toUpperCase() !== 'NONAKTIF');
+    const logs = (await query(
+      `SELECT * FROM "Log_Absen" WHERE "Tanggal" >= $1 AND "Tanggal" <= $2 AND instansi_id=$3 ORDER BY "Tanggal" ASC, "Jam" ASC`,
+      [dari, sampai, inst],
+    )).rows;
+    let libur = new Set();
+    try {
+      const q = String(req.query.libur || '');
+      if (q) {
+        const a = JSON.parse(decodeURIComponent(q));
+        if (Array.isArray(a)) libur = new Set(a.map(String));
+      }
+    } catch { /* param libur tidak valid: abaikan */ }
+    let periods = [];
+    try {
+      const q = String(req.query.jam_periode || '');
+      if (q) periods = JSON.parse(decodeURIComponent(q));
+    } catch { /* param jam_periode tidak valid: abaikan */ }
+    const stdIn = toMinutes(req.query.jam_masuk) || 435, stdOut = toMinutes(req.query.jam_pulang) || 870;
+    const getJam = t => {
+      const p = periods.find(x => {
+        const a = parseDate(x.dari), b = parseDate(x.sampai);
+        return a && b && parseDate(t) >= a && parseDate(t) <= b && x.masuk && x.pulang;
+      });
+      return p ? { masuk: toMinutes(p.masuk) || stdIn, pulang: toMinutes(p.pulang) || stdOut } : { masuk: stdIn, pulang: stdOut };
+    };
+    const range = dateRange(dari, sampai).filter(t => {
+      const d = parseDate(t);
+      return d.getUTCDay() !== 0 && d.getUTCDay() !== 6 && !libur.has(t);
+    });
+    const workDays = Math.max(1, range.length);
+    const map = new Map(users.map(u => [String(u.id), {
+      ...u,
+      masuk: 0, pulang: 0, di_luar_masuk_periode: 0, di_luar_pulang_periode: 0,
+      izin: 0, sakit: 0, tugas: 0, tubel: 0, cuti: 0, alpa: 0,
+      menit_terlambat_periode: 0, menit_lebih_awal_periode: 0,
+      hadir_dates: new Set(), excused_dates: new Set(), logByDate: {}, ketByDate: {},
+      jamMasuk: '-', jamPulang: '-',
+      _rawMasukLog: null, _rawPulangLog: null, _rawKetLog: null,
+    }]));
+    for (const l of logs) {
+      const p = map.get(String(l.ID || l.id || ''));
+      if (!p) continue;
+      const t = String(l.Tanggal || l.tanggal || '').slice(0, 10);
+      const j = String(l.Jam || l.jam || '').slice(0, 5);
+      const jm = toMinutes(j);
+      if (!t || jm === null) continue;
+      p.logByDate[t] ||= {};
+      const jenis = String(l['Jenis Absen'] || '').toUpperCase().trim();
+      const batas = getJam(t);
+      if (jenis === 'MASUK' || jenis === 'DI LUAR JAM MASUK') {
+        if (jm > batas.masuk) { p.di_luar_masuk_periode++; p.menit_terlambat_periode += jm - batas.masuk; } else p.masuk++;
+        p.jamMasuk = j;
+        p.logByDate[t].masuk = jm;
+        p.hadir_dates.add(t);
+        p._rawMasukLog = l;
+      } else if (['PULANG', 'DI LUAR JAM PULANG', 'PULANG LUAR'].includes(jenis)) {
+        if (jenis === 'PULANG LUAR' || jm >= batas.pulang) p.pulang++; else { p.di_luar_pulang_periode++; p.menit_lebih_awal_periode += batas.pulang - jm; }
+        p.jamPulang = j;
+        p.logByDate[t].pulang = jm;
+        p._rawPulangLog = l;
+      } else if (['IZIN', 'SAKIT', 'TUGAS', 'DL', 'TUBEL', 'CUTI', 'TB', 'TANPA BERITA', 'ALPA'].includes(jenis)) {
+        if (jenis === 'IZIN') p.izin++;
+        else if (jenis === 'SAKIT') p.sakit++;
+        else if (jenis === 'TUBEL') p.tubel++;
+        else if (jenis === 'CUTI') p.cuti++;
+        else if (['TB', 'TANPA BERITA', 'ALPA'].includes(jenis)) p.alpa++;
+        else p.tugas++;
+        p.excused_dates.add(t);
+        p._rawKetLog = l;
+        // ponytail: DL→TUGAS & TB/TANPA BERITA→ALPA disamakan dgn hitungan counter atas
+        p.ketByDate[t] = (jenis === 'DL') ? 'TUGAS' : (['TB', 'TANPA BERITA'].includes(jenis) ? 'ALPA' : jenis);
+      }
+    }
+    // ── Statistik all-time per pegawai dari tabel agregat statistik_pegawai ──
+    // Akumulasi = akum_menit_terlambat (DI LUAR JAM MASUK, sudah termasuk TB 450m)
+    //           + akum_menit_lebih_awal (DI LUAR JAM PULANG). Fail-soft: kalau tabel
+    // tidak ada / query gagal, rekap tetap dikirim tanpa field all_*.
+    let statByNip = new Map();
+    try {
+      const s = await query(
+        'SELECT nip, akum_menit_terlambat, akum_menit_lebih_awal, total_izin, total_sakit, total_tugas, total_tubel, total_cuti, total_alpa FROM statistik_pegawai',
+      );
+      for (const r of s.rows) statByNip.set(String(r.nip || '').replace(/\D/g, ''), r);
+    } catch (e) {
+      console.warn('[rekap] statistik_pegawai tidak terbaca:', e.message);
+    }
+    const statAll = (u) => {
+      const r = statByNip.get(String(u.nip || '').replace(/\D/g, ''));
+      if (!r) return null;
+      return {
+        all_menit_terlambat: Number(r.akum_menit_terlambat) || 0,
+        all_menit_lebih_awal: Number(r.akum_menit_lebih_awal) || 0,
+        all_izin: Number(r.total_izin) || 0,
+        all_sakit: Number(r.total_sakit) || 0,
+        all_tugas: Number(r.total_tugas) || 0,
+        all_tubel: Number(r.total_tubel) || 0,
+        all_cuti: Number(r.total_cuti) || 0,
+        all_alpa: Number(r.total_alpa) || 0,
+      };
+    };
+    const pegawai = users.map(u => {
+      const p = map.get(String(u.id));
+      let hadirMenit = 0;
+      for (const t of range) {
+        const x = p.logByDate[t];
+        if (x && x.masuk !== undefined && x.pulang !== undefined && x.pulang > x.masuk) hadirMenit += x.pulang - x.masuk;
+      }
+      // ponytail: 1 alpa = -20% (sesuai permintaan), tanpa bobot telat
+      const disiplin = Math.max(0, 100 - p.alpa * 20);
+      const sah = p.hadir_dates.size + p.tugas + p.sakit + p.tubel + p.cuti;
+      const kehadiran = Math.min(100, Math.round(sah / workDays * 100));
+      return {
+        ...p,
+        ...(statAll(u) || {}),
+        jamHadir: (hadirMenit / 60).toFixed(1),
+        lambat_count: p.di_luar_masuk_periode,
+        pulang_cepat_count: p.di_luar_pulang_periode,
+        menit_terlambat: p.menit_terlambat_periode,
+        menit_lebih_awal: p.menit_lebih_awal_periode,
+        disiplinPct: disiplin,
+        kehadiranPct: kehadiran,
+        totalAkkHHMM: `${Math.floor((p.menit_terlambat_periode + p.menit_lebih_awal_periode) / 60)}:${String((p.menit_terlambat_periode + p.menit_lebih_awal_periode) % 60).padStart(2, '0')}`,
+        hadir_dates: [...p.hadir_dates],
+        excused_dates: [...p.excused_dates],
+      };
+    });
+    const sum = k => pegawai.reduce((s, p) => s + (Number(p[k]) || 0), 0);
+    return ok(res, {
+      ringkasan: {
+        masuk: sum('masuk'),
+        pulang: sum('pulang'),
+        luar: sum('lambat_count') + sum('pulang_cepat_count'),
+        izin: sum('izin'),
+        sakit: sum('sakit'),
+        tugas: sum('tugas'),
+        tubel: sum('tubel'),
+        cuti: sum('cuti'),
+        alpa: sum('alpa'),
+      },
+      pegawai,
+    });
+  } catch (e) {
+    console.error('[rekap]', e);
+    return fail(res, 500, 'Gagal menghitung rekap absensi.');
+  }
+}
+
+
 async function qx(q, sql, params){ return typeof q === 'function' ? q(sql, params) : q.query(sql, params); }
+
+// Kelompok jenis keterangan: per pegawai+tanggal hanya boleh ada SATU baris.
+// Dipakai applyApprovedKeterangan supaya approve tidak menumpuk log baru di
+// atas baris yang sudah ada (mis. TANPA BERITA dari cron jam 10:00).
+const KET_GROUP = ['IZIN', 'SAKIT', 'TUGAS', 'DL', 'TUBEL', 'CUTI', 'TB', 'TANPA BERITA', 'ALPA'];
 
 async function applyApprovedKeterangan(queryLike,{row,dates,jenis,emp,requestId,ket,jam}){
   for(let i=0;i<dates.length;i++){
-    const t=dates[i];const rid=`${requestId||''}_${t.replace(/-/g,'')}${String(i+1).padStart(2,'0')}`;await qx(queryLike, `INSERT INTO "Log_Absen" ("Nama","NIP","Tanggal","Jam","Jenis Absen","Lokasi","Ket","koordinat","ID","request_id","instansi_id") VALUES ($1,$2,$3,$4,$5,'-',$6,'-',$7,$8,$9)`,[emp.username||row.Nama||'',emp.nip||row.NIP||'',t,jam,jenis,ket,String(emp.id),rid,emp.instansi_id]);if(jenis==='IZIN'&&toMinutes(String(row.Jam||jam).split('-').pop()?.trim())>=870){await qx(queryLike, `INSERT INTO "Log_Absen" ("Nama","NIP","Tanggal","Jam","Jenis Absen","Lokasi","Ket","koordinat","ID","request_id","instansi_id") VALUES ($1,$2,$3,$4,'PULANG','-',$5,'-',$6,$7,$8)`,[emp.username||row.Nama||'',emp.nip||row.NIP||'',t,String(row.Jam||jam).split('-').pop().trim(),`${ket} (Auto Pulang dari Izin Jam)`,String(emp.id),`${rid}_PLG`,emp.instansi_id]);}}
+    const t=dates[i];const rid=`${requestId||''}_${t.replace(/-/g,'')}${String(i+1).padStart(2,'0')}`;
+    // Gantikan baris keterangan yang sudah ada, jangan INSERT buta.
+    const exist=(await qx(queryLike,`SELECT "ID_Log" FROM "Log_Absen" WHERE "ID"::text=$1 AND "Tanggal"=$2 AND "Jenis Absen" = ANY($3::text[]) ORDER BY "ID_Log" DESC LIMIT 1`,[String(emp.id),t,KET_GROUP])).rows||[];
+    if(exist[0]){
+      await qx(queryLike,`UPDATE "Log_Absen" SET "Jenis Absen"=$1,"Jam"=$2,"Ket"=$3 WHERE "ID_Log"=$4`,[jenis,String(jam||''),ket,exist[0].ID_Log]);
+    }else{
+      await qx(queryLike, `INSERT INTO "Log_Absen" ("Nama","NIP","Tanggal","Jam","Jenis Absen","Lokasi","Ket","koordinat","ID","request_id","instansi_id") VALUES ($1,$2,$3,$4,$5,'-',$6,'-',$7,$8,$9)`,[emp.username||row.Nama||'',emp.nip||row.NIP||'',t,jam,jenis,ket,String(emp.id),rid,emp.instansi_id]);
+    }
+    if(jenis==='IZIN'&&toMinutes(String(row.Jam||jam).split('-').pop()?.trim())>=870){
+      // Auto-pulang juga harus idempoten: re-approve jangan menumpuk PULANG.
+      const plg=(await qx(queryLike,`SELECT "ID_Log" FROM "Log_Absen" WHERE "ID"::text=$1 AND "Tanggal"=$2 AND "Jenis Absen"='PULANG' ORDER BY "ID_Log" DESC LIMIT 1`,[String(emp.id),t])).rows||[];
+      const jamPlg=String(row.Jam||jam).split('-').pop().trim();
+      const ketPlg=`${ket} (Auto Pulang dari Izin Jam)`;
+      if(plg[0]){
+        await qx(queryLike,`UPDATE "Log_Absen" SET "Jam"=$1,"Ket"=$2 WHERE "ID_Log"=$3`,[jamPlg,ketPlg,plg[0].ID_Log]);
+      }else{
+        await qx(queryLike, `INSERT INTO "Log_Absen" ("Nama","NIP","Tanggal","Jam","Jenis Absen","Lokasi","Ket","koordinat","ID","request_id","instansi_id") VALUES ($1,$2,$3,$4,'PULANG','-',$5,'-',$6,$7,$8)`,[emp.username||row.Nama||'',emp.nip||row.NIP||'',t,jamPlg,ketPlg,String(emp.id),`${rid}_PLG`,emp.instansi_id]);
+      }
+    }}
 }

@@ -2,10 +2,67 @@
 
 
     /**
-     * Aktifkan section dalam panel admin.
-     * @param {string} sectionId - ID section: 'ops' | 'libur' | 'lokasi' | 'jam' | dll
+     * Tampilkan Menu Grid Admin (UI/UX Pro Max)
      */
-        function switchAdminSection(sectionId) {
+    function showAdminGrid() {
+      const gridEl = $('admin-grid-view');
+      const headEl = $('admin-detail-head');
+      if (gridEl) gridEl.style.display = 'block';
+      if (headEl) headEl.style.display = 'none';
+      document.querySelectorAll('.admin-section').forEach(s => {
+        if (s) s.style.display = 'none';
+      });
+      localStorage.setItem('absen_last_admin_section', 'grid');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /**
+     * Buka kartu modul admin tertentu (drill-down dari grid)
+     */
+    function openAdminCard(cardKey) {
+      const meta = {
+        'konfirmasi': { section: 'ops', group: 'Operasional & Kehadiran', title: 'Konfirmasi Keterangan', target: 'konfirmasiAdminList' },
+        'ket':        { section: 'ops', group: 'Operasional & Kehadiran', title: 'Input Keterangan Pegawai', target: 'adminKetCard' },
+        'meja':       { section: 'ops', group: 'Operasional & Kehadiran', title: 'Terminal Meja Absen', target: 'mejaAbsenCard' },
+        'pegawai':    { section: 'user', group: 'Manajemen Kepegawaian', title: 'Master Pegawai & Face AI', target: 'adminFaceRegCard' },
+        'admin':      { section: 'user', group: 'Manajemen Kepegawaian', title: 'Kelola Administrator', target: 'adminMgmtCard' },
+        'roles':      { section: 'user', group: 'Manajemen Kepegawaian', title: 'Kelola Role & Hak Akses', target: 'adminRolesCard' },
+        'lokasi':     { section: 'config', group: 'Konfigurasi Sistem', title: 'Geofencing & Lokasi Absen', target: 'adminMap' },
+        'jam':        { section: 'config', group: 'Konfigurasi Sistem', title: 'Jam Kerja & Periode Khusus', target: 'periodeAdminList' },
+        'libur':      { section: 'config', group: 'Konfigurasi Sistem', title: 'Hari Libur & Cuti Bersama', target: 'liburAdminList' },
+        'seragam':    { section: 'config', group: 'Konfigurasi Sistem', title: 'Mode Seragam Pegawai', target: 'seragamAdminList' },
+        'telegram':   { section: 'config', group: 'Konfigurasi Sistem', title: 'Notifikasi Telegram', target: 'telegramNotifCard' },
+        'instansi':   { section: 'config', group: 'Konfigurasi Sistem', title: 'Identitas Instansi (Superadmin)', target: 'superadminHeaderCard' },
+        'desktop':    { section: 'config', group: 'Konfigurasi Sistem', title: 'Tampilan Mode Desktop', target: 'desktopModeCard' },
+        'dev-health': { section: 'dev', group: 'Developer & Diagnostik', title: 'Status Kesehatan Seluruh Fitur', target: 'devHealthCard' },
+        'dev-test':   { section: 'dev', group: 'Developer & Diagnostik', title: 'Pengujian Fitur Otomatis', target: 'devTestCard' },
+        'dev-log':    { section: 'dev', group: 'Developer & Diagnostik', title: 'Log Aktivitas & Error', target: 'devLogCard' },
+      }[cardKey] || { section: 'ops', group: 'Operasional & Kehadiran', title: 'Operasional', target: null };
+
+      const groupEl = $('adminDetailGroup');
+      const titleEl = $('adminDetailTitle');
+      if (groupEl) groupEl.textContent = meta.group;
+      if (titleEl) titleEl.textContent = meta.title;
+
+      switchAdminSection(meta.section);
+
+      if (cardKey === 'roles' && typeof window.loadRolesList === 'function') {
+        window.loadRolesList();
+      }
+
+      if (meta.target && $(meta.target)) {
+        setTimeout(() => {
+          const el = $(meta.target);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+      }
+    }
+
+    /**
+     * Aktifkan section dalam panel admin.
+     * @param {string} sectionId - ID section: 'grid' | 'ops' | 'user' | 'config' | 'dev'
+     */
+    function switchAdminSection(sectionId) {
       const myRole = String(localStorage.getItem('MY_ROLE') || 'USER').toUpperCase();
       const isAdminGudang = myRole === 'ADMIN GUDANG';
       
@@ -16,11 +73,38 @@
         return;
       }
 
-      if (!sectionId) sectionId = localStorage.getItem('absen_last_admin_section') || 'ops';
+      if (sectionId === 'grid') {
+        showAdminGrid();
+        return;
+      }
+
+      if (!sectionId) sectionId = localStorage.getItem('absen_last_admin_section') || 'grid';
+      if (sectionId === 'grid') {
+        showAdminGrid();
+        return;
+      }
+
       // 'simapo-admin' sudah dihapus; guard juga terhadap nilai basi di localStorage
       if (sectionId === 'simapo-admin' || !$('admin-section-' + sectionId)) sectionId = 'ops';
 
       localStorage.setItem('absen_last_admin_section', sectionId);
+
+      // Hide grid view and show detail nav head
+      const gridEl = $('admin-grid-view');
+      const headEl = $('admin-detail-head');
+      if (gridEl) gridEl.style.display = 'none';
+      if (headEl) headEl.style.display = 'flex';
+
+      const groupEl = $('adminDetailGroup');
+      const titleEl = $('adminDetailTitle');
+      const defaultTitles = {
+        ops: { group: 'Operasional & Kehadiran', title: 'Operasional' },
+        user: { group: 'Manajemen Kepegawaian', title: 'Kepegawaian' },
+        config: { group: 'Konfigurasi Sistem', title: 'Konfigurasi' },
+        dev: { group: 'Developer & Diagnostik', title: 'Developer & Diagnostik' }
+      }[sectionId] || { group: 'Panel Admin', title: 'Detail Modul' };
+      if (groupEl && !groupEl.textContent) groupEl.textContent = defaultTitles.group;
+      if (titleEl && !titleEl.textContent) titleEl.textContent = defaultTitles.title;
 
       // Hide all sections
       document.querySelectorAll('.admin-section').forEach(s => {
@@ -48,14 +132,29 @@
       if (sectionId === 'user') {
         if (typeof initSuperadminPegawaiScoping === 'function') initSuperadminPegawaiScoping();
         loadAdminFaceReg();
+        if (typeof window.loadRolesList === 'function') window.loadRolesList();
       }
-      // Fix Leaflet Map rendering if switching to Config
-      if (sectionId === 'config' && typeof adminMap !== 'undefined' && adminMap) {
-        setTimeout(() => adminMap.invalidateSize(), 50);
+      // Fix Leaflet Map rendering if switching to Config & Load Settings
+      if (sectionId === 'config') {
+        if (typeof adminMap !== 'undefined' && adminMap) {
+          setTimeout(() => adminMap.invalidateSize(), 50);
+        }
+        if (typeof initSuperadminConfigScoping === 'function') initSuperadminConfigScoping();
+        if (typeof loadFaceToggle === 'function') loadFaceToggle();
+        if (typeof loadPasswordToggle === 'function') loadPasswordToggle();
+        if (typeof loadFaceSettings === 'function') loadFaceSettings();
+      }
+      if (sectionId === 'dev') {
+        if (typeof renderDevHealthMatrix === 'function') renderDevHealthMatrix();
+        if (typeof renderDevLogTable === 'function') renderDevLogTable();
       }
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+
+    window.showAdminGrid = showAdminGrid;
+    window.openAdminCard = openAdminCard;
+    window.switchAdminSection = switchAdminSection;
 
 
 
@@ -72,12 +171,12 @@
       }
 
       if (cached && cached.blob) {
-        if (statusEl) { statusEl.textContent = '✅ Tersedia (Offline Ready)'; statusEl.style.color = 'var(--success)'; }
+        if (statusEl) { statusEl.innerHTML = '<i class="fas fa-check"></i> Tersedia (Offline Ready)'; statusEl.style.color = 'var(--success)'; }
         if (btnEl) btnEl.style.display = 'none';
         if ($('btnClearHumanJs')) dom.show('btnClearHumanJs', 'flex');
         return true;
       } else {
-        if (statusEl) { statusEl.textContent = '❌ Belum Didownload'; statusEl.style.color = 'var(--warning)'; }
+        if (statusEl) { statusEl.innerHTML = '<i class="fas fa-times"></i> Belum Didownload'; statusEl.style.color = 'var(--warning)'; }
         if (btnEl) btnEl.style.display = 'flex';
         if ($('btnClearHumanJs')) dom.hide('btnClearHumanJs');
         return false;
@@ -94,7 +193,7 @@
 
     async function downloadHumanJsOffline() {
       const btn = $('btnDownloadHumanJs');
-      if (btn) { btn.innerHTML = '⏳ Mendownload... (0%)'; btn.disabled = true; }
+      if (btn) { btn.innerHTML = '<i class="fas fa-hourglass-half"></i> Mendownload... (0%)'; btn.disabled = true; }
       try {
         const response = await fetch(HUMAN_CDN);
         if (!response.ok) throw new Error('Response tidak OK');
@@ -115,31 +214,27 @@
             chunks.push(value);
             loaded += value.length;
             const progress = Math.round((loaded / total) * 100);
-            if (btn) btn.innerHTML = `⏳ Mendownload... (${progress}%)`;
+            if (btn) btn.innerHTML = `<i class="fas fa-hourglass-half"></i> Mendownload... (${progress}%)`;
           }
           const blob = new Blob(chunks, { type: 'application/javascript' });
           await idb.set('master_data', { key: 'human_script', blob: blob });
         }
 
-        alert('✅ Human.js berhasil didownload dan disimpan ke penyimpanan lokal perangkat!');
+        alert(' Human.js berhasil didownload dan disimpan ke penyimpanan lokal perangkat!');
         await checkHumanJsCache();
       } catch (err) {
-        alert('❌ Gagal mendownload Human.js: ' + err.message);
-        if (btn) { btn.innerHTML = '📥 Coba Lagi Download (Offline)'; btn.disabled = false; }
+        alert(' Gagal mendownload Human.js: ' + err.message);
+        if (btn) { btn.innerHTML = '<i class="fas fa-download"></i> Coba Lagi Download (Offline)'; btn.disabled = false; }
       }
     }
 
 
     // ── Update Admin Visibility ──
     function applyAdminVisibility() {
-      const myNip = String(localStorage.getItem('MY_NIP') || '').trim();
       const myRole = String(localStorage.getItem('MY_ROLE') || 'USER').toUpperCase();
-      const isAdmin = (typeof ADMIN_NIPS !== 'undefined' && ADMIN_NIPS.includes(myNip)) || 
-                        myRole === 'SUPERADMIN' || 
-                        myRole === 'ADMIN' || 
-                        myRole === 'ADMIN GUDANG' ||
-                        !!window.IS_ADMIN;
-      
+      // Panel admin = boolean user_list.is_admin (BUKAN role / ADMIN_NIPS) — fail-closed.
+      const isAdmin = typeof isLogAdmin === 'function' && isLogAdmin();
+
       // Update global flag if needed
       window.IS_ADMIN = isAdmin;
       window.MY_ROLE = myRole; // Store for logic
@@ -177,9 +272,12 @@
     /* ════ TABS ════ */
     function getAllTabs() { 
       const tabs = ['absen', 'ket', 'rekap', 'profil'];
-      if (IS_ADMIN) tabs.push('admin');
+      const isAdmin = window.IS_ADMIN || (typeof isLogAdmin === 'function' && isLogAdmin()) || ['ADMIN', 'SUPERADMIN'].includes((localStorage.getItem('MY_ROLE') || '').toUpperCase());
+      if (isAdmin) tabs.push('admin');
       // Always allow checking, visibility is handled via checkTugasLemburAccess
       tabs.push('tugas', 'lembur', 'simapo');
+      // Arsip: selalu terdaftar; tombolnya .admin-only (disembunyikan applyAdminVisibility).
+      tabs.push('arsip');
       return tabs;
     }
     /**
@@ -215,6 +313,7 @@
       const T = getAllTabs();
       if (!T.includes(tab)) tab = 'absen';
 
+      if (tab === 'arsip' && currentTab !== 'arsip') window._arsipPrevTab = currentTab;
       localStorage.setItem('absen_last_tab', tab);
       window.scrollTo(0, 0);
       document.querySelectorAll('.nav-item').forEach((t) => {
@@ -222,6 +321,12 @@
       });
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       const el = $('panel-' + tab); if (el) el.classList.add('active');
+      // Arsip native memakai bottom nav. Full-screen hanya untuk iframe "Aplikasi lengkap".
+      if (tab !== 'arsip' && typeof closeFull === 'function') closeFull();
+      document.body.classList.toggle('arsip-fs', tab === 'arsip' && !!window._arsipFull);
+      // .arsip-native/.arsip-list butuh tinggi terikat; di HP .app hanya min-height
+      // sehingga daftar dokumen melar jadi halaman panjang dan tak bisa digulir sendiri.
+      document.body.classList.toggle('arsip-open', tab === 'arsip' && !window._arsipFull);
 
       if (tab === 'absen') {
         updateClock(); // refresh notif & batas jam periode segera
@@ -240,27 +345,32 @@
       if (tab === 'lembur') {
         if (typeof initSuperadminLemburScoping === 'function') initSuperadminLemburScoping();
       }
-      if (tab === 'admin' && IS_ADMIN) {
-        if (typeof initSuperadminAdminScoping === 'function') initSuperadminAdminScoping();
-        if (typeof initSuperadminPegawaiScoping === 'function') initSuperadminPegawaiScoping();
-        if (typeof initSuperadminAdminKetScoping === 'function') initSuperadminAdminKetScoping();
-        // Remove forced section reset to 'ops' to preserve user context
-        initAdminMap(); initJamAdminUI(); _initPeriodeListeners();
-        if (!adminLoaded) {
-          adminLoaded = true;
-          const myRole = (window.MY_ROLE || localStorage.getItem('MY_ROLE') || 'USER').toUpperCase();
-          const isGudangOnly = myRole === 'ADMIN GUDANG';
-
-          if (!isGudangOnly) {
-            loadKonfirmasiAdmin(); loadLiburAdmin();
-            loadJamPeriodeAdmin(); loadAdminMgmt();
-            setTimeout(() => switchFaceSigTab('data'), 300);
-            loadFaceStatusAdmin();
+      if (tab === 'admin') {
+        const isAdmin = window.IS_ADMIN || (typeof isLogAdmin === 'function' && isLogAdmin()) || ['ADMIN', 'SUPERADMIN'].includes((localStorage.getItem('MY_ROLE') || '').toUpperCase());
+        if (isAdmin) {
+          window.IS_ADMIN = true;
+          if (typeof initSuperadminAdminScoping === 'function') initSuperadminAdminScoping();
+          if (typeof initSuperadminPegawaiScoping === 'function') initSuperadminPegawaiScoping();
+          if (typeof initSuperadminAdminKetScoping === 'function') initSuperadminAdminKetScoping();
+          initAdminMap(); initJamAdminUI(); _initPeriodeListeners();
+          if (typeof showAdminGrid === 'function') {
+            showAdminGrid();
           }
+          if (!adminLoaded) {
+            adminLoaded = true;
+            const myRole = (window.MY_ROLE || localStorage.getItem('MY_ROLE') || 'USER').toUpperCase();
+            const isGudangOnly = myRole === 'ADMIN GUDANG';
 
-          // Initialize Human.js Cache Check
-          checkHumanJsCache();
-        }
+            if (!isGudangOnly) {
+              loadKonfirmasiAdmin(); loadLiburAdmin();
+              loadJamPeriodeAdmin(); loadAdminMgmt();
+              setTimeout(() => switchFaceSigTab('data'), 300);
+              loadFaceStatusAdmin();
+            }
+
+            // Initialize Human.js Cache Check
+            checkHumanJsCache();
+          }
         setTimeout(() => {
           const myRole = (window.MY_ROLE || localStorage.getItem('MY_ROLE') || 'USER').toUpperCase();
           if (myRole !== 'ADMIN GUDANG') {
@@ -274,6 +384,7 @@
         // Immediate check as well
         if (typeof _applyAdminUIExtended === 'function') _applyAdminUIExtended();
       }
+    }
       // Auto-load tanda tangan saat buka tab profil
       if (tab === 'profil') {
         if (typeof loadMySignature === 'function') loadMySignature();
@@ -294,6 +405,13 @@
         if (typeof populateSimapoInstansiSelect === 'function') populateSimapoInstansiSelect();
         // Sidebar Aset = grid fitur, bukan langsung Katalog
         if (typeof switchSimapoSection === 'function') switchSimapoSection('grid');
+      }
+
+      if (tab === 'arsip') {
+        // Panel Dokumen native (Jalur A); iframe hanya dibuka via ARSIP.showFull().
+        // Selalu mulai dari beranda tile, jadi tidak nyangkut di sub-menu terakhir.
+        if (typeof window.arsipReset === 'function') window.arsipReset();
+        if (typeof loadArsipDocs === 'function') loadArsipDocs();
       }
 
       // Re-apply role based visibility on every switch to ensure consistency
@@ -432,12 +550,12 @@
       const jmStr = _jamHari.masuk, jpStr = _jamHari.pulang;
 
       let jenis = '', batas = '';
-      if (tot <= _jamMasukHari) { jenis = `🟢 Waktu Absen Masuk${_jamHari.nama ? ' 🌙 ' + _jamHari.nama : ''}`; batas = `Masuk ≤ ${jmStr}` }
-      else if (tot >= _jamPulangHari) { jenis = '🔵 Waktu Absen Pulang'; batas = `Pulang ≥ ${jpStr}` }
-      else if (tot < 720) { jenis = '🔴 Di luar jam masuk'; batas = 'Terlambat' }
-      else { jenis = '🟡 Belum Waktunya Pulang'; batas = `Pulang ≥ ${jpStr}` }
+      if (tot <= _jamMasukHari) { jenis = `<i class="fas fa-circle"></i> Waktu Absen Masuk${_jamHari.nama ? ' <i class="fas fa-moon"></i> ' + _jamHari.nama : ''}`; batas = `Masuk ≤ ${jmStr}` }
+      else if (tot >= _jamPulangHari) { jenis = '<i class="fas fa-circle"></i> Waktu Absen Pulang'; batas = `Pulang ≥ ${jpStr}` }
+      else if (tot < 720) { jenis = '<i class="fas fa-circle"></i> Di luar jam masuk'; batas = 'Terlambat' }
+      else { jenis = '<i class="fas fa-circle"></i> Belum Waktunya Pulang'; batas = `Pulang ≥ ${jpStr}` }
       
-      if (elJenis) elJenis.textContent = jenis;
+      if (elJenis) elJenis.innerHTML = jenis;
       if (elBatas) elBatas.textContent = batas;
       
       const isJamPulang = tot >= _jamPulangHari;

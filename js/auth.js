@@ -47,16 +47,31 @@
           if (!nip) throw new Error('Silakan masukkan NIP');
           if (nip.length < 3) throw new Error('ID / NIP minimal terdiri dari 3 karakter');
 
+          const pwdInput = $('loginPassword');
+          const password = pwdInput ? pwdInput.value : '';
+
           // Login NIP (web, non-Telegram): satu panggilan menerbitkan sesi native
           // dan mengembalikan baris user; tidak lagi butuh /api/user-list (yang
           // berada di balik requireRole dan tak terjangkau sebelum punya token).
           const loginRes = await fetch(API_BASE + P.webLogin, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nip }),
+            body: JSON.stringify({ nip, password }),
           });
           const loginBody = await loginRes.json().catch(() => ({}));
-          if (!loginRes.ok) throw new Error(loginBody?.message || 'Login gagal. Coba lagi.');
+          if (!loginRes.ok) {
+            if (loginBody?.require_password) {
+              const wrapper = $('loginPasswordWrapper');
+              if (wrapper) wrapper.style.display = 'block';
+              if (pwdInput) {
+                pwdInput.focus();
+                if (!password) {
+                  throw new Error('Verifikasi sandi aktif. Masukkan kata sandi akun Anda.');
+                }
+              }
+            }
+            throw new Error(loginBody?.message || 'Login gagal. Coba lagi.');
+          }
 
           const user = loginBody.user;
           if (!user || !user.id) throw new Error('Data pegawai tidak lengkap. Hubungi admin.');
@@ -95,6 +110,27 @@
           }
           // Ponytail: API error/timeout → safe default = OFF, no face required
 
+          // Cek apakah NIP ini wajib face recognition
+          let isMandatoryFace = user.is_mandatory_face === true;
+          if (!isMandatoryFace && typeof window !== 'undefined' && Array.isArray(window.MANDATORY_FACE_NIPS)) {
+            isMandatoryFace = window.MANDATORY_FACE_NIPS.map(s => String(s).trim()).includes(userNip);
+          }
+          if (!isMandatoryFace) {
+            try {
+              const fsRes = await apiGet(P.faceSettings, { instansi_id: (user.instansi_id || user.Instansi_Id || '').trim() || 'bapperida' });
+              if (fsRes?.ok) {
+                const sett = fsRes.data?.settings || fsRes.data || {};
+                const list = sett.mandatory_nips || [];
+                if (Array.isArray(list)) {
+                  window.MANDATORY_FACE_NIPS = list;
+                  isMandatoryFace = list.map(s => String(s).trim()).includes(userNip);
+                }
+              }
+            } catch (_) {}
+          }
+
+          const requireFace = isFaceEnabled || isMandatoryFace;
+
           const hasFace = !!(user.face_histogram && user.face_histogram !== '[]' && user.face_histogram !== '')
             || !!(user.face_photo && user.face_photo !== '' && user.face_photo !== 'null')
             || !!(user.foto_base64 && user.foto_base64 !== '')
@@ -115,7 +151,16 @@
             location.reload();
           };
 
-          if (isFaceEnabled && typeof openCamOverlay === 'function') {
+          if (requireFace) {
+             if (typeof openCamOverlay !== 'function') {
+               if (isMandatoryFace) {
+                 setNativeToken(null);
+                 throw new Error('NIP Anda wajib verifikasi wajah, namun modul kamera face recognition belum siap. Silakan muat ulang halaman atau hubungi admin.');
+               }
+               // Jika hanya toggle instansi tapi modul kamera tidak tersedia, lanjutkan
+               await finalizeLogin();
+               return;
+             }
              // Sembunyikan form login
              const overlayEl = document.getElementById('authOverlay');
              if (overlayEl) overlayEl.style.display = 'none';
@@ -126,12 +171,16 @@
              
              if (!hasFace) {
                  // REGISTRASI WAJAH PERTAMA KALI
-                 alert('Wajah Anda belum terdaftar.\nSilakan daftarkan wajah Anda ke sistem sekarang untuk mengamankan akun (Passwordless).');
+                 alert(isMandatoryFace
+                   ? 'NIP Anda diwajibkan melakukan verifikasi wajah.\nWajah Anda belum terdaftar di sistem. Silakan rekam wajah Anda sekarang untuk melanjutkan.'
+                   : 'Wajah Anda belum terdaftar.\nSilakan daftarkan wajah Anda ke sistem sekarang untuk mengamankan akun (Passwordless).'
+                 );
                  openCamOverlay({
                     isRegister: true,
                     onDone: async (camResult) => {
                        if (!camResult || !camResult.dataUrl) {
                           alert('Gagal mengambil data wajah.');
+                          setNativeToken(null);
                           if (overlayEl) overlayEl.style.display = 'flex';
                           btn.disabled = false;
                           btn.innerHTML = originalText;
@@ -144,13 +193,15 @@
                           alert('Wajah berhasil didaftarkan! Selamat datang.');
                           finalizeLogin();
                        } catch (err) {
-                          alert('⚠️ ' + err.message);
+                          alert(' ' + err.message);
+                          setNativeToken(null);
                           if (overlayEl) overlayEl.style.display = 'flex';
                           btn.disabled = false;
                           btn.innerHTML = originalText;
                        }
                     },
                     onCancel: () => {
+                       setNativeToken(null);
                        window.MY_ID = null; // revert
                        window.tgUser = {};
                        if (overlayEl) overlayEl.style.display = 'flex';
@@ -159,7 +210,8 @@
                     }
                  });
              } else {
-                openCamOverlay(async (camResult) => {
+                openCamOverlay({
+                    onDone: async (camResult) => {
                     let similarity = 0;
                     let failReason = "Wajah tidak cocok. Silakan coba lagi.";
 
@@ -242,18 +294,28 @@
                        await finalizeLogin();
                     } else {
                        alert(`Verifikasi Gagal!\n${failReason}`);
+                       setNativeToken(null);
                        window.MY_ID = null; // Revert
                        window.tgUser = {};
                        if (overlayEl) overlayEl.style.display = 'flex';
                        btn.disabled = false;
                        btn.innerHTML = originalText;
                    }
-                });
+                },
+                onCancel: () => {
+                   setNativeToken(null);
+                   window.MY_ID = null; // Revert
+                   window.tgUser = {};
+                   if (overlayEl) overlayEl.style.display = 'flex';
+                   btn.disabled = false;
+                   btn.innerHTML = originalText;
+                }
+             });
              }
              // Biarkan tombol disable selagi kamera aktif
              return; 
            } else {
-              // Jika Face Recognition didisable dari admin, login normal
+              // Jika Face Recognition didisable dari admin dan bukan NIP wajib face, login normal
               await finalizeLogin();
               return;
            }
@@ -274,13 +336,6 @@
           if (!payload.nama || !payload.nip) throw new Error('Nama dan NIP wajib diisi');
           if (payload.nip.length < 3) throw new Error('ID / NIP minimal terdiri dari 3 karakter');
           if (payload.no_hp && payload.no_hp.length < 10) throw new Error('Nomor WhatsApp minimal 10 digit');
-
-          // Cek apakah NIP sudah terdaftar
-          const cek = await apiGet(`${P.userList}?nip=${payload.nip}`);
-          if (cek.ok) {
-            const ada = cek.rows.find(u => String(u.nip || '').trim() === payload.nip);
-            if (ada) throw new Error('NIP ' + payload.nip + ' sudah terdaftar. Silakan login.');
-          }
 
           // Sembunyikan form pendaftaran sementara untuk scan wajah
           const overlayEl = document.getElementById('authOverlay');
@@ -304,31 +359,43 @@
               btn.innerHTML = '<span class="spin-sm"></span> Menyimpan Akun...';
 
               try {
-                // 1. Simpan user ke database
-                const { ok: regOk, data: d } = await apiPost(P.userAdd || P.faceRegister, payload);
-                if (!regOk || d?.ok === false) throw new Error(d?.message || 'Pendaftaran user gagal');
+                // 1. Daftarkan akun & terbitkan sesi native melalui /api/auth/register
+                const regRes = await fetch(API_BASE + (P.webRegister || '/api/auth/register'), {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload),
+                });
+                const d = await regRes.json().catch(() => ({}));
+                if (!regRes.ok || d?.ok === false || !d?.session_token) {
+                  throw new Error(d?.message || 'Pendaftaran user gagal');
+                }
 
-                // 2. Simpan wajah ke server
-                window.MY_ID = payload.id;
+                const regToken = d.session_token;
+                const registeredId = String(d.user?.id || payload.id);
+                setNativeToken(regToken);
+
+                // 2. Simpan wajah ke server menggunakan sesi native yang baru terbit
+                window.MY_ID = registeredId;
                 window.tgUser = { first_name: payload.nama, username: payload.nip };
                 
-                const faceOk = await syncFaceToServer(payload.id, camResult.dataUrl, camResult.descriptor, payload.nama, new Date().toISOString());
+                const faceOk = await syncFaceToServer(registeredId, camResult.dataUrl, camResult.descriptor, payload.nama, new Date().toISOString());
                 if (!faceOk) throw new Error('Gagal menyimpan data wajah ke server. Hubungi Admin.');
 
-                // 3. Simple token — tidak perlu server-side session
-                const regToken = 'usr_' + payload.id + '_' + Date.now();
+                // 3. Simpan sesi ke state lokal
+                setNativeToken(regToken);
                 setSession(regToken, { nip: payload.nip, role: 'USER', instansi_id: payload.instansi_id || '' });
                 localStorage.setItem(STORAGE_KEYS.USER_ID, String(window.MY_ID));
                 localStorage.setItem('MY_NIP', String(payload.nip));
                 localStorage.setItem('MY_ROLE', 'USER');
                 localStorage.setItem('MY_NAME', String(payload.nama));
-                localStorage.setItem(STORAGE_KEYS.USER_OBJ, JSON.stringify(payload));
+                localStorage.setItem(STORAGE_KEYS.USER_OBJ, JSON.stringify(d.user || payload));
                 if (payload.instansi_id) localStorage.setItem('MY_INSTANSI', payload.instansi_id);
 
                 alert('Pendaftaran berhasil! Wajah Anda telah terdaftar.');
                 location.reload();
               } catch (err) {
-                alert('⚠️ ' + err.message);
+                alert(' ' + err.message);
+                setNativeToken(null);
                 window.MY_ID = null;
                 window.tgUser = {};
                 if (overlayEl) overlayEl.style.display = 'flex';
@@ -345,7 +412,7 @@
           return;
         }
       } catch (err) {
-        alert('⚠️ ' + err.message);
+        alert(' ' + err.message);
       } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
@@ -357,8 +424,20 @@
     async function handleLogout() {
       if (!confirm('Apakah Anda yakin ingin keluar dari akun ini?')) return;
       console.log('[Auth] Logging out user...');
+      const activeToken = (typeof _nativeToken !== 'undefined' && _nativeToken) || localStorage.getItem('_native_token') || window._session?.token;
+      if (activeToken && /^[0-9a-f]{192}$/.test(activeToken)) {
+        try {
+          await fetch(API_BASE + '/api/auth/logout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_token: activeToken }),
+          });
+        } catch (_) {}
+      }
+      setNativeToken(null);
       clearSession();
       // Hapus auth-related keys saja, simpan face data + preferences
+      localStorage.removeItem('_native_token');
       localStorage.removeItem(STORAGE_KEYS.USER_ID);
       localStorage.removeItem(STORAGE_KEYS.USER_OBJ);
       localStorage.removeItem('MY_NIP');
@@ -376,10 +455,14 @@
         if (splash) splash.remove();
         return false;
       }
-      // MY_ID ada tapi token tidak ada → auto-login dari Telegram ID
-      if (!window._session.token) {
-        const isTg = !!(window.Telegram?.WebApp?.initData || new URLSearchParams(window.location.search).has('id'));
-        if (isTg) {
+      const isTg = !!(window.Telegram?.WebApp?.initData || new URLSearchParams(window.location.search).has('id'));
+      const hasNativeOrDevice = !!(
+        (typeof _nativeToken !== 'undefined' && _nativeToken) ||
+        (typeof _deviceToken !== 'undefined' && _deviceToken)
+      );
+      // MY_ID ada tapi token sesi atau token native tidak ada → auto-login TG atau re-login
+      if (!window._session.token || (!isTg && !hasNativeOrDevice)) {
+        if (isTg && !window._session.token) {
           console.log('[Auth] Telegram user without session → auto-login from Telegram ID');
           // Simple token — tidak perlu server call
           const token = 'tg_' + window.MY_ID + '_' + Date.now();
@@ -387,8 +470,8 @@
           console.log('[Auth] Auto-login success:', { targetId: window.MY_ID, hasToken: !!window._session.token });
           return true;
         }
-        // Non-Telegram: force re-login
-        console.warn('[Auth] No session token → forcing re-login');
+        // Non-Telegram tanpa sesi valid: force re-login sebelum memanggil API
+        console.warn('[Auth] No valid session/native token → forcing re-login');
         localStorage.removeItem(STORAGE_KEYS.USER_ID);
         localStorage.removeItem(STORAGE_KEYS.USER_OBJ);
         localStorage.removeItem('MY_NIP');
@@ -396,6 +479,7 @@
         window.MY_ID = null;
         window.tgUser = {};
         window.userProfile = null;
+        try { clearSession(); } catch (_) {}
         $('authOverlay').style.display = 'flex';
         const splash = $('appSplash');
         if (splash) splash.remove();

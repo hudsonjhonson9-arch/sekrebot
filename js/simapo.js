@@ -247,8 +247,6 @@ function showSimapoDetail(id) {
   const isOut = item.stok_saat_ini <= 0;
   Swal.fire({
     title: `<span style="font-size:18px; color:var(--white)">Detail Aset</span>`,
-    background: '#1a1d21',
-    color: '#fff',
     html: `
       <div style="text-align:left; font-size:14px;">
         <div style="width:100%; height:150px; background:rgba(255,255,255,0.03); border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:15px; overflow:hidden; border:1px solid rgba(255,255,255,0.1)">
@@ -304,15 +302,13 @@ window.showQRKatalog = function(id, nama) {
   const qr = QR(0, 'M');
   qr.addData(payload);
   qr.make();
-  const dataUrl = qr.createDataURL(6, 8);
+  const dataUrl = qr.createDataURL(8, 10);
   Swal.fire({
     title: nama,
-    background: '#1a1d21',
-    color: '#fff',
     html: `
       <div style="text-align:center;">
         <div style="background:#fff;display:inline-block;padding:10px;border-radius:8px;margin:10px 0;">
-          <img src="${dataUrl}" style="width:160px;height:160px;display:block;">
+          <img src="${dataUrl}" style="width:240px;height:240px;max-width:80vw;display:block;">
         </div>
         <div style="font-size:11px;color:var(--muted);word-break:break-all;margin-bottom:8px;">${payload}</div>
         <button onclick="downloadQRFromCatalog('${id}','${nama}')" style="padding:8px 20px;background:#22c55e;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;"><i class="fas fa-download" aria-hidden="true"></i> Download PNG</button>
@@ -492,7 +488,7 @@ window.downloadQRFromCatalog = function(id, nama) {
   const qr = QR(0, 'M');
   qr.addData(payload);
   qr.make();
-  const dataUrl = qr.createDataURL(6, 8);
+  const dataUrl = qr.createDataURL(8, 10);
   const link = document.createElement('a');
   link.download = 'QR-' + (nama || id).replace(/[^a-zA-Z0-9-]/g, '_') + '.png';
   link.href = dataUrl;
@@ -916,8 +912,25 @@ window.submitQRPinjam = async function() {
       })
     });
     if (res.ok) {
-      showToast('Pengajuan berhasil dikirim!', 'success');
-      closeQRPanel();
+      showToast('Aset berhasil dipinjam!', 'success');
+      panel.innerHTML = `
+        <div class="card glass-card" style="border:2px solid rgba(34,197,94,0.4);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <span style="font-size:24px;color:#22c55e;"><i class="fas fa-check-circle" aria-hidden="true"></i></span>
+            <div style="font-weight:800;font-size:14px;color:#22c55e;">Berhasil Dipinjam</div>
+          </div>
+          <div style="background:rgba(34,197,94,0.08);border-radius:8px;padding:12px;margin-bottom:12px;">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Unit Aset</div>
+            <div style="font-weight:700;font-size:13px;color:var(--white);">${escapeHtml(unitasetid)}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;">Peminjam: ${escapeHtml(nama)}</div>
+            <div style="font-size:11px;color:var(--muted);">Periode: ${mulai} → ${selesai}</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="adminQRKembaliScan()" style="flex:1;padding:10px;background:rgba(100,180,255,0.15);color:#64b4ff;border:1px solid rgba(100,180,255,0.3);border-radius:10px;font-weight:700;font-size:12px;cursor:pointer;"><i class="fas fa-camera" aria-hidden="true"></i> Scan QR Kembali</button>
+            <button onclick="closeQRPanel()" style="flex:1;padding:10px;background:var(--muted);color:var(--white);border:none;border-radius:10px;font-weight:700;font-size:12px;cursor:pointer;">Tutup</button>
+          </div>
+        </div>`;
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       if (window._simapoCache) {
         window._simapoCache.clear('admin_pinjam');
         window._simapoCache.clear('user_pinjam_riwayat');

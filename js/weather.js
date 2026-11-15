@@ -31,37 +31,37 @@
         const wind = Math.round(c.wind_speed_10m);
         const now = new Date();
         const jam = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} WITA`;
-        if ($('weatherIcon')) $('weatherIcon').textContent = icon;
+        if ($('weatherIcon')) $('weatherIcon').innerHTML = icon;
         if ($('weatherTemp')) $('weatherTemp').textContent = `${temp}°C`;
         if ($('weatherCond')) $('weatherCond').textContent = cond;
-        if ($('weatherHumid')) $('weatherHumid').textContent = `💧 ${humid}%`;
-        if ($('weatherWind')) $('weatherWind').textContent = `💨 ${wind} km/h`;
-        if ($('weatherFeel')) $('weatherFeel').textContent = `🌡️ Terasa ${feel}°C`;
+        if ($('weatherHumid')) $('weatherHumid').innerHTML = `<i class="fas fa-tint"></i> ${humid}%`;
+        if ($('weatherWind')) $('weatherWind').innerHTML = `<i class="fas fa-wind"></i> ${wind} km/h`;
+        if ($('weatherFeel')) $('weatherFeel').innerHTML = `<i class="fas fa-thermometer-half"></i> Terasa ${feel}°C`;
         if (card) card.style.opacity = '1';
       } catch (_) {
         // Jangan sembunyikan — tampilkan fallback agar layout tetap utuh
         if ($('weatherCond')) $('weatherCond').textContent = '—';
         if ($('weatherTemp')) $('weatherTemp').textContent = '—°C';
-        if ($('weatherIcon')) $('weatherIcon').textContent = '🌤️';
-        if ($('weatherHumid')) $('weatherHumid').textContent = '💧 —%';
-        if ($('weatherWind')) $('weatherWind').textContent = '💨 —';
-        if ($('weatherFeel')) $('weatherFeel').textContent = '🌡️ —°C';
+        if ($('weatherIcon')) $('weatherIcon').innerHTML = '<i class="fas fa-cloud-sun"></i>';
+        if ($('weatherHumid')) $('weatherHumid').innerHTML = '<i class="fas fa-tint"></i> —%';
+        if ($('weatherWind')) $('weatherWind').innerHTML = '<i class="fas fa-wind"></i> —';
+        if ($('weatherFeel')) $('weatherFeel').innerHTML = '<i class="fas fa-thermometer-half"></i> —°C';
         const card = $('weatherCard');
         if (card) card.style.opacity = '1';
       }
     }
     function _wxIcon(c) {
-      if (c === 0) return '☀️';
-      if (c <= 2) return '🌤️';
-      if (c === 3) return '☁️';
-      if (c <= 48) return '🌫️';
-      if (c <= 57) return '🌦️';
-      if (c <= 67) return '🌧️';
-      if (c <= 77) return '❄️';
-      if (c <= 82) return '🌧️';
-      if (c === 95) return '⛈️';
-      if (c >= 96) return '🌩️';
-      return '🌤️';
+      if (c === 0) return '<i class="fas fa-sun"></i>';
+      if (c <= 2) return '<i class="fas fa-cloud-sun"></i>';
+      if (c === 3) return '<i class="fas fa-cloud"></i>';
+      if (c <= 48) return '<i class="fas fa-smog"></i>';
+      if (c <= 57) return '<i class="fas fa-cloud-sun-rain"></i>';
+      if (c <= 67) return '<i class="fas fa-cloud-rain"></i>';
+      if (c <= 77) return '<i class="fas fa-snowflake"></i>';
+      if (c <= 82) return '<i class="fas fa-cloud-rain"></i>';
+      if (c === 95) return '<i class="fas fa-cloud-showers-heavy"></i>';
+      if (c >= 96) return '<i class="fas fa-cloud-showers-heavy"></i>';
+      return '<i class="fas fa-cloud-sun"></i>';
     }
     function _wxCond(c) {
       if (c === 0) return 'Cerah';
@@ -122,12 +122,12 @@
       if (on) {
         sw.style.background = '#3b82f6';
         if (knob) knob.style.left = '27px';
-        if (lbl) lbl.textContent = '🖥️ Mode Desktop Aktif';
+        if (lbl) lbl.innerHTML = '<i class="fas fa-desktop"></i> Mode Desktop Aktif';
         if (desc) desc.textContent = 'Layout diperlebar untuk layar besar (maks 900px)';
       } else {
         sw.style.background = '#6b7280';
         if (knob) knob.style.left = '3px';
-        if (lbl) lbl.textContent = '📱 Mode Mobile (Default)';
+        if (lbl) lbl.innerHTML = '<i class="fas fa-mobile-alt"></i> Mode Mobile (Default)';
         if (desc) desc.textContent = 'Layout standar untuk smartphone (maks 420px)';
       }
     }

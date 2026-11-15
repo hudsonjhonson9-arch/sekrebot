@@ -27,3 +27,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# n8n export & backup (mengandung token bot — jangan di-commit)
+n8n/backup/
+n8n/export/
+graphify-out/
+*.docx
+# sumber resmi generator SPT/SPPD tetap di-commit agar build bisa diulang
+!docs/format-spt-sppd-2026.docx
+aset.db
+*.db
+temp_qr*/
+.superpowers/
+~$*

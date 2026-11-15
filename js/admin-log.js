@@ -28,89 +28,120 @@
      * @returns {Promise<void>}
      */
     async function openLogEditor(uid = '', date = '', log = null, hintJenis = '') {
-      const isSA = typeof _isSuperAdmin === 'function' && _isSuperAdmin();
-      const isAdmin = isSA || (window.userProfile?.role?.toLowerCase().includes('admin')) || !!window.IS_ADMIN;
+      // Izin = boolean user_list.is_admin (bukan role). Fail-closed via isLogAdmin().
+      const isAdmin = typeof isLogAdmin === 'function' && isLogAdmin();
 
       if (!isAdmin) {
-        alert('Maaf, hanya Admin atau Super Admin yang diizinkan untuk menambah atau mengedit log secara manual.');
+        alert('Maaf, hanya Admin yang diizinkan untuk menambah atau mengedit log secara manual.');
         return;
       }
 
       const modal = $('logModal');
       if (!modal) return;
 
-      // Load pegawai list for dropdown if first time
-      await loadLogPegawaiList();
+      // ID_Log HANYA dari baris log yang diedit (objek `log` dari tombol Edit).
+      // Jangan pernah menebak ID dari cache rekap: tebakan itu bisa salah sasaran
+      // (mis. tombol "tambah pulang" malah menimpa log MASUK/keterangan yang ada).
+      const existingId = log ? getLogId(log) : '';
 
-      // Find the existing ID from various sources
-      let existingId = log ? getLogId(log) : '';
-
-      // SMART UI DETECTION: If ID still missing, search in our global order cache
-      if (!existingId && uid && date) {
-        const p = (window.userListOrder || []).find(u => String(u.id) === String(uid));
-        if (p) {
-          // Check which log we should prioritize based on possible selection
-          // If log data was passed but has no ID, or if we have a hintJenis
-          const hJ = (hintJenis || '').toUpperCase();
-          const isM = hJ.includes('MASUK');
-          const isP = hJ.includes('PULANG');
-
-          const logsToCheck = [];
-          if (isM) { if (p._rawMasukLog) logsToCheck.push(p._rawMasukLog); }
-          else if (isP) { if (p._rawPulangLog) logsToCheck.push(p._rawPulangLog); }
-          else {
-            if (p._rawMasukLog) logsToCheck.push(p._rawMasukLog);
-            if (p._rawPulangLog) logsToCheck.push(p._rawPulangLog);
-            if (p._rawKetLog) logsToCheck.push(p._rawKetLog);
-          }
-
-          for (const l of logsToCheck) {
-            const lid = getLogId(l);
-            if (lid) {
-              const lTime = (l.Jam || l.jam || '').substring(0, 5);
-              const paramTime = log ? ((log.Jam || log.jam || '').substring(0, 5)) : '';
-              if (paramTime && lTime === paramTime) {
-                existingId = lid;
-                break;
-              }
-              // If we have a hint, and this is the record of that type, we target it
-              if (hJ) {
-                const lJ = (l['Jenis Absen'] || l.jenis_absen || l.Jenis || '').toUpperCase();
-                if (lJ.includes(hJ)) {
-                   existingId = lid;
-                   break;
-                }
-              }
-            }
-          }
+      const applyMode = () => {
+        $('editLogId').value = existingId;
+        if (existingId) {
+          dom.setText('logModalTitle', 'UPDATE LOG ABSEN');
+          dom.setHTML('logModalIcon', '<i class="fas fa-edit"></i>');
+          dom.setText('btnSaveLogTxt', 'Perbarui Log');
+        } else {
+          dom.setText('logModalTitle', 'TAMBAH LOG MANUAL');
+          dom.setHTML('logModalIcon', '<i class="fas fa-plus"></i>');
+          dom.setText('btnSaveLogTxt', 'Simpan Log');
         }
-      }
+      };
 
-      $('editLogId').value = existingId;
       $('inLogPegawai').value = uid;
-      $('inLogTanggal').value = date || fmtD(nowWITA());
+      // Bug A: tanggal harus dari baris log yang diedit, bukan `_dari` (awal
+      // periode rekap) — kalau tidak, UPDATE memindahkan log ke tanggal lain.
+      const tglLog = log ? String(log.Tanggal || log.tanggal || '').slice(0, 10) : '';
+      $('inLogTanggal').value = /^\d{4}-\d{2}-\d{2}$/.test(tglLog) ? tglLog : (date || fmtD(nowWITA()));
       $('inLogJam').value = log ? ((log.Jam || log.jam || '').substring(0, 5)) : '';
-      $('inLogJenis').value = log ? (log['Jenis Absen'] || log.jenis_absen || log.Jenis || 'MASUK') : (hintJenis || 'MASUK');
-      $('inLogKet').value = log ? (log.Ket || log.ket || log.keterangan || '') : '';
-      dom.hide('logFormResult');
-
-      const isActualEdit = !!existingId;
-      if (isActualEdit) {
-        dom.setText('logModalTitle', 'UPDATE LOG ABSEN');
-        dom.setText('logModalIcon', '📝');
-        dom.setText('btnSaveLogTxt', 'Perbarui Log');
-      } else {
-        dom.setText('logModalTitle', 'TAMBAH LOG MANUAL');
-        dom.setText('logModalIcon', '➕');
-        dom.setText('btnSaveLogTxt', 'Simpan Log');
+      const jenisVal = log ? (log['Jenis Absen'] || log.jenis_absen || log.Jenis || 'MASUK') : (hintJenis || 'MASUK');
+      // Bug B: pastikan jenis yang diedit selalu punya opsi di dropdown,
+      // walau belum terdaftar di index.html (mis. DL, TANPA BERITA, ...).
+      const selJenis = $('inLogJenis');
+      if (jenisVal && selJenis && !Array.prototype.some.call(selJenis.options, o => o.value === jenisVal)) {
+        const optJenis = document.createElement('option');
+        optJenis.value = jenisVal;
+        optJenis.textContent = jenisVal;
+        selJenis.appendChild(optJenis);
       }
+      selJenis.value = jenisVal || 'MASUK';
+      // Auto-set jenis langsung dari jam pada add dan edit jika jam terisi
+      if ($('inLogJam')?.value) {
+        _autoJenisLog();
+      }
+      $('inLogKet').value = log ? (log.Ket || log.ket || log.keterangan || '') : '';
+      // Bug C: subjek tak boleh diganti saat edit — server sengaja mengabaikan
+      // perubahan ID/Nama/NIP, jadi mengganti pegawai hanya menipu admin
+      // (tampak sukses padahal catatan tetap milik orang lama).
+      const ddWrap = $('inLogPegawaiDd');
+      const ddInput = ddWrap ? ddWrap.querySelector('input') : null;
+      if (ddInput) {
+        ddInput.disabled = !!existingId;
+        ddInput.style.cursor = existingId ? 'not-allowed' : '';
+        ddInput.title = existingId ? 'Pegawai tidak bisa diganti saat mengedit log' : '';
+      }
+      if (ddWrap) {
+        ddWrap.style.pointerEvents = existingId ? 'none' : '';
+        ddWrap.style.opacity = existingId ? '.6' : '';
+        if (existingId) ddWrap.classList.remove('open');
+      }
+      dom.hide('logFormResult');
+      applyMode();
 
+      // Tampilkan modal sekarang juga — JANGAN blokir di network.
       modal.style.display = 'flex';
+
+      // Isi dropdown pegawai async (jangan await: fetch user-list + data
+      // biometrik inilah sumber "lama bukanya" modal).
+      // ponytail: value di-set di baris atas SEBELUM opsi terisi = hilang;
+      // set ulang setelah list load + sinkronkan label dropdown.
+      loadLogPegawaiList().then(function () {
+        if (uid) $('inLogPegawai').value = uid;
+        syncSearchDdLabel('inLogPegawai');
+      });
+
+      // Tidak ada lagi fallback "cari log lama lalu mode edit": kalau log dengan
+      // jenis yang sama memang sudah ada, server /api/log/add akan memperbarui
+      // baris itu (upsert per pegawai+tanggal+jenis) — tanpa menebak ID_Log
+      // dari baris lain yang bisa salah sasaran.
     }
 
     function closeLogEditor() {
       dom.hide('logModal');
     }
+
+    // ── Auto-set Jenis Absen langsung dari jam pada add dan edit ──
+    function _autoJenisLog() {
+      const jam = $('inLogJam')?.value, tgl = $('inLogTanggal')?.value, sel = $('inLogJenis');
+      if (!jam || !tgl || !sel) return;
+      const tot = toMenitStr(jam);
+      if (tot == null) return;
+      const j = typeof getJamForTanggal === 'function' ? getJamForTanggal(tgl) : {};
+      const jm = toMenitStr(j?.masuk) ?? (typeof JAM_MASUK_MENIT !== 'undefined' ? JAM_MASUK_MENIT : 435);
+      const jp = toMenitStr(j?.pulang) ?? (typeof JAM_PULANG_MENIT !== 'undefined' ? JAM_PULANG_MENIT : 870);
+      const targetVal = tot <= jm ? 'MASUK' : tot < 720 ? 'DI LUAR JAM MASUK' : tot < jp ? 'DI LUAR JAM PULANG' : 'PULANG';
+      if (!Array.from(sel.options).some(o => o.value === targetVal)) {
+        const opt = document.createElement('option');
+        opt.value = targetVal;
+        opt.textContent = targetVal;
+        sel.appendChild(opt);
+      }
+      sel.value = tot <= jm ? 'MASUK' : tot < 720 ? 'DI LUAR JAM MASUK' : tot < jp ? 'DI LUAR JAM PULANG' : 'PULANG';
+    }
+    window._autoJenisLog = _autoJenisLog;
+    ['input', 'change'].forEach(evt => {
+      document.getElementById('inLogJam')?.addEventListener(evt, _autoJenisLog);
+      document.getElementById('inLogTanggal')?.addEventListener(evt, _autoJenisLog);
+    });
 
     let _pegawaiListCache = null;
     async function loadLogPegawaiList() {
@@ -142,6 +173,9 @@
       } catch (e) { console.error('Load log pegawai failed', e); }
     }
 
+    /* ── Dropdown pegawai di modal log: searchable (select tersembunyi = value source) ── */
+    makeSearchDd('inLogPegawai', { ph: '— Pilih Pegawai —' });
+
     /**
      * Simpan entri log absensi (tambah baru atau update yang sudah ada).
      * @returns {Promise<void>}
@@ -151,11 +185,11 @@
     async function saveLog() {
       if (_isLogSubmitting) return; // Prevent double submission
 
-      const isSA = typeof _isSuperAdmin === 'function' && _isSuperAdmin();
-      const isAdmin = isSA || (window.userProfile?.role?.toLowerCase().includes('admin')) || !!window.IS_ADMIN;
+      // Izin = boolean user_list.is_admin (bukan role). Fail-closed via isLogAdmin().
+      const isAdmin = typeof isLogAdmin === 'function' && isLogAdmin();
 
       if (!isAdmin) {
-        alert('Maaf, hanya Admin atau Super Admin yang diizinkan untuk menyimpan log.');
+        alert('Maaf, hanya Admin yang diizinkan untuk menyimpan log.');
         return;
       }
       
@@ -166,26 +200,14 @@
       const jenis = $('inLogJenis').value;
       const ket = $('inLogKet').value.trim();
 
-      // SMART DETECTION: If no editId is set, check if we already have this log in memory (rekap view)
-      if (!editId && uid && tgl && jenis) {
-        const p = (window.userListOrder || []).find(u => String(u.id) === String(uid));
-        if (p) {
-          const jU = jenis.toUpperCase();
-          const isMasuk = jU.includes('MASUK');
-          const isPulang = jU.includes('PULANG');
-          const existing = isMasuk ? p._rawMasukLog : (isPulang ? p._rawPulangLog : p._rawKetLog);
-          const lid = existing ? getLogId(existing) : '';
-          if (lid) {
-            editId = lid;
-            console.log(`[Smart Log] Detected existing record: ${editId}. Switching to EDIT mode.`);
-          }
-        }
-      }
+      // editId hanya dari field tersembunyi yang diisi openLogEditor dari baris
+      // log yang benar-benar diedit. Tanpa tebak-ID: kalau log jenis sama sudah
+      // ada, server /add memperbaruinya; kalau belum, server INSERT baris baru.
 
       const isEdit = !!editId;
 
       if (!uid || !tgl || !jamRaw) {
-        showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'warning', '⚠️', 'Data Kurang', 'Pegawai, Tanggal, dan Jam wajib diisi.');
+        showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Data Kurang', 'Pegawai, Tanggal, dan Jam wajib diisi.');
         return;
       }
 
@@ -219,16 +241,16 @@
         const d = res?.data ?? {};
 
         if (!res.ok || d.ok === false) {
-          showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'fail', '❌', 'Gagal', d.message || 'Gagal menyimpan log.');
+          showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal', d.message || 'Gagal menyimpan log.');
         } else {
-          showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'success', '✅', 'Berhasil', isEdit ? 'Log absen diperbarui.' : 'Log absen manual ditambahkan.');
+          showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'success', '<i class="fas fa-check"></i>', 'Berhasil', (d.updated || isEdit) ? 'Log absen diperbarui.' : 'Log absen manual ditambahkan.');
           setTimeout(() => {
             closeLogEditor();
             loadRekap(); // Refresh rekap after change
           }, 2000);
         }
       } catch (e) {
-        showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'fail', '🔌', 'Koneksi Error', 'Server tidak merespons.');
+        showResult('logFormResult', 'logFormRIcon', 'logFormRTitle', 'logFormRMsg', 'fail', '<i class="fas fa-plug"></i>', 'Koneksi Error', 'Server tidak merespons.');
       } finally {
         _isLogSubmitting = false; // Reset Lock
         setBtnL('btnSaveLog', false, 'Simpan Log');

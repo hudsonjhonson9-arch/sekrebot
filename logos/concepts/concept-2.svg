@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <g id="dial">
+    <circle cx="256" cy="256" r="210" fill="#3B82F6"/>
+    <circle cx="256" cy="256" r="210" fill="none" stroke="#0F172A" stroke-width="14"/>
+    <circle cx="256" cy="256" r="148" fill="#0F172A"/>
+    <circle cx="256" cy="256" r="148" fill="none" stroke="#60A5FA" stroke-width="14"/>
+  </g>
+  <g id="hands">
+    <path d="M256 256 L181 213" fill="none" stroke="#F1F5F9" stroke-width="34" stroke-linecap="round"/>
+    <path d="M256 256 L358 197" fill="none" stroke="#F1F5F9" stroke-width="30" stroke-linecap="round"/>
+  </g>
+  <g id="check">
+    <path d="M220 332 L300 410 L452 286" fill="none" stroke="#0F172A" stroke-width="80" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M220 332 L300 410 L452 286" fill="none" stroke="#F1F5F9" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

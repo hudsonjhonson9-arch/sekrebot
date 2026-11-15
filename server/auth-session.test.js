@@ -23,11 +23,32 @@ async function drive(router, method, url, body = {}) {
   const req = { method, url, headers: { authorization: 'Bearer x' }, body, ip: '10.0.0.1' };
   let status = 200;
   let payload = null;
+  const setCookies = [];
   const res = {
     statusCode: 200,
     status(c) { status = c; return this; },
     json(p) { payload = p; return this; },
     set() { return this; },
+    cookie(name, val, opts) {
+      const attrs = [];
+      if (opts) {
+        if (opts.domain) attrs.push(`Domain=${opts.domain}`);
+        if (opts.path) attrs.push(`Path=${opts.path}`);
+        if (opts.maxAge != null) attrs.push(`Max-Age=${Math.floor(opts.maxAge / 1000)}`);
+        if (opts.httpOnly) attrs.push('HttpOnly');
+        if (opts.secure) attrs.push('Secure');
+        if (opts.sameSite) attrs.push(`SameSite=${opts.sameSite}`);
+      }
+      setCookies.push([`${name}=${val}`, ...attrs].join('; '));
+      return this;
+    },
+    clearCookie(name, opts) {
+      const attrs = [];
+      if (opts?.domain) attrs.push(`Domain=${opts.domain}`);
+      if (opts?.path) attrs.push(`Path=${opts.path}`);
+      setCookies.push([`${name}=`, ...attrs, 'Expires=Thu, 01 Jan 1970 00:00:00 GMT', 'Max-Age=0'].join('; '));
+      return this;
+    },
     end() { return this; },
   };
   const layer = router.stack.find((l) => l.route?.path && l.route.methods[method.toLowerCase()] && url.startsWith(l.route.path));
@@ -36,7 +57,7 @@ async function drive(router, method, url, body = {}) {
   let i = 0;
   const next = async (e) => { if (e) throw e; const h = handlers[i++]; if (h) await h.handle(req, res, next); };
   await next();
-  return { status, body: payload };
+  return { status, body: payload, setCookies };
 }
 
 test('role dari body diabaikan, selalu dari user_list', async () => {
@@ -243,3 +264,365 @@ test('login tidak membaca init_data Telegram (pure NIP)', async (t) => {
   const out = await drive(r, 'POST', '/api/auth/login', { nip: '99999' });
   assert.equal(out.status, 404);
 });
+
+test('login ditolak 403 jika status_aktif false', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const query = async (sql) => {
+    if (/user_list/i.test(sql)) {
+      return userListRows(sql, { id: '9', NIP: '12345', status_aktif: false, role: 'USER', instansi_id: 'bapperida' });
+    }
+    return { rows: [] };
+  };
+  const r = createAuthSessionRouter({ query });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '12345' });
+  assert.equal(out.status, 403);
+  assert.match(out.body.message, /dinonaktifkan/i);
+});
+
+test('login sukses menyertakan app_permissions', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const perms = { absensi: { enabled: true, role: 'PEGAWAI' } };
+  const query = async (sql) => {
+    if (/user_list/i.test(sql)) {
+      return userListRows(sql, { id: '9', NIP: '12345', status_aktif: true, app_permissions: perms, role: 'USER', instansi_id: 'bapperida' });
+    }
+    if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'd'.repeat(192) }] };
+    return { rows: [] };
+  };
+  const r = createAuthSessionRouter({ query });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '12345' });
+  assert.equal(out.status, 200);
+  assert.deepEqual(out.body.user.app_permissions, perms);
+});
+
+// ── Error DB tidak boleh menjatuhkan proses ──
+// Sebelumnya tak ada try/catch: query yang melempar jadi unhandled rejection →
+// Node exit → SEMUA rute 502 termasuk /api/health. Kontrak baru: balas 500.
+
+test('login: error DB dibalas 500, bukan melempar', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({ query: async () => { throw new Error('could not write init file'); } });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '200206302025061002' });
+  assert.equal(out.status, 500);
+  assert.equal(out.body.ok, false);
+});
+
+test('session: error DB dibalas 500, bukan melempar', async () => {
+  process.env.TELEGRAM_BOT_TOKEN = BOT;
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({ query: async () => { throw new Error('down'); } });
+  const out = await drive(r, 'POST', '/api/auth/session', { init_data: signInitData(TG_ID) });
+  assert.equal(out.status, 500);
+  assert.equal(out.body.ok, false);
+});
+
+test('logout: error DB dibalas 500, bukan melempar', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({ query: async () => { throw new Error('down'); } });
+  const out = await drive(r, 'POST', '/api/auth/logout', { session_token: 'c'.repeat(192) });
+  assert.equal(out.status, 500);
+});
+
+// ── SSO cookie arsip (injeksi util asli + secret dummy) ──
+
+test('login NIP sukses menerbitkan cookie arsip_session', async () => {
+  process.env.ARSIP_SESSION_SECRET = 'arsip-secret-16-chars-ok';
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const { pasangArsipCookie, lepasArsipCookie } = await import('./arsip-sso.js');
+  const r = createAuthSessionRouter({
+    query: async (sql) => {
+      if (/user_list/i.test(sql)) return userListRows(sql, { id: '9', NIP: '12345', role: 'USER', instansi_id: 'bapperida' });
+      if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'd'.repeat(192) }] };
+      return { rows: [] };
+    },
+    arsipSso: { pasangArsipCookie, lepasArsipCookie },
+  });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '12345' });
+  assert.equal(out.status, 200);
+  const set = out.setCookies.find((h) => /^arsip_session=/.test(h));
+  assert.ok(set, 'wajib ada header arsip_session');
+  assert.match(set, /Domain=\.mindcloud\.my\.id/);
+  assert.match(set, /HttpOnly/);
+  assert.match(set, /Path=\//);
+});
+
+test('login sukses TANPA secret arsip tidak set cookie (fail-open)', async () => {
+  delete process.env.ARSIP_SESSION_SECRET;
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const { pasangArsipCookie, lepasArsipCookie } = await import('./arsip-sso.js');
+  const r = createAuthSessionRouter({
+    query: async (sql) => {
+      if (/user_list/i.test(sql)) return userListRows(sql, { id: '9', NIP: '12345', role: 'USER', instansi_id: 'bapperida' });
+      if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'd'.repeat(192) }] };
+      return { rows: [] };
+    },
+    arsipSso: { pasangArsipCookie, lepasArsipCookie },
+  });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '12345' });
+  assert.equal(out.status, 200, 'login tetap sukses meski secret arsip kosong');
+  assert.ok(!out.setCookies.some((h) => /^arsip_session=/.test(h)));
+});
+
+test('logout membersihkan cookie arsip', async () => {
+  process.env.ARSIP_SESSION_SECRET = 'arsip-secret-16-chars-ok';
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const { pasangArsipCookie, lepasArsipCookie } = await import('./arsip-sso.js');
+  const r = createAuthSessionRouter({
+    query: async () => ({ rows: [] }),
+    arsipSso: { pasangArsipCookie, lepasArsipCookie },
+  });
+  const out = await drive(r, 'POST', '/api/auth/logout', { session_token: 'c'.repeat(192) });
+  assert.equal(out.status, 200);
+  const cleared = out.setCookies.find((h) => /^arsip_session=;/.test(h));
+  assert.ok(cleared, 'clearCookie harus mengosongkan arsip_session');
+  assert.match(cleared, /Max-Age=0/);
+});
+
+// ── Re-issue cookie arsip (webview Telegram: sesi valid tapi cookie tidak ada) ──
+
+test('arsip-cookie: sesi aktif & belum kedaluwarsa menerbitkan cookie arsip_session', async () => {
+  process.env.ARSIP_SESSION_SECRET = 'arsip-secret-16-chars-ok';
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const { pasangArsipCookie, lepasArsipCookie } = await import('./arsip-sso.js');
+  const seen = [];
+  const r = createAuthSessionRouter({
+    query: async (sql, params) => {
+      seen.push({ sql: String(sql), params });
+      if (/FROM auth_sessions/i.test(sql)) return { rows: [{ nip: '12345' }] };
+      return { rows: [] };
+    },
+    arsipSso: { pasangArsipCookie, lepasArsipCookie },
+  });
+  const out = await drive(r, 'POST', '/api/auth/arsip-cookie', { session_token: 'a'.repeat(192) });
+  assert.equal(out.status, 200);
+  const set = out.setCookies.find((h) => /^arsip_session=/.test(h));
+  assert.ok(set, 'wajib menerbitkan cookie arsip_session');
+  assert.match(set, /Domain=\.mindcloud\.my\.id/);
+  const lookup = seen.find((s) => /FROM auth_sessions/i.test(s.sql));
+  assert.ok(lookup.sql.includes('is_active'), 'lookup wajib cek is_active');
+  assert.ok(/expires_at\s*>\s*now\(\)/i.test(lookup.sql), 'lookup wajib cek belum kedaluwarsa');
+});
+
+test('arsip-cookie: sesi tidak dikenal/kedaluwarsa ditolak 401 tanpa cookie', async () => {
+  process.env.ARSIP_SESSION_SECRET = 'arsip-secret-16-chars-ok';
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const { pasangArsipCookie, lepasArsipCookie } = await import('./arsip-sso.js');
+  const r = createAuthSessionRouter({
+    query: async () => ({ rows: [] }),
+    arsipSso: { pasangArsipCookie, lepasArsipCookie },
+  });
+  const out = await drive(r, 'POST', '/api/auth/arsip-cookie', { session_token: 'a'.repeat(192) });
+  assert.equal(out.status, 401);
+  assert.ok(!out.setCookies.some((h) => /^arsip_session=/.test(h)), 'tidak boleh menerbitkan cookie untuk sesi mati');
+});
+
+test('arsip-cookie: token bentuk salah ditolak 400 tanpa menyentuh DB', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  let called = 0;
+  const r = createAuthSessionRouter({ query: async () => { called++; return { rows: [] }; } });
+  for (const bad of [undefined, '', 'pendek', 'C'.repeat(192)]) {
+    const out = await drive(r, 'POST', '/api/auth/arsip-cookie', { session_token: bad });
+    assert.equal(out.status, 400, `token ${String(bad).slice(0, 8)} harus 400`);
+  }
+  assert.equal(called, 0, 'SQL tidak boleh jalan untuk token tidak valid');
+});
+
+test('login NIP meminta password saat require_password aktif di pengaturan', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({
+    query: async (sql) => {
+      if (/FROM user_list/i.test(sql)) {
+        return {
+          rows: [{
+            id: '42',
+            NIP: '199001012010011001',
+            username: 'budi',
+            role: 'USER',
+            instansi_id: 'bapperida',
+            status_aktif: true,
+            password_hash: '$2a$10$qyVxAODHUx6WLLF0Tm/I7u/T1b.m0hZW2FD2ivm/6U7K.SRiIgjwq',
+          }],
+        };
+      }
+      if (/FROM pengaturan/i.test(sql)) {
+        return { rows: [{ value: '1' }] };
+      }
+      return { rows: [] };
+    },
+  });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '199001012010011001' });
+  assert.equal(out.status, 401);
+  assert.equal(out.body.require_password, true);
+  assert.match(out.body.message, /Kata sandi wajib diisi/);
+});
+
+test('login NIP dengan password salah ditolak 401 saat require_password aktif', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({
+    query: async (sql) => {
+      if (/FROM user_list/i.test(sql)) {
+        return {
+          rows: [{
+            id: '42',
+            NIP: '199001012010011001',
+            username: 'budi',
+            role: 'USER',
+            instansi_id: 'bapperida',
+            status_aktif: true,
+            password_hash: '$2a$10$qyVxAODHUx6WLLF0Tm/I7u/T1b.m0hZW2FD2ivm/6U7K.SRiIgjwq',
+          }],
+        };
+      }
+      if (/FROM pengaturan/i.test(sql)) {
+        return { rows: [{ value: '1' }] };
+      }
+      return { rows: [] };
+    },
+  });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '199001012010011001', password: 'WrongPassword' });
+  assert.equal(out.status, 401);
+  assert.equal(out.body.require_password, true);
+  assert.match(out.body.message, /Kata sandi salah/);
+});
+
+test('login NIP dengan password benar sukses saat require_password aktif', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({
+    query: async (sql) => {
+      if (/FROM user_list/i.test(sql)) {
+        return {
+          rows: [{
+            id: '42',
+            NIP: '199001012010011001',
+            username: 'budi',
+            role: 'USER',
+            instansi_id: 'bapperida',
+            status_aktif: true,
+            password_hash: '$2a$10$qyVxAODHUx6WLLF0Tm/I7u/T1b.m0hZW2FD2ivm/6U7K.SRiIgjwq',
+          }],
+        };
+      }
+      if (/FROM pengaturan/i.test(sql)) {
+        return { rows: [{ value: '1' }] };
+      }
+      if (/INSERT INTO auth_sessions/i.test(sql)) {
+        return { rows: [{ session_token: 'f'.repeat(192) }] };
+      }
+      return { rows: [] };
+    },
+  });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '199001012010011001', password: 'BapperidaSB2026' });
+  assert.equal(out.status, 200);
+  assert.equal(out.body.ok, true);
+  assert.equal(out.body.session_token, 'f'.repeat(192));
+  assert.equal(out.body.user.password_hash, undefined, 'password_hash tidak boleh bocor ke client');
+});
+
+test('login NIP menyertakan is_mandatory_face=true saat NIP terdaftar di face_mandatory_nips', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const query = async (sql) => {
+    if (/user_list/i.test(sql)) {
+      return userListRows(sql, { id: '10', NIP: '198505052010011005', role: 'USER', instansi_id: 'bapperida', username: 'Pegawai Wajib Face' });
+    }
+    if (/FROM pengaturan/i.test(sql) && /face_mandatory_nips/i.test(sql)) {
+      return { rows: [{ value: JSON.stringify(['198505052010011005', '199001012010011001']) }] };
+    }
+    if (/INSERT INTO auth_sessions/i.test(sql)) {
+      return { rows: [{ session_token: 'a'.repeat(192) }] };
+    }
+    return { rows: [] };
+  };
+  const r = createAuthSessionRouter({ query });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '198505052010011005' });
+  assert.equal(out.status, 200);
+  assert.equal(out.body.ok, true);
+  assert.equal(out.body.user.is_mandatory_face, true);
+});
+
+test('login NIP menyertakan is_mandatory_face=false saat NIP tidak ada di face_mandatory_nips', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const query = async (sql) => {
+    if (/user_list/i.test(sql)) {
+      return userListRows(sql, { id: '11', NIP: '199912312022011009', role: 'USER', instansi_id: 'bapperida', username: 'Pegawai Bebas' });
+    }
+    if (/FROM pengaturan/i.test(sql) && /face_mandatory_nips/i.test(sql)) {
+      return { rows: [{ value: JSON.stringify(['198505052010011005']) }] };
+    }
+    if (/INSERT INTO auth_sessions/i.test(sql)) {
+      return { rows: [{ session_token: 'b'.repeat(192) }] };
+    }
+    return { rows: [] };
+  };
+  const r = createAuthSessionRouter({ query });
+  const out = await drive(r, 'POST', '/api/auth/login', { nip: '199912312022011009' });
+  assert.equal(out.status, 200);
+  assert.equal(out.body.ok, true);
+  assert.equal(out.body.user.is_mandatory_face, false);
+});
+
+test('login akun ADMIN yang sudah punya password_hash wajib verifikasi password walau require_password off', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({
+    query: async (sql) => {
+      if (/FROM user_list/i.test(sql)) {
+        return userListRows(sql, {
+          id: '77',
+          NIP: '198001012005011001',
+          username: 'Admin Utama',
+          role: 'ADMIN',
+          instansi_id: 'bapperida',
+          status_aktif: true,
+          password_hash: '$2a$10$qyVxAODHUx6WLLF0Tm/I7u/T1b.m0hZW2FD2ivm/6U7K.SRiIgjwq',
+        });
+      }
+      return { rows: [] };
+    },
+  });
+  const noPwd = await drive(r, 'POST', '/api/auth/login', { nip: '198001012005011001' });
+  assert.equal(noPwd.status, 401);
+  assert.equal(noPwd.body.require_password, true);
+});
+
+test('POST /api/auth/register mendaftarkan pegawai baru dengan role USER dan menerbitkan session_token 192 hex', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const seen = [];
+  const r = createAuthSessionRouter({
+    query: async (sql, params) => {
+      seen.push({ sql: String(sql), params });
+      if (/SELECT 1 FROM user_list/i.test(sql)) return { rows: [] };
+      if (/INSERT INTO user_list/i.test(sql)) {
+        return {
+          rows: [{
+            id: params[0],
+            nama: params[1],
+            nip: params[2],
+            role: 'USER',
+            instansi_id: params[8],
+          }],
+        };
+      }
+      if (/INSERT INTO auth_sessions/i.test(sql)) {
+        return { rows: [{ session_token: 'e'.repeat(192) }] };
+      }
+      return { rows: [] };
+    },
+  });
+  const out = await drive(r, 'POST', '/api/auth/register', {
+    id: '123456',
+    nama: 'Pegawai Baru',
+    nip: '199801012025011001',
+    jabatan: 'Staf',
+    bidang: 'Sekretariat',
+    pangkat: 'III/a',
+    no_hp: '081234567890',
+    instansi_id: 'bapperida',
+    role: 'SUPERADMIN', // injeksi role harus diabaikan → paksa USER
+  });
+  assert.equal(out.status, 201);
+  assert.equal(out.body.ok, true);
+  assert.match(out.body.session_token, /^[0-9a-f]{192}$/);
+  assert.equal(out.body.user.role, 'USER');
+  const insSession = seen.find((s) => /INSERT INTO auth_sessions/i.test(s.sql));
+  assert.ok(insSession.params.includes('USER'), 'sesi hasil register wajib role USER');
+});
+

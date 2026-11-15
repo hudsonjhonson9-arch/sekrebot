@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+
+<html lang="id"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100%;margin:0;padding:0;background-color:#f8f9ff;}body{overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 'surface': '#f8f9ff', 'primary-container': '#2563eb', 'secondary': '#006c49', 'on-error': '#ffffff', 'inverse-surface': '#213145', 'on-secondary-fixed': '#002113', 'on-primary-fixed-variant': '#003ea8', 'surface-container': '#e5eeff', 'on-surface': '#0b1c30', 'on-tertiary-container': '#ffeedd', 'secondary-container': '#6cf8bb', 'tertiary-fixed-dim': '#ffb95f', 'surface-tint': '#0053db', 'error': '#ba1a1a', 'surface-container-highest': '#d3e4fe', 'on-tertiary': '#ffffff', 'surface-container-low': '#eff4ff', 'on-primary': '#ffffff', 'on-background': '#0b1c30', 'inverse-primary': '#b4c5ff', 'surface-variant': '#d3e4fe', 'on-tertiary-fixed': '#2a1700', 'on-primary-container': '#eeefff', 'outline-variant': '#c3c6d7', 'secondary-fixed': '#6ffbbe', 'surface-bright': '#f8f9ff', 'primary-fixed': '#dbe1ff', 'surface-container-lowest': '#ffffff', 'on-tertiary-fixed-variant': '#653e00', 'tertiary': '#784b00', 'error-container': '#ffdad6', 'background': '#f8f9ff', 'secondary-fixed-dim': '#4edea3', 'on-secondary-container': '#00714d', 'outline': '#737686', 'surface-dim': '#cbdbf5', 'tertiary-container': '#996100', 'tertiary-fixed': '#ffddb8', 'surface-container-high': '#dce9ff', 'on-error-container': '#93000a', 'primary': '#004ac6', 'on-secondary-fixed-variant': '#005236', 'on-surface-variant': '#434655', 'on-primary-fixed': '#00174b', 'inverse-on-surface': '#eaf1ff', 'primary-fixed-dim': '#b4c5ff', 'on-secondary': '#ffffff' }, borderRadius: { 'DEFAULT': '0.25rem', 'lg': '0.5rem', 'xl': '0.75rem', 'full': '9999px' }, spacing: { 'gutter': '1rem', 'space-xl': '2rem', 'margin-lg': '1.5rem', 'space-xs': '0.25rem', 'margin': '1rem', 'space-md': '1rem', 'space-sm': '0.5rem', 'gutter-sm': '0.75rem', 'margin-md': '1.25rem', 'space-lg': '1.5rem' }, fontFamily: { 'time-display': ['Plus Jakarta Sans'], 'display-lg-mobile': ['Plus Jakarta Sans'], 'title-md': ['Plus Jakarta Sans'], 'label-lg': ['Plus Jakarta Sans'], 'headline-sm': ['Plus Jakarta Sans'], 'display-lg': ['Plus Jakarta Sans'], 'body-lg': ['Plus Jakarta Sans'], 'headline-lg': ['Plus Jakarta Sans'], 'label-sm': ['Plus Jakarta Sans'], 'body-md': ['Plus Jakarta Sans'], 'label-md': ['Plus Jakarta Sans'], 'body-sm': ['Plus Jakarta Sans'], 'headline-md': ['Plus Jakarta Sans'] }, fontSize: { 'time-display': ['40px', { lineHeight: '48px', letterSpacing: '-0.03em', fontWeight: '800' }], 'display-lg-mobile': ['28px', { lineHeight: '36px', letterSpacing: '-0.02em', fontWeight: '700' }], 'title-md': ['16px', { lineHeight: '22px', fontWeight: '600' }], 'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.01em', fontWeight: '600' }], 'headline-sm': ['18px', { lineHeight: '24px', fontWeight: '600' }], 'display-lg': ['36px', { lineHeight: '44px', letterSpacing: '-0.02em', fontWeight: '700' }], 'body-lg': ['16px', { lineHeight: '24px', fontWeight: '400' }], 'headline-lg': ['24px', { lineHeight: '32px', letterSpacing: '-0.01em', fontWeight: '700' }], 'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.03em', fontWeight: '500' }], 'body-md': ['14px', { lineHeight: '20px', fontWeight: '400' }], 'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.02em', fontWeight: '600' }], 'body-sm': ['12px', { lineHeight: '16px', fontWeight: '400' }], 'headline-md': ['20px', { lineHeight: '28px', letterSpacing: '-0.01em', fontWeight: '600' }] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-on-surface min-h-screen flex flex-col antialiased selection:bg-primary-fixed"><header class="fixed top-0 inset-x-0 z-50 bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.03)] pt-safe"><div class="h-16 px-margin flex items-center justify-between"><div class="flex items-center gap-space-sm"><img alt="PresensiPlus Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/ALJJyrDgSWmukZt0MtvFvPyFRmb2HCxNzuUCbOltfljMCgDfe7ciZ1E9tGYEnWpD1vhtP0h4SVbtBl60g0KFJWzPbpCiWpuV4kwYvcXBo5bYhV8vIzOG1Pqj8ZqnHT8SmPzpD5q_oA5mUszJ17V48SbHJo3XDU5X6Kj_zRho_FSXng3StSOUQfdjMlkf-qOFsijEctMYB7NzCAFEMN62id5-ac-b5cQWN5u7sNzZeqIMPGG3"/><div class="flex flex-col justify-center"><span class="font-headline-sm text-headline-sm text-primary tracking-tight leading-none">PresensiPlus</span><span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Riwayat</span></div></div><div class="flex items-center gap-space-sm"><button aria-label="Notifikasi" class="w-11 h-11 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high/60 transition-colors relative"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-error ring-2 ring-surface"></span></button><div class="p-0.5 rounded-full ring-2 ring-primary/20"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBKl0OizAMsmvdFnLg68vDeGsuuq3fuKvLecLOeyGCHwbzdHjNw5kAwxmITaIuvYEZzAilvnUHuGVlv5HV0Www8hVhVxDYVaeJDSHYZcC6H-tUdHMXIZVRiXn9FBt5L-1VF_0qVK86f1GtOD3ypSHpE2S5o1IUM53lQRrp4E8kg3zXJKJYwC4GShNtU4gXDkgqoSWvfHTUiT9Y6816SuzOuG7iSLF7EyYdjtDBSNCA"/></div></div></div></header><main class="flex-1 flex flex-col relative w-full px-margin pt-16 pb-28 bg-surface"><div class="flex flex-col w-full space-y-space-md">
+<!-- Month Selector & Download Header Area -->
+<div class="flex items-center justify-between gap-space-sm pt-1">
+<div class="relative inline-block">
+<button class="flex items-center gap-space-xs px-3.5 py-2 rounded-xl bg-surface-container-lowest shadow-sm hover:bg-surface-container-low transition-all text-on-surface" id="monthDropdownBtn">
+<span class="material-symbols-outlined text-[20px] text-primary">calendar_month</span>
+<span class="font-headline-sm text-headline-sm">Oktober 2024</span>
+<span class="material-symbols-outlined text-[18px] text-outline transition-transform duration-200" id="dropdownArrow">expand_more</span>
+</button>
+<!-- Micro dropdown menu -->
+<div class="hidden absolute left-0 mt-2 w-48 rounded-xl bg-surface-container-lowest shadow-xl p-1.5 z-30 transition-all" id="monthDropdownMenu">
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-primary bg-primary-fixed/40 font-label-md text-label-md" href="#">
+<span>Oktober 2024</span>
+<span class="material-symbols-outlined text-[18px]">check</span>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low font-label-md text-label-md transition-colors" href="#">
+<span>September 2024</span>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low font-label-md text-label-md transition-colors" href="#">
+<span>Agustus 2024</span>
+</a>
+</div>
+</div>
+<!-- Download PDF Action -->
+<button class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary transition-colors shadow-sm active:scale-95" title="Download Rekap PDF">
+<span class="material-symbols-outlined text-[19px]">picture_as_pdf</span>
+<span class="font-label-md text-label-md">Unduh Rekap</span>
+</button>
+</div>
+<!-- Performance Overview Card -->
+<div class="w-full rounded-2xl bg-surface-container-lowest p-space-md shadow-[0px_4px_20px_-2px_rgba(100,116,139,0.08)] relative overflow-hidden">
+<div class="flex items-center justify-between mb-space-md">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">analytics</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-on-surface">Performa Kehadiran</span>
+</div>
+<span class="inline-flex items-center px-2.5 py-1 rounded-full bg-secondary-container/40 text-on-secondary-container font-label-sm text-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary mr-1.5 animate-pulse"></span>
+        Sesuai Regulasi HR
+      </span>
+</div>
+<div class="grid grid-cols-12 gap-space-sm items-center">
+<!-- Attendance Gauge (Visual Inline SVG) -->
+<div class="col-span-5 flex flex-col items-center justify-center p-2 rounded-xl bg-surface-container-low/70">
+<div class="relative w-20 h-20 flex items-center justify-center">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-container-highest stroke-current" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="3.5"></path>
+<path class="text-secondary stroke-current" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-dasharray="98, 100" stroke-linecap="round" stroke-width="3.5"></path>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+<span class="font-headline-md text-headline-md text-on-surface leading-none font-bold">98%</span>
+<span class="font-label-sm text-label-sm text-outline mt-0.5">Disiplin</span>
+</div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant text-center mt-1.5">Tingkat Kehadiran</span>
+</div>
+<!-- Quick Metrics Summary -->
+<div class="col-span-7 flex flex-col justify-between space-y-2">
+<div class="bg-surface-container-low/70 p-2.5 rounded-xl">
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Total Akumulasi Jam</span>
+<div class="flex items-baseline gap-1 mt-0.5">
+<span class="font-headline-md text-headline-md text-primary font-bold">142</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Jam</span>
+<span class="font-headline-md text-headline-md text-primary font-bold ml-1">30</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Menit</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-1.5 text-center">
+<div class="bg-surface-container-low/50 py-1.5 px-1 rounded-lg">
+<span class="font-headline-sm text-headline-sm text-secondary font-bold block leading-none">17</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant scale-90 block mt-0.5">Tepat</span>
+</div>
+<div class="bg-surface-container-low/50 py-1.5 px-1 rounded-lg">
+<span class="font-headline-sm text-headline-sm text-tertiary-container font-bold block leading-none">1</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant scale-90 block mt-0.5">Telat</span>
+</div>
+<div class="bg-surface-container-low/50 py-1.5 px-1 rounded-lg">
+<span class="font-headline-sm text-headline-sm text-outline font-bold block leading-none">0</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant scale-90 block mt-0.5">Izin</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Timeline Section Title -->
+<div class="flex items-center justify-between px-1 pt-1">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px] text-primary">history_edu</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Log Absensi Harian</h2>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">3 Hari Terakhir</span>
+</div>
+<!-- Log Cards Stream -->
+<div class="flex flex-col space-y-space-sm">
+<!-- Card 1: Rabu, 23 Okt 2024 (Tepat Waktu & Verified GPS) -->
+<div class="w-full rounded-2xl bg-surface-container-lowest p-space-md shadow-[0px_4px_20px_-2px_rgba(100,116,139,0.08)] flex flex-col space-y-3">
+<!-- Card Header -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-secondary-container/50 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div>
+<h3 class="font-title-md text-title-md text-on-surface leading-tight">Rabu, 23 Okt 2024</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Shift Pagi • 08:30 - 17:30</span>
+</div>
+</div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-secondary-container/30 text-on-secondary-container font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary mr-1"></span>
+          Tepat Waktu
+        </span>
+</div>
+<!-- Detail Punch Section -->
+<div class="grid grid-cols-2 gap-space-sm bg-surface-container-low/60 rounded-xl p-2.5">
+<!-- Punch In -->
+<div class="flex flex-col space-y-1">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px] text-secondary">login</span>
+<span class="font-label-sm text-label-sm">Absen Masuk</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold">08:24 <span class="font-label-sm text-label-sm font-normal text-on-surface-variant">WIB</span></span>
+<div class="flex items-center gap-1.5 pt-0.5">
+<img class="w-6 h-6 rounded-full object-cover shadow-xs" data-alt="A clean photorealistic biometric self-portrait of an Indonesian male corporate professional wearing a navy lanyard and white collared work shirt, well lit indoor office lobby lighting, soft natural expression, ultra crisp sharp focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6nozs2VobF8RYkybWjBDSrYJICV8kiGzdHmjxBFi8AxxrxK87rd_MZEk3xc52rnnNj-qCwkgowlqrWFvsz1sjsH_wI7BIs_xVbFDYvd15A8j6o7wPJ9_QySDNQuUdK1W22Bun7cmYSeSjpZAiTA4rGC3q-l8hxQsrzPW11k82E_3WBk49S1kNWpKPhwIFcMGkIGiyo6SRF8Ksi8lKrrnZp59qTTW7BuD1FpZJRTw"/>
+<span class="inline-flex items-center gap-0.5 font-label-sm text-label-sm text-secondary">
+<span class="material-symbols-outlined text-[12px]">verified</span>
+              GPS Valid
+            </span>
+</div>
+</div>
+<!-- Punch Out -->
+<div class="flex flex-col space-y-1 border-l border-surface-container-high/40 pl-2.5">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px] text-primary">logout</span>
+<span class="font-label-sm text-label-sm">Absen Pulang</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold">17:35 <span class="font-label-sm text-label-sm font-normal text-on-surface-variant">WIB</span></span>
+<div class="flex items-center gap-1 pt-0.5">
+<span class="material-symbols-outlined text-[14px] text-secondary">task_alt</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Presensi Lengkap</span>
+</div>
+</div>
+</div>
+<!-- Card Footer Metric -->
+<div class="flex items-center justify-between pt-0.5 text-on-surface-variant font-label-sm text-label-sm">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary">schedule</span>
+          Durasi Kerja: <strong class="text-on-surface font-semibold">9 jam 11 menit</strong>
+</span>
+<button class="text-primary font-label-sm text-label-sm flex items-center hover:underline">
+          Detail
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Card 2: Selasa, 22 Okt 2024 (Terlambat dengan Note HR) -->
+<div class="w-full rounded-2xl bg-surface-container-lowest p-space-md shadow-[0px_4px_20px_-2px_rgba(100,116,139,0.08)] flex flex-col space-y-3">
+<!-- Card Header -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-tertiary-fixed/60 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+</div>
+<div>
+<h3 class="font-title-md text-title-md text-on-surface leading-tight">Selasa, 22 Okt 2024</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Shift Pagi • 08:30 - 17:30</span>
+</div>
+</div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-tertiary-fixed/50 text-on-tertiary-fixed-variant font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary mr-1"></span>
+          Terlambat 8m
+        </span>
+</div>
+<!-- Detail Punch Section -->
+<div class="grid grid-cols-2 gap-space-sm bg-surface-container-low/60 rounded-xl p-2.5">
+<!-- Punch In -->
+<div class="flex flex-col space-y-1">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px] text-tertiary">login</span>
+<span class="font-label-sm text-label-sm">Absen Masuk</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-tertiary font-bold">08:38 <span class="font-label-sm text-label-sm font-normal text-on-surface-variant">WIB</span></span>
+<div class="flex items-center gap-1.5 pt-0.5">
+<img class="w-6 h-6 rounded-full object-cover shadow-xs" data-alt="Close up realistic verification portrait of a Southeast Asian employee standing near an urban train station entrance, soft morning light, holding smartphone, sharp detail and natural skin tone." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC4sIrVb-B2bcK15wmnhWCmiGFEVgbNfL6CmI-CItiFXj9ydjqD3UpHQ6NHM0oegnQqwMVv-rFhXEfFbPvLxImgZWN5AoyLuDDA6BQK902QM6Ypqk3CsAv7IKE5kDwCgTG_erJumTfVg1XbcQZVFVAGaTkodJjSRL9fIhHkOoBz7jh8ijAI9oaf8Iqa1EsBBdEj4JrRBvY3JZQaLB-87mFRRHOUmqZmS7SH7rdvaYI"/>
+<span class="inline-flex items-center gap-0.5 font-label-sm text-label-sm text-secondary">
+<span class="material-symbols-outlined text-[12px]">verified</span>
+              Dukuh Atas
+            </span>
+</div>
+</div>
+<!-- Punch Out -->
+<div class="flex flex-col space-y-1 border-l border-surface-container-high/40 pl-2.5">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px] text-primary">logout</span>
+<span class="font-label-sm text-label-sm">Absen Pulang</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold">17:45 <span class="font-label-sm text-label-sm font-normal text-on-surface-variant">WIB</span></span>
+<div class="flex items-center gap-1 pt-0.5">
+<span class="material-symbols-outlined text-[14px] text-secondary">task_alt</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Presensi Lengkap</span>
+</div>
+</div>
+</div>
+<!-- Justification / Catatan Keterlambatan -->
+<div class="flex items-start gap-2 p-2 rounded-xl bg-surface-container-high/40 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-tertiary shrink-0 mt-0.5">info</span>
+<div class="flex-1 min-w-0">
+<p class="font-label-sm text-label-sm leading-snug">
+<strong class="text-on-surface font-semibold">Alasan Disetujui HR:</strong> Kendala teknis operasional LRT Jabodebek. Tidak memotong tunjangan kehadiran.
+          </p>
+</div>
+</div>
+<!-- Card Footer Metric -->
+<div class="flex items-center justify-between pt-0.5 text-on-surface-variant font-label-sm text-label-sm">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary">schedule</span>
+          Durasi Kerja: <strong class="text-on-surface font-semibold">9 jam 7 menit</strong>
+</span>
+<button class="text-primary font-label-sm text-label-sm flex items-center hover:underline">
+          Detail
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Card 3: Senin, 21 Okt 2024 (Tepat Waktu - Standar) -->
+<div class="w-full rounded-2xl bg-surface-container-lowest p-space-md shadow-[0px_4px_20px_-2px_rgba(100,116,139,0.08)] flex flex-col space-y-3">
+<!-- Card Header -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-secondary-container/50 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div>
+<h3 class="font-title-md text-title-md text-on-surface leading-tight">Senin, 21 Okt 2024</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Shift Pagi • 08:30 - 17:30</span>
+</div>
+</div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-secondary-container/30 text-on-secondary-container font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary mr-1"></span>
+          Tepat Waktu
+        </span>
+</div>
+<!-- Detail Punch Section -->
+<div class="grid grid-cols-2 gap-space-sm bg-surface-container-low/60 rounded-xl p-2.5">
+<!-- Punch In -->
+<div class="flex flex-col space-y-1">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px] text-secondary">login</span>
+<span class="font-label-sm text-label-sm">Absen Masuk</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold">08:15 <span class="font-label-sm text-label-sm font-normal text-on-surface-variant">WIB</span></span>
+<div class="flex items-center gap-1.5 pt-0.5">
+<img class="w-6 h-6 rounded-full object-cover shadow-xs" data-alt="Crisp professional selfie attendance photo of young Indonesian office worker with company ID badge inside high rise corporate lobby, bright natural morning sunlight, high fidelity rendering." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOWpVoYkmwdfyrTGMl9hrl2Js7324ALe1GNfD1o8V5j43_Ud057zMpKivN5YYXO4z0oFuD70uRAu-9lySkIdz5bbvqokqh8ttk78-yCsZdHjntM56UrYfEpldayIuDzM-b3XNAd6irYN2hxxcyWDIQfoqAGUQmC3CW6sZD7F_wKA3SOraXYRZVviPlPdrKShJh_U62JFDR4HOs3yqj3Ko5U9XMUnyygVKrnbajgy8"/>
+<span class="inline-flex items-center gap-0.5 font-label-sm text-label-sm text-secondary">
+<span class="material-symbols-outlined text-[12px]">verified</span>
+              HQ Menara 1
+            </span>
+</div>
+</div>
+<!-- Punch Out -->
+<div class="flex flex-col space-y-1 border-l border-surface-container-high/40 pl-2.5">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px] text-primary">logout</span>
+<span class="font-label-sm text-label-sm">Absen Pulang</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold">17:30 <span class="font-label-sm text-label-sm font-normal text-on-surface-variant">WIB</span></span>
+<div class="flex items-center gap-1 pt-0.5">
+<span class="material-symbols-outlined text-[14px] text-secondary">task_alt</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Presensi Lengkap</span>
+</div>
+</div>
+</div>
+<!-- Card Footer Metric -->
+<div class="flex items-center justify-between pt-0.5 text-on-surface-variant font-label-sm text-label-sm">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary">schedule</span>
+          Durasi Kerja: <strong class="text-on-surface font-semibold">9 jam 15 menit</strong>
+</span>
+<button class="text-primary font-label-sm text-label-sm flex items-center hover:underline">
+          Detail
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- End of Stream Note & Regulatory Badge -->
+<div class="py-2 flex flex-col items-center justify-center text-center space-y-1">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-primary">verified_user</span>
+<span class="font-label-sm text-label-sm">Data terenkripsi &amp; tersinkronisasi UU Ketenagakerjaan</span>
+</div>
+<p class="font-body-sm text-body-sm text-outline">
+      Menampilkan 3 dari 18 rekaman hari kerja bulan ini
+    </p>
+</div>
+</div>
+<script>
+  (function() {
+    const dropdownBtn = document.getElementById('monthDropdownBtn');
+    const dropdownMenu = document.getElementById('monthDropdownMenu');
+    const arrow = document.getElementById('dropdownArrow');
+
+    if (dropdownBtn && dropdownMenu) {
+      dropdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = !dropdownMenu.classList.contains('hidden');
+        if (isOpen) {
+          dropdownMenu.classList.add('hidden');
+          arrow.style.transform = 'rotate(0deg)';
+        } else {
+          dropdownMenu.classList.remove('hidden');
+          arrow.style.transform = 'rotate(180deg)';
+        }
+      });
+
+      document.addEventListener('click', () => {
+        dropdownMenu.classList.add('hidden');
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
+      });
+    }
+  })();
+</script></main><div class="fixed bottom-0 inset-x-0 z-50 pointer-events-none pb-safe"><nav class="pointer-events-auto mx-margin mb-3 bg-surface-container-lowest/95 backdrop-blur-xl rounded-2xl shadow-[0_12px_32px_-4px_rgba(15,23,42,0.12),0_4px_12px_-2px_rgba(15,23,42,0.04)] px-space-xs py-1.5" data-active-classes="text-primary font-bold"><div class="flex justify-around items-center h-14"><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-space-xs rounded-xl text-on-surface-variant transition-all" data-path="presensi" href="#"><span class="material-symbols-outlined text-[24px]">fingerprint</span><span class="font-label-md text-label-md mt-0.5">Presensi</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-space-xs rounded-xl text-on-surface-variant transition-all" data-path="jadwal-shift" href="#"><span class="material-symbols-outlined text-[24px]">calendar_month</span><span class="font-label-md text-label-md mt-0.5">Jadwal Shift</span></a><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-space-xs rounded-xl transition-all text-primary font-bold" data-path="riwayat" href="#"><span class="material-symbols-outlined text-[24px]">history</span><span class="font-label-md text-label-md mt-0.5">Riwayat</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-space-xs rounded-xl text-on-surface-variant transition-all" data-path="profil" href="#"><span class="material-symbols-outlined text-[24px]">person</span><span class="font-label-md text-label-md mt-0.5">Profil</span></a></div></nav></div></body></html>

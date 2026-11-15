@@ -1,0 +1,25 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <g id="shield">
+    <path
+      d="M80 72 H432 V268 C432 364 352 440 256 472 C160 440 80 364 80 268 Z"
+      fill="#3B82F6"
+      stroke="#0F172A"
+      stroke-width="14"
+      stroke-linejoin="round"
+    />
+  </g>
+  <g id="border">
+    <path
+      d="M108 100 H404 V264 C404 346 336 412 256 442 C176 412 108 346 108 264 Z"
+      fill="none"
+      stroke="#F1F5F9"
+      stroke-width="12"
+      stroke-linejoin="round"
+    />
+  </g>
+  <g id="monogram" fill="#F1F5F9">
+    <rect x="174" y="158" width="46" height="196" />
+    <rect x="292" y="158" width="46" height="196" />
+    <rect x="220" y="234" width="72" height="44" />
+  </g>
+</svg>

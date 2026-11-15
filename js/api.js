@@ -10,11 +10,13 @@
      * POST JSON ke endpoint n8n. Wrapper ringkas untuk pola paling umum.
      * @param {string} endpoint - Path endpoint dari P.* (e.g. P.absen)
      * @param {Object} body - Data yang akan dikirim sebagai JSON
+     * @param {Object} [opts={}] - Opsi tambahan apiFetch (mis. { timeout: 50000 })
      * @returns {Promise<{ok: boolean, data: any, status: number}>}
      */
-    async function apiPost(endpoint, body) {
+    async function apiPost(endpoint, body, opts = {}) {
       try {
         const res = await apiFetch(endpoint, {
+          ...opts,
           method: 'POST',
           body: JSON.stringify(body),
         });

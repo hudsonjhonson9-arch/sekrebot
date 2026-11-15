@@ -225,7 +225,7 @@
       if (data.length === 0) {
         listEl.innerHTML = `
           <div class="empty-state" style="padding:40px 20px">
-            <div style="font-size:40px; margin-bottom:15px">📋</div>
+            <div style="font-size:40px; margin-bottom:15px"><i class="fas fa-clipboard-list"></i></div>
             <div style="font-weight:800; color:var(--white); font-size:14px">Belum Ada Perjalanan Dinas</div>
             <div style="color:var(--muted); font-size:11px; margin-top:5px">Perjalanan dinas yang diberikan atasan akan muncul di sini</div>
           </div>
@@ -243,10 +243,10 @@
       console.error('[TugasLembur] Load Error:', e);
       listEl.innerHTML = `
         <div class="empty-state">
-          <div style="font-size:30px; margin-bottom:10px">⚠️</div>
+          <div style="font-size:30px; margin-bottom:10px"><i class="fas fa-exclamation-triangle"></i></div>
           <div style="font-weight:700">Gagal memuat tugas</div>
           <div style="font-size:10px; color:var(--muted); margin:5px 0 10px">${e.message}</div>
-          <button onclick="loadMyAssignments()" class="btn-sm" style="background:rgba(255,255,255,0.1); border-radius:10px; padding:8px 15px; border:1px solid rgba(255,255,255,0.2); color:var(--white); cursor:pointer">🔄 Coba Lagi</button>
+          <button onclick="loadMyAssignments()" class="btn-sm" style="background:rgba(255,255,255,0.1); border-radius:10px; padding:8px 15px; border:1px solid rgba(255,255,255,0.2); color:var(--white); cursor:pointer"><i class="fas fa-sync"></i> Coba Lagi</button>
         </div>
       `;
     }
@@ -305,9 +305,10 @@
 
     let actionBtn = '';
     if (status === 'AKTIF') {
+      const safeId = String(r.id || r.ID || '');
       actionBtn = `
-        <button onclick='handleKerjakanTugas(${JSON.stringify(r)})' class="btn-sm" style="background:linear-gradient(135deg, var(--gold) 0%, #d4af37 100%); color:#000; border:none; padding:8px 16px; border-radius:10px; font-size:11px; font-weight:800; cursor:pointer; box-shadow: 0 4px 15px rgba(212,175,55,0.3); transition:all 0.3s ease">
-          🚀 Kerjakan Tugas
+        <button onclick="handleKerjakanTugas('${safeId}')" class="btn-sm" style="background:linear-gradient(135deg, var(--gold) 0%, #d4af37 100%); color:#000; border:none; padding:8px 16px; border-radius:10px; font-size:11px; font-weight:800; cursor:pointer; box-shadow: 0 4px 15px rgba(212,175,55,0.3); transition:all 0.3s ease">
+          <i class="fas fa-rocket"></i> Kerjakan Tugas
         </button>
       `;
     } else {
@@ -335,7 +336,7 @@
                 </div>
               </div>
               <button type="button" onclick="viewMyTugasBuktiById('${r.id}')" class="btn-sm" style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.3); padding:6px 12px; border-radius:8px; cursor:pointer; font-weight:700">
-                📄 Buka PDF
+                 Buka PDF
               </button>
             </div>
           `;
@@ -353,7 +354,7 @@
       } else {
         buktiTag = `
           <div style="margin-top:15px; border-radius:12px; padding:12px; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.15); display:flex; align-items:center; gap:10px">
-            <span style="font-size:18px">⚠️</span>
+            <span style="font-size:18px"><i class="fas fa-exclamation-triangle"></i></span>
             <div>
               <div style="font-size:11px; font-weight:700; color:#f87171">Bukti Rusak / Tidak Dikenali</div>
               <div style="font-size:9px; color:var(--muted)">Format data bukti tidak valid</div>
@@ -413,6 +414,11 @@
    * Action: Kerjakan Tugas
    */
   window.handleKerjakanTugas = function(r) {
+    if (typeof r !== 'object' || r === null) {
+      const found = (_activeMyTasks || []).find(t => String(t.id || t.ID) === String(r));
+      if (found) r = found;
+      else r = {};
+    }
     if ((r.status || '').toUpperCase() === 'SELESAI') {
       Swal.fire('Info', 'Perjalanan dinas ini sudah diselesaikan.', 'info');
       return;
@@ -433,7 +439,7 @@
       `,
       icon: 'info',
       showCancelButton: true,
-      confirmButtonText: '📍 Cek Lokasi & Foto',
+      confirmButtonText: '<i class="fas fa-map-marker-alt"></i> Cek Lokasi & Foto',
       cancelButtonText: 'Batal'
     }).then((res) => {
       if (res.isConfirmed) {
@@ -445,7 +451,7 @@
 
         Swal.fire({ title: 'Mengecek Lokasi...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-        navigator.geolocation.getCurrentPosition(async (pos) => {
+        getFreshPosition(async (pos) => {
           const myLat = pos.coords.latitude;
           const myLon = pos.coords.longitude;
           
@@ -460,7 +466,7 @@
           }
 
           if (!insideRadius) {
-            Swal.fire('❌ Gagal', `Anda berada ${Math.round(dist)}m dari titik perjalanan dinas. Jarak maksimal adalah ${r.radius}m.`, 'error');
+            Swal.fire(' Gagal', `Anda berada ${Math.round(dist)}m dari titik perjalanan dinas. Jarak maksimal adalah ${r.radius}m.`, 'error');
           } else {
             // 2. Trigger File Input
             Swal.close();
@@ -469,8 +475,8 @@
             $('tugasBuktiInput').click();
           }
         }, (err) => {
-          Swal.fire('❌ Gagal', 'Gagal mendapatkan lokasi: ' + err.message, 'error');
-        }, { enableHighAccuracy: true });
+          Swal.fire(' Gagal', 'Gagal mendapatkan lokasi: ' + err.message, 'error');
+        }, { enableHighAccuracy: true, timeout: 20000 });
       }
     });
   };
@@ -510,7 +516,7 @@
       const sizeBytes = atob(b64).length;
       if (sizeBytes > 5 * 1024 * 1024) {
         Swal.fire({
-          title: '❌ File Terlalu Besar',
+          title: '<i class="fas fa-times"></i> File Terlalu Besar',
           text: `Ukuran file (${(sizeBytes / 1024 / 1024).toFixed(2)} MB) melebihi batas maksimal 5 MB.`,
           icon: 'error',
           confirmButtonColor: '#3085d6'
@@ -543,7 +549,7 @@
         await idb.set('offline_queue', offlineData);
         
         Swal.fire({
-          title: '📴 Disimpan Offline',
+          title: '<i class="fas fa-mobile-alt"></i> Disimpan Offline',
           text: 'Penyelesaian Perjalanan Dinas disimpan sementara di perangkat Anda karena tidak ada koneksi internet. Data akan disinkronisasikan otomatis saat terhubung internet.',
           icon: 'warning',
           confirmButtonText: 'OK'
@@ -567,14 +573,14 @@
       });
 
       if (updateRes.ok) {
-        Swal.fire('✅ Berhasil', 'Tugas telah diselesaikan!', 'success');
+        Swal.fire(' Berhasil', 'Tugas telah diselesaikan!', 'success');
         loadMyAssignments();
       } else {
         throw new Error(updateRes.data?.message || 'Gagal memperbarui status tugas');
       }
 
     } catch (e) {
-      Swal.fire('❌ Gagal', e.message, 'error');
+      Swal.fire(' Gagal', e.message, 'error');
     } finally {
       input.value = '';
     }
@@ -591,7 +597,7 @@
     const el = $('tugasOptionsList');
     const pemberiEl = $('tugasPemberi');
     if (!el) return;
-    el.innerHTML = '<div style="padding:10px; text-align:center; font-size:11px; color:var(--muted)">⏳ Memuat...</div>';
+    el.innerHTML = '<div style="padding:10px; text-align:center; font-size:11px; color:var(--muted)"><i class="fas fa-hourglass-half"></i> Memuat...</div>';
     
     try {
       // Use format=full to get ALL employees (including Kabid/Manager)
@@ -631,7 +637,7 @@
           managers.map(m => `<option value="${m.nip}|${m.nama}">${m.nama} (${m.role.toUpperCase()})</option>`).join('');
       }
     } catch (e) {
-      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--danger)">❌ Gagal memuat pegawai</div>';
+      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--danger)"><i class="fas fa-times"></i> Gagal memuat pegawai</div>';
     }
   }
 
@@ -639,7 +645,7 @@
     const el = $('tugasOptionsList');
     if (!el) return;
     if (list.length === 0) {
-      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--muted)">🔍 Tidak ditemukan</div>';
+      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--muted)"><i class="fas fa-search"></i> Tidak ditemukan</div>';
       return;
     }
     el.innerHTML = list.map(u => {
@@ -649,7 +655,7 @@
           <div style="display:flex; align-items:center; justify-content:space-between; width:100%">
             <div>
               <span class="item-name">${u.nama}</span>
-              <span class="item-nip">🪪 ${u.nip || '—'}</span>
+              <span class="item-nip"><i class="fas fa-id-card"></i> ${u.nip || '—'}</span>
             </div>
             ${isSelected ? '<i class="fas fa-check-circle" style="color:var(--success)"></i>' : ''}
           </div>
@@ -770,12 +776,12 @@
     const tgl = $('tugasTanggal').value;
 
     if (_selectedTugasPegawai.length === 0 || !tgl) {
-      alert('⚠️ Harap pilih minimal satu pegawai dan tanggal tugas.');
+      alert(' Harap pilih minimal satu pegawai dan tanggal tugas.');
       return;
     }
 
     // Save for each selected employee
-    setBtnL('btnSaveTugas', true, '⏳ Memproses...');
+    setBtnL('btnSaveTugas', true, '<i class="fas fa-hourglass-half"></i> Memproses...');
     try {
       const pemberiVal = $('tugasPemberi')?.value || '';
       let creatorNama = userProfile?.nama || 'Admin';
@@ -806,7 +812,7 @@
 
       const allOk = results.every(r => r.ok && r.data?.ok !== false);
       if (allOk) {
-        showResult('tugasResult', 'tugasRIcon', 'tugasRTitle', 'tugasRMsg', 'success', '✅', 'Penugasan Berhasil', 
+        showResult('tugasResult', 'tugasRIcon', 'tugasRTitle', 'tugasRMsg', 'success', '<i class="fas fa-check"></i>', 'Penugasan Berhasil', 
           `${_selectedTugasPegawai.length} Pegawai telah ditugaskan pada ${tgl}.`);
         dom.show('tugasResult', 'flex');
         
@@ -818,14 +824,14 @@
         _selectedTugasPegawai = [];
         renderTugasPills();
       } else {
-        showResult('tugasResult', 'tugasRIcon', 'tugasRTitle', 'tugasRMsg', 'fail', '❌', 'Sebagian Gagal', 'Beberapa penugasan gagal disimpan.');
+        showResult('tugasResult', 'tugasRIcon', 'tugasRTitle', 'tugasRMsg', 'fail', '<i class="fas fa-times"></i>', 'Sebagian Gagal', 'Beberapa penugasan gagal disimpan.');
         dom.show('tugasResult', 'flex');
       }
 
     } catch (e) {
-      alert('❌ Terjadi kesalahan koneksi.');
+      alert(' Terjadi kesalahan koneksi.');
     } finally {
-      setBtnL('btnSaveTugas', false, '💾 Simpan Penugasan');
+      setBtnL('btnSaveTugas', false, '<i class="fas fa-save"></i> Simpan Penugasan');
     }
   };
 
@@ -836,10 +842,71 @@
   /**
    * Load Pegawai for Lembur Dropdown
    */
+  /* ════ PENANDATANGAN "YANG MEMBUAT" (TTD rekap lembur) ════
+     Pilihan NIP disimpan di localStorage LEMBUR_PEMBUAT_NIP.
+     Kosong = otomatis pakai user yang login. */
+  const LEMBUR_PEMBUAT_NIP_KEY = 'LEMBUR_PEMBUAT_NIP';
+  if ($('lemburPembuatSel') && typeof makeSearchDd === 'function') {
+    makeSearchDd('lemburPembuatSel', { ph: 'Cari nama / jabatan...', h: 38 });
+  }
+
+  function lemburPembuatPool() {
+    let list = _allPegawaiLembur || [];
+    if (!list.length && typeof userListOrder !== 'undefined') list = userListOrder || [];
+    if (!list.length && typeof lastRekapPegawai !== 'undefined') list = lastRekapPegawai || [];
+    return list.filter(p => p && p.nama);
+  }
+
+  function populateLemburPembuatSel() {
+    const sel = $('lemburPembuatSel');
+    if (!sel) return;
+    const list = lemburPembuatPool();
+    if (!list.length) return;
+    const cur = localStorage.getItem(LEMBUR_PEMBUAT_NIP_KEY) || sel.value || '';
+    const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const score = j => (typeof getJabatanScore === 'function' ? getJabatanScore(j) : 0);
+    const opts = list.slice().sort((a, b) => (score(b.jabatan) - score(a.jabatan)) ||
+      String(a.nama || '').localeCompare(String(b.nama || ''), 'id')).map(p =>
+      `<option value="${esc(p.nip || '')}">${esc(p.nama)} — ${esc(p.jabatan || '—')}</option>`).join('');
+    sel.innerHTML = '<option value="">— Otomatis (Saya yang login) —</option>' + opts;
+    if (cur && Array.from(sel.options).some(o => o.value === cur)) sel.value = cur;
+    if (typeof syncSearchDdLabel === 'function') syncSearchDdLabel('lemburPembuatSel');
+  }
+  window.populateLemburPembuatSel = populateLemburPembuatSel;
+
+  window.onLemburPembuatChange = function () {
+    const sel = $('lemburPembuatSel');
+    const nip = sel ? sel.value : '';
+    if (nip) localStorage.setItem(LEMBUR_PEMBUAT_NIP_KEY, nip);
+    else localStorage.removeItem(LEMBUR_PEMBUAT_NIP_KEY);
+  };
+
+  /* Pegawai terpilih sbg "Yang Membuat", atau fallback user yang login */
+  function resolveLemburPembuat() {
+    const sel = $('lemburPembuatSel');
+    const nip = (sel && sel.value) || localStorage.getItem(LEMBUR_PEMBUAT_NIP_KEY) || '';
+    const list = lemburPembuatPool();
+    let p = nip ? list.find(x => String(x.nip || '') === String(nip)) : null;
+    if (!p) {
+      const myNip = String(localStorage.getItem('MY_NIP') || '');
+      p = list.find(x => String(x.nip || '') === myNip) || null;
+    }
+    if (!p) {
+      p = {
+        nama: window.userProfile?.nama || '',
+        nip: String(localStorage.getItem('MY_NIP') || ''),
+        jabatan: window.userProfile?.jabatan || '',
+        pangkat: ''
+      };
+    }
+    return p;
+  }
+  window.resolveLemburPembuat = resolveLemburPembuat;
+
   async function loadLemburPegawai() {
     const el = $('lemburOptionsList');
     if (!el) return;
-    el.innerHTML = '<div style="padding:10px; text-align:center; font-size:11px; color:var(--muted)">⏳ Memuat...</div>';
+    el.innerHTML = '<div style="padding:10px; text-align:center; font-size:11px; color:var(--muted)"><i class="fas fa-hourglass-half"></i> Memuat...</div>';
     
     try {
       const res = await apiGet(P.userList + '?format=full');
@@ -854,8 +921,9 @@
       })).sort((a, b) => a.nama.localeCompare(b.nama));
 
       renderLemburPegawaiList(_allPegawaiLembur);
+      populateLemburPembuatSel();
     } catch (e) {
-      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--danger)">❌ Gagal</div>';
+      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--danger)"><i class="fas fa-times"></i> Gagal</div>';
     }
   }
 
@@ -863,7 +931,7 @@
     const el = $('lemburOptionsList');
     if (!el) return;
     if (list.length === 0) {
-      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--muted)">🔍 Tidak ditemukan</div>';
+      el.innerHTML = '<div style="padding:10px; text-align:center; color:var(--muted)"><i class="fas fa-search"></i> Tidak ditemukan</div>';
       return;
     }
     el.innerHTML = list.map(u => {
@@ -873,7 +941,7 @@
           <div style="display:flex; align-items:center; justify-content:space-between; width:100%">
             <div>
               <span class="item-name">${u.nama}</span>
-              <span class="item-nip">🪪 ${u.nip || '—'}</span>
+              <span class="item-nip"><i class="fas fa-id-card"></i> ${u.nip || '—'}</span>
             </div>
             ${isSelected ? '<i class="fas fa-check-circle" style="color:var(--success)"></i>' : ''}
           </div>
@@ -1033,7 +1101,7 @@
     const n = datesArr.length;
     const first = datesArr[0].split('-').reverse().join('/');
     const last  = datesArr[n - 1].split('-').reverse().join('/');
-    const label = n === 1 ? `📅 ${first}` : `📅 ${first} — ${last} &nbsp;·&nbsp; <strong>${n} hari kerja</strong>`;
+    const label = n === 1 ? `<i class="fas fa-calendar"></i> ${first}` : `<i class="fas fa-calendar"></i> ${first} — ${last} &nbsp;·&nbsp; <strong>${n} hari kerja</strong>`;
 
     c.innerHTML = `
       <div style="
@@ -1050,7 +1118,7 @@
         gap: 8px;
       ">
         <span>${label}</span>
-        <span style="font-size:10px; opacity:0.7; cursor:pointer;" onclick="window._selectedLemburDates.clear(); renderLemburDates(); renderLemburPills();">✕ Reset</span>
+        <span style="font-size:10px; opacity:0.7; cursor:pointer;" onclick="window._selectedLemburDates.clear(); renderLemburDates(); renderLemburPills();"><i class="fas fa-times"></i> Reset</span>
       </div>
     `;
   }
@@ -1060,7 +1128,7 @@
    */
   window.handleFetchLembur = async function() {
     if (window._selectedLemburDates.size === 0 || _selectedLemburPegawai.length === 0) {
-      alert('⚠️ Harap pilih minimal satu tanggal dan pilih minimal satu pegawai.');
+      alert(' Harap pilih minimal satu tanggal dan pilih minimal satu pegawai.');
       return;
     }
 
@@ -1082,7 +1150,7 @@
 
       if (!resLembur.ok) {
         const msg = getApiErrorMsg(resLembur.data, 'Gagal menarik data dari server.');
-        listEl.innerHTML = `<div class="empty-state">❌ ${escapeHtml(msg)}</div>`;
+        listEl.innerHTML = `<div class="empty-state"><i class="fas fa-times"></i> ${escapeHtml(msg)}</div>`;
         return;
       }
       
@@ -1155,9 +1223,9 @@
       if (!window._currentLiburDates) window._currentLiburDates = new Set();
       
     } catch (e) {
-      listEl.innerHTML = `<div class="empty-state">❌ Terjadi kesalahan jaringan atau server offline.</div>`;
+      listEl.innerHTML = `<div class="empty-state"><i class="fas fa-times"></i> Terjadi kesalahan jaringan atau server offline.</div>`;
     } finally {
-      setBtnL('btnFetchLembur', false, '📊 Tarik Data Lembur');
+      setBtnL('btnFetchLembur', false, '<i class="fas fa-chart-bar"></i> Tarik Data Lembur');
     }
   };
 
@@ -1228,6 +1296,10 @@
         };
       }
     });
+
+    // Rekap valid = minimal satu pegawai punya lembur nyata (menit > 0, tanpa keterangan)
+    const hasValidLembur = Object.values(groups).some(g =>
+      Object.values(g.dates).some(d => !d.ket && (d.mins || 0) > 0));
 
     // Find true Kepala dynamically (excluding sub-heads like Kepala Bidang)
     const getKepalaSignatureData = (employees) => {
@@ -1518,18 +1590,12 @@
         const dateIdx = Math.floor(dataColIdx / 4);
         const dateKey = dates[dateIdx];
         const val = g.dates[dateKey];
-        if (!val || val.ket) return; // keterangan or no data → no TTD
+        // TTD hanya untuk sel valid: ada lembur nyata (menit > 0) dan tanpa keterangan
+        if (!val || val.ket || !(val.mins > 0)) return;
 
         const nipClean  = String(g.nip || '').replace(/\s/g, '');
         const nipSigMap = window._currentNipSigMap || {};
         const sigMap    = window._currentSigMap    || {};
-
-        // DEBUG (remove after fix)
-        if (dataColIdx === 3 && data.row.index === 0) {
-          console.log('[TTD-DEBUG] nipClean:', nipClean,
-            '| nipSigMap keys:', Object.keys(nipSigMap),
-            '| found:', !!nipSigMap[nipClean]);
-        }
 
         // Use NIP-keyed map (built via _allPegawaiLembur cross-ref at fetch time)
         let sig = nipSigMap[nipClean] || sigMap[nipClean] || sigMap[g.nip];
@@ -1636,10 +1702,23 @@
     }
 
     doc.setFontSize(10);
-    const signatureX = pageWidth - 60;
-    doc.text(`Waikabubak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, signatureX, footerY, { align: 'center' });
+    const signatureX = margin + 45;         // kolom kiri: Mengetahui
+    const rightX = pageWidth - margin - 45; // kolom kanan: Yang Membuat
     doc.text('Mengetahui,', signatureX, footerY + 6, { align: 'center' });
     doc.text(kepTitle, signatureX, footerY + 11, { align: 'center' });
+
+    // TTD gambar Kepala — hanya jika hasil rekap valid (ada lembur nyata) dan ttd tersedia
+    const kbNip   = String(kb.nip || '').replace(/\s/g, '');
+    const kbUid   = String(kb.id || kb.telegram_id || '');
+    const kabanSig = (window._currentNipSigMap || {})[kbNip]
+      || (window._currentSigMap || {})[kbNip]
+      || (window._currentSigMap || {})[kbUid];
+    if (hasValidLembur && kabanSig) {
+      try {
+        const kbFmt = kabanSig.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
+        doc.addImage(kabanSig, kbFmt, signatureX - 15, footerY + 14, 30, 15, undefined, 'FAST');
+      } catch (e) { console.warn('Gagal gambar tanda tangan Kepala lembur:', e); }
+    }
 
     doc.setFont('times', 'bold');
     doc.text(kb.nama, signatureX, footerY + 38, { align: 'center' });
@@ -1651,10 +1730,41 @@
       doc.text(`NIP. ${kb.nip || '—'}`, signatureX, footerY + 44, { align: 'center' });
     }
 
+    // ── Kolom kanan: YANG MEMBUAT (dropdown lemburPembuatSel, fallback: user login) ──
+    const pembuat = resolveLemburPembuat();
+    doc.text(`Waikabubak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, rightX, footerY, { align: 'center' });
+    doc.text('Yang Membuat,', rightX, footerY + 6, { align: 'center' });
+    if (pembuat.jabatan) doc.text(pembuat.jabatan, rightX, footerY + 11, { align: 'center' });
+
+    const pbNip = String(pembuat.nip || '').replace(/\s/g, '');
+    const pbUid = String(pembuat.id || pembuat.telegram_id || '');
+    let pembuatSig = (window._currentNipSigMap || {})[pbNip]
+      || (window._currentSigMap || {})[pbNip]
+      || (window._currentSigMap || {})[pbUid]
+      || localStorage.getItem('sig_' + pbNip)
+      || localStorage.getItem('sig_' + String(pembuat.nip || ''));
+    if (pembuatSig && !String(pembuatSig).startsWith('data:')) pembuatSig = null; // jsPDF butuh data URI
+    if (hasValidLembur && pembuatSig) {
+      try {
+        const pbFmt = pembuatSig.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
+        doc.addImage(pembuatSig, pbFmt, rightX - 15, footerY + 14, 30, 15, undefined, 'FAST');
+      } catch (e) { console.warn('Gagal gambar tanda tangan pembuat lembur:', e); }
+    }
+
+    doc.setFont('times', 'bold');
+    doc.text(pembuat.nama || '__________________________', rightX, footerY + 38, { align: 'center' });
+    doc.setFont('times', 'normal');
+    if (pembuat.pangkat) {
+      doc.text(pembuat.pangkat, rightX, footerY + 44, { align: 'center' });
+      doc.text(`NIP. ${pembuat.nip || '—'}`, rightX, footerY + 49, { align: 'center' });
+    } else {
+      doc.text(`NIP. ${pembuat.nip || '—'}`, rightX, footerY + 44, { align: 'center' });
+    }
+
     // 7. Store references
     const fileName = `Rekap_Kerja_Lembur_${range.dari}_${range.sampai}.pdf`;
     const pdfBase64 = doc.output('datauristring').split(',')[1];
-    const pdfMsg = `📄 *REKAPITULASI KERJA LEMBUR PDF*\n📅 Periode: ${range.dari} s/d ${range.sampai}\n👤 Peminta: ${window.userProfile?.nama || window.MY_ID}\n🪪 NIP: ${localStorage.getItem('MY_NIP') || '-'}\n\nLaporan lembur telah siap.`;
+    const pdfMsg = ` *REKAPITULASI KERJA LEMBUR PDF*\n Periode: ${range.dari} s/d ${range.sampai}\n Peminta: ${window.userProfile?.nama || window.MY_ID}\n NIP: ${localStorage.getItem('MY_NIP') || '-'}\n\nLaporan lembur telah siap.`;
     const instName = instData?.nama_instansi || (typeof getInstansiName === 'function' ? getInstansiName(instId) : instId.toUpperCase());
 
     window.lastGeneratedDoc = doc;
@@ -1693,7 +1803,7 @@
         }
       } catch (err) {
         console.error("Capacitor download error:", err);
-        alert('❌ Gagal menyimpan PDF: ' + err.message);
+        alert(' Gagal menyimpan PDF: ' + err.message);
       }
     } else {
       doc.save(fileName);
@@ -1709,7 +1819,7 @@
       instansi_id: instId,
       instansi_name: instName
     });
-    alert('✅ Rekap Lembur PDF berhasil dikirim!');
+    alert(' Rekap Lembur PDF berhasil dikirim!');
   };
 
   window.handleExportLemburPDF = async function(options = null) {
@@ -1740,12 +1850,163 @@
   /**
    * Render Results to UI
    */
+  /**
+   * Rekap Lembur — tampilan timeline (kolom kiri = pegawai, kolom kanan = tanggal).
+   * Hari berurutan dengan lembur/keterangan yang sama digabung jadi satu bar.
+   */
+  const LT_DAY_SHORT = ['Mg', 'Sn', 'Sl', 'Rb', 'Km', 'Jm', 'Sb'];
+  const LT_DAY_LONG = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+  const LT_MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+  function ltEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function ltPad(n) { return String(n).padStart(2, '0'); }
+  function ltKey(d) { return `${d.getFullYear()}-${ltPad(d.getMonth() + 1)}-${ltPad(d.getDate())}`; }
+  function ltParse(s) {
+    const [y, m, d] = String(s).slice(0, 10).split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  function ltCompact(min) {
+    if (min <= 0) return '—';
+    const h = Math.floor(min / 60), m = min % 60;
+    return h ? (m ? `${h}j ${m}m` : `${h}j`) : `${m}m`;
+  }
+  function ltHm(t) { return t ? String(t).slice(0, 5) : '—'; }
+
+  function buildLemburTimeline(data, ketStyle) {
+    const rows = data.filter(r => r && r.tanggal);
+    const selected = new Set(rows.map(r => String(r.tanggal).slice(0, 10)));
+    const sortedDates = [...selected].sort();
+    const first = ltParse(sortedDates[0]);
+    const last = ltParse(sortedDates[sortedDates.length - 1]);
+
+    // Semua hari kalender dari tanggal pertama sampai terakhir
+    const days = [];
+    for (let d = new Date(first); d <= last; d.setDate(d.getDate() + 1)) {
+      const dt = new Date(d);
+      days.push({ key: ltKey(dt), dow: dt.getDay(), date: dt.getDate(), month: dt.getMonth(), year: dt.getFullYear() });
+    }
+    const todayKey = ltKey(new Date());
+
+    // Kelompokkan per pegawai
+    const byNip = new Map();
+    rows.forEach(r => {
+      const nip = String(r.nip || '').trim();
+      if (!byNip.has(nip)) byNip.set(nip, { nip, nama: r.nama || nip, days: {} });
+      const ket = (r.keterangan_status || '').toString().toUpperCase().trim();
+      byNip.get(nip).days[String(r.tanggal).slice(0, 10)] = ket
+        ? { ket }
+        : { masuk: r.jam_masuk, pulang: r.jam_pulang, mins: calculateOvertime(r.jam_pulang) };
+    });
+    const emps = [...byNip.values()].sort((a, b) => String(a.nama).localeCompare(String(b.nama), 'id'));
+
+    const LEMBUR = { color: '#3B82F6', bg: 'rgba(59,130,246,0.20)' };
+    const runDetail = {};
+    let runId = 0;
+
+    const periode = `${first.getDate()} ${LT_MONTH[first.getMonth()]} – ${last.getDate()} ${LT_MONTH[last.getMonth()]} ${last.getFullYear()}`;
+
+    const headCells = days.map(d => {
+      const cls = ['lt-h'];
+      if (d.dow === 0 || d.dow === 6) cls.push('lt-we');
+      if (!selected.has(d.key)) cls.push('lt-off');
+      if (d.date === 1) cls.push('lt-mo');
+      const num = d.key === todayKey ? `<span class="lt-today">${d.date}</span>` : `<span class="lt-num">${d.date}</span>`;
+      return `<div class="${cls.join(' ')}" role="columnheader" title="${LT_DAY_LONG[d.dow]}, ${d.date} ${LT_MONTH[d.month]} ${d.year}">
+        <span class="lt-dow">${LT_DAY_SHORT[d.dow]}</span>${num}</div>`;
+    }).join('');
+
+    const head = `<div class="lt-row lt-head" role="row">
+      <div class="lt-left" role="columnheader">
+        <i class="fas fa-moon lt-head-ico" aria-hidden="true"></i>
+        <div><div class="lt-head-t">Rekap Lembur</div><div class="lt-head-s">${periode}</div></div>
+      </div>${headCells}</div>`;
+
+    const body = emps.map(emp => {
+      // Sel latar (akhir pekan / hari tidak dipilih)
+      const bg = days.map((d, i) => {
+        const cls = ['lt-c'];
+        if (d.dow === 0 || d.dow === 6) cls.push('lt-we');
+        if (!selected.has(d.key)) cls.push('lt-off');
+        if (d.date === 1) cls.push('lt-mo');
+        if (d.key === todayKey) cls.push('lt-now');
+        return `<div class="${cls.join(' ')}" style="grid-column:${i + 2}" role="gridcell"></div>`;
+      }).join('');
+
+      // Gabungkan hari berurutan jadi satu bar
+      let total = 0;
+      const bars = [];
+      let i = 0;
+      while (i < days.length) {
+        const cell = emp.days[days[i].key];
+        const type = !cell ? null : (cell.ket ? 'K:' + cell.ket : (cell.mins > 0 ? 'L' : null));
+        if (!type) { i++; continue; }
+        let j = i;
+        const items = [];
+        let mins = 0;
+        while (j < days.length) {
+          const c = emp.days[days[j].key];
+          const t = !c ? null : (c.ket ? 'K:' + c.ket : (c.mins > 0 ? 'L' : null));
+          if (t !== type) break;
+          items.push({ d: days[j], c });
+          if (type === 'L') mins += c.mins;
+          j++;
+        }
+        const span = j - i;
+        let st, label;
+        if (type === 'L') {
+          st = LEMBUR; total += mins;
+          label = span >= 3 ? `${ltCompact(mins)} · ${span} hari` : ltCompact(mins);
+        } else {
+          const ket = type.slice(2);
+          const ks = ketStyle[ket] || { color: '#94A3B8', bg: 'rgba(148,163,184,0.18)' };
+          st = ks; label = ket;
+        }
+        const id = `r${runId++}`;
+        runDetail[id] = `<div class="lt-det-h"><strong>${ltEsc(emp.nama)}</strong> · ${ltEsc(label)}</div>` +
+          items.map(({ d, c }) => c.ket
+            ? `<div class="lt-det-i">${LT_DAY_LONG[d.dow]}, ${d.date} ${LT_MONTH[d.month]} — ${ltEsc(c.ket)}</div>`
+            : `<div class="lt-det-i">${LT_DAY_LONG[d.dow]}, ${d.date} ${LT_MONTH[d.month]} — masuk ${ltHm(c.masuk)}, pulang ${ltHm(c.pulang)}, lembur ${ltCompact(c.mins)}</div>`
+          ).join('');
+        bars.push(`<button type="button" class="lt-bar" data-run="${id}" style="grid-column:${i + 2} / span ${span};--c:${st.color};--cbg:${st.bg}" aria-label="${ltEsc(emp.nama)}: ${ltEsc(label)}">${ltEsc(label)}</button>`);
+        i = j;
+      }
+
+      return `<div class="lt-row" role="row">
+        <div class="lt-left" role="rowheader">
+          <div class="lt-who">
+            <div class="lt-name">${ltEsc(emp.nama)}</div>
+            <div class="lt-nip"><i class="fas fa-id-card" aria-hidden="true"></i> ${ltEsc(emp.nip)}</div>
+          </div>
+          <span class="lt-total${total > 0 ? ' has' : ''}">${ltCompact(total)}</span>
+        </div>${bg}${bars.join('')}</div>`;
+    }).join('');
+
+    window._ltRunDetail = runDetail;
+    return `<div class="lt-wrap" style="--lt-n:${days.length}" role="table" aria-label="Rekap lembur ${periode}">
+        <div class="lt-inner">${head}${body}</div>
+      </div>
+      <div class="lt-detail" id="ltDetail" aria-live="polite">Ketuk bar untuk melihat rincian per hari.</div>`;
+  }
+
+  document.addEventListener('click', (e) => {
+    const bar = e.target.closest && e.target.closest('.lt-bar');
+    if (!bar) return;
+    const box = document.getElementById('ltDetail');
+    if (!box || !window._ltRunDetail) return;
+    document.querySelectorAll('.lt-bar.sel').forEach(b => b.classList.remove('sel'));
+    bar.classList.add('sel');
+    box.innerHTML = window._ltRunDetail[bar.dataset.run] || '';
+  });
+
   function renderLemburResults(data) {
     const listEl = $('lemburResultList');
     if (!listEl) return;
 
     if (data.length === 0) {
-      listEl.innerHTML = '<div class="empty-state">📭 Tidak ada data absen untuk rentang ini.</div>';
+      listEl.innerHTML = '<div class="empty-state"><i class="fas fa-envelope-open-text"></i> Tidak ada data absen untuk rentang ini.</div>';
       return;
     }
 
@@ -1754,19 +2015,19 @@
     const actionButtons = isArchiveMode ? `
       <div style="display:flex; gap:8px;">
         <button class="btn-sm-admin" onclick="exitLemburArchivePreview()" style="background:#6b7280; color:white; border:none; padding:6px 12px; border-radius:8px; font-size:10px; font-weight:700; cursor:pointer;">
-           ✕ Tutup Preview
+           <i class="fas fa-times"></i> Tutup Preview
         </button>
         <button class="btn-sm-admin" onclick="handleExportLemburPDF()" style="background:var(--success); border:none; color:white; padding:6px 12px; border-radius:8px; font-size:10px; font-weight:700; cursor:pointer;">
-           📄 Cetak Rekap PDF
+            Cetak Rekap PDF
         </button>
       </div>
     ` : `
       <div style="display:flex; gap:8px;">
         <button class="btn-sm-admin" onclick="handleExportLemburPDF()" style="background:var(--success); border:none; color:white; padding:6px 12px; border-radius:8px; font-size:10px; font-weight:700; cursor:pointer;">
-           📄 Cetak Rekap PDF
+            Cetak Rekap PDF
         </button>
         <button id="btnSaveLemburRekap" class="btn-sm-admin" onclick="handleSaveLemburRekap()" style="background:var(--gold); border:none; color:black; padding:6px 12px; border-radius:8px; font-size:10px; font-weight:700; cursor:pointer;">
-           💾 Simpan Rekap
+           <i class="fas fa-save"></i> Simpan Rekap
         </button>
       </div>
     `;
@@ -1774,7 +2035,7 @@
     const header = `
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:15px; margin-top:20px">
         <div style="font-size:12px; font-weight:800; color:var(--white)">
-          ${isArchiveMode ? '📂 PREVIEW ARSIP' : '📋 HASIL PENCARIAN'} (${data.length})
+          ${isArchiveMode ? '<i class="fas fa-folder-open"></i> PREVIEW ARSIP' : '<i class="fas fa-clipboard-list"></i> HASIL PENCARIAN'} (${data.length})
         </div>
         ${actionButtons}
       </div>
@@ -1782,76 +2043,14 @@
 
     // Color palette per status
     const KET_STYLE = {
-      'SAKIT':  { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   icon: '🤒', border: '#ef4444' },
-      'TUGAS':  { color: '#f97316', bg: 'rgba(249,115,22,0.12)',  icon: '💼', border: '#f97316' },
-      'IZIN':   { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  icon: '🙏', border: '#3b82f6' },
-      'CUTI':   { color: '#a855f7', bg: 'rgba(168,85,247,0.12)',  icon: '🏖️', border: '#a855f7' },
-      'TUBEL':  { color: '#ec4899', bg: 'rgba(236,72,153,0.12)',  icon: '🎓', border: '#ec4899' },
+      'SAKIT':  { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   icon: '<i class="fas fa-user-sick"></i>', border: '#ef4444' },
+      'TUGAS':  { color: '#f97316', bg: 'rgba(249,115,22,0.12)',  icon: '<i class="fas fa-briefcase"></i>', border: '#f97316' },
+      'IZIN':   { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  icon: '<i class="fas fa-file-signature"></i>', border: '#3b82f6' },
+      'CUTI':   { color: '#a855f7', bg: 'rgba(168,85,247,0.12)',  icon: '<i class="fas fa-umbrella-beach"></i>', border: '#a855f7' },
+      'TUBEL':  { color: '#ec4899', bg: 'rgba(236,72,153,0.12)',  icon: '<i class="fas fa-graduation-cap"></i>', border: '#ec4899' },
     };
 
-    const items = data.map(r => {
-      const minutes = calculateOvertime(r.jam_pulang);
-      const ket = (r.keterangan_status || '').toString().toUpperCase().trim();
-      const ketStyle = KET_STYLE[ket];
-
-      // Determine card border color
-      let borderColor = ket && ketStyle ? ketStyle.border : (minutes > 0 ? 'var(--success)' : 'rgba(255,255,255,0.1)');
-
-      // Duration / status display
-      let durasiHtml;
-      if (ket && ketStyle) {
-        durasiHtml = `
-          <div style="font-size:9px; color:var(--muted)">STATUS</div>
-          <div style="
-            display:inline-flex; align-items:center; gap:4px;
-            background:${ketStyle.bg};
-            color:${ketStyle.color};
-            border:1px solid ${ketStyle.color}55;
-            border-radius:8px;
-            padding:3px 10px;
-            font-size:12px;
-            font-weight:900;
-            margin-top:2px;
-            letter-spacing:0.5px;
-          ">${ketStyle.icon} ${ket}</div>
-        `;
-      } else {
-        const dur = formatDuration(minutes);
-        const durColor = minutes > 0 ? 'var(--gold)' : 'var(--muted)';
-        durasiHtml = `
-          <div style="font-size:9px; color:var(--muted)">DURASI LEMBUR</div>
-          <div style="font-size:14px; font-weight:900; color:${durColor}">${dur}</div>
-        `;
-      }
-
-      return `
-        <div class="card glass-card" style="margin-bottom:12px; border-left:4px solid ${borderColor}">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start">
-            <div>
-              <div style="font-size:13px; font-weight:800; color:var(--white)">${r.nama}</div>
-              <div style="font-size:10px; color:var(--muted); margin-bottom:8px">NIP: ${r.nip} | Tanggal: ${r.tanggal}</div>
-              
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
-                <div style="background:rgba(255,255,255,0.03); padding:6px; border-radius:8px">
-                  <div style="font-size:8px; color:var(--muted)">MASUK</div>
-                  <div style="font-size:11px; font-weight:700; color:var(--success)">${r.jam_masuk || '—'}</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.03); padding:6px; border-radius:8px">
-                  <div style="font-size:8px; color:var(--muted)">PULANG</div>
-                  <div style="font-size:11px; font-weight:700; color:var(--info)">${r.jam_pulang || '—'}</div>
-                </div>
-              </div>
-            </div>
-            
-            <div style="text-align:right; min-width:90px">
-              ${durasiHtml}
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    listEl.innerHTML = header + items;
+    listEl.innerHTML = header + buildLemburTimeline(data, KET_STYLE);
   }
 
   // Close dropdowns on click outside
@@ -1903,7 +2102,7 @@
       renderMonitoringTasks(data);
     } catch (e) {
       console.error('[TugasLembur] Monitoring Load Error:', e);
-      el.innerHTML = `<div class="empty-state" style="padding:20px; font-size:11px">⚠️ Gagal memuat monitoring: ${escapeHtml(e.message)}</div>`;
+      el.innerHTML = `<div class="empty-state" style="padding:20px; font-size:11px"><i class="fas fa-exclamation-triangle"></i> Gagal memuat monitoring: ${escapeHtml(e.message)}</div>`;
     }
   }
 
@@ -1914,7 +2113,7 @@
     if (data.length === 0) {
       el.innerHTML = `
         <div class="card glass-card" style="padding:20px; text-align:center; opacity:0.7">
-          <div style="font-size:24px; margin-bottom:8px">📡</div>
+          <div style="font-size:24px; margin-bottom:8px"><i class="fas fa-satellite-dish"></i></div>
           <div style="font-size:11px; font-weight:700">Belum ada perjalanan dinas yang Anda instruksikan</div>
           <div style="font-size:9px; color:var(--muted)">Progres perjalanan dinas yang Anda berikan ke staf akan muncul di sini.</div>
         </div>
@@ -1927,6 +2126,13 @@
         <i class="fas fa-satellite-dish" style="margin-right:8px"></i> Monitoring Progres Perjalanan Dinas
       </div>
     `;
+
+    // ponytail: kelompokkan sekali, indeks id->grup supaya tombol tinggal bawa nomor grup.
+    const grupList = (window.TugasSPT && window.TugasSPT.kelompokkan)
+      ? window.TugasSPT.kelompokkan(_activeMonitoringTasks)
+      : [];
+    const grupIndex = new Map();
+    grupList.forEach((g, gi) => g.items.forEach(it => grupIndex.set(String(it.id), gi)));
 
     const cards = data.map(t => {
       const isSelesai = String(t.status).toUpperCase() === 'SELESAI';
@@ -1961,22 +2167,37 @@
                 <strong>Ket:</strong> ${t.keterangan || '—'}
               </div>
               <div style="font-size:9px; color:var(--muted); margin-top:8px; display:flex; align-items:center; gap:10px">
-                 <span>📅 ${tglDisplay}</span>
-                 <span>📍 Radius ${t.radius || 100}m</span>
+                 <span><i class="fas fa-calendar"></i> ${tglDisplay}</span>
+                 <span><i class="fas fa-map-marker-alt"></i> Radius ${t.radius || 100}m</span>
               </div>
             </div>
             
+            <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">
             ${t.bukti ? `
               <button onclick="viewTugasBuktiById('${t.id}')" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--white); padding:6px 12px; border-radius:10px; font-size:10px; font-weight:700; cursor:pointer">
-                📷 BUKTI
+                <i class="fas fa-camera"></i> BUKTI
               </button>
             ` : ''}
+              <button class="btn-cetak-spt" data-grup="${grupIndex.has(String(t.id)) ? grupIndex.get(String(t.id)) : ''}" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--white); padding:6px 12px; border-radius:10px; font-size:10px; font-weight:700; cursor:pointer">
+                <i class="fas fa-file-signature"></i> SPT/SPPD
+              </button>
+            </div>
           </div>
         </div>
       `;
     }).join('');
 
     el.innerHTML = header + cards;
+
+    window.__tugasGrup = grupList;
+    el.querySelectorAll('.btn-cetak-spt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const gi = Number(btn.dataset.grup);
+        if (btn.dataset.grup !== '' && Number.isInteger(gi) && window.__tugasGrup[gi]) {
+          window.TugasSPT.bukaModal(window.__tugasGrup[gi]);
+        }
+      });
+    });
   }
 
   window.viewTugasBuktiById = function(id) {
@@ -2183,6 +2404,10 @@
     } else {
       sec.style.display = 'none';
     }
+
+    // Isi dropdown "Yang Membuat" (TTD) saat tab Lembur dibuka
+    if (_allPegawaiLembur.length) populateLemburPembuatSel();
+    else loadLemburPegawai();
   }
 
   function onLemburInstansiChange() {
@@ -2253,7 +2478,7 @@
 
     sectionEl.innerHTML = `
       <div style="font-size:12px; font-weight:800; color:var(--white); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
-        📂 ARSIP REKAP LEMBUR
+        <i class="fas fa-folder-open"></i> ARSIP REKAP LEMBUR
       </div>
       <div class="shimmer-wrapper">
         <div class="shimmer sh-line" style="width:100%; height:80px; border-radius:15px; margin-bottom:10px"></div>
@@ -2272,10 +2497,10 @@
       console.error('[LemburArchive] load error:', e);
       sectionEl.innerHTML = `
         <div style="font-size:12px; font-weight:800; color:var(--white); margin-bottom:10px;">
-          📂 ARSIP REKAP LEMBUR
+          <i class="fas fa-folder-open"></i> ARSIP REKAP LEMBUR
         </div>
         <div class="empty-state" style="padding:15px; text-align:center; font-size:11px; color:var(--muted)">
-          ⚠️ Gagal memuat arsip dari server.<br>
+          <i class="fas fa-exclamation-triangle"></i> Gagal memuat arsip dari server.<br>
           <span style="font-size:9px">Pastikan webhook lembur-archive-list aktif.</span>
         </div>
       `;
@@ -2289,10 +2514,10 @@
     if (list.length === 0) {
       sectionEl.innerHTML = `
         <div style="font-size:12px; font-weight:800; color:var(--white); margin-bottom:10px;">
-          📂 ARSIP REKAP LEMBUR
+          <i class="fas fa-folder-open"></i> ARSIP REKAP LEMBUR
         </div>
         <div class="card glass-card" style="padding:20px; text-align:center; color:var(--muted); font-size:12px">
-          📭 Belum ada rekap lembur yang diarsipkan.
+          <i class="fas fa-envelope-open-text"></i> Belum ada rekap lembur yang diarsipkan.
         </div>
       `;
       return;
@@ -2300,7 +2525,7 @@
 
     const header = `
       <div style="font-size:12px; font-weight:800; color:var(--white); margin-bottom:12px;">
-        📂 ARSIP REKAP LEMBUR (${list.length})
+        <i class="fas fa-folder-open"></i> ARSIP REKAP LEMBUR (${list.length})
       </div>
     `;
 
@@ -2329,7 +2554,7 @@
         <div class="card glass-card" style="margin-bottom:12px; padding:15px; border-left:4px solid var(--gold); display:flex; justify-content:space-between; align-items:center;">
           <div style="flex:1; min-width:0; padding-right:12px; cursor:pointer;" onclick="viewLemburArchive(${item.id})">
             <div style="font-size:13px; font-weight:800; color:var(--white); margin-bottom:2px;">
-              📂 ${title}
+              <i class="fas fa-folder-open"></i> ${title}
             </div>
             <div style="font-size:11px; color:var(--gold); font-weight:700; margin-bottom:4px;">
               ${nomorSurat}
@@ -2343,10 +2568,10 @@
           </div>
           <div style="display:flex; gap:8px;">
             <button class="btn-sm-admin" onclick="viewLemburArchive(${item.id})" style="background:var(--primary); color:white; border:none; padding:6px 10px; border-radius:6px; font-size:10px; cursor:pointer; font-weight:700;">
-              👁️ Lihat
+              <i class="fas fa-eye"></i> Lihat
             </button>
             <button class="btn-sm-admin" onclick="deleteLemburArchive(${item.id}, '${title.replace(/'/g, "\\'")}')" style="background:#ef4444; color:white; border:none; padding:6px 10px; border-radius:6px; font-size:10px; cursor:pointer; font-weight:700;">
-              🗑️ Hapus
+              <i class="fas fa-trash"></i> Hapus
             </button>
           </div>
         </div>
@@ -2360,7 +2585,7 @@
     const data = window._currentLemburData;
     const range = window._currentLemburRange;
     if (!data || data.length === 0) {
-      Swal.fire('⚠️ Peringatan', 'Tidak ada data lembur untuk disimpan.', 'warning');
+      Swal.fire(' Peringatan', 'Tidak ada data lembur untuk disimpan.', 'warning');
       return;
     }
 
@@ -2371,7 +2596,7 @@
       inputLabel: 'Masukkan Nomor Surat Lembur',
       inputPlaceholder: 'Contoh: 800/123/BAP-SB/2026...',
       showCancelButton: true,
-      confirmButtonText: '💾 Simpan',
+      confirmButtonText: '<i class="fas fa-save"></i> Simpan',
       cancelButtonText: 'Batal',
       inputValidator: (value) => {
         if (!value.trim()) {
@@ -2417,13 +2642,13 @@
         throw new Error(getApiErrorMsg(res.data, 'Gagal menyimpan ke database.'));
       }
 
-      Swal.fire('✅ Berhasil', 'Rekap lembur berhasil diarsipkan!', 'success');
+      Swal.fire(' Berhasil', 'Rekap lembur berhasil diarsipkan!', 'success');
       
       // Reload archive list
       loadLemburArchive();
     } catch (e) {
       console.error('[LemburSave] error:', e);
-      Swal.fire('❌ Gagal', e.message || 'Gagal menghubungi server.', 'error');
+      Swal.fire(' Gagal', e.message || 'Gagal menghubungi server.', 'error');
     }
   };
 
@@ -2475,7 +2700,7 @@
       }
     } catch (e) {
       console.error('[LemburArchiveView] error:', e);
-      Swal.fire('❌ Gagal', e.message || 'Gagal memuat detail arsip.', 'error');
+      Swal.fire(' Gagal', e.message || 'Gagal memuat detail arsip.', 'error');
     }
   };
 
@@ -2495,7 +2720,7 @@
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: '🗑️ Hapus',
+      confirmButtonText: '<i class="fas fa-trash"></i> Hapus',
       cancelButtonText: 'Batal'
     });
 
@@ -2515,7 +2740,7 @@
         throw new Error(getApiErrorMsg(res.data, 'Gagal menghapus arsip.'));
       }
 
-      Swal.fire('✅ Terhapus', 'Arsip rekap lembur berhasil dihapus.', 'success');
+      Swal.fire(' Terhapus', 'Arsip rekap lembur berhasil dihapus.', 'success');
       
       // If we are currently previewing the deleted archive, exit preview
       if (window._currentLemburArchiveId === id) {
@@ -2526,7 +2751,7 @@
       loadLemburArchive();
     } catch (e) {
       console.error('[LemburArchiveDelete] error:', e);
-      Swal.fire('❌ Gagal', e.message || 'Gagal menghubungi server.', 'error');
+      Swal.fire(' Gagal', e.message || 'Gagal menghubungi server.', 'error');
     }
   };
 

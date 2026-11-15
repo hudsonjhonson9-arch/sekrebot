@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+
+<html lang="id"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      "colors": {
+        "on-primary-fixed": "#00174b",
+        "secondary-container": "#6cf8bb",
+        "on-primary-container": "#eeefff",
+        "on-secondary-fixed-variant": "#005236",
+        "surface": "#f8f9ff",
+        "on-primary": "#ffffff",
+        "on-secondary": "#ffffff",
+        "secondary-fixed": "#6ffbbe",
+        "on-surface-variant": "#434655",
+        "primary": "#004ac6",
+        "outline": "#737686",
+        "surface-bright": "#f8f9ff",
+        "tertiary-container": "#996100",
+        "on-primary-fixed-variant": "#003ea8",
+        "inverse-on-surface": "#eaf1ff",
+        "secondary-fixed-dim": "#4edea3",
+        "primary-fixed": "#dbe1ff",
+        "inverse-surface": "#213145",
+        "on-surface": "#0b1c30",
+        "error": "#ba1a1a",
+        "outline-variant": "#c3c6d7",
+        "on-background": "#0b1c30",
+        "primary-container": "#2563eb",
+        "surface-dim": "#cbdbf5",
+        "surface-variant": "#d3e4fe",
+        "surface-tint": "#0053db",
+        "on-tertiary-container": "#ffeedd",
+        "surface-container-lowest": "#ffffff",
+        "secondary": "#006c49",
+        "inverse-primary": "#b4c5ff",
+        "primary-fixed-dim": "#b4c5ff",
+        "on-secondary-fixed": "#002113",
+        "tertiary-fixed": "#ffddb8",
+        "surface-container-highest": "#d3e4fe",
+        "on-tertiary": "#ffffff",
+        "tertiary-fixed-dim": "#ffb95f",
+        "on-error": "#ffffff",
+        "on-tertiary-fixed-variant": "#653e00",
+        "error-container": "#ffdad6",
+        "on-tertiary-fixed": "#2a1700",
+        "on-secondary-container": "#00714d",
+        "surface-container": "#e5eeff",
+        "on-error-container": "#93000a",
+        "background": "#f8f9ff",
+        "surface-container-low": "#eff4ff",
+        "surface-container-high": "#dce9ff",
+        "tertiary": "#784b00"
+      },
+      "borderRadius": {
+        "DEFAULT": "0.25rem",
+        "lg": "0.5rem",
+        "xl": "0.75rem",
+        "full": "9999px"
+      },
+      "spacing": {
+        "margin": "1rem",
+        "margin-lg": "1.5rem",
+        "space-md": "1rem",
+        "space-sm": "0.5rem",
+        "space-xs": "0.25rem",
+        "margin-md": "1.25rem",
+        "gutter-sm": "0.75rem",
+        "gutter": "1rem",
+        "space-xl": "2rem",
+        "space-lg": "1.5rem"
+      },
+      "fontFamily": {
+        "display-lg": ["Plus Jakarta Sans"],
+        "time-display": ["Plus Jakarta Sans"],
+        "body-md": ["Plus Jakarta Sans"],
+        "body-sm": ["Plus Jakarta Sans"],
+        "headline-lg": ["Plus Jakarta Sans"],
+        "title-md": ["Plus Jakarta Sans"],
+        "body-lg": ["Plus Jakarta Sans"],
+        "label-sm": ["Plus Jakarta Sans"],
+        "label-lg": ["Plus Jakarta Sans"],
+        "display-lg-mobile": ["Plus Jakarta Sans"],
+        "label-md": ["Plus Jakarta Sans"],
+        "headline-md": ["Plus Jakarta Sans"],
+        "headline-sm": ["Plus Jakarta Sans"]
+      },
+      "fontSize": {
+        "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+        "time-display": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.03em", "fontWeight": "800"}],
+        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+        "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+        "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+        "title-md": ["16px", {"lineHeight": "22px", "fontWeight": "600"}],
+        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+        "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.03em", "fontWeight": "500"}],
+        "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+        "display-lg-mobile": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+        "headline-md": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+        "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}]
+      }
+    }
+  }
+}</script></head><body class="bg-surface font-body-md text-on-surface"><aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-low shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between"><div class="flex flex-col"><div class="px-margin-lg pt-space-lg pb-space-md flex items-center gap-space-sm"><div class="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center text-on-primary shadow-sm"><span class="material-symbols-outlined text-[24px]">account_balance</span></div><div class="flex flex-col"><span class="font-title-md text-title-md text-on-surface tracking-tight leading-tight">HADIR Daerah</span><span class="font-label-sm text-label-sm text-on-surface-variant">BAPPERIDA Sumba Barat</span></div></div><div class="px-margin-lg mb-space-sm"><div class="bg-surface-container rounded-lg px-space-sm py-space-xs flex items-center justify-between"><span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Lingkup Kepegawaian &amp; Aset</span><span class="w-2 h-2 rounded-full bg-secondary"></span></div></div><nav class="flex flex-col gap-space-xs px-margin" data-active-classes="bg-primary-container text-on-primary-container font-headline-sm rounded-xl shadow-sm"><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="beranda-dan-absen-mandiri" href="#"><span class="material-symbols-outlined text-[20px]">fingerprint</span><span class="font-label-lg text-label-lg">Beranda &amp; Absen Mandiri</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="rekap-dan-laporan" href="#"><span class="material-symbols-outlined text-[20px]">assessment</span><span class="font-label-lg text-label-lg">Rekap &amp; Laporan</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="pengajuan-dan-izin" href="#"><span class="material-symbols-outlined text-[20px]">event_available</span><span class="font-label-lg text-label-lg">Pengajuan &amp; Izin</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="layanan-kedinasan-sppd" href="#"><span class="material-symbols-outlined text-[20px]">commute</span><span class="font-label-lg text-label-lg">Layanan Kedinasan (SPPD)</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="manajemen-aset-daerah-kir" href="#"><span class="material-symbols-outlined text-[20px]">inventory_2</span><span class="font-label-lg text-label-lg">Manajemen Aset Daerah (KIR)</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="arsip-digital-kepegawaian" href="#"><span class="material-symbols-outlined text-[20px]">folder_shared</span><span class="font-label-lg text-label-lg">Arsip Digital Kepegawaian</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="panel-administrator" href="#"><span class="material-symbols-outlined text-[20px]">admin_panel_settings</span><span class="font-label-lg text-label-lg">Panel Administrator</span></a></nav></div><div class="p-margin-lg"><div class="bg-surface-container-lowest rounded-xl p-space-md shadow-[0_1px_8px_rgba(0,0,0,0.04)] flex flex-col gap-space-xs"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-secondary text-[18px]">verified</span><span class="font-label-md text-label-md text-on-surface font-semibold">SIMPEG Terintegrasi</span></div><p class="font-body-sm text-body-sm text-on-surface-variant">Sistem Presensi &amp; Inventarisasi Daerah Kab. Sumba Barat</p></div></div></aside><div class="pl-72"><header class="fixed top-0 left-72 right-0 h-16 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md"><span class="font-medium">Portal BAPPERIDA</span><span class="material-symbols-outlined text-[16px]">chevron_right</span><span class="text-on-surface font-semibold">Manajemen Layanan</span></div></div><div class="flex items-center gap-space-lg"><div class="hidden xl:flex items-center gap-space-xs bg-surface-container px-space-md py-space-xs rounded-full"><span class="material-symbols-outlined text-on-surface-variant text-[16px]">schedule</span><span class="font-label-md text-label-md text-on-surface font-semibold">Selasa, 24 Okt 2024 • 09:41 WITA</span></div><div class="flex items-center gap-space-xs bg-secondary-container px-space-md py-space-xs rounded-full shadow-sm"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span></span><span class="font-label-md text-label-md text-on-secondary-container font-semibold">Radius Kantor Terverifikasi</span></div><button class="w-9 h-9 rounded-full bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-all relative" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error"></span></button><div class="flex items-center gap-space-sm pl-space-sm"><div class="flex flex-col text-right hidden sm:flex"><span class="font-label-md text-label-md text-on-surface font-bold">Drs. H. M. Ridwan, M.Si</span><span class="font-label-sm text-label-sm text-on-surface-variant">Kepala BAPPERIDA</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="w-full pt-16 bg-surface px-space-lg py-space-lg"><div class="flex flex-col w-full gap-space-lg">
+<!-- Top Bar: Header and Core Actions -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[14px] text-primary">policy</span>
+          Permendagri No. 47 / 2021 • Perbup Sumba Barat
+        </span>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+          Rekonsiliasi BPKAD Aktif
+        </span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Manajemen Aset Daerah &amp; Inventaris Ruangan (KIR)</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Pengelolaan Barang Milik Daerah (BMD), peminjaman kendaraan dinas operasional, dan barcode audit inventaris fisik.</p>
+</div>
+<div class="flex items-center gap-space-sm flex-wrap sm:flex-nowrap">
+<button class="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-dim text-on-surface font-label-lg text-label-lg transition-all shadow-sm" type="button">
+<span class="material-symbols-outlined text-[20px] text-primary">qr_code_scanner</span>
+<span>Scan Barcode Aset</span>
+</button>
+<button class="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary-container font-label-lg text-label-lg transition-all shadow-md" type="button">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+<span>Tambah Aset / KIB Baru</span>
+</button>
+</div>
+</div>
+<!-- Metric Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all">
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-space-xs">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Total Aset Terdata</span>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-time-display text-time-display text-on-surface font-mono tabular-nums leading-none">412</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Unit BMD</span>
+</div>
+</div>
+<div class="w-11 h-11 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[24px]">inventory</span>
+</div>
+</div>
+<div class="mt-space-md pt-space-xs bg-surface-container-low -mx-space-md -mb-space-md px-space-md py-2 flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Nilai Buku Total:</span>
+<span class="font-label-md text-label-md text-on-surface font-mono tabular-nums font-bold">Rp 3.840.500.000</span>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all">
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-space-xs">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Kendaraan Dinas Aktif</span>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-time-display text-time-display text-on-surface font-mono tabular-nums leading-none">8</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Unit (Roda 4 &amp; 2)</span>
+</div>
+</div>
+<div class="w-11 h-11 rounded-lg bg-surface-container flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[24px]">directions_car</span>
+</div>
+</div>
+<div class="mt-space-md pt-space-xs bg-surface-container-low -mx-space-md -mb-space-md px-space-md py-2 flex items-center gap-space-sm font-mono text-[11px] text-on-surface">
+<span class="text-secondary font-semibold">4 Ready</span>
+<span class="text-outline-variant">•</span>
+<span class="text-primary font-semibold">3 SPPD</span>
+<span class="text-outline-variant">•</span>
+<span class="text-tertiary font-semibold">1 Servis</span>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all">
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-space-xs">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Inventaris Ruangan (KIR)</span>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-time-display text-time-display text-on-surface font-mono tabular-nums leading-none">14</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Ruang Kerja</span>
+</div>
+</div>
+<div class="w-11 h-11 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[24px]">meeting_room</span>
+</div>
+</div>
+<div class="mt-space-md pt-space-xs bg-surface-container-low -mx-space-md -mb-space-md px-space-md py-2 flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Status Sensus Fisik:</span>
+<span class="inline-flex items-center gap-1 font-label-sm text-label-sm text-secondary font-bold">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+          Sem. II 2024 Klop
+        </span>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all">
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-space-xs">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Pengajuan Pinjam</span>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-time-display text-time-display text-tertiary font-mono tabular-nums leading-none">2</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Permohonan</span>
+</div>
+</div>
+<div class="w-11 h-11 rounded-lg bg-surface-container flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[24px]">pending_actions</span>
+</div>
+</div>
+<div class="mt-space-md pt-space-xs bg-surface-container-low -mx-space-md -mb-space-md px-space-md py-2 flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Verifikasi:</span>
+<span class="font-label-sm text-label-sm text-tertiary font-semibold">Kasubag Umum &amp; Kepegawaian</span>
+</div>
+</div>
+</div>
+<!-- Sub-tab Navigation (Pill Switcher) -->
+<div class="bg-surface-container-low p-1.5 rounded-xl flex items-center gap-space-xs overflow-x-auto">
+<button class="px-space-md py-2 rounded-lg bg-surface-container-lowest text-primary font-label-lg text-label-lg shadow-sm flex items-center gap-space-xs shrink-0 font-semibold" type="button">
+<span class="material-symbols-outlined text-[18px]">format_list_bulleted</span>
+<span>1. KIB &amp; Inventaris Ruang (KIR)</span>
+</button>
+<button class="px-space-md py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-lg text-label-lg transition-all flex items-center gap-space-xs shrink-0" type="button">
+<span class="material-symbols-outlined text-[18px]">commute</span>
+<span>2. Peminjaman Kendaraan Dinas (SPPD)</span>
+<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-mono text-[11px] font-bold">2 Menunggu</span>
+</button>
+<button class="px-space-md py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-lg text-label-lg transition-all flex items-center gap-space-xs shrink-0" type="button">
+<span class="material-symbols-outlined text-[18px]">build</span>
+<span>3. Jadwal Pemeliharaan &amp; Servis</span>
+</button>
+<button class="px-space-md py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-lg text-label-lg transition-all flex items-center gap-space-xs shrink-0" type="button">
+<span class="material-symbols-outlined text-[18px]">sync_alt</span>
+<span>4. Berita Acara Rekonsiliasi (BPKAD)</span>
+</button>
+</div>
+<!-- Main Content Split / Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
+<!-- Left Column (approx 70%) -->
+<div class="lg:col-span-8 flex flex-col gap-space-md">
+<!-- Search & Filters Container -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col md:flex-row items-center gap-space-sm">
+<div class="relative w-full md:flex-1">
+<span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+<input class="w-full pl-10 pr-space-md py-2.5 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md placeholder:text-outline focus:outline-none focus:bg-surface-container transition-all" placeholder="Cari no. register KIB, nama barang, merk/tipe..." type="text"/>
+</div>
+<div class="flex items-center gap-space-sm w-full md:w-auto">
+<div class="relative flex-1 md:w-52">
+<select class="w-full appearance-none pl-3.5 pr-8 py-2.5 rounded-lg bg-surface-container-low text-on-surface font-label-md text-label-md focus:outline-none focus:bg-surface-container transition-all cursor-pointer">
+<option>Semua Ruangan (14 Ruang)</option>
+<option>Bidang Litbang &amp; Inovasi</option>
+<option>Bidang Perencanaan Ekonomi</option>
+<option>Ruang Kepala Badan</option>
+<option>Ruang Server &amp; IT Data Center</option>
+<option>Sekretariat (Pool Kendaraan)</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] pointer-events-none">arrow_drop_down</span>
+</div>
+<div class="relative flex-1 md:w-44">
+<select class="w-full appearance-none pl-3.5 pr-8 py-2.5 rounded-lg bg-surface-container-low text-on-surface font-label-md text-label-md focus:outline-none focus:bg-surface-container transition-all cursor-pointer">
+<option>Kondisi: Semua</option>
+<option>Kondisi: Baik (B)</option>
+<option>Kondisi: Rusak Ringan (RR)</option>
+<option>Kondisi: Rusak Berat (RB)</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] pointer-events-none">arrow_drop_down</span>
+</div>
+<button class="w-10 h-10 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-all shrink-0" title="Download Excel Laporan BMD" type="button">
+<span class="material-symbols-outlined text-[20px]">file_download</span>
+</button>
+</div>
+</div>
+<!-- High-Density Data Table Card -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm border-b-0 uppercase tracking-wider">
+<th class="py-3 px-space-md w-12 text-center">No</th>
+<th class="py-3 px-space-md">Kode BMD &amp; Register</th>
+<th class="py-3 px-space-md">Nama Barang &amp; Spesifikasi</th>
+<th class="py-3 px-space-md">Lokasi KIR &amp; PJ</th>
+<th class="py-3 px-space-md">Kondisi &amp; Thn</th>
+<th class="py-3 px-space-md">Status Pinjam</th>
+<th class="py-3 px-space-md text-right">Aksi</th>
+</tr>
+</thead>
+<tbody class="divide-y-0 text-on-surface font-body-sm text-body-sm">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3.5 px-space-md text-center font-mono tabular-nums text-on-surface-variant">01</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-primary">qr_code_2</span>
+<span class="font-mono tabular-nums font-semibold text-primary">KIB-B.02.01.03</span>
+</div>
+<span class="font-mono text-[11px] text-on-surface-variant">NUSP: 000142/2021</span>
+</td>
+<td class="py-3.5 px-space-md">
+<div class="font-title-md text-title-md text-on-surface leading-tight">Toyota Hilux 2.4 D-Cab</div>
+<div class="font-mono tabular-nums font-bold text-on-surface-variant text-[12px]">ED 8042 WA • M/T Diesel 4x4</div>
+</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="font-medium text-on-surface">Sekretariat (Pool Mobil)</div>
+<div class="text-on-surface-variant text-[11px]">PJ: Yohanes Ratu, ST</div>
+</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Baik
+                  </span>
+<div class="font-mono text-[11px] text-on-surface-variant mt-0.5">Perolehan: 2021</div>
+</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container-highest text-primary font-label-sm text-label-sm font-semibold">
+<span class="material-symbols-outlined text-[14px]">flight_takeoff</span>
+                    SPPD Kupang (s/d 24 Okt)
+                  </span>
+</td>
+<td class="py-3.5 px-space-md text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1">
+<button class="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold transition-all" type="button">Detail</button>
+<button class="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" title="Riwayat KIR" type="button">
+<span class="material-symbols-outlined text-[18px]">history_edu</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="bg-surface-container-lowest hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3.5 px-space-md text-center font-mono tabular-nums text-on-surface-variant">02</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-primary">qr_code_2</span>
+<span class="font-mono tabular-nums font-semibold text-primary">KIB-B.02.01.01</span>
+</div>
+<span class="font-mono text-[11px] text-on-surface-variant">NUSP: 000089/2022</span>
+</td>
+<td class="py-3.5 px-space-md">
+<div class="font-title-md text-title-md text-on-surface leading-tight">Toyota Innova Reborn 2.4 V</div>
+<div class="font-mono tabular-nums font-bold text-on-surface-variant text-[12px]">ED 102 WA • A/T Hitam Metalik</div>
+</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="font-medium text-on-surface">Ruang Kepala Badan</div>
+<div class="text-on-surface-variant text-[11px]">PJ: Drs. H. M. Ridwan, M.Si</div>
+</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Baik
+                  </span>
+<div class="font-mono text-[11px] text-on-surface-variant mt-0.5">Perolehan: 2022</div>
+</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Standby Kantor
+                  </span>
+</td>
+<td class="py-3.5 px-space-md text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1">
+<button class="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold transition-all" type="button">Detail</button>
+<button class="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" title="Riwayat KIR" type="button">
+<span class="material-symbols-outlined text-[18px]">history_edu</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3.5 px-space-md text-center font-mono tabular-nums text-on-surface-variant">03</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-primary">qr_code_2</span>
+<span class="font-mono tabular-nums font-semibold text-primary">KIB-E.05.02.11</span>
+</div>
+<span class="font-mono text-[11px] text-on-surface-variant">NUSP: 000312/2023</span>
+</td>
+<td class="py-3.5 px-space-md">
+<div class="font-title-md text-title-md text-on-surface leading-tight">Server Rack Dell PowerEdge R750</div>
+<div class="font-mono tabular-nums text-on-surface-variant text-[12px]">2x Xeon Gold 5318Y, 128GB RAM</div>
+</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="font-medium text-on-surface">Ruang Server &amp; IT Data Center</div>
+<div class="text-on-surface-variant text-[11px]">PJ: Agustinus Umbu, S.Kom</div>
+</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Baik
+                  </span>
+<div class="font-mono text-[11px] text-on-surface-variant mt-0.5">Perolehan: 2023</div>
+</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+                    Aktif 24/7 (Non-Pindah)
+                  </span>
+</td>
+<td class="py-3.5 px-space-md text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1">
+<button class="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold transition-all" type="button">Detail</button>
+<button class="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" title="Riwayat KIR" type="button">
+<span class="material-symbols-outlined text-[18px]">history_edu</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3.5 px-space-md text-center font-mono tabular-nums text-on-surface-variant">04</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-primary">qr_code_2</span>
+<span class="font-mono tabular-nums font-semibold text-primary">KIB-B.02.03.04</span>
+</div>
+<span class="font-mono text-[11px] text-on-surface-variant">NUSP: 000219/2019</span>
+</td>
+<td class="py-3.5 px-space-md">
+<div class="font-title-md text-title-md text-on-surface leading-tight">Honda CB150R Streetfire</div>
+<div class="font-mono tabular-nums font-bold text-on-surface-variant text-[12px]">ED 4412 WA • Operasional Lapangan</div>
+</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="font-medium text-on-surface">Bidang Litbang &amp; Inovasi</div>
+<div class="text-on-surface-variant text-[11px]">PJ: Stefanus Umbu K., ST</div>
+</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold">
+<span class="material-symbols-outlined text-[13px]">handyman</span>
+                    Servis Rutin
+                  </span>
+<div class="font-mono text-[11px] text-on-surface-variant mt-0.5">Perolehan: 2019</div>
+</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                    Dalam Perbaikan
+                  </span>
+</td>
+<td class="py-3.5 px-space-md text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1">
+<button class="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold transition-all" type="button">Detail</button>
+<button class="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" title="Riwayat KIR" type="button">
+<span class="material-symbols-outlined text-[18px]">history_edu</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3.5 px-space-md text-center font-mono tabular-nums text-on-surface-variant">05</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-primary">qr_code_2</span>
+<span class="font-mono tabular-nums font-semibold text-primary">KIB-E.05.01.08</span>
+</div>
+<span class="font-mono text-[11px] text-on-surface-variant">NUSP: 000450/2023</span>
+</td>
+<td class="py-3.5 px-space-md">
+<div class="font-title-md text-title-md text-on-surface leading-tight">Drone DJI Matrice 300 RTK</div>
+<div class="font-mono tabular-nums text-on-surface-variant text-[12px]">Sensor Zenmuse H20T (Geospasial)</div>
+</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="font-medium text-on-surface">Lab Data &amp; GIS Terpadu</div>
+<div class="text-on-surface-variant text-[11px]">PJ: Rina Wahyuni, S.Kom</div>
+</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Baik
+                  </span>
+<div class="font-mono text-[11px] text-on-surface-variant mt-0.5">Perolehan: 2023</div>
+</td>
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Standby Lab Litbang
+                  </span>
+</td>
+<td class="py-3.5 px-space-md text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1">
+<button class="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold transition-all" type="button">Detail</button>
+<button class="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" title="Riwayat KIR" type="button">
+<span class="material-symbols-outlined text-[18px]">history_edu</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer / Pagination -->
+<div class="bg-surface-container-low px-space-md py-3 flex flex-col sm:flex-row items-center justify-between gap-space-sm">
+<span class="font-label-md text-label-md text-on-surface-variant">
+            Menampilkan <span class="font-mono tabular-nums font-bold text-on-surface">5</span> dari <span class="font-mono tabular-nums font-bold text-on-surface">412</span> unit BMD BAPPERIDA Sumba Barat
+          </span>
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 rounded bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-all disabled:opacity-50" disabled="" type="button">
+<span class="material-symbols-outlined text-[16px]">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded bg-primary text-on-primary font-mono text-[12px] font-bold" type="button">1</button>
+<button class="w-8 h-8 rounded hover:bg-surface-container text-on-surface font-mono text-[12px] font-medium transition-all" type="button">2</button>
+<button class="w-8 h-8 rounded hover:bg-surface-container text-on-surface font-mono text-[12px] font-medium transition-all" type="button">3</button>
+<span class="px-1 text-outline font-mono text-[12px]">…</span>
+<button class="w-8 h-8 rounded hover:bg-surface-container text-on-surface font-mono text-[12px] font-medium transition-all" type="button">83</button>
+<button class="w-8 h-8 rounded bg-surface-container hover:bg-surface-container-high text-on-surface flex items-center justify-center transition-all" type="button">
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column (approx 30%) -->
+<div class="lg:col-span-4 flex flex-col gap-space-md">
+<!-- Card 1: Fast Approval Panel -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center justify-between pb-space-xs">
+<div class="flex items-center gap-space-xs">
+<div class="w-8 h-8 rounded-lg bg-tertiary-container/20 text-tertiary flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">assignment_turned_in</span>
+</div>
+<div class="flex flex-col">
+<h2 class="font-headline-sm text-headline-sm text-on-surface leading-tight">Persetujuan Pinjam Unit Cepat</h2>
+<span class="font-label-sm text-label-sm text-tertiary font-semibold">2 Berkas SPPD Menunggu Konfirmasi</span>
+</div>
+</div>
+<span class="flex h-2.5 w-2.5 relative">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-tertiary"></span>
+</span>
+</div>
+<div class="flex flex-col gap-space-sm">
+<!-- Request Item 1 -->
+<div class="bg-surface-container-low rounded-xl p-3.5 flex flex-col gap-2.5">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-mono font-bold text-[12px]">SU</div>
+<div>
+<div class="font-label-lg text-label-lg text-on-surface leading-none">Stefanus Umbu K., ST</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Bidang Litbang &amp; Inovasi</div>
+</div>
+</div>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-high text-primary font-mono font-semibold">SPPD/2024/182</span>
+</div>
+<div class="bg-surface-container-lowest rounded-lg p-2.5 flex flex-col gap-1">
+<div class="flex items-center gap-1.5 font-label-md text-label-md text-on-surface font-semibold">
+<span class="material-symbols-outlined text-[16px] text-primary">directions_car</span>
+                Toyota Hilux ED 8042 WA
+              </div>
+<div class="flex items-center gap-1 text-[11px] text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">pin_drop</span>
+<span>Survey Lapangan Irigasi Wanokaka</span>
+</div>
+<div class="flex items-center gap-1 text-[11px] text-on-surface-variant font-mono tabular-nums">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+<span>25 Okt - 27 Okt 2024 (3 Hari)</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2 mt-1">
+<button class="py-2 px-3 rounded-lg bg-surface-container hover:bg-error-container hover:text-on-error-container text-on-surface-variant font-label-md text-label-md font-semibold transition-all text-center" type="button">Tolak</button>
+<button class="py-2 px-3 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md font-semibold transition-all shadow-sm text-center" type="button">Setujui SPPD</button>
+</div>
+</div>
+<!-- Request Item 2 -->
+<div class="bg-surface-container-low rounded-xl p-3.5 flex flex-col gap-2.5">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-mono font-bold text-[12px]">MS</div>
+<div>
+<div class="font-label-lg text-label-lg text-on-surface leading-none">Maria D. Soba, S.Sos</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Bidang Perencanaan Makro</div>
+</div>
+</div>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-high text-primary font-mono font-semibold">SPPD/2024/185</span>
+</div>
+<div class="bg-surface-container-lowest rounded-lg p-2.5 flex flex-col gap-1">
+<div class="flex items-center gap-1.5 font-label-md text-label-md text-on-surface font-semibold">
+<span class="material-symbols-outlined text-[16px] text-primary">videocam</span>
+                Proyektor Epson EB-2250U
+              </div>
+<div class="flex items-center gap-1 text-[11px] text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">pin_drop</span>
+<span>Rakor Renja Bappeda Prov. NTT (Kupang)</span>
+</div>
+<div class="flex items-center gap-1 text-[11px] text-on-surface-variant font-mono tabular-nums">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+<span>28 Okt - 30 Okt 2024</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2 mt-1">
+<button class="py-2 px-3 rounded-lg bg-surface-container hover:bg-error-container hover:text-on-error-container text-on-surface-variant font-label-md text-label-md font-semibold transition-all text-center" type="button">Tolak</button>
+<button class="py-2 px-3 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md font-semibold transition-all shadow-sm text-center" type="button">Setujui SPPD</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2: Physical Verification QR Code KIR Generator -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<div class="w-8 h-8 rounded-lg bg-secondary-container/30 text-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">qr_code</span>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface leading-tight">Validasi Fisik KIR Stiker</h2>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Format Standar Permendagri No. 47</span>
+</div>
+</div>
+</div>
+<!-- Sample Sticker Label Preview -->
+<div class="bg-surface-container-low rounded-xl p-3.5 flex flex-col gap-2 relative shadow-inner">
+<div class="flex items-center justify-between pb-2 bg-surface-container-lowest -mx-3.5 -mt-3.5 px-3.5 pt-3 rounded-t-xl">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">shield</span>
+<div class="flex flex-col">
+<span class="font-label-sm text-[10px] text-on-surface font-bold uppercase tracking-tight">PEMERINTAH KABUPATEN SUMBA BARAT</span>
+<span class="font-label-sm text-[9px] text-on-surface-variant leading-none">BAPPERIDA • KARTU INVENTARIS RUANGAN</span>
+</div>
+</div>
+<span class="font-mono text-[9px] text-on-surface-variant font-semibold">T.A 2024</span>
+</div>
+<div class="flex items-center gap-space-md pt-1">
+<!-- Inline SVG QR Simulation -->
+<div class="w-20 h-20 bg-surface-container-lowest rounded-lg p-1.5 flex items-center justify-center shrink-0 shadow-sm">
+<svg class="w-full h-full text-on-surface" fill="currentColor" viewbox="0 0 100 100">
+<path d="M0,0 h30 v30 h-30 z M10,10 h10 v10 h-10 z M70,0 h30 v30 h-30 z M80,10 h10 v10 h-10 z M0,70 h30 v30 h-30 z M10,80 h10 v10 h-10 z M40,10 h10 v20 h-10 z M60,10 h5 v5 h-5 z M40,40 h20 v10 h-20 z M10,40 h20 v10 h-20 z M40,60 h10 v30 h-10 z M60,60 h30 v10 h-30 z M60,80 h10 v20 h-10 z M80,80 h20 v20 h-20 z M70,40 h20 v10 h-20 z"></path>
+</svg>
+</div>
+<div class="flex flex-col gap-1 min-w-0">
+<div class="flex flex-col">
+<span class="font-label-sm text-[9px] text-on-surface-variant uppercase">Kode Barang (KIB-B)</span>
+<span class="font-mono tabular-nums font-bold text-on-surface text-[12px] truncate">02.01.03.01.002</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-[9px] text-on-surface-variant uppercase">NUSP Register</span>
+<span class="font-mono tabular-nums font-semibold text-primary text-[11px]">2021-000142</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-[9px] text-on-surface-variant uppercase">Kode Lokasi</span>
+<span class="font-mono text-[10px] text-on-surface">12.21.05.02.01.00</span>
+</div>
+</div>
+</div>
+<div class="pt-1.5 flex items-center justify-between text-[10px] text-on-surface-variant font-mono">
+<span>Status: Terverifikasi</span>
+<span class="text-secondary font-bold">Audit OK (KIR-04)</span>
+</div>
+</div>
+<button class="w-full py-2.5 px-space-md rounded-xl bg-surface-container-high hover:bg-surface-dim text-on-surface font-label-lg text-label-lg transition-all flex items-center justify-center gap-space-xs shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px] text-primary">print</span>
+<span>Cetak Label QR Stiker Aset</span>
+</button>
+</div>
+</div>
+</div>
+</div></main></div></body></html>

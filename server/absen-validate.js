@@ -39,7 +39,11 @@ function ipInCidr(ip, cidr) {
   }
 }
 
-const tolak = (kodeTolak, keterangan) => ({ ok: false, kodeTolak, keterangan });
+// diag (opsional) berisi metrik penolakan (jarak ke pin, dsb.) untuk log audit
+// di router — tidak pernah diteruskan ke klien.
+const tolak = (kodeTolak, keterangan, diag) => ({
+  ok: false, kodeTolak, keterangan, ...(diag ? { diag } : {}),
+});
 const terima = (jenisAbsen, namaLokasi, keterangan) => ({ ok: true, jenisAbsen, namaLokasi, keterangan });
 
 function toMenit(v) {
@@ -58,19 +62,73 @@ const hariCocok = (l, hariIni) => {
 const BUTUH_KETERANGAN = ['IZIN', 'SAKIT', 'TUGAS'];
 
 export function validateAbsen({ payload = {}, serverTime, employee = {}, settings = {} }) {
-  const { hariIni = '', jamMasuk = '', jamPulang = '', tengahHari = TENGAH_HARI, lokasi = [] } = settings;
+  const {
+    hariIni = '', jamMasuk = '', jamPulang = '', tengahHari = TENGAH_HARI, lokasi = [],
+    // Fakta server: apakah pegawai punya baris penugasan hari ini. Harus persis
+    // true; undefined/false = tolak PULANG LUAR (fail-closed).
+    penugasanHariIni = false,
+    // Selain false persis, penugasan WAJIB (fail-closed). Router mengirim false
+    // hanya saat instansi belum memakai fitur Penugasan/SPT (mode "tandai").
+    wajibPenugasan = true,
+  } = settings;
   const ket = String(payload.keterangan || '').trim() ? String(payload.keterangan) : '';
 
   if (!employee?.nip) return tolak('NIP_REQUIRED', 'NIP tidak dikenali.');
   const status = String(employee.status || 'AKTIF').toUpperCase();
   if (status === 'NONAKTIF' || status === 'INACTIVE') return tolak('PEGAWAI_NONAKTIF', 'Akun pegawai ini dinonaktifkan.');
 
-  // Meja Absen: n8n only checks token presence; we check the value (T3).
+  // Meja Absen: n8n only checks token presence; we check the value (T3),
+  // atau sesi admin terotentikasi (is_admin_meja).
+  // Catatan: Pengecekan GPS pada meja absen dinonaktifkan untuk saat ini.
+  // JenisAbsen dihitung dari jam server (MASUK / DI LUAR JAM MASUK / DI LUAR JAM PULANG / PULANG),
+  // kecuali payload.jenis_absen ditentukan eksplisit.
   if (payload.source === 'meja_absen') {
-    if (!isValidMejaToken(payload.meja_token, employee.instansi_id)) {
+    if (!payload.is_admin_meja && !isValidMejaToken(payload.meja_token, employee.instansi_id)) {
       return tolak('MEJA_TOKEN_INVALID', 'Akses Meja Absen ditolak (Token tidak valid/tidak ditemukan).');
     }
-    return terima('MEJA', payload.lokasi_nama || 'Meja Absen', ket);
+
+    // Resolusi nama lokasi jika koordinat GPS tersedia dan cocok (opsional, tanpa tolak)
+    let namaLokMeja = payload.lokasi_nama || 'Meja Absen';
+    const latMeja = Number(payload.latitude);
+    const lngMeja = Number(payload.longitude);
+    if (Number.isFinite(latMeja) && Number.isFinite(lngMeja) && !(latMeja === 0 && lngMeja === 0)) {
+      const accMeja = Number(payload.horizontal_accuracy) || Number(payload.accuracy) || 0;
+      const hariLokasiMeja = lokasi.filter((l) => hariCocok(l, hariIni));
+      const poolLokasi = hariLokasiMeja.length > 0 ? hariLokasiMeja : lokasi;
+      const matched = poolLokasi.find((l) => {
+        if (isWFH(l)) return true;
+        const la = Number(l.latitude);
+        const lo = Number(l.longitude);
+        if (!Number.isFinite(la) || !Number.isFinite(lo)) return false;
+        const r = Number(l.radius);
+        if (!Number.isFinite(r) || r <= 0) return true;
+        return haversine(latMeja, lngMeja, la, lo) <= r + Math.min(accMeja, 50);
+      });
+      if (matched?.Nama_Lokasi) {
+        namaLokMeja = matched.Nama_Lokasi;
+      }
+    }
+
+    const menitMeja = toMenit(serverTime?.jam);
+    const mMasukMeja = toMenit(jamMasuk);
+    const mPulangMeja = toMenit(jamPulang);
+
+    let jAbsenMeja;
+    if (payload.jenis_absen && ['MASUK', 'PULANG', 'DI LUAR JAM MASUK', 'DI LUAR JAM PULANG'].includes(payload.jenis_absen)) {
+      jAbsenMeja = payload.jenis_absen;
+    } else if (!Number.isFinite(mMasukMeja) || !Number.isFinite(mPulangMeja)) {
+      jAbsenMeja = 'MASUK';
+    } else if (menitMeja <= mMasukMeja) {
+      jAbsenMeja = 'MASUK';
+    } else if (menitMeja <= tengahHari) {
+      jAbsenMeja = 'DI LUAR JAM MASUK';
+    } else if (menitMeja < mPulangMeja) {
+      jAbsenMeja = 'DI LUAR JAM PULANG';
+    } else {
+      jAbsenMeja = 'PULANG';
+    }
+
+    return terima(jAbsenMeja, namaLokMeja, ket);
   }
 
   // ── Anti-fake GPS ──
@@ -118,7 +176,19 @@ export function validateAbsen({ payload = {}, serverTime, employee = {}, setting
   // Parity with n8n baris 246-249: field staff are away from the office by definition,
   // so office radius is not checked for PULANG LUAR. Canonical juga tidak mewajibkan
   // keterangan di sini — dia meng-default-nya (baris 248), jadi jangan diubah jadi tolak.
-  if (isPulangLuar) return terima('PULANG LUAR', 'Lapangan', ket || 'Pulang dari lapangan');
+  // skip_radius_check dikirim klien, jadi tanpa syarat ini siapa pun bisa absen
+  // pulang dari mana saja. Radius hanya boleh dilewati kalau server mencatat
+  // penugasan (tabel penugasan) untuk pegawai ini pada tanggal server hari ini.
+  if (isPulangLuar) {
+    const hasil = terima('PULANG LUAR', 'Lapangan', ket || 'Pulang dari lapangan');
+    if (penugasanHariIni === true) return hasil;
+    if (wajibPenugasan !== false) {
+      return tolak('PULANG_LUAR_TANPA_PENUGASAN',
+        'Absen pulang luar hanya untuk pegawai yang memiliki penugasan/SPT hari ini.');
+    }
+    // Mode tandai: diterima, tapi router mencatatnya di log [absen-curiga].
+    return { ...hasil, peringatan: ['PULANG_LUAR_TANPA_PENUGASAN'] };
+  }
 
   // ── Lokasi: hari wajib untuk semua, termasuk WFH ──
   const hariLokasi = lokasi.filter((l) => hariCocok(l, hariIni));
@@ -133,9 +203,31 @@ export function validateAbsen({ payload = {}, serverTime, employee = {}, setting
     if (!Number.isFinite(la) || !Number.isFinite(lo)) return false;
     const r = Number(l.radius);
     if (!Number.isFinite(r) || r <= 0) return true;
-    return haversine(lat, lng, la, lo) <= r;
+    // Paritas n8n "Validasi Absen": radius diberi toleransi akurasi GPS,
+    // dibatasi 50 m. Tanpa ini pegawai yang berdiri di kantor dengan sinyal
+    // GPS indoor (error puluhan meter) ditolak LOKASI_TIDAK_VALID padahal
+    // fisiknya di dalam radius — penyebab utama gagal absen sejak port native.
+    return haversine(lat, lng, la, lo) <= r + Math.min(accuracy, 50);
   });
-  if (!near) return tolak('LOKASI_TIDAK_VALID', 'Anda berada di luar radius lokasi kantor.');
+  if (!near) {
+    // Metrik untuk log audit penolakan di router: jarak ke pin TERDEKAT supaya
+    // kelihatan apakah gagal karena radius terlalu ketat atau GPS memang jauh.
+    let dekat = null;
+    for (const l of hariLokasi) {
+      const la = Number(l.latitude);
+      const lo = Number(l.longitude);
+      if (!Number.isFinite(la) || !Number.isFinite(lo)) continue;
+      const jarak = haversine(lat, lng, la, lo);
+      if (!dekat || jarak < dekat.jarak) dekat = { jarak, radius: l.radius, nama: l.Nama_Lokasi };
+    }
+    return tolak('LOKASI_TIDAK_VALID', 'Anda berada di luar radius lokasi kantor.',
+      dekat && {
+        jarak_m: Math.round(dekat.jarak),
+        radius_m: Number.isFinite(Number(dekat.radius)) ? Number(dekat.radius) : null,
+        toleransi_m: Math.round(Math.min(accuracy, 50)),
+        pin: String(dekat.nama || ''),
+      });
+  }
 
   if (!isWFH(near)) {
     const ranges = String(near.ip_range || '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -145,6 +237,78 @@ export function validateAbsen({ payload = {}, serverTime, employee = {}, setting
   }
 
   return terima(jenisAbsen, near.Nama_Lokasi, ket);
+}
+
+// ── Analisis riwayat lokasi (anti-fake GPS sisi server) ──
+//
+// Skor di klien (js/absen.js) dihitung dari prevLocData di localStorage, yang
+// bisa dihapus atau diubah pengguna. Di sini pembandingnya adalah koordinat absen
+// sebelumnya di Log_Absen, yang hanya bisa ditulis server. Fungsi ini murni:
+// router yang membaca riwayat dan memutuskan apa yang dilakukan dengan hasilnya.
+
+const JARAK_MIN_TELEPORT_M = 5000; // di bawah ini selisih GPS biasa, bukan teleport
+const KECEPATAN_CURIGA_KMH = 120;
+const KECEPATAN_TELEPORT_KMH = 200;
+const IDENTIK_M = 0.5;
+const IDENTIK_MIN_ULANG = 3;
+const RIWAYAT_MAKS = 5;
+
+function parseKoordinat(v) {
+  const parts = String(v ?? '').split(',');
+  if (parts.length !== 2) return null;
+  const lat = Number(parts[0]);
+  const lng = Number(parts[1]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) return null;
+  return { lat, lng };
+}
+
+// Tanggal + jam WITA -> milidetik. Kedua sisi selalu WITA, jadi selisihnya valid.
+function epochWita(tanggal, jam) {
+  const t = String(tanggal ?? '').trim().slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const m = toMenit(jam);
+  if (!t || !Number.isFinite(m)) return NaN;
+  return Date.UTC(Number(t[1]), Number(t[2]) - 1, Number(t[3]), 0, m);
+}
+
+/**
+ * @param riwayat baris Log_Absen terbaru dulu: { Tanggal, Jam, koordinat: "lat,lng" }
+ * @param blokKmh ambang tolak (km/jam); 0/undefined = hanya menandai, tidak menolak
+ * @returns { flags: string[], teleport: {kmh, jarakM}|null, blok: boolean }
+ *
+ * Penandaan, bukan penolakan, secara default: penerbangan dinas (Tambolaka ke
+ * Kupang) dan posisi jaringan yang di-cache perangkat bisa terlihat seperti
+ * teleport atau koordinat identik pada pegawai yang jujur.
+ */
+export function analisisRiwayatLokasi({ lat, lng, serverTime, riwayat = [], blokKmh = 0 }) {
+  const hasil = { flags: [], teleport: null, blok: false };
+  const sekarang = epochWita(serverTime?.tanggal, serverTime?.jam);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(sekarang)) return hasil;
+
+  const titik = riwayat.slice(0, RIWAYAT_MAKS).map((r) => {
+    const k = parseKoordinat(r.koordinat);
+    return k && { ...k, t: epochWita(r.Tanggal, r.Jam) };
+  }).filter((p) => p && Number.isFinite(p.t) && p.t <= sekarang);
+
+  let identik = 0;
+  for (const p of titik) {
+    const jarak = haversine(lat, lng, p.lat, p.lng);
+    if (jarak <= IDENTIK_M) identik += 1;
+    // Minimal 60 dtk: jam log hanya HH:MM, jadi selisih nol/semenit tidak boleh
+    // membuat kecepatan membengkak.
+    const detik = Math.max((sekarang - p.t) / 1000, 60);
+    const kmh = (jarak / detik) * 3.6;
+    if (jarak >= JARAK_MIN_TELEPORT_M && (!hasil.teleport || kmh > hasil.teleport.kmh)) {
+      hasil.teleport = { kmh: Math.round(kmh), jarakM: Math.round(jarak) };
+    }
+  }
+
+  if (hasil.teleport) {
+    if (hasil.teleport.kmh > KECEPATAN_TELEPORT_KMH) hasil.flags.push(`TELEPORT_${hasil.teleport.kmh}kmh_${hasil.teleport.jarakM}m`);
+    else if (hasil.teleport.kmh > KECEPATAN_CURIGA_KMH) hasil.flags.push(`KECEPATAN_TINGGI_${hasil.teleport.kmh}kmh`);
+    if (Number(blokKmh) > 0 && hasil.teleport.kmh >= Number(blokKmh)) hasil.blok = true;
+  }
+  if (identik >= IDENTIK_MIN_ULANG) hasil.flags.push(`KOORDINAT_IDENTIK_${identik}x`);
+  return hasil;
 }
 
 // ── Gate bisnis (node "Validasi Absen" canonical) ──
@@ -190,18 +354,26 @@ export function evaluateGates({ jenisAbsen, serverTime, tanggal, employeeId, row
     return tolak('SUDAH_ADA_KETERANGAN', `Anda tidak bisa melakukan absen karena sudah tercatat memiliki keterangan: ${norm(ket['Jenis Absen'])}`);
   }
 
+  const hasMasuk = hariIni.some((r) => GRP_MASUK.includes(norm(r['Jenis Absen'])));
+  const hasPulang = hariIni.some((r) => GRP_PULANG.includes(norm(r['Jenis Absen'])));
+
+  // Kehadiran lengkap: jika sudah ada masuk DAN pulang hari ini, tolak absen reguler tambahan
+  if (jA !== 'KONTROL' && hasMasuk && hasPulang) {
+    return tolak('SUDAH_ABSEN', 'Kehadiran hari ini sudah lengkap (Sudah absen masuk dan pulang).');
+  }
+
   if (GRP_MASUK.includes(jA)) {
-    if (hariIni.some((r) => GRP_MASUK.includes(norm(r['Jenis Absen'])))) {
+    if (hasMasuk) {
       return tolak('SUDAH_ABSEN', 'Pegawai sudah melakukan absen masuk hari ini.');
     }
   }
   if (GRP_PULANG.includes(jA)) {
-    if (hariIni.some((r) => GRP_PULANG.includes(norm(r['Jenis Absen'])))) {
+    if (hasPulang) {
       return tolak('SUDAH_ABSEN', 'Pegawai sudah melakukan absen pulang hari ini.');
     }
     // KONTROL sengaja tidak ada di GRP_PULANG: device absen kontrol boleh tanpa
     // absen masuk, jadi tidak ikut memicu BELUM_MASUK.
-    if (!hariIni.some((r) => GRP_MASUK.includes(norm(r['Jenis Absen'])))) {
+    if (!hasMasuk) {
       return tolak('BELUM_MASUK', 'Pegawai belum melakukan absen masuk hari ini.');
     }
   }

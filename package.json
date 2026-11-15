@@ -9,31 +9,25 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "node server/index.js",
-    "test": "node --test server/*.test.js tests/gas-media.test.js tests/aset-emoji.test.mjs tests/aset-kategori-dropdown.test.mjs tests/aset-kondisi.test.mjs tests/aset-markup.test.mjs tests/aset-nav.test.mjs tests/aset-router.test.mjs tests/aset-screens.test.mjs tests/workflow-mutasi.test.mjs",
+    "test": "node --test server/*.test.js tests/gas-media.test.js tests/aset-emoji.test.mjs tests/aset-kategori-dropdown.test.mjs tests/aset-kondisi.test.mjs tests/aset-markup.test.mjs tests/aset-nav.test.mjs tests/aset-router.test.mjs tests/aset-screens.test.mjs tests/workflow-mutasi.test.mjs tests/drive-img-url.test.js tests/deemoji.test.mjs tests/search-dd.test.mjs tests/log-week.test.mjs tests/aset-tahun.test.mjs tests/aset-peg-overview.test.mjs tests/aset-kir-format.test.mjs tests/lembur-ttd.test.mjs tests/kode-aset.test.mjs tests/aset-pemegang.test.mjs tests/aset-satu-barang.test.mjs tests/log-add-edit.test.mjs tests/ket-dedup.test.mjs tests/log-edit-fix.test.mjs tests/admin-ket-multi.test.mjs tests/tugas-spt.test.mjs tests/tugas-spt-wiring.test.mjs tests/penugasan-perjadin.test.mjs tests/spt-template-tags.test.mjs tests/arsip-ui.test.js tests/arsip-markup.test.mjs tests/gps-fresh.test.mjs tests/admin-sso-ui.test.mjs tests/sidebar-desktop.test.mjs tests/meja-popup-and-face.test.mjs tests/face-quality.test.mjs tests/multi-photo-enrollment.test.mjs tests/dev-tools.test.mjs tests/admin-grid.test.mjs tests/arsip-nav-header.test.mjs tests/config-session-sync.test.mjs tests/admin-roles-ui.test.mjs",
     "test:live": "node --test tests/n8n-face.test.mjs tests/pks.test.mjs"
   },
   "dependencies": {
     "@vladmandic/human": "^3.3.6",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.5",
     "express": "^4.22.3",
     "pg": "^8.23.1",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "pizzip": "^3.3.0"
   },
   "devDependencies": {
     "@capacitor/android": "^8.5.2",
     "@capacitor/cli": "^8.5.2",
     "@capacitor/core": "^8.5.2",
     "@eslint/js": "^9.39.4",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
     "docxtemplater": "^3.71.0",
     "eslint": "^9.39.4",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
-    "pizzip": "^3.1.4",
     "vite": "^8.0.4"
   }
 }

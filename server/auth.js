@@ -10,10 +10,14 @@ export const MEDIA_ROLES = new Set([
   'IRBAN',
 ]);
 
-// Absen boleh dipakai seluruh peran media ditambah USER dan INSPEKTUR, sesuai
-// node "Check Role Absen" canonical. Daftar peran media tidak ditulis ulang:
-//-media.js dan USER/INSPEKTUR itu satu-satunya selisihnya.
-export const ABSEN_ROLES = new Set(['USER', 'INSPEKTUR', ...MEDIA_ROLES]);
+// Absen boleh dipakai seluruh peran media ditambah USER, INSPEKTUR, dan
+// BENDAHARA BARANG (staf bendahara barang tetap harus bisa absen & baca log sendiri).
+export const ABSEN_ROLES = new Set(['USER', 'INSPEKTUR', 'BENDAHARA BARANG', ...MEDIA_ROLES]);
+
+// BENDAHARA BARANG = staf bendahara barang: admin aset (SIMAPO) saja, BUKAN media.
+// Sengaja tidak masuk MEDIA_ROLES supaya tidak mendapat tulis log manual
+// (log.js) atau endpoint media lain; hanya dipakai mount /api/simapo.
+export const SIMAPO_ROLES = new Set([...MEDIA_ROLES, 'BENDAHARA BARANG']);
 
 // Token sesi nyata = public.create_session() -> encode(gen_random_bytes(48),'hex'),
 // jadi 192 hex huruf kecil. Forma lain (mis. legacy `usr_<id>_<ts>` dari n8n) ditolak
@@ -55,7 +59,7 @@ export function hashDeviceToken(token) {
 // menunggu token kedaluwarsa. revoked_at IS NULL writable di luar is_active supaya
 // token yang dicabut tidak bisa dihidupkan lagi dengan sekadar menggeser flag.
 export const DEVICE_LOOKUP_SQL =
-  'SELECT u.id::text AS id, u."NIP" AS nip, u.role, u.instansi_id ' +
+  'SELECT u.id::text AS id, u."NIP" AS nip, u.role, u.is_admin, u.instansi_id ' +
   'FROM device_sessions d ' +
   'JOIN user_list u ON u.id::text = d.user_id ' +
   'WHERE d.token_hash = $1 AND d.is_active AND d.revoked_at IS NULL ' +
@@ -78,7 +82,7 @@ export const DEVICE_LOOKUP_SQL =
 // ponytail: hash scan 47 baris per session, tidak masalah; kalau user_list jadi
 // ratusan ribu, pakai u.id = s.user_id::bigint plus index.
 export const SESSION_LOOKUP_SQL =
-  'SELECT u.id::text AS id, u."NIP" AS nip, u.role, u.instansi_id ' +
+  'SELECT u.id::text AS id, u."NIP" AS nip, u.role, u.is_admin, u.instansi_id ' +
   'FROM auth_sessions s ' +
   'JOIN user_list u ON u.id::text = s.user_id ' +
   'WHERE s.session_token = $1 AND s.is_active AND s.expires_at > now()';
@@ -120,7 +124,15 @@ export function requireRole(roles, deps = {}) {
       row = await lookup(token, kind);
       if (!row) return unauthorized(res);
       role = String(row.role || '').trim().toUpperCase();
-      if (!roles.has(role)) {
+      let allowed = roles.has(role) || roles.has(role.replace(/_/g, ' ')) || roles.has(role.replace(/\s+/g, '_'));
+      if (!allowed && roles === ABSEN_ROLES && (deps.query || process.env.DATABASE_URL)) {
+        try {
+          const doQuery = deps.query || query;
+          const roleCheck = await doQuery('SELECT id FROM absen_roles WHERE id = $1', [role]);
+          if (roleCheck?.rows?.length > 0) allowed = true;
+        } catch {}
+      }
+      if (!allowed) {
         return res.status(403).json({ ok: false, message: 'Forbidden' });
       }
     } catch {
@@ -130,7 +142,15 @@ export function requireRole(roles, deps = {}) {
     }
     // id tetap string (lihat ::text di SQL): Task 5 harus memakainya lewat String(),
     // jangan pernah `req.user.id === <number>`.
-    req.user = { id: row.id, nip: row.nip, role, instansi_id: row.instansi_id };
+    // is_admin: boolean user_list — satu-satunya sumber izin tambah/edit log
+    // (bukan role). Fail-closed: selain true dianggap false.
+    req.user = {
+      id: row.id,
+      nip: row.nip,
+      role,
+      instansi_id: row.instansi_id,
+      is_admin: row.is_admin === true || row.is_admin === 'true',
+    };
     req.authKind = kind;
     next();
   };
@@ -149,4 +169,65 @@ export function sameInstansi(user, targetInstansiId) {
   // tanpa instansi — kebocoran lintas instansi. Fail-closed.
   if (targetInstansiId === '') return false;
   return String(user?.instansi_id) === String(targetInstansiId);
+}
+
+export function hasPermission(userPermissions, requiredPermission) {
+  if (!Array.isArray(userPermissions)) return false;
+  if (userPermissions.includes('*')) return true;
+  if (userPermissions.includes(requiredPermission)) return true;
+  const [mod] = String(requiredPermission || '').split('.');
+  if (mod && userPermissions.includes(`${mod}.*`)) return true;
+  return false;
+}
+
+export function requirePermission(permission, deps = {}) {
+  const lookup = deps.lookup || defaultLookup;
+  const doQuery = deps.query || query;
+  return async function permissionMiddleware(req, res, next) {
+    const token = bearerToken(req);
+    const kind = isSessionToken(token) ? 'session' : isDeviceToken(token) ? 'device' : null;
+    if (!kind) return unauthorized(res);
+    let row;
+    let role;
+    try {
+      row = await lookup(token, kind);
+      if (!row) return unauthorized(res);
+      role = String(row.role || '').trim().toUpperCase();
+      if (role === 'SUPERADMIN') {
+        req.user = {
+          id: row.id,
+          nip: row.nip,
+          role,
+          instansi_id: row.instansi_id,
+          is_admin: true,
+          permissions: ['*'],
+        };
+        req.authKind = kind;
+        return next();
+      }
+
+      const roleRes = await doQuery('SELECT permissions FROM absen_roles WHERE id = $1', [role]);
+      const rolePerms = roleRes?.rows?.[0]?.permissions || [];
+      const permsArray = Array.isArray(rolePerms)
+        ? rolePerms
+        : (typeof rolePerms === 'string' ? JSON.parse(rolePerms) : []);
+
+      if (!hasPermission(permsArray, permission)) {
+        return res.status(403).json({ ok: false, message: 'Forbidden: Insufficient permissions' });
+      }
+
+      req.user = {
+        id: row.id,
+        nip: row.nip,
+        role,
+        instansi_id: row.instansi_id,
+        is_admin: row.is_admin === true || row.is_admin === 'true',
+        permissions: permsArray,
+      };
+      req.authKind = kind;
+      next();
+    } catch {
+      return res.status(500).json({ ok: false, message: 'Gagal memverifikasi izin' });
+    }
+  };
 }

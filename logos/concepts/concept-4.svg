@@ -1,0 +1,23 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sistem HADIR">
+  <g id="ground">
+    <ellipse cx="256" cy="458" rx="72" ry="16" fill="#60A5FA"/>
+  </g>
+  <g id="pin">
+    <path
+      d="M256 48c-79.4 0-144 64.6-144 144 0 106 144 234 144 234s144-128 144-234c0-79.4-64.6-144-144-144z"
+      fill="#3B82F6"
+      stroke="#0F172A"
+      stroke-width="12"
+      stroke-linejoin="round"/>
+    <circle cx="256" cy="192" r="112" fill="#60A5FA"/>
+  </g>
+  <g id="check">
+    <path
+      d="M188 196 240 248 332 144"
+      fill="none"
+      stroke="#F1F5F9"
+      stroke-width="44"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+  </g>
+</svg>

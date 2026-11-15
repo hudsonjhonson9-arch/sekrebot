@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+
+<html lang="id"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      "colors": {
+        "on-primary-fixed": "#00174b",
+        "secondary-container": "#6cf8bb",
+        "on-primary-container": "#eeefff",
+        "on-secondary-fixed-variant": "#005236",
+        "surface": "#f8f9ff",
+        "on-primary": "#ffffff",
+        "on-secondary": "#ffffff",
+        "secondary-fixed": "#6ffbbe",
+        "on-surface-variant": "#434655",
+        "primary": "#2563eb",
+        "outline": "#737686",
+        "surface-bright": "#f8f9ff",
+        "tertiary-container": "#996100",
+        "on-primary-fixed-variant": "#003ea8",
+        "inverse-on-surface": "#eaf1ff",
+        "secondary-fixed-dim": "#4edea3",
+        "primary-fixed": "#dbe1ff",
+        "inverse-surface": "#213145",
+        "on-surface": "#0b1c30",
+        "error": "#ba1a1a",
+        "outline-variant": "#c3c6d7",
+        "on-background": "#0b1c30",
+        "primary-container": "#2563eb",
+        "surface-dim": "#cbdbf5",
+        "surface-variant": "#d3e4fe",
+        "surface-tint": "#0053db",
+        "on-tertiary-container": "#ffeedd",
+        "surface-container-lowest": "#ffffff",
+        "secondary": "#006c49",
+        "inverse-primary": "#b4c5ff",
+        "primary-fixed-dim": "#b4c5ff",
+        "on-secondary-fixed": "#002113",
+        "tertiary-fixed": "#ffddb8",
+        "surface-container-highest": "#d3e4fe",
+        "on-tertiary": "#ffffff",
+        "tertiary-fixed-dim": "#ffb95f",
+        "on-error": "#ffffff",
+        "on-tertiary-fixed-variant": "#653e00",
+        "error-container": "#ffdad6",
+        "on-tertiary-fixed": "#2a1700",
+        "on-secondary-container": "#00714d",
+        "surface-container": "#e5eeff",
+        "on-error-container": "#93000a",
+        "background": "#f8f9ff",
+        "surface-container-low": "#eff4ff",
+        "surface-container-high": "#dce9ff",
+        "tertiary": "#784b00"
+      },
+      "borderRadius": {
+        "DEFAULT": "0.25rem",
+        "lg": "0.5rem",
+        "xl": "0.75rem",
+        "full": "9999px"
+      },
+      "spacing": {
+        "margin": "1rem",
+        "margin-lg": "1.5rem",
+        "space-md": "1rem",
+        "space-sm": "0.5rem",
+        "space-xs": "0.25rem",
+        "margin-md": "1.25rem",
+        "gutter-sm": "0.75rem",
+        "gutter": "1rem",
+        "space-xl": "2rem",
+        "space-lg": "1.5rem"
+      },
+      "fontFamily": {
+        "display-lg": ["Plus Jakarta Sans"],
+        "time-display": ["Plus Jakarta Sans"],
+        "body-md": ["Plus Jakarta Sans"],
+        "body-sm": ["Plus Jakarta Sans"],
+        "headline-lg": ["Plus Jakarta Sans"],
+        "title-md": ["Plus Jakarta Sans"],
+        "body-lg": ["Plus Jakarta Sans"],
+        "label-sm": ["Plus Jakarta Sans"],
+        "label-lg": ["Plus Jakarta Sans"],
+        "display-lg-mobile": ["Plus Jakarta Sans"],
+        "label-md": ["Plus Jakarta Sans"],
+        "headline-md": ["Plus Jakarta Sans"],
+        "headline-sm": ["Plus Jakarta Sans"]
+      },
+      "fontSize": {
+        "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+        "time-display": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.03em", "fontWeight": "800"}],
+        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+        "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+        "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+        "title-md": ["16px", {"lineHeight": "22px", "fontWeight": "600"}],
+        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+        "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.03em", "fontWeight": "500"}],
+        "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+        "display-lg-mobile": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+        "headline-md": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+        "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}]
+      }
+    }
+  }
+}</script></head><body class="bg-surface font-body-md text-on-surface">
+
+<aside class="fixed left-0 top-0 h-full w-72 bg-slate-900 z-50 flex flex-col justify-between shadow-2xl border-r border-slate-800 text-slate-100">
+    <div class="flex flex-col">
+      <!-- Logo Kop Branding Header (Pemerintah Kab. Sumba Barat) -->
+      <div class="h-20 px-5 flex items-center gap-3 border-b border-slate-800 bg-slate-950/70">
+        <div class="w-11 h-11 rounded-xl bg-white p-1 flex items-center justify-center shadow-sm shrink-0 border border-slate-700">
+          <img src="Lambang_Kabupaten_Sumba_Barat.png" alt="Lambang Kabupaten Sumba Barat" class="w-full h-full object-contain" />
+        </div>
+        <div class="flex flex-col min-w-0">
+          <span class="font-extrabold text-[12.5px] text-white tracking-tight leading-tight uppercase truncate">PEMKAB SUMBA BARAT</span>
+          <span class="text-[11px] text-slate-400 font-medium truncate">BAPPERIDA • Hadir &amp; SIMAPO</span>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <div class="px-4 pt-4">
+        <div class="px-3 py-1 mb-2 text-[10.5px] font-bold text-slate-400 uppercase tracking-widest font-mono">
+          Navigasi Portal
+        </div>
+        <nav class="flex flex-col gap-1.5">
+          <!-- Meja admin -->
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all font-semibold text-sm" href="desktop.html">
+            <span class="material-symbols-outlined text-[20px] text-slate-400">desktop_windows</span>
+            <span>Meja admin</span>
+          </a>
+          <!-- Rekap dan Laporan -->
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all font-semibold text-sm" href="rekap.html">
+            <span class="material-symbols-outlined text-[20px] text-slate-400">bar_chart</span>
+            <span>Rekap dan Laporan</span>
+          </a>
+          <!-- Manajemen Aset -->
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all font-semibold text-sm" href="aset-kir.html">
+            <span class="material-symbols-outlined text-[20px] text-slate-400">inventory_2</span>
+            <span>Manajemen Aset</span>
+          </a>
+          <!-- Arsip Digital (Active Page) -->
+          <a aria-current="page" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-md shadow-blue-900/50 transition-all" href="arsip.html">
+            <span class="material-symbols-outlined text-[20px]">folder_open</span>
+            <span>Arsip Digital</span>
+          </a>
+          <!-- Panel Admin -->
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all font-semibold text-sm" href="admin.html">
+            <span class="material-symbols-outlined text-[20px] text-slate-400">admin_panel_settings</span>
+            <span>Panel Admin</span>
+          </a>
+          <!-- Layanan Kedinasan -->
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all font-semibold text-sm" href="layanan.html">
+            <span class="material-symbols-outlined text-[20px] text-slate-400">work_outline</span>
+            <span>Layanan Kedinasan</span>
+          </a>
+          <!-- Mode Kiosk Lobi -->
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all font-semibold text-sm" href="kiosk.html">
+            <span class="material-symbols-outlined text-[20px] text-slate-400">tv_gen</span>
+            <span>Mode Kiosk Lobi</span>
+          </a>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Bottom Sidebar Status Badge -->
+    <div class="p-4 border-t border-slate-800 bg-slate-950/60">
+      <div class="p-3 rounded-xl bg-slate-800/80 flex flex-col gap-1 border border-slate-700/60">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-semibold text-slate-400">Server BAPPERIDA</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">Online</span>
+        </div>
+        <div class="flex items-center gap-1.5 text-slate-200 text-xs font-semibold">
+          <span class="material-symbols-outlined text-[15px] text-emerald-400">near_me</span>
+          <span>Geofence Presensi (200m)</span>
+        </div>
+      </div>
+    </div>
+  </aside><div class="pl-72"><header class="fixed top-0 left-72 right-0 h-16 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-space-md"><a href="desktop.html" class="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary-container text-on-primary font-bold text-xs transition-all shadow-xs hover:opacity-90"><span class="material-symbols-outlined text-[18px]">arrow_back</span><span>Presensi</span></a><div class="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md"><span class="font-medium">Portal BAPPERIDA</span><span class="material-symbols-outlined text-[16px]">chevron_right</span><span class="text-on-surface font-semibold">Manajemen Layanan</span></div></div><div class="flex items-center gap-space-lg"><a href="index.html" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary font-bold text-xs transition-all shadow-xs border border-primary/20" title="Buka tampilan presensi versi Smartphone (Screen 01)"><span class="material-symbols-outlined text-[17px]">smartphone</span><span>Mode HP (Mobile)</span></a><div class="hidden xl:flex items-center gap-space-xs bg-surface-container px-space-md py-space-xs rounded-full"><span class="material-symbols-outlined text-on-surface-variant text-[16px]">schedule</span><span id="arsipLiveClock" class="font-label-md text-label-md text-on-surface font-semibold font-mono">WITA</span></div><div class="flex items-center gap-space-xs bg-secondary-container px-space-md py-space-xs rounded-full shadow-sm"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span></span><span class="font-label-md text-label-md text-on-secondary-container font-semibold">Radius Kantor Terverifikasi</span></div><button class="w-9 h-9 rounded-full bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-all relative" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error"></span></button><div class="flex items-center gap-space-sm pl-space-sm"><div class="flex flex-col text-right hidden sm:flex"><span class="font-label-md text-label-md text-on-surface font-bold">Charles Hermana Weru, S.Sos</span><span class="font-label-sm text-label-sm text-on-surface-variant font-mono">NIP 197211022001121001 • Kepala Badan</span></div><div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs font-mono">CW</div></div></div></header><main class="w-full pt-16 bg-surface px-space-lg py-space-lg"><div class="flex flex-col w-full gap-space-lg">
+<!-- Top Banner & Action Header -->
+<div class="flex flex-col xl:flex-row xl:items-center justify-between gap-space-md bg-surface-container-lowest p-space-lg rounded-2xl shadow-[0_4px_20px_-2px_rgba(100,116,139,0.06)] relative overflow-hidden">
+<div class="absolute right-0 top-0 translate-x-12 -translate-y-8 w-72 h-72 bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+<div class="flex flex-col gap-space-xs max-w-3xl z-10">
+<div class="flex items-center gap-space-xs">
+<span class="px-2.5 py-1 bg-surface-container text-on-surface-variant font-label-sm text-label-sm rounded-full tracking-wider uppercase">Standard ANRI • BKN • BSrE BSSN</span>
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span class="font-label-sm text-label-sm text-secondary font-medium">Vault Keamanan Level IV Aktif</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Bank Arsip Digital Kepegawaian &amp; Tata Naskah Dinas</h1>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+        Repositori terenkripsi berkas SK, TPP, SPPD, sertifikasi kompetensi, dan berkas jabatan ASN BAPPERIDA Sumba Barat dengan integritas tandatangan elektronik tersertifikasi.
+      </p>
+</div>
+<div class="flex items-center gap-space-sm z-10 shrink-0">
+<button class="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-secondary-container hover:bg-secondary-fixed text-on-secondary-container font-label-lg text-label-lg transition-all shadow-sm" type="button">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+<span>Verifikasi Keabsahan TTE</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-lg py-space-sm rounded-xl bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg shadow-sm hover:shadow transition-all" type="button">
+<span class="material-symbols-outlined text-[20px]">upload_file</span>
+<span>Unggah Dokumen / SK</span>
+</button>
+</div>
+</div>
+<!-- 4 Metric Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
+<!-- Stat 1 -->
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(100,116,139,0.05)] flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Total Dokumen Terarsip</span>
+<span id="arsipStatTotal" class="font-time-display text-time-display text-on-surface tabular-nums mt-space-xs">91</span>
+</div>
+<div class="w-10 h-10 rounded-xl bg-primary-fixed/50 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[22px]">folder_copy</span>
+</div>
+</div>
+<div class="mt-space-md pt-space-xs">
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm mb-1.5">
+<span>Kapasitas Terpakai</span>
+<span class="font-mono tabular-nums font-semibold text-on-surface">14.8 GB / 50 GB</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 29.6%;"></div>
+</div>
+</div>
+</div>
+<!-- Stat 2 -->
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(100,116,139,0.05)] flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">SK &amp; Legalitas ASN</span>
+<span id="arsipStatCat1" class="font-time-display text-time-display text-on-surface tabular-nums mt-space-xs">35</span>
+</div>
+<div class="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[22px]">workspace_premium</span>
+</div>
+</div>
+<div class="mt-space-md pt-space-xs flex items-center justify-between font-body-sm text-body-sm text-on-surface-variant">
+<span class="truncate">Kenaikan Pangkat, KGB, Jabatan</span>
+<span class="font-mono tabular-nums text-secondary font-medium ml-1 shrink-0">100% Aktif</span>
+</div>
+</div>
+<!-- Stat 3 -->
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(100,116,139,0.05)] flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">SPJ &amp; Laporan SPPD</span>
+<span id="arsipStatCat2" class="font-time-display text-time-display text-on-surface tabular-nums mt-space-xs">13</span>
+</div>
+<div class="w-10 h-10 rounded-xl bg-tertiary-fixed/40 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[22px]">commute</span>
+</div>
+</div>
+<div class="mt-space-md pt-space-xs flex items-center gap-space-xs font-body-sm text-body-sm text-secondary">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span class="truncate font-medium">Terverifikasi Inspektorat</span>
+</div>
+</div>
+<!-- Stat 4 -->
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(100,116,139,0.05)] flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Validitas TTE BSrE</span>
+<span class="font-time-display text-time-display text-secondary tabular-nums mt-space-xs">99.2%</span>
+</div>
+<div class="w-10 h-10 rounded-xl bg-secondary-container/40 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' 1;">security</span>
+</div>
+</div>
+<div class="mt-space-md pt-space-xs flex items-center justify-between font-body-sm text-body-sm text-on-surface-variant">
+<span>Terkoneksi Root CA</span>
+<span class="font-label-sm text-label-sm bg-surface-container px-2 py-0.5 rounded text-on-surface font-mono font-medium">BSSN GOV</span>
+</div>
+</div>
+</div>
+<!-- Sub-tab Navigation -->
+<div class="flex items-center gap-space-xs overflow-x-auto pb-1">
+<button class="px-space-md py-2.5 rounded-xl bg-primary text-on-primary font-label-lg text-label-lg shadow-sm whitespace-nowrap flex items-center gap-space-xs" type="button">
+<span class="material-symbols-outlined text-[18px]">badge</span>
+<span>1. Dokumen Perorangan Pegawai (Dossier ASN)</span>
+</button>
+<button class="px-space-md py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg whitespace-nowrap transition-all flex items-center gap-space-xs" type="button">
+<span class="material-symbols-outlined text-[18px]">gavel</span>
+<span>2. Keputusan Bupati &amp; Kepala Badan (SK)</span>
+</button>
+<button class="px-space-md py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg whitespace-nowrap transition-all flex items-center gap-space-xs" type="button">
+<span class="material-symbols-outlined text-[18px]">airplane_ticket</span>
+<span>3. Arsip SPPD &amp; Surat Tugas (SPT)</span>
+</button>
+<button class="px-space-md py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg whitespace-nowrap transition-all flex items-center gap-space-xs" type="button">
+<span class="material-symbols-outlined text-[18px]">payments</span>
+<span>4. Rekapitulasi TPP &amp; Payroll</span>
+</button>
+<button class="px-space-md py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg whitespace-nowrap transition-all flex items-center gap-space-xs" type="button">
+<span class="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+<span>5. Berkas Lelang &amp; BMD (KIR)</span>
+</button>
+</div>
+<!-- Main Content Split Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-md">
+<!-- Left Explorer & Folder Tree (Col span 3 ~ 25%) -->
+<div class="lg:col-span-3 flex flex-col gap-space-md">
+<!-- Folder Directory -->
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(100,116,139,0.05)] flex flex-col">
+<div class="flex items-center justify-between pb-space-sm mb-space-sm bg-surface-container-low px-space-sm py-2 rounded-xl">
+<div class="flex items-center gap-space-xs text-on-surface">
+<span class="material-symbols-outlined text-[20px] text-primary">account_tree</span>
+<span class="font-headline-sm text-headline-sm">Struktur Arsip</span>
+</div>
+<span class="font-mono text-label-sm text-label-sm text-on-surface-variant tabular-nums">v4.2</span>
+</div>
+<!-- Tree List -->
+<div class="flex flex-col gap-1 text-on-surface">
+<!-- Parent 1 -->
+<div class="group">
+<div class="flex items-center justify-between p-2 rounded-xl bg-primary-fixed/40 text-primary cursor-pointer font-title-md text-title-md">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">folder_open</span>
+<span class="font-semibold text-body-md">Berkas Induk ASN</span>
+</div>
+<span class="text-label-sm font-mono bg-surface-container px-1.5 py-0.5 rounded text-on-surface">52</span>
+</div>
+<!-- Children nodes -->
+<div class="flex flex-col pl-6 mt-1 gap-0.5">
+<a class="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface text-body-sm font-body-sm transition-all" href="#">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline">subdirectory_arrow_right</span>
+<span class="truncate">Pejabat Tinggi (Eselon II)</span>
+</div>
+<span class="font-mono text-label-sm tabular-nums text-on-surface-variant">1</span>
+</a>
+<a class="flex items-center justify-between py-1.5 px-2 rounded-lg bg-surface-container text-on-surface font-semibold text-body-sm font-body-sm transition-all" href="#">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-primary">subdirectory_arrow_right</span>
+<span class="truncate">Administrator (Eselon III/IV)</span>
+</div>
+<span class="font-mono text-label-sm tabular-nums bg-surface-container-high px-1.5 rounded">8</span>
+</a>
+<a class="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface text-body-sm font-body-sm transition-all" href="#">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline">subdirectory_arrow_right</span>
+<span class="truncate">Fungsional Tertentu (JFT)</span>
+</div>
+<span class="font-mono text-label-sm tabular-nums text-on-surface-variant">24</span>
+</a>
+<a class="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface text-body-sm font-body-sm transition-all" href="#">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline">subdirectory_arrow_right</span>
+<span class="truncate">Pelaksana / Umum (JFU)</span>
+</div>
+<span class="font-mono text-label-sm tabular-nums text-on-surface-variant">19</span>
+</a>
+</div>
+</div>
+<!-- Parent 2 -->
+<div class="flex items-center justify-between p-2 rounded-xl hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer text-body-md font-body-md transition-all mt-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">folder</span>
+<span class="truncate font-medium">Arsip Regulasi &amp; Perbup</span>
+</div>
+<span class="font-mono text-label-sm tabular-nums">48</span>
+</div>
+<!-- Parent 3 -->
+<div class="flex items-center justify-between p-2 rounded-xl hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer text-body-md font-body-md transition-all">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">folder</span>
+<span class="truncate font-medium">Arsip SPPD Tahun 2024</span>
+</div>
+<span class="font-mono text-label-sm tabular-nums">186</span>
+</div>
+<!-- Parent 4 -->
+<div class="flex items-center justify-between p-2 rounded-xl hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer text-body-md font-body-md transition-all">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">folder</span>
+<span class="truncate font-medium">Arsip Tunjangan Kinerja (TPP)</span>
+</div>
+<span class="font-mono text-label-sm tabular-nums">24</span>
+</div>
+</div>
+</div>
+<!-- Security / Vault Status Widget -->
+<div class="bg-gradient-to-br from-surface-container-high to-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(100,116,139,0.05)] flex flex-col gap-space-xs">
+<div class="flex items-center gap-space-xs text-primary font-title-md text-title-md">
+<span class="material-symbols-outlined text-[20px]">lock</span>
+<span>Keamanan Vault</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+          Penyimpanan terenkripsi algoritma AES-256 GCM level militer dengan replikasi cloud terdistribusi di Pusat Data Nasional (PDN).
+        </p>
+<div class="mt-2 pt-2 bg-surface-container-lowest/80 p-2.5 rounded-xl flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+<span class="font-label-sm text-label-sm font-semibold text-on-surface">Auto-Sync PDN</span>
+</div>
+<span class="font-mono text-label-sm text-label-sm text-on-surface-variant tabular-nums">10 Menit lalu</span>
+</div>
+</div>
+<!-- Quick Storage Indicator -->
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(100,116,139,0.05)] flex flex-col gap-2">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Statistik Format Berkas</span>
+<div class="flex items-center justify-between text-body-sm font-body-sm">
+<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-error"></span>PDF / PDF-A</span>
+<span class="font-mono tabular-nums text-on-surface font-medium">94.8%</span>
+</div>
+<div class="flex items-center justify-between text-body-sm font-body-sm">
+<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-secondary"></span>Signed XML/P7S</span>
+<span class="font-mono tabular-nums text-on-surface font-medium">4.2%</span>
+</div>
+<div class="flex items-center justify-between text-body-sm font-body-sm">
+<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-tertiary"></span>Dokumen Lainnya</span>
+<span class="font-mono tabular-nums text-on-surface font-medium">1.0%</span>
+</div>
+</div>
+</div>
+<!-- Right Depository Table & Controls (Col span 9 ~ 75%) -->
+<div class="lg:col-span-9 flex flex-col gap-space-md">
+<!-- Search and Filter Toolbar -->
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(100,116,139,0.05)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-space-sm">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
+<input class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface-container-low text-body-md font-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all" placeholder="Cari no. surat, nama pegawai, NIP, atau jenis berkas..." type="text"/>
+</div>
+<div class="flex items-center gap-space-xs shrink-0 flex-wrap sm:flex-nowrap">
+<div class="flex items-center bg-surface-container-low px-3 py-2 rounded-xl text-body-sm font-body-sm text-on-surface gap-1.5">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">calendar_today</span>
+<span class="font-mono tabular-nums font-medium">2024</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant cursor-pointer">arrow_drop_down</span>
+</div>
+<div class="flex items-center bg-surface-container-low px-3 py-2 rounded-xl text-body-sm font-body-sm text-on-surface gap-1.5">
+<span class="material-symbols-outlined text-[18px] text-secondary">verified</span>
+<span class="font-medium">TTE Sah Valid</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant cursor-pointer">arrow_drop_down</span>
+</div>
+<button class="w-10 h-10 rounded-xl bg-surface-container-low hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-all" type="button">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+</button>
+</div>
+</div>
+<!-- Depository Document Table -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-[0_2px_12px_rgba(100,116,139,0.05)] overflow-hidden flex flex-col">
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-low/60 text-on-surface-variant font-label-md text-label-md">
+<th class="py-3.5 px-4 font-semibold w-12 text-center">No</th>
+<th class="py-3.5 px-4 font-semibold min-w-[220px]">Nama Dokumen &amp; Kode Arsip</th>
+<th class="py-3.5 px-4 font-semibold min-w-[130px]">Kategori</th>
+<th class="py-3.5 px-4 font-semibold min-w-[200px]">Pemilik Dokumen</th>
+<th class="py-3.5 px-4 font-semibold min-w-[140px]">Tgl &amp; Ukuran</th>
+<th class="py-3.5 px-4 font-semibold min-w-[180px]">Integritas TTE (Hash)</th>
+<th class="py-3.5 px-4 font-semibold text-right pr-6 min-w-[120px]">Aksi</th>
+</tr>
+</thead>
+<tbody id="arsipTableBody" class="divide-y divide-surface-container-high/50 text-on-surface text-body-sm">
+  <tr>
+    <td colspan="7" class="py-10 text-center text-on-surface-variant font-medium">
+      <div class="flex items-center justify-center gap-2">
+        <span class="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin"></span>
+        <span>Memuat data arsip dan dokumen digital BAPPERIDA...</span>
+      </div>
+    </td>
+  </tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Bar -->
+<div class="px-space-md py-space-sm bg-surface-container-low/30 flex items-center justify-between font-body-sm text-body-sm text-on-surface-variant">
+<div class="flex items-center gap-1">
+<span>Menampilkan</span>
+<span class="font-mono font-medium text-on-surface tabular-nums">1 - 5</span>
+<span>dari</span>
+<span class="font-mono font-medium text-on-surface tabular-nums">1.284</span>
+<span>dokumen</span>
+</div>
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 rounded-lg hover:bg-surface-container flex items-center justify-center text-on-surface-variant disabled:opacity-40" disabled="" type="button">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded-lg bg-primary text-on-primary font-mono tabular-nums font-medium flex items-center justify-center" type="button">1</button>
+<button class="w-8 h-8 rounded-lg hover:bg-surface-container text-on-surface-variant font-mono tabular-nums font-medium flex items-center justify-center" type="button">2</button>
+<button class="w-8 h-8 rounded-lg hover:bg-surface-container text-on-surface-variant font-mono tabular-nums font-medium flex items-center justify-center" type="button">3</button>
+<span class="px-1 text-outline">...</span>
+<button class="w-8 h-8 rounded-lg hover:bg-surface-container text-on-surface-variant font-mono tabular-nums font-medium flex items-center justify-center" type="button">257</button>
+<button class="w-8 h-8 rounded-lg hover:bg-surface-container flex items-center justify-center text-on-surface-variant" type="button">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Quick Preview Drawer / Card at Bottom for Selected Document -->
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_4px_20px_-2px_rgba(100,116,139,0.06)] flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-space-md">
+<!-- Document Detail & Metadata -->
+<div class="flex flex-col md:flex-row items-start md:items-center gap-space-md flex-1">
+<div class="w-14 h-14 rounded-2xl bg-secondary-container/40 flex items-center justify-center text-secondary shrink-0">
+<span class="material-symbols-outlined text-[32px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<div class="flex flex-col gap-1 min-w-0">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">SK Kenaikan Pangkat Pembina Utama Muda (Gol. IV/c)</span>
+<span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">Tervalidasi BSSN</span>
+</div>
+<div class="flex items-center gap-space-sm text-body-sm font-body-sm text-on-surface-variant flex-wrap">
+<span>Penandatangan: <strong class="text-on-surface font-medium">Gubernur NTT &amp; BKN Jakarta</strong></span>
+<span>•</span>
+<span>Naskah ID: <strong class="text-on-surface font-mono tabular-nums">BKN-KP-8829-2024</strong></span>
+<span>•</span>
+<span>Diunduh: <strong class="text-on-surface font-mono tabular-nums">14x oleh Inspektorat &amp; BKD</strong></span>
+</div>
+<!-- SHA-256 Digest String -->
+<div class="mt-1 flex items-center gap-2 bg-surface-container-low px-2.5 py-1.5 rounded-lg max-w-xl">
+<span class="material-symbols-outlined text-[16px] text-outline">fingerprint</span>
+<span class="font-mono text-label-sm text-label-sm text-on-surface-variant truncate">
+                SHA-256: e8f1b4a92c307da19b380f2d47aa1f86bb90c609513e639849204bf132cba991
+              </span>
+<button class="material-symbols-outlined text-[14px] text-primary hover:text-primary-container shrink-0" title="Salin Digest" type="button">content_copy</button>
+</div>
+</div>
+</div>
+<!-- QR Verification Preview & Quick Download -->
+<div class="flex items-center gap-space-md shrink-0 bg-surface-container-low p-space-sm rounded-xl">
+<!-- Inline Minimal SVG QR Code Placeholder -->
+<div class="w-16 h-16 bg-surface-container-lowest p-1 rounded-lg flex items-center justify-center shrink-0">
+<svg class="w-full h-full text-on-surface" fill="currentColor" viewbox="0 0 24 24">
+<path d="M2 2h8v8H2V2zm2 2v4h4V4H4zm10-2h8v8h-8V2zm2 2v4h4V4h-4zM2 14h8v8H2v-8zm2 2v4h4v-4H4zm14 0h2v2h-2v-2zm-4 0h2v4h-2v-4zm6 4h2v2h-2v-2zm-2 2h2v2h-2v-2zm-4-2h2v4h-2v-4zm4-4h2v2h-2v-2zm-6-2h4v2h-4v-2zm4 4v2h-2v-2h2z"></path>
+</svg>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">BSrE Seal Checksum</span>
+<div class="flex items-center gap-1 font-mono text-label-sm text-secondary font-semibold">
+<span class="material-symbols-outlined text-[14px]">shield</span>
+<span>ROOT-BSSN-PASS</span>
+</div>
+<button class="mt-1 px-3 py-1 bg-primary text-on-primary rounded-lg font-label-md text-label-md flex items-center justify-center gap-1 hover:bg-primary-container transition-all" type="button">
+<span class="material-symbols-outlined text-[16px]">file_download</span>
+<span>Unduh Berkas</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div></main></div>
+<script>
+  function updateArsipClock() {
+    const el = document.getElementById('arsipLiveClock');
+    if (el) {
+      const now = new Date();
+      const hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][now.getDay()];
+      const bln = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][now.getMonth()];
+      const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Makassar' });
+      el.textContent = `${hari}, ${now.getDate()} ${bln} ${now.getFullYear()} • ${timeStr} WITA`;
+    }
+  }
+  updateArsipClock();
+  setInterval(updateArsipClock, 1000);
+</script>
+
+<script>
+  let _rawArsipList = [];
+  let _activeArsipFilter = 'all';
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadRealArsipData();
+    setupArsipSearch();
+  });
+
+  async function loadRealArsipData() {
+    const tbody = document.getElementById('arsipTableBody');
+    try {
+      const res = await fetch('/api/stitch/arsip/mobile-data');
+      const json = await res.json();
+
+      if (json.ok && json.documents) {
+        _rawArsipList = json.documents;
+        
+        // Update stats
+        if (json.stats) {
+          const elTotal = document.getElementById('arsipStatTotal');
+          if (elTotal) elTotal.textContent = json.stats.totalDocs || json.documents.length;
+          
+          if (json.stats.kategoriBreakdown && json.stats.kategoriBreakdown.length >= 2) {
+            const elCat1 = document.getElementById('arsipStatCat1');
+            if (elCat1) elCat1.textContent = json.stats.kategoriBreakdown[0].count;
+            const elCat2 = document.getElementById('arsipStatCat2');
+            if (elCat2) elCat2.textContent = json.stats.kategoriBreakdown[1].count;
+          }
+        }
+
+        renderArsipRows(_rawArsipList);
+      } else {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-on-surface-variant font-medium">Belum ada arsip dokumen yang tersimpan.</td></tr>';
+      }
+    } catch (err) {
+      console.error('loadRealArsipData error:', err);
+      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-error font-medium">Gagal memuat repositori arsip: ${err.message}</td></tr>`;
+    }
+  }
+
+  function renderArsipRows(docs) {
+    const tbody = document.getElementById('arsipTableBody');
+    if (!tbody) return;
+
+    if (docs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-on-surface-variant font-medium">Tidak ada dokumen yang sesuai dengan pencarian.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = docs.map((doc, idx) => {
+      const num = String(idx + 1).padStart(2, '0');
+      const isPdf = (doc.fileType || '').toLowerCase().includes('pdf') || (doc.title || '').toLowerCase().endsWith('.pdf');
+      const isExcel = (doc.fileType || '').toLowerCase().includes('excel') || (doc.fileType || '').toLowerCase().includes('sheet') || (doc.title || '').toLowerCase().endsWith('.xlsx');
+      
+      let icon = 'description';
+      let iconColor = 'text-primary bg-primary/10';
+      if (isPdf) {
+        icon = 'picture_as_pdf';
+        iconColor = 'text-error bg-error/10';
+      } else if (isExcel) {
+        icon = 'table_chart';
+        iconColor = 'text-secondary bg-secondary/10';
+      }
+
+      const kodeArsip = doc.nomorDokumen ? `NO: ${doc.nomorDokumen}` : `BAPPERIDA/ARS/${doc.year || '2026'}/${doc.id}`;
+      const kategori = doc.type || 'Administrasi Umum';
+      const uploader = doc.uploader || 'Aparatur BAPPERIDA';
+      const uploaderNip = doc.uploaderId ? `NIP ${doc.uploaderId}` : 'Pegawai Terverifikasi';
+      const tgl = doc.tanggalDokumen || 'Terarsip';
+      const size = doc.size || 'Digital File';
+
+      const safeUrl = doc.url ? doc.url.replace(/"/g, '&quot;') : '#';
+      const hasUrl = Boolean(doc.url && doc.url !== '#');
+
+      return `
+        <tr class="hover:bg-surface-container-low/40 transition-colors group">
+          <td class="py-3.5 px-4 text-center font-mono tabular-nums text-on-surface-variant">${num}</td>
+          <td class="py-3.5 px-4">
+            <div class="flex items-start gap-2.5">
+              <div class="w-8 h-8 rounded-lg ${iconColor} flex items-center justify-center shrink-0 mt-0.5">
+                <span class="material-symbols-outlined text-[18px]">${icon}</span>
+              </div>
+              <div class="flex flex-col min-w-0">
+                <a ${hasUrl ? `href="${safeUrl}" target="_blank" rel="noopener noreferrer"` : 'href="javascript:void(0)"'} class="font-title-md text-title-md font-semibold text-primary truncate hover:underline cursor-pointer" title="${doc.title}">
+                  ${doc.title}
+                </a>
+                <span class="font-mono text-label-sm text-on-surface-variant tabular-nums">${kodeArsip}</span>
+              </div>
+            </div>
+          </td>
+          <td class="py-3.5 px-4 whitespace-nowrap">
+            <span class="px-2.5 py-1 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm font-medium">
+              ${kategori}
+            </span>
+          </td>
+          <td class="py-3.5 px-4">
+            <div class="flex flex-col min-w-0">
+              <span class="font-medium text-on-surface truncate">${uploader}</span>
+              <span class="font-mono text-label-sm text-on-surface-variant tabular-nums">${uploaderNip}</span>
+            </div>
+          </td>
+          <td class="py-3.5 px-4 whitespace-nowrap">
+            <div class="flex flex-col">
+              <span class="font-mono tabular-nums text-on-surface">${tgl}</span>
+              <span class="font-mono text-label-sm text-on-surface-variant tabular-nums">${size}</span>
+            </div>
+          </td>
+          <td class="py-3.5 px-4 whitespace-nowrap">
+            <div class="flex flex-col gap-0.5">
+              <div class="flex items-center gap-1 text-secondary font-medium">
+                <span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+                <span class="font-label-sm">BSrE Terverifikasi</span>
+              </div>
+              <span class="font-mono text-[11px] text-outline tabular-nums">Google Drive Sync</span>
+            </div>
+          </td>
+          <td class="py-3.5 px-4 text-right pr-6 whitespace-nowrap">
+            <div class="inline-flex items-center gap-1">
+              ${hasUrl ? `
+                <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary transition-all inline-flex items-center" title="Buka Dokumen Google Drive">
+                  <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+                </a>
+              ` : ''}
+              <button onclick="alert('Dokumen: ' + '${doc.title.replace(/'/g, "\\'")}' + '\nPengunggah: ' + '${uploader}' + '\nKategori: ' + '${kategori}')" class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant transition-all cursor-pointer" title="Rincian Dokumen">
+                <span class="material-symbols-outlined text-[18px]">visibility</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function setupArsipSearch() {
+    const searchInput = document.querySelector('input[type="text"][placeholder*="Cari"]');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const val = e.target.value.toLowerCase().trim();
+        if (!val) {
+          renderArsipRows(_rawArsipList);
+          return;
+        }
+        const filtered = _rawArsipList.filter(d => 
+          (d.title && d.title.toLowerCase().includes(val)) ||
+          (d.type && d.type.toLowerCase().includes(val)) ||
+          (d.uploader && d.uploader.toLowerCase().includes(val)) ||
+          (d.uploaderId && d.uploaderId.toLowerCase().includes(val)) ||
+          (d.nomorDokumen && d.nomorDokumen.toLowerCase().includes(val))
+        );
+        renderArsipRows(filtered);
+      });
+    }
+  }
+</script>
+
+</body></html>

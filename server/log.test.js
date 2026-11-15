@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
-import { requireRole, MEDIA_ROLES } from './auth.js';
+import { requireRole, ABSEN_ROLES } from './auth.js';
 
 const { createLogRouter } = await import('./log.js');
 
@@ -12,6 +12,7 @@ const ADMIN = {
   nip: '198001012000011001',
   role: 'ADMIN',
   instansi_id: 'bapperida',
+  is_admin: true,
 };
 
 // Body dari frontend. `telegram_id` bernama misleading: isinya user_list.id,
@@ -37,11 +38,12 @@ const PEGAWAI = {
   instansi_id: 'bapperida',
 };
 
-const state = { insert: [], update: [], pegawai: [], insertRows: 1, updateRows: 1 };
+const state = { insert: [], update: [], pegawai: [], insertRows: 1, updateRows: 1, existingLogs: [] };
 
 function defaultQuery(text) {
   if (/INSERT INTO/i.test(text)) return { rows: Array.from({ length: state.insertRows }, (_, i) => ({ ID_Log: i + 1 })) };
   if (/UPDATE /i.test(text)) return { rows: Array.from({ length: state.updateRows }, (_, i) => ({ ID_Log: 900 + i })) };
+  if (/SELECT "ID_Log" FROM "Log_Absen"/.test(text)) return { rows: state.existingLogs };
   if (/FROM "user_list"/i.test(text)) return { rows: state.pegawai };
   return { rows: [] };
 }
@@ -51,7 +53,9 @@ function harness({ auth = true, session = ADMIN, query } = {}) {
   const app = express();
   app.use(express.json({ limit: '256kb' }));
   if (auth) {
-    app.use('/api/log', requireRole(MEDIA_ROLES, { lookup: async () => ({ ...session }) }));
+    // Montasi produksi: /api/log untuk seluruh ABSEN_ROLES; pencatatan manual
+    // (/add, /edit) dan baca lintas-pegawai ditolak di dalam log.js.
+    app.use('/api/log', requireRole(ABSEN_ROLES, { lookup: async () => ({ ...session }) }));
   }
   app.use('/api/log', createLogRouter({
     query: async (text, params) => {
@@ -60,6 +64,19 @@ function harness({ auth = true, session = ADMIN, query } = {}) {
     },
   }));
   return { app, sql };
+}
+
+async function get(h, path) {
+  const server = await new Promise((r) => { const s = h.app.listen(0, () => r(s)); });
+  const port = server.address().port;
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}${path}`, {
+      headers: { authorization: `Bearer ${TOKEN}` },
+    });
+    return { status: res.status, body: await res.json() };
+  } finally {
+    await new Promise((r) => server.close(r));
+  }
 }
 
 async function post(h, path, body, { auth = true } = {}) {
@@ -88,10 +105,33 @@ test('menolak request tanpa bearer', async () => {
   assert.equal(r.status, 401);
 });
 
-test('menolak role non-media (USER)', async () => {
+test('menolak is_admin=false (apapun role)', async () => {
   reset();
-  const h = harness({ session: { ...ADMIN, role: 'USER' } });
+  const h = harness({ session: { ...ADMIN, is_admin: false } });
   const r = await post(h, '/api/log/add', BODY);
+  assert.equal(r.status, 403);
+});
+
+test('mengizinkan is_admin=true walau role USER', async () => {
+  reset();
+  const h = harness({ session: { ...ADMIN, role: 'USER', is_admin: true } });
+  const r = await post(h, '/api/log/add', BODY);
+  assert.equal(r.status, 200);
+  assert.ok(h.sql.some((s) => /INSERT INTO/i.test(s.text)), 'harus INSERT');
+});
+
+test('menolak role ADMIN dengan is_admin=false (bukan role yang menentukan)', async () => {
+  reset();
+  const h = harness({ session: { ...ADMIN, role: 'ADMIN', is_admin: false } });
+  const r = await post(h, '/api/log/edit', { ...BODY, ID_Log: '10355' });
+  assert.equal(r.status, 403);
+  assert.ok(!h.sql.some((s) => /UPDATE /i.test(s.text)), 'tidak boleh UPDATE');
+});
+
+test('/edit juga menjaga is_admin (bukan hanya /add)', async () => {
+  reset();
+  const h = harness({ session: { ...ADMIN, is_admin: false } });
+  const r = await post(h, '/api/log/edit', { ...BODY, ID_Log: '10355' });
   assert.equal(r.status, 403);
 });
 
@@ -169,11 +209,18 @@ test('add: request_id duplikat tetap sukses (idempoten)', async () => {
   assert.equal(r.body.ok, true);
 });
 
-test('edit: ID_Log wajib', async () => {
+test('edit: tanpa ID_Log dan tanpa pegawai -> 400 (data tidak lengkap)', async () => {
   reset();
   const h = harness();
-  const r = await post(h, '/api/log/edit', { ...BODY, ID_Log: '' });
+  const r = await post(h, '/api/log/edit', { ...BODY, ID_Log: '', telegram_id: '' });
   assert.equal(r.status, 400);
+});
+
+test('edit: ID_Log eksplisit tetap jalan (non-SUPERADMIN)', async () => {
+  reset();
+  const h = harness();
+  const r = await post(h, '/api/log/edit', { ...BODY, ID_Log: '10355' });
+  assert.equal(r.status, 200);
 });
 
 test('edit: subjek tidak bisa diganti (kolom ID tidak di-set)', async () => {
@@ -216,4 +263,85 @@ test('pesan sukses tetap sama dengan n8n', async () => {
   reset();
   const r = await post(harness(), '/api/log/add', BODY);
   assert.deepEqual(r.body, { ok: true, message: 'Log berhasil disimpan.' });
+});
+
+const USER = { id: '99', nip: '199900000000001002', role: 'USER', instansi_id: 'bapperida' };
+
+test('GET: pegawai biasa dipaksa melihat riwayatnya sendiri (user_id dikirim diabaikan)', async () => {
+  reset();
+  const h = harness({ session: USER });
+  const res = await get(h, '/api/log/?user_id=777&tanggal=2026-10-05');
+  assert.equal(res.status, 200);
+  const q = h.sql.find((s) => /FROM "Log_Absen"/.test(s.text) && /"ID"::text=\$1/.test(s.text));
+  assert.ok(q, 'filter ID milik-pegawai wajib ada');
+  assert.equal(q.params[0], USER.id, 'user_id asing tidak dipakai');
+  assert.ok(!h.sql.some((s) => /WHERE/.test(s.text) && JSON.stringify(s.params).includes('777')), 'tidak boleh query 777');
+});
+
+test('GET: pegawai biasa bisa membaca riwayatnya sendiri', async () => {
+  reset();
+  const h = harness({ session: USER });
+  const res = await get(h, '/api/log');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.ok, true);
+});
+
+test('GET: admin boleh menembak user_id tertentu', async () => {
+  reset();
+  const h = harness();
+  const res = await get(h, '/api/log/?user_id=777');
+  assert.equal(res.status, 200);
+  const q = h.sql.find((s) => /FROM "Log_Absen"/.test(s.text));
+  assert.ok(q);
+  assert.equal(q.params[0], '777', 'admin boleh query id lain');
+});
+
+// ── Upsert: "kalau sudah ada log, berarti edit" ─────────────────────────────
+function resetUpsert() {
+  reset();
+  state.pegawai = [{ ...PEGAWAI }];
+  state.existingLogs = [];
+  state.updateRows = 1;
+}
+
+test('add: log sudah ada (pegawai+tanggal+jenis) -> diupdate, bukan duplikat', async () => {
+  resetUpsert();
+  state.existingLogs = [{ ID_Log: '10355' }];
+  const h = harness();
+  const r = await post(h, '/api/log/add', BODY);
+  assert.equal(r.status, 200);
+  assert.equal(r.body.message, 'Log absen diperbarui.');
+  assert.equal(r.body.updated, true);
+  const upd = h.sql.find((s) => /UPDATE "Log_Absen"/.test(s.text));
+  assert.ok(upd, 'harus UPDATE, bukan INSERT');
+  assert.ok(upd.params.includes('10355'), `target ID_Log lama: ${JSON.stringify(upd.params)}`);
+  assert.ok(!h.sql.some((s) => /INSERT INTO/i.test(s.text)), 'tidak boleh insert duplikat');
+});
+
+test('add: belum ada log -> tetap insert (tidak ada regresi)', async () => {
+  resetUpsert();
+  const h = harness();
+  const r = await post(h, '/api/log/add', BODY);
+  assert.equal(r.status, 200);
+  assert.equal(r.body.message, 'Log berhasil disimpan.');
+  assert.ok(h.sql.some((s) => /INSERT INTO/i.test(s.text)), 'harus ada INSERT');
+});
+
+test('edit: tanpa ID_Log, dicari lewat (pegawai+tanggal+jenis)', async () => {
+  resetUpsert();
+  state.existingLogs = [{ ID_Log: '10355' }];
+  const h = harness();
+  const r = await post(h, '/api/log/edit', { ...BODY, ID_Log: '' });
+  assert.equal(r.status, 200);
+  const upd = h.sql.find((s) => /UPDATE "Log_Absen"/.test(s.text));
+  assert.ok(upd, 'harus UPDATE dengan ID hasil resolve');
+  assert.ok(upd.params.includes('10355'), 'ID Log hasil resolve dipakai');
+});
+
+test('edit: tanpa ID_Log dan tidak ada log yang cocok -> 404', async () => {
+  resetUpsert();
+  const h = harness();
+  const r = await post(h, '/api/log/edit', { ...BODY, ID_Log: '' });
+  assert.equal(r.status, 404);
+  assert.equal(r.body.message, 'Log tidak ditemukan.');
 });

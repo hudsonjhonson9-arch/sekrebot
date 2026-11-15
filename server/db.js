@@ -12,7 +12,7 @@ export function getPool() {
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: process.env.PGSSL === 'require' ? { rejectUnauthorized: false } : undefined,
-      max: 5,
+      max: Number(process.env.PG_POOL_MAX) || 15,
       connectionTimeoutMillis: 10000,
       query_timeout: 30000,
     });

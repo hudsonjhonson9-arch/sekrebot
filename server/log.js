@@ -1,5 +1,5 @@
 import express from 'express';
-import { sameInstansi } from './auth.js';
+import { MEDIA_ROLES, sameInstansi } from './auth.js';
 
 // ── SQL ──
 // Canonical n8n ("Supabase Log-Insert" / "Log-Update") menyisipkan nilai client
@@ -35,6 +35,14 @@ export const UPDATE_SQL_INSTANSI =
 
 const PESAN_TIDAK_LENGKAP = 'Data tidak lengkap (ID, Tanggal, Jam, Jenis wajib).';
 
+// Kelompok jenis keterangan & alpa — per pegawai+tanggal hanya boleh ada
+// satu baris keterangan (keputusan: gantikan, jangan tumpuk).
+export const KET_GROUP = ['IZIN', 'SAKIT', 'TUGAS', 'DL', 'TUBEL', 'CUTI', 'TB', 'TANPA BERITA', 'ALPA'];
+const ALPA_GROUP = ['TB', 'TANPA BERITA', 'ALPA'];
+// Jenis berbasis waktu: keberadaannya membuktikan pegawai hadir, sehingga
+// baris TANPA BERITA/TB/ALPA di tanggal sama harus dibuang.
+const TIME_GROUP = ['MASUK', 'PULANG', 'DI LUAR JAM MASUK', 'DI LUAR JAM PULANG', 'PULANG LUAR'];
+
 const S = (v) => (v === undefined || v === null ? '' : String(v).trim());
 
 export function pickLog(body) {
@@ -51,16 +59,47 @@ export function pickLog(body) {
   };
 }
 
+// Seretakan kebijakan "kalau sudah ada log, berarti edit": untuk kombinasi
+// pegawai + tanggal + jenis yang sama, jangan menumpuk baris baru — pakai/
+// perbarui baris lama. Non-SUPERADMIN hanya boleh menyentuh baris instansinya.
+const UPDATE_BY_KEYS = `
+  UPDATE "Log_Absen" SET "Tanggal"=$1, "Jam"=$2, "Jenis Absen"=$3, "Ket"=$4
+  WHERE "ID_Log" = $5`;
+const UPDATE_BY_KEYS_INSTANSI = `
+  UPDATE "Log_Absen" SET "Tanggal"=$1, "Jam"=$2, "Jenis Absen"=$3, "Ket"=$4
+  WHERE "ID_Log" = $5 AND "instansi_id" = $6`;
+
 export function createLogRouter({ query }) {
   const router = express.Router();
+
+  async function resolveExistingLogId({ req, subjectId, tanggal, jenis }) {
+    const params = [subjectId, String(tanggal).slice(0, 10), jenis];
+    const conds = [`"ID"::text=$1`, `"Tanggal"=$2`, `"Jenis Absen"=$3`];
+    if (req.user?.role !== 'SUPERADMIN') {
+      params.push(req.user?.instansi_id);
+      conds.push(`instansi_id=$${params.length}`);
+    }
+    const { rows } = await query(
+      `SELECT "ID_Log" FROM "Log_Absen" WHERE ${conds.join(' AND ')} ORDER BY "ID_Log" DESC LIMIT 1`,
+      params
+    );
+    return rows[0] ? String(rows[0].ID_Log) : '';
+  }
 
   router.get('/', async (req, res) => {
     try {
       const q = req.query || {};
-      const params = []; const where = [];
-      const subject = String(q.user_id || q.id || '').trim();
-      if (subject) { params.push(subject); where.push(`"ID"::text=$${params.length}`); }
-      if (q.nip) { params.push(String(q.nip)); where.push(`"NIP"=$${params.length}`); }
+      let params = []; const where = [];
+      const media = MEDIA_ROLES.has(String(req.user?.role || '').toUpperCase());
+      if (media) {
+        const subject = String(q.user_id || q.id || '').trim();
+        if (subject) { params.push(subject); where.push(`"ID"::text=$${params.length}`); }
+        if (q.nip) { params.push(String(q.nip)); where.push(`"NIP"=$${params.length}`); }
+      } else {
+        // Pegawai biasa hanya boleh melihat catatan miliknya sendiri, apa pun
+        // user_id/nip yang dikirim — riwayat orang lain adalah wewenang media.
+        params.push(req.user.id); where.push(`"ID"::text=$${params.length}`);
+      }
       if (q.tanggal) { params.push(String(q.tanggal).slice(0,10)); where.push(`"Tanggal"=$${params.length}`); }
       if (q.dari && q.sampai) { params.push(String(q.dari).slice(0,10), String(q.sampai).slice(0,10)); where.push(`"Tanggal">=$${params.length-1} AND "Tanggal"<=$${params.length}`); }
       if (req.user.role !== 'SUPERADMIN') { params.push(req.user.instansi_id); where.push(`instansi_id=$${params.length}`); }
@@ -72,6 +111,10 @@ export function createLogRouter({ query }) {
 
   router.post('/add', async (req, res) => {
     try {
+      // Izin tulis = boolean user_list.is_admin (bukan role). Fail-closed.
+      if (req.user?.is_admin !== true) {
+        return res.status(403).json({ ok: false, message: 'Forbidden' });
+      }
       const v = pickLog(req.body || {});
       if (!v.subjectId || !v.tanggal || !v.jam || !v.jenis) {
         return res.status(400).json({ ok: false, message: PESAN_TIDAK_LENGKAP });
@@ -87,6 +130,61 @@ export function createLogRouter({ query }) {
         return res.status(403).json({ ok: false, message: 'Forbidden' });
       }
 
+      const bebas = req.user?.role === 'SUPERADMIN';
+      const tgl = String(v.tanggal).slice(0, 10);
+
+      // ── 1 keterangan per pegawai+tanggal ──
+      // Jenis keterangan menimpa baris keterangan lain di tanggal yang sama
+      // (mis. TANPA BERITA → SAKIT), bukan INSERT baris kedua.
+      if (KET_GROUP.includes(v.jenis)) {
+        const params = [v.subjectId, tgl, KET_GROUP];
+        if (!bebas) params.push(req.user?.instansi_id);
+        const { rows: ketRows } = await query(
+          `SELECT "ID_Log" FROM "Log_Absen" WHERE "ID"::text=$1 AND "Tanggal"=$2 AND "Jenis Absen" = ANY($3::text[])`
+          + (bebas ? '' : ' AND instansi_id=$4')
+          + ' ORDER BY "ID_Log" DESC LIMIT 1',
+          params
+        );
+        if (ketRows[0]) {
+          const sql = bebas ? UPDATE_BY_KEYS : UPDATE_BY_KEYS_INSTANSI;
+          const upd = bebas
+            ? [v.tanggal, v.jam, v.jenis, v.ket, String(ketRows[0].ID_Log)]
+            : [v.tanggal, v.jam, v.jenis, v.ket, String(ketRows[0].ID_Log), req.user?.instansi_id];
+          await query(sql, upd);
+          return res.json({ ok: true, message: 'Log absen diperbarui.', updated: true });
+        }
+      } else if (TIME_GROUP.includes(v.jenis)) {
+        // Ada scan nyata → baris TANPA BERITA/TB/ALPA di tanggal itu salah
+        // dan harus dihapus, jangan hidup berdampingan dengan log masuk.
+        const params = [v.subjectId, tgl, ALPA_GROUP];
+        if (!bebas) params.push(req.user?.instansi_id);
+        const { rows: alpaRows } = await query(
+          `SELECT "ID_Log" FROM "Log_Absen" WHERE "ID"::text=$1 AND "Tanggal"=$2 AND "Jenis Absen" = ANY($3::text[])`
+          + (bebas ? '' : ' AND instansi_id=$4'),
+          params
+        );
+        for (const r of alpaRows) {
+          await query(
+            bebas ? 'DELETE FROM "Log_Absen" WHERE "ID_Log"=$1' : 'DELETE FROM "Log_Absen" WHERE "ID_Log"=$1 AND instansi_id=$2',
+            bebas ? [String(r.ID_Log)] : [String(r.ID_Log), req.user?.instansi_id],
+          );
+        }
+      }
+
+      // Upsert: kalau pegawai+tanggal+jenis ini SUDAH punya log, artinya ini
+      // koreksi/ulang — perbarui baris itu, jangan buat duplikat baru.
+      const existingId = await resolveExistingLogId({
+        req, subjectId: v.subjectId, tanggal: v.tanggal, jenis: v.jenis,
+      });
+      if (existingId) {
+        const sql = bebas ? UPDATE_BY_KEYS : UPDATE_BY_KEYS_INSTANSI;
+        const params = bebas
+          ? [v.tanggal, v.jam, v.jenis, v.ket, existingId]
+          : [v.tanggal, v.jam, v.jenis, v.ket, existingId, req.user?.instansi_id];
+        await query(sql, params);
+        return res.json({ ok: true, message: 'Log absen diperbarui.', updated: true });
+      }
+
       // 0 baris = request_id-nya sudah ada (ON CONFLICT DO NOTHING). Itu hasil
       // yang benar untuk kirim ulang, jadi tetap sukses; Error hanya untuk 404
       // di atas dan 500 di bawah.
@@ -99,16 +197,35 @@ export function createLogRouter({ query }) {
 
   router.post('/edit', async (req, res) => {
     try {
+      // Izin tulis = boolean user_list.is_admin (bukan role). Fail-closed.
+      if (req.user?.is_admin !== true) {
+        return res.status(403).json({ ok: false, message: 'Forbidden' });
+      }
       const v = pickLog(req.body || {});
-      if (!v.logId || !v.tanggal || !v.jam || !v.jenis) {
+      if (!v.tanggal || !v.jam || !v.jenis) {
         return res.status(400).json({ ok: false, message: PESAN_TIDAK_LENGKAP });
+      }
+
+      // Kalau client belum/kagak bisa menebak ID_Log (cache rekap hangus),
+      // temukan sendiri lewat (pegawai + tanggal + jenis): sudah ada log = edit.
+      let logBpk = v.logId;
+      if (!logBpk) {
+        if (!v.subjectId) {
+          return res.status(400).json({ ok: false, message: PESAN_TIDAK_LENGKAP });
+        }
+        logBpk = await resolveExistingLogId({
+          req, subjectId: v.subjectId, tanggal: v.tanggal, jenis: v.jenis,
+        });
+        if (!logBpk) {
+          return res.status(404).json({ ok: false, message: 'Log tidak ditemukan.' });
+        }
       }
 
       const bebas = req.user?.role === 'SUPERADMIN';
       const sql = bebas ? UPDATE_SQL : UPDATE_SQL_INSTANSI;
       const params = bebas
-        ? [v.tanggal, v.jam, v.jenis, v.ket, v.logId]
-        : [v.tanggal, v.jam, v.jenis, v.ket, v.logId, req.user?.instansi_id];
+        ? [v.tanggal, v.jam, v.jenis, v.ket, logBpk]
+        : [v.tanggal, v.jam, v.jenis, v.ket, logBpk, req.user?.instansi_id];
 
       const { rows } = await query(sql, params);
       // 0 baris = ID_Log salah atau barisnya milik instansi lain. Harus 404:

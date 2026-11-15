@@ -11,15 +11,15 @@ function _updateModelProgress(idx, pctPerStep) {
   if (bar) bar.style.width = _modelLoadPct + '%';
   if (per) per.textContent = _modelLoadPct + '%';
   if (st) { st.style.color = 'var(--white)'; st.style.fontWeight = '700'; }
-  if (ic) ic.textContent = '⏳';
+  if (ic) ic.innerHTML = '<i class="fas fa-hourglass-half"></i>';
   // Mark previous as done
   for (let i = 0; i < idx; i++) {
     const sic = $(`mlStep${i}Icon`), sst = $(`mlStep${i}`);
-    if (sic) sic.textContent = '✅';
+    if (sic) sic.innerHTML = '<i class="fas fa-check"></i>';
     if (sst) { sst.style.color = 'var(--success)'; sst.style.opacity = '1'; }
   }
   if (_modelLoadPct >= 100) {
-    if (ic) ic.textContent = '✅';
+    if (ic) ic.innerHTML = '<i class="fas fa-check"></i>';
     if (st) st.style.color = 'var(--success)';
     if ($('mlTitle')) $('mlTitle').textContent = 'Sistem AI Siap';
     if ($('mlHint')) $('mlHint').textContent = 'Semua model berhasil dimuat.';
@@ -115,9 +115,40 @@ if (window.tg) {
 window.IS_ADMIN = false;
 let adminLoaded = false;
 
-// Helper: Tunggu Telegram ID siap (tapi sekarang instan jika ada cache)
+// Izin jalur log (tambah/edit) = boolean user_list.is_admin, BUKAN role.
+// Sumber: userProfile (login userList / profil) atau cache login web (USER_OBJ).
+// Fail-closed: tanpa data dianggap false.
+function isLogAdmin() {
+  const truthy = (v) => v === true || String(v).toLowerCase() === 'true' || Number(v) === 1;
+  const p = window.userProfile;
+  if (p && p.is_admin !== undefined && p.is_admin !== null && p.is_admin !== '') {
+    return truthy(p.is_admin);
+  }
+  try {
+    const u = JSON.parse(localStorage.getItem('tg_user_obj_v5') || 'null');
+    if (u && u.is_admin !== undefined && u.is_admin !== null && u.is_admin !== '') {
+      return truthy(u.is_admin);
+    }
+  } catch (e) { /* cache rusak = false */ }
+  return false;
+}
+window.isLogAdmin = isLogAdmin;
+
+// Helper: Tunggu Telegram ID siap (tapi sekarang instan jika ada cache / session SSO)
 async function waitForMyId() {
   if (window.MY_ID) return String(window.MY_ID);
+  try {
+    const cachedId = localStorage.getItem(STORAGE_KEYS.USER_ID);
+    if (cachedId) {
+      window.MY_ID = String(cachedId);
+      return window.MY_ID;
+    }
+    const profId = window.userProfile?.id || window.userProfile?.telegram_id;
+    if (profId) {
+      window.MY_ID = String(profId);
+      return window.MY_ID;
+    }
+  } catch (_) {}
   for (let i = 0; i < 15; i++) {
     const cur = window.Telegram?.WebApp?.initDataUnsafe?.user;
     if (cur?.id) {

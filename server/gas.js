@@ -29,7 +29,7 @@ async function callGas_(path, init = {}) {
     }
     // `?.` menutup dua kasus: body JSON `null` dan body `{}` tanpa field ok
     if (!res.ok || !json?.ok) {
-      // pesan dari Apps Script diteruskan apa adanya (mis. batas 5 MB)
+      // pesan dari Apps Script diteruskan apa adanya (mis. batas 10 MB)
       throw new Error(json?.message || `Apps Script HTTP ${res.status}`);
     }
     return json;
@@ -39,7 +39,9 @@ async function callGas_(path, init = {}) {
 }
 
 export function gasHealth() {
-  return callGas_('/?action=health');
+  // path mulai '?' bukan '/?' — base sudah berakhir /exec, tambahan '/' menghasilkan
+  // /exec/ yang dijawab 404 oleh Google.
+  return callGas_('?action=health');
 }
 
 export async function gasUpsert({ filename, mimeType, dataBase64, fileId }) {

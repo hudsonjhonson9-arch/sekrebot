@@ -186,7 +186,7 @@
       const mulai = $('inputTglLiburMulai').value;
       let selesai = $('inputTglLiburSelesai').value || mulai;
       const nama = $('inputNamaLibur').value.trim();
-      if (!mulai) { showResult('liburResult', 'liburRIcon', 'liburRTitle', 'liburRMsg', 'warning', '⚠️', 'Pilih Tanggal', 'Tanggal mulai libur wajib dipilih.'); dom.show('liburResult', 'flex'); return; }
+      if (!mulai) { showResult('liburResult', 'liburRIcon', 'liburRTitle', 'liburRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Pilih Tanggal', 'Tanggal mulai libur wajib dipilih.'); dom.show('liburResult', 'flex'); return; }
       if (selesai < mulai) selesai = mulai;
       // Hitung semua tanggal dalam range
       const dates = [];
@@ -215,15 +215,15 @@
       }
       if (ok > 0) {
         const msg = dates.length > 1 ? `${ok} tanggal berhasil ditambahkan${fail ? `, ${fail} gagal` : ''}.` : `${mulai} — ${nama || 'Hari Libur'} ditambahkan.`;
-        showResult('liburResult', 'liburRIcon', 'liburRTitle', 'liburRMsg', 'success', '✅', 'Berhasil', msg);
+        showResult('liburResult', 'liburRIcon', 'liburRTitle', 'liburRMsg', 'success', '<i class="fas fa-check"></i>', 'Berhasil', msg);
         $('inputTglLiburMulai').value = ''; $('inputTglLiburSelesai').value = ''; $('inputNamaLibur').value = '';
         if ($('liburDurasiInfo')) dom.hide('liburDurasiInfo');
         liburLoaded = true; loadLiburAdmin();
       } else {
-        showResult('liburResult', 'liburRIcon', 'liburRTitle', 'liburRMsg', 'fail', '❌', 'Gagal', 'Semua tanggal gagal disimpan. Coba lagi.');
+        showResult('liburResult', 'liburRIcon', 'liburRTitle', 'liburRMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal', 'Semua tanggal gagal disimpan. Coba lagi.');
       }
       dom.show('liburResult', 'flex');
-      setBtnL('btnTambahLibur', false, '➕ Tambah Hari Libur');
+      setBtnL('btnTambahLibur', false, '<i class="fas fa-plus"></i> Tambah Hari Libur');
     }
 
     // Admin: load daftar libur — tampilan lebih baik
@@ -278,16 +278,16 @@
             <span class="libur-item-day" style="color:${isWeekend ? 'var(--danger)' : 'var(--muted)'}">${hari}</span>
             <span class="libur-item-nama">${nm}</span>
           </div>
-          <button class="libur-del-btn" onclick="hapusLibur('${tgl}',${rn})" title="Hapus">🗑️</button>
+          <button class="libur-del-btn" onclick="hapusLibur('${tgl}',${rn})" title="Hapus"><i class="fas fa-trash"></i></button>
         </div>`;
           }).join('');
           return `<div style="margin-bottom:12px">
-        <div class="libur-month-header"><span>📅 ${label}</span><span class="libur-badge">${items.length} hari</span></div>
+        <div class="libur-month-header"><span><i class="fas fa-calendar"></i> ${label}</span><span class="libur-badge">${items.length} hari</span></div>
         <div style="display:flex;flex-direction:column;gap:5px">${itemsHtml}</div>
       </div>`;
         }).join('');
       } catch {
-        el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:12px">Gagal memuat. Tekan 🔄 untuk coba lagi.</div>';
+        el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:12px">Gagal memuat. Tekan <i class="fas fa-sync"></i> untuk coba lagi.</div>';
       }
     }
 
@@ -308,7 +308,7 @@
     }
 
     // ==========================================
-    // 🏛️ SUPERADMIN: MANAJEMEN INSTANSI & HEADER
+    // <i class="fas fa-landmark"></i> SUPERADMIN: MANAJEMEN INSTANSI & HEADER
     // ==========================================
     function populateSuperadminInstansiSelect() {
       const el = $('inEditInstansiSelect');
@@ -435,7 +435,7 @@
       const fontSize = $('inEditInstansiFontSize').value;
       
       if (!id || !namaShort || !nama) {
-        showResult('instansiEditResult', 'instansiEditRIcon', 'instansiEditRTitle', 'instansiEditRMsg', 'warning', '⚠️', 'Input Tidak Lengkap', 'ID, Nama Tampilan (Short), dan Nama Instansi wajib diisi.');
+        showResult('instansiEditResult', 'instansiEditRIcon', 'instansiEditRTitle', 'instansiEditRMsg', 'warning', '<i class="fas fa-exclamation-triangle"></i>', 'Input Tidak Lengkap', 'ID, Nama Tampilan (Short), dan Nama Instansi wajib diisi.');
         dom.show('instansiEditResult', 'flex');
         return;
       }
@@ -483,17 +483,17 @@
           applyProfile();
         }
         
-        showResult('instansiEditResult', 'instansiEditRIcon', 'instansiEditRTitle', 'instansiEditRMsg', 'success', '✅', 'Berhasil Disimpan', 'Detail instansi dan header berhasil diperbarui!');
+        showResult('instansiEditResult', 'instansiEditRIcon', 'instansiEditRTitle', 'instansiEditRMsg', 'success', '<i class="fas fa-check"></i>', 'Berhasil Disimpan', 'Detail instansi dan header berhasil diperbarui!');
         dom.show('instansiEditResult', 'flex');
         
         // Refresh instansi dropdowns
         fetchInstansiList();
       } catch (err) {
         console.error('[Header Editor] Save error:', err);
-        showResult('instansiEditResult', 'instansiEditRIcon', 'instansiEditRTitle', 'instansiEditRMsg', 'fail', '❌', 'Gagal', 'Terjadi kesalahan saat menyimpan data ke server. Coba lagi.');
+        showResult('instansiEditResult', 'instansiEditRIcon', 'instansiEditRTitle', 'instansiEditRMsg', 'fail', '<i class="fas fa-times"></i>', 'Gagal', 'Terjadi kesalahan saat menyimpan data ke server. Coba lagi.');
         dom.show('instansiEditResult', 'flex');
       } finally {
-        setBtnL('btnSaveInstansi', false, '💾 Simpan Perubahan');
+        setBtnL('btnSaveInstansi', false, '<i class="fas fa-save"></i> Simpan Perubahan');
       }
     }
     window.saveInstansiHeader = saveInstansiHeader;

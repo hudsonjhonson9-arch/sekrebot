@@ -1,5 +1,6 @@
 import express from 'express';
 import crypto from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import { verifyInitData } from './telegram.js';
 import { query as realQuery } from './db.js';
 import { singleSessionRow } from './auth.js';
@@ -22,24 +23,58 @@ const USERS_BY_NIP_SQL = `
 
 const TOKEN_RE = /^[0-9a-f]{192}$/;
 
-export function createAuthSessionRouter({ query = realQuery } = {}) {
+// Error DB (mis. host Postgres mati/disk penuh) dulu melempar promise tak
+// tertangkap → Node meng-exit seluruh proses → nginx 502 untuk SEMUA rute
+// termasuk /api/health, sampai supervisor me-restart. Balas 500 supaya API tetap
+// hidup dan penyebab aslinya tidak disamarkan jadi outage total.
+function dbError(res) {
+  return res.status(500).json({ ok: false, message: 'Gagal mengakses database.' });
+}
+
+// SSO ke arsip: absensi menerbitkan cookie arsip_session (HMAC dari ARSIP_SESSION_SECRET
+// = SESSION_SECRET peta-ekonomi) supaya iframe arsipdigital.mindcloud.my.id tidak minta
+// login lagi. Default no-op supaya test/router lama tetap jalan tanpa secret/env.
+const NOOP_SSO = { pasangArsipCookie() {}, lepasArsipCookie() {} };
+
+export function createAuthSessionRouter({ query = realQuery, arsipSso } = {}) {
   const router = express.Router();
+  const arsip = arsipSso || NOOP_SSO;
+
+  // Fail-open: kegagalan set/clear cookie arsip TIDAK boleh menjatuhkan login/logout
+  // absensi sendiri. Bila secret belum diatur, util balik `false` tanpa efek samping.
+  const setCookieArsip = (res, nip) => {
+    try { arsip.pasangArsipCookie(res, nip, { secret: process.env.ARSIP_SESSION_SECRET }); }
+    catch (e) { console.warn('[arsip-sso] gagal set cookie:', e.message); }
+  };
+  const clearCookieArsip = (res) => {
+    try { arsip.lepasArsipCookie(res); }
+    catch (e) { console.warn('[arsip-sso] gagal clear cookie:', e.message); }
+  };
 
   router.post('/api/auth/session', async (req, res) => {
-    const auth = verifyInitData(req.body?.init_data, process.env.TELEGRAM_BOT_TOKEN, { maxAgeSeconds: 86400 });
-    if (!auth.ok) return res.status(401).json({ ok: false, message: 'Bukti identitas tidak valid.' });
+    try {
+      const auth = verifyInitData(req.body?.init_data, process.env.TELEGRAM_BOT_TOKEN, { maxAgeSeconds: 86400 });
+      if (!auth.ok) {
+        // reason = missing | malformed | bad_signature | expired | no_user, dipakai
+        // untuk diagnosis cepat tanpa menggali log.
+        return res.status(401).json({ ok: false, message: 'Bukti identitas tidak valid.', reason: auth.reason });
+      }
 
-    // Identitas diambil dari init_data yang sudah diverifikasi, bukan body.nip.
-    // NIP tidak unik di user_list, jadi membiarkannya memilih baris pegawai berarti
-    // siapa pun yang tahu NIP orang lain bisa meminta sesi atas nama orang itu.
-    const employee = (await query(EMPLOYEE_SQL, [String(auth.user.id)])).rows[0];
-    if (!employee) return res.status(404).json({ ok: false, message: 'Pegawai tidak dikenal.' });
+      // Identitas diambil dari init_data yang sudah diverifikasi, bukan body.nip.
+      // NIP tidak unik di user_list, jadi membiarkannya memilih baris pegawai berarti
+      // siapa pun yang tahu NIP orang lain bisa meminta sesi atas nama orang itu.
+      const employee = (await query(EMPLOYEE_SQL, [String(auth.user.id)])).rows[0];
+      if (!employee) return res.status(404).json({ ok: false, message: 'Pegawai tidak dikenal.' });
 
-    const token = crypto.randomBytes(96).toString('hex');
-    const { rows } = await query(INSERT_SESSION_SQL, [token, employee.nip, employee.id, employee.role, employee.instansi_id]);
-    if (!rows.length) return res.status(500).json({ ok: false, message: 'Gagal membuat sesi.' });
+      const token = crypto.randomBytes(96).toString('hex');
+      const { rows } = await query(INSERT_SESSION_SQL, [token, employee.nip, employee.id, employee.role, employee.instansi_id]);
+      if (!rows.length) return res.status(500).json({ ok: false, message: 'Gagal membuat sesi.' });
 
-    return res.status(200).json({ ok: true, session_token: rows[0].session_token });
+      setCookieArsip(res, employee.nip);
+      return res.status(200).json({ ok: true, session_token: rows[0].session_token });
+    } catch {
+      return dbError(res);
+    }
   });
 
   // Login web non-Telegram: NIP saja, tanpa password (keputusan pengguna).
@@ -49,32 +84,175 @@ export function createAuthSessionRouter({ query = realQuery } = {}) {
   // dari sesi, NIP ambigu ditolak. Upgrade path kalau perlu lebih: rate-limit,
   // wajib face-verify untuk web, atau PIN/OTP per pegawai.
   router.post('/api/auth/login', async (req, res) => {
-    const nip = String(req.body?.nip || '').trim();
-    if (!nip) return res.status(400).json({ ok: false, message: 'NIP wajib diisi.' });
+    try {
+      const nip = String(req.body?.nip || '').trim();
+      if (!nip) return res.status(400).json({ ok: false, message: 'NIP wajib diisi.' });
 
-    const { rows } = await query(USERS_BY_NIP_SQL, [nip]);
-    const user = singleSessionRow(rows);
-    if (!user) {
-      return res.status(rows.length ? 409 : 404).json({
-        ok: false,
-        message: rows.length ? 'NIP ambigu di user_list' : 'NIP tidak terdaftar.',
-      });
+      const { rows } = await query(USERS_BY_NIP_SQL, [nip]);
+      const user = singleSessionRow(rows);
+      if (!user) {
+        return res.status(rows.length ? 409 : 404).json({
+          ok: false,
+          message: rows.length ? 'NIP ambigu di user_list' : 'NIP tidak terdaftar.',
+        });
+      }
+
+      if (user.status_aktif === false) {
+        return res.status(403).json({
+          ok: false,
+          message: 'Akun Anda dinonaktifkan. Hubungi administrator.',
+        });
+      }
+
+      // Cek apakah instansi mewajibkan verifikasi kata sandi atau akun berprivilese sudah memiliki password_hash
+      const pwdSetting = await query(
+        `SELECT value FROM pengaturan WHERE key='require_password' AND (instansi_id=$1 OR instansi_id='all') ORDER BY CASE WHEN instansi_id=$1 THEN 0 ELSE 1 END LIMIT 1`,
+        [user.instansi_id || 'bapperida']
+      );
+      const isToggleOn = pwdSetting?.rows?.[0] ? ['1', 'true', 'on'].includes(String(pwdSetting.rows[0].value).toLowerCase()) : false;
+      const isPrivilegedWithHash = Boolean(user.password_hash) && String(user.role || 'USER').toUpperCase() !== 'USER';
+      const isPasswordRequired = isToggleOn || isPrivilegedWithHash;
+
+      if (isPasswordRequired) {
+        const password = String(req.body?.password || '');
+        if (!password) {
+          return res.status(401).json({
+            ok: false,
+            require_password: true,
+            message: 'Kata sandi wajib diisi.',
+          });
+        }
+        if (!user.password_hash) {
+          return res.status(401).json({
+            ok: false,
+            message: 'Akun belum memiliki kata sandi. Hubungi administrator untuk reset sandi.',
+          });
+        }
+        const match = await bcrypt.compare(password, user.password_hash);
+        if (!match) {
+          return res.status(401).json({
+            ok: false,
+            require_password: true,
+            message: 'Kata sandi salah.',
+          });
+        }
+      }
+
+      const token = crypto.randomBytes(96).toString('hex');
+      const ins = await query(INSERT_SESSION_SQL, [token, user.nip, user.id, user.role, user.instansi_id]);
+      if (!ins.rows.length) return res.status(500).json({ ok: false, message: 'Gagal membuat sesi.' });
+
+      delete user.password_hash;
+      delete user.pin_hash;
+
+      // Cek apakah NIP ini terdaftar wajib face recognition
+      const inst = user.instansi_id || 'bapperida';
+      let isMandatoryFace = false;
+      try {
+        const mandRes = await query(
+          `SELECT value FROM pengaturan WHERE key='face_mandatory_nips' AND (instansi_id=$1 OR instansi_id IS NULL) ORDER BY CASE WHEN instansi_id=$1 THEN 0 ELSE 1 END LIMIT 1`,
+          [inst]
+        );
+        if (mandRes?.rows?.length && mandRes.rows[0]?.value) {
+          const rawVal = mandRes.rows[0].value;
+          let list = [];
+          if (Array.isArray(rawVal)) {
+            list = rawVal;
+          } else if (typeof rawVal === 'string') {
+            try {
+              const parsed = JSON.parse(rawVal);
+              list = Array.isArray(parsed) ? parsed : [parsed];
+            } catch {
+              list = rawVal.split(',').map(s => s.trim());
+            }
+          }
+          isMandatoryFace = list.map(s => String(s).trim()).includes(String(user.nip).trim());
+        }
+      } catch (err) {
+        console.warn('[auth/login] periksa face_mandatory_nips error:', err.message);
+      }
+      user.is_mandatory_face = isMandatoryFace;
+
+      setCookieArsip(res, user.nip);
+      return res.status(200).json({ ok: true, session_token: ins.rows[0].session_token, user });
+    } catch {
+      return dbError(res);
     }
-
-    const token = crypto.randomBytes(96).toString('hex');
-    const ins = await query(INSERT_SESSION_SQL, [token, user.nip, user.id, user.role, user.instansi_id]);
-    if (!ins.rows.length) return res.status(500).json({ ok: false, message: 'Gagal membuat sesi.' });
-
-    return res.status(200).json({ ok: true, session_token: ins.rows[0].session_token, user });
   });
 
   router.post('/api/auth/logout', async (req, res) => {
-    const token = req.body?.session_token;
-    if (typeof token !== 'string' || !TOKEN_RE.test(token)) {
-      return res.status(400).json({ ok: false, message: 'session_token tidak valid.' });
+    try {
+      const token = req.body?.session_token;
+      if (typeof token !== 'string' || !TOKEN_RE.test(token)) {
+        return res.status(400).json({ ok: false, message: 'session_token tidak valid.' });
+      }
+      await query(DEACTIVATE_SQL, [token]);
+      clearCookieArsip(res);
+      return res.status(200).json({ ok: true });
+    } catch {
+      return dbError(res);
     }
-    await query(DEACTIVATE_SQL, [token]);
-    return res.status(200).json({ ok: true });
+  });
+
+  // Re-issue cookie arsip_session dari sesi absensi yang masih berlaku.
+  // Webview Telegram menyimpan _native_token di localStorage sehingga
+  // POST /api/auth/session tidak berjalan lagi saat app dibuka ulang — cookie
+  // arsip tidak pernah diterbitkan di webview itu dan iframe Arsip 401.
+  // Dipanggil klien tepat sebelum memuat iframe Arsip.
+  router.post('/api/auth/arsip-cookie', async (req, res) => {
+    try {
+      const token = String(req.body?.session_token || '').trim();
+      if (!TOKEN_RE.test(token)) {
+        return res.status(400).json({ ok: false, message: 'session_token tidak valid.' });
+      }
+      const row = (await query(
+        `SELECT nip FROM auth_sessions WHERE session_token=$1 AND is_active AND expires_at > now() LIMIT 1`,
+        [token],
+      )).rows[0];
+      if (!row) return res.status(401).json({ ok: false, message: 'Sesi tidak valid atau kedaluwarsa.' });
+      setCookieArsip(res, row.nip);
+      return res.status(200).json({ ok: true });
+    } catch {
+      return dbError(res);
+    }
+  });
+
+  router.post('/api/auth/register', async (req, res) => {
+    try {
+      const b = req.body || {};
+      const nama = String(b.nama || '').trim();
+      const nip = String(b.nip || '').trim().replace(/\s/g, '');
+      if (!nama || !nip || nip.length < 3) {
+        return res.status(400).json({ ok: false, message: 'Nama dan NIP (min. 3 karakter) wajib diisi.' });
+      }
+      const rawId = String(b.id || '').trim();
+      const uid = /^\d+$/.test(rawId) ? rawId : String(Date.now());
+      const inst = String(b.instansi_id || 'bapperida').trim() || 'bapperida';
+
+      const existing = await query(`SELECT 1 FROM user_list WHERE "NIP" = $1 OR id = $2::bigint LIMIT 1`, [nip, uid]);
+      if (existing.rows?.length) {
+        return res.status(409).json({ ok: false, message: 'NIP atau ID sudah terdaftar. Silakan login.' });
+      }
+
+      const insUser = await query(
+        `INSERT INTO user_list (id, username, "NIP", "Jabatan", bidang, "Status", pangkat, nomorhp, role, instansi_id, is_admin)
+         VALUES ($1::bigint, $2, $3, $4, $5, 'AKTIF', $6, $7, 'USER', $8, false)
+         RETURNING id::text AS id, username AS nama, "NIP" AS nip, role, instansi_id`,
+        [uid, nama, nip, String(b.jabatan || '').trim(), String(b.bidang || '').trim(), String(b.pangkat || '').trim(), String(b.no_hp || b.nomorhp || '').trim(), inst]
+      );
+      const user = insUser.rows?.[0];
+      if (!user) return res.status(500).json({ ok: false, message: 'Gagal mendaftarkan pengguna.' });
+
+      const token = crypto.randomBytes(96).toString('hex');
+      const insSess = await query(INSERT_SESSION_SQL, [token, user.nip, user.id, 'USER', user.instansi_id]);
+      if (!insSess.rows?.length) return res.status(500).json({ ok: false, message: 'Gagal membuat sesi.' });
+
+      setCookieArsip(res, user.nip);
+      return res.status(201).json({ ok: true, session_token: insSess.rows[0].session_token, user });
+    } catch (e) {
+      if (e?.code === '23505') return res.status(409).json({ ok: false, message: 'NIP atau ID sudah terdaftar.' });
+      return dbError(res);
+    }
   });
 
   return router;
