@@ -660,7 +660,7 @@ export function generateKartuPemeliharaanExcel({ cards = [], instansi_nama, tahu
         { colNum: 1, value: 'Pengguna Barang', style: 0 },
         { colNum: 3, value: ':', style: 5 },
         { colNum: 5, value: '(7)', style: 5 },
-        { colNum: 6, value: agencyName, style: 1 },
+        { colNum: 6, value: card.nama_pemegang || card.pemegang || '-', style: 1 },
       ],
     });
     merges.push(`A${curRow}:B${curRow}`, `F${curRow}:G${curRow}`);
@@ -673,7 +673,7 @@ export function generateKartuPemeliharaanExcel({ cards = [], instansi_nama, tahu
         { colNum: 1, value: 'Kuasa Pengguna Barang', style: 0 },
         { colNum: 3, value: ':', style: 5 },
         { colNum: 5, value: '(8)', style: 5 },
-        { colNum: 6, value: '-', style: 0 },
+        { colNum: 6, value: 'Kepala Badan/Dinas', style: 0 },
       ],
     });
     merges.push(`A${curRow}:B${curRow}`, `F${curRow}:G${curRow}`);

@@ -692,12 +692,7 @@ window.populateMutasiBarangSelect = async function() {
   let data = window._allMasterData;
   if (!data.length) try { data = parseApiResponse(await (await apiFetch(P.simapoAdminMasterList)).json()); } catch { data=[]; }
   sel.innerHTML = '<option value="">-- Pilih Barang --</option>' + data.map(b => {
-    const sub = [
-      b.nomorinventaris ? 'NIBAR: ' + b.nomorinventaris : '',
-      b.spesifikasi || b.merk || '',
-      b.nama_kategori ? 'Kat: ' + b.nama_kategori : '',
-      b.satuan ? 'Satuan: ' + b.satuan : ''
-    ].filter(Boolean).join(' · ');
+    const sub = window.formatAsetDropdownSub(b);
     return `<option value="${b.id}" data-sub="${sub}">${b.nama || 'Tanpa Nama'} (${b.kodebarang || '-'})</option>`;
   }).join('');
   window._asetDd('mutasiBarangId', { ph: 'Cari barang...', h: 38 });
@@ -1676,6 +1671,22 @@ window.clearPenerimaanForm = function() {
 };
 
 /* ─── ADMIN: PEMELIHARAAN (KARTU PEMELIHARAAN SESUAI TEMPLATE) ─── */
+window.formatAsetDropdownSub = function(b) {
+  if (!b) return '';
+  const parts = [];
+  if (b.nomorinventaris || b.nibar) parts.push('NIBAR: ' + (b.nomorinventaris || b.nibar));
+  const spek = b.spesifikasi || b.merk;
+  if (spek) parts.push('Spek: ' + spek);
+  const harga = Number(b.hargasatuan) > 0 ? 'Harga: Rp ' + Number(b.hargasatuan).toLocaleString('id-ID') : '';
+  if (harga) parts.push(harga);
+  const th = b.tahun_mulai || b.tahunperolehan || (b.createdat ? String(b.createdat).slice(0, 4) : '');
+  if (th) parts.push('Tahun: ' + th);
+  const pemegang = b.nama_pemegang || b.pemegang_nama || b.pemegang;
+  if (pemegang) parts.push('Pemegang: ' + pemegang);
+  if (b.nama_kategori) parts.push('Kat: ' + b.nama_kategori);
+  return parts.join(' · ');
+};
+
 window.onPmBarangChange = function() {
   const barangId = document.getElementById('pmBarangId')?.value;
   const list = window._allMasterData || [];
@@ -1686,10 +1697,10 @@ window.onPmBarangChange = function() {
     if (el) el.value = val || '';
   };
 
-  setVal('pmPenggunaBarang', 'Kepala Badan');
-  setVal('pmKuasaPengguna', 'Kuasa Pengguna Barang');
+  setVal('pmPenggunaBarang', b.nama_pemegang || b.pemegang_nama || b.pemegang || '-');
+  setVal('pmKuasaPengguna', 'Kepala Badan/Dinas');
   setVal('pmKodeBarang', b.kodebarang || b.kode_barang || '');
-  setVal('pmNamaBarang', b.namabarang || b.nama_barang || b.uraian || '');
+  setVal('pmNamaBarang', b.nama || b.nama_barang || b.namabarang || b.uraian || '');
   setVal('pmNibar', b.nomorinventaris || b.kodebarang || b.nibar || '-');
   setVal('pmSpesifikasi', b.spesifikasi || b.merk || '-');
 };
@@ -1867,12 +1878,7 @@ window.populatePemeliharaanBarang = async function() {
   let data = window._allMasterData;
   if (!data.length) try { data = parseApiResponse(await (await apiFetch(P.simapoAdminMasterList)).json()); } catch { data=[]; }
   sel.innerHTML = '<option value="">-- Pilih Aset --</option>' + data.map(b => {
-    const sub = [
-      b.nomorinventaris ? 'NIBAR: ' + b.nomorinventaris : '',
-      b.spesifikasi || b.merk || '',
-      b.nama_kategori ? 'Kat: ' + b.nama_kategori : '',
-      b.satuan ? 'Satuan: ' + b.satuan : ''
-    ].filter(Boolean).join(' · ');
+    const sub = window.formatAsetDropdownSub(b);
     return `<option value="${b.id}" data-sub="${sub}">${b.nama || 'Tanpa Nama'} (${b.kodebarang || '-'})</option>`;
   }).join('');
   sel.onchange = window.onPmBarangChange;
@@ -1887,12 +1893,7 @@ window.populateKartuPemeliharaanBarangFilter = function() {
   const items = window._allMasterData || [];
   let html = '<option value="">-- Semua Barang (Cetak Semua Kartu) --</option>';
   items.forEach(function(b) {
-    const sub = [
-      b.nomorinventaris ? 'NIBAR: ' + b.nomorinventaris : '',
-      b.spesifikasi || b.merk || '',
-      b.nama_kategori ? 'Kat: ' + b.nama_kategori : '',
-      b.satuan ? 'Satuan: ' + b.satuan : ''
-    ].filter(Boolean).join(' · ');
+    const sub = window.formatAsetDropdownSub(b);
     html += '<option value="' + b.id + '" data-sub="' + sub + '">' + (b.nama || 'Tanpa Nama') + (b.kodebarang ? ' (' + b.kodebarang + ')' : '') + '</option>';
   });
   sel.innerHTML = html;
@@ -1946,8 +1947,8 @@ window.filterKartuPemeliharaan = function() {
     const kodeBarang = bInfo.kodebarang || list[0].kodebarang || '—';
     const spesifikasi = bInfo.spesifikasi || bInfo.merk || 'Besi/Plastik';
     const nibar = bInfo.nomorinventaris || '—';
-    const penggunaBarang = 'Kepala Badan';
-    const kuasaPenggunaBarang = 'Kuasa Pengguna Barang';
+    const penggunaBarang = bInfo.nama_pemegang || list[0].nama_pemegang || bInfo.pemegang || '-';
+    const kuasaPenggunaBarang = 'Kepala Badan/Dinas';
 
     let totalBiaya = 0;
     const rowsHtml = list.map(function(item, idx) {
@@ -2067,8 +2068,9 @@ window.downloadExcelKartuPemeliharaan = async function() {
         if (gIdx > 0) ws.addRow([]);
         ws.addRow(['KARTU PEMELIHARAAN']);
         ws.addRow(['', '', '', '', '', 'NIBAR   :', bInfo.nomorinventaris || '-']);
-        ws.addRow(['Pengguna Barang                       :', '', '', '', '', 'Kepala Badan']);
-        ws.addRow(['Kuasa Pengguna Barang             :', '', '', '', '', 'Kuasa Pengguna Barang']);
+        const pengguna = bInfo.nama_pemegang || items[0].nama_pemegang || bInfo.pemegang || '-';
+        ws.addRow(['Pengguna Barang                       :', '', '', '', '', pengguna]);
+        ws.addRow(['Kuasa Pengguna Barang             :', '', '', '', '', 'Kepala Badan/Dinas']);
         ws.addRow(['Kode Barang                               :', '', '', '', '', bInfo.kodebarang || '-']);
         ws.addRow(['Nama Barang                              :', '', '', '', '', bInfo.nama || items[0].nama_barang || '-']);
         ws.addRow(['Spesifikasi Barang                      :', '', '', '', '', bInfo.spesifikasi || bInfo.merk || 'Besi/Plastik']);

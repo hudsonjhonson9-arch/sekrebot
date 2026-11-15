@@ -54,6 +54,7 @@ export const UPDATE_STOK_SQL =
 
 export const PEMELIHARAAN_SQL =
   `SELECT p.id, p.barang_id, b.nama AS nama_barang, b.kodebarang, b.spesifikasi, b.satuan,
+          (SELECT COALESCE(u2."username", '') FROM "SIMAPO".unit_aset ua LEFT JOIN public.user_list u2 ON u2.id::text = ua.pegawai_id WHERE ua.barangid = p.barang_id AND ua.pegawai_id IS NOT NULL LIMIT 1) AS nama_pemegang,
           (SELECT ua.nomorinventaris FROM "SIMAPO".unit_aset ua WHERE ua.barangid = p.barang_id LIMIT 1) AS nomorinventaris,
           p.tgl_pemeliharaan, p.jenis_pemeliharaan, p.biaya, p.nama_penyedia, p.bentuk_kontrak, p.keterangan
    FROM "SIMAPO".pemeliharaan p
@@ -64,6 +65,7 @@ export const PEMELIHARAAN_SQL =
 
 export const KARTU_PEMELIHARAAN_BARANG_SQL =
   `SELECT b.id, b.nama AS nama_barang, b.kodebarang, b.spesifikasi, b.satuan,
+          (SELECT COALESCE(u2."username", '') FROM "SIMAPO".unit_aset ua LEFT JOIN public.user_list u2 ON u2.id::text = ua.pegawai_id WHERE ua.barangid = b.id AND ua.pegawai_id IS NOT NULL LIMIT 1) AS nama_pemegang,
           (SELECT ua.nomorinventaris FROM "SIMAPO".unit_aset ua WHERE ua.barangid = b.id LIMIT 1) AS nomorinventaris
    FROM "SIMAPO".barang b
    WHERE b.instansi_id = $1 %FILTER% AND b.isactive = true
@@ -179,6 +181,7 @@ export const MASTER_LIST_SQL =
             b.stok_saat_ini, b.minimumstok, b.hargasatuan, b.kategoriid,
             k.nama AS nama_kategori, b.isactive,
             TO_CHAR(b.createdat, 'YYYY-MM-DD') AS createdat,
+            (SELECT COALESCE(u2."username", '') FROM "SIMAPO".unit_aset ua LEFT JOIN public.user_list u2 ON u2.id::text = ua.pegawai_id WHERE ua.barangid = b.id AND ua.pegawai_id IS NOT NULL LIMIT 1) AS nama_pemegang,
             (SELECT ua.nomorinventaris FROM "SIMAPO".unit_aset ua WHERE ua.barangid = b.id AND ua.nomorinventaris IS NOT NULL LIMIT 1) AS nomorinventaris,
             (SELECT MIN(ua.tahunperolehan) FROM "SIMAPO".unit_aset ua WHERE ua.barangid = b.id) AS tahun_mulai,
             (SELECT MAX(ua.tahunperolehan) FROM "SIMAPO".unit_aset ua WHERE ua.barangid = b.id) AS tahun_selesai
@@ -544,6 +547,7 @@ router.get('/kartu-pemeliharaan/xlsx', async (req, res) => {
       (barangRows || []).forEach((b) => {
         cardMap.set(b.id, {
           nama_barang: b.nama_barang,
+          nama_pemegang: b.nama_pemegang,
           kodebarang: b.kodebarang,
           spesifikasi: b.spesifikasi,
           nomorinventaris: b.nomorinventaris,
@@ -556,6 +560,7 @@ router.get('/kartu-pemeliharaan/xlsx', async (req, res) => {
         if (!cardMap.has(bid)) {
           cardMap.set(bid, {
             nama_barang: m.nama_barang,
+            nama_pemegang: m.nama_pemegang,
             kodebarang: m.kodebarang,
             spesifikasi: m.spesifikasi,
             nomorinventaris: m.nomorinventaris,

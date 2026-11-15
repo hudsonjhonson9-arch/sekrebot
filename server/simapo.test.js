@@ -866,6 +866,9 @@ test('GET /pemeliharaan mengembalikan kodebarang, spesifikasi, satuan, dan nomor
   assert.ok(PEMELIHARAAN_SQL.includes('b.spesifikasi'));
   assert.ok(PEMELIHARAAN_SQL.includes('b.satuan'));
   assert.ok(PEMELIHARAAN_SQL.includes('nomorinventaris'));
+  assert.ok(PEMELIHARAAN_SQL.includes('nama_pemegang'));
+  assert.ok(KARTU_PEMELIHARAAN_BARANG_SQL.includes('nama_pemegang'));
+  assert.ok(MASTER_LIST_SQL.includes('nama_pemegang'));
 });
 
 test('GET /kartu-pemeliharaan/xlsx menghasilkan file excel dengan header kartu yang sesuai', async () => {
