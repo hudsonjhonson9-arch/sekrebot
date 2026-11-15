@@ -149,10 +149,26 @@ export function createDevTracker(options = {}) {
     };
   }
 
+  function getDevAuthHeaders() {
+    const headers = {};
+    let token = null;
+    if (typeof _nativeToken !== 'undefined' && _nativeToken) {
+      token = _nativeToken;
+    } else if (typeof localStorage !== 'undefined') {
+      try { token = localStorage.getItem('_native_token'); } catch (_) {}
+    } else if (typeof window !== 'undefined' && window._session?.token) {
+      token = window._session.token;
+    }
+    if (token) {
+      headers['Authorization'] = 'Bearer ' + token;
+    }
+    return headers;
+  }
+
   function getDefaultProbers() {
     return {
       database: async () => {
-        const res = await fetch('/api/dev/health');
+        const res = await fetch('/api/dev/health', { headers: getDevAuthHeaders() });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         return {
@@ -163,7 +179,7 @@ export function createDevTracker(options = {}) {
       },
       backend_api: async () => {
         const t0 = Date.now();
-        const res = await fetch('/api/dev/health');
+        const res = await fetch('/api/dev/health', { headers: getDevAuthHeaders() });
         const lat = Date.now() - t0;
         if (!res.ok) throw new Error(`API Responded with status ${res.status}`);
         const data = await res.json();

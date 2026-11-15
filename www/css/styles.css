@@ -2103,6 +2103,7 @@
     }
 
     /* Dropdown / Select dark theme */
+    select,
     select.form-input,
     select.date-range-input,
     select.dok-input,
@@ -2114,7 +2115,14 @@
       background-size: 12px;
       appearance: none;
       -webkit-appearance: none;
-      padding-right: 32px;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      padding-left: 10px !important;
+      padding-right: 32px !important;
+      line-height: normal !important;
+      height: 38px !important;
+      min-height: 38px !important;
+      box-sizing: border-box !important;
       color: var(--white);
       border: 1px solid var(--border);
       cursor: pointer;
@@ -5896,7 +5904,7 @@
         font-weight: 800;
         color: var(--gold);
         letter-spacing: 3px;
-        margin-bottom: 12px;
+        margin-bottom: 24px;
         text-align: center;
         padding-bottom: 14px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -6807,6 +6815,7 @@ html.light-theme .form-input-auth:focus {
   border-color: #1D4ED8;
   background: #FFFFFF;
 }
+html.light-theme select,
 html.light-theme select.form-input,
 html.light-theme select.date-range-input,
 html.light-theme select.dok-input,
@@ -6817,6 +6826,14 @@ html.light-theme .dok-select {
   background-repeat: no-repeat;
   background-position: right 12px center;
   background-size: 12px;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 10px !important;
+  padding-right: 32px !important;
+  line-height: normal !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  box-sizing: border-box !important;
 }
 html.light-theme select.form-input option,
 html.light-theme select.date-range-input option,
@@ -8342,83 +8359,56 @@ body.sidebar-collapsed {
     to { opacity: 1; transform: translateY(-50%) translateX(0); }
   }
 
-  /* Sidebar Toggle Collapse Button */
-  /* Posisi konsisten di SEMUA state: statis, terpusat di bawah brand. */
+  /* Sidebar Toggle Collapse Button — Circular edge handle on boundary (Image 4) */
   .sidebar-toggle-btn {
+    position: absolute !important;
+    right: -13px !important;
+    top: 22px !important;
+    width: 26px !important;
+    height: 26px !important;
+    border-radius: 50% !important;
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
     display: flex !important;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin: 0 auto 16px auto;
-    width: calc(100% - 24px);
-    max-width: 210px;
-    height: 32px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    flex: 0 0 auto;
-    box-sizing: border-box;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    z-index: 1050 !important;
+    transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
   }
 
   .sidebar-toggle-btn:hover {
-    background: rgba(59, 130, 246, 0.12);
-    color: var(--gold);
-    border-color: rgba(59, 130, 246, 0.3);
-    transform: translateY(-1px);
+    background: #F8FAFC !important;
+    color: #2563EB !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+    transform: scale(1.1) !important;
   }
 
   .sidebar-toggle-btn i {
-    font-size: 11px;
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .sidebar-toggle-label {
-    display: inline-block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .bottom-nav.collapsed .sidebar-toggle-btn,
-  body.sidebar-collapsed .bottom-nav .sidebar-toggle-btn {
-    width: 36px !important;
-    height: 36px !important;
-    max-width: 36px !important;
-    padding: 0 !important;
-    border-radius: 9px !important;
-    background: rgba(255, 255, 255, 0.06) !important;
-  }
-
-  .bottom-nav.collapsed .sidebar-toggle-label,
-  body.sidebar-collapsed .bottom-nav .sidebar-toggle-label {
-    display: none !important;
+    font-size: 11px !important;
+    color: #1E293B !important;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
 
   .bottom-nav.collapsed .sidebar-toggle-btn i,
   body.sidebar-collapsed .sidebar-toggle-btn i {
-    transform: rotate(180deg);
+    transform: rotate(180deg) !important;
   }
 
   html.light-theme .sidebar-toggle-btn {
-    background: rgba(0, 0, 0, 0.03);
-    border-color: rgba(0, 0, 0, 0.08);
-    color: #64748b;
+    background: #FFFFFF !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
   }
 
   html.light-theme .sidebar-toggle-btn:hover {
-    background: rgba(29, 78, 216, 0.08);
-    color: #1d4ed8;
-    border-color: rgba(29, 78, 216, 0.25);
-  }
-
-  html.light-theme .bottom-nav.collapsed .sidebar-toggle-btn,
-  html.light-theme body.sidebar-collapsed .bottom-nav .sidebar-toggle-btn {
-    background: rgba(0, 0, 0, 0.04) !important;
+    background: #F8FAFC !important;
+    color: #1D4ED8 !important;
   }
 
   /* Sidebar Draggable Resizer Handle */
