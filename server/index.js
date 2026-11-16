@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import { closePool, query, withTransaction } from './db.js';
 import { gasUpsert } from './gas.js';
 import { createMediaRouter } from './media.js';
@@ -182,6 +183,10 @@ export function createApp() {
   const absenRolesRouter = createAbsenRolesRouter({ query });
   app.use('/api/admin/roles', requireRole(ABSEN_ROLES), absenRolesRouter);
   app.use('/api/absen-roles', requireRole(ABSEN_ROLES), absenRolesRouter);
+
+  // Layanan berkas statis antarmuka Stitch (index.html, login.html, catalog, js, css)
+  const publicDir = path.resolve(import.meta.dirname, '..');
+  app.use(express.static(publicDir));
 
   return app;
 }

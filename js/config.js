@@ -287,8 +287,38 @@ function setNativeToken(token) {
   _nativeToken = token || null;
   _authExpiredShown = false;
   try {
-    if (token) localStorage.setItem('_native_token', token);
-    else localStorage.removeItem('_native_token');
+    if (token) {
+      localStorage.setItem('_native_token', token);
+      localStorage.setItem('native_token', token);
+    } else {
+      localStorage.removeItem('_native_token');
+      localStorage.removeItem('native_token');
+    }
+  } catch { /* mode privat */ }
+}
+
+function getNativeToken() {
+  if (typeof _nativeToken !== 'undefined' && _nativeToken) return _nativeToken;
+  try {
+    const t = localStorage.getItem('_native_token') || localStorage.getItem('native_token') || localStorage.getItem('_sess_token');
+    if (t) return t;
+  } catch { /* mode privat */ }
+  if (typeof window !== 'undefined' && window._session && window._session.token) {
+    return window._session.token;
+  }
+  return null;
+}
+
+function clearNativeToken() {
+  setNativeToken(null);
+  clearSession();
+  try {
+    localStorage.removeItem('_native_token');
+    localStorage.removeItem('native_token');
+    localStorage.removeItem('_sess_token');
+    localStorage.removeItem('_sess_nip');
+    localStorage.removeItem('_sess_role');
+    localStorage.removeItem('_sess_inst');
   } catch { /* mode privat */ }
 }
 
@@ -297,6 +327,8 @@ if (typeof window !== 'undefined') {
   window.setSession = setSession;
   window.clearSession = clearSession;
   window.setNativeToken = setNativeToken;
+  window.getNativeToken = getNativeToken;
+  window.clearNativeToken = clearNativeToken;
 }
 
 function _getSessionRole() {

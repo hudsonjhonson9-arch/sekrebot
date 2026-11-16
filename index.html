@@ -2710,6 +2710,28 @@
       icon.textContent = isPwd ? 'visibility_off' : 'visibility';
     }
 
+    // Fast synchronous session check
+    function checkAuthStatus() {
+      const token = (typeof getNativeToken === 'function' ? getNativeToken() : null) ||
+                    (typeof _nativeToken !== 'undefined' && _nativeToken) ||
+                    localStorage.getItem('_native_token') ||
+                    localStorage.getItem('native_token') ||
+                    localStorage.getItem('_sess_token');
+      const savedNip = localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || (window._session && window._session.nip);
+      const authOverlayEl = document.getElementById('authOverlay');
+
+      if (!token || !savedNip) {
+        state.isLoggedIn = false;
+        state.currentUser = null;
+        if (authOverlayEl) authOverlayEl.style.display = 'flex';
+        return false;
+      } else {
+        state.isLoggedIn = true;
+        if (authOverlayEl) authOverlayEl.style.display = 'none';
+        return true;
+      }
+    }
+
     window.logoutUser = function() {
       Swal.fire({
         title: 'Konfirmasi Keluar',
@@ -2723,7 +2745,13 @@
       }).then((result) => {
         if (result.isConfirmed) {
           if (typeof clearNativeToken === 'function') clearNativeToken();
+          if (typeof clearSession === 'function') clearSession();
+          localStorage.removeItem('_native_token');
           localStorage.removeItem('native_token');
+          localStorage.removeItem('_sess_token');
+          localStorage.removeItem('_sess_nip');
+          localStorage.removeItem('_sess_role');
+          localStorage.removeItem('_sess_inst');
           localStorage.removeItem('stitch_active_nip');
           localStorage.removeItem('MY_NIP');
           localStorage.removeItem('MY_ROLE');
@@ -2763,6 +2791,7 @@
     // Initialize on DOM Ready
     document.addEventListener('DOMContentLoaded', () => {
       initClock();
+      checkAuthStatus();
       bootstrapFromDatabase();
     });
 
@@ -2810,18 +2839,10 @@
           renderKioskRecentFeed(json.recentLogs || []);
 
           // Authenticated Session Check
-          const token = typeof getNativeToken === 'function' ? getNativeToken() : localStorage.getItem('native_token');
-          const savedNip = localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP');
-          const authOverlayEl = document.getElementById('authOverlay');
-
-          if (!token || !savedNip) {
-            state.isLoggedIn = false;
-            state.currentUser = null;
-            if (authOverlayEl) authOverlayEl.style.display = 'flex';
-          } else {
-            state.isLoggedIn = true;
-            if (authOverlayEl) authOverlayEl.style.display = 'none';
-            await selectUserByNip(savedNip);
+          const isAuthed = checkAuthStatus();
+          if (isAuthed) {
+            const activeNip = localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || (window._session && window._session.nip);
+            if (activeNip) await selectUserByNip(activeNip);
           }
 
           // Preload Aset KIR data from SIMAPO
@@ -2843,6 +2864,7 @@
         }
       } catch (err) {
         console.error('[Stitch DB] Bootstrap failed:', err);
+        checkAuthStatus();
       }
     }
 

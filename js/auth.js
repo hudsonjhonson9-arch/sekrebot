@@ -140,14 +140,42 @@
             setNativeToken(sessionToken);
             setSession(sessionToken, { nip: userNip, role: user.role || 'USER', instansi_id: user.instansi_id || '' });
             window.MY_ID = targetId;
-            localStorage.setItem(STORAGE_KEYS.USER_ID, window.MY_ID);
-            localStorage.setItem('MY_NIP', userNip);
-            localStorage.setItem('MY_ROLE', String(user.role || 'USER').toUpperCase());
-            localStorage.setItem('MY_NAME', String(user.nama || 'User'));
-            localStorage.setItem(STORAGE_KEYS.USER_OBJ, JSON.stringify(user));
-            const finalInst = (user.instansi_id || user.Instansi_Id || '').trim();
-            if (finalInst) localStorage.setItem('MY_INSTANSI', finalInst);
-            else localStorage.removeItem('MY_INSTANSI');
+            try {
+              if (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.USER_ID) {
+                localStorage.setItem(STORAGE_KEYS.USER_ID, window.MY_ID);
+                localStorage.setItem(STORAGE_KEYS.USER_OBJ, JSON.stringify(user));
+              }
+              localStorage.setItem('stitch_active_nip', userNip);
+              localStorage.setItem('MY_NIP', userNip);
+              localStorage.setItem('_native_token', sessionToken);
+              localStorage.setItem('native_token', sessionToken);
+              localStorage.setItem('MY_ROLE', String(user.role || 'USER').toUpperCase());
+              localStorage.setItem('MY_NAME', String(user.nama || 'User'));
+              const finalInst = (user.instansi_id || user.Instansi_Id || '').trim();
+              if (finalInst) localStorage.setItem('MY_INSTANSI', finalInst);
+              else localStorage.removeItem('MY_INSTANSI');
+            } catch (_) {}
+
+            // Jika berada di halaman standalone login.html, navigasi ke index.html
+            if (window.location && (window.location.pathname.endsWith('login.html') || window.location.href.includes('login.html'))) {
+              window.location.href = 'index.html';
+              return;
+            }
+
+            // Jika di index.html dengan modal authOverlay
+            const overlayEl = document.getElementById('authOverlay');
+            if (overlayEl) overlayEl.style.display = 'none';
+
+            if (typeof state !== 'undefined') {
+              state.isLoggedIn = true;
+              if (typeof selectUserByNip === 'function') {
+                await selectUserByNip(userNip);
+                if (typeof showDynamicIsland === 'function') {
+                  showDynamicIsland({ type: 'success', title: 'Login Berhasil', message: `Selamat datang, ${user.nama || userNip}` });
+                }
+                return;
+              }
+            }
             location.reload();
           };
 
@@ -412,7 +440,16 @@
           return;
         }
       } catch (err) {
-        alert(' ' + err.message);
+        if (typeof Swal !== 'undefined' && Swal.fire) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Login Gagal',
+            text: err.message || 'Terjadi kesalahan sistem',
+            confirmButtonColor: '#2563eb'
+          });
+        } else {
+          alert(' ' + err.message);
+        }
       } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;

@@ -383,8 +383,8 @@
 
     // Auto redirect if already authenticated
     document.addEventListener('DOMContentLoaded', () => {
-      const token = typeof getNativeToken === 'function' ? getNativeToken() : localStorage.getItem('native_token');
-      const activeNip = localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP');
+      const token = typeof getNativeToken === 'function' ? getNativeToken() : (localStorage.getItem('_native_token') || localStorage.getItem('native_token') || localStorage.getItem('_sess_token'));
+      const activeNip = localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || (window._session && window._session.nip);
       if (token && activeNip) {
         console.log('[Auth] Active session found for NIP:', activeNip, '- Redirecting to dashboard...');
         window.location.href = 'index.html';
