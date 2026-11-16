@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html class="light" lang="id">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+  <title>Login - Sistem HADIR BAPPERIDA</title>
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <!-- Material Symbols -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#004ac6",
+            "primary-container": "#2563eb",
+            "on-primary": "#ffffff",
+            "secondary": "#006c49",
+            "secondary-container": "#6cf8bb",
+            "on-secondary-container": "#00714d",
+            "surface": "#f8f9ff",
+            "surface-bright": "#f8f9ff",
+            "surface-dim": "#cbdbf5",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#eff4ff",
+            "surface-container": "#e5eeff",
+            "surface-container-high": "#dce9ff",
+            "surface-container-highest": "#d3e4fe",
+            "on-surface": "#0b1c30",
+            "on-surface-variant": "#434655",
+            "outline": "#737686",
+            "outline-variant": "#c3c6d7",
+            "error": "#ba1a1a",
+            "error-container": "#ffdad6"
+          },
+          fontFamily: {
+            sans: ["Plus Jakarta Sans", "sans-serif"]
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .material-symbols-fill {
+      font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+    }
+    .tap-press:active {
+      transform: scale(0.98);
+    }
+    .card-elevation {
+      box-shadow: 0px 4px 20px -2px rgba(100, 116, 139, 0.08), 0px 2px 6px -1px rgba(100, 116, 139, 0.04);
+    }
+    .action-elevation {
+      box-shadow: 0px 12px 28px -4px rgba(37, 99, 235, 0.22), 0px 4px 10px -2px rgba(15, 23, 42, 0.06);
+    }
+    /* Tab active styles */
+    .auth-tab.active {
+      background-color: #2563eb !important;
+      color: #ffffff !important;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    .auth-tab:not(.active) {
+      background-color: transparent !important;
+      color: #434655 !important;
+    }
+    .spin-sm {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-surface-container-high selection:text-primary">
+
+  <!-- Top Bar -->
+  <header class="bg-surface-container-lowest text-primary shadow-sm flex justify-between items-center w-full px-4 py-3 sticky top-0 z-50">
+    <div class="flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary text-[22px]">verified_user</span>
+      <h1 class="text-base font-bold text-primary tracking-tight">Sistem HADIR - BAPPERIDA</h1>
+    </div>
+    <a href="tel:08123456789" aria-label="Bantuan Teknis" class="text-on-surface-variant hover:bg-surface-container p-2 rounded-full transition-transform active:scale-95 flex items-center justify-center">
+      <span class="material-symbols-outlined text-[20px]">help_outline</span>
+    </a>
+  </header>
+
+  <!-- Main Container -->
+  <main class="w-full max-w-[440px] mx-auto px-4 pt-4 pb-8 flex-1 flex flex-col justify-start">
+    
+    <!-- BRAND / IDENTITY HERO CARD -->
+    <div class="w-full text-center mb-5 flex flex-col items-center">
+      <div class="relative mb-3 flex items-center justify-center">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-primary-container p-0.5 shadow-md flex items-center justify-center">
+          <div class="w-full h-full bg-surface-container-lowest rounded-[14px] flex items-center justify-center">
+            <span class="material-symbols-outlined material-symbols-fill text-primary text-3xl">verified_user</span>
+          </div>
+        </div>
+        <div class="absolute -bottom-1 -right-1 bg-secondary rounded-full p-1 border-2 border-surface-container-lowest flex items-center justify-center">
+          <span class="material-symbols-outlined text-white text-xs">lock</span>
+        </div>
+      </div>
+      
+      <div class="space-y-1">
+        <div class="flex items-center justify-center gap-1.5">
+          <span class="text-2xl text-primary tracking-tight font-extrabold">Sistem HADIR</span>
+          <span class="text-[11px] bg-surface-container-highest text-primary px-2 py-0.5 rounded-full font-bold">ASN v2.6</span>
+        </div>
+        <p class="text-xs text-on-surface-variant max-w-[320px] mx-auto leading-tight">
+          BAPPERIDA Kab. Sumba Barat - Presensi Digital & Administrasi Kepegawaian
+        </p>
+      </div>
+
+      <div class="mt-3.5 inline-flex items-center gap-2 px-3 py-1 bg-surface-container-lowest border border-outline-variant/50 rounded-full shadow-sm">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+        </span>
+        <span class="text-xs text-on-surface font-medium">
+          Koneksi Terenkripsi SSL • Server Aktif
+        </span>
+        <span class="material-symbols-outlined text-secondary text-[14px]">shield</span>
+      </div>
+    </div>
+
+    <!-- MAIN INTERACTIVE CARD CONTAINER -->
+    <div class="bg-surface-container-lowest border border-surface-container-high card-elevation rounded-3xl p-5 w-full transition-all">
+      
+      <!-- SEGMENTED PILL TAB TOGGLE -->
+      <div class="bg-surface-container-low p-1 rounded-2xl flex items-center mb-6 relative border border-outline-variant/40">
+        <button id="tabLogin" onclick="switchAuthTab('login')" class="auth-tab active w-1/2 py-2.5 rounded-xl text-center text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 tap-press cursor-pointer" type="button">
+          <span class="material-symbols-outlined text-[18px]">lock_open</span>
+          <span>Masuk</span>
+        </button>
+        <button id="tabRegister" onclick="switchAuthTab('register')" class="auth-tab w-1/2 py-2.5 rounded-xl text-center text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 tap-press cursor-pointer" type="button">
+          <span class="material-symbols-outlined text-[18px]">badge</span>
+          <span>Daftar Pegawai</span>
+        </button>
+      </div>
+
+      <!-- TAB 1: FORM MASUK (LOGIN) -->
+      <div id="formLogin" class="space-y-4">
+        <form onsubmit="event.preventDefault(); handleAuthAction('login');" class="space-y-4">
+          <!-- Input NIP / ID Pegawai -->
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-on-surface flex items-center justify-between" for="loginNip">
+              <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[16px] text-primary">badge</span>
+                <span>NIP / ID Pegawai</span>
+              </span>
+              <span class="text-[11px] text-on-surface-variant font-normal">Nomor Induk Resmi</span>
+            </label>
+            <div class="relative rounded-xl border border-outline-variant/80 bg-surface-bright focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+              <input id="loginNip" class="w-full bg-transparent px-3.5 py-3 text-sm text-on-surface placeholder:text-outline/70 border-none focus:outline-none font-mono tracking-wide" inputmode="numeric" placeholder="Contoh: 198509042010012023" required type="text" oninput="this.value = this.value.replace(/[^0-9a-zA-Z]/g, '')"/>
+              <div class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60 pointer-events-none">
+                <span class="material-symbols-outlined text-[20px]">person_check</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Input Kata Sandi Wrapper -->
+          <div id="loginPasswordWrapper" class="space-y-1.5" style="display:none">
+            <label class="block text-xs font-semibold text-on-surface flex items-center justify-between" for="loginPassword">
+              <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[16px] text-primary">key</span>
+                <span>Kata Sandi</span>
+              </span>
+              <span class="text-[11px] text-amber-600 font-medium">Verifikasi Diperlukan</span>
+            </label>
+            <div class="relative rounded-xl border border-outline-variant/80 bg-surface-bright focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+              <input id="loginPassword" class="w-full bg-transparent px-3.5 py-3 text-sm text-on-surface placeholder:text-outline/70 border-none focus:outline-none tracking-wider" placeholder="Masukkan Kata Sandi" autocomplete="current-password" type="password"/>
+              <button id="toggle-pwd-btn" type="button" onclick="togglePasswordVisibility('loginPassword', 'pwd-icon')" class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-on-surface-variant hover:text-on-surface rounded-lg transition-colors flex items-center justify-center cursor-pointer">
+                <span class="material-symbols-outlined text-[20px]" id="pwd-icon">visibility</span>
+              </button>
+            </div>
+            <p class="text-[11px] text-on-surface-variant flex items-center gap-1 pt-0.5">
+              <span class="material-symbols-outlined text-[14px] text-secondary">info</span>
+              <span>Default sandi akun: <code class="font-mono bg-surface-container px-1 py-0.5 rounded font-bold text-primary">BapperidaSB2026</code></span>
+            </p>
+          </div>
+
+          <!-- Remember Me & Status -->
+          <div class="flex items-center justify-between pt-1">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" checked class="w-4 h-4 rounded text-primary focus:ring-primary/30 border-outline-variant transition"/>
+              <span class="text-xs text-on-surface">Ingat Saya</span>
+            </label>
+            <span class="text-[11px] text-secondary bg-secondary-container/40 px-2 py-0.5 rounded-full flex items-center gap-1 font-semibold">
+              <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+              GPS Aktif
+            </span>
+          </div>
+
+          <!-- Primary Submit Action Button -->
+          <button id="btnLogin" onclick="handleAuthAction('login')" class="w-full min-h-[50px] bg-primary-container hover:bg-blue-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 action-elevation tap-press transition-all duration-150 cursor-pointer mt-2" type="button">
+            <span>Masuk Sekarang</span>
+            <span class="material-symbols-outlined text-[18px]">rocket_launch</span>
+          </button>
+        </form>
+
+        <!-- Modern Soft Divider -->
+        <div class="relative py-2 flex items-center justify-center">
+          <div class="border-t border-outline-variant/40 w-full"></div>
+          <span class="bg-surface-container-lowest px-3 text-[11px] text-on-surface-variant absolute">Atau Pilihan Presensi</span>
+        </div>
+
+        <!-- Biometric Face / Kiosk Portal Button -->
+        <a href="kiosk.html" class="w-full min-h-[48px] bg-surface-container-low hover:bg-surface-container border-2 border-dashed border-secondary/40 text-on-surface rounded-xl text-xs font-bold flex items-center justify-center gap-2 tap-press transition-all duration-150 group cursor-pointer">
+          <span class="material-symbols-outlined text-secondary text-[20px] group-hover:scale-110 transition-transform">face</span>
+          <span class="text-on-surface">Buka Mode Kiosk / Verifikasi Wajah AI</span>
+          <span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-1.5 py-0.5 rounded-md">INSTAN</span>
+        </a>
+      </div>
+
+      <!-- TAB 2: FORM DAFTAR PEGAWAI (REGISTRATION) -->
+      <div id="formRegister" class="space-y-3.5" style="display:none">
+        <div class="bg-surface-container-low p-3 rounded-xl border border-surface-container-high mb-3 flex items-start gap-2.5">
+          <span class="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5">how_to_reg</span>
+          <p class="text-xs text-on-surface-variant leading-snug">
+            Pendaftaran Pegawai Baru atau Mutasi di lingkungan <strong class="text-on-surface font-semibold">BAPPERIDA Kabupaten Sumba Barat</strong>.
+          </p>
+        </div>
+
+        <form onsubmit="event.preventDefault(); handleAuthAction('register');" class="space-y-3">
+          <!-- Nama Lengkap -->
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-on-surface">Nama Lengkap (dengan Gelar)</label>
+            <div class="rounded-xl border border-outline-variant/80 bg-surface-bright focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+              <input id="regNama" class="w-full bg-transparent px-3 py-2.5 text-xs text-on-surface placeholder:text-outline/70 border-none focus:outline-none" placeholder="mis. Drs. Umbu Pati, M.Si" required type="text"/>
+            </div>
+          </div>
+
+          <!-- NIP / ID Kontrak -->
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-on-surface">NIP / ID Tenaga Kontrak</label>
+            <div class="rounded-xl border border-outline-variant/80 bg-surface-bright focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+              <input id="regNip" class="w-full bg-transparent px-3 py-2.5 text-xs text-on-surface placeholder:text-outline/70 border-none focus:outline-none font-mono" inputmode="numeric" placeholder="18 digit NIP ASN atau No. Kontrak" required type="text" oninput="this.value = this.value.replace(/[^0-9a-zA-Z]/g, '')"/>
+            </div>
+          </div>
+
+          <!-- Jabatan / Penugasan -->
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-on-surface">Jabatan / Penugasan</label>
+            <div class="rounded-xl border border-outline-variant/80 bg-surface-bright focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+              <input id="regJabatan" class="w-full bg-transparent px-3 py-2.5 text-xs text-on-surface placeholder:text-outline/70 border-none focus:outline-none" placeholder="mis. Perencana Ahli Pertama / Staf Teknis" required type="text"/>
+            </div>
+          </div>
+
+          <!-- WhatsApp Aktif -->
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-on-surface flex items-center justify-between">
+              <span>Nomor WhatsApp Aktif</span>
+              <span class="text-[10px] text-secondary font-medium">Notifikasi & Presensi</span>
+            </label>
+            <div class="rounded-xl border border-outline-variant/80 bg-surface-bright focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+              <input id="regNomor" class="w-full bg-transparent px-3 py-2.5 text-xs text-on-surface placeholder:text-outline/70 border-none focus:outline-none font-mono" inputmode="tel" placeholder="Contoh: 081234567890" required type="tel"/>
+            </div>
+          </div>
+
+          <!-- Telegram ID (Hidden wrapper if not via Telegram) -->
+          <div id="regTelegramWrapper" class="space-y-1" style="display:none">
+            <label class="block text-xs font-semibold text-on-surface">Telegram ID (Terdeteksi Otomatis)</label>
+            <div class="rounded-xl border border-outline-variant/80 bg-surface-container-low">
+              <input id="regTelegram" class="w-full bg-transparent px-3 py-2.5 text-xs text-slate-500 font-mono border-none focus:outline-none" readonly type="text"/>
+            </div>
+          </div>
+
+          <!-- Unit Kerja / Instansi & Bidang Select -->
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1">
+              <label class="block text-xs font-semibold text-on-surface">Instansi</label>
+              <select id="regInstansi" onchange="if(typeof fetchBidangList==='function')fetchBidangList(this.value)" class="w-full bg-surface-bright px-2.5 py-2.5 text-xs text-on-surface rounded-xl border border-outline-variant/80 focus:border-primary focus:outline-none">
+                <option value="bapperida">BAPPERIDA</option>
+              </select>
+            </div>
+            <div class="space-y-1">
+              <label class="block text-xs font-semibold text-on-surface">Bidang</label>
+              <select id="regBidang" class="w-full bg-surface-bright px-2.5 py-2.5 text-xs text-on-surface rounded-xl border border-outline-variant/80 focus:border-primary focus:outline-none">
+                <option value="">— Pilih Bidang —</option>
+                <option value="Sekretariat">Sekretariat</option>
+                <option value="Litbang & Inovasi">Litbang & Inovasi</option>
+                <option value="Perekonomian & SDA">Perekonomian & SDA</option>
+                <option value="Infrastruktur & Kewilayahan">IPW</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Grid: Jenis Kepegawaian & Golongan -->
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1">
+              <label class="block text-xs font-semibold text-on-surface">Jenis Pegawai</label>
+              <select id="regTipe" onchange="if(typeof _updatePangkatDropdown==='function')_updatePangkatDropdown('regPangkat', this.value)" class="w-full bg-surface-bright px-2.5 py-2.5 text-xs text-on-surface rounded-xl border border-outline-variant/80 focus:border-primary focus:outline-none">
+                <option value="">— Jenis —</option>
+                <option value="PNS">PNS</option>
+                <option value="PPPK">PPPK</option>
+                <option value="NON_ASN">Non-ASN</option>
+              </select>
+            </div>
+            <div class="space-y-1">
+              <label class="block text-xs font-semibold text-on-surface">Pangkat / Gol.</label>
+              <select id="regPangkat" class="w-full bg-surface-bright px-2.5 py-2.5 text-xs text-on-surface rounded-xl border border-outline-variant/80 focus:border-primary focus:outline-none">
+                <option value="">— Golongan —</option>
+                <option value="Pembina (IV/a)">IV/a</option>
+                <option value="Penata Tk.I (III/d)">III/d</option>
+                <option value="Penata (III/c)">III/c</option>
+                <option value="Penata Muda Tk.I (III/b)">III/b</option>
+                <option value="Penata Muda (III/a)">III/a</option>
+                <option value="Pengatur (II/c)">II/c</option>
+                <option value="Non-Golongan">Non-Gol</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Submit Register Button -->
+          <button id="btnRegister" onclick="handleAuthAction('register')" class="w-full min-h-[48px] bg-secondary hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 action-elevation tap-press transition-all duration-150 cursor-pointer mt-3" type="button">
+            <span class="material-symbols-outlined text-[18px]">person_add</span>
+            <span>Daftar Akun Pegawai</span>
+          </button>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- Quick Helpdesk Pill Button -->
+    <div class="mt-4 flex items-center justify-center">
+      <a href="tel:08123456789" class="inline-flex items-center gap-1.5 text-xs text-on-surface-variant bg-surface-container-low hover:bg-surface-container px-3.5 py-1.5 rounded-full border border-surface-container-high transition-colors">
+        <span class="material-symbols-outlined text-primary text-[16px]">support_agent</span>
+        <span>Kendala Presensi? Kontak Helpdesk IT ASN</span>
+      </a>
+    </div>
+
+  </main>
+
+  <!-- Official Footer -->
+  <footer class="bg-surface text-primary border-t border-outline-variant/60 w-full py-4 px-4 text-center flex flex-col items-center gap-1 mt-auto">
+    <div class="flex items-center gap-1.5 text-[11px] text-secondary font-medium">
+      <span class="material-symbols-outlined text-secondary text-[15px]">verified</span>
+      <span>Tersertifikasi Keamanan Siber & Terintegrasi SIASN BKN</span>
+    </div>
+    <p class="text-xs text-on-surface-variant">
+      © 2026 BAPPERIDA Kabupaten Sumba Barat. Hak Cipta Dilindungi.
+    </p>
+  </footer>
+
+  <!-- Core Scripts & Auth Handler -->
+  <script src="js/lib/sweetalert2.all.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/constants.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+
+  <script>
+    // DOM helper fallback
+    if (typeof window.$ !== 'function') {
+      window.$ = id => document.getElementById(id);
+    }
+
+    function togglePasswordVisibility(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (!input || !icon) return;
+      const isPwd = input.type === 'password';
+      input.type = isPwd ? 'text' : 'password';
+      icon.textContent = isPwd ? 'visibility_off' : 'visibility';
+    }
+
+    // Auto redirect if already authenticated
+    document.addEventListener('DOMContentLoaded', () => {
+      const token = typeof getNativeToken === 'function' ? getNativeToken() : localStorage.getItem('native_token');
+      const activeNip = localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP');
+      if (token && activeNip) {
+        console.log('[Auth] Active session found for NIP:', activeNip, '- Redirecting to dashboard...');
+        window.location.href = 'index.html';
+      }
+    });
+  </script>
+</body>
+</html>

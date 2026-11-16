@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+
+<html class="light" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Sistem HADIR - BAPPERIDA Sumba Barat</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "secondary-container": "#6cf8bb",
+            "surface-dim": "#cbdbf5",
+            "inverse-surface": "#213145",
+            "on-tertiary-container": "#ffeedd",
+            "surface-container-high": "#dce9ff",
+            "on-secondary": "#ffffff",
+            "surface-bright": "#f8f9ff",
+            "on-surface": "#0b1c30",
+            "surface-container-low": "#eff4ff",
+            "on-secondary-fixed": "#002113",
+            "on-primary": "#ffffff",
+            "primary-fixed-dim": "#b4c5ff",
+            "on-primary-fixed-variant": "#003ea8",
+            "inverse-primary": "#b4c5ff",
+            "outline": "#737686",
+            "secondary": "#006c49",
+            "surface-container-highest": "#d3e4fe",
+            "background": "#f8f9ff",
+            "on-secondary-container": "#00714d",
+            "inverse-on-surface": "#eaf1ff",
+            "on-background": "#0b1c30",
+            "on-tertiary-fixed": "#2a1700",
+            "on-tertiary": "#ffffff",
+            "tertiary-fixed": "#ffddb8",
+            "secondary-fixed-dim": "#4edea3",
+            "on-primary-container": "#eeefff",
+            "secondary-fixed": "#6ffbbe",
+            "on-error-container": "#93000a",
+            "on-secondary-fixed-variant": "#005236",
+            "outline-variant": "#c3c6d7",
+            "tertiary-fixed-dim": "#ffb95f",
+            "on-primary-fixed": "#00174b",
+            "on-tertiary-fixed-variant": "#653e00",
+            "on-surface-variant": "#434655",
+            "error-container": "#ffdad6",
+            "on-error": "#ffffff",
+            "surface-variant": "#d3e4fe",
+            "surface-container-lowest": "#ffffff",
+            "error": "#ba1a1a",
+            "primary": "#004ac6",
+            "surface": "#f8f9ff",
+            "surface-tint": "#0053db",
+            "primary-container": "#2563eb",
+            "primary-fixed": "#dbe1ff",
+            "tertiary": "#784b00",
+            "surface-container": "#e5eeff",
+            "tertiary-container": "#996100"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "3xl": "1.5rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-sm": "0.5rem",
+            "gutter": "1rem",
+            "space-md": "1rem",
+            "space-xs": "0.25rem",
+            "margin-md": "1.25rem",
+            "margin": "1rem",
+            "gutter-sm": "0.75rem",
+            "margin-lg": "1.5rem",
+            "space-lg": "1.5rem",
+            "space-xl": "2rem"
+          },
+          "fontFamily": {
+            "body-md": ["Plus Jakarta Sans", "sans-serif"],
+            "title-md": ["Plus Jakarta Sans", "sans-serif"],
+            "body-lg": ["Plus Jakarta Sans", "sans-serif"],
+            "label-lg": ["Plus Jakarta Sans", "sans-serif"],
+            "body-sm": ["Plus Jakarta Sans", "sans-serif"],
+            "time-display": ["Plus Jakarta Sans", "sans-serif"],
+            "label-md": ["Plus Jakarta Sans", "sans-serif"],
+            "headline-sm": ["Plus Jakarta Sans", "sans-serif"],
+            "display-lg-mobile": ["Plus Jakarta Sans", "sans-serif"],
+            "headline-md": ["Plus Jakarta Sans", "sans-serif"],
+            "headline-lg": ["Plus Jakarta Sans", "sans-serif"],
+            "display-lg": ["Plus Jakarta Sans", "sans-serif"],
+            "label-sm": ["Plus Jakarta Sans", "sans-serif"]
+          },
+          "fontSize": {
+            "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+            "title-md": ["16px", { "lineHeight": "22px", "fontWeight": "600" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+            "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+            "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "time-display": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.03em", "fontWeight": "800" }],
+            "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+            "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "display-lg-mobile": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+            "display-lg": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.03em", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .material-symbols-fill {
+      font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+    }
+    /* Subtle touch feedback */
+    .tap-press:active {
+      transform: scale(0.98);
+    }
+    /* Ambient Card Elevation (Level 1) */
+    .card-elevation {
+      box-shadow: 0px 4px 20px -2px rgba(100, 116, 139, 0.08), 0px 2px 6px -1px rgba(100, 116, 139, 0.04);
+    }
+    /* Floating Action Level 2 */
+    .action-elevation {
+      box-shadow: 0px 12px 28px -4px rgba(37, 99, 235, 0.22), 0px 4px 10px -2px rgba(15, 23, 42, 0.06);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md antialiased min-h-screen flex flex-col justify-between selection:bg-surface-container-high selection:text-primary">
+<!-- Top App Bar (Shared Component Anchor) -->
+<header class="bg-surface-container-lowest text-primary shadow-sm flex justify-between items-center w-full px-space-md py-space-sm sticky top-0 z-50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[22px]">verified_user</span>
+<h1 class="text-title-md font-title-md font-bold text-primary tracking-tight">Sistem HADIR - BAPPERIDA</h1>
+</div>
+<button aria-label="Bantuan Teknis" class="text-on-surface-variant hover:bg-surface-container p-2 rounded-full transition-transform active:scale-95 flex items-center justify-center" type="button">
+<span class="material-symbols-outlined text-[22px]">help_outline</span>
+</button>
+</header>
+<!-- Main Canvas Content Container -->
+<main class="w-full max-w-[440px] mx-auto px-margin pt-4 pb-8 flex-1 flex flex-col justify-start">
+<!-- BRAND / IDENTITY HERO CARD -->
+<div class="w-full text-center mb-5 flex flex-col items-center">
+<!-- Official Emblem Seal / Badge -->
+<div class="relative mb-3 flex items-center justify-center">
+<div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-primary-container p-0.5 shadow-md flex items-center justify-center">
+<div class="w-full h-full bg-surface-container-lowest rounded-[14px] flex items-center justify-center">
+<span class="material-symbols-outlined material-symbols-fill text-primary text-3xl">verified_user</span>
+</div>
+</div>
+<div class="absolute -bottom-1 -right-1 bg-secondary rounded-full p-1 border-2 border-surface-container-lowest flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-xs">lock</span>
+</div>
+</div>
+<!-- Identity Typography -->
+<div class="space-y-1">
+<div class="flex items-center justify-center gap-1.5">
+<span class="text-headline-lg font-headline-lg text-primary tracking-tight font-extrabold">Sistem HADIR</span>
+<span class="text-label-sm font-label-sm bg-surface-container-highest text-primary px-2 py-0.5 rounded-full font-bold">ASN v2.6</span>
+</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant max-w-[320px] mx-auto leading-tight">
+          BAPPERIDA Kab. Sumba Barat - Presensi Digital &amp; Administrasi Kepegawaian
+        </p>
+</div>
+<!-- SSL Security Pill Status -->
+<div class="mt-3.5 inline-flex items-center gap-2 px-3 py-1 bg-surface-container-lowest border border-outline-variant/50 rounded-full shadow-sm">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+</span>
+<span class="text-label-sm font-label-sm text-on-surface font-medium">
+          Koneksi Terenkripsi SSL • Server Aktif
+        </span>
+<span class="material-symbols-outlined text-secondary text-[14px]">shield</span>
+</div>
+</div>
+<!-- MAIN INTERACTIVE CARD CONTAINER -->
+<div class="bg-surface-container-lowest border border-surface-container-high card-elevation rounded-3xl p-5 w-full transition-all">
+<!-- SEGMENTED PILL TAB TOGGLE (Thumb Zone Ergo) -->
+<div class="bg-surface-container-low p-1 rounded-2xl flex items-center mb-6 relative border border-outline-variant/40">
+<button class="w-1/2 py-2.5 rounded-xl text-center text-label-lg font-label-lg transition-all duration-200 flex items-center justify-center gap-1.5 bg-primary-container text-on-primary shadow-sm tap-press" id="tab-login-btn" type="button">
+<span class="material-symbols-outlined text-[18px]">lock_open</span>
+<span>Masuk</span>
+</button>
+<button class="w-1/2 py-2.5 rounded-xl text-center text-label-lg font-label-lg transition-all duration-200 flex items-center justify-center gap-1.5 text-on-surface-variant hover:text-on-surface tap-press" id="tab-register-btn" type="button">
+<span class="material-symbols-outlined text-[18px]">badge</span>
+<span>Daftar Pegawai</span>
+</button>
+</div>
+<!-- TAB 1: FORM MASUK (LOGIN) -->
+<div class="space-y-4" id="container-login">
+<form class="space-y-4" onsubmit="event.preventDefault();">
+<!-- Input NIP / ID Pegawai -->
+<div class="space-y-1.5">
+<label class="block text-label-md font-label-md text-on-surface flex items-center justify-between" for="input-nip">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-primary">badge</span>
+<span>NIP / ID Pegawai</span>
+</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Nomor Induk Resmi</span>
+</label>
+<div class="relative rounded-xl border border-outline-variant/80 bg-surface-bright focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+<input class="w-full bg-transparent px-3.5 py-3 text-body-md font-body-md text-on-surface placeholder:text-outline/70 border-none focus:outline-none focus:ring-0 font-mono tracking-wide" id="input-nip" inputmode="numeric" placeholder="Contoh: 19850904 201001 2 023" required="" type="text"/>
+<div class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60 pointer-events-none">
+<span class="material-symbols-outlined text-[20px]">person_check</span>
+</div>
+</div>
+</div>
+<!-- Input Kata Sandi -->
+<div class="space-y-1.5">
+<label class="block text-label-md font-label-md text-on-surface flex items-center justify-between" for="input-password">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-primary">key</span>
+<span>Kata Sandi</span>
+</span>
+<a class="text-label-sm font-label-sm text-primary font-semibold hover:underline" href="javascript:void(0)">Lupa Sandi?</a>
+</label>
+<div class="relative rounded-xl border border-outline-variant/80 bg-surface-bright focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+<input class="w-full bg-transparent px-3.5 py-3 text-body-md font-body-md text-on-surface placeholder:text-outline/70 border-none focus:outline-none focus:ring-0 tracking-wider" id="input-password" placeholder="••••••••" required="" type="password"/>
+<button class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-on-surface-variant hover:text-on-surface rounded-lg transition-colors flex items-center justify-center" id="toggle-pwd-btn" type="button">
+<span class="material-symbols-outlined text-[20px]" id="pwd-icon">visibility</span>
+</button>
+</div>
+<p class="text-label-sm font-label-sm text-on-surface-variant flex items-center gap-1 pt-0.5">
+<span class="material-symbols-outlined text-[14px] text-secondary">info</span>
+<span>Default kata sandi baru: <code class="font-mono bg-surface-container px-1 py-0.2 rounded font-bold text-primary">BapperidaSB2026</code></span>
+</p>
+</div>
+<!-- Remember Me & Biometric Status -->
+<div class="flex items-center justify-between pt-1">
+<label class="flex items-center gap-2 cursor-pointer select-none">
+<input checked="" class="w-4 h-4 rounded text-primary focus:ring-primary/30 border-outline-variant transition" type="checkbox"/>
+<span class="text-label-md font-label-md text-on-surface">Ingat Saya di Perangkat Ini</span>
+</label>
+<span class="text-label-sm font-label-sm text-secondary bg-secondary-container/30 px-2 py-0.5 rounded-full flex items-center gap-1 font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+              GPS Aktif
+            </span>
+</div>
+<!-- Primary Submit Action Button -->
+<button class="w-full min-h-[52px] bg-primary hover:bg-primary-container text-on-primary rounded-xl font-label-lg text-label-lg flex items-center justify-center gap-2.5 action-elevation tap-press transition-all duration-150 font-bold mt-2" type="submit">
+<span>Masuk Sekarang</span>
+<span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+</form>
+<!-- Modern Soft Divider -->
+<div class="relative py-2 flex items-center justify-center">
+<div class="border-t border-outline-variant/40 w-full"></div>
+<span class="bg-surface-container-lowest px-3 text-label-sm font-label-sm text-on-surface-variant absolute">Atau Masuk Lebih Cepat</span>
+</div>
+<!-- Biometric Face Recognition AI Button -->
+<button class="w-full min-h-[50px] bg-surface-container-low hover:bg-surface-container border-2 border-dashed border-secondary/40 text-on-surface rounded-xl font-label-md text-label-md flex items-center justify-center gap-2.5 tap-press transition-all duration-150 group" type="button">
+<span class="material-symbols-outlined text-secondary text-[22px] group-hover:scale-110 transition-transform">face</span>
+<span class="font-bold text-on-surface">Masuk dengan Verifikasi Wajah AI</span>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-1.5 py-0.5 rounded-md">INSTAN</span>
+</button>
+</div>
+<!-- TAB 2: FORM DAFTAR PEGAWAI (REGISTRATION) -->
+<div class="space-y-3.5 hidden" id="container-register">
+<div class="bg-surface-container-low p-3 rounded-xl border border-surface-container-high mb-3 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5">how_to_reg</span>
+<p class="text-body-sm font-body-sm text-on-surface-variant leading-snug">
+            Khusus Pegawai Baru atau Mutasi di lingkungan <strong class="text-on-surface font-semibold">BAPPERIDA Kabupaten Sumba Barat</strong>.
+          </p>
+</div>
+<form class="space-y-3.5" onsubmit="event.preventDefault();">
+<!-- Nama Lengkap -->
+<div class="space-y-1">
+<label class="block text-label-md font-label-md text-on-surface">Nama Lengkap (dengan Gelar)</label>
+<div class="relative rounded-xl border border-outline-variant/80 bg-surface-bright focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+<input class="w-full bg-transparent px-3 py-2.5 text-body-md font-body-md text-on-surface placeholder:text-outline/70 border-none focus:outline-none" placeholder="mis. Drs. Umbu Pati, M.Si" required="" type="text"/>
+</div>
+</div>
+<!-- NIP / ID Kontrak -->
+<div class="space-y-1">
+<label class="block text-label-md font-label-md text-on-surface">NIP / ID Tenaga Kontrak</label>
+<div class="relative rounded-xl border border-outline-variant/80 bg-surface-bright focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+<input class="w-full bg-transparent px-3 py-2.5 text-body-md font-body-md text-on-surface placeholder:text-outline/70 border-none focus:outline-none font-mono" inputmode="numeric" placeholder="18 digit NIP ASN atau No. Kontrak" required="" type="text"/>
+</div>
+</div>
+<!-- Jabatan / Penugasan -->
+<div class="space-y-1">
+<label class="block text-label-md font-label-md text-on-surface">Jabatan / Penugasan</label>
+<div class="relative rounded-xl border border-outline-variant/80 bg-surface-bright focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+<input class="w-full bg-transparent px-3 py-2.5 text-body-md font-body-md text-on-surface placeholder:text-outline/70 border-none focus:outline-none" placeholder="mis. Perencana Ahli Pertama / Staf Teknis" required="" type="text"/>
+</div>
+</div>
+<!-- WhatsApp Aktif -->
+<div class="space-y-1">
+<label class="block text-label-md font-label-md text-on-surface flex items-center justify-between">
+<span>Nomor WhatsApp Aktif</span>
+<span class="text-label-sm font-label-sm text-secondary font-medium">OTP &amp; Notifikasi</span>
+</label>
+<div class="relative rounded-xl border border-outline-variant/80 bg-surface-bright focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+<div class="absolute left-3 top-1/2 -translate-y-1/2 text-body-md font-bold text-on-surface-variant">
+                +62
+              </div>
+<input class="w-full bg-transparent pl-12 pr-3 py-2.5 text-body-md font-body-md text-on-surface placeholder:text-outline/70 border-none focus:outline-none font-mono" inputmode="tel" placeholder="812 3456 7890" required="" type="tel"/>
+</div>
+</div>
+<!-- Unit Kerja / Bidang Select -->
+<div class="space-y-1">
+<label class="block text-label-md font-label-md text-on-surface">Unit Kerja / Bidang</label>
+<div class="relative rounded-xl border border-outline-variant/80 bg-surface-bright focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+<select class="w-full bg-transparent px-3 py-2.5 text-body-md font-body-md text-on-surface border-none focus:outline-none appearance-none cursor-pointer" required="">
+<option disabled="" selected="" value="">Pilih Bidang Penempatan</option>
+<option value="sekretariat">Sekretariat BAPPERIDA</option>
+<option value="litbang">Bidang Litbang &amp; Inovasi</option>
+<option value="perekonomian">Bidang Perekonomian &amp; SDA</option>
+<option value="ipw">Bidang Infrastruktur &amp; Kewilayahan (IPW)</option>
+</select>
+<div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Grid: Jenis Kepegawaian & Golongan -->
+<div class="grid grid-cols-2 gap-2.5">
+<div class="space-y-1">
+<label class="block text-label-md font-label-md text-on-surface">Jenis Pegawai</label>
+<div class="relative rounded-xl border border-outline-variant/80 bg-surface-bright focus-within:border-primary">
+<select class="w-full bg-transparent px-2.5 py-2.5 text-body-sm font-body-sm text-on-surface border-none focus:outline-none appearance-none cursor-pointer" required="">
+<option disabled="" selected="" value="">Status</option>
+<option value="pns">PNS</option>
+<option value="pppk">PPPK</option>
+<option value="nonasn">Tenaga Non-ASN</option>
+</select>
+<div class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</div>
+</div>
+</div>
+<div class="space-y-1">
+<label class="block text-label-md font-label-md text-on-surface">Golongan / Ruang</label>
+<div class="relative rounded-xl border border-outline-variant/80 bg-surface-bright focus-within:border-primary">
+<select class="w-full bg-transparent px-2.5 py-2.5 text-body-sm font-body-sm text-on-surface border-none focus:outline-none appearance-none cursor-pointer" required="">
+<option disabled="" selected="" value="">Gol.</option>
+<option value="iv_b">IV/b</option>
+<option value="iv_a">IV/a</option>
+<option value="iii_d">III/d</option>
+<option value="iii_c">III/c</option>
+<option value="iii_b">III/b</option>
+<option value="iii_a">III/a</option>
+<option value="ii_c">II/c</option>
+<option value="non_gol">Non-Golongan</option>
+</select>
+<div class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Statement Checkbox -->
+<div class="pt-1">
+<label class="flex items-start gap-2.5 cursor-pointer select-none">
+<input class="w-4 h-4 mt-0.5 rounded text-primary focus:ring-primary/30 border-outline-variant transition" required="" type="checkbox"/>
+<span class="text-body-sm font-body-sm text-on-surface-variant leading-snug">
+                Saya menyatakan data kepegawaian yang diisi adalah sah dan terdaftar di SIASN/BKPSDM Sumba Barat.
+              </span>
+</label>
+</div>
+<!-- Submit Register Button -->
+<button class="w-full min-h-[50px] bg-secondary hover:bg-secondary/90 text-on-secondary rounded-xl font-label-lg text-label-lg flex items-center justify-center gap-2 action-elevation tap-press transition-all duration-150 font-bold mt-3" type="submit">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+<span>Daftar Akun Pegawai</span>
+</button>
+</form>
+</div>
+</div>
+<!-- Quick Helpdesk Pill Button (Thumb Accessibility) -->
+<div class="mt-4 flex items-center justify-center">
+<a class="inline-flex items-center gap-2 text-label-md font-label-md text-on-surface-variant bg-surface-container-low hover:bg-surface-container px-3.5 py-1.5 rounded-full border border-surface-container-high transition-colors" href="tel:08123456789">
+<span class="material-symbols-outlined text-primary text-[18px]">support_agent</span>
+<span>Kendala Presensi? Kontak Helpdesk IT ASN</span>
+</a>
+</div>
+</main>
+<!-- Official Footer (Shared Component Anchor) -->
+<footer class="bg-surface text-primary border-t border-outline-variant/60 w-full py-space-lg px-margin text-center flex flex-col items-center gap-space-xs mt-auto">
+<!-- Security certification badge -->
+<div class="flex items-center gap-2 text-label-sm font-label-sm text-secondary font-medium mb-1">
+<span class="material-symbols-outlined text-secondary text-[16px]">verified</span>
+<span>Tersertifikasi Keamanan Siber &amp; Terintegrasi SIASN BKN</span>
+</div>
+<!-- Copyright exact label matching JSON -->
+<p class="text-label-md font-label-md text-on-surface-variant">
+      © 2024 BAPPERIDA Kabupaten Sumba Barat. Hak Cipta Dilindungi Undang-Undang.
+    </p>
+<!-- Navigation links from JSON -->
+<div class="flex flex-wrap justify-center items-center gap-x-4 gap-y-1 mt-1 text-label-sm font-label-sm">
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-150" href="javascript:void(0)">Kebijakan Privasi</a>
+<span class="text-outline-variant">•</span>
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-150" href="javascript:void(0)">Bantuan Teknis</a>
+<span class="text-outline-variant">•</span>
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-150" href="javascript:void(0)">Keamanan Siber ASN</a>
+</div>
+</footer>
+<!-- Micro Interaction Script for Tab Switcher and Password Toggle -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const tabLoginBtn = document.getElementById('tab-login-btn');
+      const tabRegisterBtn = document.getElementById('tab-register-btn');
+      const containerLogin = document.getElementById('container-login');
+      const containerRegister = document.getElementById('container-register');
+      const togglePwdBtn = document.getElementById('toggle-pwd-btn');
+      const inputPassword = document.getElementById('input-password');
+      const pwdIcon = document.getElementById('pwd-icon');
+
+      // Switch to Login Tab
+      tabLoginBtn.addEventListener('click', () => {
+        // Button styles
+        tabLoginBtn.className = 'w-1/2 py-2.5 rounded-xl text-center text-label-lg font-label-lg transition-all duration-200 flex items-center justify-center gap-1.5 bg-primary-container text-on-primary shadow-sm tap-press';
+        tabRegisterBtn.className = 'w-1/2 py-2.5 rounded-xl text-center text-label-lg font-label-lg transition-all duration-200 flex items-center justify-center gap-1.5 text-on-surface-variant hover:text-on-surface tap-press';
+        
+        // Form visibility
+        containerLogin.classList.remove('hidden');
+        containerRegister.classList.add('hidden');
+      });
+
+      // Switch to Register Tab
+      tabRegisterBtn.addEventListener('click', () => {
+        // Button styles
+        tabRegisterBtn.className = 'w-1/2 py-2.5 rounded-xl text-center text-label-lg font-label-lg transition-all duration-200 flex items-center justify-center gap-1.5 bg-primary-container text-on-primary shadow-sm tap-press';
+        tabLoginBtn.className = 'w-1/2 py-2.5 rounded-xl text-center text-label-lg font-label-lg transition-all duration-200 flex items-center justify-center gap-1.5 text-on-surface-variant hover:text-on-surface tap-press';
+        
+        // Form visibility
+        containerRegister.classList.remove('hidden');
+        containerLogin.classList.add('hidden');
+      });
+
+      // Reveal / Mask Password Toggle
+      togglePwdBtn.addEventListener('click', () => {
+        const isPassword = inputPassword.getAttribute('type') === 'password';
+        inputPassword.setAttribute('type', isPassword ? 'text' : 'password');
+        pwdIcon.textContent = isPassword ? 'visibility_off' : 'visibility';
+      });
+    });
+  </script>
+</body></html>

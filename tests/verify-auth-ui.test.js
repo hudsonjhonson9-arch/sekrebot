@@ -1,0 +1,38 @@
+import fs from 'fs';
+import assert from 'assert';
+
+console.log('--- Verifying login.html & index.html auth elements ---');
+
+const expectedIds = [
+  'authOverlay',
+  'tabLogin', 'tabRegister', 'formLogin', 'formRegister',
+  'loginNip', 'loginPasswordWrapper', 'loginPassword', 'btnLogin',
+  'regNama', 'regNip', 'regJabatan', 'regNomor', 'regTelegramWrapper',
+  'regTelegram', 'regInstansi', 'regBidang', 'regTipe', 'regPangkat', 'btnRegister'
+];
+
+// 1. Verify login.html
+const loginHtml = fs.readFileSync('D:/Code/absensi-STICH/login.html', 'utf8');
+const missingInLogin = expectedIds.filter(id => id !== 'authOverlay' && !loginHtml.includes(`id="${id}"`));
+assert.strictEqual(missingInLogin.length, 0, `Missing IDs in login.html: ${missingInLogin.join(', ')}`);
+console.log('✓ login.html contains all expected auth elements.');
+
+// 2. Verify index.html
+const indexHtml = fs.readFileSync('D:/Code/absensi-STICH/index.html', 'utf8');
+const missingInIndex = expectedIds.filter(id => !indexHtml.includes(`id="${id}"`));
+assert.strictEqual(missingInIndex.length, 0, `Missing IDs in index.html: ${missingInIndex.join(', ')}`);
+console.log('✓ index.html contains all 20 expected auth overlay elements.');
+
+// 3. Verify script inclusions in index.html
+assert(indexHtml.includes('src="js/config.js"'), 'Missing js/config.js script tag in index.html');
+assert(indexHtml.includes('src="js/constants.js"'), 'Missing js/constants.js script tag in index.html');
+assert(indexHtml.includes('src="js/api.js"'), 'Missing js/api.js script tag in index.html');
+assert(indexHtml.includes('src="js/auth.js"'), 'Missing js/auth.js script tag in index.html');
+console.log('✓ index.html correctly includes config.js, constants.js, api.js, and auth.js.');
+
+// 4. Verify logout handler & session gating in index.html
+assert(indexHtml.includes('logoutUser()') || indexHtml.includes('window.logoutUser'), 'Missing logoutUser in index.html');
+assert(indexHtml.includes('authOverlayEl.style.display = \'flex\''), 'Missing auth gating in bootstrapFromDatabase');
+console.log('✓ index.html has session gating and logout handler.');
+
+console.log('--- ALL AUTH UI VERIFICATIONS PASSED ---');

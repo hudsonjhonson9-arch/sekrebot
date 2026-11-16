@@ -1328,7 +1328,13 @@
             </button>
             <h2 class="text-base font-bold text-slate-900 dark:text-white">Profil & Kepegawaian</h2>
           </div>
-          <span class="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-mono">AKTIF</span>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-mono">AKTIF</span>
+            <button onclick="logoutUser()" type="button" class="flex items-center gap-1 text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 px-2.5 py-0.5 rounded-full border border-rose-200 dark:border-rose-900/50 transition-all cursor-pointer" title="Keluar dari Akun">
+              <span class="material-symbols-outlined text-[13px]">logout</span>
+              <span>Keluar</span>
+            </button>
+          </div>
         </div>
 
         <div class="p-5 flex flex-col gap-4 overflow-y-auto">
@@ -1492,6 +1498,14 @@
                 </button>
               </div>
             </div>
+
+            <!-- GRUP 5: KELUAR / LOGOUT -->
+            <div class="pt-2">
+              <button onclick="logoutUser()" type="button" class="w-full py-3 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-900/50 font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">logout</span>
+                <span>Keluar dari Akun Pegawai</span>
+              </button>
+            </div>
           </div>
 
         </div>
@@ -1543,6 +1557,239 @@
     </div>
 
   </main>
+
+  <!-- ═════════════════════════════════════════════════════════════════════ -->
+  <!-- 0. AUTH OVERLAY (STITCH THEME - SCREEN 21)                          -->
+  <!-- ═════════════════════════════════════════════════════════════════════ -->
+  <div id="authOverlay" class="fixed inset-0 z-[100] bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto" style="display:none">
+    <div class="w-full max-w-[440px] my-auto bg-white dark:bg-[#0b1326] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-2xl transition-all animate-in fade-in zoom-in-95 duration-200">
+      
+      <!-- BRAND / IDENTITY HERO HEADER -->
+      <div class="w-full text-center mb-4 flex flex-col items-center">
+        <div class="relative mb-2 flex items-center justify-center">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 p-0.5 shadow-md flex items-center justify-center">
+            <div class="w-full h-full bg-white dark:bg-slate-900 rounded-[14px] flex items-center justify-center">
+              <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-2xl font-bold">verified_user</span>
+            </div>
+          </div>
+          <div class="absolute -bottom-1 -right-1 bg-emerald-600 rounded-full p-1 border-2 border-white dark:border-slate-900 flex items-center justify-center">
+            <span class="material-symbols-outlined text-white text-[10px]">lock</span>
+          </div>
+        </div>
+        
+        <div class="space-y-0.5">
+          <div class="flex items-center justify-center gap-1.5">
+            <span class="text-xl text-blue-600 dark:text-blue-400 tracking-tight font-extrabold font-sans">Sistem HADIR</span>
+            <span class="text-[10px] bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-bold">ASN v2.6</span>
+          </div>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 max-w-[300px] mx-auto leading-tight">
+            BAPPERIDA Kab. Sumba Barat - Presensi Digital & Administrasi
+          </p>
+        </div>
+
+        <div class="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-full shadow-xs">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span class="text-[10px] text-slate-600 dark:text-slate-300 font-medium">
+            Koneksi Terenkripsi SSL • Server Aktif
+          </span>
+        </div>
+      </div>
+
+      <!-- SEGMENTED PILL TAB TOGGLE -->
+      <div class="bg-slate-100 dark:bg-slate-800/60 p-1 rounded-2xl flex items-center mb-4 relative border border-slate-200 dark:border-slate-700">
+        <button id="tabLogin" onclick="switchAuthTab('login')" class="auth-tab active w-1/2 py-2 rounded-xl text-center text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer bg-blue-600 text-white shadow-xs" type="button">
+          <span class="material-symbols-outlined text-[16px]">lock_open</span>
+          <span>Masuk</span>
+        </button>
+        <button id="tabRegister" onclick="switchAuthTab('register')" class="auth-tab w-1/2 py-2 rounded-xl text-center text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200" type="button">
+          <span class="material-symbols-outlined text-[16px]">badge</span>
+          <span>Daftar Pegawai</span>
+        </button>
+      </div>
+
+      <!-- TAB 1: FORM MASUK (LOGIN) -->
+      <div id="formLogin" class="space-y-3.5">
+        <form onsubmit="event.preventDefault(); handleAuthAction('login');" class="space-y-3">
+          <!-- Input NIP / ID Pegawai -->
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-between" for="loginNip">
+              <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[15px] text-blue-600 dark:text-blue-400">badge</span>
+                <span>NIP / ID Pegawai</span>
+              </span>
+              <span class="text-[10px] text-slate-400 font-normal">Nomor Induk Resmi</span>
+            </label>
+            <div class="relative rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+              <input id="loginNip" class="w-full bg-transparent px-3 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 border-none focus:outline-none font-mono tracking-wide" inputmode="numeric" placeholder="Contoh: 198509042010012023" required type="text" oninput="this.value = this.value.replace(/[^0-9a-zA-Z]/g, '')"/>
+              <div class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <span class="material-symbols-outlined text-[18px]">person_check</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Input Kata Sandi Wrapper -->
+          <div id="loginPasswordWrapper" class="space-y-1" style="display:none">
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-between" for="loginPassword">
+              <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[15px] text-blue-600 dark:text-blue-400">key</span>
+                <span>Kata Sandi</span>
+              </span>
+              <span class="text-[10px] text-amber-600 font-medium">Verifikasi Sandi</span>
+            </label>
+            <div class="relative rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+              <input id="loginPassword" class="w-full bg-transparent px-3 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 border-none focus:outline-none tracking-wider" placeholder="Masukkan Kata Sandi" autocomplete="current-password" type="password"/>
+              <button id="toggle-pwd-btn-overlay" type="button" onclick="togglePasswordVisibility('loginPassword', 'pwd-icon-overlay')" class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg transition-colors flex items-center justify-center cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]" id="pwd-icon-overlay">visibility</span>
+              </button>
+            </div>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 pt-0.5">
+              <span class="material-symbols-outlined text-[13px] text-emerald-600">info</span>
+              <span>Default kata sandi baru: <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded font-bold text-blue-600 dark:text-blue-400">BapperidaSB2026</code></span>
+            </p>
+          </div>
+
+          <!-- Remember Me & GPS indicator -->
+          <div class="flex items-center justify-between pt-0.5">
+            <label class="flex items-center gap-1.5 cursor-pointer select-none">
+              <input type="checkbox" checked class="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500/30 border-slate-300 dark:border-slate-700 transition"/>
+              <span class="text-[11px] text-slate-600 dark:text-slate-300">Ingat Saya</span>
+            </label>
+            <span class="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full flex items-center gap-1 font-semibold">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              GPS Aktif
+            </span>
+          </div>
+
+          <!-- Primary Submit Action Button -->
+          <button id="btnLogin" onclick="handleAuthAction('login')" class="w-full min-h-[46px] bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm active:scale-98 transition-all cursor-pointer mt-1" type="button">
+            <span>Masuk Sekarang</span>
+            <span class="material-symbols-outlined text-[16px]">rocket_launch</span>
+          </button>
+        </form>
+
+        <div class="relative py-1.5 flex items-center justify-center">
+          <div class="border-t border-slate-200 dark:border-slate-800 w-full"></div>
+          <span class="bg-white dark:bg-[#0b1326] px-2 text-[10px] text-slate-400 absolute">Atau Presensi Cepat</span>
+        </div>
+
+        <a href="kiosk.html" class="w-full min-h-[42px] bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border-2 border-dashed border-emerald-500/30 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all group cursor-pointer">
+          <span class="material-symbols-outlined text-emerald-600 text-[18px] group-hover:scale-110 transition-transform">face</span>
+          <span>Buka Mode Kiosk / Verifikasi Wajah AI</span>
+          <span class="bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[9px] font-bold px-1.5 py-0.2 rounded">INSTAN</span>
+        </a>
+      </div>
+
+      <!-- TAB 2: FORM DAFTAR PEGAWAI (REGISTRATION) -->
+      <div id="formRegister" class="space-y-3" style="display:none">
+        <div class="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-700 mb-2 flex items-start gap-2">
+          <span class="material-symbols-outlined text-blue-600 text-[18px] shrink-0 mt-0.5">how_to_reg</span>
+          <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
+            Pendaftaran Pegawai Baru atau Mutasi di <strong class="text-slate-900 dark:text-white">BAPPERIDA Kab. Sumba Barat</strong>.
+          </p>
+        </div>
+
+        <form onsubmit="event.preventDefault(); handleAuthAction('register');" class="space-y-2.5">
+          <div class="space-y-0.5">
+            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-200">Nama Lengkap (dengan Gelar)</label>
+            <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+              <input id="regNama" class="w-full bg-transparent px-3 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 border-none focus:outline-none" placeholder="mis. Drs. Umbu Pati, M.Si" required type="text"/>
+            </div>
+          </div>
+
+          <div class="space-y-0.5">
+            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-200">NIP / ID Tenaga Kontrak</label>
+            <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+              <input id="regNip" class="w-full bg-transparent px-3 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 border-none focus:outline-none font-mono" inputmode="numeric" placeholder="18 digit NIP ASN atau No. Kontrak" required type="text" oninput="this.value = this.value.replace(/[^0-9a-zA-Z]/g, '')"/>
+            </div>
+          </div>
+
+          <div class="space-y-0.5">
+            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-200">Jabatan / Penugasan</label>
+            <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+              <input id="regJabatan" class="w-full bg-transparent px-3 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 border-none focus:outline-none" placeholder="mis. Perencana Ahli Pertama / Staf Teknis" required type="text"/>
+            </div>
+          </div>
+
+          <div class="space-y-0.5">
+            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-between">
+              <span>Nomor WhatsApp Aktif</span>
+              <span class="text-[9px] text-emerald-600 font-medium">OTP & Presensi</span>
+            </label>
+            <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+              <input id="regNomor" class="w-full bg-transparent px-3 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 border-none focus:outline-none font-mono" inputmode="tel" placeholder="Contoh: 081234567890" required type="tel"/>
+            </div>
+          </div>
+
+          <div id="regTelegramWrapper" class="space-y-0.5" style="display:none">
+            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-200">Telegram ID (Otomatis)</label>
+            <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+              <input id="regTelegram" class="w-full bg-transparent px-3 py-2 text-xs text-slate-500 font-mono border-none focus:outline-none" readonly type="text"/>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-0.5">
+              <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-200">Instansi</label>
+              <select id="regInstansi" onchange="if(typeof fetchBidangList==='function')fetchBidangList(this.value)" class="w-full bg-slate-50 dark:bg-slate-800/80 px-2 py-2 text-xs text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none">
+                <option value="bapperida">BAPPERIDA</option>
+              </select>
+            </div>
+            <div class="space-y-0.5">
+              <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-200">Bidang</label>
+              <select id="regBidang" class="w-full bg-slate-50 dark:bg-slate-800/80 px-2 py-2 text-xs text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none">
+                <option value="">— Pilih Bidang —</option>
+                <option value="Sekretariat">Sekretariat</option>
+                <option value="Litbang & Inovasi">Litbang & Inovasi</option>
+                <option value="Perekonomian & SDA">Perekonomian & SDA</option>
+                <option value="Infrastruktur & Kewilayahan">IPW</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-0.5">
+              <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-200">Jenis Pegawai</label>
+              <select id="regTipe" onchange="if(typeof _updatePangkatDropdown==='function')_updatePangkatDropdown('regPangkat', this.value)" class="w-full bg-slate-50 dark:bg-slate-800/80 px-2 py-2 text-xs text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none">
+                <option value="">— Jenis —</option>
+                <option value="PNS">PNS</option>
+                <option value="PPPK">PPPK</option>
+                <option value="NON_ASN">Non-ASN</option>
+              </select>
+            </div>
+            <div class="space-y-0.5">
+              <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-200">Pangkat / Gol.</label>
+              <select id="regPangkat" class="w-full bg-slate-50 dark:bg-slate-800/80 px-2 py-2 text-xs text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none">
+                <option value="">— Golongan —</option>
+                <option value="Pembina (IV/a)">IV/a</option>
+                <option value="Penata Tk.I (III/d)">III/d</option>
+                <option value="Penata (III/c)">III/c</option>
+                <option value="Penata Muda Tk.I (III/b)">III/b</option>
+                <option value="Penata Muda (III/a)">III/a</option>
+                <option value="Pengatur (II/c)">II/c</option>
+                <option value="Non-Golongan">Non-Gol</option>
+              </select>
+            </div>
+          </div>
+
+          <button id="btnRegister" onclick="handleAuthAction('register')" class="w-full min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm active:scale-98 transition-all cursor-pointer mt-2" type="button">
+            <span class="material-symbols-outlined text-[16px]">person_add</span>
+            <span>Daftar Akun Pegawai</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="mt-3.5 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-center">
+        <p class="text-[10px] text-slate-400">
+          Sistem HADIR • BAPPERIDA Kab. Sumba Barat
+        </p>
+      </div>
+
+    </div>
+  </div>
 
   <!-- ═════════════════════════════════════════════════════════════════════ -->
   <!-- 3. MODALS & SUB-SCREENS (STITCH HIGH FIDELITY)                       -->
@@ -2439,13 +2686,60 @@
     </div>
   </div>
 
+  <!-- Core Auth & System Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/constants.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+
   <!-- ═════════════════════════════════════════════════════════════════════ -->
   <!-- 4. CORE CONTROLLER LOGIC (LIVE POSTGRESQL ENGINE)                     -->
   <!-- ═════════════════════════════════════════════════════════════════════ -->
   <script>
+    // DOM helper fallback
+    if (typeof window.$ !== 'function') {
+      window.$ = id => document.getElementById(id);
+    }
+
+    function togglePasswordVisibility(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (!input || !icon) return;
+      const isPwd = input.type === 'password';
+      input.type = isPwd ? 'text' : 'password';
+      icon.textContent = isPwd ? 'visibility_off' : 'visibility';
+    }
+
+    window.logoutUser = function() {
+      Swal.fire({
+        title: 'Konfirmasi Keluar',
+        text: 'Apakah Anda yakin ingin keluar dari akun pegawai?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#2563eb',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Keluar',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          if (typeof clearNativeToken === 'function') clearNativeToken();
+          localStorage.removeItem('native_token');
+          localStorage.removeItem('stitch_active_nip');
+          localStorage.removeItem('MY_NIP');
+          localStorage.removeItem('MY_ROLE');
+          localStorage.removeItem('MY_NAME');
+          state.isLoggedIn = false;
+          state.currentUser = null;
+          const authOverlayEl = document.getElementById('authOverlay');
+          if (authOverlayEl) authOverlayEl.style.display = 'flex';
+          showDynamicIsland({ type: 'info', title: 'Sesi Berakhir', message: 'Anda telah berhasil keluar.' });
+        }
+      });
+    };
+
     // State Store
     const state = {
-      isLoggedIn: true,
+      isLoggedIn: false,
       currentUser: null,
       allUsers: [],
       locations: [],
@@ -2515,11 +2809,19 @@
           // Populate Kiosk Feed with recent real logs
           renderKioskRecentFeed(json.recentLogs || []);
 
-          // Select saved user NIP or default to first user with role ADMIN/SUPERADMIN or first
-          const savedNip = localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || '200011262025061001';
-          const defaultUser = state.allUsers.find(u => u.nip === savedNip) || state.allUsers[0];
-          if (defaultUser) {
-            await selectUserByNip(defaultUser.nip);
+          // Authenticated Session Check
+          const token = typeof getNativeToken === 'function' ? getNativeToken() : localStorage.getItem('native_token');
+          const savedNip = localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP');
+          const authOverlayEl = document.getElementById('authOverlay');
+
+          if (!token || !savedNip) {
+            state.isLoggedIn = false;
+            state.currentUser = null;
+            if (authOverlayEl) authOverlayEl.style.display = 'flex';
+          } else {
+            state.isLoggedIn = true;
+            if (authOverlayEl) authOverlayEl.style.display = 'none';
+            await selectUserByNip(savedNip);
           }
 
           // Preload Aset KIR data from SIMAPO

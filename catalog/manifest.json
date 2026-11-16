@@ -238,5 +238,17 @@
     "height": "2048",
     "html_file": "screens/20-mode-kiosk-lobi-terminal-meja-absen.html",
     "screenshot_file": "screenshots/20-mode-kiosk-lobi-terminal-meja-absen.png"
+  },
+  {
+    "index": 21,
+    "id": "0c869c2a325d449aa6b56ce1d6dee6ce",
+    "title": "Login & Registrasi Pegawai - HADIR BAPPERIDA",
+    "slug": "login-registrasi-pegawai-hadir-bapperida",
+    "device": "MOBILE",
+    "screenType": "DESIGN",
+    "width": "780",
+    "height": "1982",
+    "html_file": "screens/21-login-registrasi-pegawai-hadir-bapperida.html",
+    "screenshot_file": "screenshots/21-login-registrasi-pegawai-hadir-bapperida.png"
   }
 ]
