@@ -2710,6 +2710,25 @@
       icon.textContent = isPwd ? 'visibility_off' : 'visibility';
     }
 
+    // Fallback tab switcher in case auth.js is delayed
+    window.switchAuthTab = window.switchAuthTab || function(mode) {
+      const loginTab = document.getElementById('tabLogin');
+      const regTab = document.getElementById('tabRegister');
+      const formL = document.getElementById('formLogin');
+      const formR = document.getElementById('formRegister');
+      if (mode === 'login') {
+        loginTab?.classList.add('active', 'bg-blue-600', 'text-white');
+        regTab?.classList.remove('active', 'bg-blue-600', 'text-white');
+        if (formL) formL.style.display = 'block';
+        if (formR) formR.style.display = 'none';
+      } else {
+        loginTab?.classList.remove('active', 'bg-blue-600', 'text-white');
+        regTab?.classList.add('active', 'bg-blue-600', 'text-white');
+        if (formL) formL.style.display = 'none';
+        if (formR) formR.style.display = 'block';
+      }
+    };
+
     // Fast synchronous session check
     function checkAuthStatus() {
       const token = (typeof getNativeToken === 'function' ? getNativeToken() : null) ||
@@ -2800,9 +2819,14 @@
       try {
         console.log('[Stitch DB] Fetching bootstrap data from PostgreSQL...');
         const res = await fetch('/api/stitch/bootstrap');
-        const json = await res.json();
+        if (!res.ok) {
+          console.warn('[Stitch DB] Server bootstrap returned HTTP ' + res.status);
+          checkAuthStatus();
+          return;
+        }
+        const json = await res.json().catch(() => null);
         
-        if (json.ok) {
+        if (json && json.ok) {
           state.allUsers = json.users || [];
           state.locations = json.locations || [];
           if (json.shift) state.shift = json.shift;

@@ -525,3 +525,10 @@
       return true;
     }
 
+    if (typeof window !== 'undefined') {
+      window.switchAuthTab = switchAuthTab;
+      window.handleAuthAction = handleAuthAction;
+      window.handleLogout = handleLogout;
+      window._checkIdentityOnLoad = _checkIdentityOnLoad;
+    }
+
