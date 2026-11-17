@@ -359,10 +359,11 @@
       this.capsule = null;
       this.timerId = null;
       this.currentResolve = null;
-      this.ensureRoot();
     }
 
     ensureRoot() {
+      // Script bisa dimuat di <head> (body belum ada) - root dibuat lazy saat show()
+      if (!document.body) return;
       if (!this.root || !document.body.contains(this.root)) {
         this.root = document.createElement('div');
         this.root.id = 'dynamic-island-root';
@@ -655,58 +656,53 @@
     manager.show({ title, message: String(message), type, duration: 4500 });
   };
 
-  // Seamless interception of SweetAlert2 (Swal.fire)
-  if (typeof window.Swal !== 'undefined') {
-    const originalSwalFire = window.Swal.fire;
-    const originalShowLoading = window.Swal.showLoading;
-    const originalClose = window.Swal.close;
 
-    window.Swal.fire = function (...args) {
-      if (args.length === 0) return Promise.resolve({ isConfirmed: true });
-
-      let opts = {};
-      if (args.length === 1 && typeof args[0] === 'object') {
-        opts = args[0];
-      } else {
-        opts = {
-          title: args[0],
-          text: args[1],
-          icon: args[2] || 'info'
-        };
-      }
-
-      // If caller expects custom input form field or preConfirm callback (e.g. prompt text input),
-      // we can delegate to original Swal if present, or handle natively
-      if (opts.input || typeof opts.preConfirm === 'function' || opts.html?.includes('<input')) {
-        return originalSwalFire ? originalSwalFire.apply(this, args) : manager.show(opts);
-      }
-
-      return manager.show(opts);
-    };
-
-    window.Swal.showLoading = function () {
-      manager.loading('Memproses...', 'Mohon tunggu sebentar');
-      if (originalShowLoading) try { originalShowLoading(); } catch (_) {}
-    };
-
-    window.Swal.close = function () {
-      manager.dismiss();
-      if (originalClose) try { originalClose(); } catch (_) {}
-    };
-  } else {
-    // Stub Swal if sweetalert2 is not loaded yet
-    window.Swal = {
-      fire: (...args) => {
-        let opts = args[0];
-        if (typeof opts !== 'object') {
-          opts = { title: args[0], text: args[1], icon: args[2] || 'info' };
-        }
-        return manager.show(opts);
-      },
-      showLoading: () => manager.loading('Memproses...', 'Mohon tunggu sebentar'),
-      close: () => manager.dismiss()
-    };
+  // Intersepsi SweetAlert2: tahan terhadap urutan pemuatan (Swal bisa muncul setelah script ini)
+  function toIslandOpts(args) {
+    if (args.length === 1 && args[0] && typeof args[0] === 'object') return args[0];
+    return { title: args[0], text: args[1], icon: args[2] || 'info' };
   }
 
-  console.log('[DynamicIsland] Initialized. All system notifications transformed into Dynamic Island capsules.');
+  function hookSwal(S) {
+    if (!S || S.__islandHooked) return;
+    S.__islandHooked = true;
+    const origFire = S.fire;
+    S.fire = function (...args) {
+      if (args.length === 0) return Promise.resolve({ isConfirmed: true });
+      const opts = toIslandOpts(args);
+      // Dialog berisi input/form/preConfirm tetap pakai SweetAlert asli (belum didukung kapsul)
+      const needsForm = opts.input || typeof opts.preConfirm === 'function' || opts.imageUrl ||
+        (typeof opts.html === 'string' && /<(input|select|textarea|form)\b/i.test(opts.html));
+      if (needsForm && origFire) return origFire.apply(this, args);
+      // Dialog "Memuat/Menyimpan..." (didOpen -> Swal.showLoading()) jadi kapsul loading
+      if (typeof opts.didOpen === 'function' && !opts.showCancelButton && !opts.showConfirmButton) {
+        manager.loading(String(opts.title || 'Memproses...').replace(/<[^>]+>/g, ''), opts.text || '');
+        return Promise.resolve({ isConfirmed: false });
+      }
+      return manager.show(opts);
+    };
+    S.showLoading = function () { manager.loading('Memproses...', 'Mohon tunggu sebentar'); };
+    S.hideLoading = function () { manager.dismiss(); };
+    S.close = function () { manager.dismiss(); };
+    S.isVisible = function () { return !!manager.capsule; };
+  }
+
+  let _swal = window.Swal;
+  if (_swal) {
+    hookSwal(_swal);
+  } else {
+    // Swal belum dimuat: hook begitu di-assign oleh sweetalert2
+    try {
+      Object.defineProperty(window, 'Swal', {
+        configurable: true,
+        get() { return _swal; },
+        set(v) { _swal = v; hookSwal(v); }
+      });
+    } catch (_) {}
+  }
+  const rehook = () => hookSwal(window.Swal);
+  document.addEventListener('DOMContentLoaded', rehook);
+  window.addEventListener('load', rehook);
+
+  console.log('[DynamicIsland] Aktif: Swal.fire, alert() dan showToast dialihkan ke kapsul.');
 })();

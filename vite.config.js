@@ -12,6 +12,9 @@ function copyStaticAssetsPlugin() {
       try {
         fs.cpSync(jsDir, resolve(dist, 'js'), { recursive: true, force: true });
         fs.cpSync(catalogDir, resolve(dist, 'catalog'), { recursive: true, force: true });
+        // Ikon (runeicons) + css/lib dipakai overlay kamera face.js
+        fs.cpSync(resolve(import.meta.dirname, 'icons'), resolve(dist, 'icons'), { recursive: true, force: true });
+        fs.cpSync(resolve(import.meta.dirname, 'css/lib'), resolve(dist, 'css/lib'), { recursive: true, force: true });
       } catch (e) {
         console.warn('[vite-copy] warning:', e.message);
       }
