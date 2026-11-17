@@ -18,6 +18,9 @@ import {
   INSERT_DETAIL_SQL,
   UPDATE_STOK_SQL,
   INSERT_BKU_SQL,
+  CARI_BARANG_BY_NAMA_SQL,
+  BUAT_BARANG_PENERIMAAN_SQL,
+  PENERIMAAN_LIST_SQL,
   KATEGORI_LIST_SQL,
   KATEGORI_SAVE_SQL,
   KATEGORI_DELETE_SQL,
@@ -37,6 +40,7 @@ import {
 // Semua SQL yang dibungkus router, dipakai guard "tidak ada nilai user hardcoded".
 const SEMUA_SQL = [
   MASTER_SQL, INSERT_NOTA_SQL, INSERT_DETAIL_SQL, UPDATE_STOK_SQL, INSERT_BKU_SQL,
+  CARI_BARANG_BY_NAMA_SQL, BUAT_BARANG_PENERIMAAN_SQL, PENERIMAAN_LIST_SQL,
   KATEGORI_LIST_SQL, KATEGORI_SAVE_SQL, KATEGORI_DELETE_SQL,
   KATALOG_SQL, MASTER_LIST_SQL, MASTER_SAVE_SQL, MASTER_DELETE_SQL,
   MUTASI_LIST_SQL, MUTASI_INSERT_SQL, MUTASI_STOK_SQL,
@@ -158,17 +162,25 @@ test('nilai berbahaya dari client tidak pernah masuk ke teks SQL', async () => {
 });
 
 // ── master ──
-test('GET /penerimaan mengembalikan {ok, data} dan mengoper instansi lewat $1', async () => {
-  const tx = stub({ rows: { data: { kodefikasi: [], rekening: [], barang: [], periode: { bulan: 10, tahun: 2026 } } } });
+test('GET /penerimaan mengembalikan daftar nota sebagai data dan master terpisah', async () => {
+  const tx = stub({
+    rows: (sql) => (sql.includes('json_build_object')
+      ? { data: { kodefikasi: [], rekening: [], barang: [], periode: { bulan: 10, tahun: 2026 } } }
+      : { id: 'n1', no_nota: 'N1', tgl_nota: '2026-01-05', penyedia: 'PT A' }),
+  });
   const { status, body } = await call(app(tx, ADMIN), 'GET', '/api/simapo/penerimaan');
 
   assert.equal(status, 200);
   assert.equal(body.ok, true);
-  // parseApiResponse() membaca json.data -> harus berupa objek, bukan array.
-  assert.equal(typeof body.data, 'object');
-  assert.ok(Array.isArray(body.data.barang));
+  // parseApiResponse() hanya mengenal array; objek di `data` membuat daftar kosong.
+  assert.ok(Array.isArray(body.data), 'data harus array daftar nota');
+  assert.equal(body.data[0].no_nota, 'N1');
+  // Master tetap dikirim, hanya tidak lagi menempel di `data`.
+  assert.equal(typeof body.master, 'object');
+  assert.ok(Array.isArray(body.master.barang));
   assert.equal(tx.calls[0].params[0], 'bapperida');
   assert.ok(tx.calls[0].sql.includes('$1'));
+  assert.equal(tx.calls[1].params[0], 'bapperida');
 });
 
 // ── penerimaan: transaksi ──
@@ -206,6 +218,92 @@ test('POST /penerimaan menyimpan nota, detail, dan stok dalam satu transaksi', a
   assert.equal(detail.params[0], 'nota-uuid');
   assert.ok(stok.sql.includes('UPDATE "SIMAPO".barang'));
   assert.equal(stok.params[0], 'nota-uuid');
+});
+
+// Regresi: tuple detail lama hanya menulis empat placeholder untuk lima kolom,
+// jadi Postgres menolak dengan 42601 dan setiap simpan penerimaan jadi 500.
+test('INSERT detail penerimaan punya lima placeholder per baris', async () => {
+  const tx = stub({ rows: { id: 'nota-uuid' } });
+  const { status } = await call(app(tx, ADMIN), 'POST', '/api/simapo/penerimaan', {
+    no_nota: 'N1', tgl_nota: '2026-01-05', penyedia: 'PT A',
+    items: [
+      { barang_id: 'B1', volume: 1, harga_satuan: 10 },
+      { barang_id: 'B2', volume: 2, harga_satuan: 20 },
+    ],
+  });
+  assert.equal(status, 200);
+
+  const detail = tx.calls.find((c) => c.sql.includes('INSERT INTO "SIMAPO".detail_penerimaan'));
+  // penerimaan_id (uuid) selalu $1; kolom sisanya menempel di belakangnya.
+  assert.match(detail.sql, /VALUES \(\$1, \$2, \$3, \$4, \$5\), \(\$1, \$6, \$7, \$8, \$9\)/);
+  assert.equal(detail.params.length, 9, 'nota + 4 kolom x 2 baris');
+  assert.equal(detail.params[0], 'nota-uuid');
+  assert.equal(detail.params[5], 'B2');
+});
+
+test('POST /penerimaan mencari barang per nama lalu membuatnya bila belum ada', async () => {
+  const tx = stub({
+    rows: (sql) => {
+      if (sql.includes('INSERT INTO "SIMAPO".penerimaan_barang')) return { id: 'nota-uuid' };
+      if (sql.includes('nama = $2')) return [];
+      if (sql.includes('INSERT INTO "SIMAPO".barang')) return { id: 'barang-baru' };
+      if (sql.includes('INSERT INTO "SIMAPO".detail_penerimaan')) return { barang_id: 'barang-baru', volume: 2 };
+      if (sql.includes('UPDATE "SIMAPO".barang')) return { id: 'barang-baru' };
+      return {};
+    },
+  });
+  const { status, body } = await call(app(tx, ADMIN), 'POST', '/api/simapo/penerimaan', {
+    no_nota: 'N1', tgl_nota: '2026-01-05', penyedia: 'PT A',
+    items: [{ nama_barang: 'Kertas A4', volume: 2, harga_satuan: 50000, satuan: 'Rim' }],
+  });
+
+  assert.equal(status, 200);
+  assert.equal(body.ok, true);
+
+  const cari = tx.calls.find((c) => c.sql.includes('nama = $2'));
+  assert.ok(cari, 'item tanpa barang_id harus dicari per nama dulu');
+  assert.deepEqual(cari.params, ['bapperida', 'Kertas A4']);
+
+  const buat = tx.calls.find((c) => c.sql.includes('INSERT INTO "SIMAPO".barang'));
+  assert.ok(buat, 'barang yang belum ada dibuat sebagai Habis Pakai');
+  assert.equal(buat.params[1], 'Kertas A4');
+  assert.equal(buat.params[4], 'bapperida');
+
+  const detail = tx.calls.find((c) => c.sql.includes('INSERT INTO "SIMAPO".detail_penerimaan'));
+  assert.equal(detail.params[1], 'barang-baru', 'detail memakai id hasil bukan string kosong');
+});
+
+test('item penerimaan tanpa nama barang dijawab 400, bukan 500', async () => {
+  const tx = stub({ rows: { id: 'nota-uuid' } });
+  const { status, body } = await call(app(tx, ADMIN), 'POST', '/api/simapo/penerimaan', {
+    no_nota: 'N1', tgl_nota: '2026-01-05', penyedia: 'PT A',
+    items: [{ volume: 1, harga_satuan: 10 }],
+  });
+
+  assert.equal(status, 400);
+  assert.match(body.message, /nama barang/);
+  assert.equal(tx.rolledBack, true, 'nota harus di-rollback');
+});
+
+test('barang_id yang tidak dikenal dijawab 400, bukan 500', async () => {
+  const tx = stub({
+    rows: (sql) => {
+      if (sql.includes('INSERT INTO "SIMAPO".detail_penerimaan')) {
+        const e = new Error('violates foreign key constraint');
+        e.code = '23503';
+        throw e;
+      }
+      return { id: 'nota-uuid' };
+    },
+  });
+  const { status, body } = await call(app(tx, ADMIN), 'POST', '/api/simapo/penerimaan', {
+    no_nota: 'N1', tgl_nota: '2026-01-05', penyedia: 'PT A',
+    items: [{ barang_id: 'tidak-ada', volume: 1, harga_satuan: 10 }],
+  });
+
+  assert.equal(status, 400);
+  assert.match(body.message, /master barang/);
+  assert.equal(tx.rolledBack, true);
 });
 
 test('detail penerimaan yang gagal membuat transaksi rollback, bukan meninggalkan nota yatim', async () => {

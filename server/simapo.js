@@ -52,11 +52,41 @@ export const UPDATE_STOK_SQL =
    WHERE b.id = t.barang_id
    RETURNING b.id`;
 
+// Item penerimaan diisi dari katalog standar harga, bukan dari master barang:
+// hanya 7 dari 4856 nama standar harga punya padanan di "SIMAPO".barang. Karena
+// itu item tanpa barang_id dicari dulu per nama pada instansi yang sama, lalu
+// dibuatkan sebagai "Habis Pakai" kalau memang belum ada — penerimaan tidak boleh
+// gagal hanya karena barangnya belum terdaftar di master.
+export const CARI_BARANG_BY_NAMA_SQL =
+  `SELECT id FROM "SIMAPO".barang
+   WHERE instansi_id = $1 AND nama = $2
+   ORDER BY createdat DESC
+   LIMIT 1`;
+
+export const BUAT_BARANG_PENERIMAAN_SQL =
+  `INSERT INTO "SIMAPO".barang
+     (id, kodebarang, nama, jenisbarang, satuan, spesifikasi, foto,
+      stok_saat_ini, minimumstok, hargasatuan, kategoriid, isactive, createdat, updatedat, instansi_id)
+   VALUES (gen_random_uuid()::text, $1, $2, 'Habis Pakai', $3, '', '', 0, 0, $4, NULL, true, NOW(), NOW(), $5)
+   RETURNING id`;
+
+// Daftar nota penerimaan untuk panel riwayat. Bentuknya array agar masuk ke
+// parseApiResponse(); master (kodefikasi/rekening/barang) dikirim terpisah.
+export const PENERIMAAN_LIST_SQL =
+  `SELECT id, no_nota, TO_CHAR(tgl_nota, 'YYYY-MM-DD') AS tgl_nota, penyedia, total_nilai,
+          no_sp2d, kontrak, sub_kegiatan, status_spj, created_by,
+          TO_CHAR(created_at, 'YYYY-MM-DD') AS created_at
+   FROM "SIMAPO".penerimaan_barang
+   WHERE instansi_id = $1
+   ORDER BY tgl_nota DESC, created_at DESC
+   LIMIT 200`;
+
 export const PEMELIHARAAN_SQL =
   `SELECT p.id, p.barang_id, b.nama AS nama_barang, b.kodebarang, b.spesifikasi, b.satuan,
           (SELECT COALESCE(u2."username", '') FROM "SIMAPO".unit_aset ua LEFT JOIN public.user_list u2 ON u2.id::text = ua.pegawai_id WHERE ua.barangid = p.barang_id AND ua.pegawai_id IS NOT NULL LIMIT 1) AS nama_pemegang,
           (SELECT ua.nomorinventaris FROM "SIMAPO".unit_aset ua WHERE ua.barangid = p.barang_id LIMIT 1) AS nomorinventaris,
-          p.tgl_pemeliharaan, p.jenis_pemeliharaan, p.biaya, p.nama_penyedia, p.bentuk_kontrak, p.keterangan
+          TO_CHAR(p.tgl_pemeliharaan, 'YYYY-MM-DD') AS tgl_pemeliharaan,
+          p.jenis_pemeliharaan, p.biaya, p.nama_penyedia, p.bentuk_kontrak, p.keterangan
    FROM "SIMAPO".pemeliharaan p
    LEFT JOIN "SIMAPO".barang b ON b.id = p.barang_id
    WHERE p.instansi_id = $1 %FILTER%
@@ -294,6 +324,34 @@ export function buatKodeBarang(jenis, kategoriid) {
   return `${prefix}-${kat}-${String(Date.now()).slice(-4)}`;
 }
 
+// Resolusi barang untuk satu item penerimaan: barang_id menang; tanpa id, cari
+// per nama pada instansi yang sama; kalau belum ada, buat baru sebagai "Habis
+// Pakai" supaya pengadaan pakai habis tidak mentok hanya karena barang belum
+// terdaftar. Error ditandai `code` supaya handler bisa menjawab 400, bukan 500.
+async function barangIdUntukItem(client, inst, item) {
+  const byId = S(item.barang_id);
+  if (byId) return byId;
+
+  const nama = S(item.nama_barang || item.nama);
+  if (!nama) {
+    const e = new Error('nama barang wajib diisi');
+    e.code = 'NAMA_BARANG_KOSONG';
+    throw e;
+  }
+
+  const { rows } = await client.query(CARI_BARANG_BY_NAMA_SQL, [inst, nama]);
+  if (rows[0]?.id) return rows[0].id;
+
+  const dibuat = await client.query(BUAT_BARANG_PENERIMAAN_SQL, [
+    buatKodeBarang('Habis Pakai', item.kategoriid),
+    nama,
+    S(item.satuan) || 'Unit',
+    N(item.harga_satuan),
+    inst,
+  ]);
+  return dibuat.rows[0].id;
+}
+
 // instances_id milik pemanggil bukan milik body: admin non-SUPERADMIN hanya boleh
 // menyentuh baris instansi sendiri. SUPERADMIN boleh, karena memang adminsinistrasi
 // lintas instansi.
@@ -314,16 +372,22 @@ export function barisBKU(body) {
 export function createSimapoRouter({ query, withTransaction }) {
   const router = express.Router();
 
-  // ── Master penerimaan (kodefikasi, rekening, barang, periode) ──
+  // ── Penerimaan: daftar nota (data) + master kodefikasi/rekening/barang ──
+  // Frontend memakai parseApiResponse() yang hanya mengenal array, jadi daftar
+  // nota yang jadi `data`. Master dipisah ke `master` supaya konsumen lama yang
+  // membaca objeknya tidak melihat data hilang.
   router.get('/penerimaan', async (req, res) => {
     try {
       const inst = instansiOtomatis(req, req.query?.instansi_id);
-      const { rows } = await query(MASTER_SQL, [inst]);
-      // Bentuk {data:...} dipakai frontend lewat parseApiResponse(). Versi n8n
-      // membungkus jadi [{data:...}]; keduanya diterima, jadi yang bersih dipakai.
-      return res.json({ ok: true, data: rows[0]?.data ?? {} });
+      const master = await query(MASTER_SQL, [inst]);
+      const list = await query(PENERIMAAN_LIST_SQL, [inst]);
+      return res.json({
+        ok: true,
+        data: list.rows,
+        master: master.rows[0]?.data ?? {},
+      });
     } catch {
-      return res.status(500).json({ ok: false, message: 'Gagal memuat data master penerimaan.' });
+      return res.status(500).json({ ok: false, message: 'Gagal memuat data penerimaan.' });
     }
   });
 
@@ -357,21 +421,37 @@ export function createSimapoRouter({ query, withTransaction }) {
         ]);
 
         const params = [nota.rows[0].id];
-        const tuples = items.map((it) => {
+        const tuples = [];
+        for (const it of items) {
           const volume = N(it.volume) || 1;
           const harga = N(it.harga_satuan);
+          const barangId = await barangIdUntukItem(client, inst, it);
+          // penerimaan_id selalu $1 (uuid) dan empat kolom sisanya menyusul di
+          // belakangnya: tuple pertama ($1..$5), tuple kedua ($1, $6..$9).
+          // Yang lama hanya menulis empat placeholder sehingga Postgres menolak
+          // dengan 42601 "INSERT has more target columns than expressions".
           const n = params.length;
-          params.push(S(it.barang_id), volume, harga, volume * harga);
-          return `($${n}, $${n + 1}, $${n + 2}, $${n + 3})`;
-        });
+          params.push(barangId, volume, harga, volume * harga);
+          tuples.push(`($1, $${n + 1}, $${n + 2}, $${n + 3}, $${n + 4})`);
+        }
         await client.query(INSERT_DETAIL_SQL.replace('%VALUES%', tuples.join(', ')), params);
         await client.query(UPDATE_STOK_SQL, [nota.rows[0].id]);
         return nota.rows[0].id;
       });
 
       return res.json({ ok: true, message: 'Penerimaan berhasil disimpan.', id: notaId });
-    } catch {
+    } catch (err) {
       // ROLLBACK sudah dilakukan withTransaction, jadi tidak ada nota yatim.
+      if (err?.code === 'NAMA_BARANG_KOSONG') {
+        return res.status(400).json({ ok: false, message: 'Setiap item wajib punya nama barang.' });
+      }
+      if (err?.code === '23503') {
+        return res.status(400).json({
+          ok: false,
+          message: 'Barang pada item tidak ditemukan di master barang. Periksa kembali nama barangnya.',
+        });
+      }
+      console.error('[penerimaan/post]', err);
       return res.status(500).json({ ok: false, message: 'Gagal menyimpan penerimaan.' });
     }
   });

@@ -1315,9 +1315,13 @@ window.onStandarHargaItemInput = function(val) {
 };
 
 window.addPenerimaanItem = function() {
-  const nama = document.getElementById('ptdNama')?.value.trim();
+  const raw = document.getElementById('ptdNama')?.value.trim();
+  // Opsi datalist berbentuk "Nama — Rp 1.000". Yang disimpan harus nama bersih,
+  // kalau tidak pemasangan barang_id ke master selalu gagal.
+  const cocok = raw ? (window._shData || []).find(i => raw.includes(i.nama)) : null;
+  const nama = cocok ? cocok.nama : raw;
   const jumlah = parseInt(document.getElementById('ptdJumlah')?.value) || 1;
-  const satuan = document.getElementById('ptdSatuan')?.value.trim() || 'Unit';
+  const satuan = document.getElementById('ptdSatuan')?.value.trim() || cocok?.satuan || 'Unit';
   const harga = parseFloat(document.getElementById('ptdHarga')?.value) || 0;
   if (!nama) { showToast('Nama barang wajib!', 'error'); return; }
   const total = jumlah * harga;
@@ -1420,6 +1424,11 @@ window.toggleFormPenerimaan = function() {
   wrap.style.display = isHidden ? 'block' : 'none';
   if (btn) {
     btn.innerHTML = isHidden ? '<i class="fas fa-times" aria-hidden="true"></i> Tutup Form' : '<i class="fas fa-plus" aria-hidden="true"></i> Catat Pengadaan Baru';
+  }
+  // Tanggal kosong membuat server menolak dengan 400; isi hari ini saat form dibuka.
+  if (isHidden) {
+    const tgl = document.getElementById('ptTgl');
+    if (tgl && !tgl.value) tgl.value = new Date().toISOString().split('T')[0];
   }
 };
 
@@ -1628,9 +1637,20 @@ window.downloadExcelPermen47 = async function() {
 window.savePenerimaan = async function() {
   const items = window._penerimaanItems;
   if (!items.length) { showToast('Tambah minimal 1 barang!', 'error'); return; }
+
+  // Master barang dipakai untuk memasangkan nama -> barang_id. Kalau tab master
+  // belum pernah dibuka daftarnya masih kosong, jadi muat dulu; item yang tetap
+  // tidak cocok dicari server per nama.
+  if (!window._allMasterData.length) {
+    try {
+      const res = await apiFetch(P.simapoAdminMasterList);
+      if (res.ok) window._allMasterData = parseApiResponse(await res.json()) || [];
+    } catch (e) { console.warn('[SIMAPO] master barang gagal dimuat saat simpan penerimaan', e); }
+  }
+
   const payload = {
     no_nota: document.getElementById('ptNoNota')?.value.trim(),
-    tgl_nota: document.getElementById('ptTgl')?.value,
+    tgl_nota: document.getElementById('ptTgl')?.value || new Date().toISOString().split('T')[0],
     penyedia: document.getElementById('ptPenyedia')?.value.trim(),
     no_sp2d: document.getElementById('ptSp2d')?.value.trim() || null,
     kontrak: document.getElementById('ptKontrak')?.value.trim() || null,
