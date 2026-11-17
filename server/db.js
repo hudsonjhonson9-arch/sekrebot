@@ -7,10 +7,10 @@ let pool = null;
 
 export function getPool() {
   if (!pool) {
-    // Fail-fast di sini, bukan di import: test suite meng-import modul tanpa DATABASE_URL.
-    if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
+    const connectionString = process.env.DATABASE_URL || 'postgresql://n8n_admin:bapperidasb@43.133.142.177:5432/n8n_storage';
+    if (!connectionString) throw new Error('DATABASE_URL is not set');
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString,
       ssl: process.env.PGSSL === 'require' ? { rejectUnauthorized: false } : undefined,
       max: Number(process.env.PG_POOL_MAX) || 15,
       connectionTimeoutMillis: 10000,

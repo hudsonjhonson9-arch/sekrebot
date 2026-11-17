@@ -52,6 +52,17 @@ export function createApp() {
   // 16mb: base64 10 MB ≈ 13.3 MB JSON, sisa ruang untuk field lain
   app.use(express.json({ limit: '16mb' }));
 
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+    next();
+  });
+
   // req.ip (dipakai gate ip_range di absen) hanya akurat kalau jumlah hop proxy
   // diketahui. Rantai produksi: Traefik (Coolify) -> nginx (container ini) ->
   // Express, jadi 2 hop. Tapi angka itu bergantung pada topologi, dan tebakan
