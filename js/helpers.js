@@ -197,7 +197,7 @@
       } catch (_) { }
     }
     function setBtnL(id, loading, txt) {
-      const b = $(id); b.disabled = loading;
+      const b = $(id); if (b) b.disabled = loading;
       const map = { btnAbsen: 'btnText', btnKet: 'btnKetText', btnTambahLokasi: 'btnAdminText' };
       const el = $(map[id]); if (el) el.innerHTML = loading ? `<span class="spinner"></span> ${txt}` : txt;
     }
