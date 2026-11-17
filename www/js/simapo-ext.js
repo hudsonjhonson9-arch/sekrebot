@@ -1404,6 +1404,10 @@ window.loadAdminPenerimaan = async function(force = false) {
             </div>
           </div>
           <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"><i class="fas fa-file-alt" aria-hidden="true"></i> SP2D: ${item.no_sp2d || '—'} ${item.kontrak ? '· '+item.kontrak : ''}</div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06);">
+            <button onclick="window.editPenerimaan('${item.id}')" title="Ubah penerimaan ini" style="padding:6px 12px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-edit" aria-hidden="true"></i> Ubah</button>
+            <button onclick="window.deletePenerimaan('${item.id}')" title="Hapus penerimaan ini" style="padding:6px 12px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-trash" aria-hidden="true"></i> Hapus</button>
+          </div>
         </div>`;
       }).join('');
     }
@@ -1425,6 +1429,9 @@ window.toggleFormPenerimaan = function() {
   if (btn) {
     btn.innerHTML = isHidden ? '<i class="fas fa-times" aria-hidden="true"></i> Tutup Form' : '<i class="fas fa-plus" aria-hidden="true"></i> Catat Pengadaan Baru';
   }
+  // Menutup form saat mode edit mengembalikan mode simpan biasa, supaya simpan
+  // berikutnya tidak diam-diam menimpa nota yang sedang diubah.
+  if (!isHidden && window._penerimaanEditId) window.setModePenerimaan(null);
   // Tanggal kosong membuat server menolak dengan 400; isi hari ini saat form dibuka.
   if (isHidden) {
     const tgl = document.getElementById('ptTgl');
@@ -1689,6 +1696,7 @@ window.downloadExcelPermen47 = async function() {
 
 window.savePenerimaan = async function() {
   const items = window._penerimaanItems;
+  const editing = window._penerimaanEditId;
   if (!items.length) { showToast('Tambah minimal 1 barang!', 'error'); return; }
 
   // Master barang dipakai untuk memasangkan nama -> barang_id. Kalau tab master
@@ -1711,7 +1719,7 @@ window.savePenerimaan = async function() {
     status_spj: document.getElementById('ptStatusSpj')?.value || 'belum_dikumpulkan',
     total_nilai: items.reduce((s,i) => s + i.total, 0),
     items: items.map(i => ({
-      barang_id: (window._allMasterData || []).find(b => b.nama === i.nama)?.id || null,
+      barang_id: i.barang_id || (window._allMasterData || []).find(b => b.nama === i.nama)?.id || null,
       nama_barang: i.nama,
       volume: i.jumlah,
       satuan: i.satuan,
@@ -1719,11 +1727,12 @@ window.savePenerimaan = async function() {
       total: i.total,
     })),
   };
+  if (editing) payload.id = editing;
   if (!payload.no_nota || !payload.penyedia) { showToast('No. Nota & Penyedia wajib!', 'error'); return; }
   showToast('Menyimpan...', 'info');
-  await window.simapoSubmit(P.simapoPenerimaanSave, payload, {
-    successMsg: 'Penerimaan barang tersimpan',
-    errorMsg: 'Gagal menyimpan penerimaan barang.',
+  await window.simapoSubmit(editing ? P.simapoPenerimaanUpdate : P.simapoPenerimaanSave, payload, {
+    successMsg: editing ? 'Penerimaan barang diperbarui' : 'Penerimaan barang tersimpan',
+    errorMsg: editing ? 'Gagal memperbarui penerimaan barang.' : 'Gagal menyimpan penerimaan barang.',
     onSuccess: () => {
       window._simapoCache.clear('admin_penerimaan');
       window.loadAdminPenerimaan(true);
@@ -1740,7 +1749,79 @@ window.clearPenerimaanForm = function() {
   const ss = document.getElementById('ptStatusSpj');
   if (ss) ss.value = 'belum_dikumpulkan';
   window._penerimaanItems = [];
+  window.setModePenerimaan(null);
   renderPenerimaanItems();
+};
+
+// ── CRUD penerimaan: ubah & hapus (hanya ADMIN / BENDAHARA BARANG di server) ──
+window._penerimaanEditId = null;
+
+window.setModePenerimaan = function(idNota) {
+  window._penerimaanEditId = idNota || null;
+  const editing = !!idNota;
+  const judul = document.getElementById('penerimaanFormTitle');
+  const tombol = document.getElementById('btnSavePenerimaan');
+  if (judul) {
+    judul.innerHTML = '<i class="fas fa-' + (editing ? 'pen' : 'plus') + '" aria-hidden="true"></i> ' +
+      (editing ? 'Ubah Data Penerimaan Barang' : 'Form Catat Pengadaan Barang Pakai Habis');
+  }
+  if (tombol) {
+    tombol.innerHTML = '<div class="btn-inner"><span><i class="fas fa-save" aria-hidden="true"></i></span> ' +
+      (editing ? 'Simpan Perubahan' : 'Simpan Penerimaan Barang') + '</div>';
+  }
+};
+
+window.editPenerimaan = function(id) {
+  const nota = (window._allPenerimaanData || []).find(n => String(n.id) === String(id));
+  if (!nota) { showToast('Data penerimaan tidak ditemukan.', 'error'); return; }
+
+  window.setModePenerimaan(nota.id);
+  const isi = (elId, val) => {
+    const el = document.getElementById(elId);
+    if (el) el.value = val === null || val === undefined ? '' : val;
+  };
+  isi('ptNoNota', nota.no_nota);
+  isi('ptTgl', nota.tgl_nota);
+  isi('ptKontrak', nota.kontrak);
+  isi('ptPenyedia', nota.penyedia);
+  isi('ptSp2d', nota.no_sp2d);
+  isi('ptSubKeg', nota.sub_kegiatan);
+  isi('ptStatusSpj', nota.status_spj || 'belum_dikumpulkan');
+
+  // Rincian ikut datang dari daftar, jadi form bisa diisi ulang tanpa request kedua.
+  window._penerimaanItems = (Array.isArray(nota.items) ? nota.items : []).map(it => {
+    const jumlah = Number(it.volume) || 1;
+    const harga = Number(it.harga_satuan) || 0;
+    return {
+      nama: it.nama_barang || it.nama || '',
+      jumlah,
+      satuan: it.satuan || 'Unit',
+      harga,
+      total: Number(it.total) || jumlah * harga,
+      barang_id: it.barang_id || null,
+    };
+  });
+  renderPenerimaanItems();
+
+  const wrap = document.getElementById('penerimaanFormWrap');
+  const btn = document.getElementById('btnToggleFormPenerimaan');
+  if (wrap) wrap.style.display = 'block';
+  if (btn) btn.innerHTML = '<i class="fas fa-times" aria-hidden="true"></i> Tutup Form';
+  document.getElementById('penerimaanFormTitle')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+window.deletePenerimaan = async function(id) {
+  if (!confirm('Hapus penerimaan ini? Rincian barang ikut terhapus dan stok barang akan dikembalikan.')) return;
+  showToast('Menghapus...', 'info');
+  await window.simapoSubmit(P.simapoPenerimaanDelete, { id }, {
+    successMsg: 'Penerimaan dihapus',
+    errorMsg: 'Gagal menghapus penerimaan.',
+    onSuccess: () => {
+      if (String(window._penerimaanEditId) === String(id)) window.clearPenerimaanForm();
+      window._simapoCache.clear('admin_penerimaan');
+      window.loadAdminPenerimaan(true);
+    },
+  });
 };
 
 /* ─── ADMIN: PEMELIHARAAN (KARTU PEMELIHARAAN SESUAI TEMPLATE) ─── */
@@ -1862,6 +1943,8 @@ window.toggleFormPemeliharaan = function() {
   if (btn) {
     btn.innerHTML = isHidden ? '<i class="fas fa-times" aria-hidden="true"></i> Tutup Form' : '<i class="fas fa-plus" aria-hidden="true"></i> Catat Pemeliharaan';
   }
+  // Menutup form saat mode edit mengembalikan mode simpan biasa.
+  if (!isHidden && window._pemeliharaanEditId) window.setModePemeliharaan(null);
   if (isHidden) {
     window.populatePemeliharaanBarang();
     const container = document.getElementById('pmRowsContainer');
@@ -1908,19 +1991,84 @@ window.savePemeliharaan = async function() {
     return;
   }
 
-  const payload = {
-    barang_id: barangId,
-    items: rows
-  };
+  const editing = window._pemeliharaanEditId;
+  if (editing && rows.length > 1) {
+    showToast('Mode ubah hanya menerima satu baris. Hapus baris tambahan terlebih dahulu.', 'error');
+    return;
+  }
 
-  await window.simapoSubmit(P.simapoPemeliharaanSave, payload, {
-    successMsg: 'Data pemeliharaan berhasil disimpan',
-    errorMsg: 'Gagal menyimpan data pemeliharaan.',
+  const payload = editing
+    ? { id: editing, barang_id: barangId, items: rows }
+    : { barang_id: barangId, items: rows };
+
+  await window.simapoSubmit(editing ? P.simapoPemeliharaanUpdate : P.simapoPemeliharaanSave, payload, {
+    successMsg: editing ? 'Data pemeliharaan berhasil diubah' : 'Data pemeliharaan berhasil disimpan',
+    errorMsg: editing ? 'Gagal mengubah data pemeliharaan.' : 'Gagal menyimpan data pemeliharaan.',
     onSuccess: () => {
+      window.setModePemeliharaan(null);
       window._simapoCache.clear('admin_pemeliharaan');
       window.loadAdminPemeliharaan(true);
       window.toggleFormPemeliharaan();
     }
+  });
+};
+
+// ── CRUD kartu pemeliharaan: ubah & hapus (hanya ADMIN / BENDAHARA BARANG) ──
+window._pemeliharaanEditId = null;
+
+window.setModePemeliharaan = function(idBaris) {
+  window._pemeliharaanEditId = idBaris || null;
+  const editing = !!idBaris;
+  const judul = document.getElementById('pemeliharaanFormTitle');
+  const tombol = document.getElementById('btnSavePemeliharaan');
+  if (judul) {
+    judul.innerHTML = '<i class="fas fa-' + (editing ? 'pen' : 'plus') + '" aria-hidden="true"></i> ' +
+      (editing ? 'Ubah Riwayat Pemeliharaan' : 'Form Catat Riwayat Pemeliharaan');
+  }
+  if (tombol) {
+    tombol.innerHTML = '<div class="btn-inner"><span><i class="fas fa-save" aria-hidden="true"></i></span> ' +
+      (editing ? 'Simpan Perubahan' : 'Simpan Pemeliharaan') + '</div>';
+  }
+};
+
+window.editPemeliharaan = async function(id) {
+  const item = (window._allPemeliharaanData || []).find(x => String(x.id) === String(id));
+  if (!item) { showToast('Data pemeliharaan tidak ditemukan.', 'error'); return; }
+
+  window.setModePemeliharaan(item.id);
+
+  const wrap = document.getElementById('pemeliharaanFormWrap');
+  const btn = document.getElementById('btnToggleFormPm');
+  if (wrap) wrap.style.display = 'block';
+  if (btn) btn.innerHTML = '<i class="fas fa-times" aria-hidden="true"></i> Tutup Form';
+
+  // Select aset harus terisi dulu, baru nilainya bisa di-set ke barang milik baris ini.
+  await window.populatePemeliharaanBarang();
+  const sel = document.getElementById('pmBarangId');
+  if (sel) {
+    sel.value = item.barang_id || '';
+    window.onPmBarangChange();
+  }
+
+  const container = document.getElementById('pmRowsContainer');
+  if (container) {
+    container.innerHTML = '';
+    window.addPemeliharaanRow(item);
+  }
+  document.getElementById('pemeliharaanFormTitle')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+window.deletePemeliharaan = async function(id) {
+  if (!confirm('Hapus riwayat pemeliharaan ini? Tindakan ini tidak dapat dibatalkan.')) return;
+  showToast('Menghapus...', 'info');
+  await window.simapoSubmit(P.simapoPemeliharaanDelete, { id }, {
+    successMsg: 'Riwayat pemeliharaan dihapus',
+    errorMsg: 'Gagal menghapus riwayat pemeliharaan.',
+    onSuccess: () => {
+      if (String(window._pemeliharaanEditId) === String(id)) window.setModePemeliharaan(null);
+      window._simapoCache.clear('admin_pemeliharaan');
+      window.loadAdminPemeliharaan(true);
+    },
   });
 };
 
@@ -2036,6 +2184,10 @@ window.filterKartuPemeliharaan = function() {
         '<td style="padding:8px 6px;color:var(--muted);">' + (item.nama_penyedia || item.penyedia || '—') + '</td>' +
         '<td style="padding:8px 6px;color:var(--muted);">' + (item.bentuk_kontrak || item.kontrak || '—') + '</td>' +
         '<td style="padding:8px 6px;color:var(--muted);">' + (item.keterangan || '—') + '</td>' +
+        '<td style="padding:8px 6px;text-align:right;white-space:nowrap;">' +
+          '<button onclick="window.editPemeliharaan(\'' + item.id + '\')" title="Ubah riwayat ini" style="padding:5px 9px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-edit" aria-hidden="true"></i></button> ' +
+          '<button onclick="window.deletePemeliharaan(\'' + item.id + '\')" title="Hapus riwayat ini" style="padding:5px 9px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-trash" aria-hidden="true"></i></button>' +
+        '</td>' +
         '</tr>';
     }).join('');
 
@@ -2062,6 +2214,7 @@ window.filterKartuPemeliharaan = function() {
               '<th style="padding:8px 6px;">Nama Penyedia</th>' +
               '<th style="padding:8px 6px;">Bentuk Kontrak</th>' +
               '<th style="padding:8px 6px;">Ket.</th>' +
+              '<th style="padding:8px 6px;text-align:right;width:96px;">Aksi</th>' +
             '</tr>' +
           '</thead>' +
           '<tbody>' + rowsHtml + '</tbody>' +
@@ -2069,7 +2222,7 @@ window.filterKartuPemeliharaan = function() {
             '<tr style="border-top:2px solid rgba(255,255,255,0.12);font-weight:800;">' +
               '<td colspan="3" style="padding:8px 6px;text-align:right;color:var(--white);">TOTAL BIAYA:</td>' +
               '<td style="padding:8px 6px;text-align:right;color:var(--gold);font-variant-numeric:tabular-nums;">Rp ' + new Intl.NumberFormat('id-ID').format(totalBiaya) + '</td>' +
-              '<td colspan="3"></td>' +
+              '<td colspan="4"></td>' +
             '</tr>' +
           '</tfoot>' +
         '</table>' +

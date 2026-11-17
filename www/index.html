@@ -2193,7 +2193,7 @@ html.light-theme .admin-detail-crumb-title {
 
             <!-- Form Input Collapsible (Catat Pengadaan Baru) -->
             <div id="penerimaanFormWrap" style="display:none;margin:12px 0;padding:14px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;">
-              <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:10px;"><i class="fas fa-plus" aria-hidden="true"></i> Form Catat Pengadaan Barang Pakai Habis</div>
+              <div id="penerimaanFormTitle" style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:10px;"><i class="fas fa-plus" aria-hidden="true"></i> Form Catat Pengadaan Barang Pakai Habis</div>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
                 <div class="form-group"><label class="form-label">No. Nota/Kwitansi</label><input class="form-input" id="ptNoNota" placeholder="cth: BKU 12/2025"></div>
                 <div class="form-group"><label class="form-label">Tanggal</label><input class="form-input" id="ptTgl" type="date"></div>
@@ -2247,7 +2247,7 @@ html.light-theme .admin-detail-crumb-title {
                 <span style="font-size:16px;font-weight:800;color:var(--gold);">Rp <span id="ptTotalNilai">0</span></span>
               </div>
 
-              <button type="button" class="btn-primary" onclick="savePenerimaan()" style="width:100%;">
+              <button type="button" class="btn-primary" id="btnSavePenerimaan" onclick="savePenerimaan()" style="width:100%;">
                 <div class="btn-inner"><span><i class="fas fa-save" aria-hidden="true"></i></span> Simpan Penerimaan Barang</div>
               </button>
             </div>
@@ -2294,7 +2294,7 @@ html.light-theme .admin-detail-crumb-title {
 
             <!-- Form Input Collapsible -->
             <div id="pemeliharaanFormWrap" style="display:none;margin:12px 0;padding:14px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;">
-              <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:10px;"><i class="fas fa-plus" aria-hidden="true"></i> Form Catat Riwayat Pemeliharaan</div>
+              <div id="pemeliharaanFormTitle" style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:10px;"><i class="fas fa-plus" aria-hidden="true"></i> Form Catat Riwayat Pemeliharaan</div>
               <div id="pemeliharaanForm" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
                 <div class="form-group" style="grid-column:1/-1;">
                   <label class="form-label">Pilih Barang</label>
@@ -2318,7 +2318,7 @@ html.light-theme .admin-detail-crumb-title {
                   </div>
                 </div>
               </div>
-              <button type="button" class="btn-primary" onclick="savePemeliharaan()" style="width:100%;">
+              <button type="button" class="btn-primary" id="btnSavePemeliharaan" onclick="savePemeliharaan()" style="width:100%;">
                 <div class="btn-inner"><span><i class="fas fa-save" aria-hidden="true"></i></span> Simpan Pemeliharaan</div>
               </button>
             </div>
@@ -4139,7 +4139,7 @@ html.light-theme .admin-detail-crumb-title {
 
   <!-- ════ APP SCRIPTS (urutan load penting) ════ -->
   <!-- 1. Config & constants — harus pertama -->
-  <script src="js/config.js?v=20261114a"></script>
+  <script src="js/config.js?v=20261117c"></script>
   <script src="js/constants.js?v=20261011a"></script>
 
   <!-- 2. State global & Telegram init -->
@@ -4189,7 +4189,7 @@ html.light-theme .admin-detail-crumb-title {
   
   <script src="js/aset-screens.js?v=4"></script>
 <script src="js/aset-nav.js?v=20261115a"></script>
-  <script src="js/simapo-ext.js?v=20261117b"></script>
+  <script src="js/simapo-ext.js?v=20261117c"></script>
   <script src="js/simapo-bast.js?v=20261022"></script>
   <script src="js/tugas-spt.js?v=20261112"></script>
 

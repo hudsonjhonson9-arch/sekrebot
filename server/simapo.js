@@ -72,14 +72,60 @@ export const BUAT_BARANG_PENERIMAAN_SQL =
 
 // Daftar nota penerimaan untuk panel riwayat. Bentuknya array agar masuk ke
 // parseApiResponse(); master (kodefikasi/rekening/barang) dikirim terpisah.
+// `items` ikut dibawa agar form Edit bisa mengisi ulang rincian tanpa request
+// kedua; kolom lain tidak berubah bentuk untuk konsumen lama.
 export const PENERIMAAN_LIST_SQL =
-  `SELECT id, no_nota, TO_CHAR(tgl_nota, 'YYYY-MM-DD') AS tgl_nota, penyedia, total_nilai,
-          no_sp2d, kontrak, sub_kegiatan, status_spj, created_by,
-          TO_CHAR(created_at, 'YYYY-MM-DD') AS created_at
-   FROM "SIMAPO".penerimaan_barang
-   WHERE instansi_id = $1
-   ORDER BY tgl_nota DESC, created_at DESC
+  `SELECT pb.id, pb.no_nota, TO_CHAR(pb.tgl_nota, 'YYYY-MM-DD') AS tgl_nota, pb.penyedia, pb.total_nilai,
+          pb.no_sp2d, pb.kontrak, pb.sub_kegiatan, pb.status_spj, pb.created_by,
+          TO_CHAR(pb.created_at, 'YYYY-MM-DD') AS created_at,
+          (SELECT COALESCE(json_agg(i.*), '[]'::json) FROM (
+             SELECT dp.barang_id, COALESCE(b.nama, '') AS nama_barang, COALESCE(b.kodebarang, '') AS kodebarang,
+                    dp.volume, COALESCE(b.satuan, 'Unit') AS satuan, dp.harga_satuan,
+                    dp.total_harga AS total
+             FROM "SIMAPO".detail_penerimaan dp
+             LEFT JOIN "SIMAPO".barang b ON b.id = dp.barang_id
+             WHERE dp.penerimaan_id = pb.id
+           ) i) AS items
+   FROM "SIMAPO".penerimaan_barang pb
+   WHERE pb.instansi_id = $1
+   ORDER BY pb.tgl_nota DESC, pb.created_at DESC
    LIMIT 200`;
+
+// ── Edit & hapus penerimaan ──
+// Baris dikunci FOR UPDATE lebih dulu supaya dua edit bersamaan tidak sama-sama
+// menghitung ulang stok; stok dikurangi memakai volume tersimpan, bukan payload.
+export const PENERIMAAN_NOTA_SQL =
+  `SELECT id FROM "SIMAPO".penerimaan_barang
+   WHERE id = $1::uuid AND instansi_id = $2
+   FOR UPDATE`;
+
+export const PENERIMAAN_UPDATE_NOTA_SQL =
+  `UPDATE "SIMAPO".penerimaan_barang
+   SET no_nota = $3, tgl_nota = $4::date, penyedia = $5, total_nilai = $6,
+       no_sp2d = $7, kontrak = $8, sub_kegiatan = $9, status_spj = $10,
+       updated_at = NOW()
+   WHERE id = $1::uuid AND instansi_id = $2
+   RETURNING id`;
+
+export const PENERIMAAN_DELETE_DETAIL_SQL =
+  `DELETE FROM "SIMAPO".detail_penerimaan WHERE penerimaan_id = $1::uuid`;
+
+export const PENERIMAAN_DELETE_SQL =
+  `DELETE FROM "SIMAPO".penerimaan_barang
+   WHERE id = $1::uuid AND instansi_id = $2
+   RETURNING id`;
+
+export const STOK_KURANG_SQL =
+  `UPDATE "SIMAPO".barang b
+   SET stok_saat_ini = GREATEST(COALESCE(b.stok_saat_ini, 0) - t.vol, 0), updatedat = NOW()
+   FROM (
+     SELECT barang_id, SUM(volume) AS vol
+     FROM "SIMAPO".detail_penerimaan
+     WHERE penerimaan_id = $1::uuid
+     GROUP BY barang_id
+   ) t
+   WHERE b.id = t.barang_id
+   RETURNING b.id`;
 
 export const PEMELIHARAAN_SQL =
   `SELECT p.id, p.barang_id, b.nama AS nama_barang, b.kodebarang, b.spesifikasi, b.satuan,
@@ -145,6 +191,20 @@ export const INSERT_PEMELIHARAAN_SQL =
   `INSERT INTO "SIMAPO".pemeliharaan
      (instansi_id, barang_id, tgl_pemeliharaan, jenis_pemeliharaan, biaya, nama_penyedia, bentuk_kontrak, keterangan)
    VALUES ($1, $2, NULLIF($3, '')::date, $4, $5, $6, $7, $8)
+   RETURNING id`;
+
+// Edit & hapus kartu pemeliharaan: instansi ikut di WHERE supaya admin instansi
+// lain tidak bisa menyentuh barisnya lewat id; nol baris → 404.
+export const PEMELIHARAAN_UPDATE_SQL =
+  `UPDATE "SIMAPO".pemeliharaan
+   SET barang_id = $3, tgl_pemeliharaan = NULLIF($4, '')::date, jenis_pemeliharaan = $5,
+       biaya = $6, nama_penyedia = $7, bentuk_kontrak = $8, keterangan = $9
+   WHERE id = $1::uuid AND instansi_id = $2
+   RETURNING id`;
+
+export const PEMELIHARAAN_DELETE_SQL =
+  `DELETE FROM "SIMAPO".pemeliharaan
+   WHERE id = $1::uuid AND instansi_id = $2
    RETURNING id`;
 
 export const BKU_LIST_SQL =
@@ -307,6 +367,13 @@ const BIAYA_MIN = (v) => Math.max(0, N(v));
 
 const kosongkan = (v) => (v === '' ? null : v);
 
+// id dari body selalu diuji dulu: kolomnya uuid, dan 'abc' yang dilempar ke
+// $1::uuid membuat Postgres melempar 22P02 yang berujung 500, bukan 400.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export function idUuid(v) {
+  return UUID_RE.test(String(v || '').trim());
+}
+
 // Workflow lama hanya mengenal dua jenis barang dan memetakan apa pun di luar
 // "Habis Pakai" ke "Aset Tetap". Ikuti aturan yang sama supaya jenis yang tersimpan
 // tidak berubah bentuk saat path-nya pindah ke native.
@@ -352,12 +419,92 @@ async function barangIdUntukItem(client, inst, item) {
   return dibuat.rows[0].id;
 }
 
+// Menulis seluruh rincian satu nota dalam satu statement multi-baris.
+// penerimaan_id selalu $1 (uuid) dan empat kolom sisanya menyusul di belakangnya:
+// tuple pertama ($1..$5), tuple kedua ($1, $6..$9), dan seterusnya. Bentuk lama
+// hanya menulis empat placeholder sehingga Postgres menolak dengan 42601
+// "INSERT has more target columns than expressions" dan setiap simpan jadi 500.
+async function tulisDetailPenerimaan(client, inst, penerimaanId, items) {
+  const params = [penerimaanId];
+  const tuples = [];
+  for (const it of items) {
+    const volume = N(it.volume) || 1;
+    const harga = N(it.harga_satuan);
+    const barangId = await barangIdUntukItem(client, inst, it);
+    const n = params.length;
+    params.push(barangId, volume, harga, volume * harga);
+    tuples.push(`($1, $${n + 1}, $${n + 2}, $${n + 3}, $${n + 4})`);
+  }
+  if (!tuples.length) return 0;
+  await client.query(INSERT_DETAIL_SQL.replace('%VALUES%', tuples.join(', ')), params);
+  return tuples.length;
+}
+
 // instances_id milik pemanggil bukan milik body: admin non-SUPERADMIN hanya boleh
 // menyentuh baris instansi sendiri. SUPERADMIN boleh, karena memang adminsinistrasi
 // lintas instansi.
 export function instansiOtomatis(req, diminta) {
   if (req.user?.role === 'SUPERADMIN' && diminta) return S(diminta);
   return S(req.user?.user?.instansi_id || req.user?.instansi_id) || S(diminta) || INSTANSI_DEFAULT;
+}
+
+// Edit & hapus Laporan Pengadaan / Kartu Pemeliharaan hanya untuk ADMIN dan
+// BENDAHARA BARANG. Role SIMAPO lain (SUPERADMIN, KEPALA, SEKRETARIS, KABID,
+// IRBAN) tetap boleh membuka menunya, hanya tidak boleh mengubah data.
+export const ROLE_BOLEH_UBAH = new Set(['ADMIN', 'BENDAHARA BARANG']);
+export function bolehUbahSimapo(req) {
+  return ROLE_BOLEH_UBAH.has(String(req.user?.role || '').trim().toUpperCase());
+}
+const PESAN_TANPA_HAK_UBAH = 'Hanya ADMIN dan BENDAHARA BARANG yang boleh mengubah data ini.';
+
+// Validasi penerimaan dipakai bersama oleh simpan (POST /penerimaan) dan ubah
+// (POST /penerimaan-update): pesan galatnya harus identik supaya form tidak
+// bersikap berbeda tergantung mode edit.
+export function bacaPenerimaan(body) {
+  const src = body || {};
+  const items = Array.isArray(src.items) ? src.items : [];
+  const data = {
+    noNota: S(src.no_nota),
+    tglNota: S(src.tgl_nota),
+    penyedia: S(src.penyedia),
+    noSp2d: S(src.no_sp2d),
+    kontrak: S(src.kontrak),
+    subKeg: S(src.sub_kegiatan),
+    statusSpj: S(src.status_spj) || 'belum_dikumpulkan',
+    createdBy: S(src.created_by) || 'system',
+    items,
+    total: 0,
+  };
+  if (!data.noNota || !data.tglNota || !data.penyedia || !items.length) {
+    return { error: 'no_nota, tgl_nota, penyedia, dan items wajib diisi.' };
+  }
+  if (items.length > BATAS_BKU) {
+    return { error: `Maksimal ${BATAS_BKU} item per permintaan.` };
+  }
+  // total_nilai hanya dipercaya kalau items benar-benar ada isinya; kalau tidak,
+  // jumlahkan sendiri dari volume x harga supaya nota tidak bisa bernilai 0 atau
+  // salah total hanya karena field yang dikirim tidak cocok.
+  data.total = N(src.total_nilai) || items.reduce((s, i) => s + N(i.volume) * N(i.harga_satuan), 0);
+  return data;
+}
+
+// Galat transaksi penerimaan selalu berujung di sini: rollback sudah dilakukan
+// withTransaction, jadi tidak pernah ada nota setengah jadi.
+function jawabGalatPenerimaan(res, err, label, pesan500 = 'Gagal menyimpan penerimaan.') {
+  if (err?.code === 'TIDAK_ADA') {
+    return res.status(404).json({ ok: false, message: 'Data penerimaan tidak ditemukan.' });
+  }
+  if (err?.code === 'NAMA_BARANG_KOSONG') {
+    return res.status(400).json({ ok: false, message: 'Setiap item wajib punya nama barang.' });
+  }
+  if (err?.code === '23503') {
+    return res.status(400).json({
+      ok: false,
+      message: 'Barang pada item tidak ditemukan di master barang. Periksa kembali nama barangnya.',
+    });
+  }
+  console.error(label, err);
+  return res.status(500).json({ ok: false, message: pesan500 });
 }
 
 // Kode lama menerima tiga bentuk kiriman: {rows:[...]}, satu objek, dan {uraian}
@@ -393,66 +540,106 @@ export function createSimapoRouter({ query, withTransaction }) {
 
   // ── Simpan penerimaan: nota + detail + update stok, satu transaksi ──
   router.post('/penerimaan', async (req, res) => {
-    const body = req.body || {};
-    const noNota = S(body.no_nota);
-    const tglNota = S(body.tgl_nota);
-    const penyedia = S(body.penyedia);
-    const items = Array.isArray(body.items) ? body.items : [];
-
-    if (!noNota || !tglNota || !penyedia || !items.length) {
-      return res.status(400).json({ ok: false, message: 'no_nota, tgl_nota, penyedia, dan items wajib diisi.' });
+    const baca = bacaPenerimaan(req.body);
+    if (baca.error) {
+      return res.status(400).json({ ok: false, message: baca.error });
     }
-    if (items.length > BATAS_BKU) {
-      return res.status(400).json({ ok: false, message: `Maksimal ${BATAS_BKU} item per permintaan.` });
-    }
-
-    // total_nilai hanya dipercaya kalau items benar-benar ada isinya; kalau tidak,
-    // jumlahkan sendiri dari volume x harga supaya nota tidak bisa bernilai 0 atau
-    // salah total hanya karena field yang dikirim tidak cocok.
-    const total = N(body.total_nilai) || items.reduce((s, i) => s + N(i.volume) * N(i.harga_satuan), 0);
-    const inst = instansiOtomatis(req, body.instansi_id);
+    const inst = instansiOtomatis(req, req.body?.instansi_id);
 
     try {
       const notaId = await withTransaction(async (client) => {
         const nota = await client.query(INSERT_NOTA_SQL, [
-          inst, noNota, tglNota, penyedia, total,
-          S(body.no_sp2d), S(body.kontrak), S(body.sub_kegiatan),
-          S(body.status_spj) || 'belum_dikumpulkan', S(body.created_by) || 'system',
+          inst, baca.noNota, baca.tglNota, baca.penyedia, baca.total,
+          baca.noSp2d, baca.kontrak, baca.subKeg, baca.statusSpj, baca.createdBy,
         ]);
-
-        const params = [nota.rows[0].id];
-        const tuples = [];
-        for (const it of items) {
-          const volume = N(it.volume) || 1;
-          const harga = N(it.harga_satuan);
-          const barangId = await barangIdUntukItem(client, inst, it);
-          // penerimaan_id selalu $1 (uuid) dan empat kolom sisanya menyusul di
-          // belakangnya: tuple pertama ($1..$5), tuple kedua ($1, $6..$9).
-          // Yang lama hanya menulis empat placeholder sehingga Postgres menolak
-          // dengan 42601 "INSERT has more target columns than expressions".
-          const n = params.length;
-          params.push(barangId, volume, harga, volume * harga);
-          tuples.push(`($1, $${n + 1}, $${n + 2}, $${n + 3}, $${n + 4})`);
-        }
-        await client.query(INSERT_DETAIL_SQL.replace('%VALUES%', tuples.join(', ')), params);
+        await tulisDetailPenerimaan(client, inst, nota.rows[0].id, baca.items);
         await client.query(UPDATE_STOK_SQL, [nota.rows[0].id]);
         return nota.rows[0].id;
       });
 
       return res.json({ ok: true, message: 'Penerimaan berhasil disimpan.', id: notaId });
     } catch (err) {
-      // ROLLBACK sudah dilakukan withTransaction, jadi tidak ada nota yatim.
-      if (err?.code === 'NAMA_BARANG_KOSONG') {
-        return res.status(400).json({ ok: false, message: 'Setiap item wajib punya nama barang.' });
-      }
-      if (err?.code === '23503') {
-        return res.status(400).json({
-          ok: false,
-          message: 'Barang pada item tidak ditemukan di master barang. Periksa kembali nama barangnya.',
-        });
-      }
-      console.error('[penerimaan/post]', err);
-      return res.status(500).json({ ok: false, message: 'Gagal menyimpan penerimaan.' });
+      return jawabGalatPenerimaan(res, err, '[penerimaan/post]');
+    }
+  });
+
+  // ── Ubah penerimaan: kunci baris, kembalikan stok lama, timpa nota + detail ──
+  router.post('/penerimaan-update', async (req, res) => {
+    if (!bolehUbahSimapo(req)) {
+      return res.status(403).json({ ok: false, message: PESAN_TANPA_HAK_UBAH });
+    }
+    const body = req.body || {};
+    const id = S(body.id);
+    if (!idUuid(id)) {
+      return res.status(400).json({ ok: false, message: 'id wajib diisi untuk mengubah penerimaan.' });
+    }
+    const baca = bacaPenerimaan(body);
+    if (baca.error) {
+      return res.status(400).json({ ok: false, message: baca.error });
+    }
+    const inst = instansiOtomatis(req, body.instansi_id);
+
+    try {
+      await withTransaction(async (client) => {
+        const { rows: ada } = await client.query(PENERIMAAN_NOTA_SQL, [id, inst]);
+        if (!ada.length) {
+          const e = new Error('penerimaan tidak ditemukan');
+          e.code = 'TIDAK_ADA';
+          throw e;
+        }
+        // Stok dicopot dulu dari volume tersimpan, baru diganti volume baru:
+        // menghitung delta dari payload membuat stok meleset saat volume berubah.
+        await client.query(STOK_KURANG_SQL, [id]);
+        await client.query(PENERIMAAN_DELETE_DETAIL_SQL, [id]);
+        await client.query(PENERIMAAN_UPDATE_NOTA_SQL, [
+          id, inst, baca.noNota, baca.tglNota, baca.penyedia, baca.total,
+          baca.noSp2d, baca.kontrak, baca.subKeg, baca.statusSpj,
+        ]);
+        await tulisDetailPenerimaan(client, inst, id, baca.items);
+        await client.query(UPDATE_STOK_SQL, [id]);
+      });
+
+      return res.json({ ok: true, message: 'Penerimaan berhasil diperbarui.', id });
+    } catch (err) {
+      return jawabGalatPenerimaan(res, err, '[penerimaan/update]');
+    }
+  });
+
+  // ── Hapus penerimaan: stok dikembalikan dulu, lalu detail dan notanya ──
+  router.post('/penerimaan-delete', async (req, res) => {
+    if (!bolehUbahSimapo(req)) {
+      return res.status(403).json({ ok: false, message: PESAN_TANPA_HAK_UBAH });
+    }
+    const id = S(req.body?.id);
+    if (!idUuid(id)) {
+      return res.status(400).json({ ok: false, message: 'id wajib diisi untuk menghapus penerimaan.' });
+    }
+    const inst = instansiOtomatis(req, req.body?.instansi_id);
+
+    try {
+      const dihapus = await withTransaction(async (client) => {
+        const { rows: ada } = await client.query(PENERIMAAN_NOTA_SQL, [id, inst]);
+        if (!ada.length) {
+          const e = new Error('penerimaan tidak ditemukan');
+          e.code = 'TIDAK_ADA';
+          throw e;
+        }
+        await client.query(STOK_KURANG_SQL, [id]);
+        await client.query(PENERIMAAN_DELETE_DETAIL_SQL, [id]);
+        // FK detail_penerimaan.penerimaan_id tanpa ON DELETE CASCADE: detail
+        // harus habis lebih dulu, baru notanya boleh dihapus.
+        const { rows } = await client.query(PENERIMAAN_DELETE_SQL, [id, inst]);
+        if (!rows.length) {
+          const e = new Error('penerimaan tidak ditemukan');
+          e.code = 'TIDAK_ADA';
+          throw e;
+        }
+        return rows[0].id;
+      });
+
+      return res.json({ ok: true, message: 'Penerimaan dihapus.', id: dihapus });
+    } catch (err) {
+      return jawabGalatPenerimaan(res, err, '[penerimaan/delete]', 'Gagal menghapus penerimaan.');
     }
   });
 
@@ -591,6 +778,75 @@ export function createSimapoRouter({ query, withTransaction }) {
     } catch (err) {
       console.error('[pemeliharaan/post]', err);
       return res.status(500).json({ ok: false, message: 'Gagal menyimpan pemeliharaan.' });
+    }
+  });
+
+  // ── Ubah & hapus kartu pemeliharaan (satu baris per permintaan) ──
+  // Sama seperti simpan: role dibatasi, instansi ikut di WHERE, nol baris → 404.
+  router.post('/pemeliharaan-update', async (req, res) => {
+    if (!bolehUbahSimapo(req)) {
+      return res.status(403).json({ ok: false, message: PESAN_TANPA_HAK_UBAH });
+    }
+    const body = req.body || {};
+    const id = S(body.id);
+    if (!idUuid(id)) {
+      return res.status(400).json({ ok: false, message: 'id wajib diisi untuk mengubah data pemeliharaan.' });
+    }
+    const barangId = S(body.barang_id);
+    if (!barangId) {
+      return res.status(400).json({ ok: false, message: 'barang_id wajib diisi.' });
+    }
+
+    const items = Array.isArray(body.items) && body.items.length
+      ? body.items
+      : (body.jenis_pemeliharaan ? [body] : []);
+    if (!items.length) {
+      return res.status(400).json({ ok: false, message: 'jenis_pemeliharaan wajib diisi.' });
+    }
+    if (items.length > 1) {
+      return res.status(400).json({ ok: false, message: 'Ubah data hanya menerima satu baris. Hapus baris tambahan terlebih dahulu.' });
+    }
+    const it = items[0];
+    if (!S(it.jenis_pemeliharaan)) {
+      return res.status(400).json({ ok: false, message: 'Setiap item pemeliharaan harus memiliki jenis_pemeliharaan.' });
+    }
+
+    try {
+      const inst = instansiOtomatis(req, body.instansi_id);
+      const { rows } = await query(PEMELIHARAAN_UPDATE_SQL, [
+        id, inst, barangId, S(it.tgl_pemeliharaan) || new Date().toISOString().split('T')[0],
+        S(it.jenis_pemeliharaan), BIAYA_MIN(it.biaya),
+        S(it.nama_penyedia || it.penyedia), S(it.bentuk_kontrak || it.kontrak), S(it.keterangan),
+      ]);
+      if (!rows.length) {
+        return res.status(404).json({ ok: false, message: 'Data pemeliharaan tidak ditemukan.' });
+      }
+      return res.json({ ok: true, message: 'Data pemeliharaan berhasil diubah.', id: rows[0].id });
+    } catch (err) {
+      console.error('[pemeliharaan/update]', err);
+      return res.status(500).json({ ok: false, message: 'Gagal mengubah data pemeliharaan.' });
+    }
+  });
+
+  router.post('/pemeliharaan-delete', async (req, res) => {
+    if (!bolehUbahSimapo(req)) {
+      return res.status(403).json({ ok: false, message: PESAN_TANPA_HAK_UBAH });
+    }
+    const id = S(req.body?.id);
+    if (!idUuid(id)) {
+      return res.status(400).json({ ok: false, message: 'id wajib diisi untuk menghapus data pemeliharaan.' });
+    }
+
+    try {
+      const inst = instansiOtomatis(req, req.body?.instansi_id);
+      const { rows } = await query(PEMELIHARAAN_DELETE_SQL, [id, inst]);
+      if (!rows.length) {
+        return res.status(404).json({ ok: false, message: 'Data pemeliharaan tidak ditemukan.' });
+      }
+      return res.json({ ok: true, message: 'Data pemeliharaan dihapus.', id: rows[0].id });
+    } catch (err) {
+      console.error('[pemeliharaan/delete]', err);
+      return res.status(500).json({ ok: false, message: 'Gagal menghapus data pemeliharaan.' });
     }
   });
 

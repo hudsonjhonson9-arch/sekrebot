@@ -13,14 +13,21 @@ import {
   instansiOtomatis,
   normalJenis,
   buatKodeBarang,
+  bolehUbahSimapo,
+  idUuid,
   MASTER_SQL,
   INSERT_NOTA_SQL,
   INSERT_DETAIL_SQL,
   UPDATE_STOK_SQL,
+  STOK_KURANG_SQL,
   INSERT_BKU_SQL,
   CARI_BARANG_BY_NAMA_SQL,
   BUAT_BARANG_PENERIMAAN_SQL,
   PENERIMAAN_LIST_SQL,
+  PENERIMAAN_NOTA_SQL,
+  PENERIMAAN_UPDATE_NOTA_SQL,
+  PENERIMAAN_DELETE_DETAIL_SQL,
+  PENERIMAAN_DELETE_SQL,
   KATEGORI_LIST_SQL,
   KATEGORI_SAVE_SQL,
   KATEGORI_DELETE_SQL,
@@ -32,6 +39,8 @@ import {
   MUTASI_INSERT_SQL,
   MUTASI_STOK_SQL,
   PEMELIHARAAN_SQL,
+  PEMELIHARAAN_UPDATE_SQL,
+  PEMELIHARAAN_DELETE_SQL,
   KARTU_PEMELIHARAAN_BARANG_SQL,
   LAPORAN_PERMEN47_PENERIMAAN_SQL,
   LAPORAN_PERMEN47_FALLBACK_SQL,
@@ -41,10 +50,13 @@ import {
 const SEMUA_SQL = [
   MASTER_SQL, INSERT_NOTA_SQL, INSERT_DETAIL_SQL, UPDATE_STOK_SQL, INSERT_BKU_SQL,
   CARI_BARANG_BY_NAMA_SQL, BUAT_BARANG_PENERIMAAN_SQL, PENERIMAAN_LIST_SQL,
+  PENERIMAAN_NOTA_SQL, PENERIMAAN_UPDATE_NOTA_SQL, PENERIMAAN_DELETE_DETAIL_SQL,
+  PENERIMAAN_DELETE_SQL, STOK_KURANG_SQL,
   KATEGORI_LIST_SQL, KATEGORI_SAVE_SQL, KATEGORI_DELETE_SQL,
   KATALOG_SQL, MASTER_LIST_SQL, MASTER_SAVE_SQL, MASTER_DELETE_SQL,
   MUTASI_LIST_SQL, MUTASI_INSERT_SQL, MUTASI_STOK_SQL,
-  PEMELIHARAAN_SQL, KARTU_PEMELIHARAAN_BARANG_SQL,
+  PEMELIHARAAN_SQL, PEMELIHARAAN_UPDATE_SQL, PEMELIHARAAN_DELETE_SQL,
+  KARTU_PEMELIHARAAN_BARANG_SQL,
   LAPORAN_PERMEN47_PENERIMAAN_SQL, LAPORAN_PERMEN47_FALLBACK_SQL,
 ];
 
@@ -99,6 +111,9 @@ function app(tx, user) {
 // NIP selalu ikut supaya test bisa memastikan createdbyid datang dari sesi, bukan
 // dari body yang gampang dipalsukan client.
 const ADMIN = { id: '1', nip: '198704121994031005', role: 'ADMIN', instansi_id: 'bapperida' };
+// Dua role yang berhak mengubah data, plus satu role yang hanya boleh melihat.
+const BENDAHARA = { id: '2', nip: '198801011990031002', role: 'BENDAHARA BARANG', instansi_id: 'bapperida' };
+const KEPALA = { id: '3', nip: '197501011998031001', role: 'KEPALA', instansi_id: 'bapperida' };
 
 function call(a, method, url, body) {
   return new Promise((resolve) => {
@@ -1100,4 +1115,199 @@ test('POST /api/simapo/pemeliharaan menangani tanggal kosong secara aman (defaul
   assert.equal(body.ok, true);
   assert.equal(inserted.length, 1);
   assert.ok(inserted[0][2]); // tgl_pemeliharaan defaults to today's date string
+});
+
+// ── CRUD penerimaan & kartu pemeliharaan ──
+const NOTA_UUID = '11111111-1111-4111-8111-111111111111';
+
+const payloadNota = (id) => ({
+  id,
+  no_nota: 'N-EDIT',
+  tgl_nota: '2026-11-17',
+  penyedia: 'PT Uji',
+  items: [{ barang_id: 'b1', volume: 3, harga_satuan: 1000 }],
+});
+
+const payloadPm = (id) => ({
+  id,
+  barang_id: 'b1',
+  items: [{ tgl_pemeliharaan: '2026-11-17', jenis_pemeliharaan: 'Servis', biaya: 5000 }],
+});
+
+test('bolehUbahSimapo hanya mengizinkan ADMIN dan BENDAHARA BARANG', () => {
+  assert.equal(bolehUbahSimapo({ user: ADMIN }), true);
+  assert.equal(bolehUbahSimapo({ user: BENDAHARA }), true);
+  assert.equal(bolehUbahSimapo({ user: KEPALA }), false);
+  assert.equal(bolehUbahSimapo({ user: { role: 'SUPERADMIN' } }), false);
+  assert.equal(bolehUbahSimapo({}), false);
+});
+
+test('idUuid menolak id yang tidak berbentuk uuid supaya 22P02 jadi 400, bukan 500', () => {
+  assert.equal(idUuid(NOTA_UUID), true);
+  assert.equal(idUuid('abc'), false);
+  assert.equal(idUuid(''), false);
+  assert.equal(idUuid(undefined), false);
+});
+
+test('GET /penerimaan mengirim rincian items agar form ubah bisa diisi ulang', async () => {
+  const tx = stub({ rows: (sql) => (sql.includes('json_build_object') ? { data: {} } : { id: 'n1', no_nota: 'N1' }) });
+  const { status } = await call(app(tx, ADMIN), 'GET', '/api/simapo/penerimaan');
+  assert.equal(status, 200);
+  assert.ok(tx.calls[1].sql.includes('AS items'), 'daftar nota harus menyertakan kolom items');
+});
+
+test('POST /penerimaan-update ditolak 403 untuk role selain ADMIN/BENDAHARA BARANG', async () => {
+  const tx = stub({ rows: { id: NOTA_UUID } });
+  const { status, body } = await call(app(tx, KEPALA), 'POST', '/api/simapo/penerimaan-update', payloadNota(NOTA_UUID));
+  assert.equal(status, 403);
+  assert.equal(body.ok, false);
+  assert.match(body.message, /ADMIN dan BENDAHARA BARANG/);
+  assert.equal(tx.calls.length, 0, 'role tanpa hak tidak boleh menyentuh query sama sekali');
+});
+
+test('POST /penerimaan-update mengunci baris, membalik stok lama, lalu menulis detail baru', async () => {
+  const tx = stub({
+    rows: (sql) => {
+      if (sql.includes('FOR UPDATE')) return { id: NOTA_UUID };
+      if (sql.includes('INSERT INTO "SIMAPO".detail_penerimaan')) return { barang_id: 'b1', volume: 3 };
+      if (sql.includes('UPDATE "SIMAPO".penerimaan_barang')) return { id: NOTA_UUID };
+      if (sql.includes('DELETE')) return {};
+      return { id: 'b1' };
+    },
+  });
+  const { status, body } = await call(app(tx, BENDAHARA), 'POST', '/api/simapo/penerimaan-update', payloadNota(NOTA_UUID));
+
+  assert.equal(status, 200);
+  assert.equal(body.ok, true);
+  assert.equal(tx.began && tx.committed, true, 'harus berakhir COMMIT');
+  assert.equal(tx.rolledBack, false);
+
+  const idx = (needle) => tx.calls.findIndex((c) => c.sql.includes(needle));
+  const iKunci = idx('FOR UPDATE');
+  const iKurang = idx('- t.vol');
+  const iHapusDetail = idx('DELETE FROM "SIMAPO".detail_penerimaan');
+  const iUbahNota = idx('UPDATE "SIMAPO".penerimaan_barang');
+  const iTulisDetail = idx('INSERT INTO "SIMAPO".detail_penerimaan');
+  const iTambahStok = tx.calls.reduce((acc, c, i) => (c.sql.includes('+ t.vol') ? i : acc), -1);
+
+  assert.ok(iKunci >= 0 && iKurang > iKunci, 'baris dikunci dulu, baru stok dibalik');
+  assert.ok(iHapusDetail > iKurang, 'stok lama dikembalikan sebelum detail dihapus');
+  assert.ok(iUbahNota > iHapusDetail, 'detail habis sebelum notanya ditimpa');
+  assert.ok(iTulisDetail > iUbahNota, 'detail baru ditulis setelah nota diubah');
+  assert.ok(iTambahStok > iTulisDetail, 'stok dihitung ulang dari detail tersimpan');
+
+  // Stok hanya memakai id nota: volume tersimpan di DB, bukan angka dari payload.
+  assert.deepEqual(tx.calls[iKurang].params, [NOTA_UUID]);
+});
+
+test('POST /penerimaan-update 404 dan rollback bila id bukan milik instansi ini', async () => {
+  const tx = stub({ rows: (sql) => (sql.includes('FOR UPDATE') ? [] : { id: NOTA_UUID }) });
+  const { status, body } = await call(app(tx, ADMIN), 'POST', '/api/simapo/penerimaan-update', payloadNota(NOTA_UUID));
+  assert.equal(status, 404);
+  assert.equal(body.ok, false);
+  assert.equal(tx.rolledBack, true, 'tidak boleh menyisakan perubahan sebagian');
+  assert.equal(tx.calls.length, 1, 'berhenti setelah kunci tidak menemukan baris');
+});
+
+test('POST /penerimaan-update menolak id rusak dan kiriman tidak lengkap tanpa query', async () => {
+  const tx = stub({ rows: { id: NOTA_UUID } });
+  const a = app(tx, ADMIN);
+
+  const rusak = await call(a, 'POST', '/api/simapo/penerimaan-update', payloadNota('bukan-uuid'));
+  assert.equal(rusak.status, 400);
+
+  const kosong = await call(a, 'POST', '/api/simapo/penerimaan-update', { id: NOTA_UUID, no_nota: 'N' });
+  assert.equal(kosong.status, 400);
+  assert.match(kosong.body.message, /wajib diisi/);
+
+  assert.equal(tx.calls.length, 0, 'validasi gagal berarti nol query');
+});
+
+test('POST /penerimaan-delete ditolak 403 untuk KEPALA', async () => {
+  const tx = stub({ rows: { id: NOTA_UUID } });
+  const { status } = await call(app(tx, KEPALA), 'POST', '/api/simapo/penerimaan-delete', { id: NOTA_UUID });
+  assert.equal(status, 403);
+  assert.equal(tx.calls.length, 0);
+});
+
+test('POST /penerimaan-delete mengembalikan stok lalu menghapus detail sebelum nota', async () => {
+  const tx = stub({
+    rows: (sql) => {
+      if (sql.includes('FOR UPDATE')) return { id: NOTA_UUID };
+      if (sql.includes('DELETE FROM "SIMAPO".penerimaan_barang')) return { id: NOTA_UUID };
+      if (sql.includes('DELETE')) return {};
+      return { id: 'b1' };
+    },
+  });
+  const { status, body } = await call(app(tx, ADMIN), 'POST', '/api/simapo/penerimaan-delete', { id: NOTA_UUID });
+  assert.equal(status, 200);
+  assert.equal(body.ok, true);
+  assert.equal(tx.committed, true);
+
+  const idx = (needle) => tx.calls.findIndex((c) => c.sql.includes(needle));
+  const iKunci = idx('FOR UPDATE');
+  const iKurang = idx('- t.vol');
+  const iHapusDetail = idx('DELETE FROM "SIMAPO".detail_penerimaan');
+  const iHapusNota = idx('DELETE FROM "SIMAPO".penerimaan_barang');
+  assert.ok(iKunci < iKurang && iKurang < iHapusDetail && iHapusDetail < iHapusNota,
+    'urutan wajib: kunci → balik stok → hapus detail → hapus nota (FK tanpa CASCADE)');
+});
+
+test('POST /pemeliharaan-update ditolak 403 untuk role tanpa hak', async () => {
+  const tx = stub({ rows: { id: NOTA_UUID } });
+  const { status, body } = await call(app(tx, KEPALA), 'POST', '/api/simapo/pemeliharaan-update', payloadPm(NOTA_UUID));
+  assert.equal(status, 403);
+  assert.equal(body.ok, false);
+  assert.match(body.message, /ADMIN dan BENDAHARA BARANG/);
+  assert.equal(tx.calls.length, 0);
+});
+
+test('POST /pemeliharaan-update jalan untuk BENDAHARA BARANG dan mengembalikan 404 bila baris tidak ada', async () => {
+  const ada = stub({ rows: { id: NOTA_UUID } });
+  const ok = await call(app(ada, BENDAHARA), 'POST', '/api/simapo/pemeliharaan-update', payloadPm(NOTA_UUID));
+  assert.equal(ok.status, 200);
+  assert.equal(ok.body.ok, true);
+  assert.ok(ada.calls[0].sql.includes('UPDATE "SIMAPO".pemeliharaan'));
+
+  const hilang = stub({ rows: [] });
+  const tidakAda = await call(app(hilang, ADMIN), 'POST', '/api/simapo/pemeliharaan-update', payloadPm(NOTA_UUID));
+  assert.equal(tidakAda.status, 404);
+});
+
+test('POST /pemeliharaan-update menolak multi-baris dan id rusak', async () => {
+  const tx = stub({ rows: { id: NOTA_UUID } });
+  const a = app(tx, ADMIN);
+
+  const multi = await call(a, 'POST', '/api/simapo/pemeliharaan-update', {
+    ...payloadPm(NOTA_UUID),
+    items: [
+      { jenis_pemeliharaan: 'Servis' },
+      { jenis_pemeliharaan: 'Cat' },
+    ],
+  });
+  assert.equal(multi.status, 400);
+  assert.match(multi.body.message, /satu baris/);
+
+  const rusak = await call(a, 'POST', '/api/simapo/pemeliharaan-update', payloadPm('id-salah'));
+  assert.equal(rusak.status, 400);
+
+  assert.equal(tx.calls.length, 0, 'validasi gagal berarti nol query');
+});
+
+test('POST /pemeliharaan-delete dibatasi role, 404 bila bukan milik instansi', async () => {
+  const tx = stub({ rows: { id: NOTA_UUID } });
+  const ditolak = await call(app(tx, KEPALA), 'POST', '/api/simapo/pemeliharaan-delete', { id: NOTA_UUID });
+  assert.equal(ditolak.status, 403);
+  assert.equal(tx.calls.length, 0);
+
+  const ada = stub({ rows: { id: NOTA_UUID } });
+  const ok = await call(app(ada, BENDAHARA), 'POST', '/api/simapo/pemeliharaan-delete', { id: NOTA_UUID });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.body.ok, true);
+  assert.ok(ada.calls[0].sql.includes('DELETE FROM "SIMAPO".pemeliharaan'));
+  assert.equal(ada.calls[0].params[1], 'bapperida', 'instansi ikut di WHERE');
+
+  const hilang = stub({ rows: [] });
+  const tidakAda = await call(app(hilang, ADMIN), 'POST', '/api/simapo/pemeliharaan-delete', { id: NOTA_UUID });
+  assert.equal(tidakAda.status, 404);
 });
