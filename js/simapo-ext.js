@@ -1432,9 +1432,35 @@ window.toggleFormPenerimaan = function() {
   }
 };
 
+window._permen47FilterInit = false;
+// Filter bawaan harus periode/tahun berjalan — nilai statis di HTML cepat basi
+// sehingga transaksi terbaru tersaring keluar dari pratinjau laporan.
+window.initPermen47Filters = function() {
+  if (window._permen47FilterInit) return;
+  const tahunSel = document.getElementById('permen47Tahun');
+  const periodeSel = document.getElementById('permen47Periode');
+  if (!tahunSel) return;
+  window._permen47FilterInit = true;
+
+  const now = new Date();
+  const y = now.getFullYear();
+  const optTahun = [y + 1, y, y - 1, y - 2].map(function(v) {
+    return '<option value="' + v + '"' + (v === y ? ' selected' : '') + '>' + v + '</option>';
+  }).join('');
+  tahunSel.innerHTML = optTahun;
+
+  if (periodeSel) {
+    const q = 'TW' + (Math.floor(now.getMonth() / 3) + 1);
+    const target = periodeSel.querySelector('option[value="TAHUNAN"]') || periodeSel.querySelector('option[value="' + q + '"]');
+    Array.prototype.forEach.call(periodeSel.options, function(o) { o.selected = false; });
+    if (target) target.selected = true;
+  }
+};
+
 window.loadLaporanPermen47 = async function(force = false) {
   const container = document.getElementById('permen47PreviewContainer');
   if (!container) return;
+  window.initPermen47Filters();
   const periodeSel = document.getElementById('permen47Periode');
   const tahunSel = document.getElementById('permen47Tahun');
   const periode = periodeSel ? periodeSel.value : 'TW3';
@@ -1456,6 +1482,10 @@ window.loadLaporanPermen47 = async function(force = false) {
       if (json && json.data) {
         if (Array.isArray(json.data)) {
           rows = json.data;
+        } else if (Array.isArray(json.data.rows)) {
+          // Kontrak server: { periode, tahun, rows: [hierarki], total_nilai }
+          rows = json.data.rows;
+          meta = Object.assign(meta, json.data);
         } else if (Array.isArray(json.data.items)) {
           rows = json.data.items;
           meta = Object.assign(meta, json.data);
@@ -1505,24 +1535,47 @@ window.renderPermen47Table = function(rows, meta) {
     return;
   }
 
-  let totalKeseluruhan = 0;
-  const trs = rows.map(function(r, idx) {
+  const esc = function(v) {
+    return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  };
+
+  // Baris datar dari fallback lama (tanpa hierarki) tetap dinomori seperti biasa.
+  const leafTotal = rows.reduce(function(s, r) {
+    return r.is_header ? s : s + (Number(r.total_nilai) || 0);
+  }, 0);
+  const totalKeseluruhan = Number(meta.total_nilai) || leafTotal;
+  let noUrut = 0;
+  const trs = rows.map(function(r) {
+    if (r.is_header) {
+      // Baris grup (ASET / ASET LANCAR / PERSEDIAAN / kategori): nama diindensikan,
+      // subtotal hanya tampil sebagai teks, tidak dijumlahkan dua kali ke footer.
+      const lvl = Number(r.level) || 1;
+      const sub = Number(r.total_nilai) || 0;
+      const pad = 6 + Math.min(lvl - 1, 4) * 14;
+      return '<tr style="background:rgba(255,255,255,0.045);border-bottom:1px solid rgba(255,255,255,0.07);">' +
+        '<td style="padding:7px 6px;"></td>' +
+        '<td style="padding:7px 6px;"></td>' +
+        '<td colspan="5" style="padding:7px 6px;padding-left:' + pad + 'px;font-weight:800;letter-spacing:0.4px;color:' + (lvl <= 3 ? 'var(--white)' : 'var(--gold)') + ';">' + esc(r.nama) + '</td>' +
+        '<td style="padding:7px 6px;text-align:right;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums;">' + (sub ? fmt(sub) : '') + '</td>' +
+        '<td colspan="3" style="padding:7px 6px;"></td>' +
+        '</tr>';
+    }
+    noUrut += 1;
     const jumlah = Number(r.jumlah || r.volume) || 1;
     const harga = Number(r.harga_satuan || r.hargasatuan || r.harga) || 0;
     const total = Number(r.total_nilai || r.total || (jumlah * harga)) || 0;
-    totalKeseluruhan += total;
     return '<tr style="border-bottom:1px solid rgba(255,255,255,0.06);">' +
-      '<td style="padding:8px 6px;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums;">' + (idx + 1) + '</td>' +
-      '<td style="padding:8px 6px;font-family:monospace;font-size:11px;">' + (r.kode_barang || r.kodebarang || '—') + '</td>' +
-      '<td style="padding:8px 6px;font-weight:700;color:var(--white);">' + (r.nama_barang || r.nama || '—') + '</td>' +
-      '<td style="padding:8px 6px;color:var(--muted);">' + (r.spesifikasi || r.merek || '—') + '</td>' +
+      '<td style="padding:8px 6px;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums;">' + noUrut + '</td>' +
+      '<td style="padding:8px 6px;font-family:monospace;font-size:11px;">' + esc(r.kode_barang || r.kodebarang || '—') + '</td>' +
+      '<td style="padding:8px 6px;font-weight:700;color:var(--white);">' + esc(r.nama_barang || r.nama || '—') + '</td>' +
+      '<td style="padding:8px 6px;color:var(--muted);">' + esc(r.spesifikasi || r.merek || '—') + '</td>' +
       '<td style="padding:8px 6px;text-align:right;font-variant-numeric:tabular-nums;">' + fmt(jumlah) + '</td>' +
-      '<td style="padding:8px 6px;text-align:center;color:var(--muted);">' + (r.satuan || 'Unit') + '</td>' +
+      '<td style="padding:8px 6px;text-align:center;color:var(--muted);">' + esc(r.satuan || 'Unit') + '</td>' +
       '<td style="padding:8px 6px;text-align:right;font-variant-numeric:tabular-nums;">' + fmt(harga) + '</td>' +
       '<td style="padding:8px 6px;text-align:right;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;">' + fmt(total) + '</td>' +
-      '<td style="padding:8px 6px;color:var(--muted);">' + (r.bentuk_kontrak || r.kontrak || '—') + '</td>' +
-      '<td style="padding:8px 6px;color:var(--muted);">' + (r.nama_penyedia || r.penyedia || '—') + '</td>' +
-      '<td style="padding:8px 6px;color:var(--muted);">' + (r.no_bukti || r.no_nota || '—') + '</td>' +
+      '<td style="padding:8px 6px;color:var(--muted);">' + esc(r.bentuk_kontrak || r.kontrak || '—') + '</td>' +
+      '<td style="padding:8px 6px;color:var(--muted);">' + esc(r.nama_penyedia || r.penyedia || '—') + '</td>' +
+      '<td style="padding:8px 6px;color:var(--muted);">' + esc(r.no_bukti || r.no_nota || '—') + '</td>' +
       '</tr>';
   }).join('');
 
