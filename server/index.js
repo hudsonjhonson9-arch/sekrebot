@@ -21,7 +21,7 @@ import { createCoreAdminRouter } from './core-admin.js';
 import { createCoreUserRouter } from './core-user.js';
 import { createAbsenRolesRouter } from './absen-roles.js';
 import { initAbsenRolesTable } from './absen-roles-db.js';
-import { ABSEN_ROLES, SIMAPO_ROLES, requireRole } from './auth.js';
+import { ABSEN_ROLES, MEDIA_ROLES, SIMAPO_ROLES, requireRole } from './auth.js';
 import { createStitchApiRouter } from './stitch-api.js';
 
 // Endpoint SIMAPO yang aman untuk pegawai biasa (USER/INSPEKTUR): baca katalog &
@@ -81,7 +81,9 @@ export function createApp() {
   });
 
   // Dedicated Stitch UI Real Database Engine
-  app.use('/api/stitch', createStitchApiRouter());
+  // Seluruh /api/stitch wajib sesi (Bearer). Pembatasan per-endpoint (admin,
+  // kepemilikan NIP) ada di stitch-api.js.
+  app.use('/api/stitch', requireRole(ABSEN_ROLES), createStitchApiRouter());
 
   // Router dan query di-inject, bukan di-import di dalam media.js: media.js tidak
   // pernah menyentuh pool atau Apps Script secara global, jadi test bisa instantiate

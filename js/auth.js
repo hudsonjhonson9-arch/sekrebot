@@ -162,20 +162,50 @@
               return;
             }
 
-            // Jika di index.html dengan modal authOverlay
+            // Jika di index.html dengan modal authOverlay.
+            // Modal baru ditutup SETELAH data pegawai benar-benar termuat. Dulu modal
+            // ditutup lebih dulu dan kegagalan selectUserByNip (yang menelan error)
+            // tidak terlihat, sehingga yang "berhasil" hanya menghilangkan modal.
             const overlayEl = document.getElementById('authOverlay');
-            if (overlayEl) overlayEl.style.display = 'none';
 
-            if (typeof state !== 'undefined') {
-              state.isLoggedIn = true;
-              if (typeof selectUserByNip === 'function') {
-                await selectUserByNip(userNip);
+            if (typeof state !== 'undefined' && typeof selectUserByNip === 'function') {
+              state.currentUser = null;
+              await selectUserByNip(userNip);
+
+              if (!state.currentUser) {
+                // Data pegawai gagal dimuat: batalkan sesi, tampilkan modal lagi + pesan.
+                setNativeToken(null);
+                try { clearSession(); } catch (_) {}
+                ['_native_token', 'native_token', 'stitch_active_nip', 'MY_NIP', 'MY_ROLE', 'MY_NAME']
+                  .forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+                window.MY_ID = null;
+                state.isLoggedIn = false;
+                if (overlayEl) overlayEl.style.display = 'flex';
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                const failMsg = 'Autentikasi berhasil, tetapi data pegawai gagal dimuat dari server (/api/stitch/user-data). Periksa log server lalu coba lagi.';
                 if (typeof showDynamicIsland === 'function') {
-                  showDynamicIsland({ type: 'success', title: 'Login Berhasil', message: `Selamat datang, ${user.nama || userNip}` });
+                  showDynamicIsland({ type: 'error', title: 'Login Gagal', message: failMsg });
+                } else {
+                  alert(failMsg);
                 }
                 return;
               }
+
+              state.isLoggedIn = true;
+              if (overlayEl) overlayEl.style.display = 'none';
+              // Bootstrap awal (users/lokasi/shift) ditolak 401 saat belum login,
+              // jadi muat ulang sekarang setelah token tersedia.
+              if (typeof bootstrapFromDatabase === 'function') {
+                try { await bootstrapFromDatabase(); } catch (_) {}
+              }
+              if (typeof showDynamicIsland === 'function') {
+                showDynamicIsland({ type: 'success', title: 'Login Berhasil', message: `Selamat datang, ${user.nama || userNip}` });
+              }
+              return;
             }
+
+            if (overlayEl) overlayEl.style.display = 'none';
             location.reload();
           };
 

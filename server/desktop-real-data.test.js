@@ -37,11 +37,18 @@ describe('Desktop Real Database Integration', () => {
     assert.ok(html.includes('/api/stitch/keterangan'), 'Missing /api/stitch/keterangan in layanan.html');
   });
 
-  test('admin.html contains dynamic tbody and real Keterangan approval call', () => {
+  test('admin.html memakai AdminCore bersama (keterangan, monitoring, lokasi) dan tanpa data statis', () => {
     const html = fs.readFileSync(path.join(rootDir, 'admin.html'), 'utf8');
+    const core = fs.readFileSync(path.join(rootDir, 'js', 'admin-core.js'), 'utf8');
+    const index = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
     assert.ok(html.includes('id="adminKeteranganTableBody"'), 'Missing id="adminKeteranganTableBody" in admin.html');
-    assert.ok(html.includes('/api/stitch/keterangan'), 'Missing /api/stitch/keterangan in admin.html');
-    assert.ok(html.includes('/api/stitch/keterangan/approve'), 'Missing /api/stitch/keterangan/approve in admin.html');
+    assert.ok(html.includes('id="adminMonitoringTableBody"'), 'Missing id="adminMonitoringTableBody" in admin.html');
+    assert.ok(html.includes('/js/admin-core.js'), 'admin.html harus memuat js/admin-core.js');
+    assert.ok(index.includes('js/admin-core.js'), 'index.html harus memuat js/admin-core.js');
+    assert.ok(core.includes("'/keterangan'"), 'admin-core.js harus memanggil /keterangan');
+    assert.ok(core.includes("'/keterangan/approve'"), 'admin-core.js harus memanggil /keterangan/approve');
+    assert.ok(core.includes("'/admin/monitoring-today'"), 'admin-core.js harus memanggil /admin/monitoring-today');
+    assert.ok(core.includes("'/admin-lokasi'"), 'admin-core.js harus memanggil /admin-lokasi');
     assert.ok(!/<tbody[^>]*>\s*<tr[^>]*>[\s\S]*?Sri Handayani/i.test(html), 'Found static Sri Handayani in admin.html');
   });
 

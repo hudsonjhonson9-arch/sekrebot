@@ -3,9 +3,20 @@ import fs from 'fs';
 import path from 'path';
 import { query } from './db.js';
 import { gasUpsert } from './gas.js';
+import { MEDIA_ROLES } from './auth.js';
 
 export function createStitchApiRouter() {
   const router = express.Router();
+
+  // req.user diisi requireRole di index.js. Admin = role MEDIA_ROLES atau is_admin.
+  const requireAdmin = (req, res, next) => {
+    if (MEDIA_ROLES.has(req.user?.role) || req.user?.is_admin) return next();
+    return res.status(403).json({ ok: false, message: 'Forbidden' });
+  };
+  // Non-admin hanya boleh bertindak atas NIP miliknya sendiri.
+  const isSelfOrAdmin = (req, nip) =>
+    MEDIA_ROLES.has(req.user?.role) || req.user?.is_admin || String(req.user?.nip || '') === String(nip || '');
+  const denySelf = (res) => res.status(403).json({ ok: false, message: 'Forbidden: bukan NIP Anda.' });
 
   // 1. BOOTSTRAP: Load all master data for the Stitch UI
   router.get('/bootstrap', async (req, res) => {
@@ -69,6 +80,7 @@ export function createStitchApiRouter() {
     try {
       const nip = String(req.query.nip || '').trim();
       if (!nip) return res.status(400).json({ ok: false, message: 'NIP wajib disertakan.' });
+      if (!isSelfOrAdmin(req, nip)) return denySelf(res);
 
       // User details
       const userRes = await query(`
@@ -212,6 +224,7 @@ export function createStitchApiRouter() {
       const ket = String(b.ket || '').trim();
 
       if (!nip) return res.status(400).json({ ok: false, message: 'NIP wajib diisi.' });
+      if (!isSelfOrAdmin(req, nip)) return denySelf(res);
 
       // Lookup user
       const userRes = await query('SELECT id::text AS id, username, "NIP", instansi_id FROM user_list WHERE "NIP" = $1 LIMIT 1', [nip]);
@@ -309,7 +322,7 @@ export function createStitchApiRouter() {
   });
 
   // 5. UPDATE GEOFENCE: Update location radius or coords in database
-  router.post('/admin-lokasi', async (req, res) => {
+  router.post('/admin-lokasi', requireAdmin, async (req, res) => {
     try {
       const b = req.body || {};
       const id = String(b.id || '1');
@@ -335,7 +348,9 @@ export function createStitchApiRouter() {
   // 6. KETERANGAN / IZIN / CUTI / SAKIT (Connected to table ket_temp)
   router.get('/keterangan', async (req, res) => {
     try {
-      const nip = req.query.nip ? String(req.query.nip).trim() : null;
+      const nip = (MEDIA_ROLES.has(req.user?.role) || req.user?.is_admin)
+        ? (req.query.nip ? String(req.query.nip).trim() : null)
+        : String(req.user?.nip || '');
       let sql = `
         SELECT "ID_Ket" AS id_ket, "ID_Pegawai" AS id_pegawai, "Nama" AS nama, "NIP" AS nip,
                "Tanggal" AS tanggal, "Jam" AS jam, "Jenis Absen" AS jenis, "Status" AS status,
@@ -371,6 +386,7 @@ export function createStitchApiRouter() {
 
       if (!nip) return res.status(400).json({ ok: false, message: 'NIP wajib diisi.' });
       if (!tglMulai) return res.status(400).json({ ok: false, message: 'Tanggal mulai wajib diisi.' });
+      if (!isSelfOrAdmin(req, nip)) return denySelf(res);
 
       // Lookup user
       const userRes = await query('SELECT id, username, "NIP", instansi_id FROM user_list WHERE "NIP" = $1 LIMIT 1', [nip]);
@@ -479,7 +495,7 @@ export function createStitchApiRouter() {
     }
   });
 
-  router.post('/keterangan/approve', async (req, res) => {
+  router.post('/keterangan/approve', requireAdmin, async (req, res) => {
     try {
       const b = req.body || {};
       const idKet = String(b.id_ket || '').trim();
@@ -571,7 +587,7 @@ export function createStitchApiRouter() {
   });
 
   // 9. ADMIN MONITORING TODAY (Live Matrix of all 47 employees)
-  router.get('/admin/monitoring-today', async (req, res) => {
+  router.get('/admin/monitoring-today', requireAdmin, async (req, res) => {
     try {
       const todayWita = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
       

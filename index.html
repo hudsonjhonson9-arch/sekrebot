@@ -13,6 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 
   <!-- Libraries -->
+  <script src="js/stitch-auth.js"></script>
   <script src="js/lib/qrcode.min.js"></script>
   <script src="js/lib/jspdf.umd.min.js"></script>
   <script src="js/lib/sweetalert2.all.min.js"></script>
@@ -2697,6 +2698,7 @@
   <script type="module" src="js/face-quality.js"></script>
   <script src="js/face.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/admin-core.js"></script>
 
   <!-- ═════════════════════════════════════════════════════════════════════ -->
   <!-- 4. CORE CONTROLLER LOGIC (LIVE POSTGRESQL ENGINE)                     -->
@@ -4747,25 +4749,14 @@
     }
 
     async function saveAdminSettings() {
-      try {
-        const sel = document.getElementById('adminLocationSelect');
-        const lat = document.getElementById('adminOfficeLat').value;
-        const lon = document.getElementById('adminOfficeLon').value;
-        const rad = document.getElementById('adminRadiusSlider').value;
-
-        const res = await fetch('/api/stitch/admin-lokasi', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: sel.value, latitude: lat, longitude: lon, radius: rad })
-        });
-        const json = await res.json();
-        if (json.ok) {
-          showDynamicIsland({ type: 'success', title: 'Tersimpan di Database', message: json.message });
-          await bootstrapFromDatabase();
-        }
-      } catch (e) {
-        Swal.fire('Error', e.message, 'error');
-      }
+      const g = (id) => document.getElementById(id);
+      const ok = await AdminCore.saveLokasi({
+        id: g('adminLocationSelect').value,
+        lat: g('adminOfficeLat').value,
+        lon: g('adminOfficeLon').value,
+        radius: g('adminRadiusSlider').value
+      });
+      if (ok) await bootstrapFromDatabase();
     }
 
     /* ── 9. UTILITIES & THEME ────────────────────────────────────────── */
@@ -4869,6 +4860,16 @@
     }
 
     /* ── 8. ADMIN MONITORING & APPROVAL (POSTGRESQL TABLES) ─────────── */
+    // Logika admin dipindah ke js/admin-core.js (dipakai bersama admin.html).
+    // Di layar lebar (desktop) halaman ini mengalihkan ke admin.html.
+    function loadAdminMonitoringData() {
+      if (AdminCore.autoRoute('mobile')) return;
+      return AdminCore.loadMonitoring();
+    }
+    function loadAdminKeteranganData() { return AdminCore.loadKeterangan(); }
+    function approveKeterangan(idKet, status) { return AdminCore.approve(idKet, status); }
+
+    /* LEGACY — digantikan AdminCore, aman dihapus setelah diverifikasi:
     async function loadAdminMonitoringData() {
       const tbody = document.getElementById('adminMonitoringTableBody');
       try {
@@ -4977,6 +4978,7 @@
       }
     }
 
+*/
     /* ── 9. SPPD & PERJALANAN DINAS (agenda_sppd) ────────────────────── */
     async function loadSppdData() {
       const tbody = document.getElementById('sppdTableBody');
