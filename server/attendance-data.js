@@ -1,7 +1,6 @@
 import express from 'express';
 import { sameInstansi } from './auth.js';
 
-const KET_ROLES = new Set(['USER','INSPEKTUR','ADMIN','SUPERADMIN','KEPALA','SEKRETARIS','KABID','IRBAN']);
 const ADMIN_ROLES = new Set(['ADMIN','SUPERADMIN','KEPALA','SEKRETARIS','KABID','IRBAN']);
 
 const ok = (res, data = {}) => res.status(200).json({ ok: true, ...data });

@@ -7,14 +7,6 @@ import { PERMISSIONS_CATALOG } from './absen-roles-db.js';
 
 const TOKEN = 'a'.repeat(192);
 
-const SUPERADMIN = {
-  id: '1',
-  nip: '197001011990011001',
-  role: 'SUPERADMIN',
-  instansi_id: 'bapperida',
-  is_admin: true,
-};
-
 const ADMIN = {
   id: '7',
   nip: '198001012000011001',

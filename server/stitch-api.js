@@ -1,11 +1,14 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import { query } from './db.js';
+import { query as defaultQuery } from './db.js';
 import { gasUpsert } from './gas.js';
 import { MEDIA_ROLES } from './auth.js';
 
-export function createStitchApiRouter() {
+// query di-inject supaya test bisa stub tanpa DB (pola sama dengan media.js /
+// simapo.js). Tanpa argumen tetap memakai pool asli — caller produksi tidak berubah.
+export function createStitchApiRouter(deps = {}) {
+  const query = deps.query || defaultQuery;
   const router = express.Router();
 
   // req.user diisi requireRole di index.js. Admin = role MEDIA_ROLES atau is_admin.
@@ -899,7 +902,6 @@ export function createStitchApiRouter() {
   router.post('/aset/tiket', async (req, res) => {
     try {
       const b = req.body || {};
-      const unitasetid = String(b.unitasetid || '').trim();
       const judul = String(b.judul || 'Laporan Kerusakan Aset').trim();
       const deskripsi = String(b.deskripsi || '').trim();
       const prioritas = String(b.prioritas || 'Sedang').trim();
@@ -968,7 +970,6 @@ export function createStitchApiRouter() {
   // 15. MOBILE REAL ARSIP DATA (bapperida_dokumen)
   router.get('/arsip/mobile-data', async (req, res) => {
     try {
-      const nip = String(req.query.nip || '').trim();
       const kategori = String(req.query.kategori || '').trim();
       const search = String(req.query.q || '').trim();
 

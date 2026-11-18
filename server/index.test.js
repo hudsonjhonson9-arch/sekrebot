@@ -12,20 +12,47 @@ const app = createApp();
 // req/res minimal, tapi cukup untuk routing Express: app() butuh req.url,
 // req.method, dan next. requireRole() menolak di token check sebelum menyentuh
 // query/gasUpsert, jadi tidak ada DB atau jaringan yang tersentuh di test ini.
+// express.static (mount terakhir) memanggil setHeader/getHeader/write saat
+// menyajikan berkas; tanpa method itu send() melempar dan test jatuh ke 500 palsu.
 function call(method, url, headers = {}) {
   return new Promise((resolve) => {
     let err;
-    const done = () => resolve({ err, res, answered: res.statusCode > 0 || res.body !== null });
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      resolve({ err, res, answered: res.statusCode > 0 || res.body !== null || res.ended === true });
+    };
     const req = { method, url, headers };
+    const headerStore = Object.create(null);
+    const chunks = [];
     const res = {
       statusCode: 0,
       body: null,
+      ended: false,
+      headersSent: false,
       status(code) { this.statusCode = code; return this; },
       // Express default status 200 kalau res.status() tidak dipanggil; stub harus
       // meniru itu, kalau tidak route yang sehat pun terlihat seperti tidak hidup.
-      json(payload) { this.body = payload; this.statusCode ||= 200; done(); return this; },
-      end() { this.statusCode ||= 200; done(); return this; },
-      setHeader() {},
+      json(payload) { this.body = payload; this.statusCode ||= 200; this.ended = true; done(); return this; },
+      end(chunk) {
+        if (chunk != null) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        if (this.body == null && chunks.length) this.body = Buffer.concat(chunks);
+        this.statusCode ||= 200;
+        this.ended = true;
+        this.headersSent = true;
+        done();
+        return this;
+      },
+      write(chunk) {
+        if (chunk != null) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        return true;
+      },
+      writeHead(code) { this.statusCode = code; this.headersSent = true; return this; },
+      setHeader(k, v) { headerStore[String(k).toLowerCase()] = v; },
+      getHeader(k) { return headerStore[String(k).toLowerCase()]; },
+      removeHeader(k) { delete headerStore[String(k).toLowerCase()]; },
+      flushHeaders() { this.headersSent = true; },
     };
     app(req, res, (e) => { err = e; done(); });
   });
@@ -116,17 +143,40 @@ test('token berformat salah (tg_ legacy) ditolak 401, tidak pernah jatuh ke hand
 // pesan auth yang salah untuk file hilang atau endpoint yang tidak pernah ada,
 // dan browser tidak bisa membedakan "belum login" dari "salah alamat".
 //
-// `answered: false` = tidak ada yang menjawab, jadi request jatuh ke 404 bawaan
-// Express (dan, di produksi, ke nginx yang menyajikan www/). Itu bentuk yang benar.
+// Sejak express.static dipasang di index.js, berkas yang ada (/, /index.html,
+// /js/app.js) memang dijawab 200 oleh static — itu benar dan bukan gate.
+// Yang dijaga di sini: path yang TIDAK ada sebagai berkas tidak boleh kena 401
+// dari gate; ia jatuh ke next() lalu 404 bawaan Express (di produksi: nginx).
 //
 // Hanya path non-API yang diuji. `/api/*` sengaja di-gate penuh oleh router
 // di index.js dan menjawab 401 tanpa token — fail-closed itu benar untuk API,
 // jadi tidak ikut diubah.
 test('path tak dikenal tidak dijawab gate, jadi jatuh ke 404', async () => {
-  for (const url of ['/', '/index.html', '/login', '/absen.html', '/favicon.ico', '/js/app.js']) {
+  for (const url of ['/login', '/absen.html', '/favicon.ico', '/halaman-tidak-ada', '/js/tidak-ada.js']) {
     const { err, res, answered } = await call('GET', url);
     assert.equal(err, undefined, `${url} -> next(${err})`);
-    assert.equal(answered, false, `${url} -> ${res.statusCode} (401 = gate masih catch-all di root)`);
+    assert.notEqual(res.statusCode, 401, `${url} -> 401 = gate masih catch-all di root`);
+    assert.equal(answered, false, `${url} -> ${res.statusCode} (seharusnya tidak dijawab, jatuh 404)`);
+  }
+});
+
+// express.static harus melayani berkas yang ada — bukan 401 gate, bukan 404.
+// Pakai HTTP server nyata: stream.pipe(res) butuh interface Writable/EventEmitter
+// yang tidak bisa di-stub dengan object literal.
+test('berkas statis yang ada dilayani express.static', async () => {
+  const server = app.listen(0);
+  await new Promise((resolve) => server.once('listening', resolve));
+  const { port } = server.address();
+  try {
+    for (const url of ['/', '/index.html', '/js/app.js']) {
+      const res = await fetch(`http://127.0.0.1:${port}${url}`);
+      assert.notEqual(res.status, 401, `${url} -> 401 = gate masih catch-all di root`);
+      assert.ok(res.status >= 200 && res.status < 400, `${url} -> ${res.status} (seharusnya terlayani)`);
+      await res.arrayBuffer();
+    }
+  } finally {
+    server.close();
+    server.closeAllConnections?.();
   }
 });
 

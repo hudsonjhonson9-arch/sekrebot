@@ -85,7 +85,7 @@ export function groupPermen47Rows(items) {
   const categoryMap = new Map();
   let totalNilai = 0;
 
-  items.forEach((item, idx) => {
+  items.forEach((item) => {
     const catName = String(item.nama_kategori || 'BARANG PAKAI HABIS LAINNYA').trim();
     if (!categoryMap.has(catName)) {
       categoryMap.set(catName, { name: catName, items: [] });
@@ -610,7 +610,7 @@ export function generatePermen47Excel({ periode, tahun, instansi_id, rows, total
   }]);
 }
 
-export function generateKartuPemeliharaanExcel({ cards = [], instansi_nama, tahun }) {
+export function generateKartuPemeliharaanExcel({ cards = [], instansi_nama }) {
   const agencyName = (instansi_nama || 'BAPPERIDA').toUpperCase();
   const tglToday = formatTglIndo(new Date());
 
@@ -626,7 +626,7 @@ export function generateKartuPemeliharaanExcel({ cards = [], instansi_nama, tahu
     items: [],
   }];
 
-  cardList.forEach((card, cIdx) => {
+  cardList.forEach((card) => {
     // Row: Header title
     sheetRows.push({
       rowNum: curRow,

@@ -1,5 +1,9 @@
 import fs from 'fs';
 import assert from 'assert';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 console.log('--- Verifying login.html & index.html auth elements ---');
 
@@ -12,13 +16,13 @@ const expectedIds = [
 ];
 
 // 1. Verify login.html
-const loginHtml = fs.readFileSync('D:/Code/absensi-STICH/login.html', 'utf8');
+const loginHtml = fs.readFileSync(path.join(ROOT, 'login.html'), 'utf8');
 const missingInLogin = expectedIds.filter(id => id !== 'authOverlay' && !loginHtml.includes(`id="${id}"`));
 assert.strictEqual(missingInLogin.length, 0, `Missing IDs in login.html: ${missingInLogin.join(', ')}`);
 console.log('✓ login.html contains all expected auth elements.');
 
 // 2. Verify index.html
-const indexHtml = fs.readFileSync('D:/Code/absensi-STICH/index.html', 'utf8');
+const indexHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const missingInIndex = expectedIds.filter(id => !indexHtml.includes(`id="${id}"`));
 assert.strictEqual(missingInIndex.length, 0, `Missing IDs in index.html: ${missingInIndex.join(', ')}`);
 console.log('✓ index.html contains all 20 expected auth overlay elements.');
@@ -32,7 +36,7 @@ console.log('✓ index.html correctly includes config.js, constants.js, api.js, 
 
 // 4. Verify logout handler & session gating in index.html
 assert(indexHtml.includes('logoutUser()') || indexHtml.includes('window.logoutUser'), 'Missing logoutUser in index.html');
-assert(indexHtml.includes('authOverlayEl.style.display = \'flex\''), 'Missing auth gating in bootstrapFromDatabase');
+assert(indexHtml.includes("authOverlayEl.style.display = 'flex'"), 'Missing auth gating in bootstrapFromDatabase');
 console.log('✓ index.html has session gating and logout handler.');
 
 console.log('--- ALL AUTH UI VERIFICATIONS PASSED ---');
