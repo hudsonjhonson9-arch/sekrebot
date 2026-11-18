@@ -2191,66 +2191,7 @@ html.light-theme .admin-detail-crumb-title {
               </div>
             </div>
 
-            <!-- Form Input Collapsible (Catat Pengadaan Baru) -->
-            <div id="penerimaanFormWrap" style="display:none;margin:12px 0;padding:14px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;">
-              <div id="penerimaanFormTitle" style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:10px;"><i class="fas fa-plus" aria-hidden="true"></i> Form Catat Pengadaan Barang Pakai Habis</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
-                <div class="form-group"><label class="form-label">No. Nota/Kwitansi</label><input class="form-input" id="ptNoNota" placeholder="cth: BKU 12/2025"></div>
-                <div class="form-group"><label class="form-label">Tanggal</label><input class="form-input" id="ptTgl" type="date"></div>
-                <div class="form-group"><label class="form-label">Bentuk Kontrak</label><input class="form-input" id="ptKontrak" placeholder="Swakelola / Langganan"></div>
-                <div class="form-group"><label class="form-label">Penyedia</label><input class="form-input" id="ptPenyedia" placeholder="CV. Sumber Karya Abadi"></div>
-                <div class="form-group"><label class="form-label">No. SP2D</label><input class="form-input" id="ptSp2d" placeholder="Nomor SP2D"></div>
-                <div class="form-group"><label class="form-label">Status SPJ</label>
-                  <select class="form-input" id="ptStatusSpj">
-                    <option value="belum_dikumpulkan">Belum Dikumpulkan</option>
-                    <option value="sudah_di_map">Sudah di Map</option>
-                    <option value="sudah_lapor">Sudah Lapor</option>
-                  </select>
-                </div>
-                <div class="form-group" style="grid-column:1/-1;">
-                  <label class="form-label">Sub Kegiatan</label>
-                  <input class="form-input" id="ptSubKeg" placeholder="cth: 5.01.01.2.09.0009 - Pemeliharaan Gedung Kantor">
-                </div>
-              </div>
-
-              <!-- Detail Items Table -->
-              <div style="margin:14px 0;">
-                <div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:8px;"><i class="fas fa-clipboard-list" aria-hidden="true"></i> Daftar Barang</div>
-                <div style="display:grid;grid-template-columns:3fr 1fr 1.5fr 1fr 80px;gap:6px;align-items:end;margin-bottom:8px;">
-                  <div class="form-group" style="margin:0;">
-                    <label class="form-label">Nama Barang</label>
-                    <input class="form-input" id="ptdNama" list="shItemList" placeholder="Ketik nama barang..." oninput="onStandarHargaItemInput(this.value)">
-                    <datalist id="shItemList"></datalist>
-                  </div>
-                  <div class="form-group" style="margin:0;">
-                    <label class="form-label">Jumlah</label>
-                    <input class="form-input" id="ptdJumlah" type="number" min="1" value="1">
-                  </div>
-                  <div class="form-group" style="margin:0;">
-                    <label class="form-label">Satuan</label>
-                    <input class="form-input" id="ptdSatuan" placeholder="Unit">
-                  </div>
-                  <div class="form-group" style="margin:0;">
-                    <label class="form-label">Harga Satuan</label>
-                    <input class="form-input" id="ptdHarga" type="number" placeholder="0">
-                  </div>
-                  <button type="button" class="btn-sm-admin" onclick="addPenerimaanItem()" style="background:var(--success);height:38px;align-self:end;"><i class="fas fa-plus" aria-hidden="true"></i></button>
-                </div>
-              </div>
-
-              <div id="penerimaanItemsContainer" style="margin-bottom:10px;">
-                <div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Belum ada item. Tambah barang di atas.</div>
-              </div>
-
-              <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0;padding:10px;background:rgba(0,0,0,0.2);border-radius:8px;">
-                <span style="font-size:12px;color:var(--muted);">Total Item: <span id="ptTotalItem">0</span></span>
-                <span style="font-size:16px;font-weight:800;color:var(--gold);">Rp <span id="ptTotalNilai">0</span></span>
-              </div>
-
-              <button type="button" class="btn-primary" id="btnSavePenerimaan" onclick="savePenerimaan()" style="width:100%;">
-                <div class="btn-inner"><span><i class="fas fa-save" aria-hidden="true"></i></span> Simpan Penerimaan Barang</div>
-              </button>
-            </div>
+            <!-- Form Catat/Ubah penerimaan pindah ke modal #penerimaanModal (di akhir body) -->
 
             <!-- Tabel Pratinjau Permen 47 -->
             <div id="permen47PreviewContainer" style="margin-top:12px;"></div>
@@ -4143,7 +4084,7 @@ html.light-theme .admin-detail-crumb-title {
 
   <!-- ════ APP SCRIPTS (urutan load penting) ════ -->
   <!-- 1. Config & constants — harus pertama -->
-  <script src="js/config.js?v=20261117c"></script>
+  <script src="js/config.js?v=20261118a"></script>
   <script src="js/constants.js?v=20261011a"></script>
 
   <!-- 2. State global & Telegram init -->
@@ -4193,7 +4134,7 @@ html.light-theme .admin-detail-crumb-title {
   
   <script src="js/aset-screens.js?v=4"></script>
 <script src="js/aset-nav.js?v=20261115a"></script>
-  <script src="js/simapo-ext.js?v=20261117e"></script>
+  <script src="js/simapo-ext.js?v=20261118a"></script>
   <script src="js/simapo-bast.js?v=20261022"></script>
   <script src="js/tugas-spt.js?v=20261112"></script>
 
@@ -4545,6 +4486,79 @@ html.light-theme .admin-detail-crumb-title {
       #pdfPreviewMobileWarning { display: none !important; }
     }
   </style>
+
+  <!-- Modal Catat/Ubah Penerimaan Barang Pakai Habis (Permen 47) -->
+  <div id="penerimaanModal" class="ket-modal-overlay" style="display:none" onclick="if(event.target===this)closePenerimaanModal()">
+    <div class="ket-modal" style="max-width:780px;max-height:92vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;">
+        <div id="penerimaanFormTitle" style="font-size:14px;font-weight:800;color:var(--gold);"><i class="fas fa-plus" aria-hidden="true"></i> Form Catat Pengadaan Barang Pakai Habis</div>
+        <button type="button" aria-label="Tutup" onclick="closePenerimaanModal()" style="background:none;border:none;color:var(--white);font-size:26px;line-height:1;cursor:pointer;padding:0 4px;">&times;</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+        <div class="form-group"><label class="form-label">No. Nota/Kwitansi</label><input class="form-input" id="ptNoNota" placeholder="cth: BKU 12/2025"></div>
+        <div class="form-group"><label class="form-label">Tanggal</label><input class="form-input" id="ptTgl" type="date"></div>
+        <div class="form-group"><label class="form-label">Bentuk Kontrak</label><input class="form-input" id="ptKontrak" list="ptKontrakList" placeholder="Swakelola / Langganan"><datalist id="ptKontrakList"></datalist></div>
+        <div class="form-group"><label class="form-label">Penyedia</label><input class="form-input" id="ptPenyedia" list="ptPenyediaList" placeholder="CV. Sumber Karya Abadi"><datalist id="ptPenyediaList"></datalist></div>
+        <div class="form-group"><label class="form-label">No. SP2D</label><input class="form-input" id="ptSp2d" placeholder="Nomor SP2D"></div>
+        <div class="form-group"><label class="form-label">Status SPJ</label>
+          <select class="form-input" id="ptStatusSpj">
+            <option value="belum_dikumpulkan">Belum Dikumpulkan</option>
+            <option value="sudah_di_map">Sudah di Map</option>
+            <option value="sudah_lapor">Sudah Lapor</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Tahun (PKS)</label><select class="form-input" id="ptTahun" onchange="onPksTahunChange()"></select></div>
+        <div class="form-group"><label class="form-label">Kegiatan</label>
+          <select class="form-input" id="ptKegiatan" onchange="onPksKegiatanChange()"><option value="">— Pilih Kegiatan —</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Sub Kegiatan</label>
+          <select class="form-input" id="ptSubKeg" onchange="onSubKegChange()"><option value="">— Pilih Sub Kegiatan —</option></select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label class="form-label">Kode &amp; Uraian Sub Kegiatan</label>
+          <div id="ptSubKegInfo" style="display:flex;gap:16px;flex-wrap:wrap;padding:8px 10px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.06);border-radius:8px;font-size:12px;color:var(--muted);">Belum dipilih.</div>
+        </div>
+      </div>
+
+      <!-- Detail Items Table -->
+      <div style="margin:14px 0;">
+        <div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:8px;"><i class="fas fa-clipboard-list" aria-hidden="true"></i> Daftar Barang</div>
+        <div style="display:grid;grid-template-columns:3fr 1fr 1.5fr 1fr 80px;gap:6px;align-items:end;margin-bottom:8px;">
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">Nama Barang</label>
+            <input class="form-input" id="ptdNama" list="shItemList" placeholder="Ketik nama barang..." oninput="onStandarHargaItemInput(this.value)">
+            <datalist id="shItemList"></datalist>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">Jumlah</label>
+            <input class="form-input" id="ptdJumlah" type="number" min="1" value="1">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">Satuan</label>
+            <input class="form-input" id="ptdSatuan" placeholder="Unit">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">Harga Satuan</label>
+            <input class="form-input" id="ptdHarga" type="number" placeholder="0">
+          </div>
+          <button type="button" class="btn-sm-admin" onclick="addPenerimaanItem()" style="background:var(--success);height:38px;align-self:end;"><i class="fas fa-plus" aria-hidden="true"></i></button>
+        </div>
+      </div>
+
+      <div id="penerimaanItemsContainer" style="margin-bottom:10px;">
+        <div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Belum ada item. Tambah barang di atas.</div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0;padding:10px;background:rgba(0,0,0,0.2);border-radius:8px;">
+        <span style="font-size:12px;color:var(--muted);">Total Item: <span id="ptTotalItem">0</span></span>
+        <span style="font-size:16px;font-weight:800;color:var(--gold);">Rp <span id="ptTotalNilai">0</span></span>
+      </div>
+
+      <button type="button" class="btn-primary" id="btnSavePenerimaan" onclick="savePenerimaan()" style="width:100%;">
+        <div class="btn-inner"><span><i class="fas fa-save" aria-hidden="true"></i></span> Simpan Penerimaan Barang</div>
+      </button>
+    </div>
+  </div>
 
   <!-- Modal detail perjalanan dinas (SPT/SPPD) -->
   <div id="perjadinModal" class="modal-overlay" style="display:none">

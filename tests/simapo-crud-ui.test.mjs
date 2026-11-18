@@ -83,3 +83,43 @@ test('tombol Ubah/Hapus hanya dirender untuk role berhak (SUPERADMIN/ADMIN/BENDA
   assert.ok(dipakai >= 2, 'kartu penerimaan dan baris pemeliharaan harus sama-sama memakai helper');
 });
 
+test('form penerimaan berupa modal (ket-modal) dengan pemilih PKS & datalist riwayat', () => {
+  assert.match(indexHtml, /<div id="penerimaanModal" class="ket-modal-overlay"/,
+    'modal memakai pola .ket-modal-overlay yang sudah ada di css');
+  assert.equal(indexHtml.includes('id="penerimaanFormWrap"'), false,
+    'form inline lama sudah dipindahkan ke modal');
+  for (const id of ['ptTahun', 'ptKegiatan', 'ptSubKeg', 'ptSubKegInfo', 'ptPenyediaList', 'ptKontrakList']) {
+    assert.ok(indexHtml.includes(`id="${id}"`), `index.html harus memuat id="${id}"`);
+  }
+  assert.match(indexHtml, /<select class="form-input" id="ptSubKeg"/,
+    'sub kegiatan kini select dari pohon PKS, bukan input teks bebas');
+  // id yang diuji tes CRUD lain harus tetap ada di dalam modal.
+  for (const id of ['penerimaanFormTitle', 'btnSavePenerimaan']) {
+    assert.ok(indexHtml.includes(`id="${id}"`), `id="${id}" harus tetap ada`);
+  }
+});
+
+test('frontend membuka/menutup modal & menyimpan kode+uraian sub kegiatan terpisah', () => {
+  for (const fn of ['openPenerimaanModal', 'closePenerimaanModal', 'toggleFormPenerimaan',
+    'initPksForm', 'loadPksTreeForTahun', 'onPksTahunChange', 'onPksKegiatanChange',
+    'onSubKegChange', 'renderSubKegInfo', 'loadPenerimaanRiwayat']) {
+    assert.ok(ext.includes(`window.${fn} = `), `fungsi ${fn} harus ada di simapo-ext.js`);
+  }
+  assert.ok(ext.includes('sub_kegiatan_uraian'), 'payload simpan harus membawa uraian terpisah');
+  assert.ok(ext.includes('nama_sub_kegiatan') || ext.includes('window.namaSubKeg'),
+    'uraian sub kegiatan diambil dari pohon PKS');
+  assert.equal(ext.includes('penerimaanFormWrap'), false, 'referensi form inline lama sudah dihapus');
+});
+
+test('endpoint pks tahun/tree & riwayat penyedia terdaftar di config', () => {
+  const daftar = [
+    ['simapoPksTahun', '/api/simapo/pks-tahun'],
+    ['simapoPksTree', '/api/simapo/pks-tree'],
+    ['simapoPenerimaanRiwayat', '/api/simapo/penerimaan-riwayat'],
+  ];
+  for (const [key, url] of daftar) {
+    assert.ok(cfg.includes(key + ':'), `config.js harus memuat ${key}`);
+    assert.ok(cfg.includes(`'${url}'`), `config.js harus memuat ${url}`);
+  }
+});
+

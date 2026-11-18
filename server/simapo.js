@@ -27,8 +27,8 @@ export const MASTER_SQL =
 
 export const INSERT_NOTA_SQL =
   `INSERT INTO "SIMAPO".penerimaan_barang
-     (instansi_id, no_nota, tgl_nota, penyedia, total_nilai, no_sp2d, kontrak, sub_kegiatan, status_spj, created_by)
-   VALUES ($1, $2, $3::date, $4, $5, $6, $7, $8, $9, $10)
+     (instansi_id, no_nota, tgl_nota, penyedia, total_nilai, no_sp2d, kontrak, sub_kegiatan, sub_kegiatan_uraian, status_spj, created_by)
+   VALUES ($1, $2, $3::date, $4, $5, $6, $7, $8, $9, $10, $11)
    RETURNING id`;
 
 // Volume boleh desimal dari form; kolomnya numeric, jadi biarkan Postgres yang
@@ -75,8 +75,8 @@ export const BUAT_BARANG_PENERIMAAN_SQL =
 // `items` ikut dibawa agar form Edit bisa mengisi ulang rincian tanpa request
 // kedua; kolom lain tidak berubah bentuk untuk konsumen lama.
 export const PENERIMAAN_LIST_SQL =
-  `SELECT pb.id, pb.no_nota, TO_CHAR(pb.tgl_nota, 'YYYY-MM-DD') AS tgl_nota, pb.penyedia, pb.total_nilai,
-          pb.no_sp2d, pb.kontrak, pb.sub_kegiatan, pb.status_spj, pb.created_by,
+  `   SELECT pb.id, pb.no_nota, TO_CHAR(pb.tgl_nota, 'YYYY-MM-DD') AS tgl_nota, pb.penyedia, pb.total_nilai,
+          pb.no_sp2d, pb.kontrak, pb.sub_kegiatan, pb.sub_kegiatan_uraian, pb.status_spj, pb.created_by,
           TO_CHAR(pb.created_at, 'YYYY-MM-DD') AS created_at,
           (SELECT COALESCE(json_agg(i.*), '[]'::json) FROM (
              SELECT dp.barang_id, COALESCE(b.nama, '') AS nama_barang, COALESCE(b.kodebarang, '') AS kodebarang,
@@ -102,8 +102,8 @@ export const PENERIMAAN_NOTA_SQL =
 export const PENERIMAAN_UPDATE_NOTA_SQL =
   `UPDATE "SIMAPO".penerimaan_barang
    SET no_nota = $3, tgl_nota = $4::date, penyedia = $5, total_nilai = $6,
-       no_sp2d = $7, kontrak = $8, sub_kegiatan = $9, status_spj = $10,
-       updated_at = NOW()
+       no_sp2d = $7, kontrak = $8, sub_kegiatan = $9, sub_kegiatan_uraian = $11,
+       status_spj = $10, updated_at = NOW()
    WHERE id = $1::uuid AND instansi_id = $2
    RETURNING id`;
 
@@ -152,7 +152,7 @@ export const LAPORAN_PERMEN47_PENERIMAAN_SQL =
           COALESCE(b.spesifikasi, '') AS spesifikasi, COALESCE(b.satuan, 'Unit') AS satuan,
           dp.volume AS jumlah, dp.harga_satuan, dp.total_harga AS total_nilai,
           COALESCE(NULLIF(pb.sub_kegiatan, ''), '') AS sub_kegiatan,
-          COALESCE(sk.nama, '') AS nama_sub_kegiatan,
+          COALESCE(NULLIF(pb.sub_kegiatan_uraian, ''), sk.nama, '') AS nama_sub_kegiatan,
           COALESCE(NULLIF(b.koderekening, ''), '') AS kode_rekening,
           COALESCE(rb.uraian, '') AS uraian_belanja,
           TO_CHAR(pb.tgl_nota, 'YYYY-MM-DD') AS tgl_nota,
@@ -478,6 +478,7 @@ export function bacaPenerimaan(body) {
     noSp2d: S(src.no_sp2d),
     kontrak: S(src.kontrak),
     subKeg: S(src.sub_kegiatan),
+    subKegUraian: S(src.sub_kegiatan_uraian),
     statusSpj: S(src.status_spj) || 'belum_dikumpulkan',
     createdBy: S(src.created_by) || 'system',
     items,
@@ -524,6 +525,48 @@ export function barisBKU(body) {
   return rows;
 }
 
+// ── Sumber pemilihan Kegiatan/Sub Kegiatan di form penerimaan ──
+// Pohon PKS bercadangan tahun (pks_kegiatan/pks_subkegiatan, kolom tahun) —
+// beda dengan hierarki "SIMAPO".kegiatan yang tanpa dimensi tahun.
+export const PKS_TAHUN_SQL =
+  `SELECT t.tahun FROM pks_tahun t
+   WHERE EXISTS (SELECT 1 FROM pks_program p WHERE p.tahun = t.tahun)
+   ORDER BY t.tahun DESC`;
+
+export const PKS_TREE_KEGIATAN_SQL =
+  `SELECT k.id::text AS id, k.kode, k.nama, p.kode AS program_kode
+   FROM pks_kegiatan k
+   JOIN pks_program p ON p.id = k.program_id
+   WHERE k.tahun = $1
+   ORDER BY k.urutan, k.kode`;
+
+export const PKS_TREE_SUBKEGIATAN_SQL =
+  `SELECT s.id::text AS id, s.kegiatan_id::text AS kegiatan_id, s.kode, s.nama
+   FROM pks_subkegiatan s
+   WHERE s.tahun = $1
+   ORDER BY s.urutan, s.kode`;
+
+// Riwayat penyedia & bentuk kontrak untuk saran datalist: nilai pernah dipakai
+// di penerimaan maupun kartu pemeliharaan, terbaru dulu, instansi pemanggil saja.
+export const PENERIMAAN_RIWAYAT_SQL =
+  `WITH src AS (
+     SELECT TRIM(penyedia) AS penyedia, TRIM(kontrak) AS kontrak, created_at
+     FROM "SIMAPO".penerimaan_barang WHERE instansi_id = $1
+     UNION ALL
+     SELECT TRIM(nama_penyedia), TRIM(bentuk_kontrak), created_at
+     FROM "SIMAPO".pemeliharaan WHERE instansi_id = $1
+   ),
+   pen AS (
+     SELECT penyedia AS v, MAX(created_at) AS terakhir FROM src
+     WHERE penyedia IS NOT NULL AND penyedia <> '' GROUP BY penyedia
+   ),
+   kon AS (
+     SELECT kontrak AS v, MAX(created_at) AS terakhir FROM src
+     WHERE kontrak IS NOT NULL AND kontrak <> '' GROUP BY kontrak
+   )
+   SELECT (SELECT COALESCE(json_agg(v ORDER BY terakhir DESC, v), '[]'::json) FROM (SELECT * FROM pen LIMIT 50) p) AS penyedia,
+          (SELECT COALESCE(json_agg(v ORDER BY terakhir DESC, v), '[]'::json) FROM (SELECT * FROM kon LIMIT 50) k) AS kontrak`;
+
 export function createSimapoRouter({ query, withTransaction }) {
   const router = express.Router();
 
@@ -546,6 +589,50 @@ export function createSimapoRouter({ query, withTransaction }) {
     }
   });
 
+  // Daftar tahun PKS yang punya data; tahun berjalan disuntik agar select di
+  // form selalu punya pilihan walaupun seed tahunan belum dijalankan.
+  router.get('/pks-tahun', async (_req, res) => {
+    try {
+      const { rows } = await query(PKS_TAHUN_SQL, []);
+      const now = new Date().getFullYear();
+      const ada = rows.map((r) => Number(r.tahun));
+      const suntik = [now + 1, now, now - 1].filter((y) => !ada.includes(y));
+      return res.json([...ada, ...suntik]);
+    } catch {
+      return res.status(500).json({ ok: false, message: 'Gagal memuat daftar tahun PKS.' });
+    }
+  });
+
+  // Pohon kegiatan + sub kegiatan untuk satu tahun (flatten supaya frontend
+  // tinggal menyaring sub kegiatan lewat kegiatan_id).
+  router.get('/pks-tree', async (req, res) => {
+    const tahun = parseInt(req.query?.tahun, 10) || new Date().getFullYear();
+    try {
+      const [k, s] = await Promise.all([
+        query(PKS_TREE_KEGIATAN_SQL, [tahun]),
+        query(PKS_TREE_SUBKEGIATAN_SQL, [tahun]),
+      ]);
+      return res.json({ ok: true, tahun, data: { kegiatan: k.rows, subkegiatan: s.rows } });
+    } catch {
+      return res.status(500).json({ ok: false, message: 'Gagal memuat pohon PKS.' });
+    }
+  });
+
+  // Saran penyedia & bentuk kontrak dari riwayat pencatatan (datalist, tetap
+  // teks bebas — nilai baru yang belum pernah ada tetap boleh diketik manual).
+  router.get('/penerimaan-riwayat', async (req, res) => {
+    try {
+      const inst = instansiOtomatis(req, req.query?.instansi_id);
+      const { rows } = await query(PENERIMAAN_RIWAYAT_SQL, [inst]);
+      return res.json({
+        ok: true,
+        data: { penyedia: rows[0]?.penyedia || [], kontrak: rows[0]?.kontrak || [] },
+      });
+    } catch {
+      return res.status(500).json({ ok: false, message: 'Gagal memuat riwayat penyedia/kontrak.' });
+    }
+  });
+
   // ── Simpan penerimaan: nota + detail + update stok, satu transaksi ──
   router.post('/penerimaan', async (req, res) => {
     const baca = bacaPenerimaan(req.body);
@@ -558,7 +645,7 @@ export function createSimapoRouter({ query, withTransaction }) {
       const notaId = await withTransaction(async (client) => {
         const nota = await client.query(INSERT_NOTA_SQL, [
           inst, baca.noNota, baca.tglNota, baca.penyedia, baca.total,
-          baca.noSp2d, baca.kontrak, baca.subKeg, baca.statusSpj, baca.createdBy,
+          baca.noSp2d, baca.kontrak, baca.subKeg, baca.subKegUraian, baca.statusSpj, baca.createdBy,
         ]);
         await tulisDetailPenerimaan(client, inst, nota.rows[0].id, baca.items);
         await client.query(UPDATE_STOK_SQL, [nota.rows[0].id]);
@@ -601,7 +688,7 @@ export function createSimapoRouter({ query, withTransaction }) {
         await client.query(PENERIMAAN_DELETE_DETAIL_SQL, [id]);
         await client.query(PENERIMAAN_UPDATE_NOTA_SQL, [
           id, inst, baca.noNota, baca.tglNota, baca.penyedia, baca.total,
-          baca.noSp2d, baca.kontrak, baca.subKeg, baca.statusSpj,
+          baca.noSp2d, baca.kontrak, baca.subKeg, baca.statusSpj, baca.subKegUraian,
         ]);
         await tulisDetailPenerimaan(client, inst, id, baca.items);
         await client.query(UPDATE_STOK_SQL, [id]);

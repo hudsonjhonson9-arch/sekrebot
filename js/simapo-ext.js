@@ -1431,26 +1431,194 @@ window.loadAdminPenerimaan = async function(force = false) {
 };
 window._simapoRetryMap['adminPenerimaanList'] = window.loadAdminPenerimaan;
 
-/* ─── LAPORAN PENGADAAN BARANG PAKAI HABIS (PERMENDAGRI 47) ─── */
-window.toggleFormPenerimaan = function() {
-  const wrap = document.getElementById('penerimaanFormWrap');
-  const btn = document.getElementById('btnToggleFormPenerimaan');
-  if (!wrap) return;
-  const isHidden = wrap.style.display === 'none' || !wrap.style.display;
-  wrap.style.display = isHidden ? 'block' : 'none';
-  if (btn) {
-    btn.innerHTML = isHidden ? '<i class="fas fa-times" aria-hidden="true"></i> Tutup Form' : '<i class="fas fa-plus" aria-hidden="true"></i> Catat Pengadaan Baru';
-  }
-  // Menutup form saat mode edit mengembalikan mode simpan biasa, supaya simpan
-  // berikutnya tidak diam-diam menimpa nota yang sedang diubah.
-  if (!isHidden && window._penerimaanEditId) window.setModePenerimaan(null);
-  // Tanggal kosong membuat server menolak dengan 400; isi hari ini saat form dibuka.
-  if (isHidden) {
-    const tgl = document.getElementById('ptTgl');
-    if (tgl && !tgl.value) tgl.value = new Date().toISOString().split('T')[0];
-  }
+/* ─── MODAL PENERIMAAN + PILIHAN PKS (tahun → kegiatan → sub kegiatan) ───
+   Pohon PKS diambil dari tabel bercadangan tahun (pks_kegiatan/pks_subkegiatan),
+   bukan hierarki "SIMAPO".kegiatan yang tanpa tahun. Kode & uraian sub kegiatan
+   ditampilkan terpisah; yang disimpan ke nota adalah keduanya (2 kolom). */
+window._pksTreeCache = {};
+window._subKegKode = '';
+window._subKegUraian = '';
+window._penerimaanRiwayatLoaded = false;
+
+// Escaping untuk opsi select & info sub kegiatan di modal (pksEsc dipakai bila
+// sudah dimuat; fallback mandiri supaya modal tidak bergantung urutan load).
+window.escHtml = function(v) {
+  const s = String(v == null ? '' : v);
+  return window.pksEsc
+    ? window.pksEsc(s)
+    : s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 };
 
+window.openPenerimaanModal = function() {
+  const m = document.getElementById('penerimaanModal');
+  if (!m) return;
+  // Tanggal kosong membuat server menolak dengan 400; isi hari ini saat dibuka.
+  const tgl = document.getElementById('ptTgl');
+  if (tgl && !tgl.value) tgl.value = new Date().toISOString().split('T')[0];
+  m.style.display = 'flex';
+  requestAnimationFrame(() => m.classList.add('open'));
+  window.initPksForm();
+  window.loadPenerimaanRiwayat();
+};
+
+window.closePenerimaanModal = function() {
+  const m = document.getElementById('penerimaanModal');
+  if (!m) return;
+  m.classList.remove('open');
+  m.style.display = 'none';
+  // Menutup form saat mode edit mengembalikan mode simpan biasa, supaya simpan
+  // berikutnya tidak diam-diam menimpa nota yang sedang diubah.
+  window.setModePenerimaan(null);
+};
+
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape') return;
+  const m = document.getElementById('penerimaanModal');
+  if (m && m.style.display !== 'none') window.closePenerimaanModal();
+});
+
+window.toggleFormPenerimaan = function() {
+  window.setModePenerimaan(null);
+  window.openPenerimaanModal();
+};
+
+// Isi select Tahun sekali (daftar tahun PKS + tahun berjalan), lalu muat pohon
+// kegiatan untuk tahun terpilih. Bila filter pratinjau sudah memilih tahun,
+// ikuti agar form dan laporan sebidang.
+window.initPksForm = async function() {
+  const sel = document.getElementById('ptTahun');
+  if (!sel) return;
+  if (!sel.options.length) {
+    try {
+      const res = await apiFetch(P.simapoPksTahun);
+      if (res.ok) {
+        const json = await res.json();
+        const daftar = (Array.isArray(json) ? json : []).map(Number).filter(Boolean);
+        const now = new Date().getFullYear();
+        const prefer = Number(document.getElementById('permen47Tahun')?.value) || now;
+        const pilih = daftar.includes(prefer) ? prefer : (daftar.includes(now) ? now : (daftar[0] || ''));
+        sel.innerHTML = daftar.map(y =>
+          '<option value="' + y + '"' + (y === pilih ? ' selected' : '') + '>' + y + '</option>').join('');
+      }
+    } catch (e) { console.warn('[SIMAPO] daftar tahun PKS gagal dimuat', e); }
+  }
+  if (sel.value) await window.loadPksTreeForTahun(sel.value);
+};
+
+window.loadPksTreeForTahun = async function(tahun) {
+  const th = String(tahun || '');
+  if (!th) return;
+  let tree = window._pksTreeCache[th];
+  if (!tree) {
+    try {
+      const res = await apiFetch(P.simapoPksTree + '?tahun=' + encodeURIComponent(th));
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+      tree = (json && json.data) || { kegiatan: [], subkegiatan: [] };
+      window._pksTreeCache[th] = tree;
+    } catch (e) {
+      console.warn('[SIMAPO] pohon PKS tahun ' + th + ' gagal dimuat', e);
+      tree = { kegiatan: [], subkegiatan: [] };
+      window._pksTreeCache[th] = tree;
+    }
+  }
+  const kegSel = document.getElementById('ptKegiatan');
+  if (kegSel) {
+    const prev = kegSel.value;
+    kegSel.innerHTML = '<option value="">— Pilih Kegiatan —</option>' +
+      (tree.kegiatan || []).map(k =>
+        '<option value="' + escHtml(String(k.id)) + '">' + escHtml(k.kode) + ' — ' + escHtml(k.nama) + '</option>').join('');
+    if (prev && Array.prototype.some.call(kegSel.options, o => o.value === prev)) kegSel.value = prev;
+  }
+  window.fillSubKegOptions(true);
+};
+
+// Sub kegiatan difilter mengikuti kegiatan terpilih; tanpa pilihan kegiatan,
+// seluruh sub kegiatan tahun itu tetap ditawarkan (pencarian native select).
+window.fillSubKegOptions = function(keepValue) {
+  const subSel = document.getElementById('ptSubKeg');
+  if (!subSel) return;
+  const tahun = document.getElementById('ptTahun')?.value;
+  const tree = window._pksTreeCache[String(tahun)] || { kegiatan: [], subkegiatan: [] };
+  const kegId = document.getElementById('ptKegiatan')?.value || '';
+  const subs = (tree.subkegiatan || []).filter(s => !kegId || String(s.kegiatan_id) === String(kegId));
+  const prev = keepValue ? subSel.value : '';
+  subSel.innerHTML = '<option value="">— Pilih Sub Kegiatan —</option>' +
+    subs.map(s => '<option value="' + escHtml(s.kode) + '">' + escHtml(s.kode) + ' — ' + escHtml(s.nama) + '</option>').join('');
+  if (prev && Array.prototype.some.call(subSel.options, o => o.value === prev)) subSel.value = prev;
+};
+
+window.namaSubKeg = function(kode) {
+  if (!kode) return '';
+  const tahun = document.getElementById('ptTahun')?.value;
+  const tree = window._pksTreeCache[String(tahun)];
+  const s = tree && (tree.subkegiatan || []).find(x => x.kode === kode);
+  return s ? s.nama : '';
+};
+
+// Kode dan uraian sengaja ditampilkan sebagai dua elemen terpisah — jangan
+// pernah diglue jadi satu baris "kode - uraian" seperti input teks lama.
+window.renderSubKegInfo = function(kode, uraian) {
+  const el = document.getElementById('ptSubKegInfo');
+  if (!el) return;
+  if (!kode) {
+    el.textContent = 'Belum dipilih.';
+    return;
+  }
+  el.innerHTML = '<span>Kode: <b style="font-family:monospace;color:var(--gold);">' + escHtml(kode) + '</b></span>' +
+    '<span>Uraian: <b style="color:var(--white);font-weight:600;">' + escHtml(uraian || '—') + '</b></span>';
+};
+
+window.onPksTahunChange = async function() {
+  const kegSel = document.getElementById('ptKegiatan');
+  const subSel = document.getElementById('ptSubKeg');
+  if (kegSel) kegSel.innerHTML = '<option value="">— Pilih Kegiatan —</option>';
+  if (subSel) subSel.innerHTML = '<option value="">— Pilih Sub Kegiatan —</option>';
+  window._subKegKode = '';
+  window._subKegUraian = '';
+  window.renderSubKegInfo('', '');
+  const th = document.getElementById('ptTahun')?.value;
+  if (th) await window.loadPksTreeForTahun(th);
+};
+
+window.onPksKegiatanChange = function() {
+  window.fillSubKegOptions(false);
+  window.onSubKegChange();
+};
+
+window.onSubKegChange = function() {
+  const kode = document.getElementById('ptSubKeg')?.value || '';
+  // Uraian hasil pohon PKS menang; bila pohon tidak memuat kode yang sama
+  // (mis. nota lama), uraian tersimpan dipertahankan selama kodenya tidak berubah.
+  const uraian = kode ? (window.namaSubKeg(kode) || (kode === window._subKegKode ? window._subKegUraian : '')) : '';
+  window._subKegKode = kode;
+  window._subKegUraian = uraian;
+  window.renderSubKegInfo(kode, uraian);
+};
+
+// Riwayat penyedia & bentuk kontrak untuk datalist: teks bebas tetap boleh,
+// saran hanya menawarkan nilai yang pernah tercatat di instansi ini.
+window.loadPenerimaanRiwayat = async function() {
+  if (window._penerimaanRiwayatLoaded) return;
+  try {
+    const res = await apiFetch(P.simapoPenerimaanRiwayat);
+    if (!res.ok) return;
+    const json = await res.json();
+    const data = (json && json.data) || {};
+    const isi = (id, vals) => {
+      const dl = document.getElementById(id);
+      if (dl) {
+        dl.innerHTML = (Array.isArray(vals) ? vals : []).map(v =>
+          '<option value="' + escHtml(v) + '"></option>').join('');
+      }
+    };
+    isi('ptPenyediaList', data.penyedia);
+    isi('ptKontrakList', data.kontrak);
+    window._penerimaanRiwayatLoaded = true;
+  } catch (e) { console.warn('[SIMAPO] riwayat penyedia/kontrak gagal dimuat', e); }
+};
+
+/* ─── LAPORAN PENGADAAN BARANG PAKAI HABIS (PERMENDAGRI 47) ─── */
 window._permen47FilterInit = false;
 // Filter bawaan harus periode/tahun berjalan — nilai statis di HTML cepat basi
 // sehingga transaksi terbaru tersaring keluar dari pratinjau laporan.
@@ -1803,13 +1971,19 @@ window.savePenerimaan = async function() {
     } catch (e) { console.warn('[SIMAPO] master barang gagal dimuat saat simpan penerimaan', e); }
   }
 
+  const subKode = document.getElementById('ptSubKeg')?.value || '';
+  const subUraian = subKode
+    ? (window.namaSubKeg(subKode) || (subKode === window._subKegKode ? window._subKegUraian : ''))
+    : '';
   const payload = {
     no_nota: document.getElementById('ptNoNota')?.value.trim(),
     tgl_nota: document.getElementById('ptTgl')?.value || new Date().toISOString().split('T')[0],
     penyedia: document.getElementById('ptPenyedia')?.value.trim(),
     no_sp2d: document.getElementById('ptSp2d')?.value.trim() || null,
     kontrak: document.getElementById('ptKontrak')?.value.trim() || null,
-    sub_kegiatan: document.getElementById('ptSubKeg')?.value.trim() || null,
+    // Kode & uraian sub kegiatan disimpan terpisah (2 kolom), tidak diglue.
+    sub_kegiatan: subKode || null,
+    sub_kegiatan_uraian: subUraian || null,
     status_spj: document.getElementById('ptStatusSpj')?.value || 'belum_dikumpulkan',
     total_nilai: items.reduce((s,i) => s + i.total, 0),
     items: items.map(i => ({
@@ -1831,6 +2005,9 @@ window.savePenerimaan = async function() {
       window._simapoCache.clear('admin_penerimaan');
       window.loadAdminPenerimaan(true);
       window.clearPenerimaanForm();
+      window.closePenerimaanModal();
+      // Catatan baru bisa jadi saran penyedia/kontrak berikutnya.
+      window._penerimaanRiwayatLoaded = false;
     },
   });
 };
@@ -1842,6 +2019,12 @@ window.clearPenerimaanForm = function() {
   });
   const ss = document.getElementById('ptStatusSpj');
   if (ss) ss.value = 'belum_dikumpulkan';
+  const keg = document.getElementById('ptKegiatan');
+  if (keg) keg.value = '';
+  window.fillSubKegOptions(false);
+  window._subKegKode = '';
+  window._subKegUraian = '';
+  window.renderSubKegInfo('', '');
   window._penerimaanItems = [];
   window.setModePenerimaan(null);
   renderPenerimaanItems();
@@ -1865,7 +2048,7 @@ window.setModePenerimaan = function(idNota) {
   }
 };
 
-window.editPenerimaan = function(id) {
+window.editPenerimaan = async function(id) {
   const nota = (window._allPenerimaanData || []).find(n => String(n.id) === String(id));
   if (!nota) { showToast('Data penerimaan tidak ditemukan.', 'error'); return; }
 
@@ -1879,7 +2062,6 @@ window.editPenerimaan = function(id) {
   isi('ptKontrak', nota.kontrak);
   isi('ptPenyedia', nota.penyedia);
   isi('ptSp2d', nota.no_sp2d);
-  isi('ptSubKeg', nota.sub_kegiatan);
   isi('ptStatusSpj', nota.status_spj || 'belum_dikumpulkan');
 
   // Rincian ikut datang dari daftar, jadi form bisa diisi ulang tanpa request kedua.
@@ -1897,11 +2079,40 @@ window.editPenerimaan = function(id) {
   });
   renderPenerimaanItems();
 
-  const wrap = document.getElementById('penerimaanFormWrap');
-  const btn = document.getElementById('btnToggleFormPenerimaan');
-  if (wrap) wrap.style.display = 'block';
-  if (btn) btn.innerHTML = '<i class="fas fa-times" aria-hidden="true"></i> Tutup Form';
-  document.getElementById('penerimaanFormTitle')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // Pohon PKS mengikuti tahun nota supaya kode sub kegiatan tersimpan bisa
+  // dipilih ulang; uraian lama tetap tampil walau pohon tahun itu kosong.
+  await window.initPksForm();
+  const subKode = nota.sub_kegiatan || '';
+  const subUraian = nota.sub_kegiatan_uraian || '';
+  const th = String(nota.tgl_nota || '').slice(0, 4);
+  const thSel = document.getElementById('ptTahun');
+  if (th && thSel && Array.prototype.some.call(thSel.options, o => o.value === th)) thSel.value = th;
+  if (thSel && thSel.value) await window.loadPksTreeForTahun(thSel.value);
+  const tree = window._pksTreeCache[String(thSel?.value)] || { kegiatan: [], subkegiatan: [] };
+  if (subKode) {
+    const s = (tree.subkegiatan || []).find(x => x.kode === subKode);
+    const kegSel = document.getElementById('ptKegiatan');
+    if (s && kegSel) kegSel.value = String(s.kegiatan_id);
+    window.fillSubKegOptions(true);
+    const subSel = document.getElementById('ptSubKeg');
+    const ada = subSel && Array.prototype.some.call(subSel.options, o => o.value === subKode);
+    if (subSel && ada) {
+      subSel.value = subKode;
+    } else if (subSel) {
+      // Kode lama tidak ada di pohon tahun terpilih: sisipkan sebagai pilihan
+      // agar data tersimpan tidak hilang hanya karena ganti tahun.
+      subSel.insertAdjacentHTML('beforeend',
+        '<option value="' + escHtml(subKode) + '" selected>' + escHtml(subKode) +
+        (subUraian ? ' — ' + escHtml(subUraian) : '') + '</option>');
+    }
+  } else {
+    window.fillSubKegOptions(true);
+  }
+  window._subKegKode = subKode;
+  window._subKegUraian = subUraian || window.namaSubKeg(subKode);
+  window.renderSubKegInfo(subKode, window._subKegUraian);
+
+  window.openPenerimaanModal();
 };
 
 window.deletePenerimaan = async function(id) {

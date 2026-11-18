@@ -17,7 +17,12 @@ import {
   buatKodeBarang,
   bolehUbahSimapo,
   idUuid,
+  bacaPenerimaan,
   MASTER_SQL,
+  PKS_TAHUN_SQL,
+  PKS_TREE_KEGIATAN_SQL,
+  PKS_TREE_SUBKEGIATAN_SQL,
+  PENERIMAAN_RIWAYAT_SQL,
   INSERT_NOTA_SQL,
   INSERT_DETAIL_SQL,
   UPDATE_STOK_SQL,
@@ -60,6 +65,8 @@ const SEMUA_SQL = [
   PEMELIHARAAN_SQL, PEMELIHARAAN_UPDATE_SQL, PEMELIHARAAN_DELETE_SQL,
   KARTU_PEMELIHARAAN_BARANG_SQL,
   LAPORAN_PERMEN47_PENERIMAAN_SQL, LAPORAN_PERMEN47_FALLBACK_SQL,
+  PKS_TAHUN_SQL, PKS_TREE_KEGIATAN_SQL, PKS_TREE_SUBKEGIATAN_SQL,
+  PENERIMAAN_RIWAYAT_SQL,
 ];
 
 // ── stub ──
@@ -422,6 +429,88 @@ test('SQL yang dipakai bersama punya placeholder jelas dan tanpa nilai user hard
   for (const sql of SEMUA_SQL) {
     assert.ok(!/bapperida/.test(sql), 'nilai default tidak boleh masuk ke SQL');
   }
+});
+
+// ── Kode & uraian sub kegiatan disimpan terpisah (2 kolom) ──
+test('bacaPenerimaan memisahkan kode dan uraian sub kegiatan', () => {
+  const out = bacaPenerimaan({
+    no_nota: 'N', tgl_nota: '2026-01-01', penyedia: 'PT A',
+    sub_kegiatan: '5.01.01.2.09.0009', sub_kegiatan_uraian: 'Pemeliharaan Gedung Kantor',
+    items: [{ volume: 1, harga_satuan: 10 }],
+  });
+  assert.equal(out.error, undefined);
+  assert.equal(out.subKeg, '5.01.01.2.09.0009');
+  assert.equal(out.subKegUraian, 'Pemeliharaan Gedung Kantor');
+});
+
+test('INSERT/UPDATE nota membawa kode DAN uraian sub kegiatan sebagai kolom terpisah', async () => {
+  const tx = stub({ rows: { id: 'nota-uuid' } });
+  await call(app(tx, ADMIN), 'POST', '/api/simapo/penerimaan', {
+    no_nota: 'N1', tgl_nota: '2026-01-05', penyedia: 'PT A',
+    sub_kegiatan: '5.01.01.2.09.0009', sub_kegiatan_uraian: 'Pemeliharaan Gedung Kantor',
+    items: [{ barang_id: 'B1', volume: 1, harga_satuan: 10 }],
+  });
+  const nota = tx.calls[0];
+  assert.ok(nota.sql.includes('sub_kegiatan_uraian'), 'INSERT harus menyimpan uraian terpisah');
+  assert.equal(nota.params[7], '5.01.01.2.09.0009', 'param $8 = kode sub kegiatan');
+  assert.equal(nota.params[8], 'Pemeliharaan Gedung Kantor', 'param $9 = uraian sub kegiatan');
+  assert.match(PENERIMAAN_UPDATE_NOTA_SQL, /sub_kegiatan_uraian = \$11/);
+  assert.ok(PENERIMAAN_LIST_SQL.includes('pb.sub_kegiatan_uraian'), 'daftar nota ikut membawa uraian');
+});
+
+test('laporan Permen 47 memakai uraian tersimpan lebih dulu, join hanya fallback', () => {
+  assert.ok(
+    LAPORAN_PERMEN47_PENERIMAAN_SQL.includes("COALESCE(NULLIF(pb.sub_kegiatan_uraian, ''), sk.nama, '') AS nama_sub_kegiatan"),
+    'uraian tersimpan menang atas nama hasil join',
+  );
+  assert.ok(LAPORAN_PERMEN47_PENERIMAAN_SQL.includes('LEFT JOIN "SIMAPO".subkegiatan sk'), 'join tetap dipakai sebagai fallback');
+});
+
+// ── Sumber kegiatan/sub kegiatan (tabel PKS bercadangan tahun) & riwayat ──
+test('GET /pks-tahun mengembalikan daftar tahun dengan tahun berjalan disuntik', async () => {
+  const tx = stub({ rows: [{ tahun: 2027 }, { tahun: 2026 }] });
+  const { status, body } = await call(app(tx, ADMIN), 'GET', '/api/simapo/pks-tahun');
+
+  assert.equal(status, 200);
+  assert.ok(Array.isArray(body), 'bentuk array supaya frontend tinggal map');
+  const now = new Date().getFullYear();
+  assert.ok(body.includes(2027) && body.includes(2026), 'tahun berdata tetap utuh');
+  assert.ok(body.includes(now), 'tahun berjalan selalu tersedia walau belum seed');
+  assert.ok(tx.calls[0].sql.includes('FROM pks_tahun'));
+  assert.equal(tx.calls[0].sql.includes('bapperida'), false, 'instansi tidak boleh dihardcode di SQL');
+});
+
+test('GET /pks-tree mengembalikan kegiatan & subkegiatan untuk tahun diminta', async () => {
+  const tx = stub({
+    rows: (sql) => {
+      if (sql.includes('FROM pks_kegiatan')) {
+        return [{ id: 'k1', kode: '5.01.01.2.09', nama: 'Keg. Pemeliharaan', program_kode: '5.01.01' }];
+      }
+      if (sql.includes('FROM pks_subkegiatan')) {
+        return [{ id: 's1', kegiatan_id: 'k1', kode: '5.01.01.2.09.0009', nama: 'Pemeliharaan Gedung Kantor' }];
+      }
+      return [];
+    },
+  });
+  const { status, body } = await call(app(tx, ADMIN), 'GET', '/api/simapo/pks-tree?tahun=2026');
+
+  assert.equal(status, 200);
+  assert.equal(body.tahun, 2026);
+  assert.equal(body.data.kegiatan[0].kode, '5.01.01.2.09');
+  assert.equal(body.data.subkegiatan[0].kegiatan_id, 'k1', 'sub kegiatan harus bisa difilter lewat kegiatan_id');
+  assert.deepEqual(tx.calls[0].params, [2026], 'tahun dikirim sebagai parameter, bukan literal');
+});
+
+test('GET /penerimaan-riwayat mengembalikan saran penyedia & kontrak instansi pemanggil', async () => {
+  const tx = stub({ rows: { penyedia: ['CV Sumber Karya', 'PT Maju'], kontrak: ['Swakelola', 'Langganan'] } });
+  const { status, body } = await call(app(tx, ADMIN), 'GET', '/api/simapo/penerimaan-riwayat');
+
+  assert.equal(status, 200);
+  assert.deepEqual(body.data.penyedia, ['CV Sumber Karya', 'PT Maju']);
+  assert.deepEqual(body.data.kontrak, ['Swakelola', 'Langganan']);
+  assert.ok(tx.calls[0].sql.includes('FROM "SIMAPO".penerimaan_barang'));
+  assert.ok(tx.calls[0].sql.includes('FROM "SIMAPO".pemeliharaan'), 'riwayat digabung dari kartu pemeliharaan');
+  assert.equal(tx.calls[0].params[0], 'bapperida', 'dibatasi instansi pemanggil');
 });
 
 // ── helper murni kategori & master ──
