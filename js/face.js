@@ -1752,11 +1752,25 @@
     }
 
     /* ── Helper UI ── */
+    function _toStitchCamIcon(raw) {
+      const s = String(raw || '');
+      if (s.includes('material-symbols-outlined')) return s;
+      if (s.includes('fa-camera')) return '<span class="material-symbols-outlined" style="font-size:19px">photo_camera</span>';
+      if (s.includes('fa-check')) return '<span class="material-symbols-outlined" style="font-size:19px">check_circle</span>';
+      if (s.includes('fa-times')) return '<span class="material-symbols-outlined" style="font-size:19px">cancel</span>';
+      if (s.includes('fa-shield')) return '<span class="material-symbols-outlined" style="font-size:19px">verified_user</span>';
+      if (s.includes('fa-search')) return '<span class="material-symbols-outlined" style="font-size:19px">center_focus_strong</span>';
+      if (s.includes('fa-hourglass')) return '<span class="material-symbols-outlined" style="font-size:19px">hourglass_top</span>';
+      if (s.includes('fa-bolt')) return '<span class="material-symbols-outlined" style="font-size:19px">bolt</span>';
+      if (s.includes('fa-meh')) return '<span class="material-symbols-outlined" style="font-size:19px">face</span>';
+      if (s.includes('fa-exclamation')) return '<span class="material-symbols-outlined" style="font-size:19px">warning</span>';
+      return s;
+    }
     function setCamStatus(type, icon, title, sub) {
       if (!_isLoopEnabled && type === 'ok' && icon !== '<i class="fas fa-camera"></i>' && icon !== '<i class="fas fa-check"></i>' && icon !== '<i class="fas fa-times"></i>') return;
       const el = $('camStatus'); if (!el) return;
       el.className = `cam-status ${type}`;
-      $('camStatusIcon').innerHTML = icon;
+      $('camStatusIcon').innerHTML = _toStitchCamIcon(icon);
       $('camStatusTitle').textContent = title;
       $('camStatusSub').textContent = sub;
     }

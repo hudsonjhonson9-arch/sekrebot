@@ -148,7 +148,7 @@
       bootstrapFromDatabase();
     });
 
-    /* â”€â”€ 1. BOOTSTRAP FROM POSTGRESQL DATABASE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── 1. BOOTSTRAP FROM POSTGRESQL DATABASE ────────────────────────── */
     async function bootstrapFromDatabase() {
       try {
         console.log('[Stitch DB] Fetching bootstrap data from PostgreSQL...');
@@ -251,7 +251,7 @@
           <div class="p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-between">
             <div>
               <h4 class="font-bold text-xs text-slate-800 dark:text-slate-200">${title}</h4>
-              <p class="text-[10px] text-slate-500 font-mono mt-0.5">${h.tanggal} â€¢ ${isCuti ? 'Cuti Bersama' : 'Libur Nasional'}</p>
+              <p class="text-[10px] text-slate-500 font-mono mt-0.5">${h.tanggal} • ${isCuti ? 'Cuti Bersama' : 'Libur Nasional'}</p>
             </div>
             <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${badgeColor}">${isCuti ? 'Cuti' : 'Libur'}</span>
           </div>
@@ -302,12 +302,13 @@
           window.MY_ID = String(data.user.id || '');
           window.userProfile = data.user;
           if (!window._faceRefCache) window._faceRefCache = {};
-          if (data.user.face_photo) {
-            let desc = data.user.face_histogram || null;
-            if (typeof desc === 'string') { try { desc = JSON.parse(desc); } catch (_) { desc = null; } }
+          let desc = data.user.face_histogram || null;
+          if (typeof desc === 'string') { try { desc = JSON.parse(desc); } catch (_) { desc = null; } }
+          const hasDesc = Array.isArray(desc) && desc.length >= 128;
+          if (data.user.face_photo || hasDesc) {
             window._faceRefCache[window.MY_ID] = {
-              dataUrl: data.user.face_photo,
-              descriptor: Array.isArray(desc) ? desc : null,
+              dataUrl: resolveBioImageSrc(data.user.face_photo) || 'enrolled',
+              descriptor: hasDesc ? desc : null,
               savedAt: data.user.face_saved_at || new Date().toISOString(),
               faceModel: data.user.face_model || 'human'
             };
@@ -339,7 +340,7 @@
       const mobileNameEl = document.getElementById('mobileUserName');
       if (mobileNameEl) mobileNameEl.textContent = u.nama;
       const mobileRoleEl = document.getElementById('mobileUserRole');
-      if (mobileRoleEl) mobileRoleEl.textContent = `${u.jabatan || 'Aparatur'} â€¢ ${u.bidang || 'BAPPERIDA'}`;
+      if (mobileRoleEl) mobileRoleEl.textContent = `${u.jabatan || 'Aparatur'} • ${u.bidang || 'BAPPERIDA'}`;
       const mobileBadgeEl = document.getElementById('mobileUserBadge');
       if (mobileBadgeEl) mobileBadgeEl.textContent = u.role || 'ASN';
       const dropdownNameEl = document.getElementById('dropdownUserName');
@@ -362,7 +363,7 @@
       const profilNipEl = document.getElementById('profilViewNip');
       if (profilNipEl) profilNipEl.textContent = 'NIP. ' + u.nip;
       const profilJabatanEl = document.getElementById('profilViewJabatan');
-      if (profilJabatanEl) profilJabatanEl.textContent = `${u.jabatan || 'Aparatur'} â€¢ ${u.bidang || 'BAPPERIDA'}`;
+      if (profilJabatanEl) profilJabatanEl.textContent = `${u.jabatan || 'Aparatur'} • ${u.bidang || 'BAPPERIDA'}`;
       const profilPangkatEl = document.getElementById('profilViewPangkat');
       if (profilPangkatEl) profilPangkatEl.textContent = u.pangkat || u.golongan || 'PNS / PPPK BAPPERIDA';
       
@@ -373,6 +374,20 @@
       renderCalendarStrip();
     }
 
+    function resolveBioImageSrc(raw) {
+      const s = String(raw ?? '').trim();
+      if (!s || s === 'null' || s === 'undefined') return '';
+      if (s.startsWith('data:image')) return s;
+      // Ekstrak fileId dari URL Google Drive (/file/d/<id> atau ?id=<id>) -> arahkan ke proxy internal /api/media/raw/<id>
+      const m = s.match(/\/file\/d\/([-\w]{5,200})/) || s.match(/[?&]id=([-\w]{5,200})/);
+      if (m && m[1]) {
+        return '/api/media/raw/' + encodeURIComponent(m[1]);
+      }
+      if (s.startsWith('/') || s.startsWith('http://') || s.startsWith('https://')) return s;
+      return '';
+    }
+    window.resolveBioImageSrc = resolveBioImageSrc;
+
     function updateBiometricAndSigUI() {
       const u = state.currentUser;
       if (!u) return;
@@ -381,24 +396,68 @@
       const faceStatus = document.getElementById('profilFaceStatusText');
       const faceBtnLbl = document.getElementById('btnEnrollFaceLabel');
       const avatarBox = document.getElementById('profilViewAvatar');
-      const initialsEl = document.getElementById('profilViewInitials');
 
-      if (u.face_photo) {
-        if (faceImg) { faceImg.src = u.face_photo; faceImg.classList.remove('hidden'); }
-        if (faceIcon) faceIcon.classList.add('hidden');
-        if (faceStatus) { faceStatus.textContent = 'Terdaftar (Human AI)'; faceStatus.className = 'text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold truncate'; }
+      const parts = (u.nama || 'ASN').trim().split(/\s+/);
+      const ini = (parts.length > 1 ? (parts[0][0] + parts[1][0]) : (parts[0][0] || 'A')).toUpperCase();
+
+      let hasDescriptor = false;
+      try {
+        const hist = typeof u.face_histogram === 'string' ? JSON.parse(u.face_histogram) : u.face_histogram;
+        hasDescriptor = Array.isArray(hist) && hist.length >= 128;
+      } catch (_) {}
+
+      const faceSrc = resolveBioImageSrc(u.face_photo);
+      const hasFace = Boolean(faceSrc || hasDescriptor);
+
+      if (hasFace) {
+        if (faceStatus) {
+          faceStatus.textContent = 'Terdaftar (AI)';
+          faceStatus.className = 'text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold truncate';
+        }
         if (faceBtnLbl) faceBtnLbl.textContent = 'Perbarui';
-        if (avatarBox && u.face_photo.startsWith('data:image')) {
-          avatarBox.innerHTML = `<img src="${u.face_photo}" class="w-full h-full object-cover" alt="${u.nama}" />`;
+
+        if (faceImg && faceSrc) {
+          faceImg.onload = () => {
+            faceImg.classList.remove('hidden');
+            if (faceIcon) faceIcon.classList.add('hidden');
+          };
+          faceImg.onerror = () => {
+            faceImg.classList.add('hidden');
+            faceImg.removeAttribute('src');
+            if (faceIcon) faceIcon.classList.remove('hidden');
+          };
+          faceImg.src = faceSrc;
+        } else {
+          if (faceImg) { faceImg.classList.add('hidden'); faceImg.removeAttribute('src'); }
+          if (faceIcon) faceIcon.classList.remove('hidden');
+        }
+
+        if (avatarBox) {
+          if (faceSrc) {
+            const avImg = document.createElement('img');
+            avImg.className = 'w-full h-full object-cover';
+            avImg.alt = u.nama || 'Avatar';
+            avImg.onload = () => {
+              avatarBox.innerHTML = '';
+              avatarBox.appendChild(avImg);
+            };
+            avImg.onerror = () => {
+              avatarBox.innerHTML = `<span id="profilViewInitials">${ini}</span>`;
+            };
+            avImg.src = faceSrc;
+          } else if (!document.getElementById('profilViewInitials')) {
+            avatarBox.innerHTML = `<span id="profilViewInitials">${ini}</span>`;
+          }
         }
       } else {
-        if (faceImg) faceImg.classList.add('hidden');
+        if (faceImg) { faceImg.classList.add('hidden'); faceImg.removeAttribute('src'); }
         if (faceIcon) faceIcon.classList.remove('hidden');
-        if (faceStatus) { faceStatus.textContent = 'Belum terdaftar'; faceStatus.className = 'text-[10px] text-slate-400 truncate'; }
+        if (faceStatus) {
+          faceStatus.textContent = 'Belum terdaftar';
+          faceStatus.className = 'text-[10px] text-slate-400 truncate';
+        }
         if (faceBtnLbl) faceBtnLbl.textContent = 'Daftarkan';
-        if (avatarBox && !initialsEl) {
-          const parts = (u.nama || 'ASN').trim().split(/\s+/);
-          const ini = (parts.length > 1 ? (parts[0][0] + parts[1][0]) : (parts[0][0] || 'A')).toUpperCase();
+        if (avatarBox) {
           avatarBox.innerHTML = `<span id="profilViewInitials">${ini}</span>`;
         }
       }
@@ -407,16 +466,38 @@
       const sigIcon = document.getElementById('profilSigIcon');
       const sigStatus = document.getElementById('profilSigStatusText');
       const sigBtnLbl = document.getElementById('btnEnrollSigLabel');
-      const sigData = u.signature || localStorage.getItem('sig_' + u.nip) || null;
-      if (sigData) {
-        if (sigImg) { sigImg.src = sigData; sigImg.classList.remove('hidden'); }
-        if (sigIcon) sigIcon.classList.add('hidden');
-        if (sigStatus) { sigStatus.textContent = 'Tersimpan di DB'; sigStatus.className = 'text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold truncate'; }
+      const rawSig = u.signature || localStorage.getItem('sig_' + u.nip) || null;
+      const sigSrc = resolveBioImageSrc(rawSig);
+
+      if (rawSig) {
+        if (sigStatus) {
+          sigStatus.textContent = 'Tersimpan di DB';
+          sigStatus.className = 'text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold truncate';
+        }
         if (sigBtnLbl) sigBtnLbl.textContent = 'Perbarui';
+
+        if (sigImg && sigSrc) {
+          sigImg.onload = () => {
+            sigImg.classList.remove('hidden');
+            if (sigIcon) sigIcon.classList.add('hidden');
+          };
+          sigImg.onerror = () => {
+            sigImg.classList.add('hidden');
+            sigImg.removeAttribute('src');
+            if (sigIcon) sigIcon.classList.remove('hidden');
+          };
+          sigImg.src = sigSrc;
+        } else {
+          if (sigImg) { sigImg.classList.add('hidden'); sigImg.removeAttribute('src'); }
+          if (sigIcon) sigIcon.classList.remove('hidden');
+        }
       } else {
-        if (sigImg) sigImg.classList.add('hidden');
+        if (sigImg) { sigImg.classList.add('hidden'); sigImg.removeAttribute('src'); }
         if (sigIcon) sigIcon.classList.remove('hidden');
-        if (sigStatus) { sigStatus.textContent = 'Belum ada'; sigStatus.className = 'text-[10px] text-slate-400 truncate'; }
+        if (sigStatus) {
+          sigStatus.textContent = 'Belum ada';
+          sigStatus.className = 'text-[10px] text-slate-400 truncate';
+        }
         if (sigBtnLbl) sigBtnLbl.textContent = 'Buat TTD';
       }
     }
@@ -532,7 +613,7 @@
             </div>
             <div class="flex-1 min-w-0">
               <p class="text-xs font-bold text-slate-900 dark:text-white truncate">${l.Nama}</p>
-              <p class="text-[11px] text-slate-400 font-mono">${l.Tanggal} â€¢ ${l.Jam} WITA</p>
+              <p class="text-[11px] text-slate-400 font-mono">${l.Tanggal} • ${l.Jam} WITA</p>
             </div>
             <span class="text-[10px] ${color} px-2 py-0.5 rounded-full font-bold">${l['Jenis Absen']}</span>
           </div>
@@ -570,7 +651,7 @@
         return 'Tercatat Jam Kerja';
       }
     }
-    /* â”€â”€ DYNAMIC ISLAND NOTIFICATION CONTROLLER (IPHONE STYLE) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── DYNAMIC ISLAND NOTIFICATION CONTROLLER (IPHONE STYLE) ────────── */
     let islandTimer = null;
 
     function showDynamicIsland(options = {}) {
@@ -653,7 +734,7 @@
       showDynamicIsland({ title: msg, type });
     };
 
-    /* â”€â”€ 2. REALTIME CLOCK WITA (UTC+8) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── 2. REALTIME CLOCK WITA (UTC+8) ────────────────────────────── */
     function initClock() {
       function update() {
         const now = new Date();
@@ -689,7 +770,7 @@
       update();
     }
 
-    /* â”€â”€ 3. VIEW SWITCHER (PERSISTENT ACROSS REFRESH) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── 3. VIEW SWITCHER (PERSISTENT ACROSS REFRESH) ────────────────── */
     function switchMainView(viewName, updateHash = true) {
       const target = (viewName === 'riwayat') ? 'riwayat-full' : (viewName === 'profile' || viewName === 'jadwal') ? 'profil' : viewName;
       const views = ['presensi', 'riwayat-full', 'arsip', 'aset', 'profil', 'kiosk', 'admin', 'sppd', 'tpp'];
@@ -790,7 +871,7 @@
       }
     }
 
-    /* â”€â”€ 6. KIOSK LOBBY SCANNER (POSTGRESQL INSERTION) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── 6. KIOSK LOBBY SCANNER (POSTGRESQL INSERTION) ───────────────── */
     let kioskStream = null;
     function startKioskCamera() {
       const video = document.getElementById('kioskWebcam');
@@ -889,7 +970,7 @@
       }
     }
 
-    /* â”€â”€ 7. CETAK TPP (CALCULATED FROM POSTGRESQL) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── 7. CETAK TPP (CALCULATED FROM POSTGRESQL) ──────────────────── */
     let _lastTppPayload = null;
     async function loadTppData() {
       const tbody = document.getElementById('tppTableBody');
@@ -1028,7 +1109,7 @@
       });
     }
 
-    /* â”€â”€ 8. ADMIN LOKASI SETTINGS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── 8. ADMIN LOKASI SETTINGS ────────────────────────────────────── */
     function onAdminLocationChange() {
       const sel = document.getElementById('adminLocationSelect');
       const loc = state.locations.find(l => String(l.id) === sel.value);
@@ -1099,7 +1180,7 @@
       `).join('');
     }
 
-    /* â”€â”€ 9. UTILITIES & THEME â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── 9. UTILITIES & THEME ────────────────────────────────────────── */
     function toggleUserDropdown() {
       const dd = document.getElementById('userDropdown');
       dd.classList.toggle('hidden');
@@ -1177,7 +1258,7 @@
           showDynamicIsland({
             type: isInside ? 'success' : 'warning',
             title: isInside ? 'GPS Terverifikasi Valid' : 'Di Luar Radius Kantor',
-            message: `Akurasi Â±${accuracy}m â€¢ Jarak ${distMeters}m dari Kantor BAPPERIDA`
+            message: `Akurasi ±${accuracy}m • Jarak ${distMeters}m dari Kantor BAPPERIDA`
           });
         },
         (err) => {
@@ -1199,7 +1280,7 @@
       );
     }
 
-    /* â”€â”€ 8. ADMIN MONITORING & APPROVAL (POSTGRESQL TABLES) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── 8. ADMIN MONITORING & APPROVAL (POSTGRESQL TABLES) ─────────── */
     // Logika admin dipindah ke js/admin-core.js (dipakai bersama admin.html).
     // Di layar lebar (desktop) halaman ini mengalihkan ke admin.html.
     function loadAdminMonitoringData() {

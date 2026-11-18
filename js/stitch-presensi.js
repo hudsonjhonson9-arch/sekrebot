@@ -1,5 +1,5 @@
 /* Stitch Presensi: 1-Tombol Masuk/Pulang/Lapangan, Anti-Spoofing GPS v3, Kalender & E-Slip */
-    /* â”€â”€ 4. CLOCK IN / OUT WITH REAL POSTGRESQL INSERTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── 4. CLOCK IN / OUT WITH REAL POSTGRESQL INSERTION ────────────── */
     let _lastStitchAbsenClick = 0;
 
     function startClockInFlow() {
@@ -19,7 +19,7 @@
         Swal.fire('Selesai', 'Anda sudah menyelesaikan absensi masuk dan pulang hari ini di database.', 'info');
         return;
       }
-      // Verifikasi wajah AI (Human.js, dari absensi) bila diaktifkan admin & wajah sudah terdaftar.
+      // Verifikasi wajah AI (Human.js) dengan tampilan kamera asli absensi-STICH (Screen 19).
       try {
         if (state.currentUser && !window.MY_ID) window.MY_ID = String(state.currentUser.id || '');
         const myNip = String(state.currentUser?.nip || '').trim();
@@ -27,8 +27,9 @@
         const isMandatory = mandNips.includes(myNip);
         const faceOn = (typeof FACE_RECOGNITION_ENABLED !== 'undefined' && FACE_RECOGNITION_ENABLED) || isMandatory;
         const ref = typeof getFaceRef === 'function' ? getFaceRef() : null;
-        if (faceOn && navigator.onLine && typeof openCamOverlay === 'function') {
-          if (!ref || !ref.dataUrl) {
+        const hasRef = Boolean(ref && (ref.dataUrl || (Array.isArray(ref.descriptor) && ref.descriptor.length >= 128)));
+        if (typeof openCamOverlay === 'function') {
+          if (faceOn && !hasRef) {
             Swal.fire({
               title: 'Wajah Belum Didaftarkan',
               text: 'Daftarkan wajah Anda terlebih dahulu untuk verifikasi biometrik AI.',
@@ -471,7 +472,7 @@
       }
     }
 
-    /* â”€â”€ 4B. DIRECT MONTH & YEAR PICKER LOGIC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── 4B. DIRECT MONTH & YEAR PICKER LOGIC ────────────────────────── */
     let pickerSelectedYear = new Date().getFullYear();
     let pickerSelectedMonth = new Date().getMonth(); // 0-11
 
@@ -580,7 +581,7 @@
       }
     }
 
-    /* â”€â”€ 4C. INTERACTIVE CALENDAR WEEK STRIP & DAILY DETAIL â”€â”€ */
+    /* ── 4C. INTERACTIVE CALENDAR WEEK STRIP & DAILY DETAIL ── */
     let selectedStripDate = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
     let stripMode = 'week';
 
@@ -805,7 +806,7 @@
           <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <div class="flex items-center gap-2">
               <span class="material-symbols-outlined text-[18px] text-amber-500">weekend</span>
-              <span>${formattedDate} â€¢ <strong>Akhir Pekan (Hari Libur)</strong></span>
+              <span>${formattedDate} • <strong>Akhir Pekan (Hari Libur)</strong></span>
             </div>
             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">Libur</span>
           </div>
@@ -815,7 +816,7 @@
           <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <div class="flex items-center gap-2">
               <span class="material-symbols-outlined text-[18px] text-slate-400">event_busy</span>
-              <span>${formattedDate} â€¢ <strong>Belum ada catatan presensi</strong></span>
+              <span>${formattedDate} • <strong>Belum ada catatan presensi</strong></span>
             </div>
             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">Nir-Absen</span>
           </div>
@@ -956,7 +957,7 @@
               </div>
               <div class="overflow-hidden">
                 <p class="text-xs font-bold text-slate-900 dark:text-white truncate">${formatted}</p>
-                <p class="text-[10px] text-slate-400 truncate">${jamStr} â€¢ ${lokasiStr}</p>
+                <p class="text-[10px] text-slate-400 truncate">${jamStr} • ${lokasiStr}</p>
               </div>
             </div>
             ${badge}
@@ -986,7 +987,7 @@
       setStripMode('month');
     }
 
-    /* â”€â”€ 5. E-SLIP OFFICIAL RECEIPT (SCREEN 11) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── 5. E-SLIP OFFICIAL RECEIPT (SCREEN 11) ─────────────────────── */
     function showESlipModal() {
       if (!state.currentUser) return;
       const modal = document.getElementById('eSlipModal');
@@ -1060,7 +1061,7 @@
       doc.setFontSize(8);
       doc.text('Jalan Weekarou No. 12, Waikabubak, Nusa Tenggara Timur - Kode Pos: 87211', 112, 32, { align: 'center' });
       doc.setFontSize(7.5);
-      doc.text('Laman: bapperida.sumbabaratkab.go.id â€¢ Pos-el: info@bapperida.sumbabaratkab.go.id', 112, 36, { align: 'center' });
+      doc.text('Laman: bapperida.sumbabaratkab.go.id • Pos-el: info@bapperida.sumbabaratkab.go.id', 112, 36, { align: 'center' });
 
       // 3. Official Double Divider Line (Garis Ganda Kop Surat)
       doc.setLineWidth(0.8);

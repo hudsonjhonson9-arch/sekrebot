@@ -1,7 +1,7 @@
 /* Stitch Mobile Aset SIMAPO, QR Scanner & Bank Arsip Digital */
-    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ───────────────────────────────────────────────────────────────── */
     /* 11. MOBILE REAL ASET & ARSIP DATA (POSTGRESQL & SIMAPO)          */
-    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ───────────────────────────────────────────────────────────────── */
     let _mobilePersonalAssets = [];
     let _mobileKatalogAssets = [];
     let _selectedAsetId = null;
@@ -124,7 +124,7 @@
                 <h4 class="text-xs font-bold text-slate-900 dark:text-white truncate">${item.nama_barang} ${item.merk_type ? '(' + item.merk_type + ')' : ''}</h4>
                 <div class="flex items-center gap-2 mt-0.5 text-[10px] font-mono">
                   <span class="text-slate-400 font-semibold truncate">${subIdentifier}</span>
-                  <span class="text-slate-300 dark:text-slate-600">â€¢</span>
+                  <span class="text-slate-300 dark:text-slate-600">•</span>
                   <span class="font-bold ${pemegangColor}">${pemegangTag}</span>
                 </div>
               </div>
@@ -155,7 +155,7 @@
       if (titleEl) titleEl.textContent = item.nama_barang;
 
       const subEl = document.getElementById('madSubTitle');
-      if (subEl) subEl.textContent = `SIMAPO â€¢ ${item.kodebarang || '-'}`;
+      if (subEl) subEl.textContent = `SIMAPO • ${item.kodebarang || '-'}`;
 
       const pemegangEl = document.getElementById('madStatusPemegang');
       if (pemegangEl) pemegangEl.textContent = item.status_pemegang || 'Aset Inventaris BAPPERIDA';
@@ -180,7 +180,7 @@
       if (kdEl) kdEl.textContent = item.kodebarang || '-';
 
       const merkEl = document.getElementById('madMerkType');
-      if (merkEl) merkEl.textContent = [item.merk_type, item.spesifikasi].filter(Boolean).join(' â€¢ ') || '-';
+      if (merkEl) merkEl.textContent = [item.merk_type, item.spesifikasi].filter(Boolean).join(' • ') || '-';
 
       const nopolRow = document.getElementById('madNoPolisiRow');
       const nopolEl = document.getElementById('madNoPolisi');
@@ -198,7 +198,7 @@
       if (tahunNilaiEl) {
         const thn = item.tahunperolehan ? `Tahun ${item.tahunperolehan}` : '';
         const nilai = item.nilaiperolehan ? formatRupiah(item.nilaiperolehan) : '';
-        tahunNilaiEl.textContent = [thn, nilai].filter(Boolean).join(' â€¢ ') || '-';
+        tahunNilaiEl.textContent = [thn, nilai].filter(Boolean).join(' • ') || '-';
       }
 
       const kodeAsetEl = document.getElementById('madKodeAset');
@@ -462,9 +462,9 @@
       }
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═══════════════════════════════════════════════════════════════════
     // LIVE CAMERA QR & BARCODE SCANNER (SIMAPO ASET BAPPERIDA)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═══════════════════════════════════════════════════════════════════
     let _scannerStream = null;
     let _scannerActive = false;
     let _scannerFacingMode = 'environment';
@@ -978,7 +978,7 @@
           iconBg = 'bg-purple-50 text-purple-600 dark:bg-slate-800';
         }
 
-        const subInfo = [doc.type || 'Umum', doc.fileType || 'PDF', doc.size || '1.2 MB'].filter(Boolean).join(' â€¢ ');
+        const subInfo = [doc.type || 'Umum', doc.fileType || 'PDF', doc.size || '1.2 MB'].filter(Boolean).join(' • ');
 
         return `
           <div onclick="openMobileArsipDetail(${doc.id})" class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between hover:border-blue-400 transition-all cursor-pointer group">
@@ -990,7 +990,7 @@
                 <h4 class="text-xs font-bold text-slate-900 dark:text-white truncate">${doc.title}</h4>
                 <div class="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400 font-mono truncate">
                   <span>${doc.nomorDokumen || doc.type || 'BAPPERIDA'}</span>
-                  <span>â€¢</span>
+                  <span>•</span>
                   <span>${subInfo}</span>
                 </div>
               </div>

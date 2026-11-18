@@ -390,9 +390,9 @@
 <button type="button" onclick="AdminCore.refresh()" class="p-2 bg-surface-container hover:bg-surface-container-high rounded-xl text-primary text-xs font-bold"><span class="material-symbols-outlined text-[18px]">refresh</span></button>
 </div>
 </div>
-<div class="overflow-x-auto max-h-96 w-full">
-<table class="w-full text-left text-xs">
-<thead class="bg-surface-container-low text-on-surface-variant uppercase tracking-wider font-bold sticky top-0 z-10">
+<div class="overflow-x-hidden md:overflow-x-auto max-h-96 w-full">
+<table class="w-full table-fixed md:table-auto text-left text-xs">
+<thead class="hidden md:table-header-group bg-surface-container-low text-on-surface-variant uppercase tracking-wider font-bold sticky top-0 z-10">
 <tr><th class="p-3">Pegawai</th><th class="p-3">Bidang / Jabatan</th><th class="p-3">Jam Masuk</th><th class="p-3">Jam Pulang</th><th class="p-3">Lokasi</th><th class="p-3">Status</th></tr>
 </thead>
 <tbody id="adminMonitoringTableBody" class="divide-y divide-slate-100">
@@ -417,9 +417,9 @@
 </div>
 </div>
 <!-- Table Container -->
-<div class="overflow-x-auto w-full">
-<table class="w-full text-left">
-<thead>
+<div class="overflow-x-hidden md:overflow-x-auto w-full">
+<table class="w-full table-fixed md:table-auto text-left">
+<thead class="hidden md:table-header-group">
 <tr class="bg-surface-container-low text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">
 <th class="py-2.5 px-space-md rounded-l-lg">Pegawai &amp; NIP</th>
 <th class="py-2.5 px-space-md">Jenis Keterangan</th>

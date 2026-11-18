@@ -1,5 +1,5 @@
 /* Stitch Layanan Kedinasan: SPPD, KIR Pemeliharaan & Drawer Pengajuan Izin/Notifikasi */
-    /* â”€â”€ 9. SPPD & PERJALANAN DINAS (agenda_sppd) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── 9. SPPD & PERJALANAN DINAS (agenda_sppd) ────────────────────── */
     async function loadSppdData() {
       const tbody = document.getElementById('sppdTableBody');
       try {
@@ -73,7 +73,7 @@
       Swal.fire('Unduh Dokumen', `Template resmi SPPD & SPT Nomor ${no} siap diunduh (terintegrasi template BAPPERIDA).`, 'success');
     }
 
-    /* â”€â”€ 9B. ASET KIR & KARTU PEMELIHARAAN (SIMAPO) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── 9B. ASET KIR & KARTU PEMELIHARAAN (SIMAPO) ──────────────────── */
     let _allKirBarang = [];
     let _allKirPemeliharaan = [];
 
@@ -88,7 +88,7 @@
           sel.innerHTML = `
             <option value="">-- Pilih Aset / Barang (Total: ${_allKirBarang.length} Unit) --</option>
             ${_allKirBarang.map(b => `
-              <option value="${b.id}">[${b.kodebarang || '-'}] ${b.nama_barang} â€¢ Inv: ${b.nomorinventaris || '-'} (${b.nama_ruangan || 'BAPPERIDA'})</option>
+              <option value="${b.id}">[${b.kodebarang || '-'}] ${b.nama_barang} • Inv: ${b.nomorinventaris || '-'} (${b.nama_ruangan || 'BAPPERIDA'})</option>
             `).join('')}
           `;
           if (_allKirBarang.length > 0 && !sel.value) {
@@ -330,7 +330,7 @@
           <div class="text-left text-xs space-y-2 p-2">
             <div class="border-b pb-2 text-center">
               <p class="font-bold">KARTU PEMELIHARAAN BARANG MILIK DAERAH</p>
-              <p class="text-[10px] text-slate-400">Lampiran Permendagri No. 47 Tahun 2021 â€¢ BAPPERIDA Sumba Barat</p>
+              <p class="text-[10px] text-slate-400">Lampiran Permendagri No. 47 Tahun 2021 • BAPPERIDA Sumba Barat</p>
             </div>
             <div class="grid grid-cols-2 gap-2 text-[11px]">
               <div><strong>Nama Barang:</strong> ${b.nama_barang}</div>
@@ -402,7 +402,7 @@
       Swal.fire('Berhasil Mengunduh', 'File spreadsheet riwayat pemeliharaan siap dibuka di Microsoft Excel.', 'success');
     }
 
-    /* â”€â”€ 10. MODAL DRAWER & DIALOGS WITH REAL DATA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── 10. MODAL DRAWER & DIALOGS WITH REAL DATA ───────────────────── */
     let drawerStartDate = '';
     let drawerEndDate = '';
     let drawerCalViewMonth = 10; // November (0-based)
@@ -492,7 +492,7 @@
           if (drawerStartDate === drawerEndDate) {
             disp.textContent = `${sD} ${sM} ${sY}`;
           } else {
-            disp.textContent = `${sD} ${sM} â€” ${eD} ${eM} ${eY}`;
+            disp.textContent = `${sD} ${sM} — ${eD} ${eM} ${eY}`;
           }
         }
 
@@ -705,7 +705,7 @@
       if (card) card.classList.remove('hidden');
       if (btnGroup) btnGroup.classList.add('hidden');
       if (nameEl) nameEl.textContent = keteranganBuktiFile.name;
-      if (sizeEl) sizeEl.textContent = `${keteranganBuktiFile.sizeStr} â€¢ Siap Kirim`;
+      if (sizeEl) sizeEl.textContent = `${keteranganBuktiFile.sizeStr} • Siap Kirim`;
 
       if (keteranganBuktiFile.isImage) {
         if (imgPrev) {

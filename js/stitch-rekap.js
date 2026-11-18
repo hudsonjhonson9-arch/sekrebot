@@ -174,12 +174,12 @@
         const masukJam = day.masuk ? day.masuk.Jam : '--:--';
         const masukLoc = day.masuk ? (day.masuk.Lokasi || 'Kantor BAPPERIDA') : 'Belum Absen';
         const isLate = day.masuk && (String(day.masuk['Jenis Absen']).includes('TERLAMBAT') || String(day.masuk.Ket || '').toLowerCase().includes('terlambat'));
-        const masukBadge = day.masuk ? (isLate ? 'Terlambat' : 'Tepat Waktu') : 'â€”';
+        const masukBadge = day.masuk ? (isLate ? 'Terlambat' : 'Tepat Waktu') : '—';
         const masukBadgeClass = isLate ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-emerald-600 dark:text-emerald-400 font-bold';
 
         const pulangJam = day.pulang ? day.pulang.Jam : '--:--';
         const pulangLoc = day.pulang ? (day.pulang.Lokasi || 'Meja Absen') : (day.masuk ? 'Menunggu Pulang' : 'Belum Tercatat');
-        const pulangBadge = day.pulang ? 'Tercatat' : 'â€”';
+        const pulangBadge = day.pulang ? 'Tercatat' : '—';
 
         return `
           <div class="w-full rounded-2xl bg-white dark:bg-slate-900 p-4 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col gap-3 transition-all hover:border-blue-200 dark:hover:border-blue-900">
@@ -290,7 +290,12 @@
       if (!sig || sig.length < 10) return null;
       if (sig.startsWith('data:image')) return sig;
       try {
-        const blob = await (await fetch(sig)).blob();
+        const url = typeof window.resolveBioImageSrc === 'function' ? window.resolveBioImageSrc(sig) : sig;
+        if (!url) return null;
+        const res = await fetch(url, { credentials: 'include' });
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        if (!blob || !String(blob.type || '').startsWith('image/')) return null;
         return await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.onerror = () => r(null); f.readAsDataURL(blob); });
       } catch (_) { return null; }
     }

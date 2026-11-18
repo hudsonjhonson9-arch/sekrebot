@@ -7,6 +7,10 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const configSrc = fs.readFileSync(path.join(ROOT, 'js/config.js'), 'utf8');
 const authSrc = fs.readFileSync(path.join(ROOT, 'js/auth.js'), 'utf8');
 const indexHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const stitchAppSrc = fs.existsSync(path.join(ROOT, 'js/stitch-app.js'))
+  ? fs.readFileSync(path.join(ROOT, 'js/stitch-app.js'), 'utf8')
+  : '';
+const indexAndApp = indexHtml + '\n' + stitchAppSrc;
 const loginHtml = fs.readFileSync(path.join(ROOT, 'login.html'), 'utf8');
 
 function setupEnv(initialStorage = {}) {
@@ -62,11 +66,11 @@ test('Verification: getNativeToken retrieves from _sess_token fallback if native
 });
 
 test('Verification: index.html contains immediate checkAuthStatus on DOMContentLoaded', () => {
-  assert.match(indexHtml, /function\s+checkAuthStatus\s*\(/, 'index.html must define checkAuthStatus');
-  assert.match(indexHtml, /checkAuthStatus\(\);/, 'index.html must invoke checkAuthStatus immediately on DOM ready');
+  assert.match(indexAndApp, /function\s+checkAuthStatus\s*\(/, 'index.html / js/stitch-app.js must define checkAuthStatus');
+  assert.match(indexAndApp, /checkAuthStatus\(\);/, 'index.html / js/stitch-app.js must invoke checkAuthStatus immediately on DOM ready');
   assert.match(indexHtml, /id="authOverlay"/, 'index.html must contain authOverlay element');
   assert.match(indexHtml, /handleAuthAction\('login'\)/, 'index.html must connect to handleAuthAction login');
-  assert.match(indexHtml, /window\.logoutUser\s*=/, 'index.html must provide logoutUser function');
+  assert.match(indexAndApp, /window\.logoutUser\s*=/, 'index.html / js/stitch-app.js must provide logoutUser function');
 });
 
 test('Verification: login.html auto-redirect and auth logic uses getNativeToken', () => {

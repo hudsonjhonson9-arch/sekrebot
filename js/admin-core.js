@@ -130,17 +130,17 @@
     const bukti = link
       ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline text-[11px]">Lampiran bukti</a>`
       : '<span class="text-slate-400 text-[11px]">Tanpa lampiran</span>';
-    const badge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${KET_BADGE[k.status] || KET_BADGE.PENDING}">${esc(k.status)}</span>`;
+    const badge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 whitespace-nowrap ${KET_BADGE[k.status] || KET_BADGE.PENDING}">${esc(k.status)}</span>`;
 
     if (!isWide) {
-      return `<tr><td colspan="6" class="p-3"><div class="rounded-2xl border border-slate-200 dark:border-slate-700 p-3 flex flex-col gap-2">
+      return `<tr><td colspan="6" class="py-2 px-0"><div class="w-full max-w-full overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 p-3 flex flex-col gap-2">
         <div class="flex items-start justify-between gap-2">
-          <div class="min-w-0"><p class="font-bold text-sm truncate">${esc(k.nama)}</p><p class="text-[10px] text-slate-400 font-mono">${esc(k.nip)}</p></div>
+          <div class="min-w-0 flex-1"><p class="font-bold text-sm truncate">${esc(k.nama)}</p><p class="text-[10px] text-slate-400 font-mono truncate">${esc(k.nip)}</p></div>
           ${badge}
         </div>
-        <div class="text-[11px]"><span class="font-bold text-blue-600">${esc(String(k.jenis || '').toUpperCase())}</span> • <span class="font-mono">${rentang}</span></div>
-        <p class="text-[12px] text-slate-600 dark:text-slate-300">${esc(k.keterangan || '-')}</p>
-        <div class="flex items-center justify-between gap-2">${bukti}${ketActions(k)}</div>
+        <div class="text-[11px] break-words"><span class="font-bold text-blue-600">${esc(String(k.jenis || '').toUpperCase())}</span> • <span class="font-mono">${rentang}</span></div>
+        <p class="text-[12px] text-slate-600 dark:text-slate-300 break-words">${esc(k.keterangan || '-')}</p>
+        <div class="flex flex-wrap items-center justify-between gap-2">${bukti}${ketActions(k)}</div>
       </div></td></tr>`;
     }
     return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100">
@@ -154,13 +154,13 @@
   }
 
   function monRow(u, isWide) {
-    const badge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${esc(u.statusBadge)}">${esc(u.statusText)}</span>`;
+    const badge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 whitespace-nowrap ${esc(u.statusBadge)}">${esc(u.statusText)}</span>`;
     if (!isWide) {
-      return `<tr><td colspan="6" class="p-3"><div class="rounded-2xl border border-slate-200 dark:border-slate-700 p-3 flex items-center gap-3">
+      return `<tr><td colspan="6" class="py-2 px-0"><div class="w-full max-w-full overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 p-3 flex items-center gap-3">
         ${avatar(u)}
         <div class="min-w-0 flex-1"><p class="font-bold text-sm truncate">${esc(u.nama)}</p>
           <p class="text-[10px] text-slate-400 truncate">${esc(u.bidang || 'BAPPERIDA')} • ${esc(u.jabatan || 'Aparatur')}</p>
-          <p class="text-[11px] font-mono mt-0.5">${esc(u.jamMasuk)} – ${esc(u.jamPulang)} • ${esc(u.lokasi)}</p></div>
+          <p class="text-[11px] font-mono mt-0.5 break-words">${esc(u.jamMasuk)} – ${esc(u.jamPulang)} • ${esc(u.lokasi)}</p></div>
         ${badge}
       </div></td></tr>`;
     }
@@ -177,9 +177,17 @@
   /* ── data & aksi ──────────────────────────────────────────────────── */
   const cache = { ket: null, mon: null };
 
+  function syncTableHead(tbody, isWide) {
+    const table = tbody && tbody.closest && tbody.closest('table');
+    const thead = table && table.querySelector('thead');
+    if (thead) thead.style.display = isWide ? '' : 'none';
+  }
+
   function renderKeterangan() {
     const tbody = el('adminKeteranganTableBody');
     if (!tbody || !cache.ket) return;
+    const isWide = wide();
+    syncTableHead(tbody, isWide);
     const items = cache.ket;
     const pill = el('adminPendingCount');
     if (pill) pill.textContent = `Semua (${items.length}) • Pending (${items.filter((k) => k.status === STATUS.PENDING).length})`;
@@ -187,19 +195,19 @@
       tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-slate-400">Tidak ada pengajuan keterangan.</td></tr>';
       return;
     }
-    const isWide = wide();
     tbody.innerHTML = items.slice(0, 50).map((k) => ketRow(k, isWide)).join('');
   }
 
   function renderMonitoring() {
     const tbody = el('adminMonitoringTableBody');
     if (!tbody || !cache.mon) return;
+    const isWide = wide();
+    syncTableHead(tbody, isWide);
     const { summary: s, data } = cache.mon;
     const set = (id, txt) => { const e = el(id); if (e) e.textContent = txt; };
     set('monBadgeHadir', `Hadir: ${s.hadir}`);
     set('monBadgeIzin', `Izin/Cuti: ${s.izin}`);
     set('monBadgeBelum', `Belum: ${s.belum}`);
-    const isWide = wide();
     tbody.innerHTML = data.map((u) => monRow(u, isWide)).join('')
       || '<tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada data pegawai.</td></tr>';
   }
