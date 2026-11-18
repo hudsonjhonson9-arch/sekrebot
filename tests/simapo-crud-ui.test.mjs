@@ -63,3 +63,23 @@ test('mode edit memakai endpoint update dan me-reset mode setelah simpan/tutup',
   assert.ok(ext.includes('window._penerimaanEditId'), 'id nota yang diedit harus disimpan');
   assert.ok(ext.includes('window._pemeliharaanEditId'), 'id baris yang diedit harus disimpan');
 });
+
+test('daftar nota penerimaan tampil (permukaan Ubah/Hapus) di kartu Laporan Pengadaan', () => {
+  // display:none membuat tombol Ubah/Hapus mustahil ditemukan: layar penerimaan
+  // tidak pernah menyalakan div ini, sehingga CRUD terasa "belum bisa".
+  const baris = (indexHtml.match(/<div id="adminPenerimaanList"[^>]*>/) || [])[0];
+  assert.ok(baris, 'index.html harus memuat <div id="adminPenerimaanList">');
+  assert.doesNotMatch(baris, /display:\s*none/, 'daftar nota tidak boleh tersembunyi');
+  assert.match(baris, /display:\s*block/, 'daftar nota harus tampil');
+  assert.match(indexHtml, /Daftar Nota Penerimaan — Ubah \/ Hapus/, 'butuh judul penanda permukaan CRUD');
+});
+
+test('tombol Ubah/Hapus hanya dirender untuk role berhak (SUPERADMIN/ADMIN/BENDAHARA BARANG)', () => {
+  assert.ok(ext.includes('window.simapoBolehUbah = function'), 'helper hak ubah harus ada');
+  for (const role of ['superadmin', 'admin', 'bendaharabarang']) {
+    assert.ok(ext.includes(`r === '${role}'`), `helper harus mengizinkan role ${role}`);
+  }
+  const dipakai = ext.split('window.simapoBolehUbah()').length - 1;
+  assert.ok(dipakai >= 2, 'kartu penerimaan dan baris pemeliharaan harus sama-sama memakai helper');
+});
+

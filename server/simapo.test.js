@@ -1204,11 +1204,12 @@ const payloadPm = (id) => ({
   items: [{ tgl_pemeliharaan: '2026-11-17', jenis_pemeliharaan: 'Servis', biaya: 5000 }],
 });
 
-test('bolehUbahSimapo hanya mengizinkan ADMIN dan BENDAHARA BARANG', () => {
+test('bolehUbahSimapo mengizinkan SUPERADMIN, ADMIN dan BENDAHARA BARANG', () => {
   assert.equal(bolehUbahSimapo({ user: ADMIN }), true);
   assert.equal(bolehUbahSimapo({ user: BENDAHARA }), true);
+  assert.equal(bolehUbahSimapo({ user: { role: 'SUPERADMIN', instansi_id: 'bapperida' } }), true);
   assert.equal(bolehUbahSimapo({ user: KEPALA }), false);
-  assert.equal(bolehUbahSimapo({ user: { role: 'SUPERADMIN' } }), false);
+  assert.equal(bolehUbahSimapo({ user: { role: 'SEKRETARIS' } }), false);
   assert.equal(bolehUbahSimapo({}), false);
 });
 
@@ -1226,13 +1227,30 @@ test('GET /penerimaan mengirim rincian items agar form ubah bisa diisi ulang', a
   assert.ok(tx.calls[1].sql.includes('AS items'), 'daftar nota harus menyertakan kolom items');
 });
 
-test('POST /penerimaan-update ditolak 403 untuk role selain ADMIN/BENDAHARA BARANG', async () => {
+test('POST /penerimaan-update ditolak 403 untuk role selain SUPERADMIN/ADMIN/BENDAHARA BARANG', async () => {
   const tx = stub({ rows: { id: NOTA_UUID } });
   const { status, body } = await call(app(tx, KEPALA), 'POST', '/api/simapo/penerimaan-update', payloadNota(NOTA_UUID));
   assert.equal(status, 403);
   assert.equal(body.ok, false);
-  assert.match(body.message, /ADMIN dan BENDAHARA BARANG/);
+  assert.match(body.message, /SUPERADMIN, ADMIN dan BENDAHARA BARANG/);
   assert.equal(tx.calls.length, 0, 'role tanpa hak tidak boleh menyentuh query sama sekali');
+});
+
+test('POST /penerimaan-update jalan untuk SUPERADMIN', async () => {
+  const sa = { id: '9', role: 'SUPERADMIN', instansi_id: 'bapperida' };
+  const tx = stub({
+    rows: (sql) => {
+      if (sql.includes('FOR UPDATE')) return { id: NOTA_UUID };
+      if (sql.includes('INSERT INTO "SIMAPO".detail_penerimaan')) return { barang_id: 'b1', volume: 3 };
+      if (sql.includes('UPDATE "SIMAPO".penerimaan_barang')) return { id: NOTA_UUID };
+      if (sql.includes('DELETE')) return {};
+      return { id: 'b1' };
+    },
+  });
+  const { status, body } = await call(app(tx, sa), 'POST', '/api/simapo/penerimaan-update', payloadNota(NOTA_UUID));
+  assert.equal(status, 200);
+  assert.equal(body.ok, true);
+  assert.equal(tx.began && tx.committed, true, 'transaksi superadmin juga harus COMMIT');
 });
 
 test('POST /penerimaan-update mengunci baris, membalik stok lama, lalu menulis detail baru', async () => {
@@ -1328,7 +1346,7 @@ test('POST /pemeliharaan-update ditolak 403 untuk role tanpa hak', async () => {
   const { status, body } = await call(app(tx, KEPALA), 'POST', '/api/simapo/pemeliharaan-update', payloadPm(NOTA_UUID));
   assert.equal(status, 403);
   assert.equal(body.ok, false);
-  assert.match(body.message, /ADMIN dan BENDAHARA BARANG/);
+  assert.match(body.message, /SUPERADMIN, ADMIN dan BENDAHARA BARANG/);
   assert.equal(tx.calls.length, 0);
 });
 

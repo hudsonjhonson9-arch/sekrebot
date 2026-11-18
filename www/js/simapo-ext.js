@@ -1365,6 +1365,17 @@ window.removePenerimaanItem = function(idx) {
   renderPenerimaanItems();
 };
 
+/* ─── HAK UBAH DATA SIMAPO ───────────────────────────────────── */
+// SUPERADMIN, ADMIN dan BENDAHARA BARANG. Sisi client hanya menyembunyikan
+// tombol supaya role lain tidak menekan tombol yang pasti 403; server tetap
+// jadi penjaga lewat bolehUbahSimapo().
+window.simapoBolehUbah = function() {
+  const norm = function(v) { return String(v || '').trim().toLowerCase().replace(/\s+/g, ''); };
+  const r = norm(window.userProfile?.role || localStorage.getItem('MY_ROLE'));
+  if (!r) return true;
+  return r === 'superadmin' || r === 'admin' || r === 'bendaharabarang';
+};
+
 /* ─── ADMIN: PENERIMAAN BARANG ────────────────────────────── */
 window.loadAdminPenerimaan = async function(force = false) {
   const el = document.getElementById('adminPenerimaanList');
@@ -1404,10 +1415,11 @@ window.loadAdminPenerimaan = async function(force = false) {
             </div>
           </div>
           <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"><i class="fas fa-file-alt" aria-hidden="true"></i> SP2D: ${item.no_sp2d || '—'} ${item.kontrak ? '· '+item.kontrak : ''}</div>
+          ${window.simapoBolehUbah() ? `
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06);">
             <button onclick="window.editPenerimaan('${item.id}')" title="Ubah penerimaan ini" style="padding:6px 12px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-edit" aria-hidden="true"></i> Ubah</button>
             <button onclick="window.deletePenerimaan('${item.id}')" title="Hapus penerimaan ini" style="padding:6px 12px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-trash" aria-hidden="true"></i> Hapus</button>
-          </div>
+          </div>` : ''}
         </div>`;
       }).join('');
     }
@@ -2267,8 +2279,10 @@ window.filterKartuPemeliharaan = function() {
         '<td style="padding:8px 6px;color:var(--muted);">' + (item.bentuk_kontrak || item.kontrak || '—') + '</td>' +
         '<td style="padding:8px 6px;color:var(--muted);">' + (item.keterangan || '—') + '</td>' +
         '<td style="padding:8px 6px;text-align:right;white-space:nowrap;">' +
-          '<button onclick="window.editPemeliharaan(\'' + item.id + '\')" title="Ubah riwayat ini" style="padding:5px 9px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-edit" aria-hidden="true"></i></button> ' +
-          '<button onclick="window.deletePemeliharaan(\'' + item.id + '\')" title="Hapus riwayat ini" style="padding:5px 9px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-trash" aria-hidden="true"></i></button>' +
+          (window.simapoBolehUbah()
+            ? '<button onclick="window.editPemeliharaan(\'' + item.id + '\')" title="Ubah riwayat ini" style="padding:5px 9px;background:rgba(255,255,255,0.08);color:var(--white);border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-edit" aria-hidden="true"></i></button> ' +
+              '<button onclick="window.deletePemeliharaan(\'' + item.id + '\')" title="Hapus riwayat ini" style="padding:5px 9px;background:rgba(255,60,60,0.15);color:var(--danger);border:1px solid rgba(255,60,60,0.2);border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;"><i class="fas fa-trash" aria-hidden="true"></i></button>'
+            : '<span style="color:var(--muted);font-size:11px;">—</span>') +
         '</td>' +
         '</tr>';
     }).join('');

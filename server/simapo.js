@@ -456,14 +456,14 @@ export function instansiOtomatis(req, diminta) {
   return S(req.user?.user?.instansi_id || req.user?.instansi_id) || S(diminta) || INSTANSI_DEFAULT;
 }
 
-// Edit & hapus Laporan Pengadaan / Kartu Pemeliharaan hanya untuk ADMIN dan
-// BENDAHARA BARANG. Role SIMAPO lain (SUPERADMIN, KEPALA, SEKRETARIS, KABID,
-// IRBAN) tetap boleh membuka menunya, hanya tidak boleh mengubah data.
-export const ROLE_BOLEH_UBAH = new Set(['ADMIN', 'BENDAHARA BARANG']);
+// Edit & hapus Laporan Pengadaan / Kartu Pemeliharaan: SUPERADMIN, ADMIN dan
+// BENDAHARA BARANG. Role SIMAPO lain (KEPALA, SEKRETARIS, KABID, IRBAN) tetap
+// boleh membuka menunya, hanya tidak boleh mengubah data.
+export const ROLE_BOLEH_UBAH = new Set(['SUPERADMIN', 'ADMIN', 'BENDAHARA BARANG']);
 export function bolehUbahSimapo(req) {
   return ROLE_BOLEH_UBAH.has(String(req.user?.role || '').trim().toUpperCase());
 }
-const PESAN_TANPA_HAK_UBAH = 'Hanya ADMIN dan BENDAHARA BARANG yang boleh mengubah data ini.';
+const PESAN_TANPA_HAK_UBAH = 'Hanya SUPERADMIN, ADMIN dan BENDAHARA BARANG yang boleh mengubah data ini.';
 
 // Validasi penerimaan dipakai bersama oleh simpan (POST /penerimaan) dan ubah
 // (POST /penerimaan-update): pesan galatnya harus identik supaya form tidak
