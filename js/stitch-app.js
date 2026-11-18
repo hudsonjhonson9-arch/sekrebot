@@ -64,26 +64,57 @@
         cancelButtonColor: '#64748b',
         confirmButtonText: 'Ya, Keluar',
         cancelButtonText: 'Batal'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          if (typeof clearNativeToken === 'function') clearNativeToken();
-          if (typeof clearSession === 'function') clearSession();
-          localStorage.removeItem('_native_token');
-          localStorage.removeItem('native_token');
-          localStorage.removeItem('_sess_token');
-          localStorage.removeItem('_sess_nip');
-          localStorage.removeItem('_sess_role');
-          localStorage.removeItem('_sess_inst');
-          localStorage.removeItem('stitch_active_nip');
-          localStorage.removeItem('MY_NIP');
-          localStorage.removeItem('MY_ROLE');
-          localStorage.removeItem('MY_NAME');
-          state.isLoggedIn = false;
-          state.currentUser = null;
-          const authOverlayEl = document.getElementById('authOverlay');
-          if (authOverlayEl) authOverlayEl.style.display = 'flex';
-          showDynamicIsland({ type: 'info', title: 'Sesi Berakhir', message: 'Anda telah berhasil keluar.' });
+      }).then(async (result) => {
+        if (!result.isConfirmed) return;
+
+        // 1. Cabut sesi di server (/api/auth/logout) & bersihkan cookie HttpOnly arsip_session
+        const activeToken = (typeof getNativeToken === 'function' ? getNativeToken() : null)
+          || localStorage.getItem('_native_token')
+          || localStorage.getItem('native_token')
+          || localStorage.getItem('_sess_token')
+          || (window._session && window._session.token);
+
+        if (activeToken && /^[0-9a-f]{192}$/.test(activeToken)) {
+          try {
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 3500);
+            const base = (typeof API_BASE !== 'undefined' && API_BASE) ? API_BASE : '';
+            await fetch(base + '/api/auth/logout', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ session_token: activeToken }),
+              signal: ctrl.signal
+            });
+            clearTimeout(t);
+          } catch (_) {}
         }
+
+        // 2. Bersihkan seluruh kunci sesi di localStorage, sessionStorage, dan cookie
+        if (typeof clearNativeToken === 'function') clearNativeToken();
+        if (typeof clearSession === 'function') clearSession();
+        if (window.StitchSession && typeof window.StitchSession.clear === 'function') {
+          window.StitchSession.clear();
+        }
+        [
+          '_native_token', 'native_token', '_sess_token', '_sess_nip', '_sess_role', '_sess_inst',
+          'stitch_active_nip', 'stitch_active_view', 'MY_NIP', 'MY_ROLE', 'MY_NAME', 'MY_INSTANSI',
+          'tg_user_id_v5', 'tg_user_obj_v5', 'tg_user_id_v4', 'tg_user_obj_v4'
+        ].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+
+        window.MY_ID = null;
+        window.userProfile = null;
+        state.isLoggedIn = false;
+        state.currentUser = null;
+
+        const authOverlayEl = document.getElementById('authOverlay');
+        if (authOverlayEl) authOverlayEl.style.display = 'flex';
+        const loginInput = document.getElementById('loginNip');
+        if (loginInput) loginInput.value = '';
+        const pwdInput = document.getElementById('loginPassword');
+        if (pwdInput) pwdInput.value = '';
+
+        // 3. Reload bersih tanpa hash agar semua state & halaman kembali ke layar login
+        location.replace(location.pathname.endsWith('index.html') || location.pathname === '/' ? 'index.html' : 'login.html');
       });
     };
 

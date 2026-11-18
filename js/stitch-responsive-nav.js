@@ -35,6 +35,24 @@
       { href: 'arsip.html', icon: 'folder_open', label: 'Arsip', match: 'arsip.html' }
     ];
 
+    // Suntikkan tombol Keluar (Logout) di bagian bawah sidebar desktop jika belum ada
+    const sidebarNav = document.querySelector('aside.w-72 nav');
+    if (sidebarNav && !document.getElementById('stitchSidebarLogoutBtn')) {
+      const btn = document.createElement('button');
+      btn.id = 'stitchSidebarLogoutBtn';
+      btn.type = 'button';
+      btn.className = 'w-full mt-2 flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-rose-400 hover:bg-rose-950/60 hover:text-rose-300 transition-all font-semibold text-sm cursor-pointer';
+      btn.innerHTML = '<span class="material-symbols-outlined text-[20px]">logout</span><span>Keluar Akun</span>';
+      btn.addEventListener('click', () => {
+        if (window.StitchSession && typeof window.StitchSession.logout === 'function') {
+          window.StitchSession.logout();
+        } else if (typeof window.logoutUser === 'function') {
+          window.logoutUser();
+        }
+      });
+      sidebarNav.appendChild(btn);
+    }
+
     const nav = document.createElement('nav');
     nav.id = 'stitchStandaloneBottomNav';
     nav.setAttribute('aria-label', 'Navigasi Bawah');

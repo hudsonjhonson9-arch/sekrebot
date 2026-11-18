@@ -20,10 +20,30 @@
   window.getStitchToken = getToken;
 
   /* ── Sesi: pembersihan terpusat + penanganan sesi kedaluwarsa (401) ── */
-  const SESSION_KEYS = ['_native_token', 'native_token', '_sess_token', 'stitch_active_nip',
-    'MY_NIP', 'MY_ROLE', 'MY_NAME', 'MY_INSTANSI'];
+  const SESSION_KEYS = [
+    '_native_token', 'native_token', '_sess_token', '_sess_nip', '_sess_role', '_sess_inst',
+    'stitch_active_nip', 'stitch_active_view', 'MY_NIP', 'MY_ROLE', 'MY_NAME', 'MY_INSTANSI',
+    'tg_user_id_v5', 'tg_user_obj_v5', 'tg_user_id_v4', 'tg_user_obj_v4'
+  ];
+  function clearAllClientCookies() {
+    try {
+      const cookies = (document.cookie || '').split(';');
+      const host = location.hostname || '';
+      const parts = host.split('.');
+      const rootDom = parts.length >= 2 ? '.' + parts.slice(-2).join('.') : '';
+      cookies.forEach(function (c) {
+        const name = c.split('=')[0].trim();
+        if (!name) return;
+        document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+        if (host) document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + host;
+        if (rootDom) document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + rootDom;
+      });
+    } catch (_) {}
+  }
   function clearSession() {
     SESSION_KEYS.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
+    try { sessionStorage.clear(); } catch (_) {}
+    clearAllClientCookies();
     try {
       if (typeof STORAGE_KEYS !== 'undefined') {
         if (STORAGE_KEYS.USER_ID) localStorage.removeItem(STORAGE_KEYS.USER_ID);
@@ -31,9 +51,64 @@
       }
     } catch (_) {}
     try { if (typeof setNativeToken === 'function') setNativeToken(null); } catch (_) {}
+    try {
+      if (window._session) {
+        window._session.token = null;
+        window._session.nip = null;
+        window._session.isLoggedIn = false;
+      }
+    } catch (_) {}
     window.MY_ID = null;
+    window.userProfile = null;
   }
-  window.StitchSession = { clear: clearSession };
+
+  async function globalStitchLogout() {
+    let ok = true;
+    if (typeof window.Swal !== 'undefined') {
+      const r = await window.Swal.fire({
+        title: 'Konfirmasi Keluar',
+        text: 'Apakah Anda yakin ingin keluar dari akun pegawai?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#2563eb',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Keluar',
+        cancelButtonText: 'Batal'
+      });
+      ok = !!r.isConfirmed;
+    } else {
+      ok = confirm('Apakah Anda yakin ingin keluar dari akun pegawai?');
+    }
+    if (!ok) return;
+
+    const tok = getToken();
+    if (tok && /^[0-9a-f]{192}$/.test(tok)) {
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(function () { ctrl.abort(); }, 3500);
+        await origFetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_token: tok }),
+          signal: ctrl.signal
+        });
+        clearTimeout(t);
+      } catch (_) {}
+    }
+    clearSession();
+    try { if (typeof window.clearNativeToken === 'function') window.clearNativeToken(); } catch (_) {}
+    try { if (typeof window.clearSession === 'function') window.clearSession(); } catch (_) {}
+
+    const ov = document.getElementById('authOverlay');
+    if (ov) {
+      ov.style.display = 'flex';
+      location.replace('index.html');
+    } else {
+      location.replace('login.html?logout=1');
+    }
+  }
+  window.StitchSession = { clear: clearSession, logout: globalStitchLogout };
+  if (typeof window.logoutUser !== 'function') window.logoutUser = globalStitchLogout;
 
   let expiredHandled = false;
   function handleExpired() {

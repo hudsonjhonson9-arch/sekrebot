@@ -387,13 +387,40 @@
       icon.textContent = isPwd ? 'visibility_off' : 'visibility';
     }
 
-    // Auto redirect if already authenticated
-    document.addEventListener('DOMContentLoaded', () => {
+    // Auto redirect if already authenticated (validasi sesi ke server lebih dulu;
+    // jika ?logout=1 atau sesi tidak valid, bersihkan sisa token agar tidak mental balik)
+    document.addEventListener('DOMContentLoaded', async () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('logout')) {
+        if (typeof clearNativeToken === 'function') clearNativeToken();
+        if (typeof clearSession === 'function') clearSession();
+        [
+          '_native_token', 'native_token', '_sess_token', '_sess_nip', '_sess_role', '_sess_inst',
+          'stitch_active_nip', 'stitch_active_view', 'MY_NIP', 'MY_ROLE', 'MY_NAME', 'MY_INSTANSI',
+          'tg_user_id_v5', 'tg_user_obj_v5', 'tg_user_id_v4', 'tg_user_obj_v4'
+        ].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+        try { history.replaceState(null, '', 'login.html'); } catch (_) {}
+        return;
+      }
+
       const token = typeof getNativeToken === 'function' ? getNativeToken() : (localStorage.getItem('_native_token') || localStorage.getItem('native_token') || localStorage.getItem('_sess_token'));
       const activeNip = localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || (window._session && window._session.nip);
-      if (token && activeNip) {
-        console.log('[Auth] Active session found for NIP:', activeNip, '- Redirecting to dashboard...');
-        window.location.href = 'index.html';
+      if (token && activeNip && /^[0-9a-f]{192}$/.test(token)) {
+        try {
+          const res = await fetch(`/api/stitch/user-data?nip=${encodeURIComponent(activeNip)}`, {
+            headers: { Authorization: 'Bearer ' + token }
+          });
+          if (res.ok) {
+            console.log('[Auth] Active session verified for NIP:', activeNip, '- Redirecting to dashboard...');
+            window.location.replace('index.html');
+            return;
+          }
+        } catch (_) {}
+        // Token sudah kedaluwarsa atau dicabut di server -> bersihkan agar tetap di halaman login
+        if (typeof clearNativeToken === 'function') clearNativeToken();
+        if (typeof clearSession === 'function') clearSession();
+        ['_native_token', 'native_token', '_sess_token', 'stitch_active_nip', 'MY_NIP', 'tg_user_id_v5', 'tg_user_obj_v5']
+          .forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
       }
     });
   </script>

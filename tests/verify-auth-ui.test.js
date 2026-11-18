@@ -34,9 +34,13 @@ assert(indexHtml.includes('src="js/api.js"'), 'Missing js/api.js script tag in i
 assert(indexHtml.includes('src="js/auth.js"'), 'Missing js/auth.js script tag in index.html');
 console.log('✓ index.html correctly includes config.js, constants.js, api.js, and auth.js.');
 
-// 4. Verify logout handler & session gating in index.html
-assert(indexHtml.includes('logoutUser()') || indexHtml.includes('window.logoutUser'), 'Missing logoutUser in index.html');
-assert(indexHtml.includes("authOverlayEl.style.display = 'flex'"), 'Missing auth gating in bootstrapFromDatabase');
-console.log('✓ index.html has session gating and logout handler.');
+// 4. Verify logout handler & session gating in index.html / js/stitch-app.js
+const stitchAppJs = fs.existsSync(path.join(ROOT, 'js', 'stitch-app.js'))
+  ? fs.readFileSync(path.join(ROOT, 'js', 'stitch-app.js'), 'utf8')
+  : '';
+const indexAndApp = indexHtml + '\n' + stitchAppJs;
+assert(indexAndApp.includes('logoutUser()') || indexAndApp.includes('window.logoutUser'), 'Missing logoutUser in index.html / js/stitch-app.js');
+assert(indexAndApp.includes("authOverlayEl.style.display = 'flex'"), 'Missing auth gating in bootstrapFromDatabase');
+console.log('✓ index.html + js/stitch-app.js has session gating and logout handler.');
 
 console.log('--- ALL AUTH UI VERIFICATIONS PASSED ---');

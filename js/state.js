@@ -62,10 +62,21 @@ window.MY_ID = null;
   keysToPurge.forEach(k => localStorage.removeItem(k));
 })();
 
-// 1. Prioritas Utama: Ambil dari Cache Logal (Instant pada Refresh)
+// 1. Prioritas Utama: Ambil dari Cache Lokal HANYA bila masih ada token sesi aktif.
+// Jika sudah logout (tidak ada token), hapus sisa cache tg_user_id_v5 / tg_user_obj_v5
+// agar tidak menghidupkan kembali MY_NIP secara diam-diam saat reload.
 try {
-  const cachedId = localStorage.getItem(STORAGE_KEYS.USER_ID);
-  const cachedUser = localStorage.getItem(STORAGE_KEYS.USER_OBJ);
+  const hasActiveToken = !!(
+    localStorage.getItem('_native_token') ||
+    localStorage.getItem('native_token') ||
+    localStorage.getItem('_sess_token')
+  );
+  const cachedId = hasActiveToken ? localStorage.getItem(STORAGE_KEYS.USER_ID) : null;
+  const cachedUser = hasActiveToken ? localStorage.getItem(STORAGE_KEYS.USER_OBJ) : null;
+  if (!hasActiveToken) {
+    localStorage.removeItem(STORAGE_KEYS.USER_ID);
+    localStorage.removeItem(STORAGE_KEYS.USER_OBJ);
+  }
   if (cachedId) {
     window.MY_ID = String(cachedId);
     if (cachedUser) {
