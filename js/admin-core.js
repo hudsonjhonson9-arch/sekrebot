@@ -64,28 +64,32 @@
     let pref = null;
     try { pref = localStorage.getItem(MODE_KEY); } catch (_) {}
     if (pref === 'desktop' || pref === 'mobile') return pref;
-    return w.matchMedia('(min-width: 1024px)').matches ? 'desktop' : 'mobile';
+    return w.matchMedia('(min-width: 768px)').matches ? 'desktop' : 'mobile';
   }
 
+  // 'desktop' | 'mobile' | 'auto' (ikuti lebar layar). null/lainnya = default (mobile).
   function setMode(mode) {
     try {
-      if (mode === 'desktop' || mode === 'mobile') localStorage.setItem(MODE_KEY, mode);
+      if (mode === 'desktop' || mode === 'mobile' || mode === 'auto') localStorage.setItem(MODE_KEY, mode);
       else localStorage.removeItem(MODE_KEY);
     } catch (_) {}
   }
 
   // page: 'desktop' (admin.html) atau 'mobile' (index.html#admin).
-  // Ambang berbeda (<768 vs >=1024) agar tidak pernah saling melempar bolak-balik.
+  // Default: TIDAK mengalihkan; admin.html tetap admin.html (refresh tetap di sini) dan
+  // tampilannya menyesuaikan lebar layar. Peralihan hanya bila dipilih eksplisit:
+  // 'mobile' -> index.html#admin, 'desktop' -> admin.html, 'auto' -> ikut lebar layar.
   function autoRoute(page) {
     let pref = null;
     try { pref = localStorage.getItem(MODE_KEY); } catch (_) {}
+    const auto = pref === 'auto';
     if (page === 'desktop') {
-      if (pref === 'mobile' || (pref !== 'desktop' && w.matchMedia('(max-width: 767px)').matches)) {
+      if (pref === 'mobile' || (auto && w.matchMedia('(max-width: 767px)').matches)) {
         location.replace('index.html#admin');
         return true;
       }
     } else if (page === 'mobile') {
-      if (pref === 'desktop' || (pref !== 'mobile' && w.matchMedia('(min-width: 1024px)').matches)) {
+      if (pref === 'desktop' || (auto && w.matchMedia('(min-width: 1024px)').matches)) {
         location.replace('admin.html');
         return true;
       }
@@ -275,6 +279,61 @@
     }
   }
 
+  async function saveJamAbsen({ masuk, pulang }) {
+    const m = String(masuk || '').trim(), p = String(pulang || '').trim();
+    if (!/^\d{2}:\d{2}$/.test(m) || !/^\d{2}:\d{2}$/.test(p)) {
+      notify('error', 'Format Jam Tidak Valid', 'Gunakan format HH:MM (contoh 07:15 dan 14:30).');
+      return false;
+    }
+    try {
+      const json = await api('/admin-jam-absen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ masuk: m, pulang: p }),
+      });
+      notify('success', 'Jam Kerja Tersimpan', json.message || 'Jadwal kerja diperbarui.');
+      return true;
+    } catch (err) {
+      notify('error', 'Gagal menyimpan jam kerja', err.message);
+      return false;
+    }
+  }
+
+  async function addLibur({ tanggal, nama }) {
+    const t = String(tanggal || '').trim(), n = String(nama || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(t) || !n) {
+      notify('error', 'Data Libur Belum Lengkap', 'Pilih tanggal dan isi keterangan hari libur.');
+      return null;
+    }
+    try {
+      const json = await api('/admin-libur', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tanggal: t, nama: n }),
+      });
+      notify('success', 'Hari Libur Tersimpan', json.message || 'Kalender libur diperbarui.');
+      return json.holidays || [];
+    } catch (err) {
+      notify('error', 'Gagal menambah libur', err.message);
+      return null;
+    }
+  }
+
+  async function deleteLibur(tanggal) {
+    try {
+      const json = await api('/admin-libur/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tanggal: String(tanggal || '').trim() }),
+      });
+      notify('success', 'Hari Libur Dihapus', json.message || 'Tanggal libur dihapus.');
+      return json.holidays || [];
+    } catch (err) {
+      notify('error', 'Gagal menghapus libur', err.message);
+      return null;
+    }
+  }
+
   /* ── event: tombol Setujui/Tolak (delegasi, aman dari injeksi onclick) ── */
   document.addEventListener('click', (e) => {
     const btn = e.target.closest && e.target.closest('[data-ket-id]');
@@ -290,6 +349,7 @@
 
   w.AdminCore = {
     loadKeterangan, loadMonitoring, approve, loadLokasi, saveLokasi,
+    saveJamAbsen, addLibur, deleteLibur,
     getMode, setMode, autoRoute, normStatus,
     refresh() { return Promise.all([loadMonitoring(), loadKeterangan()]); },
   };

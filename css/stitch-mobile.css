@@ -1,0 +1,168 @@
+/* Stitch Mobile UI & Light Animations (extracted from index.html) */
+    html, body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f1f5f9;
+      color: #0b1c30;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .dark body {
+      background-color: #060b17;
+      color: #e2e8f0;
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Radar scan animation for face camera */
+    @keyframes radarScan {
+      0% { top: 10%; opacity: 0.8; }
+      50% { top: 90%; opacity: 1; }
+      100% { top: 10%; opacity: 0.8; }
+    }
+    .radar-beam {
+      animation: radarScan 2.4s ease-in-out infinite;
+    }
+
+    /* Pulse animation */
+    @keyframes pulseGlow {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.04); opacity: 1; }
+    }
+    .pulse-btn {
+      animation: pulseGlow 2.5s infinite;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #334155;
+    }
+
+    /* Analog Clock Dial Styling (Stitch Screen: Presensi Mandiri Mobile Gaya Jam Analog) */
+    .clock-face {
+      position: relative;
+      width: 196px;
+      height: 196px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 18px 40px -10px rgba(14, 116, 144, 0.16), 0 4px 12px rgba(0, 0, 0, 0.04);
+      border: 5px solid #22d3ee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .dark .clock-face {
+      background: #111b33;
+      border-color: #0284c7;
+      box-shadow: 0 18px 40px -10px rgba(2, 132, 199, 0.25);
+    }
+    .clock-center-dot {
+      width: 10px;
+      height: 10px;
+      background: #0f172a;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      position: absolute;
+      z-index: 20;
+    }
+    .dark .clock-center-dot {
+      background: #38bdf8;
+      border-color: #0f172a;
+    }
+    .clock-hand {
+      position: absolute;
+      bottom: 50%;
+      left: 50%;
+      transform-origin: bottom center;
+      border-radius: 9999px;
+      transition: transform 0.05s cubic-bezier(0.4, 2.08, 0.55, 0.44);
+    }
+    .hand-hour {
+      width: 5px;
+      height: 48px;
+      background-color: #1e293b;
+      margin-left: -2.5px;
+      z-index: 10;
+    }
+    .dark .hand-hour {
+      background-color: #f1f5f9;
+    }
+    .hand-minute {
+      width: 3.5px;
+      height: 68px;
+      background-color: #0284c7;
+      margin-left: -1.75px;
+      z-index: 11;
+    }
+    .dark .hand-minute {
+      background-color: #38bdf8;
+    }
+    .hand-second {
+      width: 1.5px;
+      height: 76px;
+      background-color: #10b981;
+      margin-left: -0.75px;
+      z-index: 12;
+    }
+    .clock-watermark-12 {
+      position: absolute;
+      top: 10px;
+      font-size: 2.1rem;
+      font-weight: 800;
+      color: rgba(203, 213, 225, 0.45);
+      user-select: none;
+      line-height: 1;
+    }
+    .dark .clock-watermark-12 {
+      color: rgba(148, 163, 184, 0.25);
+    }
+    .clock-subtle-indicator {
+      position: absolute;
+      bottom: 12px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(226, 232, 240, 0.6);
+    }
+    .dark .clock-subtle-indicator {
+      background: rgba(51, 65, 85, 0.6);
+    }
+    .tap-effect {
+      transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+    .tap-effect:active {
+      transform: scale(0.97);
+    }
+    /* Animasi ringan Rekap: hanya transform/opacity, easing slow-in/slow-out */
+    @keyframes rekapIn { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+    @keyframes pdfPop { 0% { transform: scale(1); } 40% { transform: scale(.88, 1.1); } 100% { transform: scale(1); } }
+    #riwayatCardsContainer > * { animation: rekapIn .28s cubic-bezier(.22,1,.36,1) both; }
+    #riwayatCardsContainer > *:nth-child(2) { animation-delay: .04s; }
+    #riwayatCardsContainer > *:nth-child(3) { animation-delay: .08s; }
+    #riwayatCardsContainer > *:nth-child(4) { animation-delay: .12s; }
+    #riwayatCardsContainer > *:nth-child(n+5) { animation-delay: .16s; }
+    #view-riwayat-full button[onclick^="exportHarianPDF"], #view-riwayat-full button[onclick^="shiftRekapMonth"] { min-width: 40px; min-height: 40px; transition: transform .15s cubic-bezier(.22,1,.36,1), background-color .15s; }
+    #view-riwayat-full button[onclick^="exportHarianPDF"]:active { animation: pdfPop .25s ease-out; }
+    #view-riwayat-full button[onclick^="shiftRekapMonth"]:active { transform: scale(.88); }
+    #rekapDisiplinBar { transition: width .6s cubic-bezier(.22,1,.36,1); }
+    @media (prefers-reduced-motion: reduce) { #riwayatCardsContainer > * { animation: none; } #rekapDisiplinBar { transition: none; } }
+    /* Animasi ringan Presensi & modal */
+    @keyframes btnIdle { 0%,100% { box-shadow: 0 6px 20px rgba(37,99,235,.28); } 50% { box-shadow: 0 8px 26px rgba(37,99,235,.42); } }
+    @keyframes modalPop { 0% { opacity: 0; transform: translateY(16px) scale(.94); } 60% { opacity: 1; transform: translateY(-2px) scale(1.01); } 100% { transform: none; } }
+    @keyframes checkPop { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); } }
+    #clockInBtn { transition: transform .15s cubic-bezier(.22,1,.36,1), background-color .2s, box-shadow .2s; }
+    #clockInBtn:active { transform: scale(.96, 1.03); }
+    #clockInBtn.bg-blue-600 { animation: btnIdle 2.4s ease-in-out infinite; }
+    #cameraModal:not(.hidden) > *, #successModal:not(.hidden) > * { animation: modalPop .32s cubic-bezier(.22,1,.36,1) both; }
+    #successModal:not(.hidden) .material-symbols-outlined { animation: checkPop .45s .12s cubic-bezier(.34,1.56,.64,1) both; }
+    @media (prefers-reduced-motion: reduce) { #clockInBtn.bg-blue-600, #cameraModal > *, #successModal > *, #successModal .material-symbols-outlined { animation: none !important; } }

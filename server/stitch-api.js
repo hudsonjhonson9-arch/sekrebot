@@ -24,10 +24,11 @@ export function createStitchApiRouter(deps = {}) {
   // 1. BOOTSTRAP: Load all master data for the Stitch UI
   router.get('/bootstrap', async (req, res) => {
     try {
-      // Fetch users
+      // Fetch users (tanpa face_photo base64 agar payload bootstrap tetap ringan)
       const usersRes = await query(`
         SELECT id::text AS id, username AS nama, "NIP" AS nip, "Jabatan" AS jabatan,
-               role, bidang, pangkat, face_photo, instansi_id, status_aktif
+               role, bidang, pangkat, instansi_id, status_aktif,
+               (face_photo IS NOT NULL AND face_photo != '') AS has_face
         FROM user_list
         WHERE status_aktif = true OR status_aktif IS NULL
         ORDER BY "NIP" ASC
@@ -87,10 +88,12 @@ export function createStitchApiRouter(deps = {}) {
 
       // User details
       const userRes = await query(`
-        SELECT id::text AS id, username AS nama, "NIP" AS nip, "Jabatan" AS jabatan,
-               role, bidang, pangkat, face_photo, instansi_id
-        FROM user_list
-        WHERE "NIP" = $1 LIMIT 1
+        SELECT u.id::text AS id, u.username AS nama, u."NIP" AS nip, u."Jabatan" AS jabatan,
+               u.role, u.bidang, u.pangkat, u.face_photo, u.face_histogram, u.face_saved_at, u.face_model, u.instansi_id,
+               t.signature
+        FROM user_list u
+        LEFT JOIN tanda_tangan t ON t.nip = u."NIP"
+        WHERE u."NIP" = $1 LIMIT 1
       `, [nip]);
 
       if (!userRes.rows.length) {
@@ -158,17 +161,35 @@ export function createStitchApiRouter(deps = {}) {
         });
       }
 
+      // Total jam kerja minggu ini: hanya hari yang punya jam masuk DAN pulang.
+      const weeklyHours = weekDays.reduce((sum, d) => {
+        if (!d.masuk || !d.pulang) return sum;
+        const [h1, m1] = String(d.masuk).split(':').map(Number);
+        const [h2, m2] = String(d.pulang).split(':').map(Number);
+        const mins = (h2 * 60 + m2) - (h1 * 60 + m1);
+        return mins > 0 ? sum + mins / 60 : sum;
+      }, 0);
+
       // Today's status (WITA date: YYYY-MM-DD)
       const todayWita = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
       const todayLogs = logsRes.rows.filter(l => l.Tanggal === todayWita);
       const masukLog = todayLogs.find(l => l['Jenis Absen'] === 'MASUK' || l['Jenis Absen'] === 'DI LUAR JAM MASUK');
-      const pulangLog = todayLogs.find(l => l['Jenis Absen'] === 'PULANG');
+      const pulangLog = todayLogs.find(l => String(l['Jenis Absen'] || '').includes('PULANG'));
+      const ketTodayRes = await query(`
+        SELECT "Jenis Absen" AS jenis, "Ket" AS ket, "Status" AS status FROM ket_temp
+        WHERE "NIP" = $1 AND UPPER("Status") = 'DISETUJUI'
+          AND ("Tanggal" = $2 OR ($2 BETWEEN "tgl_mulai" AND "tgl_selesai"))
+        LIMIT 1
+      `, [nip, todayWita]);
+      const ketToday = ketTodayRes.rows[0] || null;
 
       let status = 'BELUM_ABSEN';
       if (pulangLog) {
         status = 'SELESAI';
       } else if (masukLog) {
         status = 'SUDAH_MASUK';
+      } else if (ketToday) {
+        status = 'KETERANGAN';
       }
 
       // Compute work duration today
@@ -195,16 +216,17 @@ export function createStitchApiRouter(deps = {}) {
           clockInTime: masukLog ? masukLog.Jam : null,
           clockOutTime: pulangLog ? pulangLog.Jam : null,
           lokasi: masukLog ? masukLog.Lokasi : null,
-          duration: todayDuration
+          duration: todayDuration,
+          keterangan: ketToday ? String(ketToday.jenis || 'KETERANGAN').toUpperCase() : null
         },
         metrics: {
-          hadir: hadirDays || 10,
-          terlambat: terlambatDays || 0,
-          cuti: cutiDays || 1,
+          hadir: hadirDays,
+          terlambat: terlambatDays,
+          cuti: cutiDays,
           weekly: {
-            hadir: weeklyHadirDays || 5,
-            terlambat: weeklyTerlambatDays || 0,
-            totalHours: ((weeklyHadirDays || 5) * 8.5).toFixed(1),
+            hadir: weeklyHadirDays,
+            terlambat: weeklyTerlambatDays,
+            totalHours: weeklyHours.toFixed(1),
             days: weekDays
           }
         },
@@ -239,8 +261,47 @@ export function createStitchApiRouter(deps = {}) {
       const tanggal = nowWita.toISOString().slice(0, 10);
       const jam = `${String(nowWita.getUTCHours()).padStart(2, '0')}:${String(nowWita.getUTCMinutes()).padStart(2, '0')}`;
       
-      const requestId = `absen_${nip}_${tanggal}_${jenis.toLowerCase()}_${Date.now()}`;
       const instansiId = u.instansi_id || 'bapperida';
+
+      if (!['MASUK', 'PULANG', 'PULANG LUAR'].includes(jenis)) return res.status(400).json({ ok: false, message: 'Jenis presensi tidak valid.' });
+
+      // Cek apakah hari ini ada keterangan (IZIN / SAKIT / CUTI / DL / TUGAS / TUBEL) yang disetujui
+      const ketToday = (await query(`
+        SELECT "Jenis Absen" AS jenis FROM ket_temp
+        WHERE "NIP" = $1 AND UPPER("Status") = 'DISETUJUI'
+          AND ("Tanggal" = $2 OR ($2 BETWEEN "tgl_mulai" AND "tgl_selesai"))
+        LIMIT 1
+      `, [u.NIP, tanggal])).rows[0];
+      if (ketToday) {
+        return res.status(409).json({ ok: false, message: `Tidak dapat presensi karena status hari ini adalah ${String(ketToday.jenis).toUpperCase()}.` });
+      }
+
+      // Urutan & duplikasi: 1x masuk, pulang hanya setelah masuk, 1x pulang
+      const todays = (await query('SELECT "Jenis Absen" FROM "Log_Absen" WHERE "NIP" = $1 AND "Tanggal" = $2', [u.NIP, tanggal])).rows.map(r => String(r['Jenis Absen']).toUpperCase());
+      const hasMasuk = todays.some(j => j.includes('MASUK') || j === 'TERLAMBAT');
+      const hasPulang = todays.some(j => j.includes('PULANG'));
+      if (jenis === 'MASUK' && hasMasuk) return res.status(409).json({ ok: false, message: 'Anda sudah presensi masuk hari ini.' });
+      if (jenis.startsWith('PULANG') && !hasMasuk) return res.status(409).json({ ok: false, message: 'Presensi masuk belum tercatat.' });
+      if (jenis.startsWith('PULANG') && hasPulang) return res.status(409).json({ ok: false, message: 'Anda sudah presensi pulang hari ini.' });
+      if (jenis === 'PULANG LUAR' && !ket) return res.status(400).json({ ok: false, message: 'Tuliskan lokasi/kegiatan lapangan sebelum presensi pulang dari lapangan.' });
+
+      // Geofence: koordinat asli perangkat harus dalam radius salah satu lokasi kantor (kecuali PULANG LUAR)
+      const m = koordinat.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
+      if (!m) return res.status(400).json({ ok: false, message: 'Koordinat GPS tidak valid.' });
+      const [lat, lon] = [parseFloat(m[1]), parseFloat(m[3])];
+      const acc = Number(b.akurasi) || 0;
+      if (acc > 100) return res.status(400).json({ ok: false, message: `Akurasi GPS rendah (${Math.round(acc)} m). Coba di area terbuka.` });
+      let matchedLoc = lokasi;
+      if (jenis !== 'PULANG LUAR') {
+        const locs = (await query(`SELECT "Nama_Lokasi" AS nama, latitude, longitude, radius FROM lokasiabsen WHERE instansi_id = $1 OR instansi_id = 'all'`, [instansiId])).rows;
+        const dist = (a, b2, c, d) => { const R = 6371000, r = Math.PI / 180, dl = (c - a) * r, dn = (d - b2) * r; const h = Math.sin(dl / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin(dn / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+        if (locs.length) {
+          const hit = locs.find(l => dist(lat, lon, Number(l.latitude), Number(l.longitude)) <= (Number(l.radius) || 250) + acc * 0.5);
+          if (!hit) return res.status(403).json({ ok: false, message: 'Anda berada di luar radius lokasi presensi.' });
+          if (hit.nama) matchedLoc = hit.nama;
+        }
+      }
+      const requestId = `absen_${nip}_${tanggal}_${jenis.toLowerCase()}_${Date.now()}`;
 
       const insertSql = `
         INSERT INTO "Log_Absen" ("ID", "Nama", "NIP", "Tanggal", "Jam", "Jenis Absen", "Lokasi", "Ket", "koordinat", "request_id", "instansi_id")
@@ -255,7 +316,7 @@ export function createStitchApiRouter(deps = {}) {
         tanggal,
         jam,
         jenis,
-        lokasi,
+        matchedLoc,
         ket,
         koordinat,
         requestId,
@@ -275,34 +336,61 @@ export function createStitchApiRouter(deps = {}) {
   });
 
   // 4. REKAP TPP: Calculate discipline and attendance percentage from PostgreSQL
-  router.get('/rekap-tpp', async (req, res) => {
+  router.get('/rekap-tpp', requireAdmin, async (req, res) => {
     try {
-      const now = new Date();
-      const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const now = new Date(Date.now() + 8 * 3600000);
+      const currentYearMonth = String(req.query.periode || `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`).slice(0, 7);
+      const [yNum, mNum] = currentYearMonth.split('-').map(Number);
 
-      const users = (await query(`
-        SELECT id::text AS id, username AS nama, "NIP" AS nip, "Jabatan" AS jabatan, pangkat
-        FROM user_list
-        WHERE status_aktif = true OR status_aktif IS NULL
-        ORDER BY username ASC
-        LIMIT 30
-      `)).rows;
+      const [usersRes, logsRes, shiftRes, liburRes] = await Promise.all([
+        query(`
+          SELECT u.id::text AS id, u.username AS nama, u."NIP" AS nip, u."Jabatan" AS jabatan, u.pangkat, t.signature
+          FROM user_list u LEFT JOIN tanda_tangan t ON t.nip = u."NIP"
+          WHERE u.status_aktif = true OR u.status_aktif IS NULL
+          ORDER BY u.username ASC
+        `),
+        query(`
+          SELECT "NIP", "Tanggal", "Jam", "Jenis Absen"
+          FROM "Log_Absen"
+          WHERE "Tanggal" LIKE $1
+        `, [currentYearMonth + '%']),
+        query(`SELECT masuk, pulang FROM jam_absen WHERE instansi_id = 'bapperida' OR instansi_id IS NULL LIMIT 1`),
+        query(`SELECT tanggal FROM libur_nasional WHERE tanggal LIKE $1`, [currentYearMonth + '%'])
+      ]);
 
-      const logs = (await query(`
-        SELECT "NIP", "Tanggal", "Jam", "Jenis Absen"
-        FROM "Log_Absen"
-        WHERE "Tanggal" LIKE $1
-      `, [currentYearMonth + '%'])).rows;
+      const users = usersRes.rows;
+      const logs = logsRes.rows;
+      const shiftMasuk = (shiftRes.rows[0] && shiftRes.rows[0].masuk) || '07:15';
+      const liburSet = new Set(liburRes.rows.map(r => String(r.tanggal).slice(0, 10)));
+      const todayIso = now.toISOString().slice(0, 10);
 
-      const workingDays = 22;
+      let workingDays = 0;
+      const lastDay = new Date(yNum, mNum, 0).getDate();
+      for (let d = 1; d <= lastDay; d++) {
+        const iso = `${yNum}-${String(mNum).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const dow = new Date(yNum, mNum - 1, d).getDay();
+        if (dow === 0 || dow === 6 || liburSet.has(iso) || iso > todayIso) continue;
+        workingDays++;
+      }
+
+      const isBoss = j => {
+        j = String(j || '').toUpperCase();
+        if (/BIDANG|SEKSI|SUB|BAGIAN|UPTD|PELAKSANA|FUNGSIONAL/.test(j)) return false;
+        return /KEPALA BADAN|KEPALA DINAS|INSPEKTUR|SEKRETARIS DAERAH|CAMAT/.test(j) || j === 'KEPALA' || j.includes('KEPALA');
+      };
+      const kp = users.find(u => isBoss(u.jabatan)) || null;
+      const kepala = kp && { nama: kp.nama, nip: kp.nip, jabatan: kp.jabatan, pangkat: kp.pangkat, signature: kp.signature || null };
+
       const tppList = users.map(u => {
         const uLogs = logs.filter(l => l.NIP === u.nip);
-        const hadirCount = new Set(uLogs.filter(l => l['Jenis Absen'] === 'MASUK' || l['Jenis Absen'] === 'DI LUAR JAM MASUK').map(l => l.Tanggal)).size;
-        const telatCount = uLogs.filter(l => l['Jenis Absen'] === 'DI LUAR JAM MASUK').length;
-        
-        const effectiveHadir = Math.min(workingDays, Math.max(hadirCount, 18));
-        const disiplinPct = Math.max(80, Math.round(((effectiveHadir - (telatCount * 0.1)) / workingDays) * 100));
-        const potPct = 100 - disiplinPct;
+        const masukLogs = uLogs.filter(l => /MASUK|TERLAMBAT/.test(String(l['Jenis Absen']).toUpperCase()));
+        const hadirCount = new Set(masukLogs.map(l => l.Tanggal)).size;
+        const telatCount = new Set(masukLogs.filter(l => l['Jenis Absen'] === 'DI LUAR JAM MASUK' || l['Jenis Absen'] === 'TERLAMBAT' || (l.Jam && l.Jam > shiftMasuk)).map(l => l.Tanggal)).size;
+
+        const disiplinPct = workingDays > 0
+          ? Math.max(0, Math.min(100, Math.round(((hadirCount - (telatCount * 0.25)) / workingDays) * 100)))
+          : 0;
+        const potPct = Math.max(0, 100 - disiplinPct);
 
         return {
           nama: u.nama,
@@ -310,14 +398,16 @@ export function createStitchApiRouter(deps = {}) {
           jabatan: u.jabatan,
           pangkat: u.pangkat,
           hariKerja: workingDays,
-          hadir: effectiveHadir,
+          hadir: hadirCount,
           terlambat: telatCount,
+          disiplinPct,
+          potPct,
           disiplin: `${disiplinPct}%`,
-          potongan: potPct > 0 ? `${potPct}%` : '0% (Rp 0)'
+          potongan: potPct > 0 ? `${potPct}%` : '0%'
         };
       });
 
-      return res.json({ ok: true, period: currentYearMonth, data: tppList });
+      return res.json({ ok: true, period: currentYearMonth, hariKerja: workingDays, kepala, data: tppList });
     } catch (err) {
       console.error('[stitch-api] rekap-tpp error:', err);
       return res.status(500).json({ ok: false, message: 'Gagal menghitung rekap TPP: ' + err.message });
@@ -345,6 +435,189 @@ export function createStitchApiRouter(deps = {}) {
     } catch (err) {
       console.error('[stitch-api] admin-lokasi error:', err);
       return res.status(500).json({ ok: false, message: 'Gagal memperbarui lokasi: ' + err.message });
+    }
+  });
+
+  // 5b. UPDATE JAM KERJA: Simpan jam masuk & pulang ke tabel jam_absen
+  router.post('/admin-jam-absen', requireAdmin, async (req, res) => {
+    try {
+      const b = req.body || {};
+      const masuk = String(b.masuk || '07:15').trim();
+      const pulang = String(b.pulang || '14:30').trim();
+      const instansiId = String(b.instansi_id || req.user?.instansi_id || 'bapperida').trim();
+      if (!/^\d{2}:\d{2}$/.test(masuk) || !/^\d{2}:\d{2}$/.test(pulang)) {
+        return res.status(400).json({ ok: false, message: 'Format jam harus HH:MM.' });
+      }
+      await query(`
+        INSERT INTO jam_absen (key, instansi_id, masuk, pulang, diubah_oleh, updated_at)
+        VALUES ('jam_absen_global', $1, $2, $3, $4, NOW())
+        ON CONFLICT (key, instansi_id) DO UPDATE
+          SET masuk = EXCLUDED.masuk, pulang = EXCLUDED.pulang, diubah_oleh = EXCLUDED.diubah_oleh, updated_at = NOW()
+      `, [instansiId, masuk, pulang, String(req.user?.id || req.user?.nip || 'admin')]);
+
+      return res.json({ ok: true, message: `Jam kerja (${masuk} - ${pulang} WITA) berhasil disimpan di database.`, shift: { masuk, pulang } });
+    } catch (err) {
+      console.error('[stitch-api] admin-jam-absen error:', err);
+      return res.status(500).json({ ok: false, message: 'Gagal menyimpan jam kerja: ' + err.message });
+    }
+  });
+
+  // 5c. KELOLA HARI LIBUR NASIONAL & CUTI BERSAMA (libur_nasional)
+  router.post('/admin-libur', requireAdmin, async (req, res) => {
+    try {
+      const b = req.body || {};
+      const tanggal = String(b.tanggal || '').trim();
+      const nama = String(b.nama || 'Hari Libur Resmi').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) {
+        return res.status(400).json({ ok: false, message: 'Format tanggal harus YYYY-MM-DD.' });
+      }
+      await query(`
+        INSERT INTO libur_nasional (tanggal, nama, ditambahkan_oleh)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (tanggal) DO UPDATE SET nama = EXCLUDED.nama
+      `, [tanggal, nama, String(req.user?.id || req.user?.nip || 'admin')]);
+
+      const rows = (await query(`SELECT tanggal, nama FROM libur_nasional ORDER BY tanggal ASC`)).rows;
+      return res.json({ ok: true, message: 'Hari libur berhasil disimpan.', holidays: rows });
+    } catch (err) {
+      console.error('[stitch-api] admin-libur add error:', err);
+      return res.status(500).json({ ok: false, message: 'Gagal menyimpan hari libur: ' + err.message });
+    }
+  });
+
+  router.post('/admin-libur/delete', requireAdmin, async (req, res) => {
+    try {
+      const tanggal = String(req.body?.tanggal || '').trim();
+      if (!tanggal) return res.status(400).json({ ok: false, message: 'Tanggal wajib diisi.' });
+      await query(`DELETE FROM libur_nasional WHERE tanggal = $1`, [tanggal]);
+      const rows = (await query(`SELECT tanggal, nama FROM libur_nasional ORDER BY tanggal ASC`)).rows;
+      return res.json({ ok: true, message: 'Hari libur dihapus.', holidays: rows });
+    } catch (err) {
+      console.error('[stitch-api] admin-libur delete error:', err);
+      return res.status(500).json({ ok: false, message: 'Gagal menghapus hari libur: ' + err.message });
+    }
+  });
+
+  // 5d. REKAP RENTANG TANGGAL SELURUH PEGAWAI (port dari D:\Code\absensi\js\rekap.js)
+  router.get('/rekap-range', async (req, res) => {
+    try {
+      const dari = String(req.query.dari || '').trim();
+      const sampai = String(req.query.sampai || '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dari) || !/^\d{4}-\d{2}-\d{2}$/.test(sampai) || dari > sampai) {
+        return res.status(400).json({ ok: false, message: 'Rentang tanggal tidak valid.' });
+      }
+
+      const [usersRes, logsRes, ketRes, shiftRes, liburRes] = await Promise.all([
+        query(`
+          SELECT u.id::text AS id, u.username AS nama, u."NIP" AS nip, u."Jabatan" AS jabatan, u.pangkat, t.signature
+          FROM user_list u LEFT JOIN tanda_tangan t ON t.nip = u."NIP"
+          WHERE u.status_aktif = true OR u.status_aktif IS NULL
+          ORDER BY u.username ASC
+        `),
+        query(`SELECT "NIP", "Tanggal", "Jam", "Jenis Absen", "Ket" FROM "Log_Absen" WHERE "Tanggal" BETWEEN $1 AND $2`, [dari, sampai]),
+        query(`
+          SELECT "NIP", "Tanggal", "tgl_mulai", "tgl_selesai", "Jenis Absen" AS jenis, "Ket" AS ket
+          FROM ket_temp
+          WHERE UPPER("Status") = 'DISETUJUI'
+            AND (("Tanggal" BETWEEN $1 AND $2) OR ("tgl_mulai" <= $2 AND "tgl_selesai" >= $1))
+        `, [dari, sampai]),
+        query(`SELECT masuk, pulang FROM jam_absen WHERE instansi_id = 'bapperida' OR instansi_id IS NULL LIMIT 1`),
+        query(`SELECT tanggal FROM libur_nasional WHERE tanggal BETWEEN $1 AND $2`, [dari, sampai])
+      ]);
+
+      const shift = shiftRes.rows[0] || { masuk: '07:15', pulang: '14:30' };
+      const toMin = (hm) => { const [h, m] = String(hm || '00:00').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+      const masukLimit = toMin(shift.masuk || '07:15');
+      const pulangLimit = toMin(shift.pulang || '14:30');
+      const liburSet = new Set(liburRes.rows.map(r => String(r.tanggal).slice(0, 10)));
+      const todayIso = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+
+      // Daftar hari kerja (Sen-Jum, bukan hari libur, tidak melewati hari ini)
+      const workDates = [];
+      for (let d = new Date(dari + 'T00:00:00Z'), end = new Date(sampai + 'T00:00:00Z'); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+        const iso = d.toISOString().slice(0, 10);
+        const dow = d.getUTCDay();
+        if (dow === 0 || dow === 6 || liburSet.has(iso) || iso > todayIso) continue;
+        workDates.push(iso);
+      }
+
+      const isBoss = j => {
+        j = String(j || '').toUpperCase();
+        if (/BIDANG|SEKSI|SUB|BAGIAN|UPTD|PELAKSANA|FUNGSIONAL/.test(j)) return false;
+        return /KEPALA BADAN|KEPALA DINAS|INSPEKTUR|SEKRETARIS DAERAH|CAMAT/.test(j) || j === 'KEPALA' || j.includes('KEPALA');
+      };
+      const kepalaRow = usersRes.rows.find(u => isBoss(u.jabatan)) || null;
+      const kepala = kepalaRow && { nama: kepalaRow.nama, nip: kepalaRow.nip, jabatan: kepalaRow.jabatan, pangkat: kepalaRow.pangkat, signature: kepalaRow.signature || null };
+
+      const admin = !!(MEDIA_ROLES.has(req.user?.role) || req.user?.is_admin);
+      const targetUsers = admin ? usersRes.rows : usersRes.rows.filter(u => u.nip === String(req.user?.nip || ''));
+
+      const data = targetUsers.map(u => {
+        const uLogs = logsRes.rows.filter(l => l.NIP === u.nip);
+        const uKets = ketRes.rows.filter(k => k.NIP === u.nip);
+
+        const byDate = new Map();
+        uLogs.forEach(l => {
+          const t = String(l.Tanggal).slice(0, 10);
+          const rec = byDate.get(t) || { masuk: null, pulang: null, ket: null };
+          const j = String(l['Jenis Absen'] || '').toUpperCase();
+          if (j.includes('PULANG')) { if (!rec.pulang || (l.Jam || '') > (rec.pulang.Jam || '')) rec.pulang = l; }
+          else if (j.includes('MASUK') || j === 'TERLAMBAT') { if (!rec.masuk || (l.Jam || '') < (rec.masuk.Jam || '')) rec.masuk = l; }
+          else if (/IZIN|SAKIT|TUGAS|CUTI|DL|TUBEL/.test(j)) rec.ket = j;
+          byDate.set(t, rec);
+        });
+
+        let hadir = 0, izin = 0, sakit = 0, tugas = 0, cuti = 0, tubel = 0, alpa = 0;
+        let lambatCount = 0, menitLambat = 0, menitCepat = 0;
+
+        workDates.forEach(iso => {
+          const rec = byDate.get(iso);
+          const ketMatch = uKets.find(k => k.Tanggal === iso || (k.tgl_mulai && k.tgl_selesai && iso >= k.tgl_mulai && iso <= k.tgl_selesai));
+          const ketJenis = ketMatch ? String(ketMatch.jenis || '').toUpperCase() : (rec?.ket || '');
+
+          if (ketJenis) {
+            if (ketJenis.includes('SAKIT')) sakit++;
+            else if (ketJenis.includes('TUBEL')) tubel++;
+            else if (ketJenis.includes('CUTI')) cuti++;
+            else if (ketJenis.includes('TUGAS') || ketJenis.includes('DL') || ketJenis.includes('DINAS')) tugas++;
+            else izin++;
+            return;
+          }
+          if (rec && rec.masuk) {
+            hadir++;
+            const mMin = toMin(rec.masuk.Jam);
+            if (mMin > masukLimit) { lambatCount++; menitLambat += (mMin - masukLimit); }
+            if (rec.pulang) {
+              const pMin = toMin(rec.pulang.Jam);
+              if (pMin < pulangLimit) menitCepat += (pulangLimit - pMin);
+            }
+          } else if (iso < todayIso) {
+            alpa++;
+          }
+        });
+
+        return {
+          nip: u.nip,
+          nama: u.nama,
+          jabatan: u.jabatan,
+          pangkat: u.pangkat,
+          hadir,
+          izin,
+          sakit,
+          tugas,
+          cuti,
+          tubel,
+          alpa,
+          lambat_count: lambatCount,
+          menit_terlambat: menitLambat,
+          menit_lebih_awal: menitCepat
+        };
+      });
+
+      return res.json({ ok: true, dari, sampai, hariKerja: workDates.length, shift, kepala, data });
+    } catch (err) {
+      console.error('[stitch-api] rekap-range error:', err);
+      return res.status(500).json({ ok: false, message: 'Gagal menghitung rekap rentang tanggal: ' + err.message });
     }
   });
 
@@ -668,6 +941,53 @@ export function createStitchApiRouter(deps = {}) {
     } catch (err) {
       console.error('[stitch-api] admin/monitoring-today error:', err);
       return res.status(500).json({ ok: false, message: 'Gagal memuat monitoring hari ini: ' + err.message });
+    }
+  });
+
+  // 9b. REKAP HARIAN (format Daftar Hadir): admin = semua pegawai, non-admin = hanya dirinya.
+  // Kepala + tanda tangan selalu disertakan untuk blok TTD.
+  router.get('/rekap-harian', async (req, res) => {
+    try {
+      const tanggal = String(req.query.tanggal || '');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) return res.status(400).json({ ok: false, message: 'Tanggal tidak valid.' });
+
+      const usersRes = await query(`
+        SELECT u."NIP" AS nip, u.username AS nama, u."Jabatan" AS jabatan, u.pangkat, t.signature
+        FROM user_list u LEFT JOIN tanda_tangan t ON t.nip = u."NIP"
+        WHERE u.status_aktif = true OR u.status_aktif IS NULL
+        ORDER BY u.username ASC
+      `);
+      const logs = (await query(`SELECT "NIP", "Jam", "Jenis Absen" FROM "Log_Absen" WHERE "Tanggal" = $1`, [tanggal])).rows;
+      const kets = (await query(`
+        SELECT "NIP", "Jenis Absen" AS jenis, "Ket" AS ket FROM ket_temp
+        WHERE UPPER("Status") = 'DISETUJUI' AND ("Tanggal" = $1 OR ($1 BETWEEN "tgl_mulai" AND "tgl_selesai"))
+      `, [tanggal])).rows;
+
+      const isBoss = j => {
+        j = String(j || '').toUpperCase();
+        if (/BIDANG|SEKSI|SUB|BAGIAN|UPTD|PELAKSANA|FUNGSIONAL/.test(j)) return false;
+        return /KEPALA BADAN|KEPALA DINAS|INSPEKTUR|SEKRETARIS DAERAH|CAMAT/.test(j) || j === 'KEPALA' || j.includes('KEPALA');
+      };
+      const kepala = usersRes.rows.find(u => isBoss(u.jabatan)) || null;
+      const admin = !!(MEDIA_ROLES.has(req.user?.role) || req.user?.is_admin);
+
+      let rows = usersRes.rows.map(u => {
+        const l = logs.filter(x => x.NIP === u.nip);
+        const masuk = l.filter(x => /MASUK|TERLAMBAT/.test(String(x['Jenis Absen']).toUpperCase())).map(x => x.Jam).sort()[0] || null;
+        const pulang = l.filter(x => String(x['Jenis Absen']).toUpperCase().includes('PULANG')).map(x => x.Jam).sort().pop() || null;
+        const k = kets.find(x => x.NIP === u.nip);
+        return { nip: u.nip, nama: u.nama, jabatan: u.jabatan, pangkat: u.pangkat, jamMasuk: masuk, jamPulang: pulang,
+                 ket: k ? [String(k.jenis).toUpperCase(), k.ket].filter(Boolean).join(': ') : (masuk ? '' : 'TB'), signature: u.signature || null };
+      });
+      if (!admin) {
+        const me = String(req.user?.nip || '');
+        rows = rows.filter(r => r.nip === me);
+      }
+      const k = kepala && { nama: kepala.nama, nip: kepala.nip, jabatan: kepala.jabatan, pangkat: kepala.pangkat, signature: kepala.signature || null };
+      return res.json({ ok: true, tanggal, kepala: k, data: rows });
+    } catch (err) {
+      console.error('[stitch-api] rekap-harian error:', err);
+      return res.status(500).json({ ok: false, message: 'Gagal memuat rekap harian: ' + err.message });
     }
   });
 
@@ -1038,6 +1358,53 @@ export function createStitchApiRouter(deps = {}) {
     } catch (err) {
       console.error('[stitch-api] arsip/mobile-data error:', err);
       return res.status(500).json({ ok: false, message: 'Gagal memuat data arsip: ' + err.message });
+    }
+  });
+
+  // 16. BIOMETRIK WAJAH & SPESIMEN TTD (sinkronisasi dari Profil / Admin)
+  router.post('/face-save', async (req, res) => {
+    try {
+      const b = req.body || {};
+      const nip = String(b.nip || '').trim();
+      const facePhoto = String(b.face_photo || '').trim();
+      const descriptor = Array.isArray(b.face_descriptor) ? JSON.stringify(b.face_descriptor) : (typeof b.face_descriptor === 'string' ? b.face_descriptor : '[]');
+      const faceModel = String(b.face_model || 'human').trim();
+
+      if (!nip) return res.status(400).json({ ok: false, message: 'NIP wajib diisi.' });
+      if (!isSelfOrAdmin(req, nip)) return denySelf(res);
+      if (!facePhoto.startsWith('data:image')) return res.status(400).json({ ok: false, message: 'Foto wajah tidak valid.' });
+
+      await query(`
+        UPDATE user_list
+        SET face_photo = $1, face_histogram = $2, face_saved_at = $3, face_model = $4
+        WHERE "NIP" = $5
+      `, [facePhoto, descriptor, new Date().toISOString(), faceModel, nip]);
+
+      return res.json({ ok: true, message: 'Data wajah biometrik berhasil disimpan.' });
+    } catch (err) {
+      console.error('[stitch-api] face-save error:', err);
+      return res.status(500).json({ ok: false, message: 'Gagal menyimpan wajah: ' + err.message });
+    }
+  });
+
+  router.post('/signature-save', async (req, res) => {
+    try {
+      const b = req.body || {};
+      const nip = String(b.nip || '').trim();
+      const sig = String(b.signature || '').trim();
+      if (!nip || !sig) return res.status(400).json({ ok: false, message: 'NIP dan tanda tangan wajib diisi.' });
+      if (!isSelfOrAdmin(req, nip)) return denySelf(res);
+
+      await query(`
+        INSERT INTO tanda_tangan (nip, signature, saved_at, updated_at)
+        VALUES ($1, $2, NOW(), NOW())
+        ON CONFLICT (nip) DO UPDATE SET signature = EXCLUDED.signature, updated_at = NOW()
+      `, [nip, sig]);
+
+      return res.json({ ok: true, message: 'Spesimen tanda tangan berhasil disimpan.' });
+    } catch (err) {
+      console.error('[stitch-api] signature-save error:', err);
+      return res.status(500).json({ ok: false, message: 'Gagal menyimpan tanda tangan: ' + err.message });
     }
   });
 

@@ -7,6 +7,8 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 
 test('index.html memuat library jsQR dan komponen modal pemindai kamera live QR & Barcode BMD', () => {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const asetJs = fs.readFileSync(path.join(ROOT, 'js', 'stitch-aset-arsip.js'), 'utf8');
+  const src = html + '\n' + asetJs;
 
   // 1. Library jsQR
   assert.ok(html.includes('src="js/lib/jsQR.min.js"'), 'index.html harus memuat js/lib/jsQR.min.js');
@@ -18,12 +20,12 @@ test('index.html memuat library jsQR dan komponen modal pemindai kamera live QR 
   assert.ok(html.includes('id="btnScannerTorch"'), 'index.html harus memiliki kontrol senter #btnScannerTorch');
   assert.ok(html.includes('id="scannerFallbackBox"'), 'index.html harus memiliki fallback UI saat kamera belum diizinkan');
 
-  // 3. Fungsi JS Pemindai Kamera
-  assert.ok(html.includes('function openMobileQrScanModal()'), 'index.html harus mendefinisikan openMobileQrScanModal()');
-  assert.ok(html.includes('function startScannerCamera()'), 'index.html harus mendefinisikan startScannerCamera()');
-  assert.ok(html.includes('function stopScannerStream()'), 'index.html harus mendefinisikan stopScannerStream()');
-  assert.ok(html.includes('function onCodeDetected('), 'index.html harus mendefinisikan onCodeDetected()');
-  assert.ok(html.includes('function handleScannerFilePicked('), 'index.html harus mendefinisikan handleScannerFilePicked()');
+  // 3. Fungsi JS Pemindai Kamera (di index.html atau js/stitch-aset-arsip.js)
+  assert.ok(src.includes('function openMobileQrScanModal()'), 'harus mendefinisikan openMobileQrScanModal()');
+  assert.ok(src.includes('function startScannerCamera()'), 'harus mendefinisikan startScannerCamera()');
+  assert.ok(src.includes('function stopScannerStream()'), 'harus mendefinisikan stopScannerStream()');
+  assert.ok(src.includes('function onCodeDetected('), 'harus mendefinisikan onCodeDetected()');
+  assert.ok(src.includes('function handleScannerFilePicked('), 'harus mendefinisikan handleScannerFilePicked()');
 
   // 4. Barcode Hero Card di Aset bisa di-klik untuk scan
   assert.ok(html.includes('onclick="openMobileQrScanModal()"'), 'Scan Barcode Card harus memanggil openMobileQrScanModal()');

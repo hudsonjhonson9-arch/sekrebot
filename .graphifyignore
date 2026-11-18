@@ -1,0 +1,7 @@
+dist/
+catalog/
+node_modules/
+data/cadangan/
+*.min.js
+css/lib/
+js/lib/

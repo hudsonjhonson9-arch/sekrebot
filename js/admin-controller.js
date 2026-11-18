@@ -15,33 +15,56 @@
     const rad = $('adminRadiusSlider');
     const label = $('radiusLabel');
     const btn = $('btnSaveLokasi');
-    if (!core || !lat || !lon || !rad || !btn) return;
+    if (!core) return;
 
     let locId = '1';
     const showRadius = () => { if (label) label.textContent = rad.value + ' Meter'; };
+    const jamMasukEl = $('inputJamMasuk') || $('adminJamMasuk');
+    const jamPulangEl = $('inputJamPulang') || $('adminJamPulang');
 
     try {
-      const { locations } = await core.loadLokasi();
+      const { locations, shift } = await core.loadLokasi();
       const loc = locations[0];
       if (loc) {
         locId = String(loc.id);
-        lat.value = loc.latitude;
-        lon.value = loc.longitude;
-        rad.value = loc.radius || rad.value;
+        if (lat) lat.value = loc.latitude;
+        if (lon) lon.value = loc.longitude;
+        if (rad) rad.value = loc.radius || rad.value;
+      }
+      if (shift) {
+        if (jamMasukEl && shift.masuk) jamMasukEl.value = shift.masuk;
+        if (jamPulangEl && shift.pulang) jamPulangEl.value = shift.pulang;
       }
     } catch (err) {
-      console.warn('[admin] gagal memuat lokasi dari database:', err.message);
+      console.warn('[admin] gagal memuat lokasi/shift dari database:', err.message);
     }
-    showRadius();
-    rad.addEventListener('input', showRadius);
+    if (rad) {
+      showRadius();
+      rad.addEventListener('input', showRadius);
+    }
 
-    btn.addEventListener('click', async function () {
-      btn.disabled = true;
-      try {
-        await core.saveLokasi({ id: locId, lat: lat.value, lon: lon.value, radius: rad.value });
-      } finally {
-        btn.disabled = false;
-      }
-    });
+    if (btn && lat && lon && rad) {
+      btn.addEventListener('click', async function () {
+        btn.disabled = true;
+        try {
+          await core.saveLokasi({ id: locId, lat: lat.value, lon: lon.value, radius: rad.value });
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+
+    // Bind tombol "Simpan Kebijakan Jam Kerja" di admin.html
+    const btnJam = $('btnSaveJamKerja') || Array.from(document.querySelectorAll('button')).find(b => /Simpan Kebijakan Jam Kerja/i.test(b.textContent || ''));
+    if (btnJam && jamMasukEl && jamPulangEl && typeof core.saveJamAbsen === 'function') {
+      btnJam.addEventListener('click', async function () {
+        btnJam.disabled = true;
+        try {
+          await core.saveJamAbsen({ masuk: jamMasukEl.value, pulang: jamPulangEl.value });
+        } finally {
+          btnJam.disabled = false;
+        }
+      });
+    }
   });
 })();

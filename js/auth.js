@@ -489,30 +489,52 @@
 
     // Global Logout Handler
     async function handleLogout() {
-      if (!confirm('Apakah Anda yakin ingin keluar dari akun ini?')) return;
+      let confirmed;
+      if (typeof Swal !== 'undefined') {
+        const r = await Swal.fire({
+          title: 'Keluar dari akun?',
+          text: 'Anda perlu login lagi untuk memakai aplikasi.',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Ya, keluar',
+          cancelButtonText: 'Batal'
+        });
+        confirmed = r.isConfirmed;
+      } else {
+        confirmed = confirm('Apakah Anda yakin ingin keluar dari akun ini?');
+      }
+      if (!confirmed) return;
       console.log('[Auth] Logging out user...');
-      const activeToken = (typeof _nativeToken !== 'undefined' && _nativeToken) || localStorage.getItem('_native_token') || window._session?.token;
+      const activeToken = (typeof _nativeToken !== 'undefined' && _nativeToken) || localStorage.getItem('_native_token') || localStorage.getItem('native_token') || window._session?.token;
       if (activeToken && /^[0-9a-f]{192}$/.test(activeToken)) {
+        // Cabut sesi di server, tapi jangan menahan logout bila jaringan lambat (maks 4 dtk).
         try {
+          const ctrl = new AbortController();
+          const t = setTimeout(() => ctrl.abort(), 4000);
           await fetch(API_BASE + '/api/auth/logout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ session_token: activeToken }),
+            signal: ctrl.signal,
           });
+          clearTimeout(t);
         } catch (_) {}
       }
       setNativeToken(null);
-      clearSession();
-      // Hapus auth-related keys saja, simpan face data + preferences
-      localStorage.removeItem('_native_token');
-      localStorage.removeItem(STORAGE_KEYS.USER_ID);
-      localStorage.removeItem(STORAGE_KEYS.USER_OBJ);
-      localStorage.removeItem('MY_NIP');
-      localStorage.removeItem('MY_ROLE');
-      localStorage.removeItem('MY_INSTANSI');
-      
-      // Force return to login screen
-      location.href = location.pathname; 
+      try { clearSession(); } catch (_) {}
+      // Hapus SEMUA kunci sesi (termasuk native_token, stitch_active_nip, MY_NAME) agar
+      // token lama tidak ikut terkirim. Data wajah + preferensi tetap disimpan.
+      if (window.StitchSession) window.StitchSession.clear();
+      ['_native_token', 'native_token', 'stitch_active_nip', 'MY_NIP', 'MY_ROLE', 'MY_NAME', 'MY_INSTANSI']
+        .forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+      try {
+        localStorage.removeItem(STORAGE_KEYS.USER_ID);
+        localStorage.removeItem(STORAGE_KEYS.USER_OBJ);
+      } catch (_) {}
+      window.MY_ID = null;
+
+      // Kembali ke layar login (tanpa hash, tanpa riwayat halaman terautentikasi).
+      location.replace(location.pathname);
     }
 
     async function _checkIdentityOnLoad() {

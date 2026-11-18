@@ -19,6 +19,43 @@
   }
   window.getStitchToken = getToken;
 
+  /* ── Sesi: pembersihan terpusat + penanganan sesi kedaluwarsa (401) ── */
+  const SESSION_KEYS = ['_native_token', 'native_token', '_sess_token', 'stitch_active_nip',
+    'MY_NIP', 'MY_ROLE', 'MY_NAME', 'MY_INSTANSI'];
+  function clearSession() {
+    SESSION_KEYS.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
+    try {
+      if (typeof STORAGE_KEYS !== 'undefined') {
+        if (STORAGE_KEYS.USER_ID) localStorage.removeItem(STORAGE_KEYS.USER_ID);
+        if (STORAGE_KEYS.USER_OBJ) localStorage.removeItem(STORAGE_KEYS.USER_OBJ);
+      }
+    } catch (_) {}
+    try { if (typeof setNativeToken === 'function') setNativeToken(null); } catch (_) {}
+    window.MY_ID = null;
+  }
+  window.StitchSession = { clear: clearSession };
+
+  let expiredHandled = false;
+  function handleExpired() {
+    if (expiredHandled) return;
+    expiredHandled = true;
+    clearSession();
+    const ov = document.getElementById('authOverlay');
+    if (ov) {                       // index.html: tampilkan modal login lagi
+      ov.style.display = 'flex';
+      try { if (typeof state !== 'undefined') state.isLoggedIn = false; } catch (_) {}
+      try {
+        if (typeof showDynamicIsland === 'function') {
+          showDynamicIsland({ type: 'error', title: 'Sesi Berakhir', message: 'Silakan login kembali.' });
+        }
+      } catch (_) {}
+      setTimeout(function () { expiredHandled = false; }, 3000);
+    } else {                        // halaman portal: kembali ke login.html
+      location.replace('login.html');
+    }
+  }
+
+  const STITCH_RE = /^(https?:\/\/[^/]+)?\/api\/stitch(\/|\?|$)/;
   const origFetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
     try {
@@ -33,8 +70,39 @@
         }
       }
     } catch (_) { /* jangan pernah memblokir fetch */ }
-    return origFetch(input, init);
+    let isStitch = false;
+    try { isStitch = STITCH_RE.test(typeof input === 'string' ? input : (input && input.url) || ''); } catch (_) {}
+    const hadToken = isStitch && !!getToken();
+    return origFetch(input, init).then(function (res) {
+      // 401 saat memegang token = sesi habis/dicabut server -> paksa login ulang.
+      if (hadToken && res.status === 401) handleExpired();
+      return res;
+    });
   };
+
+  /* ── PENGALIHAN MODE (opt-in) ──
+   * Tiap fitur tetap file sendiri, sehingga refresh tetap di halaman yang sama.
+   * Pengalihan ke versi SPA index.html HANYA terjadi bila pengguna memilih
+   * AdminCore.setMode('mobile'); bawaannya tidak mengalihkan apa pun.
+   */
+  const MODE_KEY = 'stitch_admin_mode';
+  const getPref = () => { try { return localStorage.getItem(MODE_KEY); } catch (_) { return null; } };
+  const pageName = (location.pathname.split('/').pop() || '').toLowerCase();
+  const MOBILE_EQUIVALENT = {
+    'desktop.html': 'index.html',
+    'admin.html': 'index.html#admin',
+    'aset-kir.html': 'index.html#aset',
+    'arsip.html': 'index.html#arsip',
+    'layanan.html': 'index.html#sppd',
+    'rekap.html': 'index.html#tpp',
+    'cetak-tpp.html': 'index.html#tpp',
+    'kiosk.html': 'index.html#kiosk'
+  };
+
+  if (MOBILE_EQUIVALENT[pageName] && getPref() === 'mobile') {
+    location.replace(MOBILE_EQUIVALENT[pageName]);
+    return;
+  }
 
   // Halaman portal desktop/admin tidak punya modal login: wajib punya sesi.
   const page = (location.pathname.split('/').pop() || '').toLowerCase();
@@ -42,5 +110,14 @@
     'aset-kir.html', 'arsip.html'].includes(page);
   if (needsLogin && !getToken()) {
     location.replace('login.html');
+    return;
+  }
+
+  // Muat bottom-nav responsif untuk halaman desktop bersidebar di layar kecil (<1024px)
+  if (needsLogin) {
+    const s = document.createElement('script');
+    s.src = 'js/stitch-responsive-nav.js';
+    s.defer = true;
+    (document.head || document.documentElement).appendChild(s);
   }
 })();
