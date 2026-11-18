@@ -30,6 +30,31 @@ test('filter default Permen 47 diisi dinamis dari periode/tahun berjalan', () =>
   assert.ok(ext.includes('window.initPermen47Filters();'), 'loadLaporanPermen47 harus memanggil init');
 });
 
+test('pratinjau memakai 27 kolom template resmi Permen 47', () => {
+  const label = [
+    'Penggolongan dan Kodefikasi Barang', 'Spesifikasi Nama Barang', 'Merek', 'Jumlah Barang',
+    'Satuan Barang', 'Harga Satuan', 'Total Nilai Barang', 'Total Biaya Atribusi',
+    'Nilai Perolehan Barang', 'Harga Satuan Perolehan', 'Sub Kegiatan', 'Kode Sub Kegiatan',
+    'Nama Sub Kegiatan', 'Kode Rekening', 'Uraian Belanja', 'Tanggal Perolehan',
+    'Bentuk Kontrak', 'Nama Penyedia', 'Dokumen Sumber Perolehan', 'Ket.',
+  ];
+  for (const s of label) {
+    assert.ok(ext.includes(s), 'label kolom template hilang di pratinjau: ' + s);
+  }
+  assert.ok(ext.includes('9 = 6 X 8') && ext.includes('11 = 9 + 10') && ext.includes('12 = 11 : 6'), 'baris nomor kolom 1..21 wajib ada');
+  assert.ok(ext.includes('J U M L A H     T O T A L'), 'baris JUMLAH TOTAL wajib sama dengan template');
+  assert.ok(ext.includes('min-width:1560px'), 'tabel 27 kolom harus bergulir horizontal');
+  assert.ok(ext.includes('rowspan="3"') && ext.includes('colspan="7"'), 'header bertingkat seperti template');
+});
+
+test('pratinjau membaca kolom hasil enrich SQL (sub kegiatan, rekening, tanggal)', () => {
+  assert.ok(ext.includes('r.nama_sub_kegiatan'), 'pratinjau harus menampilkan nama sub kegiatan');
+  assert.ok(ext.includes('r.kode_rekening'), 'pratinjau harus menampilkan kode rekening');
+  assert.ok(ext.includes('r.uraian_belanja'), 'pratinjau harus menampilkan uraian belanja');
+  assert.ok(ext.includes('tglIndo'), 'tanggal perolehan diformat Indonesia seperti template');
+  assert.ok(ext.includes('kode_parts'), 'baris grup memakai potongan kode barang per kolom');
+});
+
 test('index.html dan www/index.html identik + tag simapo-ext.js memakai versi yang sama', () => {
   assert.equal(indexHtml, wwwIndexHtml, 'index.html dan www/index.html harus identik');
   assert.equal(ext, wwwExt, 'js/simapo-ext.js dan www/js/simapo-ext.js harus identik');

@@ -1551,40 +1551,141 @@ window.renderPermen47Table = function(rows, meta) {
     return r.is_header ? s : s + (Number(r.total_nilai) || 0);
   }, 0);
   const totalKeseluruhan = Number(meta.total_nilai) || leafTotal;
+
+  const ST = 'padding:5px;border:1px solid rgba(255,255,255,0.10);vertical-align:middle;';
+  const ST_HEAD = ST + 'background:rgba(255,255,255,0.05);color:var(--white);font-weight:800;text-align:center;font-size:10.5px;letter-spacing:0.2px;';
+  const NUM = 'text-align:right;font-variant-numeric:tabular-nums;';
+  const KODE_CELL = 'text-align:center;font-family:monospace;font-size:10.5px;';
+  const SUB_BG = 'background:rgba(255,255,255,0.045);';
+  const th = function(inner, attrs, extra) {
+    return '<th style="' + ST_HEAD + (extra || '') + '"' + (attrs || '') + '>' + inner + '</th>';
+  };
+  const td = function(inner, extra) {
+    return '<td style="' + ST + (extra || '') + '">' + (inner == null ? '' : inner) + '</td>';
+  };
+  const tdNum = function(v, extra) {
+    return td(v === '' || v == null ? '' : fmt(v), NUM + (extra || ''));
+  };
+  const rp = '<span style="font-weight:600;opacity:0.65;">( Rp)</span>';
+  const kodeParts = function(r) {
+    if (Array.isArray(r.kode_parts)) {
+      return Array.from({ length: 7 }, function(_, i) {
+        const v = r.kode_parts[i];
+        return v == null ? '' : String(v);
+      });
+    }
+    const parts = String(r.kode_barang || r.kodebarang || '').split('.').filter(Boolean).slice(0, 7);
+    return Array.from({ length: 7 }, function(_, i) { return parts[i] || ''; });
+  };
+  const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const tglIndo = function(v) {
+    const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return String(v || '');
+    return Number(m[3]) + ' ' + BULAN[Number(m[2]) - 1] + ' ' + m[1];
+  };
+
+  const kotak = Array.from({ length: 6 }, function() { return th('', ''); }).join('');
+  const headRow1 = '<tr>' +
+    th('No.', ' rowspan="3"') +
+    th('Penggolongan dan Kodefikasi Barang', ' colspan="8"') +
+    th('Spesifikasi Nama Barang', ' rowspan="3"') +
+    th('Merek', ' rowspan="3"') +
+    th('Jumlah Barang', ' rowspan="3"') +
+    th('Satuan Barang', ' rowspan="3"') +
+    th('Harga Satuan<br>' + rp, ' rowspan="2"') +
+    th('Total Nilai Barang<br>' + rp, ' rowspan="2"') +
+    th('Total Biaya Atribusi<br>' + rp, ' rowspan="2"') +
+    th('Nilai Perolehan Barang<br>' + rp, ' rowspan="2"') +
+    th('Harga Satuan Perolehan<br>' + rp, ' rowspan="2"') +
+    th('Sub Kegiatan dan Rekening Anggaran Belanja Daerah atas Pengadaan Barang', ' colspan="4"') +
+    th('Tanggal Perolehan', ' rowspan="3"') +
+    th('Dokumen Sumber Perolehan', ' colspan="3"') +
+    th('Ket.', ' rowspan="3"') +
+  '</tr>';
+  const headRow2 = '<tr>' +
+    th('Kode Barang', ' rowspan="2"') + kotak +
+    th('Nama Barang', ' rowspan="2"') +
+    th('Sub Kegiatan', ' colspan="2"') +
+    th('Rekening Belanja Daerah', ' colspan="2"') +
+    th('Bentuk Kontrak', ' rowspan="2"') +
+    th('Nama Penyedia', ' rowspan="2"') +
+    th('No.', ' rowspan="2"') +
+  '</tr>';
+  const headRow3 = '<tr>' + kotak +
+    th(rp) + th(rp) + th(rp) + th(rp) + th(rp) +
+    th('Kode Sub Kegiatan') + th('Nama Sub Kegiatan') + th('Kode Rekening') + th('Uraian Belanja') +
+  '</tr>';
+  const headRow4 = '<tr>' + th('1') + th('2', ' colspan="7"') +
+    ['3', '4', '5', '6', '7', '8', '9 = 6 X 8', '10', '11 = 9 + 10', '12 = 11 : 6',
+      '13', '14', '15', '16', '17', '18', '19', '20', '21']
+      .map(function(v) { return th(v); }).join('') +
+  '</tr>';
+
   let noUrut = 0;
   const trs = rows.map(function(r) {
     if (r.is_header) {
-      // Baris grup (ASET / ASET LANCAR / PERSEDIAAN / kategori): nama diindensikan,
-      // subtotal hanya tampil sebagai teks, tidak dijumlahkan dua kali ke footer.
+      // Baris grup (ASET / ASET LANCAR / PERSEDIAAN / kategori): subtotal hanya
+      // tampil sebagai teks, tidak dijumlahkan dua kali ke footer.
       const lvl = Number(r.level) || 1;
       const sub = Number(r.total_nilai) || 0;
+      const nilai = Number(r.nilai_perolehan) || 0;
+      const jml = Number(r.jumlah || r.volume) || 0;
       const pad = 6 + Math.min(lvl - 1, 4) * 14;
-      return '<tr style="background:rgba(255,255,255,0.045);border-bottom:1px solid rgba(255,255,255,0.07);">' +
-        '<td style="padding:7px 6px;"></td>' +
-        '<td style="padding:7px 6px;"></td>' +
-        '<td colspan="5" style="padding:7px 6px;padding-left:' + pad + 'px;font-weight:800;letter-spacing:0.4px;color:' + (lvl <= 3 ? 'var(--white)' : 'var(--gold)') + ';">' + esc(r.nama) + '</td>' +
-        '<td style="padding:7px 6px;text-align:right;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums;">' + (sub ? fmt(sub) : '') + '</td>' +
-        '<td colspan="3" style="padding:7px 6px;"></td>' +
-        '</tr>';
+      const c = [td('')];
+      kodeParts(r).forEach(function(k) { c.push(td(esc(k), KODE_CELL)); });
+      c.push(td(esc(r.nama || ''), 'font-weight:800;padding-left:' + pad + 'px;' + SUB_BG +
+        'color:' + (lvl <= 3 ? 'var(--white)' : 'var(--gold)') + ';'));
+      c.push(td(''));
+      c.push(td(''));
+      c.push(tdNum(jml ? jml : '', 'font-weight:700;' + SUB_BG));
+      c.push(td(''));
+      c.push(td(''));
+      c.push(tdNum(sub ? sub : '', 'font-weight:800;color:var(--gold);' + SUB_BG));
+      c.push(td(''));
+      c.push(tdNum(nilai ? nilai : '', 'font-weight:800;color:var(--gold);' + SUB_BG));
+      for (let i = 18; i <= 27; i++) c.push(td(''));
+      return '<tr>' + c.join('') + '</tr>';
     }
     noUrut += 1;
     const jumlah = Number(r.jumlah || r.volume) || 1;
     const harga = Number(r.harga_satuan || r.hargasatuan || r.harga) || 0;
     const total = Number(r.total_nilai || r.total || (jumlah * harga)) || 0;
-    return '<tr style="border-bottom:1px solid rgba(255,255,255,0.06);">' +
-      '<td style="padding:8px 6px;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums;">' + noUrut + '</td>' +
-      '<td style="padding:8px 6px;font-family:monospace;font-size:11px;">' + esc(r.kode_barang || r.kodebarang || '—') + '</td>' +
-      '<td style="padding:8px 6px;font-weight:700;color:var(--white);">' + esc(r.nama_barang || r.nama || '—') + '</td>' +
-      '<td style="padding:8px 6px;color:var(--muted);">' + esc(r.spesifikasi || r.merek || '—') + '</td>' +
-      '<td style="padding:8px 6px;text-align:right;font-variant-numeric:tabular-nums;">' + fmt(jumlah) + '</td>' +
-      '<td style="padding:8px 6px;text-align:center;color:var(--muted);">' + esc(r.satuan || 'Unit') + '</td>' +
-      '<td style="padding:8px 6px;text-align:right;font-variant-numeric:tabular-nums;">' + fmt(harga) + '</td>' +
-      '<td style="padding:8px 6px;text-align:right;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;">' + fmt(total) + '</td>' +
-      '<td style="padding:8px 6px;color:var(--muted);">' + esc(r.bentuk_kontrak || r.kontrak || '—') + '</td>' +
-      '<td style="padding:8px 6px;color:var(--muted);">' + esc(r.nama_penyedia || r.penyedia || '—') + '</td>' +
-      '<td style="padding:8px 6px;color:var(--muted);">' + esc(r.no_bukti || r.no_nota || '—') + '</td>' +
-      '</tr>';
+    const atribusi = Number(r.biaya_atribusi) || 0;
+    const perolehan = Number(r.nilai_perolehan) || total;
+    const hsp = Number(r.harga_satuan_perolehan) || (jumlah > 0 ? Math.round(perolehan / jumlah) : harga);
+    const c = [td(r.no || noUrut, 'text-align:center;color:var(--muted);font-variant-numeric:tabular-nums;')];
+    kodeParts(r).forEach(function(k) { c.push(td(esc(k), KODE_CELL)); });
+    c.push(td(esc(r.nama_barang || r.nama || ''), 'font-weight:700;color:var(--white);'));
+    c.push(td(esc(r.spesifikasi || ''), 'color:var(--muted);'));
+    c.push(td(esc(r.merek || ''), 'color:var(--muted);'));
+    c.push(tdNum(jumlah));
+    c.push(td(esc(r.satuan || 'Unit'), 'text-align:center;color:var(--muted);'));
+    c.push(tdNum(harga));
+    c.push(tdNum(total, 'font-weight:700;color:var(--gold);'));
+    c.push(tdNum(atribusi));
+    c.push(tdNum(perolehan, 'font-weight:700;'));
+    c.push(tdNum(hsp));
+    c.push(td(esc(r.sub_kegiatan || ''), KODE_CELL));
+    c.push(td(esc(r.nama_sub_kegiatan || ''), 'color:var(--muted);'));
+    c.push(td(esc(r.kode_rekening || ''), KODE_CELL));
+    c.push(td(esc(r.uraian_belanja || ''), 'color:var(--muted);'));
+    c.push(td(esc(tglIndo(r.tgl_nota || r.tanggal || r.tgl)), 'text-align:center;white-space:nowrap;'));
+    c.push(td(esc(r.bentuk_kontrak || r.kontrak || ''), 'color:var(--muted);'));
+    c.push(td(esc(r.nama_penyedia || r.penyedia || ''), 'color:var(--muted);'));
+    c.push(td(esc(r.dokumen_sumber || r.no_bukti || r.no_nota || ''), 'color:var(--muted);'));
+    c.push(td(esc(r.keterangan || r.ket || ''), 'color:var(--muted);'));
+    return '<tr>' + c.join('') + '</tr>';
   }).join('');
+
+  const foot = '<tr>' +
+    '<td style="' + ST + '"></td>' +
+    '<td colspan="13" style="' + ST + 'text-align:center;font-weight:800;letter-spacing:2px;background:rgba(255,255,255,0.05);color:var(--white);">J U M L A H     T O T A L</td>' +
+    '<td style="' + ST + NUM + 'font-weight:800;color:var(--gold);">' + fmt(totalKeseluruhan) + '</td>' +
+    '<td style="' + ST + NUM + '">' + fmt(0) + '</td>' +
+    '<td style="' + ST + NUM + 'font-weight:800;color:var(--gold);">' + fmt(totalKeseluruhan) + '</td>' +
+    '<td style="' + ST + NUM + '">' + fmt(0) + '</td>' +
+    Array.from({ length: 9 }, function() { return '<td style="' + ST + '"></td>'; }).join('') +
+  '</tr>';
 
   container.innerHTML = '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;margin-top:10px;overflow-x:auto;">' +
     '<div style="text-align:center;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:12px;">' +
@@ -1592,31 +1693,12 @@ window.renderPermen47Table = function(rows, meta) {
       '<div style="font-size:12px;font-weight:700;color:var(--gold);margin-top:3px;">Periode: ' + labelPeriode + ' Tahun ' + meta.tahun + '</div>' +
       '<div style="font-size:11px;color:var(--muted);margin-top:2px;">Pemerintah Kabupaten Sumba Barat · Pengguna Barang: BAPPELITBANGDA</div>' +
     '</div>' +
-    '<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:840px;">' +
-      '<thead>' +
-        '<tr style="background:rgba(255,255,255,0.04);border-bottom:2px solid rgba(255,255,255,0.12);color:var(--white);text-align:left;">' +
-          '<th style="padding:8px 6px;text-align:center;width:34px;">No.</th>' +
-          '<th style="padding:8px 6px;">Kode Barang</th>' +
-          '<th style="padding:8px 6px;">Nama Barang</th>' +
-          '<th style="padding:8px 6px;">Spesifikasi / Merek</th>' +
-          '<th style="padding:8px 6px;text-align:right;">Jumlah</th>' +
-          '<th style="padding:8px 6px;text-align:center;">Satuan</th>' +
-          '<th style="padding:8px 6px;text-align:right;">Harga Satuan (Rp)</th>' +
-          '<th style="padding:8px 6px;text-align:right;">Total Nilai (Rp)</th>' +
-          '<th style="padding:8px 6px;">Bentuk Kontrak</th>' +
-          '<th style="padding:8px 6px;">Penyedia</th>' +
-          '<th style="padding:8px 6px;">No. Bukti / Nota</th>' +
-        '</tr>' +
-      '</thead>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:1560px;">' +
+      '<thead>' + headRow1 + headRow2 + headRow3 + headRow4 + '</thead>' +
       '<tbody>' + trs + '</tbody>' +
-      '<tfoot>' +
-        '<tr style="border-top:2px solid rgba(255,255,255,0.12);font-weight:800;">' +
-          '<td colspan="7" style="padding:10px 6px;text-align:right;color:var(--white);">TOTAL NILAI PENGADAAN:</td>' +
-          '<td style="padding:10px 6px;text-align:right;color:var(--gold);font-size:13px;font-variant-numeric:tabular-nums;">Rp ' + fmt(totalKeseluruhan) + '</td>' +
-          '<td colspan="3"></td>' +
-        '</tr>' +
-      '</tfoot>' +
+      '<tfoot>' + foot + '</tfoot>' +
     '</table>' +
+    '<div style="font-size:10.5px;color:var(--muted);margin-top:10px;text-align:right;">Format Permendagri No. 47 Tahun 2006 · geser tabel ke samping untuk melihat seluruh kolom</div>' +
   '</div>';
 };
 

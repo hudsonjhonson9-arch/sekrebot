@@ -84,6 +84,7 @@ export function groupPermen47Rows(items) {
 
   const categoryMap = new Map();
   let totalNilai = 0;
+  let totalVol = 0;
 
   items.forEach((item, idx) => {
     const catName = String(item.nama_kategori || 'BARANG PAKAI HABIS LAINNYA').trim();
@@ -94,6 +95,7 @@ export function groupPermen47Rows(items) {
     const harga = Number(item.harga_satuan) || 0;
     const nilai = Number(item.total_nilai) || (jumlah * harga);
     totalNilai += nilai;
+    totalVol += jumlah;
 
     categoryMap.get(catName).items.push({
       ...item,
@@ -125,6 +127,7 @@ export function groupPermen47Rows(items) {
     level: 2,
     kode_parts: [1, 1, '', '', '', '', ''],
     nama: 'ASET LANCAR',
+    jumlah: totalVol,
     total_nilai: totalNilai,
     nilai_perolehan: totalNilai,
   });
@@ -135,6 +138,7 @@ export function groupPermen47Rows(items) {
     level: 3,
     kode_parts: [1, 1, 7, '', '', '', ''],
     nama: 'PERSEDIAAN',
+    jumlah: totalVol,
     total_nilai: totalNilai,
     nilai_perolehan: totalNilai,
   });
@@ -145,6 +149,7 @@ export function groupPermen47Rows(items) {
     level: 4,
     kode_parts: [1, 1, 7, 1, '', '', ''],
     nama: 'BARANG PAKAI HABIS',
+    jumlah: totalVol,
     total_nilai: totalNilai,
     nilai_perolehan: totalNilai,
   });
@@ -417,7 +422,6 @@ export function generatePermen47Excel({ periode, tahun, instansi_id, rows, total
     cells: [
       { colNum: 1, value: 'No.', style: 3 },
       { colNum: 2, value: 'Penggolongan dan Kodefikasi Barang', style: 3 },
-      { colNum: 9, value: 'Nama Barang', style: 3 },
       { colNum: 10, value: 'Spesifikasi Nama Barang', style: 3 },
       { colNum: 11, value: 'Merek', style: 3 },
       { colNum: 12, value: 'Jumlah Barang', style: 3 },
@@ -439,6 +443,7 @@ export function generatePermen47Excel({ periode, tahun, instansi_id, rows, total
     rowNum: 9,
     cells: [
       { colNum: 2, value: 'Kode Barang', style: 3 },
+      ...Array.from({ length: 6 }, (_, i) => ({ colNum: 3 + i, value: '', style: 3 })),
       { colNum: 9, value: 'Nama Barang', style: 3 },
       { colNum: 19, value: 'Sub Kegiatan', style: 3 },
       { colNum: 21, value: 'Rekening Belanja Daerah', style: 3 },
@@ -447,11 +452,12 @@ export function generatePermen47Excel({ periode, tahun, instansi_id, rows, total
       { colNum: 26, value: 'No.', style: 3 },
     ],
   });
-  merges.push('B9:H10', 'I9:I10', 'S9:T9', 'U9:V9', 'X9:X10', 'Y9:Y10', 'Z9:Z10');
+  merges.push('B9:B10', 'I9:I10', 'S9:T9', 'U9:V9', 'X9:X10', 'Y9:Y10', 'Z9:Z10');
 
   sheetRows.push({
     rowNum: 10,
     cells: [
+      ...Array.from({ length: 13 }, (_, i) => ({ colNum: 1 + i, value: '', style: 3 })),
       { colNum: 14, value: '( Rp)', style: 3 },
       { colNum: 15, value: '( Rp)', style: 3 },
       { colNum: 16, value: '( Rp)', style: 3 },

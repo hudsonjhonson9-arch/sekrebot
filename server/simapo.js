@@ -151,7 +151,10 @@ export const LAPORAN_PERMEN47_PENERIMAAN_SQL =
   `SELECT b.id AS barang_id, COALESCE(b.kodebarang, '') AS kodebarang, b.nama AS nama_barang,
           COALESCE(b.spesifikasi, '') AS spesifikasi, COALESCE(b.satuan, 'Unit') AS satuan,
           dp.volume AS jumlah, dp.harga_satuan, dp.total_harga AS total_nilai,
-          COALESCE(pb.sub_kegiatan, b.koderekening, '') AS sub_kegiatan,
+          COALESCE(NULLIF(pb.sub_kegiatan, ''), '') AS sub_kegiatan,
+          COALESCE(sk.nama, '') AS nama_sub_kegiatan,
+          COALESCE(NULLIF(b.koderekening, ''), '') AS kode_rekening,
+          COALESCE(rb.uraian, '') AS uraian_belanja,
           TO_CHAR(pb.tgl_nota, 'YYYY-MM-DD') AS tgl_nota,
           COALESCE(pb.penyedia, '') AS nama_penyedia,
           COALESCE(pb.kontrak, '') AS bentuk_kontrak,
@@ -161,6 +164,8 @@ export const LAPORAN_PERMEN47_PENERIMAAN_SQL =
    JOIN "SIMAPO".detail_penerimaan dp ON dp.penerimaan_id = pb.id
    JOIN "SIMAPO".barang b ON b.id = dp.barang_id
    LEFT JOIN "SIMAPO".kategori_barang kb ON kb.id = b.kategoriid
+   LEFT JOIN "SIMAPO".subkegiatan sk ON sk.kode = NULLIF(pb.sub_kegiatan, '')
+   LEFT JOIN "SIMAPO".rekening_belanja rb ON rb.kode = b.koderekening
    WHERE pb.instansi_id = $1
      AND pb.tgl_nota BETWEEN $2::date AND $3::date
    ORDER BY b.kodebarang, b.nama, pb.tgl_nota ASC`;
@@ -171,12 +176,15 @@ export const LAPORAN_PERMEN47_FALLBACK_SQL =
           GREATEST(COALESCE(b.stok_saat_ini, 1), 1) AS jumlah,
           COALESCE(b.hargasatuan, 0) AS harga_satuan,
           (GREATEST(COALESCE(b.stok_saat_ini, 1), 1) * COALESCE(b.hargasatuan, 0)) AS total_nilai,
-          COALESCE(b.koderekening, '') AS sub_kegiatan,
+          '' AS sub_kegiatan, '' AS nama_sub_kegiatan,
+          COALESCE(NULLIF(b.koderekening, ''), '') AS kode_rekening,
+          COALESCE(rb.uraian, '') AS uraian_belanja,
           TO_CHAR(COALESCE(b.createdat, NOW()), 'YYYY-MM-DD') AS tgl_nota,
           '' AS nama_penyedia, '' AS bentuk_kontrak, '' AS dokumen_sumber,
           COALESCE(kb.nama, '') AS nama_kategori
    FROM "SIMAPO".barang b
    LEFT JOIN "SIMAPO".kategori_barang kb ON kb.id = b.kategoriid
+   LEFT JOIN "SIMAPO".rekening_belanja rb ON rb.kode = b.koderekening
    WHERE b.instansi_id = $1
      AND b.isactive = true
      AND (

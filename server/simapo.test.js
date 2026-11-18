@@ -6,7 +6,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import express from 'express';
+import PizZip from 'pizzip';
 
+import { groupPermen47Rows } from './simapo-excel.js';
 import {
   createSimapoRouter,
   barisBKU,
@@ -941,6 +943,74 @@ test('GET /laporan-permen47/xlsx menghasilkan file excel biner valid', async () 
   // Magic bytes untuk ZIP file (PK\x03\x04)
   assert.equal(body[0], 0x50);
   assert.equal(body[1], 0x4b);
+});
+
+test('Excel Permen 47 memakai merge, label, dan nomor kolom template resmi', async () => {
+  const a = app(stub({
+    rows: [{
+      barang_id: 'b-cat',
+      kodebarang: '1.1.7.01.01.01.006',
+      nama_barang: 'Cat Tembok 20 kg',
+      spesifikasi: 'Warna Putih',
+      satuan: 'Kaleng',
+      jumlah: 2,
+      harga_satuan: 550000,
+      total_nilai: 1100000,
+      sub_kegiatan: '5.01.01.2.09.0009',
+      tgl_nota: '2026-02-15',
+      nama_penyedia: 'CV Mandiri',
+      bentuk_kontrak: 'SPK',
+      dokumen_sumber: 'SP2D-001',
+      nama_kategori: 'Bahan Bangunan',
+    }],
+  }), ADMIN);
+
+  const { status, body } = await call(a, 'GET', '/api/simapo/laporan-permen47/xlsx?periode=TW1&tahun=2026');
+  assert.equal(status, 200);
+
+  const sheetXml = new PizZip(body).file('xl/worksheets/sheet1.xml').asText();
+  const rowOf = (n) => (sheetXml.match(new RegExp('<row[^>]*\\br="' + n + '"[^>]*>[\\s\\S]*?</row>')) || [''])[0];
+  const merges = Array.from(sheetXml.matchAll(/<mergeCell ref="([^"]+)"/g), (m) => m[1]);
+
+  assert.ok(merges.includes('A8:A10') && merges.includes('B8:I8') && merges.includes('B11:H11'), 'merge header utama wajib sama dengan template');
+  assert.ok(merges.includes('B9:B10'), 'Kode Barang harus merge vertikal B9:B10');
+  assert.ok(!merges.includes('B9:H10'), 'merge lama B9:H10 sudah diganti agar kotak kode tampil');
+  assert.ok(!rowOf(8).includes('>Nama Barang</t>'), 'Nama Barang tidak boleh berada di baris 8 (area merge B8:I8)');
+  assert.ok(rowOf(9).includes('>Nama Barang</t>'), 'Nama Barang ada di baris 9 seperti template');
+  assert.ok(rowOf(10).includes('( Rp)'), 'baris satuan rupiah wajib ada');
+  assert.ok(rowOf(11).includes('9 = 6 X 8') && rowOf(11).includes('21'), 'baris nomor kolom 1..21 wajib sama');
+
+  for (const label of [
+    'Penggolongan dan Kodefikasi Barang', 'Spesifikasi Nama Barang', 'Total Biaya Atribusi',
+    'Harga Satuan Perolehan', 'Kode Sub Kegiatan', 'Nama Sub Kegiatan', 'Kode Rekening',
+    'Uraian Belanja', 'Dokumen Sumber Perolehan', 'J U M L A H     T O T A L',
+  ]) {
+    assert.ok(sheetXml.includes(label), 'label template hilang: ' + label);
+  }
+});
+
+test('subtotal level 1..5 Permen 47 memuat jumlah & nilai seperti template', () => {
+  const { hierarchicalRows, totalNilai } = groupPermen47Rows([
+    { nama_barang: 'Cat Tembok', jumlah: 4, harga_satuan: 500000, total_nilai: 2000000, nama_kategori: 'Bahan Bangunan' },
+  ]);
+  assert.equal(totalNilai, 2000000);
+
+  const lvl = (n) => hierarchicalRows.find((r) => r.is_header && r.level === n);
+  assert.equal(lvl(1).jumlah, undefined, 'level 1 (ASET) tanpa jumlah seperti template');
+  assert.equal(lvl(2).jumlah, 4, 'level 2 memuat jumlah total');
+  assert.equal(lvl(3).jumlah, 4, 'level 3 memuat jumlah total');
+  assert.equal(lvl(4).jumlah, 4, 'level 4 memuat jumlah total');
+  assert.equal(lvl(5).jumlah, 4, 'level 5 (kategori) memuat jumlah');
+  assert.equal(lvl(4).total_nilai, 2000000);
+});
+
+test('SQL laporan Permen 47 mengisi nama sub kegiatan, kode & uraian rekening', () => {
+  assert.ok(LAPORAN_PERMEN47_PENERIMAAN_SQL.includes('AS nama_sub_kegiatan'), 'kolom nama sub kegiatan wajib ada');
+  assert.ok(LAPORAN_PERMEN47_PENERIMAAN_SQL.includes('AS kode_rekening'), 'kolom kode rekening wajib ada');
+  assert.ok(LAPORAN_PERMEN47_PENERIMAAN_SQL.includes('AS uraian_belanja'), 'kolom uraian belanja wajib ada');
+  assert.ok(LAPORAN_PERMEN47_PENERIMAAN_SQL.includes('LEFT JOIN "SIMAPO".subkegiatan'), 'join master subkegiatan wajib ada');
+  assert.ok(LAPORAN_PERMEN47_PENERIMAAN_SQL.includes('LEFT JOIN "SIMAPO".rekening_belanja'), 'join master rekening wajib ada');
+  assert.ok(LAPORAN_PERMEN47_FALLBACK_SQL.includes('AS kode_rekening'), 'jalur fallback ikut memuat kolom yang sama');
 });
 
 // ── Kartu Pemeliharaan ──
