@@ -69,6 +69,7 @@
     };
   </script>
 
+  <link rel="stylesheet" href="css/lib/leaflet.min.css" />
   <link rel="stylesheet" href="css/stitch-mobile.css" />
   <link rel="stylesheet" href="css/stitch-swal.css" />
 </head>
@@ -766,7 +767,23 @@
                 <span>Radius Buffer</span>
                 <span id="radiusLabel" class="text-blue-600 font-bold font-mono">20 Meter</span>
               </div>
-              <input type="range" id="adminRadiusSlider" min="10" max="500" step="10" value="20" oninput="document.getElementById('radiusLabel').textContent = this.value + ' Meter'" class="w-full accent-blue-600" />
+              <input type="range" id="adminRadiusSlider" min="10" max="500" step="10" value="20" oninput="document.getElementById('radiusLabel').textContent = this.value + ' Meter'; if(typeof updateAdminGeofenceMap==='function')updateAdminGeofenceMap();" class="w-full accent-blue-600" />
+            </div>
+
+            <!-- Peta Leaflet Interaktif: Jalan (OSM) & Satelit (Esri) -->
+            <div class="pt-2 space-y-2">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="inline-flex p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                  <button type="button" id="btnMapLayerStreet" onclick="setAdminMapLayer('street')" class="min-h-[34px] px-3 py-1 rounded-lg text-[11px] font-bold bg-blue-600 text-white shadow-xs transition-all cursor-pointer">Peta Jalan</button>
+                  <button type="button" id="btnMapLayerSat" onclick="setAdminMapLayer('satellite')" class="min-h-[34px] px-3 py-1 rounded-lg text-[11px] font-semibold text-slate-600 dark:text-slate-300 transition-all cursor-pointer">Satelit</button>
+                </div>
+                <button type="button" onclick="useMyGpsForAdminMap()" class="min-h-[34px] px-3 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800 text-[11px] font-bold flex items-center gap-1 cursor-pointer">
+                  <span class="material-symbols-outlined text-[15px]">my_location</span>
+                  <span>Posisi Saya</span>
+                </button>
+              </div>
+              <div id="adminGeofenceMap" class="w-full h-64 sm:h-72 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-100 dark:bg-slate-800 z-10"></div>
+              <p class="text-[11px] text-slate-400">Ketuk peta atau geser pin marker untuk memindahkan titik pusat radius kantor secara presisi.</p>
             </div>
           </div>
         </div>
@@ -866,9 +883,10 @@
             <span class="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Rekapitulasi Seluruh Pegawai</span>
             <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">Rekap Kehadiran, Preview &amp; Ekspor Resmi</h3>
           </div>
-          <div class="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 shrink-0">
+          <div class="inline-flex flex-wrap p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 shrink-0 gap-0.5">
             <button type="button" id="btnAdminRekapModeRange" onclick="setAdminRekapMode('range')" class="min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-xs transition-all cursor-pointer">Rentang / Bulanan</button>
             <button type="button" id="btnAdminRekapModeHarian" onclick="setAdminRekapMode('harian')" class="min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 transition-all cursor-pointer">Daftar Hadir Harian</button>
+            <button type="button" id="btnAdminRekapModeLogs" onclick="setAdminRekapMode('logs')" class="min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 transition-all cursor-pointer">Log Absen (Edit/Tambah)</button>
           </div>
         </div>
 
@@ -918,6 +936,10 @@
           <button type="button" onclick="loadAdminRekapData()" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
             <span class="material-symbols-outlined text-[18px]">refresh</span>
             <span>Muat Data</span>
+          </button>
+          <button type="button" onclick="openAdminLogFormModal()" class="min-h-[44px] px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">add_circle</span>
+            <span>Tambah Log</span>
           </button>
           <button type="button" onclick="openAdminRekapPreview()" class="min-h-[44px] px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
             <span class="material-symbols-outlined text-[18px]">visibility</span>
@@ -2936,7 +2958,76 @@
     </div>
   </div>
 
+  <!-- MODAL TAMBAH / EDIT LOG ABSEN (CUSTOM STITCH PICKERS) -->
+  <div id="modalAdminLogForm" class="hidden fixed inset-0 z-[76] bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4" onclick="if(event.target===this)closeAdminLogFormModal()">
+    <div class="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-[28px] sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[20px]">edit_calendar</span>
+          </div>
+          <div>
+            <h3 id="adminLogModalTitle" class="text-sm font-extrabold text-slate-900 dark:text-white">Tambah Log Kehadiran</h3>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">Catat atau koreksi log presensi pegawai</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeAdminLogFormModal()" aria-label="Tutup" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+      <div class="p-5 overflow-y-auto space-y-3.5 text-xs">
+        <input type="hidden" id="adminLogEditId" value="" />
+        <div id="adminLogPegawaiWrap">
+          <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Pegawai</label>
+          <select id="adminLogPegawaiSelect" class="w-full"></select>
+        </div>
+        <div id="adminLogPegawaiReadonly" class="hidden p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          <p id="adminLogReadonlyNama" class="font-bold text-slate-900 dark:text-white">-</p>
+          <p id="adminLogReadonlyNip" class="text-[11px] font-mono text-slate-400">-</p>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Tanggal</label>
+            <input type="date" id="adminLogTanggal" class="w-full" />
+          </div>
+          <div>
+            <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Jam (WITA)</label>
+            <input type="time" id="adminLogJam" value="07:30" class="w-full" />
+          </div>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Jenis Absen</label>
+          <select id="adminLogJenisSelect" class="w-full">
+            <option value="MASUK">MASUK</option>
+            <option value="PULANG">PULANG</option>
+            <option value="PULANG LUAR">PULANG LUAR</option>
+            <option value="DI LUAR JAM MASUK">DI LUAR JAM MASUK</option>
+            <option value="DI LUAR JAM PULANG">DI LUAR JAM PULANG</option>
+            <option value="IZIN">IZIN</option>
+            <option value="SAKIT">SAKIT</option>
+            <option value="TUGAS">TUGAS / DINAS LUAR</option>
+            <option value="CUTI">CUTI</option>
+            <option value="TUBEL">TUBEL</option>
+            <option value="TANPA BERITA">TANPA BERITA</option>
+          </select>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Keterangan / Catatan</label>
+          <textarea id="adminLogKet" rows="2" placeholder="Opsional: alasan koreksi atau keterangan tambahan..." class="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-blue-500"></textarea>
+        </div>
+      </div>
+      <div class="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex items-center gap-2.5">
+        <button type="button" onclick="closeAdminLogFormModal()" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs cursor-pointer">Batal</button>
+        <button type="button" id="btnSubmitAdminLog" onclick="submitAdminLogForm()" class="flex-1 min-h-[44px] px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+          <span class="material-symbols-outlined text-[18px]">save</span>
+          <span id="btnSubmitAdminLogText">Simpan Log</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Core Auth & System Scripts -->
+  <script defer src="js/lib/leaflet.min.js"></script>
   <script defer src="js/lib/xlsx.full.min.js"></script>
   <script src="js/config.js"></script>
   <script src="js/constants.js"></script>

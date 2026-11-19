@@ -1238,6 +1238,9 @@
           loadViewOnce('admin-roles', () => (typeof loadAdminRolesMobile === 'function' ? loadAdminRolesMobile() : Promise.resolve()));
         } else if (effectiveSection === 'adminSectionGeofence') {
           loadViewOnce('admin-face-cfg', () => (_faceConfigLoaded ? Promise.resolve() : loadStitchFaceConfig()));
+          if (typeof initAdminGeofenceMap === 'function') {
+            requestAnimationFrame(() => initAdminGeofenceMap());
+          }
         }
       } else if (target === 'sppd') {
         loadViewOnce('sppd', () => Promise.all([
@@ -1600,6 +1603,7 @@
         document.getElementById('radiusLabel').textContent = (loc.radius || 20) + ' Meter';
       }
       syncAdminLocationDropdownUI();
+      if (typeof updateAdminGeofenceMap === 'function') updateAdminGeofenceMap();
     }
 
     function syncAdminLocationDropdownUI() {

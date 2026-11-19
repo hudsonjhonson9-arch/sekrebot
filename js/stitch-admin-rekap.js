@@ -2,10 +2,12 @@
 (function (w, d) {
   'use strict';
 
-  let _mode = 'range'; // 'range' | 'harian'
+  let _mode = 'range'; // 'range' | 'harian' | 'logs'
   let _inited = false;
+  let _logModalInited = false;
   let _rangePayload = null;
   let _harianPayload = null;
+  let _logsList = [];
 
   function esc(s) {
     return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -55,21 +57,20 @@
   }
 
   function setAdminRekapMode(mode) {
-    _mode = mode === 'harian' ? 'harian' : 'range';
+    _mode = (mode === 'harian' || mode === 'logs') ? mode : 'range';
     const bR = d.getElementById('btnAdminRekapModeRange');
     const bH = d.getElementById('btnAdminRekapModeHarian');
+    const bL = d.getElementById('btnAdminRekapModeLogs');
     const cR = d.getElementById('adminRekapControlsRange');
     const cH = d.getElementById('adminRekapControlsHarian');
 
-    if (bR && bH) {
-      bR.className = _mode === 'range'
-        ? 'min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-xs transition-all cursor-pointer'
-        : 'min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 transition-all cursor-pointer';
-      bH.className = _mode === 'harian'
-        ? 'min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-xs transition-all cursor-pointer'
-        : 'min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 transition-all cursor-pointer';
-    }
-    if (cR) cR.classList.toggle('hidden', _mode !== 'range');
+    const activeCls = 'min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-xs transition-all cursor-pointer';
+    const idleCls = 'min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 transition-all cursor-pointer';
+    if (bR) bR.className = _mode === 'range' ? activeCls : idleCls;
+    if (bH) bH.className = _mode === 'harian' ? activeCls : idleCls;
+    if (bL) bL.className = _mode === 'logs' ? activeCls : idleCls;
+
+    if (cR) cR.classList.toggle('hidden', _mode === 'harian');
     if (cH) {
       cH.classList.toggle('hidden', _mode !== 'harian');
       cH.classList.toggle('grid', _mode === 'harian');
@@ -114,6 +115,21 @@
         if (!res.ok || !json.ok) throw new Error(json.message || 'Gagal memuat rekap rentang.');
         _rangePayload = json;
         renderAdminRekapList();
+      } else if (_mode === 'logs') {
+        const dari = d.getElementById('adminRekapDari')?.value || todayWitaIso();
+        const sampai = d.getElementById('adminRekapSampai')?.value || dari;
+        const headers = {};
+        if (typeof w.getStitchToken === 'function' && w.getStitchToken()) {
+          headers.Authorization = 'Bearer ' + w.getStitchToken();
+        }
+        const res = await fetch(`/api/log?dari=${encodeURIComponent(dari)}&sampai=${encodeURIComponent(sampai)}`, { headers });
+        const json = await res.json();
+        if (!res.ok || !json.ok) throw new Error(json.message || 'Gagal memuat log presensi.');
+        _logsList = (json.rows || json.data || []).filter((r) => {
+          const t = String(r.Tanggal || r.tanggal || '').slice(0, 10);
+          return (!dari || t >= dari) && (!sampai || t <= sampai);
+        });
+        renderAdminRekapList();
       } else {
         const tanggal = d.getElementById('adminRekapTanggalHarian')?.value || todayWitaIso();
         const res = await fetch(`/api/stitch/rekap-harian?tanggal=${encodeURIComponent(tanggal)}`);
@@ -129,16 +145,18 @@
   }
 
   function getFilteredRows() {
-    const q = (_mode === 'range'
-      ? (d.getElementById('adminRekapSearch')?.value || '')
-      : (d.getElementById('adminRekapSearchHarian')?.value || '')
+    const q = (_mode === 'harian'
+      ? (d.getElementById('adminRekapSearchHarian')?.value || '')
+      : (d.getElementById('adminRekapSearch')?.value || '')
     ).trim().toLowerCase();
-    const list = _mode === 'range' ? (_rangePayload?.data || []) : (_harianPayload?.data || []);
+    const list = _mode === 'range'
+      ? (_rangePayload?.data || [])
+      : (_mode === 'logs' ? _logsList : (_harianPayload?.data || []));
     if (!q) return list;
     return list.filter((r) =>
-      String(r.nama || '').toLowerCase().includes(q)
-      || String(r.nip || '').toLowerCase().includes(q)
-      || String(r.jabatan || '').toLowerCase().includes(q)
+      String(r.nama || r.Nama || '').toLowerCase().includes(q)
+      || String(r.nip || r.NIP || '').toLowerCase().includes(q)
+      || String(r.jabatan || r['Jenis Absen'] || r.Ket || '').toLowerCase().includes(q)
     );
   }
 
@@ -221,6 +239,74 @@
                   <td class="p-2.5 text-center font-mono tabular-nums">${r.lambat_count || 0} (${r.menit_terlambat || 0}m)</td>
                 </tr>
               `).join('')}
+            </tbody>
+          </table>`;
+      }
+      return;
+    }
+
+    if (_mode === 'logs') {
+      if (sumBar) {
+        sumBar.innerHTML = `<span class="px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-bold">${rows.length} Baris Log Presensi</span>`;
+      }
+      if (!rows.length) {
+        box.innerHTML = '<div class="p-8 text-center text-xs text-slate-400">Belum ada log presensi pada rentang tanggal ini. Klik <strong>Tambah Log</strong> untuk mencatat manual.</div>';
+        return;
+      }
+      if (!isWide) {
+        box.innerHTML = `<div class="space-y-2.5">${rows.slice(0, 120).map((r) => {
+          const logId = esc(r.ID_Log || r.id_log || '');
+          const jenis = esc(r['Jenis Absen'] || r.jenis || '-');
+          return `
+            <div class="rounded-2xl border border-slate-200 dark:border-slate-700 p-3.5 bg-slate-50/70 dark:bg-slate-800/40 space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-slate-900 dark:text-white truncate">${esc(r.Nama || r.nama || '-')}</p>
+                  <p class="text-[10px] font-mono text-slate-400">${esc(r.NIP || r.nip || '-')}</p>
+                </div>
+                <span class="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-[10px] font-bold shrink-0">${jenis}</span>
+              </div>
+              <div class="flex items-center justify-between text-[11px] font-mono text-slate-600 dark:text-slate-300">
+                <span>${esc(String(r.Tanggal || '').slice(0, 10))} • ${esc(r.Jam || '-')} WITA</span>
+                <button type="button" onclick="openAdminLogEditById('${logId}')" class="min-h-[34px] px-3 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[11px] font-bold flex items-center gap-1 cursor-pointer">
+                  <span class="material-symbols-outlined text-[14px]">edit</span>
+                  <span>Edit</span>
+                </button>
+              </div>
+              ${r.Ket ? `<p class="text-[11px] text-slate-500 break-words">${esc(r.Ket)}</p>` : ''}
+            </div>`;
+        }).join('')}</div>`;
+      } else {
+        box.innerHTML = `
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase font-bold sticky top-0">
+              <tr>
+                <th class="p-2.5 rounded-l-xl">Tanggal</th>
+                <th class="p-2.5">Jam</th>
+                <th class="p-2.5">Pegawai / NIP</th>
+                <th class="p-2.5">Jenis Absen</th>
+                <th class="p-2.5">Keterangan</th>
+                <th class="p-2.5 text-right rounded-r-xl">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              ${rows.slice(0, 150).map((r) => {
+                const logId = esc(r.ID_Log || r.id_log || '');
+                return `
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <td class="p-2.5 font-mono">${esc(String(r.Tanggal || '').slice(0, 10))}</td>
+                    <td class="p-2.5 font-mono font-bold">${esc(r.Jam || '-')}</td>
+                    <td class="p-2.5"><p class="font-bold text-slate-900 dark:text-white">${esc(r.Nama || r.nama || '-')}</p><p class="text-[10px] font-mono text-slate-400">${esc(r.NIP || r.nip || '-')}</p></td>
+                    <td class="p-2.5"><span class="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-[10px] font-bold">${esc(r['Jenis Absen'] || r.jenis || '-')}</span></td>
+                    <td class="p-2.5 text-slate-500 max-w-xs truncate">${esc(r.Ket || '-')}</td>
+                    <td class="p-2.5 text-right">
+                      <button type="button" onclick="openAdminLogEditById('${logId}')" class="min-h-[34px] px-3 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-xs font-bold inline-flex items-center gap-1 cursor-pointer">
+                        <span class="material-symbols-outlined text-[15px]">edit</span>
+                        <span>Edit</span>
+                      </button>
+                    </td>
+                  </tr>`;
+              }).join('')}
             </tbody>
           </table>`;
       }
@@ -524,6 +610,252 @@
     }
   }
 
+  /* ── TAMBAH & EDIT LOG ABSEN (/api/log/add & /api/log/edit) ─────────── */
+  function ensureLogModalPickers() {
+    if (_logModalInited) return;
+    _logModalInited = true;
+    if (w.StitchPicker) {
+      w.StitchPicker.enhanceSelect('adminLogPegawaiSelect', { placeholder: 'Pilih pegawai...', searchable: true });
+      w.StitchPicker.enhanceSelect('adminLogJenisSelect', { placeholder: 'Pilih jenis absen...', searchable: false });
+      w.StitchPicker.enhanceDate('adminLogTanggal', { placeholder: 'Pilih tanggal' });
+      w.StitchPicker.enhanceTime('adminLogJam', { minHour: 6, maxHour: 22, stepMin: 5 });
+    }
+  }
+
+  function populateLogPegawaiOptions() {
+    const sel = d.getElementById('adminLogPegawaiSelect');
+    if (!sel) return;
+    const users = (w.state && Array.isArray(w.state.allUsers)) ? w.state.allUsers : [];
+    sel.innerHTML = users.map((u) => `<option value="${esc(u.id)}">${esc(u.nama)} (${esc(u.nip || '-')})</option>`).join('');
+    if (w.StitchPicker && typeof w.StitchPicker.refreshSelect === 'function') {
+      w.StitchPicker.refreshSelect('adminLogPegawaiSelect');
+    }
+  }
+
+  function openAdminLogFormModal(logRecord = null) {
+    ensureLogModalPickers();
+    populateLogPegawaiOptions();
+
+    const modal = d.getElementById('modalAdminLogForm');
+    const titleEl = d.getElementById('adminLogModalTitle');
+    const editIdEl = d.getElementById('adminLogEditId');
+    const pegWrap = d.getElementById('adminLogPegawaiWrap');
+    const pegRo = d.getElementById('adminLogPegawaiReadonly');
+    const roNama = d.getElementById('adminLogReadonlyNama');
+    const roNip = d.getElementById('adminLogReadonlyNip');
+    const tglEl = d.getElementById('adminLogTanggal');
+    const jamEl = d.getElementById('adminLogJam');
+    const jenisEl = d.getElementById('adminLogJenisSelect');
+    const ketEl = d.getElementById('adminLogKet');
+    const btnTxt = d.getElementById('btnSubmitAdminLogText');
+
+    if (logRecord) {
+      if (titleEl) titleEl.textContent = 'Edit Log Kehadiran';
+      if (btnTxt) btnTxt.textContent = 'Simpan Perubahan';
+      if (editIdEl) editIdEl.value = String(logRecord.ID_Log || logRecord.id_log || '');
+      if (pegWrap) pegWrap.classList.add('hidden');
+      if (pegRo) pegRo.classList.remove('hidden');
+      if (roNama) roNama.textContent = logRecord.Nama || logRecord.nama || '-';
+      if (roNip) roNip.textContent = 'NIP. ' + (logRecord.NIP || logRecord.nip || '-');
+      if (tglEl) tglEl.value = String(logRecord.Tanggal || '').slice(0, 10) || todayWitaIso();
+      if (jamEl) jamEl.value = String(logRecord.Jam || '07:30').slice(0, 5);
+      if (jenisEl) jenisEl.value = logRecord['Jenis Absen'] || logRecord.jenis || 'MASUK';
+      if (ketEl) ketEl.value = logRecord.Ket || '';
+    } else {
+      if (titleEl) titleEl.textContent = 'Tambah Log Kehadiran';
+      if (btnTxt) btnTxt.textContent = 'Simpan Log Baru';
+      if (editIdEl) editIdEl.value = '';
+      if (pegWrap) pegWrap.classList.remove('hidden');
+      if (pegRo) pegRo.classList.add('hidden');
+      if (tglEl) tglEl.value = todayWitaIso();
+      if (jamEl) jamEl.value = '07:30';
+      if (jenisEl) jenisEl.value = 'MASUK';
+      if (ketEl) ketEl.value = '';
+    }
+
+    if (w.StitchPicker && typeof w.StitchPicker.refreshAll === 'function') {
+      w.StitchPicker.refreshAll();
+    }
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+  }
+
+  function openAdminLogEditById(logId) {
+    const rec = _logsList.find((r) => String(r.ID_Log || r.id_log || '') === String(logId));
+    if (!rec) return;
+    openAdminLogFormModal(rec);
+  }
+
+  function closeAdminLogFormModal() {
+    const modal = d.getElementById('modalAdminLogForm');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  }
+
+  async function submitAdminLogForm() {
+    const editId = d.getElementById('adminLogEditId')?.value || '';
+    const subjectId = d.getElementById('adminLogPegawaiSelect')?.value || '';
+    const tanggal = d.getElementById('adminLogTanggal')?.value || '';
+    const jam = d.getElementById('adminLogJam')?.value || '';
+    const jenis = d.getElementById('adminLogJenisSelect')?.value || '';
+    const ket = (d.getElementById('adminLogKet')?.value || '').trim();
+
+    if (!tanggal || !jam || !jenis || (!editId && !subjectId)) {
+      if (w.Swal) w.Swal.fire('Perhatian', 'Pegawai, tanggal, jam, dan jenis absen wajib diisi.', 'warning');
+      return;
+    }
+
+    const btn = d.getElementById('btnSubmitAdminLog');
+    if (btn) btn.disabled = true;
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (typeof w.getStitchToken === 'function' && w.getStitchToken()) {
+        headers.Authorization = 'Bearer ' + w.getStitchToken();
+      }
+      const endpoint = editId ? '/api/log/edit' : '/api/log/add';
+      const payload = editId
+        ? { ID_Log: editId, tanggal, jam, jenis_absen: jenis, keterangan: ket }
+        : { telegram_id: subjectId, tanggal, jam, jenis_absen: jenis, keterangan: ket, request_id: `stitch_admin_log_${subjectId}_${Date.now()}` };
+
+      const res = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(payload) });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.message || 'Gagal menyimpan log.');
+
+      closeAdminLogFormModal();
+      if (typeof w.showDynamicIsland === 'function') {
+        w.showDynamicIsland({ type: 'success', title: editId ? 'Log Diperbarui' : 'Log Ditambahkan', message: json.message || 'Tersimpan di database.' });
+      }
+      await loadAdminRekapData();
+    } catch (err) {
+      if (w.Swal) w.Swal.fire('Gagal', err.message, 'error');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  /* ── PETA LEAFLET GEOFENCING (JALAN OSM & SATELIT ESRI) ─────────────── */
+  let _geoMap = null;
+  let _geoMarker = null;
+  let _geoCircle = null;
+  let _geoStreetLayer = null;
+  let _geoSatLayer = null;
+  let _geoCurrentLayer = 'street';
+
+  function readGeofenceInputs() {
+    const lat = parseFloat(d.getElementById('adminOfficeLat')?.value) || -9.648769;
+    const lon = parseFloat(d.getElementById('adminOfficeLon')?.value) || 119.389232;
+    const rad = parseFloat(d.getElementById('adminRadiusSlider')?.value) || 50;
+    return { lat, lon, rad };
+  }
+
+  function writeGeofenceInputs(lat, lon) {
+    const latEl = d.getElementById('adminOfficeLat');
+    const lonEl = d.getElementById('adminOfficeLon');
+    if (latEl) latEl.value = Number(lat).toFixed(6);
+    if (lonEl) lonEl.value = Number(lon).toFixed(6);
+  }
+
+  function initAdminGeofenceMap() {
+    const container = d.getElementById('adminGeofenceMap');
+    if (!container || typeof w.L === 'undefined') return;
+    const { lat, lon, rad } = readGeofenceInputs();
+
+    if (!_geoMap) {
+      _geoMap = w.L.map(container, { zoomControl: true }).setView([lat, lon], 17);
+      _geoStreetLayer = w.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+      });
+      _geoSatLayer = w.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: '&copy; Esri World Imagery'
+      });
+      _geoStreetLayer.addTo(_geoMap);
+
+      _geoMarker = w.L.marker([lat, lon], { draggable: true }).addTo(_geoMap);
+      _geoCircle = w.L.circle([lat, lon], {
+        radius: rad,
+        color: '#2563eb',
+        fillColor: '#3b82f6',
+        fillOpacity: 0.2,
+        weight: 2
+      }).addTo(_geoMap);
+
+      _geoMarker.on('dragend', () => {
+        const pos = _geoMarker.getLatLng();
+        writeGeofenceInputs(pos.lat, pos.lng);
+        _geoCircle.setLatLng(pos);
+      });
+
+      _geoMap.on('click', (ev) => {
+        writeGeofenceInputs(ev.latlng.lat, ev.latlng.lng);
+        _geoMarker.setLatLng(ev.latlng);
+        _geoCircle.setLatLng(ev.latlng);
+      });
+
+      const latEl = d.getElementById('adminOfficeLat');
+      const lonEl = d.getElementById('adminOfficeLon');
+      if (latEl) latEl.addEventListener('change', updateAdminGeofenceMap);
+      if (lonEl) lonEl.addEventListener('change', updateAdminGeofenceMap);
+    }
+
+    setTimeout(() => {
+      if (_geoMap) {
+        _geoMap.invalidateSize();
+        updateAdminGeofenceMap();
+      }
+    }, 120);
+  }
+
+  function updateAdminGeofenceMap() {
+    if (!_geoMap || !_geoMarker || !_geoCircle) return;
+    const { lat, lon, rad } = readGeofenceInputs();
+    _geoMarker.setLatLng([lat, lon]);
+    _geoCircle.setLatLng([lat, lon]);
+    _geoCircle.setRadius(rad);
+    _geoMap.panTo([lat, lon]);
+  }
+
+  function setAdminMapLayer(layer) {
+    _geoCurrentLayer = layer === 'satellite' ? 'satellite' : 'street';
+    const bS = d.getElementById('btnMapLayerStreet');
+    const bSat = d.getElementById('btnMapLayerSat');
+    const activeCls = 'min-h-[34px] px-3 py-1 rounded-lg text-[11px] font-bold bg-blue-600 text-white shadow-xs transition-all cursor-pointer';
+    const idleCls = 'min-h-[34px] px-3 py-1 rounded-lg text-[11px] font-semibold text-slate-600 dark:text-slate-300 transition-all cursor-pointer';
+    if (bS) bS.className = _geoCurrentLayer === 'street' ? activeCls : idleCls;
+    if (bSat) bSat.className = _geoCurrentLayer === 'satellite' ? activeCls : idleCls;
+
+    if (!_geoMap || !_geoStreetLayer || !_geoSatLayer) return;
+    if (_geoCurrentLayer === 'satellite') {
+      if (_geoMap.hasLayer(_geoStreetLayer)) _geoMap.removeLayer(_geoStreetLayer);
+      if (!_geoMap.hasLayer(_geoSatLayer)) _geoSatLayer.addTo(_geoMap);
+    } else {
+      if (_geoMap.hasLayer(_geoSatLayer)) _geoMap.removeLayer(_geoSatLayer);
+      if (!_geoMap.hasLayer(_geoStreetLayer)) _geoStreetLayer.addTo(_geoMap);
+    }
+  }
+
+  function useMyGpsForAdminMap() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        writeGeofenceInputs(pos.coords.latitude, pos.coords.longitude);
+        updateAdminGeofenceMap();
+        if (typeof w.showDynamicIsland === 'function') {
+          w.showDynamicIsland({ type: 'info', title: 'Koordinat Diperbarui', message: `Akurasi ±${Math.round(pos.coords.accuracy)}m` });
+        }
+      },
+      () => {
+        if (w.Swal) w.Swal.fire('GPS Gagal', 'Pastikan izin lokasi browser diaktifkan.', 'warning');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
   w.initAdminRekapPanel = initAdminRekapPanel;
   w.setAdminRekapMode = setAdminRekapMode;
   w.setAdminRekapPreset = setAdminRekapPreset;
@@ -533,4 +865,12 @@
   w.closeAdminRekapPreview = closeAdminRekapPreview;
   w.exportAdminRekapPDF = exportAdminRekapPDF;
   w.exportAdminRekapXLSX = exportAdminRekapXLSX;
+  w.openAdminLogFormModal = openAdminLogFormModal;
+  w.openAdminLogEditById = openAdminLogEditById;
+  w.closeAdminLogFormModal = closeAdminLogFormModal;
+  w.submitAdminLogForm = submitAdminLogForm;
+  w.initAdminGeofenceMap = initAdminGeofenceMap;
+  w.updateAdminGeofenceMap = updateAdminGeofenceMap;
+  w.setAdminMapLayer = setAdminMapLayer;
+  w.useMyGpsForAdminMap = useMyGpsForAdminMap;
 })(window, document);
