@@ -244,25 +244,34 @@ test('POST /penerimaan menyimpan nota, detail, dan stok dalam satu transaksi', a
   assert.equal(stok.params[0], 'nota-uuid');
 });
 
-// Regresi: tuple detail lama hanya menulis empat placeholder untuk lima kolom,
-// jadi Postgres menolak dengan 42601 dan setiap simpan penerimaan jadi 500.
-test('INSERT detail penerimaan punya lima placeholder per baris', async () => {
+// Regresi: tuple detail harus punya placeholder = jumlah kolom INSERT.
+// Bentuk lama (5 kolom, 4 placeholder) ditolak Postgres 42601 dan simpan jadi 500.
+// Kini 7 kolom: penerimaan_id + barang, volume, harga, total, kode_rekening, uraian_belanja.
+test('INSERT detail penerimaan punya tujuh placeholder per baris', async () => {
   const tx = stub({ rows: { id: 'nota-uuid' } });
   const { status } = await call(app(tx, ADMIN), 'POST', '/api/simapo/penerimaan', {
     no_nota: 'N1', tgl_nota: '2026-01-05', penyedia: 'PT A',
     items: [
-      { barang_id: 'B1', volume: 1, harga_satuan: 10 },
+      { barang_id: 'B1', volume: 1, harga_satuan: 10, kode_rekening: '5.1.02.01.01.0024', uraian_belanja: 'Belanja ATK' },
       { barang_id: 'B2', volume: 2, harga_satuan: 20 },
     ],
   });
   assert.equal(status, 200);
 
   const detail = tx.calls.find((c) => c.sql.includes('INSERT INTO "SIMAPO".detail_penerimaan'));
-  // penerimaan_id (uuid) selalu $1; kolom sisanya menempel di belakangnya.
-  assert.match(detail.sql, /VALUES \(\$1, \$2, \$3, \$4, \$5\), \(\$1, \$6, \$7, \$8, \$9\)/);
-  assert.equal(detail.params.length, 9, 'nota + 4 kolom x 2 baris');
+  assert.ok(detail.sql.includes('kode_rekening'), 'INSERT detail wajib memuat kode_rekening');
+  assert.ok(detail.sql.includes('uraian_belanja'), 'INSERT detail wajib memuat uraian_belanja');
+  // penerimaan_id (uuid) selalu $1; 6 kolom sisanya menempel di belakangnya.
+  assert.match(
+    detail.sql,
+    /VALUES \(\$1, \$2, \$3, \$4, \$5, \$6, \$7\), \(\$1, \$8, \$9, \$10, \$11, \$12, \$13\)/,
+  );
+  assert.equal(detail.params.length, 13, 'nota + 6 kolom x 2 baris');
   assert.equal(detail.params[0], 'nota-uuid');
-  assert.equal(detail.params[5], 'B2');
+  assert.equal(detail.params[5], '5.1.02.01.01.0024', 'kode rekening per baris ikut tersimpan');
+  assert.equal(detail.params[6], 'Belanja ATK');
+  assert.equal(detail.params[7], 'B2', 'tuple kedua dimulai dari barang_id');
+  assert.equal(detail.params[11], '', 'kode rekening kosong -> string kosong');
 });
 
 test('POST /penerimaan mencari barang per nama lalu membuatnya bila belum ada', async () => {
@@ -1097,9 +1106,18 @@ test('SQL laporan Permen 47 mengisi nama sub kegiatan, kode & uraian rekening', 
   assert.ok(LAPORAN_PERMEN47_PENERIMAAN_SQL.includes('AS nama_sub_kegiatan'), 'kolom nama sub kegiatan wajib ada');
   assert.ok(LAPORAN_PERMEN47_PENERIMAAN_SQL.includes('AS kode_rekening'), 'kolom kode rekening wajib ada');
   assert.ok(LAPORAN_PERMEN47_PENERIMAAN_SQL.includes('AS uraian_belanja'), 'kolom uraian belanja wajib ada');
+  assert.ok(
+    LAPORAN_PERMEN47_PENERIMAAN_SQL.includes("COALESCE(NULLIF(dp.kode_rekening, ''), NULLIF(b.koderekening, ''), '') AS kode_rekening"),
+    'kode rekening diambil dari detail baris lebih dulu, master barang hanya fallback',
+  );
+  assert.ok(
+    LAPORAN_PERMEN47_PENERIMAAN_SQL.includes("COALESCE(NULLIF(dp.uraian_belanja, ''), rb.uraian, '') AS uraian_belanja"),
+    'uraian belanja diambil dari detail baris lebih dulu',
+  );
   assert.ok(LAPORAN_PERMEN47_PENERIMAAN_SQL.includes('LEFT JOIN "SIMAPO".subkegiatan'), 'join master subkegiatan wajib ada');
   assert.ok(LAPORAN_PERMEN47_PENERIMAAN_SQL.includes('LEFT JOIN "SIMAPO".rekening_belanja'), 'join master rekening wajib ada');
   assert.ok(LAPORAN_PERMEN47_FALLBACK_SQL.includes('AS kode_rekening'), 'jalur fallback ikut memuat kolom yang sama');
+  assert.ok(PENERIMAAN_LIST_SQL.includes('dp.kode_rekening'), 'daftar nota ikut membawa kode rekening per item');
 });
 
 // ── Kartu Pemeliharaan ──

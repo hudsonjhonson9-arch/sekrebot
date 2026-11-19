@@ -33,8 +33,11 @@ export const INSERT_NOTA_SQL =
 
 // Volume boleh desimal dari form; kolomnya numeric, jadi biarkan Postgres yang
 // memotong. NUMERIC(10,2)-kan di sini akan menolak volume pecahan yang sah.
+// kode_rekening & uraian_belanja ikut per baris (bukan di master barang):
+// satu barang bisa tercatat di beberapa rekening belanja berbeda.
 export const INSERT_DETAIL_SQL =
-  `INSERT INTO "SIMAPO".detail_penerimaan (penerimaan_id, barang_id, volume, harga_satuan, total_harga)
+  `INSERT INTO "SIMAPO".detail_penerimaan
+     (penerimaan_id, barang_id, volume, harga_satuan, total_harga, kode_rekening, uraian_belanja)
    VALUES %VALUES%
    RETURNING barang_id, volume`;
 
@@ -81,7 +84,9 @@ export const PENERIMAAN_LIST_SQL =
           (SELECT COALESCE(json_agg(i.*), '[]'::json) FROM (
              SELECT dp.barang_id, COALESCE(b.nama, '') AS nama_barang, COALESCE(b.kodebarang, '') AS kodebarang,
                     dp.volume, COALESCE(b.satuan, 'Unit') AS satuan, dp.harga_satuan,
-                    dp.total_harga AS total
+                    dp.total_harga AS total,
+                    COALESCE(NULLIF(dp.kode_rekening, ''), '') AS kode_rekening,
+                    COALESCE(NULLIF(dp.uraian_belanja, ''), '') AS uraian_belanja
              FROM "SIMAPO".detail_penerimaan dp
              LEFT JOIN "SIMAPO".barang b ON b.id = dp.barang_id
              WHERE dp.penerimaan_id = pb.id
@@ -153,19 +158,20 @@ export const LAPORAN_PERMEN47_PENERIMAAN_SQL =
           dp.volume AS jumlah, dp.harga_satuan, dp.total_harga AS total_nilai,
           COALESCE(NULLIF(pb.sub_kegiatan, ''), '') AS sub_kegiatan,
           COALESCE(NULLIF(pb.sub_kegiatan_uraian, ''), sk.nama, '') AS nama_sub_kegiatan,
-          COALESCE(NULLIF(b.koderekening, ''), '') AS kode_rekening,
-          COALESCE(rb.uraian, '') AS uraian_belanja,
+          COALESCE(NULLIF(dp.kode_rekening, ''), NULLIF(b.koderekening, ''), '') AS kode_rekening,
+          COALESCE(NULLIF(dp.uraian_belanja, ''), rb.uraian, '') AS uraian_belanja,
           TO_CHAR(pb.tgl_nota, 'YYYY-MM-DD') AS tgl_nota,
           COALESCE(pb.penyedia, '') AS nama_penyedia,
           COALESCE(pb.kontrak, '') AS bentuk_kontrak,
-          COALESCE(pb.no_sp2d, pb.no_nota, '') AS dokumen_sumber,
+          COALESCE(NULLIF(pb.no_sp2d, ''), NULLIF(pb.no_nota, ''), '') AS dokumen_sumber,
           COALESCE(kb.nama, '') AS nama_kategori
    FROM "SIMAPO".penerimaan_barang pb
    JOIN "SIMAPO".detail_penerimaan dp ON dp.penerimaan_id = pb.id
    JOIN "SIMAPO".barang b ON b.id = dp.barang_id
    LEFT JOIN "SIMAPO".kategori_barang kb ON kb.id = b.kategoriid
    LEFT JOIN "SIMAPO".subkegiatan sk ON sk.kode = NULLIF(pb.sub_kegiatan, '')
-   LEFT JOIN "SIMAPO".rekening_belanja rb ON rb.kode = b.koderekening
+   LEFT JOIN "SIMAPO".rekening_belanja rb
+          ON rb.kode = COALESCE(NULLIF(dp.kode_rekening, ''), NULLIF(b.koderekening, ''))
    WHERE pb.instansi_id = $1
      AND pb.tgl_nota BETWEEN $2::date AND $3::date
    ORDER BY b.kodebarang, b.nama, pb.tgl_nota ASC`;
@@ -428,10 +434,8 @@ async function barangIdUntukItem(client, inst, item) {
 }
 
 // Menulis seluruh rincian satu nota dalam satu statement multi-baris.
-// penerimaan_id selalu $1 (uuid) dan empat kolom sisanya menyusul di belakangnya:
-// tuple pertama ($1..$5), tuple kedua ($1, $6..$9), dan seterusnya. Bentuk lama
-// hanya menulis empat placeholder sehingga Postgres menolak dengan 42601
-// "INSERT has more target columns than expressions" dan setiap simpan jadi 500.
+// penerimaan_id selalu $1 (uuid); kolom sisanya menyusul per tuple:
+// barang_id, volume, harga_satuan, total_harga, kode_rekening, uraian_belanja.
 async function tulisDetailPenerimaan(client, inst, penerimaanId, items) {
   const params = [penerimaanId];
   const tuples = [];
@@ -440,8 +444,11 @@ async function tulisDetailPenerimaan(client, inst, penerimaanId, items) {
     const harga = N(it.harga_satuan);
     const barangId = await barangIdUntukItem(client, inst, it);
     const n = params.length;
-    params.push(barangId, volume, harga, volume * harga);
-    tuples.push(`($1, $${n + 1}, $${n + 2}, $${n + 3}, $${n + 4})`);
+    params.push(
+      barangId, volume, harga, volume * harga,
+      S(it.kode_rekening), S(it.uraian_belanja),
+    );
+    tuples.push(`($1, $${n + 1}, $${n + 2}, $${n + 3}, $${n + 4}, $${n + 5}, $${n + 6})`);
   }
   if (!tuples.length) return 0;
   await client.query(INSERT_DETAIL_SQL.replace('%VALUES%', tuples.join(', ')), params);
