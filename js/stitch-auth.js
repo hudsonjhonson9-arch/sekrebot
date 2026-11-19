@@ -130,12 +130,12 @@
     }
   }
 
-  const STITCH_RE = /^(https?:\/\/[^/]+)?\/api\/stitch(\/|\?|$)/;
+  const STITCH_RE = /^(https?:\/\/[^/]+)?\/api\/(stitch|media)(\/|\?|$)/;
   const origFetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
     try {
       const url = typeof input === 'string' ? input : (input && input.url) || '';
-      if (/^(https?:\/\/[^/]+)?\/api\/stitch(\/|\?|$)/.test(url)) {
+      if (STITCH_RE.test(url)) {
         const token = getToken();
         if (token) {
           init = Object.assign({}, init);

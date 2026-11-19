@@ -25,13 +25,20 @@ export const SIMAPO_ROLES = new Set([...MEDIA_ROLES, 'BENDAHARA BARANG']);
 const SESSION_TOKEN_RE = /^[0-9a-f]{192}$/;
 
 // Header tanpa skema ("usr_1_2") juga diterima; skema selain "bearer" ditolak.
+// Untuk tag <img src="/api/media/raw/:fileId?token=..."> (yang tidak bisa mengirim
+// header Authorization), token query diterima khusus untuk GET /api/media/raw/*.
 export function bearerToken(req) {
   const raw = (req.headers?.authorization || '').trim();
-  if (!raw) return null;
-  const m = /^Bearer\s+(\S+)$/i.exec(raw);
-  if (m) return m[1];
-  // Skema tanpa kredensial ("Bearer") ditolak; bentuk tanpa skema harus satu kata tanpa spasi.
-  return /^\S+$/.test(raw) && !/^bearer$/i.test(raw) ? raw : null;
+  if (raw) {
+    const m = /^Bearer\s+(\S+)$/i.exec(raw);
+    if (m) return m[1];
+    // Skema tanpa kredensial ("Bearer") ditolak; bentuk tanpa skema harus satu kata tanpa spasi.
+    return /^\S+$/.test(raw) && !/^bearer$/i.test(raw) ? raw : null;
+  }
+  const qTok = req.method === 'GET' && /^\/raw\//.test(String(req.path || ''))
+    ? String(req.query?.token || '').trim()
+    : '';
+  return qTok && (SESSION_TOKEN_RE.test(qTok) || DEVICE_TOKEN_RE.test(qTok)) ? qTok : null;
 }
 
 export function isSessionToken(token) {

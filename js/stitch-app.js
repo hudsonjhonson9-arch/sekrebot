@@ -564,7 +564,11 @@
       // Ekstrak fileId dari URL Google Drive (/file/d/<id> atau ?id=<id>) -> arahkan ke proxy internal /api/media/raw/<id>
       const m = s.match(/\/file\/d\/([-\w]{5,200})/) || s.match(/[?&]id=([-\w]{5,200})/);
       if (m && m[1]) {
-        return '/api/media/raw/' + encodeURIComponent(m[1]);
+        const tok = (typeof window.getStitchToken === 'function' && window.getStitchToken())
+          || (typeof window.getNativeToken === 'function' && window.getNativeToken())
+          || '';
+        const q = tok ? ('?token=' + encodeURIComponent(tok)) : '';
+        return '/api/media/raw/' + encodeURIComponent(m[1]) + q;
       }
       if (s.startsWith('/') || s.startsWith('http://') || s.startsWith('https://')) return s;
       return '';
