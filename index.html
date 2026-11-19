@@ -611,44 +611,44 @@
     <!-- ───────────────────────────────────────────────────────────────── -->
     <!-- VIEW C: KIOSK LOBI TERMINAL MEJA ABSEN (SCREEN 20)                -->
     <!-- ───────────────────────────────────────────────────────────────── -->
-    <section id="view-kiosk" class="hidden w-full max-w-7xl px-4 py-6 flex-col gap-6">
+    <section id="view-kiosk" class="hidden w-full max-w-7xl px-4 py-6 pb-28 flex-col gap-6">
       
       <!-- Top Kiosk Header -->
-      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div class="flex flex-col">
-          <div class="flex items-center gap-3 mb-2">
-            <button onclick="switchMainView('profil')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="flex flex-col min-w-0">
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+            <button onclick="switchMainView('profil')" class="min-h-[40px] flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer">
               <span class="material-symbols-outlined text-[18px]">arrow_back</span>
               <span>Kembali ke Profil</span>
             </button>
             <span class="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">Terminal Meja Absen</span>
           </div>
-          <div class="flex items-center gap-2 text-slate-400 text-xs font-mono mb-1">
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-slate-400 text-[11px] sm:text-xs font-mono mb-1">
             <span>KANTOR BAPPERIDA</span>
-            <span>•</span>
-            <span>TERMINAL MEJA LOBI LANTAI 1</span>
-            <span>•</span>
-            <span class="text-emerald-500 font-bold">POSTGRESQL TERKONEKSI</span>
+            <span>/</span>
+            <span>LOBI LANTAI 1</span>
+            <span>/</span>
+            <span class="text-emerald-500 font-bold">TERHUBUNG</span>
           </div>
-          <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Terminal Presensi Meja Lobi BAPPERIDA Sumba Barat
           </h1>
-          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Arahkan wajah ke kamera scanner untuk verifikasi biometrik otomatis dan pencatatan database tanpa sentuh.
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Arahkan wajah ke kamera scanner untuk verifikasi biometrik otomatis dan pencatatan kehadiran tanpa sentuh.
           </p>
         </div>
 
         <!-- Quick Live Metrics -->
-        <div class="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl border border-slate-200 dark:border-slate-700">
-          <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 shadow-xs">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-            <span class="text-sm font-bold font-mono" id="kioskHadirCount">38</span>
-            <span class="text-xs text-slate-500">Hadir Hari Ini</span>
+        <div class="grid grid-cols-2 sm:flex items-center gap-2 sm:gap-3 w-full sm:w-auto bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl border border-slate-200 dark:border-slate-700 shrink-0">
+          <div class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 shadow-xs min-w-0">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
+            <span class="text-sm font-bold font-mono tabular-nums" id="kioskHadirCount">38</span>
+            <span class="text-[11px] sm:text-xs text-slate-500 truncate">Hadir Hari Ini</span>
           </div>
-          <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 shadow-xs">
-            <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-            <span class="text-sm font-bold font-mono" id="kioskTotalStaff">47</span>
-            <span class="text-xs text-slate-500">Total ASN/PPPK</span>
+          <div class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 shadow-xs min-w-0">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></span>
+            <span class="text-sm font-bold font-mono tabular-nums" id="kioskTotalStaff">47</span>
+            <span class="text-[11px] sm:text-xs text-slate-500 truncate">Total ASN/PPPK</span>
           </div>
         </div>
       </div>
@@ -658,14 +658,14 @@
         
         <!-- Camera Viewfinder (8 Cols) -->
         <div class="lg:col-span-8 flex flex-col gap-4">
-          <div class="relative bg-black rounded-3xl overflow-hidden shadow-2xl aspect-[16/10] flex items-center justify-center border-4 border-slate-800">
+          <div class="relative bg-black rounded-3xl overflow-hidden shadow-2xl aspect-[3/4] sm:aspect-[16/10] flex items-center justify-center border-4 border-slate-800">
             
             <!-- Video element for live webcam -->
             <video id="kioskWebcam" autoplay playsinline muted class="w-full h-full object-cover"></video>
 
             <!-- Face Detection Overlay Frame -->
-            <div class="absolute inset-0 pointer-events-none flex items-center justify-center p-8">
-              <div class="relative w-64 h-80 sm:w-80 sm:h-96 border-2 border-emerald-400/80 rounded-3xl flex flex-col justify-between p-4 shadow-[0_0_50px_rgba(16,185,129,0.25)]">
+            <div class="absolute inset-0 pointer-events-none flex items-center justify-center p-4 sm:p-8">
+              <div class="relative w-44 h-56 sm:w-72 sm:h-80 border-2 border-emerald-400/80 rounded-3xl flex flex-col justify-between p-3 sm:p-4 shadow-[0_0_50px_rgba(16,185,129,0.25)]">
                 <!-- Top Brackets -->
                 <div class="flex justify-between">
                   <div class="w-8 h-8 border-t-4 border-l-4 border-emerald-400 -mt-1 -ml-1 rounded-tl-xl"></div>
@@ -684,15 +684,15 @@
             </div>
 
             <!-- Bottom Camera HUD -->
-            <div class="absolute bottom-4 inset-x-6 flex items-center justify-between text-white bg-slate-950/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-800">
-              <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span class="text-xs font-semibold" id="kioskCameraStatus">AI Human Face Scanner Siaga (DB Connected)</span>
+            <div class="absolute bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-white bg-slate-950/80 backdrop-blur-md px-3.5 sm:px-4 py-2.5 rounded-2xl border border-slate-800">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+                <span class="text-xs font-semibold truncate" id="kioskCameraStatus">Scanner Wajah AI Siaga</span>
               </div>
-              <div class="flex items-center gap-3">
-                <button onclick="submitKioskBiometric()" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5" title="Verifikasi Biometrik Wajah dan Simpan ke Log Database">
+              <div class="flex items-center gap-3 w-full sm:w-auto">
+                <button onclick="submitKioskBiometric()" class="w-full sm:w-auto min-h-[44px] px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer" title="Verifikasi Biometrik Wajah dan Simpan">
                   <span class="material-symbols-outlined text-[16px]">fingerprint</span>
-                  <span>Verifikasi Biometrik &amp; Simpan ke Database</span>
+                  <span>Verifikasi Biometrik &amp; Simpan</span>
                 </button>
               </div>
             </div>
@@ -706,9 +706,9 @@
             <div class="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800 mb-3">
               <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <span class="material-symbols-outlined text-blue-600 text-[18px]">history</span>
-                <span>Feed Kehadiran Realtime (DB)</span>
+                <span>Feed Kehadiran Realtime</span>
               </h2>
-              <span class="text-xs text-emerald-600 font-mono font-bold">PostgreSQL</span>
+              <span class="text-xs text-emerald-600 font-mono font-bold">Live</span>
             </div>
 
             <!-- Live List -->
@@ -733,19 +733,23 @@
     <!-- ───────────────────────────────────────────────────────────────── -->
     <section id="view-admin" class="hidden w-full max-w-7xl px-4 py-6 pb-28 flex-col gap-6">
       
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div class="flex flex-col">
-          <div class="flex items-center gap-3 mb-2">
-            <button onclick="switchMainView('profil')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="flex flex-col min-w-0">
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+            <button onclick="switchMainView('profil')" class="min-h-[40px] flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer">
               <span class="material-symbols-outlined text-[18px]">arrow_back</span>
               <span>Kembali ke Profil</span>
             </button>
+            <button type="button" onclick="openMobileAdminDrawer()" class="lg:hidden min-h-[40px] flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 border border-blue-200/70 dark:border-blue-800/70 text-xs font-bold transition-all cursor-pointer">
+              <span class="material-symbols-outlined text-[18px]">menu_open</span>
+              <span>Menu Admin</span>
+            </button>
             <span class="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">Pusat Kendali Kepegawaian</span>
           </div>
-          <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Panel Konfigurasi & Admin BAPPERIDA</h1>
-          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Konfigurasi radius geofencing kantor, jadwal jam kerja ASN/PPPK, dan toleransi kehadiran pegawai.</p>
+          <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Panel Konfigurasi &amp; Admin BAPPERIDA</h1>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Konfigurasi radius geofencing kantor, jadwal jam kerja ASN/PPPK, dan toleransi kehadiran pegawai.</p>
         </div>
-        <button onclick="saveAdminSettings()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer">
+        <button onclick="saveAdminSettings()" class="w-full sm:w-auto min-h-[44px] px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer shrink-0">
           <span class="material-symbols-outlined text-[18px]">save</span>
           <span>Simpan Pengaturan</span>
         </button>
@@ -1430,115 +1434,37 @@
             </div>
           </div>
 
-          <!-- Akses Administrator (Terstruktur Sesuai D:\Code\absensi) -->
-          <div id="profilAdminSection" class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-blue-100 dark:border-slate-800 shadow-sm text-xs space-y-3.5">
+          <!-- Akses Administrator (1-Tap Trigger ke Menu Admin Drawer) -->
+          <div id="profilAdminSection" class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-blue-100 dark:border-slate-800 shadow-sm text-xs space-y-3">
             <div class="flex items-center justify-between border-b pb-2.5 border-slate-100 dark:border-slate-800">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center">
-                  <span class="material-symbols-outlined text-[17px]">shield_person</span>
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
+                  <span class="material-symbols-outlined text-[18px]">shield_person</span>
                 </div>
-                <div>
-                  <h3 class="font-bold text-slate-900 dark:text-white text-xs">Akses Administrator</h3>
-                  <p class="text-[10px] text-slate-400">Kendali operasional &amp; konfigurasi terpusat</p>
+                <div class="min-w-0">
+                  <h3 class="font-bold text-slate-900 dark:text-white text-xs truncate">Akses Administrator</h3>
+                  <p class="text-[11px] text-slate-400 truncate">Kendali operasional &amp; konfigurasi terpusat</p>
                 </div>
               </div>
             </div>
 
-            <!-- GRUP 1: OPERASIONAL & KEHADIRAN -->
-            <div class="space-y-1.5">
-              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                <span class="material-symbols-outlined text-[14px]">how_to_reg</span> Operasional &amp; Kehadiran
-              </span>
-              <div class="grid grid-cols-2 gap-2">
-                <button onclick="switchMainView('admin', true, 'adminSectionIzin')" class="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-xl text-left border border-slate-200/80 dark:border-slate-700 transition-all group cursor-pointer">
-                  <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-[18px] mb-1">rule</span>
-                  <p class="font-bold text-slate-900 dark:text-white text-[11px] group-hover:text-blue-600 dark:group-hover:text-blue-400">Konfirmasi Izin</p>
-                  <p class="text-[10px] text-slate-400 leading-tight">Persetujuan pending</p>
-                </button>
-                <button onclick="openIzinDrawer({ adminMode: true })" class="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-xl text-left border border-slate-200/80 dark:border-slate-700 transition-all group cursor-pointer">
-                  <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-[18px] mb-1">assignment_add</span>
-                  <p class="font-bold text-slate-900 dark:text-white text-[11px] group-hover:text-indigo-600 dark:group-hover:text-indigo-400">Input Keterangan</p>
-                  <p class="text-[10px] text-slate-400 leading-tight">Catat izin/sakit/cuti</p>
-                </button>
-                <button onclick="switchMainView('kiosk')" class="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 rounded-xl text-left border border-slate-200/80 dark:border-slate-700 transition-all group cursor-pointer col-span-2">
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-[18px]">desktop_windows</span>
-                      <div>
-                        <p class="font-bold text-slate-900 dark:text-white text-[11px] group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Terminal Meja Absen (Kiosk Lobi)</p>
-                        <p class="text-[10px] text-slate-400 leading-tight">Presensi tablet kantor dengan AI face scan</p>
-                      </div>
-                    </div>
-                    <span class="text-slate-400 group-hover:text-emerald-600">→</span>
-                  </div>
-                </button>
+            <button type="button" onclick="openMobileAdminDrawer()" class="w-full min-h-[48px] p-3.5 rounded-2xl bg-blue-50/80 hover:bg-blue-100/80 dark:bg-blue-950/40 dark:hover:bg-blue-950/70 border border-blue-200/80 dark:border-blue-800/70 flex items-center justify-between gap-3 text-left transition-all active:scale-[0.99] cursor-pointer group">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+                </div>
+                <div class="min-w-0">
+                  <p class="font-bold text-slate-900 dark:text-white text-xs group-hover:text-blue-700 dark:group-hover:text-blue-300 truncate">Buka Menu Administrator</p>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Monitoring, izin, pegawai AI, role, geofence, kiosk &amp; TPP</p>
+                </div>
               </div>
-            </div>
+              <span class="material-symbols-outlined text-[20px] text-blue-600 dark:text-blue-400 shrink-0">chevron_right</span>
+            </button>
 
-            <!-- GRUP 2: MANAJEMEN KEPEGAWAIAN -->
-            <div class="space-y-1.5 pt-1">
-              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                <span class="material-symbols-outlined text-[14px]">badge</span> Manajemen Kepegawaian
-              </span>
-              <div class="grid grid-cols-2 gap-2">
-                <button onclick="switchMainView('admin', true, 'adminSectionPegawai')" class="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-xl text-left border border-slate-200/80 dark:border-slate-700 transition-all group cursor-pointer">
-                  <span class="material-symbols-outlined text-teal-600 dark:text-teal-400 text-[18px] mb-1">face</span>
-                  <p class="font-bold text-slate-900 dark:text-white text-[11px] group-hover:text-teal-600 dark:group-hover:text-teal-400">Master Pegawai &amp; AI</p>
-                  <p class="text-[10px] text-slate-400 leading-tight">Biometrik &amp; spesimen TTD</p>
-                </button>
-                <button onclick="switchMainView('admin', true, 'adminSectionRoles')" class="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-xl text-left border border-slate-200/80 dark:border-slate-700 transition-all group cursor-pointer">
-                  <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-[18px] mb-1">manage_accounts</span>
-                  <p class="font-bold text-slate-900 dark:text-white text-[11px] group-hover:text-blue-600 dark:group-hover:text-blue-400">Kelola Role &amp; Hak</p>
-                  <p class="text-[10px] text-slate-400 leading-tight">Matriks hak akses</p>
-                </button>
-              </div>
-            </div>
-
-            <!-- GRUP 3: KONFIGURASI SISTEM -->
-            <div class="space-y-1.5 pt-1">
-              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                <span class="material-symbols-outlined text-[14px]">tune</span> Konfigurasi Sistem
-              </span>
-              <div class="grid grid-cols-2 gap-2">
-                <button onclick="switchMainView('admin', true, 'adminSectionGeofence')" class="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-xl text-left border border-slate-200/80 dark:border-slate-700 transition-all group cursor-pointer">
-                  <span class="material-symbols-outlined text-rose-600 dark:text-rose-400 text-[18px] mb-1">share_location</span>
-                  <p class="font-bold text-slate-900 dark:text-white text-[11px] group-hover:text-rose-600 dark:group-hover:text-rose-400">Geofencing Presensi</p>
-                  <p class="text-[10px] text-slate-400 leading-tight">Koordinat GPS BAPPERIDA</p>
-                </button>
-                <button onclick="switchMainView('admin', true, 'adminSectionJamLibur')" class="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-xl text-left border border-slate-200/80 dark:border-slate-700 transition-all group cursor-pointer">
-                  <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-[18px] mb-1">schedule</span>
-                  <p class="font-bold text-slate-900 dark:text-white text-[11px] group-hover:text-amber-600 dark:group-hover:text-amber-400">Jam Kerja &amp; Libur</p>
-                  <p class="text-[10px] text-slate-400 leading-tight">Toleransi &amp; dispensasi</p>
-                </button>
-              </div>
-            </div>
-
-            <!-- GRUP 4: LAPORAN & KEDINASAN -->
-            <div class="space-y-1.5 pt-1">
-              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                <span class="material-symbols-outlined text-[14px]">description</span> Laporan &amp; Kedinasan
-              </span>
-              <div class="grid grid-cols-2 gap-2">
-                <button onclick="switchMainView('tpp')" class="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-slate-700 rounded-xl text-left border border-slate-200/80 dark:border-slate-700 transition-all group cursor-pointer">
-                  <span class="material-symbols-outlined text-purple-600 dark:text-purple-400 text-[18px] mb-1">receipt_long</span>
-                  <p class="font-bold text-slate-900 dark:text-white text-[11px] group-hover:text-purple-600 dark:group-hover:text-purple-400">Cetak Rekap TPP</p>
-                  <p class="text-[10px] text-slate-400 leading-tight">Disiplin &amp; potongan gaji</p>
-                </button>
-                <button onclick="switchMainView('sppd')" class="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-cyan-50 dark:hover:bg-slate-700 rounded-xl text-left border border-slate-200/80 dark:border-slate-700 transition-all group cursor-pointer">
-                  <span class="material-symbols-outlined text-cyan-600 dark:text-cyan-400 text-[18px] mb-1">flight_takeoff</span>
-                  <p class="font-bold text-slate-900 dark:text-white text-[11px] group-hover:text-cyan-600 dark:group-hover:text-cyan-400">SPPD &amp; Aset KIR</p>
-                  <p class="text-[10px] text-slate-400 leading-tight">Perjalanan &amp; pemeliharaan</p>
-                </button>
-              </div>
-            </div>
-
-            <!-- GRUP 5: KELUAR / LOGOUT -->
-            <div class="pt-2">
-              <button onclick="logoutUser()" type="button" class="w-full py-3 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-900/50 font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer">
-                <span class="material-symbols-outlined text-[18px]">logout</span>
-                <span>Keluar dari Akun Pegawai</span>
-              </button>
-            </div>
+            <button onclick="logoutUser()" type="button" class="w-full min-h-[44px] py-2.5 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-900/50 font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer">
+              <span class="material-symbols-outlined text-[18px]">logout</span>
+              <span>Keluar dari Akun Pegawai</span>
+            </button>
           </div>
 
         </div>
@@ -1549,7 +1475,7 @@
     <!-- ═════════════════════════════════════════════════════════════════════ -->
     <!-- FLOATING MOBILE BOTTOM NAVIGATION BAR (AUTHENTIC STITCH TOKEN)      -->
     <!-- ═════════════════════════════════════════════════════════════════════ -->
-    <div id="globalMobileBottomNav" class="fixed bottom-3 inset-x-0 z-40 flex justify-center pointer-events-none px-4">
+    <div id="globalMobileBottomNav" class="lg:hidden fixed bottom-3 inset-x-0 z-40 flex justify-center pointer-events-none px-4">
       <div class="w-full sm:max-w-[428px] pointer-events-auto">
         <nav class="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl shadow-[0_12px_32px_-4px_rgba(15,23,42,0.18)] border border-slate-200/80 dark:border-slate-800 px-3 py-1.5">
           <div class="flex justify-between items-center h-14">
@@ -2940,6 +2866,7 @@
 
   <!-- Modular Stitch Controllers -->
   <script src="js/stitch-pickers.js"></script>
+  <script src="js/stitch-desktop-shell.js"></script>
   <script src="js/stitch-app.js"></script>
   <script src="js/stitch-presensi.js"></script>
   <script src="js/stitch-rekap.js"></script>

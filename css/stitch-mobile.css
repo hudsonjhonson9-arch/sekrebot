@@ -167,3 +167,10 @@
     #cameraModal:not(.hidden) > *, #successModal:not(.hidden) > * { animation: modalPop .32s cubic-bezier(.22,1,.36,1) both; }
     #successModal:not(.hidden) .material-symbols-outlined { animation: checkPop .45s .12s cubic-bezier(.34,1.56,.64,1) both; }
     @media (prefers-reduced-motion: reduce) { #clockInBtn.bg-blue-600, #cameraModal > *, #successModal > *, #successModal .material-symbols-outlined { animation: none !important; } }
+
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+
+    @media (min-width: 1024px) {
+      #globalMobileBottomNav { display: none !important; }
+    }

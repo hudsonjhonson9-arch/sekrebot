@@ -307,6 +307,9 @@
       html.classList.toggle('light', !isDark);
       const icon = document.getElementById('themeIcon');
       if (icon) icon.textContent = isDark ? 'light_mode' : 'dark_mode';
+      if (window.StitchShell && typeof window.StitchShell.syncTheme === 'function') {
+        window.StitchShell.syncTheme();
+      }
     }
 
     // Initialize on DOM Ready
@@ -568,6 +571,9 @@
       const isAdmin = isStitchAdminUser(u);
       const profilAdminEl = document.getElementById('profilAdminSection');
       if (profilAdminEl) profilAdminEl.classList.toggle('hidden', !isAdmin);
+      if (window.StitchShell && typeof window.StitchShell.syncRole === 'function') {
+        window.StitchShell.syncRole();
+      }
       const quickTppBtn = document.getElementById('btnQuickCetakTpp') ||
         document.querySelector('#view-presensi button[onclick*="switchMainView(\'tpp\')"]');
       if (quickTppBtn) {
@@ -1183,6 +1189,10 @@
           activeTab.classList.add('text-blue-600', 'dark:text-blue-400', 'font-bold');
           activeTab.classList.remove('text-slate-400');
         }
+      }
+
+      if (window.StitchShell && typeof window.StitchShell.syncActive === 'function') {
+        window.StitchShell.syncActive(target, sectionId);
       }
 
       if (target === 'tpp') {
