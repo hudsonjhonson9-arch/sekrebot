@@ -337,7 +337,7 @@
             <button onclick="switchMainView('presensi')" aria-label="Kembali" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
               <span class="material-symbols-outlined text-[20px]">arrow_back</span>
             </button>
-            <h2 class="text-base font-bold text-slate-900 dark:text-white">Rekap Kehadiran</h2>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">Riwayat Kehadiran</h2>
           </div>
           <button onclick="exportRiwayatPDF()" class="flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900 hover:bg-blue-100 transition-colors cursor-pointer" title="Unduh Laporan PDF">
             <span class="material-symbols-outlined text-[14px]">picture_as_pdf</span>
@@ -373,40 +373,10 @@
             </div>
           </div>
 
-          <!-- Rekap Rentang Tanggal & Cetak PDF Seluruh Pegawai (Fitur dari D:\Code\absensi) -->
-          <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col gap-2.5">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-1.5">
-                <span class="material-symbols-outlined text-[18px] text-indigo-600 dark:text-indigo-400">date_range</span>
-                <span class="text-xs font-bold text-slate-900 dark:text-white">Rekap Rentang Tanggal (PDF Resmi)</span>
-              </div>
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">F4 + TTD</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <button type="button" onclick="setRekapRangePreset('hari_ini')" class="tap-effect px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Hari Ini</button>
-              <button type="button" onclick="setRekapRangePreset('minggu_ini')" class="tap-effect px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Minggu Ini</button>
-              <button type="button" onclick="setRekapRangePreset('bulan_ini')" class="tap-effect px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Bulan Ini</button>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="text-[10px] font-semibold text-slate-400 block">Dari Tanggal</label>
-                <input type="date" id="rekapRangeDari" class="mt-0.5 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-blue-500" />
-              </div>
-              <div>
-                <label class="text-[10px] font-semibold text-slate-400 block">Sampai Tanggal</label>
-                <input type="date" id="rekapRangeSampai" class="mt-0.5 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-blue-500" />
-              </div>
-            </div>
-            <button type="button" onclick="exportRekapRangePDF()" class="tap-effect w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer">
-              <span class="material-symbols-outlined text-[16px]">print</span>
-              <span>Cetak PDF Rekap Rentang Tanggal</span>
-            </button>
-          </div>
-
           <!-- Section Title & Stream of Daily Cards -->
           <div class="flex items-center justify-between pt-1">
             <div class="flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-[18px] text-blue-600">history_edu</span>
+              <span class="material-symbols-outlined text-[18px] text-blue-600 shrink-0">calendar_today</span>
               <h3 class="text-xs font-bold text-slate-900 dark:text-white" id="riwayatFullTitle">Riwayat Harian</h3>
             </div>
           </div>
@@ -746,22 +716,23 @@
             </button>
             <span class="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">Pusat Kendali Kepegawaian</span>
           </div>
-          <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Panel Konfigurasi &amp; Admin BAPPERIDA</h1>
-          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Konfigurasi radius geofencing kantor, jadwal jam kerja ASN/PPPK, dan toleransi kehadiran pegawai.</p>
+          <h1 id="adminPanelHeading" class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Monitoring Presensi Hari Ini</h1>
+          <p id="adminPanelSubheading" class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Pantau kehadiran pegawai secara real-time atau pindah menu lewat Panel Admin.</p>
         </div>
-        <button onclick="saveAdminSettings()" class="w-full sm:w-auto min-h-[44px] px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer shrink-0">
+        <button id="btnSaveAdminSettings" onclick="saveAdminSettings()" class="hidden w-full sm:w-auto min-h-[44px] px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer shrink-0">
           <span class="material-symbols-outlined text-[18px]">save</span>
           <span>Simpan Pengaturan</span>
         </button>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Panel: Geofencing Lokasi & Biometrik AI -->
+      <div id="adminSectionGeofence" data-admin-panel="adminSectionGeofence" class="hidden grid-cols-1 lg:grid-cols-2 gap-6">
         
         <!-- Geofence Office Settings -->
-        <div id="adminSectionGeofence" class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
           <div class="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
             <span class="material-symbols-outlined text-blue-600 text-[20px]">location_on</span>
-            <span>Titik Koordinat & Radius Kantor (Pengaturan Lokasi)</span>
+            <span>Titik Koordinat &amp; Radius Kantor (Pengaturan Lokasi)</span>
           </div>
 
           <div class="space-y-3">
@@ -771,7 +742,7 @@
                 <option value="1">Kantor Bapperida</option>
               </select>
               <div id="adminLocationDropdownWrap" class="relative mt-1">
-                <button type="button" id="adminLocationTrigger" onclick="toggleAdminLocationDropdown()" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-500 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white flex items-center justify-between gap-2 text-left transition-colors cursor-pointer">
+                <button type="button" id="adminLocationTrigger" onclick="toggleAdminLocationDropdown()" class="w-full min-h-[44px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-500 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white flex items-center justify-between gap-2 text-left transition-colors cursor-pointer">
                   <span id="adminLocationLabel" class="truncate">Kantor Bapperida</span>
                   <span id="adminLocationExpandIcon" class="material-symbols-outlined text-slate-400 text-[18px] shrink-0">expand_more</span>
                 </button>
@@ -782,11 +753,11 @@
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Latitude</label>
-                <input type="text" id="adminOfficeLat" value="-9.648769" class="mt-1 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+                <input type="text" id="adminOfficeLat" value="-9.648769" class="mt-1 w-full min-h-[44px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-blue-500" />
               </div>
               <div>
                 <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Longitude</label>
-                <input type="text" id="adminOfficeLon" value="119.389232" class="mt-1 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+                <input type="text" id="adminOfficeLon" value="119.389232" class="mt-1 w-full min-h-[44px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-blue-500" />
               </div>
             </div>
 
@@ -800,70 +771,8 @@
           </div>
         </div>
 
-        <!-- Work Hours & Shift -->
-        <div id="adminSectionJamLibur" class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
-          <div class="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
-            <span class="material-symbols-outlined text-emerald-600 text-[20px]">schedule</span>
-            <span>Konfigurasi Jam Kerja WITA</span>
-          </div>
-
-          <div class="space-y-3">
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Jam Masuk</label>
-                <input type="time" id="adminJamMasuk" value="07:15" class="mt-1 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-blue-500" />
-              </div>
-              <div>
-                <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Jam Pulang</label>
-                <input type="time" id="adminJamPulang" value="14:30" class="mt-1 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-blue-500" />
-              </div>
-            </div>
-
-            <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Toleransi Keterlambatan</label>
-              <select id="adminToleransi" class="hidden">
-                <option value="0">0 Menit (Ketepatan Mutlak)</option>
-                <option value="15" selected>15 Menit (Standar Pemda)</option>
-                <option value="30">30 Menit (Kondisi Khusus)</option>
-              </select>
-              <div id="adminToleransiDropdownWrap" class="relative mt-1">
-                <button type="button" id="adminToleransiTrigger" onclick="toggleAdminToleransiDropdown()" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-500 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white flex items-center justify-between gap-2 text-left transition-colors cursor-pointer">
-                  <span id="adminToleransiLabel" class="truncate">15 Menit (Standar Pemda)</span>
-                  <span id="adminToleransiExpandIcon" class="material-symbols-outlined text-slate-400 text-[18px] shrink-0">expand_more</span>
-                </button>
-                <div id="adminToleransiDropdown" class="hidden absolute left-0 right-0 top-full mt-1 z-30 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
-                  <button type="button" onclick="selectAdminToleransi('0')" data-toleransi="0" class="w-full px-3 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">
-                    <span>0 Menit (Ketepatan Mutlak)</span>
-                  </button>
-                  <button type="button" onclick="selectAdminToleransi('15')" data-toleransi="15" class="w-full px-3 py-2 text-left text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50/70 dark:bg-blue-950/40 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">
-                    <span>15 Menit (Standar Pemda)</span>
-                    <span class="material-symbols-outlined text-[16px]">check</span>
-                  </button>
-                  <button type="button" onclick="selectAdminToleransi('30')" data-toleransi="30" class="w-full px-3 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">
-                    <span>30 Menit (Kondisi Khusus)</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Kelola Hari Libur & Cuti Bersama -->
-            <div class="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block">Tambah Hari Libur / Cuti Bersama</label>
-              <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
-                <input type="date" id="adminLiburDate" class="sm:col-span-5 min-h-[40px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-blue-500" />
-                <input type="text" id="adminLiburName" placeholder="Nama libur..." class="sm:col-span-5 min-h-[40px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-blue-500" />
-                <button type="button" onclick="addAdminHolidayStitch()" class="sm:col-span-2 min-h-[40px] px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer" title="Tambah / Simpan Libur">
-                  <span class="material-symbols-outlined text-[18px]">add</span>
-                  <span class="sm:hidden">Tambah</span>
-                </button>
-              </div>
-              <div id="adminHolidaysList" class="max-h-48 overflow-y-auto space-y-1.5 pr-1"></div>
-            </div>
-          </div>
-        </div>
-
         <!-- Biometric Face Thresholds -->
-        <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
           <div class="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
             <span class="material-symbols-outlined text-purple-600 text-[20px]">face</span>
             <span>Parameter Human.js Face AI</span>
@@ -887,11 +796,154 @@
             </div>
           </div>
         </div>
+      </div>
 
+      <!-- Panel: Konfigurasi Jam Kerja & Hari Libur -->
+      <div id="adminSectionJamLibur" data-admin-panel="adminSectionJamLibur" class="hidden bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex-col gap-4">
+        <div class="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
+          <span class="material-symbols-outlined text-emerald-600 text-[20px]">schedule</span>
+          <span>Konfigurasi Jam Kerja WITA &amp; Hari Libur</span>
+        </div>
+
+        <div class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Jam Masuk</label>
+              <input type="time" id="adminJamMasuk" value="07:15" class="mt-1 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Jam Pulang</label>
+              <input type="time" id="adminJamPulang" value="14:30" class="mt-1 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Toleransi Keterlambatan</label>
+              <select id="adminToleransi" class="hidden">
+                <option value="0">0 Menit (Ketepatan Mutlak)</option>
+                <option value="15" selected>15 Menit (Standar Pemda)</option>
+                <option value="30">30 Menit (Kondisi Khusus)</option>
+              </select>
+              <div id="adminToleransiDropdownWrap" class="relative mt-1">
+                <button type="button" id="adminToleransiTrigger" onclick="toggleAdminToleransiDropdown()" class="w-full min-h-[44px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-500 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white flex items-center justify-between gap-2 text-left transition-colors cursor-pointer">
+                  <span id="adminToleransiLabel" class="truncate">15 Menit (Standar Pemda)</span>
+                  <span id="adminToleransiExpandIcon" class="material-symbols-outlined text-slate-400 text-[18px] shrink-0">expand_more</span>
+                </button>
+                <div id="adminToleransiDropdown" class="hidden absolute left-0 right-0 top-full mt-1 z-30 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+                  <button type="button" onclick="selectAdminToleransi('0')" data-toleransi="0" class="w-full px-3 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">
+                    <span>0 Menit (Ketepatan Mutlak)</span>
+                  </button>
+                  <button type="button" onclick="selectAdminToleransi('15')" data-toleransi="15" class="w-full px-3 py-2 text-left text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50/70 dark:bg-blue-950/40 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">
+                    <span>15 Menit (Standar Pemda)</span>
+                    <span class="material-symbols-outlined text-[16px]">check</span>
+                  </button>
+                  <button type="button" onclick="selectAdminToleransi('30')" data-toleransi="30" class="w-full px-3 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">
+                    <span>30 Menit (Kondisi Khusus)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kelola Hari Libur & Cuti Bersama -->
+          <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block">Tambah / Edit Hari Libur &amp; Cuti Bersama</label>
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+              <input type="date" id="adminLiburDate" class="sm:col-span-5 min-h-[44px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+              <input type="text" id="adminLiburName" placeholder="Nama hari libur..." class="sm:col-span-5 min-h-[44px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+              <button type="button" onclick="addAdminHolidayStitch()" class="sm:col-span-2 min-h-[44px] px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer" title="Tambah / Simpan Libur">
+                <span class="material-symbols-outlined text-[18px]">add</span>
+                <span>Simpan</span>
+              </button>
+            </div>
+            <div id="adminHolidaysList" class="max-h-72 overflow-y-auto space-y-1.5 pr-1"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel: Rekap Kehadiran Semua Pegawai (Fitur D:\Code\absensi + UI Stitch) -->
+      <div id="adminSectionRekap" data-admin-panel="adminSectionRekap" class="hidden bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex-col gap-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4 border-slate-100 dark:border-slate-800">
+          <div>
+            <span class="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Rekapitulasi Seluruh Pegawai</span>
+            <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">Rekap Kehadiran, Preview &amp; Ekspor Resmi</h3>
+          </div>
+          <div class="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 shrink-0">
+            <button type="button" id="btnAdminRekapModeRange" onclick="setAdminRekapMode('range')" class="min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-xs transition-all cursor-pointer">Rentang / Bulanan</button>
+            <button type="button" id="btnAdminRekapModeHarian" onclick="setAdminRekapMode('harian')" class="min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 transition-all cursor-pointer">Daftar Hadir Harian</button>
+          </div>
+        </div>
+
+        <!-- Controls: Mode Rentang -->
+        <div id="adminRekapControlsRange" class="space-y-3">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button type="button" onclick="setAdminRekapPreset('hari_ini')" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Hari Ini</button>
+            <button type="button" onclick="setAdminRekapPreset('minggu_ini')" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Minggu Ini</button>
+            <button type="button" onclick="setAdminRekapPreset('bulan_ini')" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-xs font-bold text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800 cursor-pointer">Bulan Ini</button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Dari Tanggal</label>
+              <input type="date" id="adminRekapDari" class="w-full" />
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Sampai Tanggal</label>
+              <input type="date" id="adminRekapSampai" class="w-full" />
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Cari Pegawai</label>
+              <div class="relative">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                <input type="text" id="adminRekapSearch" oninput="filterAdminRekapList()" placeholder="Nama atau NIP..." class="w-full min-h-[44px] pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls: Mode Harian -->
+        <div id="adminRekapControlsHarian" class="hidden grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Tanggal Daftar Hadir</label>
+            <input type="date" id="adminRekapTanggalHarian" class="w-full" />
+          </div>
+          <div>
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Cari Pegawai</label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+              <input type="text" id="adminRekapSearchHarian" oninput="filterAdminRekapList()" placeholder="Nama atau NIP..." class="w-full min-h-[44px] pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
+          <button type="button" onclick="loadAdminRekapData()" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">refresh</span>
+            <span>Muat Data</span>
+          </button>
+          <button type="button" onclick="openAdminRekapPreview()" class="min-h-[44px] px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">visibility</span>
+            <span>Preview Dokumen</span>
+          </button>
+          <button type="button" onclick="exportAdminRekapPDF()" class="min-h-[44px] px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+            <span>Unduh PDF (F4)</span>
+          </button>
+          <button type="button" onclick="exportAdminRekapXLSX()" class="min-h-[44px] px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">table_view</span>
+            <span>Unduh Excel (.xlsx)</span>
+          </button>
+        </div>
+
+        <!-- Summary Chips -->
+        <div id="adminRekapSummaryBar" class="flex flex-wrap items-center gap-2 text-xs"></div>
+
+        <!-- Responsive Data Container -->
+        <div id="adminRekapListContainer" class="max-h-[540px] overflow-y-auto pr-1">
+          <div class="p-8 text-center text-xs text-slate-400">Klik <strong>Muat Data</strong> untuk menampilkan rekap kehadiran seluruh pegawai.</div>
+        </div>
       </div>
 
       <!-- Live Attendance Monitoring Matrix -->
-      <div id="adminSectionMonitoring" class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
+      <div id="adminSectionMonitoring" data-admin-panel="adminSectionMonitoring" class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4 border-slate-100 dark:border-slate-800">
           <div>
             <span class="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Pemantauan Real-Time</span>
@@ -927,7 +979,7 @@
       </div>
 
       <!-- Approval Cuti / Izin Pegawai -->
-      <div id="adminSectionIzin" class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
+      <div id="adminSectionIzin" data-admin-panel="adminSectionIzin" class="hidden bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex-col gap-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4 border-slate-100 dark:border-slate-800">
           <div>
             <span class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Verifikasi Permohonan Pegawai</span>
@@ -965,7 +1017,7 @@
       </div>
 
       <!-- Master Pegawai & Biometrik AI -->
-      <div id="adminSectionPegawai" class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
+      <div id="adminSectionPegawai" data-admin-panel="adminSectionPegawai" class="hidden bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex-col gap-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4 border-slate-100 dark:border-slate-800">
           <div>
             <span class="text-[11px] font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Direktori &amp; Biometrik AI</span>
@@ -1003,7 +1055,7 @@
       </div>
 
       <!-- Kelola Role & Hak Akses -->
-      <div id="adminSectionRoles" class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
+      <div id="adminSectionRoles" data-admin-panel="adminSectionRoles" class="hidden bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex-col gap-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4 border-slate-100 dark:border-slate-800">
           <div>
             <span class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Matriks Peran &amp; Wewenang</span>
@@ -1482,7 +1534,7 @@
             <!-- 1. Riwayat -->
             <button onclick="switchMobileTab('riwayat')" id="mTab-riwayat" class="mobile-tab flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-medium transition-all cursor-pointer">
               <span class="material-symbols-outlined text-[22px]">history</span>
-              <span class="text-[10px] mt-0.5">Rekap</span>
+              <span class="text-[10px] mt-0.5">Riwayat</span>
             </button>
 
             <!-- 2. Arsip -->
@@ -2852,7 +2904,40 @@
     </div>
   </div>
 
+  <!-- MODAL PREVIEW DOKUMEN REKAP KEHADIRAN (F4 + KOP + PARAF/TTD) -->
+  <div id="modalAdminRekapPreview" class="hidden fixed inset-0 z-[75] bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4" onclick="if(event.target===this)closeAdminRekapPreview()">
+    <div class="w-full max-w-4xl max-h-[92vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden">
+      <div class="px-4 sm:px-6 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-[20px]">description</span>
+          </div>
+          <div class="min-w-0">
+            <h3 id="adminRekapPreviewTitle" class="text-sm font-extrabold text-slate-900 dark:text-white truncate">Preview Dokumen Rekap Resmi</h3>
+            <p id="adminRekapPreviewSub" class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Format F4 • Kop BAPPERIDA • Paraf &amp; TTD Kepala Badan</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeAdminRekapPreview()" aria-label="Tutup preview" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer shrink-0">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+      <div id="adminRekapPreviewBody" class="flex-1 overflow-auto p-3 sm:p-6 bg-slate-100 dark:bg-slate-950"></div>
+      <div class="px-4 sm:px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-wrap items-center justify-end gap-2 shrink-0">
+        <button type="button" onclick="closeAdminRekapPreview()" class="min-h-[42px] px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Tutup</button>
+        <button type="button" onclick="exportAdminRekapXLSX()" class="min-h-[42px] px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+          <span class="material-symbols-outlined text-[18px]">table_view</span>
+          <span>Unduh Excel (.xlsx)</span>
+        </button>
+        <button type="button" onclick="exportAdminRekapPDF()" class="min-h-[42px] px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer">
+          <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+          <span>Unduh PDF (F4)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Core Auth & System Scripts -->
+  <script defer src="js/lib/xlsx.full.min.js"></script>
   <script src="js/config.js"></script>
   <script src="js/constants.js"></script>
   <script src="js/api.js"></script>
@@ -2873,5 +2958,6 @@
   <script src="js/stitch-layanan.js"></script>
   <script src="js/stitch-aset-arsip.js"></script>
   <script src="js/stitch-admin-mobile.js"></script>
+  <script src="js/stitch-admin-rekap.js"></script>
 </body>
 </html>

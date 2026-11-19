@@ -99,12 +99,20 @@
 
   /* ── renderer ─────────────────────────────────────────────────────── */
   function avatar(u) {
-    const photo = safeUrl(u.face_photo);
-    if (photo && /^https?:/i.test(photo)) {
-      return `<img src="${esc(photo)}" class="w-8 h-8 rounded-full object-cover border border-slate-200" alt="">`;
-    }
     const ini = String(u.nama || 'P').split(/\s+/).filter((p) => !p.includes('.')).slice(0, 2)
       .map((p) => p[0]).join('').toUpperCase() || 'P';
+    const resolved = typeof w.resolveBioImageSrc === 'function'
+      ? w.resolveBioImageSrc(u.face_photo)
+      : safeUrl(u.face_photo);
+    const photo = resolved && (/^(\/api\/media\/raw\/|\/uploads\/|https?:|data:image\/)/i.test(resolved))
+      ? resolved
+      : '';
+    if (photo) {
+      return `<div class="w-8 h-8 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[11px] font-mono flex-shrink-0">
+        <img src="${esc(photo)}" class="w-full h-full object-cover" alt="" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.classList.remove('hidden');">
+        <span class="hidden">${esc(ini)}</span>
+      </div>`;
+    }
     return `<div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[11px] font-mono flex-shrink-0">${esc(ini)}</div>`;
   }
 

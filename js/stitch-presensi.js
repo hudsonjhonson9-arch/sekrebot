@@ -399,57 +399,6 @@
     function updateAttendanceUI() {
       const inBtn = document.getElementById('clockInBtn');
       const inTitle = document.getElementById('clockInBtnTitle');
-      const inSub = document.getElementById('clockInBtnSubtitle');
-      
-      const outBtn = document.getElementById('clockOutBtn');
-      const outTitle = document.getElementById('clockOutBtnTitle');
-      const outSub = document.getElementById('clockOutBtnSubtitle');
-      const outBadge = document.getElementById('clockOutBtnBadge');
-      const outIcon = document.getElementById('clockOutLockIcon');
-
-      const timeInEl = document.getElementById('timelineInTime');
-      const timeInSub = document.getElementById('timelineInSubtitle');
-      const btnSlipMini = document.getElementById('btnViewSlipMini');
-
-      const timeOutEl = document.getElementById('timelineOutTime');
-      const timeOutSub = document.getElementById('timelineOutSubtitle');
-
-      // Monthly Metrics (Bulanan)
-      const mHadir = document.getElementById('metricHadirCount');
-      if (mHadir) mHadir.textContent = state.metrics.hadir;
-      const mTelat = document.getElementById('metricTerlambatCount');
-      if (mTelat) mTelat.textContent = state.metrics.terlambat;
-      const mCuti = document.getElementById('metricCutiCount');
-      if (mCuti) mCuti.textContent = state.metrics.cuti;
-
-      // Daily Metrics (Harian)
-      const dIn = document.getElementById('dailyInMetric');
-      const dInSub = document.getElementById('dailyInMetricSub');
-      const dOut = document.getElementById('dailyOutMetric');
-      const dOutSub = document.getElementById('dailyOutMetricSub');
-      const dDur = document.getElementById('dailyDurationMetric');
-
-      if (dIn) {
-        dIn.textContent = state.attendance.clockInTime || '--:--';
-        dInSub.textContent = state.attendance.clockInTime ? 'Tepat Waktu' : 'Belum Absen';
-      }
-      if (dOut) {
-        dOut.textContent = state.attendance.clockOutTime || '--:--';
-        dOutSub.textContent = state.attendance.clockOutTime ? 'Tercatat Pulang' : 'Menunggu Pulang';
-      }
-      if (dDur) {
-        dDur.textContent = state.attendance.duration || (state.attendance.clockInTime ? 'Sedang Berjalan' : '0 Jam');
-      }
-
-      // Weekly Metrics (Mingguan)
-      if (state.metrics && state.metrics.weekly) {
-        const wHadir = document.getElementById('metricWeeklyHadir');
-        if (wHadir) wHadir.textContent = state.metrics.weekly.hadir;
-        const wHours = document.getElementById('metricWeeklyHours');
-        if (wHours) wHours.textContent = state.metrics.weekly.totalHours + ' Jam';
-        const wLate = document.getElementById('metricWeeklyLate');
-        if (wLate) wLate.textContent = state.metrics.weekly.terlambat;
-      }
 
       // Analog Hero Check In/Out Displays
       const heroCheckin = document.getElementById('display-checkin');
@@ -467,60 +416,21 @@
           inBtn.className = "tap-effect w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white font-extrabold text-sm shadow-[0_6px_20px_rgba(225,29,72,0.28)] border border-rose-500 transition-all cursor-pointer";
         }
         if (inTitle) inTitle.textContent = 'PRESENSI PULANG';
-        
-        if (timeInEl) {
-          timeInEl.textContent = state.attendance.clockInTime;
-          timeInEl.classList.add('text-emerald-600', 'dark:text-emerald-400');
-        }
-        if (timeInSub) timeInSub.textContent = 'Hadir Tepat Waktu (Tercatat DB)';
-        if (btnSlipMini) btnSlipMini.classList.remove('hidden');
-
-        if (outBtn) {
-          outBtn.disabled = false;
-          outBtn.className = "tap-effect flex items-center justify-center gap-2 py-3.5 px-3 rounded-2xl bg-gradient-to-r from-teal-200 via-cyan-200 to-sky-200 hover:from-teal-300 hover:to-cyan-300 active:scale-[0.98] text-slate-900 font-extrabold text-sm shadow-xs border border-cyan-300/60 transition-all cursor-pointer";
-        }
-        if (outTitle) outTitle.textContent = 'CHECK OUT';
-
       } else if (state.attendance.status === 'SELESAI') {
         if (inBtn) {
           inBtn.className = "tap-effect w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-sm shadow-xs border border-slate-200 dark:border-slate-700 transition-all cursor-pointer";
         }
         if (inTitle) inTitle.textContent = 'PRESENSI SELESAI';
-
-        if (outBtn) {
-          outBtn.disabled = true;
-          outBtn.className = "tap-effect flex items-center justify-center gap-2 py-3.5 px-3 rounded-2xl bg-[#eef2f7] dark:bg-slate-800/80 text-[#8b9cb5] dark:text-slate-500 font-semibold text-sm shadow-xs border border-slate-200 dark:border-slate-700 transition-all cursor-not-allowed";
-        }
-        if (outTitle) outTitle.textContent = 'Sudah Pulang';
-
-        if (timeInEl) timeInEl.textContent = state.attendance.clockInTime;
-        if (timeOutEl) timeOutEl.textContent = state.attendance.clockOutTime;
-        if (timeOutSub) timeOutSub.textContent = 'Tercatat Pulang di PostgreSQL';
       } else if (state.attendance.status === 'KETERANGAN') {
         if (inBtn) {
           inBtn.className = "tap-effect w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 font-extrabold text-sm shadow-xs border border-amber-300 dark:border-amber-800 transition-all cursor-not-allowed";
         }
         if (inTitle) inTitle.textContent = `STATUS: ${state.attendance.keterangan || 'IZIN / CUTI'}`;
-        if (timeInSub) timeInSub.textContent = `Keterangan disetujui (${state.attendance.keterangan || 'Izin'})`;
       } else {
         if (inBtn) {
           inBtn.className = "tap-effect w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-extrabold text-sm shadow-[0_6px_20px_rgba(37,99,235,0.28)] border border-blue-500 transition-all cursor-pointer";
         }
         if (inTitle) inTitle.textContent = 'PRESENSI';
-        
-        if (timeInEl) {
-          timeInEl.textContent = '-- : --';
-          timeInEl.classList.remove('text-emerald-600', 'dark:text-emerald-400');
-        }
-        if (timeInSub) timeInSub.textContent = 'Menunggu absensi...';
-        if (btnSlipMini) btnSlipMini.classList.add('hidden');
-
-        if (outBtn) {
-          outBtn.disabled = true;
-          outBtn.className = "tap-effect flex items-center justify-center gap-2 py-3.5 px-3 rounded-2xl bg-[#eef2f7] dark:bg-slate-800/80 text-[#8b9cb5] dark:text-slate-400 font-semibold text-sm shadow-xs border border-slate-200/80 dark:border-slate-700 transition-all cursor-not-allowed";
-        }
-        if (outTitle) outTitle.textContent = 'Check Out';
-        if (timeOutEl) timeOutEl.textContent = '-- : --';
       }
     }
 
@@ -1033,10 +943,6 @@
           </button>
         </div>
       `;
-    }
-
-    function toggleMonthPicker() {
-      setStripMode('month');
     }
 
     /* ── 5. E-SLIP OFFICIAL RECEIPT (SCREEN 11) ─────────────────────── */

@@ -122,9 +122,6 @@
     if (w.state && typeof w.state === 'object') {
       w.state.allUsers = pegawaiCache.slice();
     }
-    if (typeof w.renderUsersDropdown === 'function') {
-      try { w.renderUsersDropdown(pegawaiCache); } catch (_) {}
-    }
   }
 
   function updatePegawaiFilterChipsUI() {

@@ -45,3 +45,17 @@
   - `js/kiosk-controller.js` dan `submitKioskBiometric()` tidak lagi memakai simulasi pegawai acak, melainkan terhubung ke `/api/stitch/bootstrap` dan `/api/stitch/absen`.
   - `cetak-tpp.html` dan `downloadTppPdf()` kini memuat data nyata dari `/api/stitch/rekap-tpp` (dengan hari kerja efektif & TTD Kepala Badan).
   - Halaman desktop bersidebar (`admin.html`, `rekap.html`, `layanan.html`, `aset-kir.html`, `arsip.html`, `desktop.html`) otomatis memuat `js/stitch-responsive-nav.js` untuk tampilan layar kecil (<1024px) dengan *floating bottom nav*.
+
+## Pembersihan Arsitektur Bagian 1 (Dead Code, Duplikat, & Pemecahan Backend)
+- **Pemangkasan dead code frontend**:
+  - `js/stitch-presensi.js`: menghapus query ID DOM yang sudah tidak ada di `updateAttendanceUI()` (`clockInBtnSubtitle`, `clockOutBtn*`, `timeline*`, `metricHadirCount*`, `dailyInMetric*`, `metricWeekly*`) serta `toggleMonthPicker()`, mempertahankan `clockInBtn`, `clockInBtnTitle`, dan tampilan analog `display-checkin*` / `display-checkout*`.
+  - `js/stitch-rekap.js`: menghapus `tepatEl`, `telatEl`, `izinEl` dan loop mati `tepatCount`/`telatCount`/`izinCount` di `renderRiwayatCards()`.
+  - `js/stitch-app.js` & `js/stitch-admin-mobile.js`: menghapus fungsi mati (`toggleUserDropdown`, `openMapModal`, `renderUsersDropdown` beserta pemanggilannya), query DOM usang (`shiftHours`, `userDropdown`, `mobileUserBadge`, `dropdownUserName`, `dropdownUserNip`, `gpsPillText`, `perimeterText`), dan membersihkan parameter catch `err` -> `_err` (dengan `checkAuthStatus`, `logoutUser`, dan `bootstrapFromDatabase` tetap utuh).
+  - `js/stitch-layanan.js` & `js/stitch-aset-arsip.js`: membersihkan variabel/parameter tidak terpakai (`idx`, `fileType`, parameter `catch` -> `_*`).
+  - `admin.html`: menghapus blok `<script type="text/plain" data-legacy="keterangan">` yang sudah digantikan `js/admin-core.js`.
+- **Penghapusan file duplikat & CSS lama**:
+  - Menghapus 16 file duplikat OS `" 1.*"` (`css/styles 1.css`, `css/lib/* 1.*`, `css/lib/images/* 1.png`, `db/migrations/006_pks_standar_harga 1.sql`, `js/lib/*.min 1.js`) dan 3 file CSS lama yang tidak direferensikan (`css/styles.css`, `css/face-cam.css`, `css/stitch-theme.css`).
+- **Modularisasi `server/stitch-api.js`**:
+  - Memecah rute rekap ke `server/stitch-api-rekap.js` (`mountStitchRekapRoutes`) untuk `/rekap-tpp`, `/rekap-range`, `/rekap-harian`.
+  - Memecah rute aset & arsip ke `server/stitch-api-aset-arsip.js` (`mountStitchAsetArsipRoutes`) untuk `/aset/barang`, `/aset/pemeliharaan`, `/aset/mobile-data`, `/aset/scan`, `/aset/tiket`, `/aset/pinjam`, `/arsip/mobile-data`.
+  - `server/stitch-api.js` memasang keduanya di `createStitchApiRouter(deps = {})` dengan kontrak publik dan seluruh test `server/stitch-api.test.js` tetap kompatibel.

@@ -218,10 +218,12 @@
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) > div > div:nth-child(2) > div:first-child,
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) nav a > span:not(.material-symbols-outlined),
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) nav button > span:not(.material-symbols-outlined),
+          body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) #stitchStandaloneAdminSubmenu,
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) > div:last-child,
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) #stitchStandalonePinBtn {
             opacity: 0;
             max-width: 0;
+            max-height: 0;
             overflow: hidden;
             pointer-events: none;
             white-space: nowrap;
@@ -266,6 +268,77 @@
 
     const sidebarAside = document.querySelector('aside.w-72');
     const sidebarNav = sidebarAside ? sidebarAside.querySelector('nav') : null;
+
+    // 1. Suntikkan Submenu Panel Admin di Sidebar Desktop (hover/klik untuk buka)
+    if (sidebarNav && !document.getElementById('stitchStandaloneAdminSubmenu')) {
+      const adminLink = sidebarNav.querySelector('a[href="admin.html"]');
+      if (adminLink) {
+        const subWrap = document.createElement('div');
+        subWrap.id = 'stitchStandaloneAdminSubmenu';
+        subWrap.className = 'mt-0.5 ml-3 pl-3 border-l border-slate-700/80 flex flex-col gap-0.5 overflow-hidden transition-all';
+        const adminSubs = [
+          { href: 'index.html#admin:adminSectionMonitoring', icon: 'monitoring', label: 'Monitoring Hari Ini' },
+          { href: 'index.html#admin:adminSectionIzin', icon: 'rule', label: 'Konfirmasi Izin' },
+          { href: 'index.html#admin:adminSectionRekap', icon: 'analytics', label: 'Rekap Semua Pegawai' },
+          { href: 'index.html#admin:adminSectionPegawai', icon: 'face', label: 'Master Pegawai & AI' },
+          { href: 'index.html#admin:adminSectionRoles', icon: 'manage_accounts', label: 'Kelola Role & Hak' },
+          { href: 'index.html#admin:adminSectionGeofence', icon: 'share_location', label: 'Geofencing Lokasi' },
+          { href: 'index.html#admin:adminSectionJamLibur', icon: 'schedule', label: 'Jam Kerja & Libur' },
+          { href: 'cetak-tpp.html', icon: 'receipt_long', label: 'Cetak Rekap TPP' }
+        ];
+        subWrap.innerHTML = adminSubs.map((s) => `
+          <a href="${s.href}" title="${s.label}" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium">
+            <span class="material-symbols-outlined text-[16px] text-slate-500">${s.icon}</span>
+            <span>${s.label}</span>
+          </a>
+        `).join('');
+        adminLink.insertAdjacentElement('afterend', subWrap);
+      }
+    }
+
+    // 2. Sinkronisasi profil user login asli pada top header halaman desktop (ganti placeholder statis)
+    try {
+      const uObj = JSON.parse(localStorage.getItem('tg_user_obj_v5') || 'null') || {};
+      const realNama = uObj.username || uObj.nama || localStorage.getItem('MY_NAME') || '';
+      const realNip = uObj.NIP || uObj.nip || localStorage.getItem('MY_NIP') || '';
+      const realJab = uObj.Jabatan || uObj.jabatan || localStorage.getItem('MY_ROLE') || 'Pegawai';
+      if (realNama) {
+        const parts = realNama.trim().split(/\s+/).filter((p) => !p.includes('.'));
+        const ini = (parts.length > 1 ? (parts[0][0] + parts[1][0]) : (parts[0]?.[0] || 'P')).toUpperCase();
+        document.querySelectorAll('header span').forEach((sp) => {
+          const txt = (sp.textContent || '').trim();
+          if (txt === 'Charles Hermana Weru, S.Sos') sp.textContent = realNama;
+          else if (txt.includes('197211022001121001')) sp.textContent = `NIP ${realNip || '-'} • ${realJab}`;
+        });
+        document.querySelectorAll('header div').forEach((dv) => {
+          if ((dv.textContent || '').trim() === 'CW' && dv.children.length === 0) dv.textContent = ini;
+        });
+      }
+    } catch (_) {}
+
+    // 3. Auto-enhance native <select> & <input type="date"> di portal desktop bila StitchPicker belum dimuat
+    if (document.querySelector('select:not(.hidden), input[type="date"]')) {
+      const enhanceDesktopControls = () => {
+        if (!window.StitchPicker) return;
+        document.querySelectorAll('select:not(.hidden)').forEach((sel, idx) => {
+          if (!sel.id) sel.id = 'stitchDesktopSel_' + idx;
+          window.StitchPicker.enhanceSelect(sel.id, { searchable: sel.options.length > 6 });
+        });
+        document.querySelectorAll('input[type="date"]').forEach((inp, idx) => {
+          if (!inp.id) inp.id = 'stitchDesktopDate_' + idx;
+          window.StitchPicker.enhanceDate(inp.id);
+        });
+      };
+      if (window.StitchPicker) {
+        enhanceDesktopControls();
+      } else if (!document.querySelector('script[src*="stitch-pickers.js"]')) {
+        const sc = document.createElement('script');
+        sc.src = 'js/stitch-pickers.js';
+        sc.onload = enhanceDesktopControls;
+        document.body.appendChild(sc);
+      }
+    }
+
     if (sidebarNav && !document.getElementById('stitchSidebarLogoutBtn')) {
       const btn = document.createElement('button');
       btn.id = 'stitchSidebarLogoutBtn';

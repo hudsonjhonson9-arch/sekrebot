@@ -479,7 +479,7 @@
         _scannerBarcodeDetector = new BarcodeDetector({
           formats: ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e']
         });
-      } catch (e) {
+      } catch (_e) {
         _scannerBarcodeDetector = null;
       }
     }
@@ -586,7 +586,7 @@
                   return;
                 }
               }
-            } catch (e) {
+            } catch (_e) {
               // fallback ke jsQR
             }
           }
@@ -607,7 +607,7 @@
               return;
             }
           }
-        } catch (e) {
+        } catch (_e) {
           // ignore scan frame error
         }
       }, 200);
@@ -621,7 +621,7 @@
       if (_scannerStream) {
         try {
           _scannerStream.getTracks().forEach(t => t.stop());
-        } catch (e) {}
+        } catch (_e) {}
         _scannerStream = null;
       }
       const video = document.getElementById('scannerVideo');
@@ -730,7 +730,7 @@
               onCodeDetected(barcodes[0].rawValue);
               return;
             }
-          } catch (err) {}
+          } catch (_err) {}
         }
 
         // 2. Coba jsQR
@@ -749,7 +749,7 @@
           title: 'Tidak Terbaca',
           message: 'Stiker barcode tidak terdeteksi pada gambar.'
         });
-      } catch (err) {
+      } catch (_err) {
         if (statusText) statusText.textContent = 'Gagal memproses gambar.';
       }
     }
@@ -770,13 +770,13 @@
           osc.start();
           osc.stop(ctx.currentTime + 0.12);
         }
-      } catch (e) {}
+      } catch (_e) {}
 
       try {
         if (navigator.vibrate) {
           navigator.vibrate([60, 40, 60]);
         }
-      } catch (e) {}
+      } catch (_e) {}
     }
 
     async function onCodeDetected(rawCode) {
@@ -957,7 +957,6 @@
       }
 
       container.innerHTML = _mobileArsipDocs.map(doc => {
-        const fileType = (doc.fileType || 'PDF').toUpperCase();
         let iconName = 'description';
         let iconBg = 'bg-blue-50 text-blue-600 dark:bg-slate-800';
 

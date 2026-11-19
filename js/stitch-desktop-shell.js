@@ -11,7 +11,7 @@
 
   const PRIMARY_NAV = [
     { key: 'presensi', label: 'Presensi', icon: 'fingerprint', action: () => callSwitch('presensi') },
-    { key: 'riwayat-full', label: 'Rekap', icon: 'history', action: () => callSwitch('riwayat') },
+    { key: 'riwayat-full', label: 'Riwayat', icon: 'history', action: () => callSwitch('riwayat') },
     { key: 'arsip', label: 'Arsip', icon: 'folder_shared', action: () => callSwitch('arsip') },
     { key: 'aset', label: 'Aset', icon: 'inventory_2', action: () => callSwitch('aset') },
     { key: 'sppd', label: 'SPPD & KIR', icon: 'flight_takeoff', action: () => callSwitch('sppd') },
@@ -97,6 +97,14 @@
       id: 'laporan',
       title: 'Laporan & Terminal',
       items: [
+        {
+          key: 'admin:adminSectionRekap',
+          label: 'Rekap Semua Pegawai',
+          hint: 'Preview berkop, PDF (F4) & Excel',
+          icon: 'analytics',
+          tone: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60',
+          action: () => callSwitch('admin', true, 'adminSectionRekap')
+        },
         {
           key: 'kiosk',
           label: 'Terminal Meja Absen',

@@ -298,7 +298,7 @@
         return;
       }
 
-      tbody.innerHTML = list.map((p, idx) => {
+      tbody.innerHTML = list.map((p) => {
         const tglStr = p.tgl_pemeliharaan ? new Date(p.tgl_pemeliharaan).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
         const biayaNum = parseFloat(p.biaya) || 0;
         return `
@@ -669,7 +669,7 @@
         try {
           keteranganCameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
           video.srcObject = keteranganCameraStream;
-        } catch (e2) {
+        } catch (_e2) {
           closeKeteranganCamera();
           Swal.fire('Kamera Tidak Dapat Dibuka', 'Pastikan izin akses kamera diberikan atau gunakan opsi Unggah Berkas.', 'error');
         }

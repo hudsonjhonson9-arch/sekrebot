@@ -69,9 +69,6 @@
       logs = logsOfRekapMonth(logs);
       renderRekapSummary(logs);
       const container = document.getElementById('riwayatCardsContainer');
-      const tepatEl = document.getElementById('riwayatTepatCount');
-      const telatEl = document.getElementById('riwayatTelatCount');
-      const izinEl = document.getElementById('riwayatIzinCount');
 
       if (!logs || !logs.length) {
         if (container) {
@@ -120,27 +117,6 @@
       const sortedDays = Array.from(dateMap.values()).sort((a, b) => {
         return (b.tanggal || '').localeCompare(a.tanggal || '');
       });
-
-      // Compute metrics
-      let tepatCount = 0;
-      let telatCount = 0;
-      let izinCount = 0;
-
-      sortedDays.forEach(d => {
-        if (d.keterangan) {
-          izinCount++;
-        } else if (d.masuk) {
-          const ket = String(d.masuk.Ket || '').toLowerCase();
-          const jenis = String(d.masuk['Jenis Absen'] || '').toUpperCase();
-          if (jenis === 'TERLAMBAT' || ket.includes('terlambat')) {
-            telatCount++;
-          } else {
-            tepatCount++;
-          }
-        }
-      });
-
-      // Metrik sudah dihitung di renderRekapSummary()
 
       if (!container) return;
       container.innerHTML = sortedDays.map(day => {

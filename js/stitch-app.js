@@ -198,8 +198,6 @@
       }
 
       if (state.shift) {
-        const shiftHoursEl = document.getElementById('shiftHours');
-        if (shiftHoursEl) shiftHoursEl.textContent = `${state.shift.masuk} - ${state.shift.pulang}`;
         const profilShiftHoursEl = document.getElementById('profilShiftHours');
         if (profilShiftHoursEl) profilShiftHoursEl.textContent = `${state.shift.masuk} - ${state.shift.pulang}`;
         const adminInEl = document.getElementById('adminJamMasuk');
@@ -211,10 +209,6 @@
       if (Array.isArray(state.holidays)) {
         renderJadwalHolidays(state.holidays);
         renderAdminHolidaysList(state.holidays);
-      }
-
-      if (Array.isArray(state.allUsers) && state.allUsers.length > 0) {
-        renderUsersDropdown(state.allUsers);
       }
 
       if (Array.isArray(recentLogs)) {
@@ -396,18 +390,21 @@
 
           saveBootCache();
 
-          // Restore persisted view across page refresh (Hash or localStorage)
-          const hashView = (window.location.hash || '').replace(/^#/, '').trim();
+          // Restore persisted view across page refresh (Hash or localStorage, mendukung #admin:sectionId)
+          const rawHash = (window.location.hash || '').replace(/^#/, '').trim();
+          const [hashView, hashSection] = rawHash.split(':');
           const savedView = localStorage.getItem('stitch_active_view');
           const targetView = hashView || savedView || 'presensi';
-          switchMainView(targetView, false);
+          switchMainView(targetView, false, hashSection || null);
 
           // Listen to browser navigation / hashchange for persistent multi-view
           if (!window._stitchHashListenerBound) {
             window._stitchHashListenerBound = true;
             window.addEventListener('hashchange', () => {
-              const h = (window.location.hash || '').replace(/^#/, '').trim();
-              if (h) switchMainView(h, false);
+              const raw = (window.location.hash || '').replace(/^#/, '').trim();
+              if (!raw) return;
+              const [hv, hs] = raw.split(':');
+              if (hv) switchMainView(hv, false, hs || null);
             });
           }
         }
@@ -445,27 +442,6 @@
       }).join('');
 
       if (profilListEl) profilListEl.innerHTML = holidayHtml;
-    }
-
-    function renderUsersDropdown(users) {
-      const ddList = document.getElementById('dropdownUsersList');
-      const totalBadge = document.getElementById('dbTotalPegawaiBadge');
-      if (totalBadge) totalBadge.textContent = users.length + ' Pegawai (DB)';
-
-      if (!ddList) return;
-      ddList.innerHTML = users.map(u => {
-        const roleBadge = u.role === 'SUPERADMIN' ? 'bg-purple-100 text-purple-700' :
-                         u.role === 'ADMIN' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700';
-        return `
-          <button onclick="selectUserByNip('${u.nip}')" class="w-full text-left px-4 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between border-b border-slate-50 dark:border-slate-800/50">
-            <div class="min-w-0 pr-2">
-              <p class="font-bold truncate text-slate-800 dark:text-slate-100">${u.nama}</p>
-              <p class="text-[10px] text-slate-400 font-mono">${u.nip}</p>
-            </div>
-            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded ${roleBadge} flex-shrink-0">${u.role || 'USER'}</span>
-          </button>
-        `;
-      }).join('');
     }
 
     async function selectUserByNip(nip, opts = {}) {
@@ -523,8 +499,6 @@
       } catch (err) {
         console.error('[Stitch DB] Failed to load user:', err);
       }
-      const dd = document.getElementById('userDropdown');
-      if (dd && !dd.classList.contains('hidden')) dd.classList.add('hidden');
     }
 
     function updateUserUI() {
@@ -539,12 +513,6 @@
       if (mobileNameEl) mobileNameEl.textContent = u.nama;
       const mobileRoleEl = document.getElementById('mobileUserRole');
       if (mobileRoleEl) mobileRoleEl.textContent = `${u.jabatan || 'Aparatur'} • ${u.bidang || 'BAPPERIDA'}`;
-      const mobileBadgeEl = document.getElementById('mobileUserBadge');
-      if (mobileBadgeEl) mobileBadgeEl.textContent = u.role || 'ASN';
-      const dropdownNameEl = document.getElementById('dropdownUserName');
-      if (dropdownNameEl) dropdownNameEl.textContent = u.nama;
-      const dropdownNipEl = document.getElementById('dropdownUserNip');
-      if (dropdownNipEl) dropdownNipEl.textContent = 'NIP. ' + u.nip;
 
       // Header Initials
       const headerInitials = document.getElementById('headerUserInitials');
@@ -1191,20 +1159,86 @@
         }
       }
 
+      const effectiveSection = (target === 'admin') ? (sectionId || 'adminSectionMonitoring') : sectionId;
+
+      if (target === 'admin') {
+        const panelMeta = {
+          adminSectionMonitoring: {
+            title: 'Monitoring Presensi Hari Ini',
+            sub: 'Pantau status kehadiran seluruh pegawai secara real-time.',
+            saveBtn: false
+          },
+          adminSectionIzin: {
+            title: 'Persetujuan Cuti, Izin & Sakit',
+            sub: 'Verifikasi permohonan pegawai atau input keterangan atas nama pegawai.',
+            saveBtn: false
+          },
+          adminSectionRekap: {
+            title: 'Rekap Kehadiran Seluruh Pegawai',
+            sub: 'Pratinjau dokumen berkop + paraf/TTD serta unduh PDF (F4) & Excel (.xlsx).',
+            saveBtn: false
+          },
+          adminSectionPegawai: {
+            title: 'Master Pegawai & Biometrik AI',
+            sub: 'Kelola direktori pegawai, reset kata sandi, reset wajah AI, dan peran.',
+            saveBtn: false
+          },
+          adminSectionRoles: {
+            title: 'Kelola Role & Hak Akses',
+            sub: 'Atur matriks wewenang dan penetapan peran pegawai.',
+            saveBtn: false
+          },
+          adminSectionGeofence: {
+            title: 'Geofencing Lokasi & Parameter AI',
+            sub: 'Atur titik koordinat, radius buffer kantor, dan keamanan biometrik.',
+            saveBtn: true
+          },
+          adminSectionJamLibur: {
+            title: 'Jam Kerja WITA & Hari Libur',
+            sub: 'Konfigurasi jadwal masuk/pulang, toleransi keterlambatan, dan hari libur.',
+            saveBtn: true
+          }
+        };
+        const activeMeta = panelMeta[effectiveSection] || panelMeta.adminSectionMonitoring;
+        const h1 = document.getElementById('adminPanelHeading');
+        const sub = document.getElementById('adminPanelSubheading');
+        const saveBtn = document.getElementById('btnSaveAdminSettings');
+        if (h1) h1.textContent = activeMeta.title;
+        if (sub) sub.textContent = activeMeta.sub;
+        if (saveBtn) saveBtn.classList.toggle('hidden', !activeMeta.saveBtn);
+
+        document.querySelectorAll('#view-admin [data-admin-panel]').forEach(panel => {
+          const id = panel.getAttribute('data-admin-panel');
+          const show = id === effectiveSection;
+          panel.classList.toggle('hidden', !show);
+          if (id === 'adminSectionGeofence') {
+            panel.classList.toggle('grid', show);
+          } else {
+            panel.classList.toggle('flex', show);
+          }
+        });
+      }
+
       if (window.StitchShell && typeof window.StitchShell.syncActive === 'function') {
-        window.StitchShell.syncActive(target, sectionId);
+        window.StitchShell.syncActive(target, effectiveSection);
       }
 
       if (target === 'tpp') {
         loadViewOnce('tpp', () => loadTppData());
       } else if (target === 'admin') {
-        loadViewOnce('admin', () => Promise.all([
-          loadAdminMonitoringData(),
-          loadAdminKeteranganData(),
-          _faceConfigLoaded ? Promise.resolve() : loadStitchFaceConfig(),
-          typeof loadAdminPegawaiMobile === 'function' ? loadAdminPegawaiMobile() : Promise.resolve(),
-          typeof loadAdminRolesMobile === 'function' ? loadAdminRolesMobile() : Promise.resolve()
-        ]));
+        if (effectiveSection === 'adminSectionMonitoring') {
+          loadViewOnce('admin-mon', () => loadAdminMonitoringData());
+        } else if (effectiveSection === 'adminSectionIzin') {
+          loadViewOnce('admin-izin', () => loadAdminKeteranganData());
+        } else if (effectiveSection === 'adminSectionRekap') {
+          if (typeof initAdminRekapPanel === 'function') initAdminRekapPanel();
+        } else if (effectiveSection === 'adminSectionPegawai') {
+          loadViewOnce('admin-pegawai', () => (typeof loadAdminPegawaiMobile === 'function' ? loadAdminPegawaiMobile() : Promise.resolve()));
+        } else if (effectiveSection === 'adminSectionRoles') {
+          loadViewOnce('admin-roles', () => (typeof loadAdminRolesMobile === 'function' ? loadAdminRolesMobile() : Promise.resolve()));
+        } else if (effectiveSection === 'adminSectionGeofence') {
+          loadViewOnce('admin-face-cfg', () => (_faceConfigLoaded ? Promise.resolve() : loadStitchFaceConfig()));
+        }
       } else if (target === 'sppd') {
         loadViewOnce('sppd', () => Promise.all([
           loadSppdData(),
@@ -1225,13 +1259,7 @@
         stopKioskCamera();
       }
 
-      if (sectionId) {
-        requestAnimationFrame(() => {
-          document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-      } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function switchMobileTab(tabName) {
@@ -1818,11 +1846,6 @@
     }
 
     /* ── 9. UTILITIES & THEME ────────────────────────────────────────── */
-    function toggleUserDropdown() {
-      const dd = document.getElementById('userDropdown');
-      dd.classList.toggle('hidden');
-    }
-
     function toggleDarkMode() {
       const isDark = !document.documentElement.classList.contains('dark');
       applyThemePreference(isDark ? 'dark' : 'light');
@@ -1841,22 +1864,16 @@
     }
 
     function syncRealGPS() {
-      const pill = document.getElementById('gpsPillText');
       const mobilePill = document.getElementById('mobileGpsAccuracyPill');
-      const perimeterText = document.getElementById('perimeterText');
       const officeLat = Number(state.currentLocation?.latitude ?? -9.648769);
       const officeLng = Number(state.currentLocation?.longitude ?? 119.389232);
       const officeRadius = Number(state.currentLocation?.radius ?? 250);
       const officeName = state.currentLocation?.nama_lokasi || 'Kantor Bapperida';
 
       if (!navigator.geolocation) {
-        if (pill) pill.textContent = `${officeName} (~15m)`;
         if (mobilePill) {
           mobilePill.textContent = 'Akurat ~ 12m';
           mobilePill.className = 'text-[11px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded-full flex-shrink-0 font-semibold font-mono';
-        }
-        if (perimeterText) {
-          perimeterText.innerHTML = `Perimeter: <strong class="text-slate-800 dark:text-slate-200">Zona Hijau (Lolos)</strong>`;
         }
         showDynamicIsland({
           type: 'info',
@@ -1865,8 +1882,6 @@
         });
         return;
       }
-
-      if (pill) pill.textContent = 'Mencari GPS...';
 
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -1879,17 +1894,11 @@
           state.userLocation = { lat, lng, distMeters, accuracy };
           const isInside = distMeters <= officeRadius;
 
-          if (pill) pill.textContent = isInside ? `${officeName} (~${distMeters}m)` : `Di Luar Radius (${(distMeters/1000).toFixed(1)}km)`;
           if (mobilePill) {
             mobilePill.textContent = isInside ? `Akurat ~ ${accuracy}m` : `Jarak ~ ${(distMeters/1000).toFixed(1)}km`;
             mobilePill.className = isInside 
               ? 'text-[11px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded-full flex-shrink-0 font-semibold font-mono'
               : 'text-[11px] bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 px-2.5 py-0.5 rounded-full flex-shrink-0 font-semibold font-mono';
-          }
-          if (perimeterText) {
-            perimeterText.innerHTML = isInside
-              ? `Perimeter: <strong class="text-slate-800 dark:text-slate-200">Zona Hijau (Lolos)</strong>`
-              : `Perimeter: <strong class="text-rose-600">Di Luar Radius Kantor</strong>`;
           }
 
           showDynamicIsland({
@@ -1898,14 +1907,10 @@
             message: `Akurasi ±${accuracy}m • Jarak ${distMeters}m dari ${officeName}`
           });
         },
-        (err) => {
-          if (pill) pill.textContent = `${officeName} (~15m)`;
+        (_err) => {
           if (mobilePill) {
             mobilePill.textContent = 'Akurat ~ 12m';
             mobilePill.className = 'text-[11px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded-full flex-shrink-0 font-semibold font-mono';
-          }
-          if (perimeterText) {
-            perimeterText.innerHTML = `Perimeter: <strong class="text-slate-800 dark:text-slate-200">Zona Hijau (Lolos)</strong>`;
           }
           showDynamicIsland({
             type: 'info',
@@ -1932,13 +1937,4 @@
       if (badge) badge.classList.add('hidden');
       showDynamicIsland({ type: 'info', title: 'Notifikasi Ditandai', message: 'Semua pemberitahuan ditandai telah dibaca.' });
       closeNotificationDrawer();
-    }
-
-    function openMapModal() {
-      Swal.fire({
-        title: state.currentLocation ? state.currentLocation.nama_lokasi : 'Kantor BAPPERIDA',
-        text: state.currentLocation ? `Lat: ${state.currentLocation.latitude}, Lon: ${state.currentLocation.longitude} (Radius: ${state.currentLocation.radius}m)` : '-9.648769, 119.389232',
-        icon: 'info',
-        confirmButtonColor: '#2563eb'
-      });
     }
