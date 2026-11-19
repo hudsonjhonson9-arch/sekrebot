@@ -1074,7 +1074,9 @@
         loadViewOnce('admin', () => Promise.all([
           loadAdminMonitoringData(),
           loadAdminKeteranganData(),
-          _faceConfigLoaded ? Promise.resolve() : loadStitchFaceConfig()
+          _faceConfigLoaded ? Promise.resolve() : loadStitchFaceConfig(),
+          typeof loadAdminPegawaiMobile === 'function' ? loadAdminPegawaiMobile() : Promise.resolve(),
+          typeof loadAdminRolesMobile === 'function' ? loadAdminRolesMobile() : Promise.resolve()
         ]));
       } else if (target === 'sppd') {
         loadViewOnce('sppd', () => Promise.all([

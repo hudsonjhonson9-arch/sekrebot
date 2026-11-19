@@ -296,3 +296,44 @@ test('endpoint dashboard dan mobile-data mengeksekusi query secara paralel', asy
     }
   }
 });
+
+// ── admin/face-reset: reset biometrik wajah oleh admin ──
+
+test('USER ditolak 403 di POST /admin/face-reset (requireAdmin)', async () => {
+  const q = stubQuery();
+  const r = await call(app(USER, q), 'POST', '/api/stitch/admin/face-reset', { nip: USER.nip });
+  assert.equal(r.status, 403);
+  assert.equal(r.body.ok, false);
+  assert.equal(q.calls.length, 0, 'guard harus menolak sebelum menyentuh DB');
+});
+
+test('POST /admin/face-reset tanpa nip/userId ditolak 400', async () => {
+  const q = stubQuery();
+  const r = await call(app(ADMIN, q), 'POST', '/api/stitch/admin/face-reset', {});
+  assert.equal(r.status, 400);
+  assert.equal(r.body.ok, false);
+  assert.equal(q.calls.length, 0);
+});
+
+test('ADMIN berhasil POST /admin/face-reset dan mengosongkan face_photo & face_histogram', async () => {
+  const calls = [];
+  const q = async (sql, params) => {
+    calls.push({ sql: String(sql), params });
+    return { rows: [{ id: '9', nama: 'Budi', nip: USER.nip }] };
+  };
+  const r = await call(app(ADMIN, q), 'POST', '/api/stitch/admin/face-reset', { nip: USER.nip });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.ok, true);
+  assert.equal(r.body.data.nip, USER.nip);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].sql, /face_photo\s*=\s*NULL/i);
+  assert.match(calls[0].sql, /face_histogram\s*=\s*NULL/i);
+  assert.deepEqual(calls[0].params, [USER.nip]);
+});
+
+test('POST /admin/face-reset mengembalikan 404 saat pegawai tidak ditemukan', async () => {
+  const q = async () => ({ rows: [] });
+  const r = await call(app(ADMIN, q), 'POST', '/api/stitch/admin/face-reset', { nip: '000000000000000000' });
+  assert.equal(r.status, 404);
+  assert.equal(r.body.ok, false);
+});

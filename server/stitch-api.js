@@ -1388,6 +1388,38 @@ export function createStitchApiRouter(deps = {}) {
     }
   });
 
+  // Reset biometrik wajah pegawai (khusus admin)
+  router.post('/admin/face-reset', requireAdmin, async (req, res) => {
+    try {
+      const b = req.body || {};
+      const nip = String(b.nip || '').trim();
+      const userId = String(b.userId || b.id || '').trim();
+      if (!nip && !/^\d+$/.test(userId)) {
+        return res.status(400).json({ ok: false, message: 'NIP atau userId wajib diisi.' });
+      }
+      const whereSql = nip ? '"NIP" = $1' : 'id = $1::bigint';
+      const param = nip || userId;
+      const r = await query(
+        `UPDATE user_list
+         SET face_photo = NULL, face_histogram = NULL, face_saved_at = NULL
+         WHERE ${whereSql}
+         RETURNING id::text AS id, username AS nama, "NIP" AS nip`,
+        [param]
+      );
+      if (!r.rows || r.rows.length === 0) {
+        return res.status(404).json({ ok: false, message: 'Pegawai tidak ditemukan.' });
+      }
+      return res.json({
+        ok: true,
+        data: r.rows[0],
+        message: 'Data wajah biometrik berhasil direset.'
+      });
+    } catch (err) {
+      console.error('[stitch-api] admin/face-reset error:', err);
+      return res.status(500).json({ ok: false, message: 'Gagal mereset data wajah: ' + err.message });
+    }
+  });
+
   router.post('/signature-save', async (req, res) => {
     try {
       const b = req.body || {};
