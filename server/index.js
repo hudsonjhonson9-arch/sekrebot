@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import zlib from 'node:zlib';
 import { closePool, query, withTransaction } from './db.js';
 import { gasUpsert } from './gas.js';
 import { createMediaRouter } from './media.js';
@@ -21,8 +22,165 @@ import { createCoreAdminRouter } from './core-admin.js';
 import { createCoreUserRouter } from './core-user.js';
 import { createAbsenRolesRouter } from './absen-roles.js';
 import { initAbsenRolesTable } from './absen-roles-db.js';
-import { ABSEN_ROLES, SIMAPO_ROLES, requireRole } from './auth.js';
+import { ABSEN_ROLES, SIMAPO_ROLES, createRequireRole } from './auth.js';
 import { createStitchApiRouter } from './stitch-api.js';
+
+const GZIP_MIN_BYTES = 1024;
+const COMPRESSIBLE_CT_RE = /^text\/|application\/(json|javascript|ecmascript|xml)|[+-]json\b|[+-]xml\b|image\/svg\+xml/i;
+
+function appendVary(res, value) {
+  const cur = res.getHeader('vary');
+  if (!cur) {
+    res.setHeader('Vary', value);
+    return;
+  }
+  const str = Array.isArray(cur) ? cur.join(', ') : String(cur);
+  if (!str.toLowerCase().split(',').some((v) => v.trim() === value.toLowerCase())) {
+    res.setHeader('Vary', `${str}, ${value}`);
+  }
+}
+
+function normalizeChunk(chunk, encoding) {
+  if (chunk == null) return Buffer.alloc(0);
+  if (Buffer.isBuffer(chunk)) return chunk;
+  return Buffer.from(String(chunk), typeof encoding === 'string' ? encoding : 'utf8');
+}
+
+function gzipCompression() {
+  return (req, res, next) => {
+    if (
+      req.method === 'HEAD' ||
+      !/\bgzip\b/i.test(req.headers['accept-encoding'] || '') ||
+      typeof res.write !== 'function' ||
+      typeof res.end !== 'function' ||
+      typeof res.setHeader !== 'function' ||
+      typeof res.getHeader !== 'function'
+    ) {
+      return next();
+    }
+
+    const origWrite = res.write.bind(res);
+    const origEnd = res.end.bind(res);
+    let pendingChunks = [];
+    let pendingBytes = 0;
+    let gzipStream = null;
+    let pausedBySocket = false;
+    let waitingGzipDrain = false;
+    let bypass = false;
+    let ended = false;
+
+    const canCompress = () => {
+      if (res.headersSent || res.getHeader('content-encoding')) return false;
+      if (res.statusCode === 204 || res.statusCode === 304) return false;
+      const ct = String(res.getHeader('content-type') || '');
+      return COMPRESSIBLE_CT_RE.test(ct);
+    };
+
+    const startStream = () => {
+      res.removeHeader('Content-Length');
+      res.setHeader('Content-Encoding', 'gzip');
+      appendVary(res, 'Accept-Encoding');
+      gzipStream = zlib.createGzip();
+      gzipStream.on('data', (c) => {
+        if (origWrite(c) === false) {
+          pausedBySocket = true;
+          gzipStream.pause();
+        }
+      });
+      gzipStream.on('drain', () => {
+        if (waitingGzipDrain) {
+          waitingGzipDrain = false;
+          res.emit?.('drain');
+        }
+      });
+      res.on?.('drain', () => {
+        if (pausedBySocket) {
+          pausedBySocket = false;
+          gzipStream?.resume();
+        }
+      });
+      res.once?.('close', () => gzipStream?.destroy());
+      gzipStream.on('error', () => {
+        if (!ended) { ended = true; origEnd(); }
+      });
+      for (const c of pendingChunks) {
+        if (gzipStream.write(c) === false) waitingGzipDrain = true;
+      }
+      pendingChunks = [];
+      pendingBytes = 0;
+    };
+
+    res.write = function (chunk, encoding, cb) {
+      if (typeof encoding === 'function') { cb = encoding; encoding = undefined; }
+      if (bypass) return origWrite(chunk, encoding, cb);
+      if (gzipStream) {
+        const ok = gzipStream.write(chunk, encoding, cb);
+        if (!ok) waitingGzipDrain = true;
+        return ok;
+      }
+
+      if (!canCompress()) {
+        bypass = true;
+        return origWrite(chunk, encoding, cb);
+      }
+      const cl = Number(res.getHeader('content-length'));
+      if (Number.isFinite(cl) && cl <= GZIP_MIN_BYTES) {
+        bypass = true;
+        return origWrite(chunk, encoding, cb);
+      }
+
+      const buf = normalizeChunk(chunk, encoding);
+      pendingChunks.push(buf);
+      pendingBytes += buf.length;
+
+      if (pendingBytes > GZIP_MIN_BYTES || (Number.isFinite(cl) && cl > GZIP_MIN_BYTES)) {
+        startStream();
+        if (typeof cb === 'function') cb();
+        return !waitingGzipDrain;
+      }
+      if (typeof cb === 'function') cb();
+      return true;
+    };
+
+    res.end = function (chunk, encoding, cb) {
+      if (typeof chunk === 'function') { cb = chunk; chunk = undefined; encoding = undefined; }
+      else if (typeof encoding === 'function') { cb = encoding; encoding = undefined; }
+
+      if (bypass) return origEnd(chunk, encoding, cb);
+      if (gzipStream) {
+        gzipStream.once('end', () => {
+          if (!ended) { ended = true; origEnd(cb); }
+        });
+        return chunk != null ? gzipStream.end(chunk, encoding) : gzipStream.end();
+      }
+
+      const tail = normalizeChunk(chunk, encoding);
+      const total = pendingBytes + tail.length;
+      if (total <= GZIP_MIN_BYTES || !canCompress()) {
+        bypass = true;
+        for (const c of pendingChunks) origWrite(c);
+        pendingChunks = [];
+        pendingBytes = 0;
+        return chunk != null ? origEnd(chunk, encoding, cb) : origEnd(cb);
+      }
+
+      const full = pendingChunks.length ? Buffer.concat([...pendingChunks, tail], total) : tail;
+      pendingChunks = [];
+      pendingBytes = 0;
+      res.removeHeader('Content-Length');
+      res.setHeader('Content-Encoding', 'gzip');
+      appendVary(res, 'Accept-Encoding');
+      zlib.gzip(full, (err, compressed) => {
+        if (err) return origEnd(full, cb);
+        if (!res.headersSent) res.setHeader('Content-Length', compressed.length);
+        return origEnd(compressed, cb);
+      });
+      return res;
+    };
+
+    next();
+  };
+}
 
 // Endpoint SIMAPO yang aman untuk pegawai biasa (USER/INSPEKTUR): baca katalog &
 // QR, pinjam (manual & via QR), baca riwayat pinjaman sendiri, dan buat tiket
@@ -51,6 +209,9 @@ export function createApp() {
   const app = express();
   // 16mb: base64 10 MB ≈ 13.3 MB JSON, sisa ruang untuk field lain
   app.use(express.json({ limit: '16mb' }));
+  app.use(gzipCompression());
+
+  const requireRole = createRequireRole({ query });
 
   app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
@@ -97,7 +258,11 @@ export function createApp() {
   if (!bersihkanSecret(process.env.ARSIP_SESSION_SECRET)) {
     console.warn('[arsip-sso] ARSIP_SESSION_SECRET belum diatur/pendek (min 16); cookie arsip tidak diterbitkan.');
   }
-  app.use(createAuthSessionRouter({ query, arsipSso: { pasangArsipCookie, lepasArsipCookie } }));
+  app.use(createAuthSessionRouter({
+    query,
+    arsipSso: { pasangArsipCookie, lepasArsipCookie },
+    onLogout: (token) => requireRole.invalidate(token),
+  }));
 
   // Fase 2: keterangan/dokumen/rekap. Fase 3: penugasan/lembur. Dipasang
   // setelah /api/auth agar catch-all /api middleware tidak memblokir penerbitan sesi.
@@ -148,7 +313,10 @@ export function createApp() {
   // Prefiks /api/auth wajib, dan path di auth-device.js relatif terhadapnya. Dulu
   // router ini di-mount di root, jadi gate-nya jadi catch-all: /, /login,
   // /favicon.ico, dan semua path typo dapat 401 "sesi berakhir" alih-alih 404.
-  app.use('/api/auth', requireRole(new Set(['SUPERADMIN'])), createAuthDeviceRouter({ query }));
+  app.use('/api/auth', requireRole(new Set(['SUPERADMIN'])), createAuthDeviceRouter({
+    query,
+    onRevoke: (tokenHash) => (tokenHash ? requireRole.invalidateHash(tokenHash) : requireRole.clearCache()),
+  }));
 
   // ABSEN_ROLES, bukan MEDIA_ROLES: presence absen boleh dipakai role apa pun
   // yang bisa absen, dan verifyInitData di-inject supaya test tidak butuh bot token.
@@ -199,7 +367,17 @@ export function createApp() {
 
   // Layanan berkas statis antarmuka Stitch (index.html, login.html, catalog, js, css)
   const publicDir = path.resolve(import.meta.dirname, '..');
-  app.use(express.static(publicDir));
+  app.use(express.static(publicDir, {
+    maxAge: '1h',
+    setHeaders(res, filePath) {
+      const rel = path.relative(publicDir, filePath).replace(/\\/g, '/');
+      if (rel.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache');
+      } else if (rel.startsWith('js/lib/') || rel.startsWith('css/lib/')) {
+        res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+      }
+    },
+  }));
 
   return app;
 }

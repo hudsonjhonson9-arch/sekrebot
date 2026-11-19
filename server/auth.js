@@ -97,63 +97,134 @@ export function singleSessionRow(rows) {
   return rows.length === 1 ? rows[0] : null;
 }
 
-async function defaultLookup(sessionToken, kind) {
+const DEFAULT_CACHE_TTL_MS = 15000;
+const DEFAULT_CACHE_MAX_ENTRIES = 500;
+
+export function createSessionCache({ ttlMs = DEFAULT_CACHE_TTL_MS, maxEntries = DEFAULT_CACHE_MAX_ENTRIES } = {}) {
+  const entries = new Map();
+  return {
+    get(key) {
+      const entry = entries.get(key);
+      if (!entry) return undefined;
+      if (Date.now() > entry.expiresAt) {
+        entries.delete(key);
+        return undefined;
+      }
+      return entry.row;
+    },
+    set(key, row) {
+      if (!row) return;
+      if (entries.has(key)) entries.delete(key);
+      while (entries.size >= maxEntries) {
+        const oldest = entries.keys().next().value;
+        entries.delete(oldest);
+      }
+      entries.set(key, { row, expiresAt: Date.now() + ttlMs });
+    },
+    delete(key) {
+      entries.delete(key);
+    },
+    clear() {
+      entries.clear();
+    },
+    get size() {
+      return entries.size;
+    },
+  };
+}
+
+async function queryLookup(doQuery, sessionToken, kind) {
   // Hash hanya untuk token perangkat; token sesi sudah acak dan disimpan plaintext
   // oleh create_session(), jadi bentuk lamanya harus tetap cocok.
   const sql = kind === 'device' ? DEVICE_LOOKUP_SQL : SESSION_LOOKUP_SQL;
   const params = kind === 'device' ? [hashDeviceToken(sessionToken)] : [sessionToken];
-  const { rows } = await query(sql, params);
+  const { rows } = await doQuery(sql, params);
   return singleSessionRow(rows);
 }
 
-export function requireRole(roles, deps = {}) {
-  const lookup = deps.lookup || defaultLookup;
-  // Semua yang bisa gagal (await lookup, roles.has dari pemanggil yang salah bentuk,
-  // res.status) ada DI DALAM try, jadi fungsi async ini tidak pernah menolak: Express 4
-  // tidak meneruskan rejected promise ke error handler, dan penolakan seperti itu akan
-  // menggantung request selamanya. next() disinkronkan dan di luar try.
-  return async function authMiddleware(req, res, next) {
-    const token = bearerToken(req);
-    // 401 yang sama untuk tanpa token / token rusak / tak dikenal / kedaluwarsa,
-    // supaya statusnya tidak membocorkan apakah token itu ada.
-    const kind = isSessionToken(token) ? 'session' : isDeviceToken(token) ? 'device' : null;
-    if (!kind) return unauthorized(res);
-    let row;
-    let role;
-    try {
-      row = await lookup(token, kind);
-      if (!row) return unauthorized(res);
-      role = String(row.role || '').trim().toUpperCase();
-      let allowed = roles.has(role) || roles.has(role.replace(/_/g, ' ')) || roles.has(role.replace(/\s+/g, '_'));
-      if (!allowed && roles === ABSEN_ROLES && (deps.query || process.env.DATABASE_URL)) {
-        try {
-          const doQuery = deps.query || query;
-          const roleCheck = await doQuery('SELECT id FROM absen_roles WHERE id = $1', [role]);
-          if (roleCheck?.rows?.length > 0) allowed = true;
-        } catch {}
-      }
-      if (!allowed) {
-        return res.status(403).json({ ok: false, message: 'Forbidden' });
-      }
-    } catch {
-      // DB mati = 500, bukan next(): error lookup yang jatuh ke next() akan
-      // mengubah outage menjadi bypass otorisasi.
-      return res.status(500).json({ ok: false, message: 'Gagal memverifikasi sesi' });
+export function createRequireRole(defaultDeps = {}) {
+  // Cache scoped per instance (bukan module-global) supaya test dengan mock
+  // query/lookup tidak pernah berbagi sesi cache antar-test.
+  const instanceCache = defaultDeps.cache || createSessionCache({
+    ttlMs: defaultDeps.ttlMs,
+    maxEntries: defaultDeps.maxEntries,
+  });
+
+  function requireRoleMiddleware(roles, deps = {}) {
+    const activeCache = deps.cache || instanceCache;
+    const doQuery = deps.query || defaultDeps.query || query;
+    const rawLookup = deps.lookup || defaultDeps.lookup || ((token, kind) => queryLookup(doQuery, token, kind));
+
+    async function cachedLookup(token, kind) {
+      const key = kind === 'device' ? hashDeviceToken(token) : token;
+      const cached = activeCache.get(key);
+      if (cached !== undefined) return cached;
+      const row = await rawLookup(token, kind);
+      if (row) activeCache.set(key, row);
+      return row;
     }
-    // id tetap string (lihat ::text di SQL): Task 5 harus memakainya lewat String(),
-    // jangan pernah `req.user.id === <number>`.
-    // is_admin: boolean user_list — satu-satunya sumber izin tambah/edit log
-    // (bukan role). Fail-closed: selain true dianggap false.
-    req.user = {
-      id: row.id,
-      nip: row.nip,
-      role,
-      instansi_id: row.instansi_id,
-      is_admin: row.is_admin === true || row.is_admin === 'true',
+
+    // Semua yang bisa gagal (await lookup, roles.has dari pemanggil yang salah bentuk,
+    // res.status) ada DI DALAM try, jadi fungsi async ini tidak pernah menolak: Express 4
+    // tidak meneruskan rejected promise ke error handler, dan penolakan seperti itu akan
+    // menggantung request selamanya. next() disinkronkan dan di luar try.
+    return async function authMiddleware(req, res, next) {
+      const token = bearerToken(req);
+      // 401 yang sama untuk tanpa token / token rusak / tak dikenal / kedaluwarsa,
+      // supaya statusnya tidak membocorkan apakah token itu ada.
+      const kind = isSessionToken(token) ? 'session' : isDeviceToken(token) ? 'device' : null;
+      if (!kind) return unauthorized(res);
+      let row;
+      let role;
+      try {
+        row = await cachedLookup(token, kind);
+        if (!row) return unauthorized(res);
+        role = String(row.role || '').trim().toUpperCase();
+        let allowed = roles.has(role) || roles.has(role.replace(/_/g, ' ')) || roles.has(role.replace(/\s+/g, '_'));
+        if (!allowed && roles === ABSEN_ROLES && (deps.query || defaultDeps.query || process.env.DATABASE_URL)) {
+          try {
+            const roleCheck = await doQuery('SELECT id FROM absen_roles WHERE id = $1', [role]);
+            if (roleCheck?.rows?.length > 0) allowed = true;
+          } catch {}
+        }
+        if (!allowed) {
+          return res.status(403).json({ ok: false, message: 'Forbidden' });
+        }
+      } catch {
+        // DB mati = 500, bukan next(): error lookup yang jatuh ke next() akan
+        // mengubah outage menjadi bypass otorisasi.
+        return res.status(500).json({ ok: false, message: 'Gagal memverifikasi sesi' });
+      }
+      // id tetap string (lihat ::text di SQL): Task 5 harus memakainya lewat String(),
+      // jangan pernah `req.user.id === <number>`.
+      // is_admin: boolean user_list — satu-satunya sumber izin tambah/edit log
+      // (bukan role). Fail-closed: selain true dianggap false.
+      req.user = {
+        id: row.id,
+        nip: row.nip,
+        role,
+        instansi_id: row.instansi_id,
+        is_admin: row.is_admin === true || row.is_admin === 'true',
+      };
+      req.authKind = kind;
+      next();
     };
-    req.authKind = kind;
-    next();
+  }
+
+  requireRoleMiddleware.cache = instanceCache;
+  requireRoleMiddleware.invalidate = (token) => {
+    if (typeof token !== 'string' || !token) return;
+    instanceCache.delete(isDeviceToken(token) ? hashDeviceToken(token) : token);
   };
+  requireRoleMiddleware.invalidateHash = (tokenHash) => {
+    if (typeof tokenHash === 'string' && tokenHash) instanceCache.delete(tokenHash);
+  };
+  requireRoleMiddleware.clearCache = () => instanceCache.clear();
+  return requireRoleMiddleware;
+}
+
+export function requireRole(roles, deps = {}) {
+  return createRequireRole(deps)(roles);
 }
 
 function unauthorized(res) {

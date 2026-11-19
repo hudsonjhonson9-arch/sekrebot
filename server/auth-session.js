@@ -36,7 +36,7 @@ function dbError(res) {
 // login lagi. Default no-op supaya test/router lama tetap jalan tanpa secret/env.
 const NOOP_SSO = { pasangArsipCookie() {}, lepasArsipCookie() {} };
 
-export function createAuthSessionRouter({ query = realQuery, arsipSso } = {}) {
+export function createAuthSessionRouter({ query = realQuery, arsipSso, onLogout, sessionCache } = {}) {
   const router = express.Router();
   const arsip = arsipSso || NOOP_SSO;
 
@@ -187,6 +187,8 @@ export function createAuthSessionRouter({ query = realQuery, arsipSso } = {}) {
         return res.status(400).json({ ok: false, message: 'session_token tidak valid.' });
       }
       await query(DEACTIVATE_SQL, [token]);
+      sessionCache?.delete?.(token);
+      onLogout?.(token);
       clearCookieArsip(res);
       return res.status(200).json({ ok: true });
     } catch {

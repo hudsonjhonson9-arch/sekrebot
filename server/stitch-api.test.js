@@ -207,3 +207,58 @@ test('SUPERADMIN is_admin lolos requireAdmin', async () => {
   assert.equal(r.status, 200);
   assert.equal(r.body.ok, true);
 });
+
+test('endpoint dashboard dan mobile-data mengeksekusi query secara paralel', async () => {
+  function concurrencyTracker() {
+    let inflight = 0;
+    let maxInflight = 0;
+    const calls = [];
+    const fn = async (sql, params) => {
+      calls.push({ sql: String(sql), params });
+      inflight++;
+      if (inflight > maxInflight) maxInflight = inflight;
+      await new Promise((r) => setTimeout(r, 10));
+      inflight--;
+      if (/GROUP BY kondisi/i.test(sql)) {
+        return { rows: [{ kondisi: 'Baik', count: 5 }, { kondisi: 'Rusak Ringan', count: 2 }] };
+      }
+      if (/FROM "SIMAPO"\.unit_aset/i.test(sql)) {
+        return { rows: [{ id: 'u1', nama_barang: 'Laptop' }] };
+      }
+      if (/count\(\*\)::int AS total FROM bapperida_dokumen/i.test(sql)) {
+        return { rows: [{ total: 12 }] };
+      }
+      if (/GROUP BY kategori/i.test(sql)) {
+        return { rows: [{ kategori: 'SK', count: 4 }] };
+      }
+      if (/FROM user_list/i.test(sql)) {
+        return { rows: [{ id: '9', nama: 'Budi', nip: USER.nip, jabatan: 'Staf' }] };
+      }
+      return { rows: [] };
+    };
+    fn.calls = calls;
+    fn.getMax = () => maxInflight;
+    return fn;
+  }
+
+  for (const [ep, minParallel] of [
+    ['/api/stitch/bootstrap', 5],
+    [`/api/stitch/user-data?nip=${USER.nip}`, 3],
+    ['/api/stitch/admin/monitoring-today', 3],
+    ['/api/stitch/rekap-harian?tanggal=2026-11-19', 3],
+    [`/api/stitch/aset/mobile-data?nip=${USER.nip}`, 4],
+    ['/api/stitch/arsip/mobile-data', 3],
+  ]) {
+    const q = concurrencyTracker();
+    const r = await call(app(ADMIN, q), 'GET', ep);
+    assert.equal(r.status, 200, `${ep} harus 200`);
+    assert.equal(r.body.ok, true, `${ep} harus ok:true`);
+    assert.ok(q.getMax() >= minParallel, `${ep} max inflight ${q.getMax()} harus >= ${minParallel}`);
+    if (ep.includes('/aset/mobile-data')) {
+      assert.equal(r.body.stats.totalUnit, 7);
+      assert.equal(r.body.stats.kondisiBaik, 5);
+      assert.equal(r.body.stats.kondisiRusak, 2);
+      assert.ok(!q.calls.some((c) => /SELECT count\(\*\)::int AS total FROM "SIMAPO"\.unit_aset/i.test(c.sql)));
+    }
+  }
+});

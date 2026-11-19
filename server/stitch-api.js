@@ -25,45 +25,40 @@ export function createStitchApiRouter(deps = {}) {
   router.get('/bootstrap', async (req, res) => {
     try {
       // Fetch users (tanpa face_photo base64 agar payload bootstrap tetap ringan)
-      const usersRes = await query(`
-        SELECT id::text AS id, username AS nama, "NIP" AS nip, "Jabatan" AS jabatan,
-               role, bidang, pangkat, instansi_id, status_aktif,
-               (face_photo IS NOT NULL AND face_photo != '') AS has_face
-        FROM user_list
-        WHERE status_aktif = true OR status_aktif IS NULL
-        ORDER BY "NIP" ASC
-      `);
-
-      // Fetch locations
-      const locRes = await query(`
-        SELECT id, "Nama_Lokasi" AS nama_lokasi, latitude, longitude, radius, instansi_id
-        FROM lokasiabsen
-        WHERE instansi_id = 'bapperida' OR instansi_id = 'all'
-        ORDER BY id ASC
-      `);
-
-      // Fetch shift settings
-      const shiftRes = await query(`
-        SELECT masuk, pulang, instansi_id
-        FROM jam_absen
-        WHERE instansi_id = 'bapperida' OR instansi_id IS NULL
-        LIMIT 1
-      `);
-
-      // Fetch holidays
-      const holidayRes = await query(`
-        SELECT tanggal, nama
-        FROM libur_nasional
-        ORDER BY tanggal ASC
-      `);
-
-      // Fetch recent global logs
-      const logsRes = await query(`
-        SELECT "ID_Log", "Nama", "NIP", "Tanggal", "Jam", "Jenis Absen", "Lokasi", "Ket", "koordinat"
-        FROM "Log_Absen"
-        ORDER BY "Tanggal" DESC, "Jam" DESC
-        LIMIT 20
-      `);
+      // dan seluruh master data secara paralel untuk memangkas latency DB remote.
+      const [usersRes, locRes, shiftRes, holidayRes, logsRes] = await Promise.all([
+        query(`
+          SELECT id::text AS id, username AS nama, "NIP" AS nip, "Jabatan" AS jabatan,
+                 role, bidang, pangkat, instansi_id, status_aktif,
+                 (face_photo IS NOT NULL AND face_photo != '') AS has_face
+          FROM user_list
+          WHERE status_aktif = true OR status_aktif IS NULL
+          ORDER BY "NIP" ASC
+        `),
+        query(`
+          SELECT id, "Nama_Lokasi" AS nama_lokasi, latitude, longitude, radius, instansi_id
+          FROM lokasiabsen
+          WHERE instansi_id = 'bapperida' OR instansi_id = 'all'
+          ORDER BY id ASC
+        `),
+        query(`
+          SELECT masuk, pulang, instansi_id
+          FROM jam_absen
+          WHERE instansi_id = 'bapperida' OR instansi_id IS NULL
+          LIMIT 1
+        `),
+        query(`
+          SELECT tanggal, nama
+          FROM libur_nasional
+          ORDER BY tanggal ASC
+        `),
+        query(`
+          SELECT "ID_Log", "Nama", "NIP", "Tanggal", "Jam", "Jenis Absen", "Lokasi", "Ket", "koordinat"
+          FROM "Log_Absen"
+          ORDER BY "Tanggal" DESC, "Jam" DESC
+          LIMIT 20
+        `),
+      ]);
 
       return res.json({
         ok: true,
@@ -86,29 +81,37 @@ export function createStitchApiRouter(deps = {}) {
       if (!nip) return res.status(400).json({ ok: false, message: 'NIP wajib disertakan.' });
       if (!isSelfOrAdmin(req, nip)) return denySelf(res);
 
-      // User details
-      const userRes = await query(`
-        SELECT u.id::text AS id, u.username AS nama, u."NIP" AS nip, u."Jabatan" AS jabatan,
-               u.role, u.bidang, u.pangkat, u.face_photo, u.face_histogram, u.face_saved_at, u.face_model, u.instansi_id,
-               t.signature
-        FROM user_list u
-        LEFT JOIN tanda_tangan t ON t.nip = u."NIP"
-        WHERE u."NIP" = $1 LIMIT 1
-      `, [nip]);
+      // Today's date (WITA: YYYY-MM-DD) computed upfront so all 3 queries run in parallel
+      const todayWita = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+
+      const [userRes, logsRes, ketTodayRes] = await Promise.all([
+        query(`
+          SELECT u.id::text AS id, u.username AS nama, u."NIP" AS nip, u."Jabatan" AS jabatan,
+                 u.role, u.bidang, u.pangkat, u.face_photo, u.face_histogram, u.face_saved_at, u.face_model, u.instansi_id,
+                 t.signature
+          FROM user_list u
+          LEFT JOIN tanda_tangan t ON t.nip = u."NIP"
+          WHERE u."NIP" = $1 LIMIT 1
+        `, [nip]),
+        query(`
+          SELECT "ID_Log", "Tanggal", "Jam", "Jenis Absen", "Lokasi", "Ket", "koordinat"
+          FROM "Log_Absen"
+          WHERE "NIP" = $1
+          ORDER BY "Tanggal" DESC, "Jam" DESC
+          LIMIT 50
+        `, [nip]),
+        query(`
+          SELECT "Jenis Absen" AS jenis, "Ket" AS ket, "Status" AS status FROM ket_temp
+          WHERE "NIP" = $1 AND UPPER("Status") = 'DISETUJUI'
+            AND ("Tanggal" = $2 OR ($2 BETWEEN "tgl_mulai" AND "tgl_selesai"))
+          LIMIT 1
+        `, [nip, todayWita]),
+      ]);
 
       if (!userRes.rows.length) {
         return res.status(404).json({ ok: false, message: 'Pegawai tidak ditemukan.' });
       }
       const user = userRes.rows[0];
-
-      // Logs for user
-      const logsRes = await query(`
-        SELECT "ID_Log", "Tanggal", "Jam", "Jenis Absen", "Lokasi", "Ket", "koordinat"
-        FROM "Log_Absen"
-        WHERE "NIP" = $1
-        ORDER BY "Tanggal" DESC, "Jam" DESC
-        LIMIT 50
-      `, [nip]);
 
       // Calculate monthly metrics (Current month)
       const now = new Date();
@@ -171,16 +174,9 @@ export function createStitchApiRouter(deps = {}) {
       }, 0);
 
       // Today's status (WITA date: YYYY-MM-DD)
-      const todayWita = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
       const todayLogs = logsRes.rows.filter(l => l.Tanggal === todayWita);
       const masukLog = todayLogs.find(l => l['Jenis Absen'] === 'MASUK' || l['Jenis Absen'] === 'DI LUAR JAM MASUK');
       const pulangLog = todayLogs.find(l => String(l['Jenis Absen'] || '').includes('PULANG'));
-      const ketTodayRes = await query(`
-        SELECT "Jenis Absen" AS jenis, "Ket" AS ket, "Status" AS status FROM ket_temp
-        WHERE "NIP" = $1 AND UPPER("Status") = 'DISETUJUI'
-          AND ("Tanggal" = $2 OR ($2 BETWEEN "tgl_mulai" AND "tgl_selesai"))
-        LIMIT 1
-      `, [nip, todayWita]);
       const ketToday = ketTodayRes.rows[0] || null;
 
       let status = 'BELUM_ABSEN';
@@ -866,26 +862,26 @@ export function createStitchApiRouter(deps = {}) {
   router.get('/admin/monitoring-today', requireAdmin, async (req, res) => {
     try {
       const todayWita = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
-      
-      const usersRes = await query(`
-        SELECT id::text AS id, username AS nama, "NIP" AS nip, "Jabatan" AS jabatan,
-               bidang, pangkat, face_photo
-        FROM user_list
-        WHERE status_aktif = true OR status_aktif IS NULL
-        ORDER BY username ASC
-      `);
 
-      const logsRes = await query(`
-        SELECT "NIP", "Jam", "Jenis Absen", "Lokasi", "Ket", "koordinat"
-        FROM "Log_Absen"
-        WHERE "Tanggal" = $1
-      `, [todayWita]);
-
-      const ketRes = await query(`
-        SELECT "NIP", "Jenis Absen" AS jenis, "Ket" AS ket, "Status" AS status
-        FROM ket_temp
-        WHERE "Tanggal" = $1 OR ($1 BETWEEN "tgl_mulai" AND "tgl_selesai")
-      `, [todayWita]);
+      const [usersRes, logsRes, ketRes] = await Promise.all([
+        query(`
+          SELECT id::text AS id, username AS nama, "NIP" AS nip, "Jabatan" AS jabatan,
+                 bidang, pangkat, face_photo
+          FROM user_list
+          WHERE status_aktif = true OR status_aktif IS NULL
+          ORDER BY username ASC
+        `),
+        query(`
+          SELECT "NIP", "Jam", "Jenis Absen", "Lokasi", "Ket", "koordinat"
+          FROM "Log_Absen"
+          WHERE "Tanggal" = $1
+        `, [todayWita]),
+        query(`
+          SELECT "NIP", "Jenis Absen" AS jenis, "Ket" AS ket, "Status" AS status
+          FROM ket_temp
+          WHERE "Tanggal" = $1 OR ($1 BETWEEN "tgl_mulai" AND "tgl_selesai")
+        `, [todayWita]),
+      ]);
 
       const matrix = usersRes.rows.map(u => {
         const uLogs = logsRes.rows.filter(l => l.NIP === u.nip);
@@ -951,17 +947,21 @@ export function createStitchApiRouter(deps = {}) {
       const tanggal = String(req.query.tanggal || '');
       if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) return res.status(400).json({ ok: false, message: 'Tanggal tidak valid.' });
 
-      const usersRes = await query(`
-        SELECT u."NIP" AS nip, u.username AS nama, u."Jabatan" AS jabatan, u.pangkat, t.signature
-        FROM user_list u LEFT JOIN tanda_tangan t ON t.nip = u."NIP"
-        WHERE u.status_aktif = true OR u.status_aktif IS NULL
-        ORDER BY u.username ASC
-      `);
-      const logs = (await query(`SELECT "NIP", "Jam", "Jenis Absen" FROM "Log_Absen" WHERE "Tanggal" = $1`, [tanggal])).rows;
-      const kets = (await query(`
-        SELECT "NIP", "Jenis Absen" AS jenis, "Ket" AS ket FROM ket_temp
-        WHERE UPPER("Status") = 'DISETUJUI' AND ("Tanggal" = $1 OR ($1 BETWEEN "tgl_mulai" AND "tgl_selesai"))
-      `, [tanggal])).rows;
+      const [usersRes, logsRes, ketRes] = await Promise.all([
+        query(`
+          SELECT u."NIP" AS nip, u.username AS nama, u."Jabatan" AS jabatan, u.pangkat, t.signature
+          FROM user_list u LEFT JOIN tanda_tangan t ON t.nip = u."NIP"
+          WHERE u.status_aktif = true OR u.status_aktif IS NULL
+          ORDER BY u.username ASC
+        `),
+        query(`SELECT "NIP", "Jam", "Jenis Absen" FROM "Log_Absen" WHERE "Tanggal" = $1`, [tanggal]),
+        query(`
+          SELECT "NIP", "Jenis Absen" AS jenis, "Ket" AS ket FROM ket_temp
+          WHERE UPPER("Status") = 'DISETUJUI' AND ("Tanggal" = $1 OR ($1 BETWEEN "tgl_mulai" AND "tgl_selesai"))
+        `, [tanggal]),
+      ]);
+      const logs = logsRes.rows;
+      const kets = ketRes.rows;
 
       const isBoss = j => {
         j = String(j || '').toUpperCase();
@@ -1063,47 +1063,27 @@ export function createStitchApiRouter(deps = {}) {
       const nip = String(req.query.nip || '').trim();
       const userId = String(req.query.userId || '').trim();
 
-      // Overall stats from SIMAPO
-      const totalRes = await query('SELECT count(*)::int AS total FROM "SIMAPO".unit_aset');
-      const totalUnit = totalRes.rows[0]?.total || 0;
-
-      const kondisiRes = await query(`
-        SELECT kondisi, count(*)::int AS count 
-        FROM "SIMAPO".unit_aset 
-        GROUP BY kondisi
-      `);
-      let kondisiBaik = 0;
-      let kondisiKurang = 0;
-      let kondisiRusak = 0;
-      for (const row of kondisiRes.rows) {
-        const k = (row.kondisi || '').toLowerCase();
-        if (k.includes('baik') && !k.includes('kurang')) kondisiBaik += row.count;
-        else if (k.includes('kurang')) kondisiKurang += row.count;
-        else if (k.includes('rusak')) kondisiRusak += row.count;
-      }
-      const persenBaik = totalUnit > 0 ? ((kondisiBaik / totalUnit) * 100).toFixed(1) + '%' : '100%';
-
-      // Personal assets assigned to this employee
-      let personalAssets = [];
-      if (nip || userId) {
-        const pRes = await query(`
-          SELECT ua.id, ua.nomorinventaris, ua.kondisi, ua.merk_type, ua.tahunperolehan, 
-                 ua.nilaiperolehan, ua.no_polisi, ua.kib, ua.kode_aset, ua.qrcode,
-                 b.nama AS nama_barang, b.kodebarang, b.spesifikasi, b.satuan,
-                 r.nama AS nama_ruangan,
-                 'Dipegang Pribadi' AS status_pemegang
-          FROM "SIMAPO".unit_aset ua
-          JOIN "SIMAPO".barang b ON b.id = ua.barangid
-          LEFT JOIN "SIMAPO".ruangan r ON r.id = ua.ruangan_id
-          WHERE ua.pegawai_id = $1 OR ua.pegawai_id = $2
-          ORDER BY ua.tahunperolehan DESC, b.nama ASC
-        `, [nip, userId]);
-        personalAssets = pRes.rows;
-      }
-
-      // If user has fewer than 2 personal assets, also fetch BAPPERIDA shared / operational vehicle assets
-      if (personalAssets.length < 3) {
-        const opRes = await query(`
+      const [kondisiRes, pRes, opRes, katRes] = await Promise.all([
+        query(`
+          SELECT kondisi, count(*)::int AS count 
+          FROM "SIMAPO".unit_aset 
+          GROUP BY kondisi
+        `),
+        (nip || userId)
+          ? query(`
+              SELECT ua.id, ua.nomorinventaris, ua.kondisi, ua.merk_type, ua.tahunperolehan, 
+                     ua.nilaiperolehan, ua.no_polisi, ua.kib, ua.kode_aset, ua.qrcode,
+                     b.nama AS nama_barang, b.kodebarang, b.spesifikasi, b.satuan,
+                     r.nama AS nama_ruangan,
+                     'Dipegang Pribadi' AS status_pemegang
+              FROM "SIMAPO".unit_aset ua
+              JOIN "SIMAPO".barang b ON b.id = ua.barangid
+              LEFT JOIN "SIMAPO".ruangan r ON r.id = ua.ruangan_id
+              WHERE ua.pegawai_id = $1 OR ua.pegawai_id = $2
+              ORDER BY ua.tahunperolehan DESC, b.nama ASC
+            `, [nip, userId])
+          : Promise.resolve({ rows: [] }),
+        query(`
           SELECT ua.id, ua.nomorinventaris, ua.kondisi, ua.merk_type, ua.tahunperolehan, 
                  ua.nilaiperolehan, ua.no_polisi, ua.kib, ua.kode_aset, ua.qrcode,
                  b.nama AS nama_barang, b.kodebarang, b.spesifikasi, b.satuan,
@@ -1116,7 +1096,39 @@ export function createStitchApiRouter(deps = {}) {
              OR b.nama ILIKE '%motor%' OR b.nama ILIKE '%mobil%'
           ORDER BY ua.tahunperolehan DESC
           LIMIT 4
-        `);
+        `),
+        query(`
+          SELECT ua.id, ua.nomorinventaris, ua.kondisi, ua.merk_type, ua.tahunperolehan, 
+                 ua.nilaiperolehan, ua.no_polisi, ua.kib, ua.kode_aset,
+                 b.nama AS nama_barang, b.kodebarang, b.spesifikasi,
+                 r.nama AS nama_ruangan
+          FROM "SIMAPO".unit_aset ua
+          JOIN "SIMAPO".barang b ON b.id = ua.barangid
+          LEFT JOIN "SIMAPO".ruangan r ON r.id = ua.ruangan_id
+          ORDER BY b.nama ASC
+          LIMIT 40
+        `),
+      ]);
+
+      let totalUnit = 0;
+      let kondisiBaik = 0;
+      let kondisiKurang = 0;
+      let kondisiRusak = 0;
+      for (const row of kondisiRes.rows) {
+        const cnt = Number(row.count) || 0;
+        totalUnit += cnt;
+        const k = (row.kondisi || '').toLowerCase();
+        if (k.includes('baik') && !k.includes('kurang')) kondisiBaik += cnt;
+        else if (k.includes('kurang')) kondisiKurang += cnt;
+        else if (k.includes('rusak')) kondisiRusak += cnt;
+      }
+      const persenBaik = totalUnit > 0 ? ((kondisiBaik / totalUnit) * 100).toFixed(1) + '%' : '100%';
+
+      // Personal assets assigned to this employee
+      const personalAssets = [...pRes.rows];
+
+      // If user has fewer than 3 personal assets, also fetch BAPPERIDA shared / operational vehicle assets
+      if (personalAssets.length < 3) {
         // Append operational assets avoiding duplicates
         const existingIds = new Set(personalAssets.map(a => a.id));
         for (const op of opRes.rows) {
@@ -1126,19 +1138,6 @@ export function createStitchApiRouter(deps = {}) {
           }
         }
       }
-
-      // All assets catalog for borrowing & reporting dropdowns
-      const katRes = await query(`
-        SELECT ua.id, ua.nomorinventaris, ua.kondisi, ua.merk_type, ua.tahunperolehan, 
-               ua.nilaiperolehan, ua.no_polisi, ua.kib, ua.kode_aset,
-               b.nama AS nama_barang, b.kodebarang, b.spesifikasi,
-               r.nama AS nama_ruangan
-        FROM "SIMAPO".unit_aset ua
-        JOIN "SIMAPO".barang b ON b.id = ua.barangid
-        LEFT JOIN "SIMAPO".ruangan r ON r.id = ua.ruangan_id
-        ORDER BY b.nama ASC
-        LIMIT 40
-      `);
 
       return res.json({
         ok: true,
@@ -1330,20 +1329,19 @@ export function createStitchApiRouter(deps = {}) {
 
       sql += ` ORDER BY d.id DESC LIMIT 40`;
 
-      const { rows } = await query(sql, params);
-
-      // Total count & category breakdown
-      const countRes = await query('SELECT count(*)::int AS total FROM bapperida_dokumen');
+      const [{ rows }, countRes, katRes] = await Promise.all([
+        query(sql, params),
+        query('SELECT count(*)::int AS total FROM bapperida_dokumen'),
+        query(`
+          SELECT kategori, count(*)::int AS count
+          FROM bapperida_dokumen
+          WHERE kategori IS NOT NULL AND kategori != ''
+          GROUP BY kategori
+          ORDER BY count DESC
+          LIMIT 8
+        `),
+      ]);
       const totalDocs = countRes.rows[0]?.total || 0;
-
-      const katRes = await query(`
-        SELECT kategori, count(*)::int AS count
-        FROM bapperida_dokumen
-        WHERE kategori IS NOT NULL AND kategori != ''
-        GROUP BY kategori
-        ORDER BY count DESC
-        LIMIT 8
-      `);
 
       return res.json({
         ok: true,

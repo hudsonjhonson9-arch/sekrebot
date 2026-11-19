@@ -24,12 +24,12 @@ const LIST_SQL = `
 const REVOKE_SQL = `
   UPDATE device_sessions SET is_active = false, revoked_at = now()
   WHERE id = $1 AND is_active = true AND revoked_at IS NULL
-  RETURNING id`;
+  RETURNING id, token_hash`;
 
 const DEFAULT_EXPIRY_DAYS = 365;
 const MAX_EXPIRY_DAYS = 3650;
 
-export function createAuthDeviceRouter({ query = realQuery } = {}) {
+export function createAuthDeviceRouter({ query = realQuery, onRevoke, sessionCache } = {}) {
   const router = express.Router();
 
   router.post('/devices', async (req, res) => {
@@ -76,6 +76,8 @@ export function createAuthDeviceRouter({ query = realQuery } = {}) {
     if (!/^\d+$/.test(id)) return res.status(400).json({ ok: false, message: 'id tidak valid.' });
     const { rows } = await query(REVOKE_SQL, [id]);
     if (!rows.length) return res.status(404).json({ ok: false, message: 'Device tidak aktif.' });
+    if (rows[0].token_hash) sessionCache?.delete?.(rows[0].token_hash);
+    onRevoke?.(rows[0].token_hash);
     return res.json({ ok: true, device_id: rows[0].id });
   });
 

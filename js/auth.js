@@ -168,15 +168,21 @@
             // tidak terlihat, sehingga yang "berhasil" hanya menghilangkan modal.
             const overlayEl = document.getElementById('authOverlay');
 
-            if (typeof state !== 'undefined' && typeof selectUserByNip === 'function') {
+            if (typeof state !== 'undefined' && (typeof bootstrapFromDatabase === 'function' || typeof selectUserByNip === 'function')) {
               state.currentUser = null;
-              await selectUserByNip(userNip);
+              // bootstrapFromDatabase() sudah memuat user aktif, bootstrap & face config secara paralel;
+              // hindari memanggil selectUserByNip() terpisah agar tidak terjadi double fetch saat login.
+              if (typeof bootstrapFromDatabase === 'function') {
+                try { await bootstrapFromDatabase({ keepOverlay: true }); } catch (_) {}
+              } else {
+                await selectUserByNip(userNip, { skipSecondaryLoads: true });
+              }
 
               if (!state.currentUser) {
                 // Data pegawai gagal dimuat: batalkan sesi, tampilkan modal lagi + pesan.
                 setNativeToken(null);
                 try { clearSession(); } catch (_) {}
-                ['_native_token', 'native_token', 'stitch_active_nip', 'MY_NIP', 'MY_ROLE', 'MY_NAME']
+                ['_native_token', 'native_token', 'stitch_active_nip', 'stitch_boot_cache_v1', 'MY_NIP', 'MY_ROLE', 'MY_NAME']
                   .forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
                 window.MY_ID = null;
                 state.isLoggedIn = false;
@@ -194,11 +200,6 @@
 
               state.isLoggedIn = true;
               if (overlayEl) overlayEl.style.display = 'none';
-              // Bootstrap awal (users/lokasi/shift) ditolak 401 saat belum login,
-              // jadi muat ulang sekarang setelah token tersedia.
-              if (typeof bootstrapFromDatabase === 'function') {
-                try { await bootstrapFromDatabase(); } catch (_) {}
-              }
               if (typeof showDynamicIsland === 'function') {
                 showDynamicIsland({ type: 'success', title: 'Login Berhasil', message: `Selamat datang, ${user.nama || userNip}` });
               }

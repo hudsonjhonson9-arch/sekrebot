@@ -3,7 +3,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { SESSION_LOOKUP_SQL, requireRole, singleSessionRow, ABSEN_ROLES, MEDIA_ROLES, SIMAPO_ROLES } from './auth.js';
+import {
+  SESSION_LOOKUP_SQL,
+  requireRole,
+  createRequireRole,
+  singleSessionRow,
+  ABSEN_ROLES,
+  MEDIA_ROLES,
+  SIMAPO_ROLES,
+  hashDeviceToken,
+} from './auth.js';
 
 test('lookup sesi join lewat user_id, bukan NIP', () => {
   // NIP tidak unik di user_list. Join lewat NIP akan fan-out saat ada NIP dobel dan
@@ -120,4 +129,97 @@ test('SIMAPO_ROLES mengotorisasi BENDAHARA BARANG untuk mount /api/simapo', asyn
 test('BENDAHARA BARANG tidak masuk MEDIA_ROLES (hanya aset, bukan media)', () => {
   assert.ok(!MEDIA_ROLES.has('BENDAHARA BARANG'));
   assert.ok(MEDIA_ROLES.has('ADMIN'));
+});
+
+test('createRequireRole meng-cache lookup dalam TTL dan mengisolasi cache per instance', async () => {
+  let callsA = 0;
+  let callsB = 0;
+  const rowA = { id: '7', nip: '77', role: 'USER', instansi_id: 'bapperida', is_admin: false };
+  const rowB = { id: '8', nip: '88', role: 'ADMIN', instansi_id: 'bapperida', is_admin: true };
+
+  const reqRoleA = createRequireRole({
+    ttlMs: 15000,
+    maxEntries: 500,
+    query: async () => {
+      callsA++;
+      return { rows: [rowA] };
+    },
+  });
+  const reqRoleB = createRequireRole({
+    ttlMs: 15000,
+    maxEntries: 500,
+    query: async () => {
+      callsB++;
+      return { rows: [rowB] };
+    },
+  });
+
+  const mwA1 = reqRoleA(ABSEN_ROLES);
+  const mwA2 = reqRoleA(ABSEN_ROLES);
+  const mwB = reqRoleB(ABSEN_ROLES);
+
+  const r1 = { headers: { authorization: `Bearer ${TOKEN}` } };
+  await mwA1(r1, fakeRes(), () => {});
+  assert.equal(r1.user.nip, '77');
+  assert.equal(callsA, 1);
+
+  // Request kedua di instance A memakai cache (tidak hit DB lagi)
+  const r2 = { headers: { authorization: `Bearer ${TOKEN}` } };
+  await mwA2(r2, fakeRes(), () => {});
+  assert.equal(r2.user.nip, '77');
+  assert.equal(callsA, 1);
+
+  // Instance B tidak berbagi cache dengan instance A
+  const r3 = { headers: { authorization: `Bearer ${TOKEN}` } };
+  await mwB(r3, fakeRes(), () => {});
+  assert.equal(r3.user.nip, '88');
+  assert.equal(callsB, 1);
+
+  // Invalidasi token memaksa lookup ulang di instance A
+  reqRoleA.invalidate(TOKEN);
+  const r4 = { headers: { authorization: `Bearer ${TOKEN}` } };
+  await mwA1(r4, fakeRes(), () => {});
+  assert.equal(callsA, 2);
+
+  // Device token juga dapat di-invalidate lewat hash
+  const dv = 'dv_' + 'b'.repeat(64);
+  const r5 = { headers: { authorization: `Bearer ${dv}` } };
+  await mwA1(r5, fakeRes(), () => {});
+  assert.equal(callsA, 3);
+  await mwA1({ headers: { authorization: `Bearer ${dv}` } }, fakeRes(), () => {});
+  assert.equal(callsA, 3);
+  reqRoleA.invalidateHash(hashDeviceToken(dv));
+  await mwA1({ headers: { authorization: `Bearer ${dv}` } }, fakeRes(), () => {});
+  assert.equal(callsA, 4);
+});
+
+test('createRequireRole cache menghormati batas maxEntries dan TTL', async () => {
+  let calls = 0;
+  const reqRole = createRequireRole({
+    ttlMs: 15,
+    maxEntries: 2,
+    lookup: async (token) => {
+      calls++;
+      return { id: token.slice(0, 4), nip: '1', role: 'USER', instansi_id: 'bapperida', is_admin: false };
+    },
+  });
+  const mw = reqRole(ABSEN_ROLES);
+  const t1 = '1'.repeat(192);
+  const t2 = '2'.repeat(192);
+  const t3 = '3'.repeat(192);
+
+  await mw({ headers: { authorization: `Bearer ${t1}` } }, fakeRes(), () => {});
+  await mw({ headers: { authorization: `Bearer ${t2}` } }, fakeRes(), () => {});
+  await mw({ headers: { authorization: `Bearer ${t3}` } }, fakeRes(), () => {}); // evicts t1
+  assert.equal(calls, 3);
+  assert.equal(reqRole.cache.size, 2);
+
+  // t1 tereviksi sehingga hit lookup lagi
+  await mw({ headers: { authorization: `Bearer ${t1}` } }, fakeRes(), () => {});
+  assert.equal(calls, 4);
+
+  // Tunggu TTL 15ms lewat, t1 harus kedaluwarsa di cache
+  await new Promise((r) => setTimeout(r, 30));
+  await mw({ headers: { authorization: `Bearer ${t1}` } }, fakeRes(), () => {});
+  assert.equal(calls, 5);
 });

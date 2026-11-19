@@ -249,3 +249,53 @@ test('/api/admin/roles dan /api/absen-roles ter-mount dengan benar', () => {
   const petaRoles = paths.filter((p) => p.startsWith('/api/roles'));
   assert.deepEqual(petaRoles, [], `KOLISI TERDETEKSI: /api/roles ter-mount: ${petaRoles.join(', ')}`);
 });
+
+test('gzip compression dan static Cache-Control headers bekerja benar', async () => {
+  const server = app.listen(0);
+  await new Promise((resolve) => server.once('listening', resolve));
+  const { port } = server.address();
+  try {
+    // 1. HTML -> no-cache dan terkompresi gzip saat > 1024 bytes
+    const htmlRes = await fetch(`http://127.0.0.1:${port}/index.html`, {
+      headers: { 'Accept-Encoding': 'gzip' },
+    });
+    assert.equal(htmlRes.status, 200);
+    assert.equal(htmlRes.headers.get('cache-control'), 'no-cache');
+    assert.equal(htmlRes.headers.get('content-encoding'), 'gzip');
+    const htmlText = await htmlRes.text();
+    assert.ok(htmlText.includes('<!DOCTYPE html>') || htmlText.includes('<html'));
+
+    // 2. Vendor library di js/lib/* & css/lib/* -> max-age=86400 (1d)
+    const libJsRes = await fetch(`http://127.0.0.1:${port}/js/lib/qrcode.min.js`, {
+      headers: { 'Accept-Encoding': 'gzip' },
+    });
+    assert.equal(libJsRes.status, 200);
+    assert.match(libJsRes.headers.get('cache-control') || '', /max-age=86400/);
+    assert.equal(libJsRes.headers.get('content-encoding'), 'gzip');
+    await libJsRes.arrayBuffer();
+
+    const libCssRes = await fetch(`http://127.0.0.1:${port}/css/lib/leaflet.min.css`, {
+      headers: { 'Accept-Encoding': 'gzip' },
+    });
+    assert.equal(libCssRes.status, 200);
+    assert.match(libCssRes.headers.get('cache-control') || '', /max-age=86400/);
+    await libCssRes.arrayBuffer();
+
+    // 3. App JS non-lib -> max-age=3600 (1h)
+    const appJsRes = await fetch(`http://127.0.0.1:${port}/js/app.js`);
+    assert.equal(appJsRes.status, 200);
+    assert.match(appJsRes.headers.get('cache-control') || '', /max-age=3600/);
+    await appJsRes.arrayBuffer();
+
+    // 4. Small JSON (/api/health < 1024 bytes) tidak di-gzip
+    const healthRes = await fetch(`http://127.0.0.1:${port}/api/health`, {
+      headers: { 'Accept-Encoding': 'gzip' },
+    });
+    assert.equal(healthRes.status, 200);
+    assert.equal(healthRes.headers.get('content-encoding'), null);
+    assert.equal((await healthRes.json()).ok, true);
+  } finally {
+    server.close();
+    server.closeAllConnections?.();
+  }
+});

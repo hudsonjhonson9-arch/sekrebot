@@ -13,6 +13,8 @@ export function getPool() {
       connectionString,
       ssl: process.env.PGSSL === 'require' ? { rejectUnauthorized: false } : undefined,
       max: Number(process.env.PG_POOL_MAX) || 15,
+      keepAlive: true,
+      idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
       query_timeout: 30000,
     });

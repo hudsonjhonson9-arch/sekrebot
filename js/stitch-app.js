@@ -33,7 +33,7 @@
     };
 
     // Fast synchronous session check
-    function checkAuthStatus() {
+    function checkAuthStatus(opts = {}) {
       const token = (typeof getNativeToken === 'function' ? getNativeToken() : null) ||
                     (typeof _nativeToken !== 'undefined' && _nativeToken) ||
                     localStorage.getItem('_native_token') ||
@@ -49,7 +49,7 @@
         return false;
       } else {
         state.isLoggedIn = true;
-        if (authOverlayEl) authOverlayEl.style.display = 'none';
+        if (authOverlayEl && !opts.keepOverlay) authOverlayEl.style.display = 'none';
         return true;
       }
     }
@@ -97,7 +97,7 @@
         }
         [
           '_native_token', 'native_token', '_sess_token', '_sess_nip', '_sess_role', '_sess_inst',
-          'stitch_active_nip', 'stitch_active_view', 'MY_NIP', 'MY_ROLE', 'MY_NAME', 'MY_INSTANSI',
+          'stitch_active_nip', 'stitch_active_view', 'stitch_boot_cache_v1', 'MY_NIP', 'MY_ROLE', 'MY_NAME', 'MY_INSTANSI',
           'tg_user_id_v5', 'tg_user_obj_v5', 'tg_user_id_v4', 'tg_user_obj_v4'
         ].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
 
@@ -126,6 +126,7 @@
       locations: [],
       currentLocation: null,
       shift: { masuk: '07:15', pulang: '14:30' },
+      holidays: [],
       gpsSimulationInside: true,
       attendance: {
         clockInTime: null,
@@ -138,8 +139,160 @@
         terlambat: 0,
         cuti: 0
       },
-      userLogs: []
+      userLogs: [],
+      _asetDirty: false
     };
+
+    const BOOT_CACHE_KEY = 'stitch_boot_cache_v1';
+    let _faceConfigPromise = null;
+    let _faceConfigLoaded = false;
+
+    function sanitizeUserForCache(u) {
+      if (!u || typeof u !== 'object') return null;
+      const copy = { ...u };
+      delete copy.face_histogram;
+      if (typeof copy.face_photo === 'string' && (copy.face_photo.startsWith('data:') || copy.face_photo.length > 512)) {
+        delete copy.face_photo;
+      }
+      if (typeof copy.signature === 'string' && (copy.signature.startsWith('data:') || copy.signature.length > 512)) {
+        delete copy.signature;
+      }
+      return copy;
+    }
+
+    function saveBootCache() {
+      try {
+        if (!state.currentUser && !state.locations.length) return;
+        const todayWita = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+        const payload = {
+          v: 1,
+          savedAt: Date.now(),
+          savedDate: todayWita,
+          nip: state.currentUser ? String(state.currentUser.nip || '') : (localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || ''),
+          currentUser: sanitizeUserForCache(state.currentUser),
+          attendance: state.attendance || null,
+          metrics: state.metrics || null,
+          userLogs: Array.isArray(state.userLogs) ? state.userLogs.slice(0, 100) : [],
+          shift: state.shift || null,
+          holidays: Array.isArray(state.holidays) ? state.holidays : [],
+          locations: Array.isArray(state.locations) ? state.locations : []
+        };
+        localStorage.setItem(BOOT_CACHE_KEY, JSON.stringify(payload));
+      } catch (_) {}
+    }
+
+    function applyBootstrapSharedUI(recentLogs = null) {
+      if (state.locations.length > 0) {
+        state.currentLocation = state.locations[0];
+        const officeNameEl = document.getElementById('currentOfficeName');
+        if (officeNameEl) officeNameEl.textContent = state.currentLocation.nama_lokasi + ' (Titik DB)';
+
+        const locSelect = document.getElementById('adminLocationSelect');
+        if (locSelect) {
+          locSelect.innerHTML = state.locations.map(l =>
+            `<option value="${l.id}">${l.nama_lokasi} (${l.latitude}, ${l.longitude})</option>`
+          ).join('');
+          onAdminLocationChange();
+        }
+      }
+
+      if (state.shift) {
+        const shiftHoursEl = document.getElementById('shiftHours');
+        if (shiftHoursEl) shiftHoursEl.textContent = `${state.shift.masuk} - ${state.shift.pulang}`;
+        const profilShiftHoursEl = document.getElementById('profilShiftHours');
+        if (profilShiftHoursEl) profilShiftHoursEl.textContent = `${state.shift.masuk} - ${state.shift.pulang}`;
+        const adminInEl = document.getElementById('adminJamMasuk');
+        if (adminInEl && state.shift.masuk) adminInEl.value = state.shift.masuk;
+        const adminOutEl = document.getElementById('adminJamPulang');
+        if (adminOutEl && state.shift.pulang) adminOutEl.value = state.shift.pulang;
+      }
+
+      if (Array.isArray(state.holidays)) {
+        renderJadwalHolidays(state.holidays);
+        renderAdminHolidaysList(state.holidays);
+      }
+
+      if (Array.isArray(state.allUsers) && state.allUsers.length > 0) {
+        renderUsersDropdown(state.allUsers);
+      }
+
+      if (Array.isArray(recentLogs)) {
+        renderKioskRecentFeed(recentLogs);
+        const todayWita = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+        const todayHadirNips = new Set(
+          recentLogs
+            .filter(l => {
+              const tgl = String(l.Tanggal || '').slice(0, 10);
+              const jns = String(l['Jenis Absen'] || '').toUpperCase();
+              return tgl === todayWita && (jns.includes('MASUK') || jns === 'TERLAMBAT');
+            })
+            .map(l => String(l.NIP || '').trim())
+            .filter(Boolean)
+        );
+        const kioskHadirEl = document.getElementById('kioskHadirCount');
+        if (kioskHadirEl) kioskHadirEl.textContent = todayHadirNips.size;
+        const kioskTotalEl = document.getElementById('kioskTotalStaff');
+        if (kioskTotalEl) kioskTotalEl.textContent = state.allUsers.length;
+      }
+    }
+
+    function hydrateFromCache() {
+      try {
+        const activeNip = localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || (window._session && window._session.nip) || '';
+        let cached = null;
+        const raw = localStorage.getItem(BOOT_CACHE_KEY);
+        if (raw) {
+          try { cached = JSON.parse(raw); } catch (_) { cached = null; }
+        }
+
+        const todayWita = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+        if (cached && (!activeNip || !cached.nip || cached.nip === activeNip)) {
+          if (cached.currentUser) state.currentUser = cached.currentUser;
+          if (cached.shift) state.shift = cached.shift;
+          if (Array.isArray(cached.holidays)) state.holidays = cached.holidays;
+          if (Array.isArray(cached.locations)) state.locations = cached.locations;
+          if (cached.metrics) state.metrics = cached.metrics;
+          if (Array.isArray(cached.userLogs)) state.userLogs = cached.userLogs;
+          if (cached.attendance && cached.savedDate === todayWita) {
+            state.attendance = cached.attendance;
+          }
+        }
+
+        // Fallback identity from auth storage keys if boot cache is missing or belongs to another NIP
+        if (!state.currentUser && activeNip) {
+          let fallbackUser = null;
+          try {
+            const uStr = localStorage.getItem('tg_user_obj_v5');
+            if (uStr) fallbackUser = JSON.parse(uStr);
+          } catch (_) {}
+          if (fallbackUser && (!fallbackUser.nip || String(fallbackUser.nip) === String(activeNip))) {
+            state.currentUser = sanitizeUserForCache(fallbackUser);
+          } else {
+            const myName = localStorage.getItem('MY_NAME');
+            const myRole = localStorage.getItem('MY_ROLE');
+            const myInst = localStorage.getItem('MY_INSTANSI');
+            if (myName) {
+              state.currentUser = {
+                nip: activeNip,
+                nama: myName,
+                role: myRole || 'USER',
+                instansi_id: myInst || 'bapperida'
+              };
+            }
+          }
+        }
+
+        applyBootstrapSharedUI();
+        if (state.currentUser) {
+          if (typeof updateUserUI === 'function') updateUserUI();
+          if (typeof updateAttendanceUI === 'function') updateAttendanceUI();
+          if (typeof renderRiwayatCards === 'function') renderRiwayatCards(state.userLogs);
+          if (typeof renderRiwayatFullTable === 'function') renderRiwayatFullTable(state.userLogs);
+        }
+      } catch (err) {
+        console.warn('[Stitch Cache] Hydrate skipped:', err);
+      }
+    }
 
     const ADMIN_ROLES = ['ADMIN', 'SUPERADMIN', 'KEPALA', 'SEKRETARIS', 'KABID', 'IRBAN'];
     function isStitchAdminUser(u) {
@@ -163,116 +316,81 @@
       } catch (_) {}
       bindAdminSettingToggles();
       initClock();
-      checkAuthStatus();
+      const isAuthed = checkAuthStatus();
+      if (isAuthed) hydrateFromCache();
       bootstrapFromDatabase();
     });
 
     /* ── 1. BOOTSTRAP FROM POSTGRESQL DATABASE ────────────────────────── */
     async function loadStitchFaceConfig() {
+      if (_faceConfigPromise) return _faceConfigPromise;
       const instId = state.currentUser?.instansi_id || localStorage.getItem('MY_INSTANSI') || 'bapperida';
-      if (typeof loadFaceSettingsGlobal === 'function') {
-        try { await loadFaceSettingsGlobal(); } catch (_) {}
-      }
-      try {
-        const tok = (typeof getStitchToken === 'function' ? getStitchToken() : '') ||
-          (typeof getNativeToken === 'function' ? getNativeToken() : '') ||
-          localStorage.getItem('_native_token') ||
-          localStorage.getItem('native_token') ||
-          localStorage.getItem('_sess_token') || '';
-        const res = await fetch('/api/media/face-toggle?instansi_id=' + encodeURIComponent(instId), {
-          headers: tok ? { Authorization: 'Bearer ' + tok } : {}
+      const tok = (typeof getStitchToken === 'function' ? getStitchToken() : '') ||
+        (typeof getNativeToken === 'function' ? getNativeToken() : '') ||
+        localStorage.getItem('_native_token') ||
+        localStorage.getItem('native_token') ||
+        localStorage.getItem('_sess_token') || '';
+
+      const faceSettingsTask = (typeof loadFaceSettingsGlobal === 'function')
+        ? loadFaceSettingsGlobal().catch(() => {})
+        : Promise.resolve();
+      const faceToggleTask = fetch('/api/media/face-toggle?instansi_id=' + encodeURIComponent(instId), {
+        headers: tok ? { Authorization: 'Bearer ' + tok } : {}
+      }).then(async (res) => {
+        if (!res.ok) return;
+        const data = await res.json().catch(() => null);
+        const enabled = data?.enabled !== false;
+        window.FACE_RECOGNITION_ENABLED = enabled;
+        if (typeof FACE_RECOGNITION_ENABLED !== 'undefined') FACE_RECOGNITION_ENABLED = enabled;
+      }).catch(() => {});
+
+      _faceConfigPromise = Promise.allSettled([faceSettingsTask, faceToggleTask])
+        .then(() => {
+          _faceConfigLoaded = true;
+          syncAdminFaceGpsCheckboxes();
+        })
+        .finally(() => {
+          _faceConfigPromise = null;
         });
-        if (res.ok) {
-          const data = await res.json().catch(() => null);
-          const enabled = data?.enabled !== false;
-          window.FACE_RECOGNITION_ENABLED = enabled;
-          if (typeof FACE_RECOGNITION_ENABLED !== 'undefined') FACE_RECOGNITION_ENABLED = enabled;
-        }
-      } catch (_) {}
-      syncAdminFaceGpsCheckboxes();
+      return _faceConfigPromise;
     }
 
-    async function bootstrapFromDatabase() {
+    async function bootstrapFromDatabase(opts = {}) {
       try {
         console.log('[Stitch DB] Fetching bootstrap data from PostgreSQL...');
-        const res = await fetch('/api/stitch/bootstrap');
+        const isAuthed = checkAuthStatus(opts);
+        const activeNip = isAuthed
+          ? (localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || (window._session && window._session.nip))
+          : null;
+
+        const parallelTasks = [fetch('/api/stitch/bootstrap')];
+        if (isAuthed) {
+          if (activeNip) parallelTasks.push(selectUserByNip(activeNip, { skipSecondaryLoads: true }));
+          parallelTasks.push(loadStitchFaceConfig());
+        }
+
+        const [res] = await Promise.all(parallelTasks);
         if (!res.ok) {
           console.warn('[Stitch DB] Server bootstrap returned HTTP ' + res.status);
-          checkAuthStatus();
+          checkAuthStatus(opts);
           return;
         }
         const json = await res.json().catch(() => null);
-        
+
         if (json && json.ok) {
           state.allUsers = json.users || [];
           state.locations = json.locations || [];
           if (json.shift) state.shift = json.shift;
-
-          // Update Locations in UI
-          if (state.locations.length > 0) {
-            state.currentLocation = state.locations[0];
-            const officeNameEl = document.getElementById('currentOfficeName');
-            if (officeNameEl) officeNameEl.textContent = state.currentLocation.nama_lokasi + ' (Titik DB)';
-            
-            // Populate Admin Location select
-            const locSelect = document.getElementById('adminLocationSelect');
-            if (locSelect) {
-              locSelect.innerHTML = state.locations.map(l => 
-                `<option value="${l.id}">${l.nama_lokasi} (${l.latitude}, ${l.longitude})</option>`
-              ).join('');
-              onAdminLocationChange();
-            }
-          }
-
-          // Populate Shift in UI
-          const shiftHoursEl = document.getElementById('shiftHours');
-          if (shiftHoursEl) shiftHoursEl.textContent = `${state.shift.masuk} - ${state.shift.pulang}`;
-          const profilShiftHoursEl = document.getElementById('profilShiftHours');
-          if (profilShiftHoursEl) profilShiftHoursEl.textContent = `${state.shift.masuk} - ${state.shift.pulang}`;
-          const adminInEl = document.getElementById('adminJamMasuk');
-          if (adminInEl && state.shift.masuk) adminInEl.value = state.shift.masuk;
-          const adminOutEl = document.getElementById('adminJamPulang');
-          if (adminOutEl && state.shift.pulang) adminOutEl.value = state.shift.pulang;
-
-          // Populate Holidays in Jadwal
           state.holidays = json.holidays || [];
-          renderJadwalHolidays(state.holidays);
-          renderAdminHolidaysList(state.holidays);
 
-          // Populate Users in Dropdown Switcher
-          renderUsersDropdown(state.allUsers);
+          applyBootstrapSharedUI(json.recentLogs || []);
 
-          // Populate Kiosk Feed with recent real logs & hydrate Kiosk counters
-          const recentLogs = json.recentLogs || [];
-          renderKioskRecentFeed(recentLogs);
-          const todayWita = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
-          const todayHadirNips = new Set(
-            recentLogs
-              .filter(l => {
-                const tgl = String(l.Tanggal || '').slice(0, 10);
-                const jns = String(l['Jenis Absen'] || '').toUpperCase();
-                return tgl === todayWita && (jns.includes('MASUK') || jns === 'TERLAMBAT');
-              })
-              .map(l => String(l.NIP || '').trim())
-              .filter(Boolean)
-          );
-          const kioskHadirEl = document.getElementById('kioskHadirCount');
-          if (kioskHadirEl) kioskHadirEl.textContent = todayHadirNips.size;
-          const kioskTotalEl = document.getElementById('kioskTotalStaff');
-          if (kioskTotalEl) kioskTotalEl.textContent = state.allUsers.length;
-
-          // Authenticated Session Check
-          const isAuthed = checkAuthStatus();
-          if (isAuthed) {
-            const activeNip = localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || (window._session && window._session.nip);
-            if (activeNip) await selectUserByNip(activeNip);
-            await loadStitchFaceConfig();
+          // Re-render monthly summary if user logs arrived before holidays/shift from bootstrap
+          if (state.currentUser && Array.isArray(state.userLogs) && typeof renderRiwayatCards === 'function') {
+            renderRiwayatCards(state.userLogs);
           }
 
-          // Preload Aset KIR data from SIMAPO
-          loadKirBarangData();
-          loadRealMobileAsetData();
-          loadRealMobileArsipData();
+          saveBootCache();
 
           // Restore persisted view across page refresh (Hash or localStorage)
           const hashView = (window.location.hash || '').replace(/^#/, '').trim();
@@ -281,14 +399,17 @@
           switchMainView(targetView, false);
 
           // Listen to browser navigation / hashchange for persistent multi-view
-          window.addEventListener('hashchange', () => {
-            const h = (window.location.hash || '').replace(/^#/, '').trim();
-            if (h) switchMainView(h, false);
-          });
+          if (!window._stitchHashListenerBound) {
+            window._stitchHashListenerBound = true;
+            window.addEventListener('hashchange', () => {
+              const h = (window.location.hash || '').replace(/^#/, '').trim();
+              if (h) switchMainView(h, false);
+            });
+          }
         }
       } catch (err) {
         console.error('[Stitch DB] Bootstrap failed:', err);
-        checkAuthStatus();
+        checkAuthStatus(opts);
       }
     }
 
@@ -343,8 +464,9 @@
       }).join('');
     }
 
-    async function selectUserByNip(nip) {
+    async function selectUserByNip(nip, opts = {}) {
       try {
+        const prevNip = state.currentUser ? String(state.currentUser.nip || '') : '';
         const res = await fetch(`/api/stitch/user-data?nip=${nip}`);
         const data = await res.json();
         if (data.ok) {
@@ -381,7 +503,18 @@
           updateAttendanceUI();
           renderRiwayatCards(state.userLogs);
           renderRiwayatFullTable(state.userLogs);
-          loadRealMobileAsetData();
+          saveBootCache();
+
+          const userChanged = prevNip && prevNip !== String(data.user.nip || '');
+          if (userChanged) {
+            const onAsetTab = !document.getElementById('view-aset')?.classList.contains('hidden');
+            if (onAsetTab && !opts.skipSecondaryLoads) {
+              state._asetDirty = false;
+              loadViewOnce('aset', () => loadRealMobileAsetData(), true);
+            } else {
+              state._asetDirty = true;
+            }
+          }
         }
       } catch (err) {
         console.error('[Stitch DB] Failed to load user:', err);
@@ -846,6 +979,21 @@
     }
 
     /* ── 3. VIEW SWITCHER (PERSISTENT ACROSS REFRESH) ────────────────── */
+    const _viewLoadState = {};
+    function loadViewOnce(key, loaderFn, force = false) {
+      const entry = _viewLoadState[key] || (_viewLoadState[key] = { loading: null, loaded: false });
+      if (entry.loading && !force) return entry.loading;
+      if (entry.loaded && !force) return Promise.resolve();
+      const p = Promise.resolve()
+        .then(() => loaderFn())
+        .then(
+          () => { entry.loaded = true; entry.loading = null; },
+          () => { entry.loading = null; }
+        );
+      entry.loading = p;
+      return p;
+    }
+
     function switchMainView(viewName, updateHash = true) {
       const target = (viewName === 'riwayat') ? 'riwayat-full' : (viewName === 'profile' || viewName === 'jadwal') ? 'profil' : viewName;
       const views = ['presensi', 'riwayat-full', 'arsip', 'aset', 'profil', 'kiosk', 'admin', 'sppd', 'tpp'];
@@ -916,19 +1064,25 @@
       }
 
       if (target === 'tpp') {
-        loadTppData();
+        loadViewOnce('tpp', () => loadTppData());
       } else if (target === 'admin') {
-        loadAdminMonitoringData();
-        loadAdminKeteranganData();
-        loadStitchFaceConfig();
+        loadViewOnce('admin', () => Promise.all([
+          loadAdminMonitoringData(),
+          loadAdminKeteranganData(),
+          _faceConfigLoaded ? Promise.resolve() : loadStitchFaceConfig()
+        ]));
       } else if (target === 'sppd') {
-        loadSppdData();
-        loadKirBarangData();
-        loadKirPemeliharaanData();
+        loadViewOnce('sppd', () => Promise.all([
+          loadSppdData(),
+          loadKirBarangData(),
+          loadKirPemeliharaanData()
+        ]));
       } else if (target === 'aset') {
-        loadRealMobileAsetData();
+        const forceAset = Boolean(state._asetDirty);
+        state._asetDirty = false;
+        loadViewOnce('aset', () => loadRealMobileAsetData(), forceAset);
       } else if (target === 'arsip') {
-        loadRealMobileArsipData();
+        loadViewOnce('arsip', () => loadRealMobileArsipData());
       }
 
       if (target === 'kiosk') {
