@@ -418,33 +418,48 @@
     };
     let keteranganCameraStream = null;
 
+    function getWitaDateNow() {
+      const witaStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Makassar',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(new Date());
+      const [y, m, d] = witaStr.split('-').map(n => parseInt(n, 10));
+      return new Date(Date.UTC(y, m - 1, d));
+    }
+
     function initDrawerDatepicker() {
-      const today = new Date(Date.now() + 8 * 3600000);
-      drawerCalViewMonth = today.getMonth();
-      drawerCalViewYear = today.getFullYear();
+      const today = getWitaDateNow();
+      drawerCalViewMonth = today.getUTCMonth();
+      drawerCalViewYear = today.getUTCFullYear();
+      const jumpPanel = document.getElementById('drawerCalendarJumpPanel');
+      if (jumpPanel) jumpPanel.classList.add('hidden');
       setDrawerDatePreset('today');
     }
 
     function setDrawerDatePreset(preset) {
-      const now = new Date(Date.now() + 8 * 3600000);
-      const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const now = getWitaDateNow();
+      const fmt = d => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
       
-      let startD = new Date(now);
-      let endD = new Date(now);
+      let startD = new Date(now.getTime());
+      let endD = new Date(now.getTime());
 
       if (preset === 'today') {
         // start and end are today
       } else if (preset === 'tomorrow') {
-        startD.setDate(startD.getDate() + 1);
-        endD.setDate(endD.getDate() + 1);
+        startD.setUTCDate(startD.getUTCDate() + 1);
+        endD.setUTCDate(endD.getUTCDate() + 1);
       } else if (preset === '3days') {
-        endD.setDate(endD.getDate() + 2);
+        endD.setUTCDate(endD.getUTCDate() + 2);
       } else if (preset === 'week') {
-        endD.setDate(endD.getDate() + 6);
+        endD.setUTCDate(endD.getUTCDate() + 6);
       }
 
       drawerStartDate = fmt(startD);
       drawerEndDate = fmt(endD);
+      drawerCalViewMonth = startD.getUTCMonth();
+      drawerCalViewYear = startD.getUTCFullYear();
       drawerPickingRange = false;
 
       ['today', 'tomorrow', '3days', 'week'].forEach(p => {
@@ -526,6 +541,44 @@
         drawerCalViewYear++;
       }
       renderDrawerCalendar();
+      renderDrawerCalendarMonthGrid();
+    }
+
+    function toggleDrawerCalendarJump() {
+      const panel = document.getElementById('drawerCalendarJumpPanel');
+      if (!panel) return;
+      const willOpen = panel.classList.contains('hidden');
+      panel.classList.toggle('hidden', !willOpen);
+      if (willOpen) renderDrawerCalendarMonthGrid();
+    }
+
+    function changeDrawerCalendarYear(offset) {
+      drawerCalViewYear += offset;
+      renderDrawerCalendar();
+      renderDrawerCalendarMonthGrid();
+    }
+
+    function selectDrawerCalendarMonth(monthIdx) {
+      drawerCalViewMonth = monthIdx;
+      const panel = document.getElementById('drawerCalendarJumpPanel');
+      if (panel) panel.classList.add('hidden');
+      renderDrawerCalendar();
+    }
+
+    function renderDrawerCalendarMonthGrid() {
+      const yearEl = document.getElementById('drawerCalendarJumpYear');
+      const gridEl = document.getElementById('drawerCalendarMonthGrid');
+      if (yearEl) yearEl.textContent = String(drawerCalViewYear);
+      if (!gridEl) return;
+      const shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      gridEl.innerHTML = shortMonths.map((label, idx) => {
+        const active = idx === drawerCalViewMonth;
+        return `
+          <button type="button" onclick="selectDrawerCalendarMonth(${idx})" class="py-1.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${active ? 'bg-blue-600 text-white' : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-700'}">
+            ${label}
+          </button>
+        `;
+      }).join('');
     }
 
     function renderDrawerCalendar() {
@@ -738,19 +791,226 @@
       if (fileInput) fileInput.value = '';
     }
 
-    function openIzinDrawer() {
+    function escDrawerHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[c]));
+    }
+
+    function getPegawaiInitials(nama) {
+      const parts = String(nama || '').trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return '--';
+      if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+
+    function toggleDrawerPegawaiDropdown(forceState) {
+      const drop = document.getElementById('drawerPegawaiDropdown');
+      const icon = document.getElementById('drawerPegawaiExpandIcon');
+      if (!drop) return;
+      const willOpen = typeof forceState === 'boolean' ? forceState : drop.classList.contains('hidden');
+      drop.classList.toggle('hidden', !willOpen);
+      if (icon) icon.textContent = willOpen ? 'expand_less' : 'expand_more';
+      if (willOpen) {
+        const searchEl = document.getElementById('drawerPegawaiSearch');
+        renderDrawerPegawaiList(searchEl ? searchEl.value : '');
+        setTimeout(() => { if (searchEl) searchEl.focus(); }, 20);
+      }
+    }
+
+    function filterDrawerPegawaiList(q) {
+      renderDrawerPegawaiList(q);
+    }
+
+    function renderDrawerPegawaiList(q = '') {
+      const listEl = document.getElementById('drawerPegawaiList');
+      if (!listEl) return;
+      const users = Array.isArray(state.allUsers) ? state.allUsers : [];
+      const query = String(q || '').trim().toLowerCase();
+      const selectedNip = String(document.getElementById('drawerTargetNip')?.value || '');
+
+      const filtered = query
+        ? users.filter(u =>
+            String(u.nama || '').toLowerCase().includes(query) ||
+            String(u.nip || '').toLowerCase().includes(query) ||
+            String(u.jabatan || '').toLowerCase().includes(query)
+          )
+        : users;
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div class="p-4 text-center text-[11px] text-slate-400">
+            Pegawai tidak ditemukan.
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(u => {
+        const isSelected = String(u.nip || '') === selectedNip;
+        const initials = getPegawaiInitials(u.nama);
+        const nipSafe = escDrawerHtml(u.nip);
+        return `
+          <button type="button" onclick="selectDrawerPegawai('${nipSafe}')" class="w-full px-3 py-2 text-left flex items-center justify-between gap-2.5 hover:bg-blue-50/70 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isSelected ? 'bg-blue-50 dark:bg-blue-950/40' : ''}">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-lg ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'} font-bold text-[11px] font-mono flex items-center justify-center shrink-0">
+                ${escDrawerHtml(initials)}
+              </div>
+              <div class="min-w-0">
+                <p class="text-xs font-bold text-slate-900 dark:text-white truncate">${escDrawerHtml(u.nama || '-')}</p>
+                <p class="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">${nipSafe}${u.jabatan ? ' • ' + escDrawerHtml(u.jabatan) : ''}</p>
+              </div>
+            </div>
+            ${isSelected ? '<span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-[18px] shrink-0">check</span>' : ''}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectDrawerPegawai(nip, opts = {}) {
+      const users = Array.isArray(state.allUsers) ? state.allUsers : [];
+      const u = users.find(item => String(item.nip) === String(nip)) || null;
+      const hiddenEl = document.getElementById('drawerTargetNip');
+      const avatarEl = document.getElementById('drawerPegawaiSelectedAvatar');
+      const namaEl = document.getElementById('drawerPegawaiSelectedNama');
+      const nipEl = document.getElementById('drawerPegawaiSelectedNip');
+
+      const resolvedNip = u ? String(u.nip) : String(nip || '');
+      if (hiddenEl) hiddenEl.value = resolvedNip;
+
+      if (u) {
+        if (avatarEl) avatarEl.textContent = getPegawaiInitials(u.nama);
+        if (namaEl) namaEl.textContent = u.nama || 'Pegawai';
+        if (nipEl) nipEl.textContent = `NIP. ${u.nip}${u.jabatan ? ' • ' + u.jabatan : ''}`;
+      } else {
+        if (avatarEl) avatarEl.textContent = '--';
+        if (namaEl) namaEl.textContent = 'Pilih Pegawai...';
+        if (nipEl) nipEl.textContent = resolvedNip ? `NIP. ${resolvedNip}` : 'NIP. —';
+      }
+
+      const searchEl = document.getElementById('drawerPegawaiSearch');
+      renderDrawerPegawaiList(searchEl ? searchEl.value : '');
+      if (opts.closeDropdown !== false) {
+        toggleDrawerPegawaiDropdown(false);
+      }
+    }
+
+    const DRAWER_TIME_SLOTS = (() => {
+      const slots = [];
+      for (let h = 7; h <= 17; h++) {
+        for (let m = 0; m < 60; m += 15) {
+          if (h === 17 && m > 0) break;
+          slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+        }
+      }
+      return slots;
+    })();
+
+    function renderDrawerTimeSlots(which) {
+      const isStart = which === 'mulai';
+      const drop = document.getElementById(isStart ? 'drawerJamMulaiDropdown' : 'drawerJamSelesaiDropdown');
+      const valEl = document.getElementById(isStart ? 'drawerJamMulai' : 'drawerJamSelesai');
+      if (!drop) return;
+      const activeVal = valEl ? valEl.value : (isStart ? '08:00' : '11:30');
+      drop.innerHTML = DRAWER_TIME_SLOTS.map(slot => {
+        const active = slot === activeVal;
+        return `
+          <button type="button" onclick="selectDrawerTime('${which}', '${slot}')" class="w-full px-3 py-2 text-left font-mono text-xs flex items-center justify-between hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${active ? 'bg-blue-50/80 dark:bg-blue-950/40 font-bold text-blue-600 dark:text-blue-400' : 'font-semibold text-slate-700 dark:text-slate-200'}">
+            <span>${slot}</span>
+            ${active ? '<span class="material-symbols-outlined text-[15px]">check</span>' : ''}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function toggleDrawerTimeDropdown(which, forceState) {
+      const isStart = which === 'mulai';
+      const drop = document.getElementById(isStart ? 'drawerJamMulaiDropdown' : 'drawerJamSelesaiDropdown');
+      const icon = document.getElementById(isStart ? 'drawerJamMulaiIcon' : 'drawerJamSelesaiIcon');
+      const otherDrop = document.getElementById(isStart ? 'drawerJamSelesaiDropdown' : 'drawerJamMulaiDropdown');
+      const otherIcon = document.getElementById(isStart ? 'drawerJamSelesaiIcon' : 'drawerJamMulaiIcon');
+      if (!drop) return;
+
+      if (otherDrop && !otherDrop.classList.contains('hidden')) {
+        otherDrop.classList.add('hidden');
+        if (otherIcon) otherIcon.textContent = 'expand_more';
+      }
+
+      const willOpen = typeof forceState === 'boolean' ? forceState : drop.classList.contains('hidden');
+      if (willOpen) renderDrawerTimeSlots(which);
+      drop.classList.toggle('hidden', !willOpen);
+      if (icon) icon.textContent = willOpen ? 'expand_less' : 'expand_more';
+    }
+
+    function selectDrawerTime(which, hhmm) {
+      const isStart = which === 'mulai';
+      const valEl = document.getElementById(isStart ? 'drawerJamMulai' : 'drawerJamSelesai');
+      const dispEl = document.getElementById(isStart ? 'drawerJamMulaiDisplay' : 'drawerJamSelesaiDisplay');
+      if (valEl) valEl.value = hhmm;
+      if (dispEl) dispEl.textContent = hhmm;
+      toggleDrawerTimeDropdown(which, false);
+    }
+
+    async function openIzinDrawer(opts = {}) {
       if (!state.currentUser) {
         Swal.fire('Perhatian', 'Silakan pilih pegawai terlebih dahulu.', 'warning');
         return;
       }
       const u = state.currentUser;
+      const isAdmin = typeof isStitchAdminUser === 'function'
+        ? isStitchAdminUser(u)
+        : ['ADMIN', 'SUPERADMIN', 'KEPALA', 'SEKRETARIS', 'KABID', 'IRBAN'].includes(String(u.role || '').toUpperCase());
 
-      const namaEl = document.getElementById('drawerUserNama');
-      const nipEl = document.getElementById('drawerUserNip');
-      const jabatanEl = document.getElementById('drawerUserJabatan');
-      if (namaEl) namaEl.textContent = u.nama;
-      if (nipEl) nipEl.textContent = 'NIP. ' + u.nip;
-      if (jabatanEl) jabatanEl.textContent = u.jabatan || 'Aparatur BAPPERIDA';
+      window._drawerAdminMode = Boolean(opts && opts.adminMode && isAdmin);
+
+      const titleEl = document.getElementById('drawerKetTitle');
+      const subtitleEl = document.getElementById('drawerKetSubtitle');
+      const adminWrap = document.getElementById('drawerAdminPegawaiWrap');
+      const userCard = document.getElementById('drawerUserInfoCard');
+      const autoApproveEl = document.getElementById('drawerAdminAutoApprove');
+
+      if (window._drawerAdminMode) {
+        if (titleEl) titleEl.textContent = 'Input Keterangan Pegawai (Admin)';
+        if (subtitleEl) subtitleEl.textContent = 'Catat Izin, Sakit, Dinas Luar, atau Cuti atas nama pegawai';
+        if (adminWrap) adminWrap.classList.remove('hidden');
+        if (userCard) userCard.classList.add('hidden');
+        if (autoApproveEl) autoApproveEl.checked = true;
+
+        if (!Array.isArray(state.allUsers) || state.allUsers.length === 0) {
+          try {
+            const res = await fetch('/api/stitch/bootstrap');
+            const json = await res.json();
+            if (json && json.ok && Array.isArray(json.users)) {
+              state.allUsers = json.users;
+            }
+          } catch (e) {
+            console.warn('[drawer] gagal bootstrap daftar pegawai:', e);
+          }
+        }
+
+        const searchEl = document.getElementById('drawerPegawaiSearch');
+        if (searchEl) searchEl.value = '';
+        const defaultNip = opts.nip || u.nip || (state.allUsers[0]?.nip || '');
+        selectDrawerPegawai(defaultNip, { closeDropdown: true });
+      } else {
+        if (titleEl) titleEl.textContent = 'Ajukan Keterangan Tidak Hadir';
+        if (subtitleEl) subtitleEl.textContent = 'Izin, Sakit, Dinas Luar, atau Cuti';
+        if (adminWrap) adminWrap.classList.add('hidden');
+        if (userCard) userCard.classList.remove('hidden');
+
+        const namaEl = document.getElementById('drawerUserNama');
+        const nipEl = document.getElementById('drawerUserNip');
+        const jabatanEl = document.getElementById('drawerUserJabatan');
+        const targetNipEl = document.getElementById('drawerTargetNip');
+        if (namaEl) namaEl.textContent = u.nama;
+        if (nipEl) nipEl.textContent = 'NIP. ' + u.nip;
+        if (jabatanEl) jabatanEl.textContent = u.jabatan || 'Aparatur BAPPERIDA';
+        if (targetNipEl) targetNipEl.value = u.nip || '';
+      }
 
       const ketEl = document.getElementById('drawerKet');
       const checkJam = document.getElementById('drawerCheckIzinJam');
@@ -762,6 +1022,14 @@
       setDrawerJenis('IZIN');
       if (checkJam) checkJam.checked = false;
       toggleDrawerIzinJam(false);
+      selectDrawerTime('mulai', '08:00');
+      selectDrawerTime('selesai', '11:30');
+      toggleDrawerPegawaiDropdown(false);
+
+      const calDrop = document.getElementById('drawerCalendarDropdown');
+      const calIcon = document.getElementById('drawerDatePickerIcon');
+      if (calDrop) calDrop.classList.add('hidden');
+      if (calIcon) calIcon.textContent = 'expand_more';
 
       const drawer = document.getElementById('drawerAjukanKeterangan');
       const backdrop = document.getElementById('drawerAjukanBackdrop');
@@ -783,6 +1051,10 @@
     }
 
     function closeIzinDrawer() {
+      toggleDrawerPegawaiDropdown(false);
+      toggleDrawerTimeDropdown('mulai', false);
+      toggleDrawerTimeDropdown('selesai', false);
+
       const drawer = document.getElementById('drawerAjukanKeterangan');
       const backdrop = document.getElementById('drawerAjukanBackdrop');
       const panel = document.getElementById('drawerAjukanPanel');
@@ -839,11 +1111,22 @@
     async function submitIzinDrawer() {
       if (!state.currentUser) return;
       const u = state.currentUser;
+      const isAdminMode = Boolean(window._drawerAdminMode);
+      const targetNip = isAdminMode
+        ? String(document.getElementById('drawerTargetNip')?.value || '').trim()
+        : String(u.nip || '').trim();
+
+      if (isAdminMode && !targetNip) {
+        Swal.fire('Perhatian', 'Pilih pegawai terlebih dahulu.', 'warning');
+        return;
+      }
+
       const jenis = document.getElementById('drawerJenisValue').value;
       const tglMulai = document.getElementById('drawerTglMulai')?.value || drawerStartDate;
       const tglSelesai = document.getElementById('drawerTglSelesai')?.value || drawerEndDate || tglMulai;
       let keterangan = document.getElementById('drawerKet').value.trim();
       const isIzinJam = document.getElementById('drawerCheckIzinJam')?.checked;
+      const autoApprove = Boolean(isAdminMode && document.getElementById('drawerAdminAutoApprove')?.checked);
 
       if (isIzinJam && jenis === 'IZIN') {
         const jMulai = document.getElementById('drawerJamMulai')?.value || '08:00';
@@ -860,8 +1143,8 @@
         return;
       }
 
-      // Validasi bukti wajib untuk dinas luar dan sakit > 1 hari
-      if (jenis === 'TUGAS' && !keteranganBuktiFile.base64) {
+      // Validasi bukti wajib untuk dinas luar pada mode pegawai biasa (opsional di mode admin)
+      if (!isAdminMode && jenis === 'TUGAS' && !keteranganBuktiFile.base64) {
         Swal.fire('Bukti Surat Tugas Wajib', 'Pengajuan Dinas Luar wajib melampirkan foto kamera atau berkas surat tugas resmi.', 'warning');
         return;
       }
@@ -876,11 +1159,12 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            nip: u.nip,
+            nip: targetNip,
             jenis,
             tgl_mulai: tglMulai,
             tgl_selesai: tglSelesai,
             keterangan,
+            auto_approve: autoApprove,
             bukti_base64: keteranganBuktiFile.base64,
             bukti_mime: keteranganBuktiFile.mime,
             bukti_nama: keteranganBuktiFile.name
@@ -893,9 +1177,19 @@
           showDynamicIsland({
             type: 'success',
             title: `Keterangan ${jenis} Terkirim`,
-            message: 'Tersimpan di Google Drive, PostgreSQL, dan grup dinas.'
+            message: autoApprove
+              ? 'Langsung disetujui dan tersimpan di PostgreSQL.'
+              : 'Tersimpan di Google Drive, PostgreSQL, dan grup dinas.'
           });
-          await selectUserByNip(u.nip);
+          if (isAdminMode) {
+            if (typeof loadAdminKeteranganData === 'function') await loadAdminKeteranganData();
+            if (typeof loadAdminMonitoringData === 'function') await loadAdminMonitoringData();
+            if (targetNip === String(u.nip || '') && typeof selectUserByNip === 'function') {
+              await selectUserByNip(u.nip);
+            }
+          } else {
+            await selectUserByNip(u.nip);
+          }
         } else {
           showDynamicIsland({ type: 'error', title: 'Gagal Mengajukan', message: json.message || 'Terjadi kesalahan sistem.' });
         }
@@ -909,8 +1203,8 @@
     }
 
     // Keep openIzinModal as alias for backward compatibility
-    function openIzinModal() {
-      openIzinDrawer();
+    function openIzinModal(opts) {
+      return openIzinDrawer(opts);
     }
 
     async function openNotificationModal() {

@@ -193,6 +193,7 @@
             `<option value="${l.id}">${l.nama_lokasi} (${l.latitude}, ${l.longitude})</option>`
           ).join('');
           onAdminLocationChange();
+          if (typeof syncAdminLocationDropdownUI === 'function') syncAdminLocationDropdownUI();
         }
       }
 
@@ -1357,6 +1358,94 @@
         document.getElementById('adminRadiusSlider').value = loc.radius || 20;
         document.getElementById('radiusLabel').textContent = (loc.radius || 20) + ' Meter';
       }
+      syncAdminLocationDropdownUI();
+    }
+
+    function syncAdminLocationDropdownUI() {
+      const sel = document.getElementById('adminLocationSelect');
+      const labelEl = document.getElementById('adminLocationLabel');
+      const listEl = document.getElementById('adminLocationDropdown');
+      if (!sel) return;
+      const selectedId = String(sel.value || '');
+      const locs = Array.isArray(state.locations) && state.locations.length
+        ? state.locations
+        : Array.from(sel.options).map(o => ({ id: o.value, nama_lokasi: o.textContent, latitude: '', longitude: '' }));
+      const activeLoc = locs.find(l => String(l.id) === selectedId) || locs[0];
+      if (labelEl && activeLoc) {
+        labelEl.textContent = activeLoc.latitude
+          ? `${activeLoc.nama_lokasi} (${activeLoc.latitude}, ${activeLoc.longitude})`
+          : String(activeLoc.nama_lokasi || 'Pilih Lokasi');
+      }
+      if (listEl) {
+        const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        listEl.innerHTML = locs.map(l => {
+          const isActive = String(l.id) === selectedId;
+          const label = l.latitude ? `${l.nama_lokasi} (${l.latitude}, ${l.longitude})` : l.nama_lokasi;
+          return `
+            <button type="button" onclick="selectAdminLocation('${esc(l.id)}')" class="w-full px-3 py-2 text-left text-xs flex items-center justify-between gap-2 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isActive ? 'bg-blue-50/70 dark:bg-blue-950/40 font-bold text-blue-600 dark:text-blue-400' : 'font-medium text-slate-700 dark:text-slate-200'}">
+              <span class="truncate">${esc(label)}</span>
+              ${isActive ? '<span class="material-symbols-outlined text-[16px] shrink-0">check</span>' : ''}
+            </button>
+          `;
+        }).join('');
+      }
+    }
+
+    function toggleAdminLocationDropdown() {
+      const drop = document.getElementById('adminLocationDropdown');
+      const icon = document.getElementById('adminLocationExpandIcon');
+      if (!drop) return;
+      const willOpen = drop.classList.contains('hidden');
+      if (willOpen) syncAdminLocationDropdownUI();
+      drop.classList.toggle('hidden', !willOpen);
+      if (icon) icon.textContent = willOpen ? 'expand_less' : 'expand_more';
+    }
+
+    function selectAdminLocation(id) {
+      const sel = document.getElementById('adminLocationSelect');
+      if (sel) sel.value = String(id);
+      onAdminLocationChange();
+      const drop = document.getElementById('adminLocationDropdown');
+      const icon = document.getElementById('adminLocationExpandIcon');
+      if (drop) drop.classList.add('hidden');
+      if (icon) icon.textContent = 'expand_more';
+    }
+
+    function toggleAdminToleransiDropdown() {
+      const drop = document.getElementById('adminToleransiDropdown');
+      const icon = document.getElementById('adminToleransiExpandIcon');
+      if (!drop) return;
+      const willOpen = drop.classList.contains('hidden');
+      drop.classList.toggle('hidden', !willOpen);
+      if (icon) icon.textContent = willOpen ? 'expand_less' : 'expand_more';
+    }
+
+    function selectAdminToleransi(val) {
+      const sel = document.getElementById('adminToleransi');
+      const labelEl = document.getElementById('adminToleransiLabel');
+      const drop = document.getElementById('adminToleransiDropdown');
+      const icon = document.getElementById('adminToleransiExpandIcon');
+      if (sel) sel.value = String(val);
+      const labels = {
+        '0': '0 Menit (Ketepatan Mutlak)',
+        '15': '15 Menit (Standar Pemda)',
+        '30': '30 Menit (Kondisi Khusus)'
+      };
+      if (labelEl) labelEl.textContent = labels[String(val)] || `${val} Menit`;
+      if (drop) {
+        drop.querySelectorAll('button[data-toleransi]').forEach(btn => {
+          const active = btn.getAttribute('data-toleransi') === String(val);
+          btn.className = `w-full px-3 py-2 text-left text-xs hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer ${active ? 'font-bold text-blue-600 dark:text-blue-400 bg-blue-50/70 dark:bg-blue-950/40' : 'font-medium text-slate-700 dark:text-slate-200'}`;
+          const existingCheck = btn.querySelector('.material-symbols-outlined');
+          if (active && !existingCheck) {
+            btn.insertAdjacentHTML('beforeend', '<span class="material-symbols-outlined text-[16px]">check</span>');
+          } else if (!active && existingCheck) {
+            existingCheck.remove();
+          }
+        });
+        drop.classList.add('hidden');
+      }
+      if (icon) icon.textContent = 'expand_more';
     }
 
     function syncAdminFaceGpsCheckboxes() {

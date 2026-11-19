@@ -149,6 +149,40 @@ test('USER ditolak 403 saat POST /absen dan /keterangan untuk nip lain', async (
   assert.equal(q.calls.length, 0);
 });
 
+test('ADMIN dapat POST /keterangan untuk NIP lain dengan auto_approve: true menjadi DISETUJUI', async () => {
+  const q = stubQuery();
+  const r = await call(app(ADMIN, q), 'POST', '/api/stitch/keterangan', {
+    nip: USER.nip,
+    jenis: 'IZIN',
+    tgl_mulai: '2026-11-19',
+    tgl_selesai: '2026-11-19',
+    keterangan: 'Izin keperluan keluarga',
+    auto_approve: true,
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.ok, true);
+  const ins = q.calls.find((c) => /INSERT INTO ket_temp/i.test(c.sql));
+  assert.ok(ins, 'harus INSERT INTO ket_temp');
+  assert.equal(ins.params[7], 'DISETUJUI');
+});
+
+test('USER tidak dapat memaksa auto_approve: true pada POST /keterangan NIP sendiri (selalu PENDING)', async () => {
+  const q = stubQuery();
+  const r = await call(app(USER, q), 'POST', '/api/stitch/keterangan', {
+    nip: USER.nip,
+    jenis: 'IZIN',
+    tgl_mulai: '2026-11-19',
+    tgl_selesai: '2026-11-19',
+    keterangan: 'Izin pribadi',
+    auto_approve: true,
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.ok, true);
+  const ins = q.calls.find((c) => /INSERT INTO ket_temp/i.test(c.sql));
+  assert.ok(ins, 'harus INSERT INTO ket_temp');
+  assert.equal(ins.params[7], 'PENDING');
+});
+
 // ── GET /keterangan: non-admin dipaksa ke NIP sesi sendiri ──
 
 test('GET /keterangan USER mengabaikan ?nip= orang lain dan memakai NIP sesi', async () => {

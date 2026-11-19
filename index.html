@@ -767,9 +767,16 @@
           <div class="space-y-3">
             <div>
               <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Pilih Lokasi Kantor</label>
-              <select id="adminLocationSelect" onchange="onAdminLocationChange()" class="mt-1 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-blue-500">
+              <select id="adminLocationSelect" onchange="onAdminLocationChange()" class="hidden">
                 <option value="1">Kantor Bapperida</option>
               </select>
+              <div id="adminLocationDropdownWrap" class="relative mt-1">
+                <button type="button" id="adminLocationTrigger" onclick="toggleAdminLocationDropdown()" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-500 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white flex items-center justify-between gap-2 text-left transition-colors cursor-pointer">
+                  <span id="adminLocationLabel" class="truncate">Kantor Bapperida</span>
+                  <span id="adminLocationExpandIcon" class="material-symbols-outlined text-slate-400 text-[18px] shrink-0">expand_more</span>
+                </button>
+                <div id="adminLocationDropdown" class="hidden absolute left-0 right-0 top-full mt-1 z-30 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg overflow-hidden max-h-52 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800"></div>
+              </div>
             </div>
             
             <div class="grid grid-cols-2 gap-2">
@@ -814,11 +821,29 @@
 
             <div>
               <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Toleransi Keterlambatan</label>
-              <select id="adminToleransi" class="mt-1 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white outline-none focus:border-blue-500">
+              <select id="adminToleransi" class="hidden">
                 <option value="0">0 Menit (Ketepatan Mutlak)</option>
                 <option value="15" selected>15 Menit (Standar Pemda)</option>
                 <option value="30">30 Menit (Kondisi Khusus)</option>
               </select>
+              <div id="adminToleransiDropdownWrap" class="relative mt-1">
+                <button type="button" id="adminToleransiTrigger" onclick="toggleAdminToleransiDropdown()" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-500 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white flex items-center justify-between gap-2 text-left transition-colors cursor-pointer">
+                  <span id="adminToleransiLabel" class="truncate">15 Menit (Standar Pemda)</span>
+                  <span id="adminToleransiExpandIcon" class="material-symbols-outlined text-slate-400 text-[18px] shrink-0">expand_more</span>
+                </button>
+                <div id="adminToleransiDropdown" class="hidden absolute left-0 right-0 top-full mt-1 z-30 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+                  <button type="button" onclick="selectAdminToleransi('0')" data-toleransi="0" class="w-full px-3 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">
+                    <span>0 Menit (Ketepatan Mutlak)</span>
+                  </button>
+                  <button type="button" onclick="selectAdminToleransi('15')" data-toleransi="15" class="w-full px-3 py-2 text-left text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50/70 dark:bg-blue-950/40 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">
+                    <span>15 Menit (Standar Pemda)</span>
+                    <span class="material-symbols-outlined text-[16px]">check</span>
+                  </button>
+                  <button type="button" onclick="selectAdminToleransi('30')" data-toleransi="30" class="w-full px-3 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">
+                    <span>30 Menit (Kondisi Khusus)</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             <!-- Kelola Hari Libur & Cuti Bersama (Tabel libur_nasional) -->
@@ -902,15 +927,21 @@
 
       <!-- Approval Cuti / Izin Pegawai (ket_temp) -->
       <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
-        <div class="flex items-center justify-between border-b pb-4 border-slate-100 dark:border-slate-800">
+        <div class="flex items-center justify-between gap-2 border-b pb-4 border-slate-100 dark:border-slate-800">
           <div>
             <span class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Verifikasi Permohonan (ket_temp)</span>
             <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">Persetujuan Cuti, Izin & Sakit Pegawai</h3>
           </div>
-          <button onclick="loadAdminKeteranganData()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 rounded-xl text-xs font-bold flex items-center gap-1">
-            <span class="material-symbols-outlined text-[16px]">refresh</span>
-            <span>Segarkan</span>
-          </button>
+          <div class="flex items-center gap-2 shrink-0">
+            <button type="button" onclick="openIzinDrawer({ adminMode: true })" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs active:scale-95 transition-all cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">assignment_add</span>
+              <span>Input Pegawai</span>
+            </button>
+            <button type="button" onclick="loadAdminKeteranganData()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">refresh</span>
+              <span>Segarkan</span>
+            </button>
+          </div>
         </div>
 
         <div class="overflow-x-hidden md:overflow-x-auto max-h-80">
@@ -1367,7 +1398,7 @@
                   <p class="font-bold text-slate-900 dark:text-white text-[11px] group-hover:text-blue-600 dark:group-hover:text-blue-400">Konfirmasi Izin</p>
                   <p class="text-[10px] text-slate-400 leading-tight">Persetujuan pending</p>
                 </button>
-                <button onclick="openIzinDrawer()" class="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-xl text-left border border-slate-200/80 dark:border-slate-700 transition-all group cursor-pointer">
+                <button onclick="openIzinDrawer({ adminMode: true })" class="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-xl text-left border border-slate-200/80 dark:border-slate-700 transition-all group cursor-pointer">
                   <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-[18px] mb-1">assignment_add</span>
                   <p class="font-bold text-slate-900 dark:text-white text-[11px] group-hover:text-indigo-600 dark:group-hover:text-indigo-400">Input Keterangan</p>
                   <p class="text-[10px] text-slate-400 leading-tight">Catat izin/sakit/cuti</p>
@@ -2038,19 +2069,54 @@
             <span class="material-symbols-outlined text-[20px]">assignment</span>
           </div>
           <div>
-            <h3 class="text-sm font-extrabold text-slate-900 dark:text-white">Ajukan Keterangan Tidak Hadir</h3>
-            <p class="text-[11px] text-slate-500 dark:text-slate-400">Izin, Sakit, Dinas Luar, atau Cuti</p>
+            <h3 id="drawerKetTitle" class="text-sm font-extrabold text-slate-900 dark:text-white">Ajukan Keterangan Tidak Hadir</h3>
+            <p id="drawerKetSubtitle" class="text-[11px] text-slate-500 dark:text-slate-400">Izin, Sakit, Dinas Luar, atau Cuti</p>
           </div>
         </div>
-        <button onclick="closeIzinDrawer()" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+        <button type="button" onclick="closeIzinDrawer()" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
           <span class="material-symbols-outlined text-[20px]">close</span>
         </button>
       </div>
 
       <!-- Drawer Body (Scrollable) -->
       <div class="p-5 overflow-y-auto space-y-3.5 text-xs overscroll-contain flex-1">
-        <!-- Info Pegawai Card -->
-        <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between">
+        <!-- Admin Mode: Custom Searchable Pegawai Dropdown -->
+        <div id="drawerAdminPegawaiWrap" class="hidden space-y-2 relative">
+          <div class="flex items-center justify-between gap-2">
+            <label class="font-bold text-slate-700 dark:text-slate-300 text-xs flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-[16px]">badge</span>
+              <span>Pilih Pegawai (Mode Admin)</span>
+            </label>
+            <label class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/70 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 cursor-pointer select-none">
+              <input type="checkbox" id="drawerAdminAutoApprove" checked class="w-3.5 h-3.5 rounded accent-emerald-600 cursor-pointer" />
+              <span>Langsung Disetujui</span>
+            </label>
+          </div>
+
+          <button type="button" id="drawerPegawaiTrigger" onclick="toggleDrawerPegawaiDropdown()" class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-500 transition-colors flex items-center justify-between gap-2 text-left cursor-pointer shadow-2xs">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div id="drawerPegawaiSelectedAvatar" class="w-8 h-8 rounded-lg bg-blue-600 text-white font-bold text-[11px] font-mono flex items-center justify-center shrink-0">--</div>
+              <div class="min-w-0">
+                <p id="drawerPegawaiSelectedNama" class="text-xs font-bold text-slate-900 dark:text-white truncate">Pilih Pegawai...</p>
+                <p id="drawerPegawaiSelectedNip" class="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">NIP. —</p>
+              </div>
+            </div>
+            <span id="drawerPegawaiExpandIcon" class="material-symbols-outlined text-slate-400 text-[18px] shrink-0">expand_more</span>
+          </button>
+
+          <div id="drawerPegawaiDropdown" class="hidden absolute left-0 right-0 top-full mt-1.5 z-30 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg overflow-hidden">
+            <div class="p-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/60">
+              <div class="relative flex items-center">
+                <span class="material-symbols-outlined text-slate-400 text-[16px] absolute left-2.5 pointer-events-none">search</span>
+                <input type="text" id="drawerPegawaiSearch" oninput="filterDrawerPegawaiList(this.value)" placeholder="Cari nama atau NIP pegawai..." class="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-500" />
+              </div>
+            </div>
+            <div id="drawerPegawaiList" class="max-h-52 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80"></div>
+          </div>
+        </div>
+
+        <!-- Info Pegawai Card (User Mode) -->
+        <div id="drawerUserInfoCard" class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between">
           <div>
             <p id="drawerUserNama" class="font-bold text-slate-900 dark:text-white text-xs">—</p>
             <p id="drawerUserNip" class="text-[11px] font-mono text-slate-500 dark:text-slate-400">NIP. —</p>
@@ -2059,6 +2125,7 @@
             —
           </span>
         </div>
+        <input type="hidden" id="drawerTargetNip" value="" />
 
         <!-- Pilihan Jenis Keterangan (Pill Selector) -->
         <div>
@@ -2080,20 +2147,36 @@
           <input type="hidden" id="drawerJenisValue" value="IZIN" />
         </div>
 
-        <!-- Opsi Izin Jam (Seperti di aplikasi absen) -->
+        <!-- Opsi Izin Jam (Custom Stitch Timepicker) -->
         <div id="drawerIzinJamWrapper" class="p-3 rounded-2xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/80 transition-all">
           <label class="flex items-center gap-2 cursor-pointer font-bold text-amber-900 dark:text-amber-200 text-xs">
             <input type="checkbox" id="drawerCheckIzinJam" onchange="toggleDrawerIzinJam(this.checked)" class="rounded text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer" />
             <span>Izin Hanya Beberapa Jam (Izin Jam Kerja)</span>
           </label>
           <div id="drawerRowIzinJam" class="hidden grid-cols-2 gap-2.5 mt-2.5 pt-2 border-t border-amber-200/60 dark:border-amber-800/60">
-            <div>
-              <label class="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Jam Mulai</label>
-              <input type="time" id="drawerJamMulai" value="08:00" class="w-full mt-0.5 p-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 font-mono text-xs focus:ring-2 focus:ring-blue-500" />
+            <div class="relative">
+              <label class="text-[10px] text-slate-500 dark:text-slate-400 font-semibold block mb-0.5">Jam Mulai</label>
+              <button type="button" id="drawerJamMulaiTrigger" onclick="toggleDrawerTimeDropdown('mulai')" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-blue-500 font-mono text-xs font-bold text-slate-900 dark:text-white flex items-center justify-between gap-1.5 transition-colors cursor-pointer">
+                <span class="flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-[16px]">schedule</span>
+                  <span id="drawerJamMulaiDisplay">08:00</span>
+                </span>
+                <span id="drawerJamMulaiIcon" class="material-symbols-outlined text-slate-400 text-[16px]">expand_more</span>
+              </button>
+              <div id="drawerJamMulaiDropdown" class="hidden absolute left-0 right-0 top-full mt-1 z-30 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg max-h-44 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800"></div>
+              <input type="hidden" id="drawerJamMulai" value="08:00" />
             </div>
-            <div>
-              <label class="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Jam Selesai</label>
-              <input type="time" id="drawerJamSelesai" value="11:30" class="w-full mt-0.5 p-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 font-mono text-xs focus:ring-2 focus:ring-blue-500" />
+            <div class="relative">
+              <label class="text-[10px] text-slate-500 dark:text-slate-400 font-semibold block mb-0.5">Jam Selesai</label>
+              <button type="button" id="drawerJamSelesaiTrigger" onclick="toggleDrawerTimeDropdown('selesai')" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-blue-500 font-mono text-xs font-bold text-slate-900 dark:text-white flex items-center justify-between gap-1.5 transition-colors cursor-pointer">
+                <span class="flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-[16px]">schedule</span>
+                  <span id="drawerJamSelesaiDisplay">11:30</span>
+                </span>
+                <span id="drawerJamSelesaiIcon" class="material-symbols-outlined text-slate-400 text-[16px]">expand_more</span>
+              </button>
+              <div id="drawerJamSelesaiDropdown" class="hidden absolute left-0 right-0 top-full mt-1 z-30 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg max-h-44 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800"></div>
+              <input type="hidden" id="drawerJamSelesai" value="11:30" />
             </div>
           </div>
         </div>
@@ -2128,13 +2211,29 @@
           <!-- Interactive Custom Calendar View Dropdown -->
           <div id="drawerCalendarDropdown" class="hidden pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-2">
             <div class="flex items-center justify-between px-1">
-              <button type="button" onclick="changeDrawerCalendarMonth(-1)" class="w-7 h-7 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300">
+              <button type="button" onclick="changeDrawerCalendarMonth(-1)" class="w-7 h-7 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer">
                 <span class="material-symbols-outlined text-[18px]">chevron_left</span>
               </button>
-              <span id="drawerCalendarMonthLabel" class="text-xs font-bold text-slate-900 dark:text-white font-mono">November 2026</span>
-              <button type="button" onclick="changeDrawerCalendarMonth(1)" class="w-7 h-7 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300">
+              <button type="button" onclick="toggleDrawerCalendarJump()" class="px-2.5 py-1 rounded-lg hover:bg-slate-200/70 dark:hover:bg-slate-700/70 flex items-center gap-1 text-xs font-bold text-slate-900 dark:text-white font-mono cursor-pointer transition-colors">
+                <span id="drawerCalendarMonthLabel">November 2026</span>
+                <span class="material-symbols-outlined text-[15px] text-slate-400">unfold_more</span>
+              </button>
+              <button type="button" onclick="changeDrawerCalendarMonth(1)" class="w-7 h-7 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer">
                 <span class="material-symbols-outlined text-[18px]">chevron_right</span>
               </button>
+            </div>
+            <!-- Month / Year Quick Jump Panel -->
+            <div id="drawerCalendarJumpPanel" class="hidden p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 space-y-2">
+              <div class="flex items-center justify-between">
+                <button type="button" onclick="changeDrawerCalendarYear(-1)" class="w-7 h-7 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+                </button>
+                <span id="drawerCalendarJumpYear" class="text-xs font-extrabold font-mono text-slate-900 dark:text-white">2026</span>
+                <button type="button" onclick="changeDrawerCalendarYear(1)" class="w-7 h-7 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+                </button>
+              </div>
+              <div id="drawerCalendarMonthGrid" class="grid grid-cols-4 gap-1"></div>
             </div>
             <!-- Days Grid -->
             <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400">
