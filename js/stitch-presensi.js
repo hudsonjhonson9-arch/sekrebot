@@ -2,6 +2,32 @@
     /* ── 4. CLOCK IN / OUT WITH REAL POSTGRESQL INSERTION ────────────── */
     let _lastStitchAbsenClick = 0;
 
+    function getStitchFaceContext() {
+      if (state.currentUser && !window.MY_ID) window.MY_ID = String(state.currentUser.id || '');
+      const myNip = String(state.currentUser?.nip || '').trim();
+      const mandNips = Array.isArray(window.MANDATORY_FACE_NIPS) ? window.MANDATORY_FACE_NIPS.map(s => String(s).trim()) : [];
+      const isMandatory = mandNips.includes(myNip);
+      const faceGlobal = (typeof FACE_RECOGNITION_ENABLED !== 'undefined' && FACE_RECOGNITION_ENABLED !== null)
+        ? Boolean(FACE_RECOGNITION_ENABLED)
+        : Boolean(window.FACE_RECOGNITION_ENABLED);
+      const faceOn = faceGlobal || isMandatory;
+      const ref = typeof getFaceRef === 'function' ? getFaceRef() : null;
+      const hasRef = Boolean(ref && (ref.dataUrl || (Array.isArray(ref.descriptor) && ref.descriptor.length >= 128)));
+      return { faceOn, hasRef };
+    }
+
+    function promptEnrollFaceFirst() {
+      Swal.fire({
+        title: 'Wajah Belum Didaftarkan',
+        text: 'Daftarkan wajah Anda terlebih dahulu untuk verifikasi biometrik AI.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#2563eb',
+        confirmButtonText: 'Daftarkan Sekarang',
+        cancelButtonText: 'Nanti'
+      }).then(r => { if (r.isConfirmed && typeof enrollMyFaceStitch === 'function') enrollMyFaceStitch(); });
+    }
+
     function startClockInFlow() {
       const now = Date.now();
       if (now - _lastStitchAbsenClick < 2500) return;
@@ -21,24 +47,10 @@
       }
       // Verifikasi wajah AI (Human.js) dengan tampilan kamera asli absensi-STICH (Screen 19).
       try {
-        if (state.currentUser && !window.MY_ID) window.MY_ID = String(state.currentUser.id || '');
-        const myNip = String(state.currentUser?.nip || '').trim();
-        const mandNips = Array.isArray(window.MANDATORY_FACE_NIPS) ? window.MANDATORY_FACE_NIPS.map(s => String(s).trim()) : [];
-        const isMandatory = mandNips.includes(myNip);
-        const faceOn = (typeof FACE_RECOGNITION_ENABLED !== 'undefined' && FACE_RECOGNITION_ENABLED) || isMandatory;
-        const ref = typeof getFaceRef === 'function' ? getFaceRef() : null;
-        const hasRef = Boolean(ref && (ref.dataUrl || (Array.isArray(ref.descriptor) && ref.descriptor.length >= 128)));
+        const { faceOn, hasRef } = getStitchFaceContext();
         if (typeof openCamOverlay === 'function') {
           if (faceOn && !hasRef) {
-            Swal.fire({
-              title: 'Wajah Belum Didaftarkan',
-              text: 'Daftarkan wajah Anda terlebih dahulu untuk verifikasi biometrik AI.',
-              icon: 'warning',
-              showCancelButton: true,
-              confirmButtonColor: '#2563eb',
-              confirmButtonText: 'Daftarkan Sekarang',
-              cancelButtonText: 'Nanti'
-            }).then(r => { if (r.isConfirmed) enrollMyFaceStitch(); });
+            promptEnrollFaceFirst();
             return;
           }
           openCamOverlay(async (cam) => { await captureAndVerifySelfie(cam); });
@@ -177,17 +189,10 @@
       };
     }
 
-    async function captureAndVerifySelfie(camResult) {
-      const btn = document.getElementById('btnCapturePhoto');
-      if (btn) {
-        btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>Mengirim Presensi...</span>`;
-        btn.disabled = true;
-      }
-
-      try {
-        // Jika datang dari kamera biometrik AI (openCamOverlay), cocokkan descriptor wajah dengan referensi pegawai
-        let faceNote = '';
-        if (camResult && camResult.dataUrl && typeof matchFace === 'function') {
+    async function verifyFaceCapture(camResult) {
+      let faceNote = '';
+      if (camResult && camResult.dataUrl) {
+        if (typeof matchFace === 'function') {
           const m = await matchFace(camResult.dataUrl, camResult.descriptor || null);
           const minSim = typeof FS_FACE_THRESHOLD !== 'undefined' ? FS_FACE_THRESHOLD : 0.45;
           if (m && typeof m.similarity === 'number') {
@@ -196,8 +201,36 @@
             }
             faceNote = ` • Face AI ${m.score}%`;
           }
-          state.attendance.selfiePhotoUrl = camResult.dataUrl;
         }
+        state.attendance.selfiePhotoUrl = camResult.dataUrl;
+      }
+      return faceNote;
+    }
+
+    async function captureAndVerifySelfie(camResult) {
+      const btn = document.getElementById('btnCapturePhoto');
+      if (btn) {
+        btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>Mengirim Presensi...</span>`;
+        btn.disabled = true;
+      }
+
+      try {
+        if (!camResult) {
+          const video = document.getElementById('selfieVideo');
+          const canvas = document.getElementById('selfieCanvas');
+          if (video && canvas && video.videoWidth > 0 && video.videoHeight > 0) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              state.attendance.selfiePhotoUrl = canvas.toDataURL('image/jpeg', 0.85);
+            }
+          }
+        }
+
+        // Jika datang dari kamera biometrik AI (openCamOverlay), cocokkan descriptor wajah dengan referensi pegawai
+        const faceNote = await verifyFaceCapture(camResult);
 
         const locName = state.currentLocation ? state.currentLocation.nama_lokasi : 'Kantor Bapperida';
         const gps = await getRealPosition();
@@ -270,6 +303,43 @@
       showESlipModal();
     }
 
+    async function submitClockOutRequest(isLapangan, ketLapangan, camResult) {
+      const faceNote = await verifyFaceCapture(camResult);
+      const gps = await getRealPosition();
+      const coords = gps.koordinat;
+      const locName = isLapangan
+        ? `Lapangan: ${ketLapangan.slice(0, 60)}`
+        : (state.currentLocation ? state.currentLocation.nama_lokasi : 'Kantor Bapperida');
+
+      const res = await fetch('/api/stitch/absen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nip: state.currentUser.nip,
+          jenis: isLapangan ? 'PULANG LUAR' : 'PULANG',
+          lokasi: locName,
+          koordinat: coords,
+          akurasi: gps.akurasi,
+          ket: (isLapangan ? `Pulang dari Lapangan: ${ketLapangan}` : 'Pulang Kerja (Stitch UI)') + faceNote
+        })
+      });
+      const json = await res.json();
+
+      if (json.ok) {
+        state.attendance.status = 'SELESAI';
+        state.attendance.clockOutTime = json.witaTime;
+        updateAttendanceUI();
+        await selectUserByNip(state.currentUser.nip);
+        showDynamicIsland({
+          type: 'success',
+          title: isLapangan ? 'Pulang Lapangan Tersimpan' : 'Presensi Pulang Tersimpan',
+          message: `Tercatat di PostgreSQL pukul ${json.witaTime}${faceNote}. Selamat beristirahat!`
+        });
+      } else {
+        Swal.fire('Gagal', json.message || 'Gagal menyimpan presensi pulang.', 'error');
+      }
+    }
+
     async function startClockOutFlow() {
       if (state.attendance.status !== 'SUDAH_MASUK') return;
 
@@ -305,39 +375,22 @@
         const ketLapangan = isLapangan ? String(result.value || '').trim() : '';
 
         try {
-          const gps = await getRealPosition();
-          const coords = gps.koordinat;
-          const locName = isLapangan
-            ? `Lapangan: ${ketLapangan.slice(0, 60)}`
-            : (state.currentLocation ? state.currentLocation.nama_lokasi : 'Kantor Bapperida');
-
-          const res = await fetch('/api/stitch/absen', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              nip: state.currentUser.nip,
-              jenis: isLapangan ? 'PULANG LUAR' : 'PULANG',
-              lokasi: locName,
-              koordinat: coords,
-              akurasi: gps.akurasi,
-              ket: isLapangan ? `Pulang dari Lapangan: ${ketLapangan}` : 'Pulang Kerja (Stitch UI)'
-            })
-          });
-          const json = await res.json();
-
-          if (json.ok) {
-            state.attendance.status = 'SELESAI';
-            state.attendance.clockOutTime = json.witaTime;
-            updateAttendanceUI();
-            await selectUserByNip(state.currentUser.nip);
-            showDynamicIsland({
-              type: 'success',
-              title: isLapangan ? 'Pulang Lapangan Tersimpan' : 'Presensi Pulang Tersimpan',
-              message: `Tercatat di PostgreSQL pukul ${json.witaTime}. Selamat beristirahat!`
+          const { faceOn, hasRef } = getStitchFaceContext();
+          if (faceOn && typeof openCamOverlay === 'function') {
+            if (!hasRef) {
+              promptEnrollFaceFirst();
+              return;
+            }
+            openCamOverlay(async (cam) => {
+              try {
+                await submitClockOutRequest(isLapangan, ketLapangan, cam);
+              } catch (e) {
+                Swal.fire('Gagal', e.message, 'error');
+              }
             });
-          } else {
-            Swal.fire('Gagal', json.message || 'Gagal menyimpan presensi pulang.', 'error');
+            return;
           }
+          await submitClockOutRequest(isLapangan, ketLapangan, null);
         } catch (e) {
           Swal.fire('Gagal', e.message, 'error');
         }

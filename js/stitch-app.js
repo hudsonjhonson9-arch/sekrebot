@@ -141,14 +141,57 @@
       userLogs: []
     };
 
+    const ADMIN_ROLES = ['ADMIN', 'SUPERADMIN', 'KEPALA', 'SEKRETARIS', 'KABID', 'IRBAN'];
+    function isStitchAdminUser(u) {
+      return ADMIN_ROLES.includes(String(u?.role || '').toUpperCase());
+    }
+
+    function applyThemePreference(theme) {
+      const isDark = theme === 'dark';
+      const html = document.documentElement;
+      html.classList.toggle('dark', isDark);
+      html.classList.toggle('light', !isDark);
+      const icon = document.getElementById('themeIcon');
+      if (icon) icon.textContent = isDark ? 'light_mode' : 'dark_mode';
+    }
+
     // Initialize on DOM Ready
     document.addEventListener('DOMContentLoaded', () => {
+      try {
+        const savedTheme = localStorage.getItem('stitch_theme');
+        if (savedTheme === 'dark' || savedTheme === 'light') applyThemePreference(savedTheme);
+      } catch (_) {}
+      bindAdminSettingToggles();
       initClock();
       checkAuthStatus();
       bootstrapFromDatabase();
     });
 
     /* ── 1. BOOTSTRAP FROM POSTGRESQL DATABASE ────────────────────────── */
+    async function loadStitchFaceConfig() {
+      const instId = state.currentUser?.instansi_id || localStorage.getItem('MY_INSTANSI') || 'bapperida';
+      if (typeof loadFaceSettingsGlobal === 'function') {
+        try { await loadFaceSettingsGlobal(); } catch (_) {}
+      }
+      try {
+        const tok = (typeof getStitchToken === 'function' ? getStitchToken() : '') ||
+          (typeof getNativeToken === 'function' ? getNativeToken() : '') ||
+          localStorage.getItem('_native_token') ||
+          localStorage.getItem('native_token') ||
+          localStorage.getItem('_sess_token') || '';
+        const res = await fetch('/api/media/face-toggle?instansi_id=' + encodeURIComponent(instId), {
+          headers: tok ? { Authorization: 'Bearer ' + tok } : {}
+        });
+        if (res.ok) {
+          const data = await res.json().catch(() => null);
+          const enabled = data?.enabled !== false;
+          window.FACE_RECOGNITION_ENABLED = enabled;
+          if (typeof FACE_RECOGNITION_ENABLED !== 'undefined') FACE_RECOGNITION_ENABLED = enabled;
+        }
+      } catch (_) {}
+      syncAdminFaceGpsCheckboxes();
+    }
+
     async function bootstrapFromDatabase() {
       try {
         console.log('[Stitch DB] Fetching bootstrap data from PostgreSQL...');
@@ -177,6 +220,7 @@
               locSelect.innerHTML = state.locations.map(l => 
                 `<option value="${l.id}">${l.nama_lokasi} (${l.latitude}, ${l.longitude})</option>`
               ).join('');
+              onAdminLocationChange();
             }
           }
 
@@ -198,14 +242,31 @@
           // Populate Users in Dropdown Switcher
           renderUsersDropdown(state.allUsers);
 
-          // Populate Kiosk Feed with recent real logs
-          renderKioskRecentFeed(json.recentLogs || []);
+          // Populate Kiosk Feed with recent real logs & hydrate Kiosk counters
+          const recentLogs = json.recentLogs || [];
+          renderKioskRecentFeed(recentLogs);
+          const todayWita = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+          const todayHadirNips = new Set(
+            recentLogs
+              .filter(l => {
+                const tgl = String(l.Tanggal || '').slice(0, 10);
+                const jns = String(l['Jenis Absen'] || '').toUpperCase();
+                return tgl === todayWita && (jns.includes('MASUK') || jns === 'TERLAMBAT');
+              })
+              .map(l => String(l.NIP || '').trim())
+              .filter(Boolean)
+          );
+          const kioskHadirEl = document.getElementById('kioskHadirCount');
+          if (kioskHadirEl) kioskHadirEl.textContent = todayHadirNips.size;
+          const kioskTotalEl = document.getElementById('kioskTotalStaff');
+          if (kioskTotalEl) kioskTotalEl.textContent = state.allUsers.length;
 
           // Authenticated Session Check
           const isAuthed = checkAuthStatus();
           if (isAuthed) {
             const activeNip = localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || (window._session && window._session.nip);
             if (activeNip) await selectUserByNip(activeNip);
+            await loadStitchFaceConfig();
           }
 
           // Preload Aset KIR data from SIMAPO
@@ -369,6 +430,20 @@
       
       const sppdInput = document.getElementById('sppdPegawaiName');
       if (sppdInput) sppdInput.value = `${u.nama} - NIP. ${u.nip}`;
+
+      const isAdmin = isStitchAdminUser(u);
+      const profilAdminEl = document.getElementById('profilAdminSection');
+      if (profilAdminEl) profilAdminEl.classList.toggle('hidden', !isAdmin);
+      const quickTppBtn = document.getElementById('btnQuickCetakTpp') ||
+        document.querySelector('#view-presensi button[onclick*="switchMainView(\'tpp\')"]');
+      if (quickTppBtn) {
+        quickTppBtn.classList.toggle('hidden', !isAdmin);
+        const gridEl = quickTppBtn.parentElement;
+        if (gridEl) {
+          gridEl.classList.toggle('grid-cols-3', !isAdmin);
+          gridEl.classList.toggle('grid-cols-4', isAdmin);
+        }
+      }
 
       updateBiometricAndSigUI();
       renderCalendarStrip();
@@ -776,6 +851,13 @@
       const views = ['presensi', 'riwayat-full', 'arsip', 'aset', 'profil', 'kiosk', 'admin', 'sppd', 'tpp'];
       if (!views.includes(target)) return;
 
+      if ((target === 'admin' || target === 'tpp') && state.currentUser && !isStitchAdminUser(state.currentUser)) {
+        if (typeof showDynamicIsland === 'function') {
+          showDynamicIsland({ type: 'warning', title: 'Akses Terbatas', message: 'Menu ini hanya untuk Administrator / Pimpinan.' });
+        }
+        return switchMainView('presensi', updateHash);
+      }
+
       // Persist active view to localStorage & sync with URL hash
       try {
         localStorage.setItem('stitch_active_view', target);
@@ -838,6 +920,7 @@
       } else if (target === 'admin') {
         loadAdminMonitoringData();
         loadAdminKeteranganData();
+        loadStitchFaceConfig();
       } else if (target === 'sppd') {
         loadSppdData();
         loadKirBarangData();
@@ -1109,9 +1192,10 @@
       });
     }
 
-    /* ── 8. ADMIN LOKASI SETTINGS ────────────────────────────────────── */
+    /* ── 8. ADMIN LOKASI & BIOMETRIK SETTINGS ─────────────────────────── */
     function onAdminLocationChange() {
       const sel = document.getElementById('adminLocationSelect');
+      if (!sel) return;
       const loc = state.locations.find(l => String(l.id) === sel.value);
       if (loc) {
         document.getElementById('adminOfficeLat').value = loc.latitude;
@@ -1119,6 +1203,89 @@
         document.getElementById('adminRadiusSlider').value = loc.radius || 20;
         document.getElementById('radiusLabel').textContent = (loc.radius || 20) + ' Meter';
       }
+    }
+
+    function syncAdminFaceGpsCheckboxes() {
+      const faceEl = document.getElementById('adminFaceToggle');
+      if (faceEl) {
+        const faceEnabled = typeof window.FACE_RECOGNITION_ENABLED === 'boolean'
+          ? window.FACE_RECOGNITION_ENABLED
+          : (typeof FACE_RECOGNITION_ENABLED === 'boolean' ? FACE_RECOGNITION_ENABLED : true);
+        const livenessEnabled = window.FS_LIVENESS_MOBILE !== false;
+        faceEl.checked = Boolean(faceEnabled && livenessEnabled);
+      }
+      const gpsEl = document.getElementById('adminGpsStrictToggle');
+      if (gpsEl) {
+        let gpsStrict = true;
+        try { gpsStrict = localStorage.getItem('stitch_gps_strict') !== '0'; } catch (_) {}
+        window.STITCH_GPS_STRICT = gpsStrict;
+        gpsEl.checked = gpsStrict;
+      }
+    }
+
+    async function saveAdminFaceAndGpsSettings(showToast = false) {
+      const faceEl = document.getElementById('adminFaceToggle');
+      const gpsEl = document.getElementById('adminGpsStrictToggle');
+      const instId = state.currentUser?.instansi_id || localStorage.getItem('MY_INSTANSI') || 'bapperida';
+      const tok = (typeof getStitchToken === 'function' ? getStitchToken() : '') ||
+        (typeof getNativeToken === 'function' ? getNativeToken() : '') ||
+        localStorage.getItem('_native_token') ||
+        localStorage.getItem('native_token') ||
+        localStorage.getItem('_sess_token') || '';
+      const headers = { 'Content-Type': 'application/json' };
+      if (tok) headers['Authorization'] = 'Bearer ' + tok;
+
+      let ok = true;
+      if (faceEl) {
+        const enabled = !!faceEl.checked;
+        window.FACE_RECOGNITION_ENABLED = enabled;
+        if (typeof FACE_RECOGNITION_ENABLED !== 'undefined') FACE_RECOGNITION_ENABLED = enabled;
+        window.FS_LIVENESS_MOBILE = enabled;
+        try {
+          const [r1, r2] = await Promise.all([
+            fetch('/api/media/face-toggle', {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ enabled, instansi_id: instId })
+            }),
+            fetch('/api/media/face-settings', {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ instansi_id: instId, settings: { liveness_enabled: enabled } })
+            })
+          ]);
+          if (!r1.ok || !r2.ok) ok = false;
+        } catch (_) {
+          ok = false;
+        }
+      }
+      if (gpsEl) {
+        const gpsStrict = !!gpsEl.checked;
+        window.STITCH_GPS_STRICT = gpsStrict;
+        try { localStorage.setItem('stitch_gps_strict', gpsStrict ? '1' : '0'); } catch (_) {}
+      }
+      if (showToast && typeof showDynamicIsland === 'function') {
+        showDynamicIsland({
+          type: ok ? 'success' : 'warning',
+          title: ok ? 'Pengaturan AI & GPS Disimpan' : 'Tersimpan Lokal',
+          message: ok ? 'Parameter Face AI dan GPS telah diperbarui.' : 'Sebagian pengaturan gagal disinkronkan ke server.'
+        });
+      }
+      return ok;
+    }
+
+    function bindAdminSettingToggles() {
+      const faceEl = document.getElementById('adminFaceToggle');
+      if (faceEl && !faceEl.dataset.bound) {
+        faceEl.dataset.bound = '1';
+        faceEl.addEventListener('change', () => { saveAdminFaceAndGpsSettings(true); });
+      }
+      const gpsEl = document.getElementById('adminGpsStrictToggle');
+      if (gpsEl && !gpsEl.dataset.bound) {
+        gpsEl.dataset.bound = '1';
+        gpsEl.addEventListener('change', () => { saveAdminFaceAndGpsSettings(true); });
+      }
+      syncAdminFaceGpsCheckboxes();
     }
 
     async function saveAdminSettings() {
@@ -1136,7 +1303,8 @@
           pulang: g('adminJamPulang').value
         });
       }
-      if (okLoc || okJam) await bootstrapFromDatabase();
+      const okFace = await saveAdminFaceAndGpsSettings(false);
+      if (okLoc || okJam || okFace) await bootstrapFromDatabase();
     }
 
     async function addAdminHolidayStitch() {
@@ -1187,10 +1355,9 @@
     }
 
     function toggleDarkMode() {
-      const html = document.documentElement;
-      const isDark = html.classList.toggle('dark');
-      const icon = document.getElementById('themeIcon');
-      if (icon) icon.textContent = isDark ? 'light_mode' : 'dark_mode';
+      const isDark = !document.documentElement.classList.contains('dark');
+      applyThemePreference(isDark ? 'dark' : 'light');
+      try { localStorage.setItem('stitch_theme', isDark ? 'dark' : 'light'); } catch (_) {}
     }
 
     function getDistanceFromLatLonInM(lat1, lon1, lat2, lon2) {
@@ -1208,9 +1375,13 @@
       const pill = document.getElementById('gpsPillText');
       const mobilePill = document.getElementById('mobileGpsAccuracyPill');
       const perimeterText = document.getElementById('perimeterText');
+      const officeLat = Number(state.currentLocation?.latitude ?? -9.648769);
+      const officeLng = Number(state.currentLocation?.longitude ?? 119.389232);
+      const officeRadius = Number(state.currentLocation?.radius ?? 250);
+      const officeName = state.currentLocation?.nama_lokasi || 'Kantor Bapperida';
 
       if (!navigator.geolocation) {
-        if (pill) pill.textContent = 'Kantor Bapperida (~15m)';
+        if (pill) pill.textContent = `${officeName} (~15m)`;
         if (mobilePill) {
           mobilePill.textContent = 'Akurat ~ 12m';
           mobilePill.className = 'text-[11px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded-full flex-shrink-0 font-semibold font-mono';
@@ -1221,7 +1392,7 @@
         showDynamicIsland({
           type: 'info',
           title: 'Titik Lokasi DB Aktif',
-          message: 'Koordinat resmi BAPPERIDA Sumba Barat (-9.648769, 119.389232)'
+          message: `Koordinat resmi ${officeName} (${officeLat}, ${officeLng})`
         });
         return;
       }
@@ -1234,15 +1405,12 @@
           const lng = pos.coords.longitude;
           const accuracy = Math.round(pos.coords.accuracy || 15);
           
-          // Official BAPPERIDA Sumba Barat Coordinates (-9.648769, 119.389232)
-          const officeLat = -9.648769;
-          const officeLng = 119.389232;
           const distMeters = Math.round(getDistanceFromLatLonInM(lat, lng, officeLat, officeLng));
           
           state.userLocation = { lat, lng, distMeters, accuracy };
-          const isInside = distMeters <= 250;
+          const isInside = distMeters <= officeRadius;
 
-          if (pill) pill.textContent = isInside ? `Kantor Bapperida (~${distMeters}m)` : `Di Luar Radius (${(distMeters/1000).toFixed(1)}km)`;
+          if (pill) pill.textContent = isInside ? `${officeName} (~${distMeters}m)` : `Di Luar Radius (${(distMeters/1000).toFixed(1)}km)`;
           if (mobilePill) {
             mobilePill.textContent = isInside ? `Akurat ~ ${accuracy}m` : `Jarak ~ ${(distMeters/1000).toFixed(1)}km`;
             mobilePill.className = isInside 
@@ -1258,11 +1426,11 @@
           showDynamicIsland({
             type: isInside ? 'success' : 'warning',
             title: isInside ? 'GPS Terverifikasi Valid' : 'Di Luar Radius Kantor',
-            message: `Akurasi ±${accuracy}m • Jarak ${distMeters}m dari Kantor BAPPERIDA`
+            message: `Akurasi ±${accuracy}m • Jarak ${distMeters}m dari ${officeName}`
           });
         },
         (err) => {
-          if (pill) pill.textContent = 'Kantor Bapperida (~15m)';
+          if (pill) pill.textContent = `${officeName} (~15m)`;
           if (mobilePill) {
             mobilePill.textContent = 'Akurat ~ 12m';
             mobilePill.className = 'text-[11px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded-full flex-shrink-0 font-semibold font-mono';
@@ -1273,7 +1441,7 @@
           showDynamicIsland({
             type: 'info',
             title: 'GPS Terkoneksi Titik DB',
-            message: 'Terverifikasi pada radius perimeter Kantor BAPPERIDA'
+            message: `Terverifikasi pada radius perimeter ${officeName}`
           });
         },
         { enableHighAccuracy: true, timeout: 5000 }

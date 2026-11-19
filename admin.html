@@ -214,7 +214,7 @@
 </div>
 <div class="flex items-center gap-space-md w-full lg:w-auto justify-end">
 <span class="font-mono text-[12px] text-on-primary-container hidden sm:inline">Token: BAPP-KIOSK-01</span>
-<button class="w-full lg:w-auto px-space-md py-2.5 rounded-xl bg-surface-container-lowest text-primary font-label-lg text-label-lg shadow-sm hover:bg-surface-bright active:scale-95 transition-all flex items-center justify-center gap-space-xs font-semibold" type="button">
+<button id="btnOpenKiosk" class="w-full lg:w-auto px-space-md py-2.5 rounded-xl bg-surface-container-lowest text-primary font-label-lg text-label-lg shadow-sm hover:bg-surface-bright active:scale-95 transition-all flex items-center justify-center gap-space-xs font-semibold" type="button">
 <span class="material-symbols-outlined text-[20px]">fullscreen</span>
 <span>Buka Terminal Meja</span>
 </button>
@@ -253,10 +253,10 @@
 <div class="flex flex-col gap-1.5">
 <div class="flex items-center justify-between">
 <span class="font-label-sm text-label-sm text-on-surface-variant">Toleransi Dispensasi</span>
-<span class="font-mono font-bold text-label-sm text-primary">15 Menit (s/d 07:45)</span>
+<span id="adminToleransiLabel" class="font-mono font-bold text-label-sm text-primary">15 Menit (s/d 07:45)</span>
 </div>
 <div class="flex items-center px-3 py-2 rounded-lg bg-surface-container-low">
-<input aria-label="Toleransi Keterlambatan" class="w-full accent-primary cursor-pointer" max="60" min="0" type="range" value="15">
+<input id="adminToleransiSlider" aria-label="Toleransi Keterlambatan" class="w-full accent-primary cursor-pointer" max="60" min="0" type="range" value="15">
 </div>
 </div>
 <div class="flex items-center justify-between p-3 rounded-lg bg-surface-container-low">
@@ -298,7 +298,7 @@
 <div class="absolute inset-0 opacity-20 bg-[linear-gradient(to_right,#334155_1px,transparent_1px),linear-gradient(to_bottom,#334155_1px,transparent_1px)] bg-[size:16px_16px]"></div>
 <div class="absolute top-3 right-3 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-<span>RADIUS AKTIF 250M</span>
+<span id="adminRadiusActiveBadge">RADIUS AKTIF 50M</span>
 </div>
 <div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/80 via-inverse-surface/20 to-transparent"></div>
 <div class="relative z-10 flex items-center justify-between text-on-primary">
@@ -348,7 +348,7 @@
 <div class="flex items-center justify-between">
 <span class="font-label-md text-label-md text-on-surface font-medium">Liveness Check</span>
 <label class="relative inline-flex items-center cursor-pointer">
-<input checked="" class="sr-only peer" type="checkbox">
+<input id="adminLivenessToggle" checked="" class="sr-only peer" type="checkbox">
 <div class="w-9 h-5 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-secondary"></div>
 </label>
 </div>
@@ -357,16 +357,16 @@
 <div class="p-3 rounded-lg bg-surface-container-low flex flex-col justify-between gap-2">
 <div class="flex items-center justify-between">
 <span class="font-label-md text-label-md text-on-surface font-medium">Threshold Wajah</span>
-<span class="font-mono font-bold text-label-sm text-primary">0.55</span>
+<span id="adminThresholdLabel" class="font-mono font-bold text-label-sm text-primary">0.55</span>
 </div>
-<input aria-label="Threshold Kemiripan" class="accent-primary cursor-pointer" max="0.85" min="0.30" step="0.05" type="range" value="0.55">
+<input id="adminThresholdSlider" aria-label="Threshold Kemiripan" class="accent-primary cursor-pointer" max="0.85" min="0.30" step="0.05" type="range" value="0.55">
 <span class="font-body-sm text-body-sm text-secondary font-mono">Standar rekomendasi</span>
 </div>
 <div class="p-3 rounded-lg bg-surface-container-low flex flex-col justify-between gap-3">
 <div class="flex items-center justify-between">
 <span class="font-label-md text-label-md text-on-surface font-medium">Password Darurat</span>
 <label class="relative inline-flex items-center cursor-pointer">
-<input checked="" class="sr-only peer" type="checkbox">
+<input id="adminEmergencyPwdToggle" checked="" class="sr-only peer" type="checkbox">
 <div class="w-9 h-5 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-secondary"></div>
 </label>
 </div>
@@ -459,7 +459,7 @@
 </div>
 <div class="flex flex-col">
 <span class="font-label-sm text-label-sm text-on-surface-variant">Pegawai Terdaftar</span>
-<span class="font-title-md text-title-md text-on-surface font-mono font-medium">148 Pegawai (142 Aktif)</span>
+<span id="adminUserCount" class="font-title-md text-title-md text-on-surface font-mono font-medium">Memuat data...</span>
 </div>
 </div>
 <div class="p-space-md rounded-2xl bg-surface-container-lowest shadow-sm flex items-center gap-space-sm">
