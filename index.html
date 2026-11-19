@@ -70,6 +70,7 @@
   </script>
 
   <link rel="stylesheet" href="css/stitch-mobile.css" />
+  <link rel="stylesheet" href="css/stitch-swal.css" />
 </head>
 <body class="min-h-screen flex flex-col antialiased bg-[#f8f9ff] dark:bg-[#0b1326] selection:bg-blue-600 selection:text-white">
 
@@ -2865,6 +2866,61 @@
         <button type="button" onclick="applyRoleFilterToPegawai()" class="flex-1 min-h-[44px] py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer">
           <span class="material-symbols-outlined text-[18px]">filter_list</span>
           <span>Filter di Master Pegawai</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL / BOTTOM-SHEET: SPESIMEN TANDA TANGAN / PARAF ────────── -->
+  <div id="modalStitchSignature" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="stitchSigModalTitle">
+    <div id="modalStitchSignatureBackdrop" onclick="closeStitchSignatureModal()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200 opacity-0"></div>
+    <div id="modalStitchSignaturePanel" class="relative w-full sm:max-w-[440px] bg-white dark:bg-slate-900 rounded-t-[28px] sm:rounded-3xl shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] z-10 transform translate-y-full sm:translate-y-0 sm:scale-95 opacity-0 transition-all duration-200 ease-out">
+      <div class="pt-3 pb-1 flex justify-center sm:hidden cursor-pointer" onclick="closeStitchSignatureModal()">
+        <div class="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+      </div>
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-[20px]">ink_pen</span>
+          </div>
+          <div class="min-w-0">
+            <h3 id="stitchSigModalTitle" class="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight truncate">Spesimen Tanda Tangan / Paraf</h3>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Disisipkan otomatis pada PDF Daftar Hadir</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeStitchSignatureModal()" aria-label="Tutup" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+      <div class="p-5 space-y-3 overflow-y-auto overscroll-contain">
+        <div id="stitchSigCanvasWrap" class="relative rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white overflow-hidden">
+          <div id="stitchSigGuide" class="pointer-events-none absolute inset-x-6 bottom-5 flex flex-col items-center gap-1.5 transition-opacity duration-150">
+            <div class="w-full border-b border-slate-200"></div>
+            <span class="text-[11px] font-semibold text-slate-400 select-none">Tanda tangan di sini</span>
+          </div>
+          <canvas id="stitchSigCanvas" class="block w-full h-[180px] touch-none cursor-crosshair select-none"></canvas>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <button type="button" id="btnClearStitchSig" onclick="clearStitchSignatureCanvas()" class="min-h-[40px] px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-950/80 text-rose-600 dark:text-rose-400 border border-rose-200/70 dark:border-rose-900/60 text-xs font-bold inline-flex items-center gap-1.5 transition-colors active:scale-[0.98] cursor-pointer">
+            <span class="material-symbols-outlined text-[17px]">ink_eraser</span>
+            <span>Bersihkan Kanvas</span>
+          </button>
+          <div id="stitchSigStrokeStatus" class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+            <span id="stitchSigStrokeDot" class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 transition-colors"></span>
+            <span id="stitchSigStrokeText">Belum ada goresan</span>
+          </div>
+        </div>
+        <div id="stitchSigError" class="hidden px-3.5 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800/70 text-rose-700 dark:text-rose-300 text-xs font-semibold">
+          Gambar tanda tangan terlebih dahulu sebelum menyimpan.
+        </div>
+      </div>
+      <div class="p-4 bg-slate-50 dark:bg-slate-900/90 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3">
+        <button type="button" onclick="closeStitchSignatureModal()" class="min-h-[46px] px-5 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors active:scale-[0.98] cursor-pointer">
+          Batal
+        </button>
+        <button type="button" id="btnSaveStitchSig" onclick="saveStitchSignatureModal()" class="flex-1 min-h-[46px] px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
+          <span class="material-symbols-outlined text-[18px]">check_circle</span>
+          <span id="btnSaveStitchSigText">Simpan TTD</span>
         </button>
       </div>
     </div>

@@ -752,55 +752,172 @@
       });
     }
 
+    let _sigKeyHandler = null;
+
+    function updateStitchSigStrokeUI(hasInk) {
+      const guide = document.getElementById('stitchSigGuide');
+      const dot = document.getElementById('stitchSigStrokeDot');
+      const txt = document.getElementById('stitchSigStrokeText');
+      const err = document.getElementById('stitchSigError');
+      if (guide) guide.classList.toggle('opacity-0', !!hasInk);
+      if (dot) {
+        dot.classList.toggle('bg-emerald-500', !!hasInk);
+        dot.classList.toggle('bg-slate-300', !hasInk);
+        dot.classList.toggle('dark:bg-slate-600', !hasInk);
+      }
+      if (txt) txt.textContent = hasInk ? 'Goresan aktif' : 'Belum ada goresan';
+      if (hasInk && err) err.classList.add('hidden');
+    }
+
+    function setupStitchSigCanvas() {
+      const c = document.getElementById('stitchSigCanvas');
+      if (!c) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 3);
+      const rect = c.getBoundingClientRect();
+      const w = Math.max(280, Math.round(rect.width || 380));
+      const h = Math.max(160, Math.round(rect.height || 180));
+      c.width = Math.round(w * dpr);
+      c.height = Math.round(h * dpr);
+      const ctx = c.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2.4;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      c._hasInk = false;
+      updateStitchSigStrokeUI(false);
+
+      if (c._stitchBound) return;
+      c._stitchBound = true;
+      let drawing = false;
+      const getPos = (e) => {
+        const r = c.getBoundingClientRect();
+        return { x: e.clientX - r.left, y: e.clientY - r.top };
+      };
+      c.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        drawing = true;
+        if (c.setPointerCapture) {
+          try { c.setPointerCapture(e.pointerId); } catch (_) {}
+        }
+        const p = getPos(e);
+        const context = c.getContext('2d');
+        context.beginPath();
+        context.moveTo(p.x, p.y);
+        context.lineTo(p.x + 0.01, p.y + 0.01);
+        context.stroke();
+        c._hasInk = true;
+        updateStitchSigStrokeUI(true);
+      });
+      c.addEventListener('pointermove', (e) => {
+        if (!drawing) return;
+        const p = getPos(e);
+        const context = c.getContext('2d');
+        context.lineTo(p.x, p.y);
+        context.stroke();
+      });
+      const stopDraw = (e) => {
+        if (!drawing) return;
+        drawing = false;
+        if (c.releasePointerCapture) {
+          try { c.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
+      };
+      c.addEventListener('pointerup', stopDraw);
+      c.addEventListener('pointercancel', stopDraw);
+    }
+
+    function clearStitchSignatureCanvas() {
+      const c = document.getElementById('stitchSigCanvas');
+      if (!c) return;
+      const ctx = c.getContext('2d');
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.restore();
+      c._hasInk = false;
+      updateStitchSigStrokeUI(false);
+    }
+
     function openStitchSignatureModal() {
       if (!state.currentUser) return;
-      Swal.fire({
-        title: 'Spesimen Tanda Tangan / Paraf',
-        html: `
-          <p class="text-xs text-slate-500 mb-2">Gambar paraf Anda di kotak bawah. Akan disisipkan otomatis pada PDF Daftar Hadir Harian.</p>
-          <div class="border-2 border-dashed border-slate-300 rounded-xl bg-white overflow-hidden">
-            <canvas id="stitchSigCanvas" width="320" height="150" style="width:100%;height:150px;touch-action:none;cursor:crosshair"></canvas>
-          </div>
-          <button type="button" id="btnClearStitchSig" class="mt-2 text-xs text-rose-600 font-bold hover:underline">Bersihkan Kanvas</button>
-        `,
-        showCancelButton: true,
-        confirmButtonColor: '#2563eb',
-        confirmButtonText: 'Simpan TTD',
-        cancelButtonText: 'Batal',
-        didOpen: () => {
-          const c = document.getElementById('stitchSigCanvas');
-          const ctx = c.getContext('2d');
-          ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-          let draw = false;
-          const pos = (e) => { const r = c.getBoundingClientRect(), t = e.touches ? e.touches[0] : e; return { x: (t.clientX - r.left) * (c.width / r.width), y: (t.clientY - r.top) * (c.height / r.height) }; };
-          c.onpointerdown = (e) => { draw = true; const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); c._hasInk = true; };
-          c.onpointermove = (e) => { if (!draw) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
-          window.addEventListener('pointerup', () => { draw = false; }, { once: false });
-          document.getElementById('btnClearStitchSig').onclick = () => { ctx.clearRect(0, 0, c.width, c.height); c._hasInk = false; };
-        },
-        preConfirm: () => {
-          const c = document.getElementById('stitchSigCanvas');
-          if (!c || !c._hasInk) { Swal.showValidationMessage('Gambar tanda tangan terlebih dahulu.'); return false; }
-          return c.toDataURL('image/png');
-        }
-      }).then(async (r) => {
-        if (!r.isConfirmed || !r.value) return;
-        try {
-          const res = await fetch('/api/stitch/signature-save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nip: state.currentUser.nip, signature: r.value })
-          });
-          const json = await res.json();
-          if (!json.ok) throw new Error(json.message || 'Gagal menyimpan tanda tangan.');
-          state.currentUser.signature = r.value;
-          try { localStorage.setItem('sig_' + state.currentUser.nip, r.value); } catch (_) {}
-          updateBiometricAndSigUI();
-          showDynamicIsland({ type: 'success', title: 'Tanda Tangan Tersimpan', message: 'Siap digunakan pada PDF Daftar Hadir.' });
-        } catch (e) {
-          Swal.fire('Gagal', e.message, 'error');
-        }
+      const modal = document.getElementById('modalStitchSignature');
+      const backdrop = document.getElementById('modalStitchSignatureBackdrop');
+      const panel = document.getElementById('modalStitchSignaturePanel');
+      if (!modal || !backdrop || !panel) return;
+
+      const err = document.getElementById('stitchSigError');
+      if (err) err.classList.add('hidden');
+      const btnSave = document.getElementById('btnSaveStitchSig');
+      const btnText = document.getElementById('btnSaveStitchSigText');
+      if (btnSave) btnSave.disabled = false;
+      if (btnText) btnText.textContent = 'Simpan TTD';
+
+      modal.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        backdrop.classList.remove('opacity-0');
+        panel.classList.remove('translate-y-full', 'sm:scale-95', 'opacity-0');
+        setupStitchSigCanvas();
       });
+
+      if (!_sigKeyHandler) {
+        _sigKeyHandler = (e) => {
+          if (e.key === 'Escape') closeStitchSignatureModal();
+        };
+        document.addEventListener('keydown', _sigKeyHandler);
+      }
+    }
+
+    function closeStitchSignatureModal() {
+      const modal = document.getElementById('modalStitchSignature');
+      const backdrop = document.getElementById('modalStitchSignatureBackdrop');
+      const panel = document.getElementById('modalStitchSignaturePanel');
+      if (!modal || !backdrop || !panel) return;
+
+      backdrop.classList.add('opacity-0');
+      panel.classList.add('translate-y-full', 'sm:scale-95', 'opacity-0');
+      if (_sigKeyHandler) {
+        document.removeEventListener('keydown', _sigKeyHandler);
+        _sigKeyHandler = null;
+      }
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 210);
+    }
+
+    async function saveStitchSignatureModal() {
+      if (!state.currentUser) return;
+      const c = document.getElementById('stitchSigCanvas');
+      const err = document.getElementById('stitchSigError');
+      if (!c || !c._hasInk) {
+        if (err) err.classList.remove('hidden');
+        return;
+      }
+      const dataUrl = c.toDataURL('image/png');
+      const btnSave = document.getElementById('btnSaveStitchSig');
+      const btnText = document.getElementById('btnSaveStitchSigText');
+      if (btnSave) btnSave.disabled = true;
+      if (btnText) btnText.textContent = 'Menyimpan...';
+
+      try {
+        const res = await fetch('/api/stitch/signature-save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nip: state.currentUser.nip, signature: dataUrl })
+        });
+        const json = await res.json();
+        if (!json.ok) throw new Error(json.message || 'Gagal menyimpan tanda tangan.');
+        state.currentUser.signature = dataUrl;
+        try { localStorage.setItem('sig_' + state.currentUser.nip, dataUrl); } catch (_) {}
+        updateBiometricAndSigUI();
+        closeStitchSignatureModal();
+        showDynamicIsland({ type: 'success', title: 'Tanda Tangan Tersimpan', message: 'Siap digunakan pada PDF Daftar Hadir.' });
+      } catch (e) {
+        Swal.fire('Gagal', e.message, 'error');
+      } finally {
+        if (btnSave) btnSave.disabled = false;
+        if (btnText) btnText.textContent = 'Simpan TTD';
+      }
     }
 
     function renderKioskRecentFeed(logs) {
@@ -1147,24 +1264,48 @@
       const { value: formVal } = await Swal.fire({
         title: 'Terminal Kiosk Lobi BAPPERIDA',
         html: `
-          <div class="text-left space-y-2.5 text-xs">
+          <div class="text-left space-y-3 text-xs pt-1">
             <div>
-              <label class="font-bold text-slate-600 block mb-1">NIP Pegawai:</label>
-              <input id="swalKioskNip" type="text" value="${activeNip}" placeholder="Masukkan 18 digit NIP..." class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs" />
+              <label for="swalKioskNip" class="font-bold text-slate-700 dark:text-slate-300 block mb-1.5">NIP Pegawai</label>
+              <input id="swalKioskNip" type="text" value="${activeNip}" placeholder="Masukkan 18 digit NIP..." class="w-full min-h-[44px] px-3.5 py-2.5 rounded-[14px] border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 font-mono text-[13px] focus:outline-none focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 transition-colors" />
             </div>
             <div>
-              <label class="font-bold text-slate-600 block mb-1">Jenis Presensi:</label>
-              <select id="swalKioskJenis" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-xs">
-                <option value="MASUK">PRESENSI MASUK</option>
-                <option value="PULANG">PRESENSI PULANG</option>
-              </select>
+              <span class="font-bold text-slate-700 dark:text-slate-300 block mb-1.5">Jenis Presensi</span>
+              <input id="swalKioskJenis" type="hidden" value="MASUK" />
+              <div class="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <button type="button" data-kiosk-jenis="MASUK" class="min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-blue-600 text-white shadow-xs">
+                  <span class="material-symbols-outlined text-[17px]">login</span>
+                  <span>Masuk</span>
+                </button>
+                <button type="button" data-kiosk-jenis="PULANG" class="min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
+                  <span class="material-symbols-outlined text-[17px]">logout</span>
+                  <span>Pulang</span>
+                </button>
+              </div>
             </div>
           </div>
         `,
         showCancelButton: true,
-        confirmButtonColor: '#2563eb',
         confirmButtonText: 'Catat ke Database',
         cancelButtonText: 'Batal',
+        didOpen: (popup) => {
+          const hidden = popup.querySelector('#swalKioskJenis');
+          const pills = popup.querySelectorAll('[data-kiosk-jenis]');
+          pills.forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const val = btn.getAttribute('data-kiosk-jenis');
+              if (hidden) hidden.value = val;
+              pills.forEach((p) => {
+                const active = p.getAttribute('data-kiosk-jenis') === val;
+                p.classList.toggle('bg-blue-600', active);
+                p.classList.toggle('text-white', active);
+                p.classList.toggle('shadow-xs', active);
+                p.classList.toggle('text-slate-600', !active);
+                p.classList.toggle('dark:text-slate-300', !active);
+              });
+            });
+          });
+        },
         preConfirm: () => {
           const nip = (document.getElementById('swalKioskNip')?.value || '').trim();
           const jenis = document.getElementById('swalKioskJenis')?.value || 'MASUK';

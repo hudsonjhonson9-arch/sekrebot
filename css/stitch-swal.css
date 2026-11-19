@@ -1,0 +1,261 @@
+/* Stitch Design System Theme for SweetAlert2 (Mobile & Desktop, Light & Dark) */
+
+@keyframes stitchSwalShow {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes stitchSwalHide {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+}
+
+body:not(.swal2-toast-shown):not(.swal2-no-backdrop) .swal2-container {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  background: rgba(15, 23, 42, 0.55) !important;
+  padding: 16px !important;
+}
+
+.swal2-popup:not(.swal2-toast) {
+  --swal2-confirm-button-background-color: #2563eb;
+  --swal2-deny-button-background-color: #d97706;
+  --swal2-show-animation: stitchSwalShow 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  --swal2-hide-animation: stitchSwalHide 0.18s cubic-bezier(0.4, 0, 1, 1) forwards;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+  border-radius: 28px !important;
+  padding: 24px !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.28) !important;
+  width: min(100%, 420px) !important;
+}
+
+.dark .swal2-popup:not(.swal2-toast) {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #1e293b !important;
+  box-shadow: 0 25px 60px -15px rgba(2, 6, 23, 0.68) !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-icon {
+  transform: scale(0.85);
+  margin: 0 auto 10px !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-title {
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.3 !important;
+  color: #0f172a !important;
+  padding: 0 0 6px !important;
+  margin: 0 !important;
+}
+
+.dark .swal2-popup:not(.swal2-toast) .swal2-title {
+  color: #f8fafc !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-html-container {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  color: #475569 !important;
+  margin: 6px 0 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+.dark .swal2-popup:not(.swal2-toast) .swal2-html-container {
+  color: #94a3b8 !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-close {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 9999px !important;
+  font-size: 22px !important;
+  color: #64748b !important;
+  margin: 4px !important;
+  transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-close:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.dark .swal2-popup:not(.swal2-toast) .swal2-close:hover {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-actions {
+  width: 100% !important;
+  gap: 10px !important;
+  margin: 20px 0 0 !important;
+  padding: 0 !important;
+  flex-wrap: nowrap !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-actions:has(> .swal2-deny:not([style*="display: none"])) {
+  flex-wrap: wrap !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-styled {
+  border-radius: 14px !important;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  min-height: 44px !important;
+  padding: 10px 18px !important;
+  box-shadow: none !important;
+  transition: transform 0.15s ease, background-color 0.15s ease, filter 0.15s ease !important;
+  margin: 0 !important;
+  flex: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-actions:has(> .swal2-deny:not([style*="display: none"])) .swal2-confirm,
+.swal2-popup:not(.swal2-toast) .swal2-actions:has(> .swal2-deny:not([style*="display: none"])) .swal2-deny {
+  flex: 1 1 calc(50% - 5px) !important;
+  min-width: 136px !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-actions:has(> .swal2-deny:not([style*="display: none"])) .swal2-cancel {
+  flex: 1 0 100% !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-styled:active {
+  transform: scale(0.97) !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-confirm {
+  background-color: var(--swal2-confirm-button-background-color, #2563eb);
+  color: #ffffff !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-confirm:not([style*="--swal2-confirm-button-background-color"]):hover {
+  background-color: #1d4ed8 !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-confirm[style*="--swal2-confirm-button-background-color"]:hover {
+  filter: brightness(0.92);
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-cancel {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-cancel:hover {
+  background: #e2e8f0 !important;
+}
+
+.dark .swal2-popup:not(.swal2-toast) .swal2-cancel {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+  border-color: #334155 !important;
+}
+
+.dark .swal2-popup:not(.swal2-toast) .swal2-cancel:hover {
+  background: #334155 !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-deny {
+  background-color: var(--swal2-deny-button-background-color, #d97706);
+  color: #ffffff !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-deny:hover {
+  filter: brightness(0.92);
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-input,
+.swal2-popup:not(.swal2-toast) .swal2-textarea,
+.swal2-popup:not(.swal2-toast) .swal2-select {
+  border-radius: 14px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  min-height: 44px !important;
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  box-shadow: none !important;
+  padding: 10px 14px !important;
+  margin: 10px 0 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-textarea {
+  min-height: 96px !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-input:focus,
+.swal2-popup:not(.swal2-toast) .swal2-textarea:focus,
+.swal2-popup:not(.swal2-toast) .swal2-select:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16) !important;
+  background: #ffffff !important;
+  outline: none !important;
+}
+
+.dark .swal2-popup:not(.swal2-toast) .swal2-input,
+.dark .swal2-popup:not(.swal2-toast) .swal2-textarea,
+.dark .swal2-popup:not(.swal2-toast) .swal2-select {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark .swal2-popup:not(.swal2-toast) .swal2-input:focus,
+.dark .swal2-popup:not(.swal2-toast) .swal2-textarea:focus,
+.dark .swal2-popup:not(.swal2-toast) .swal2-select:focus {
+  border-color: #3b82f6 !important;
+  background: #0f172a !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-validation-message {
+  border-radius: 12px !important;
+  background: #fef2f2 !important;
+  color: #b91c1c !important;
+  border: 1px solid #fecaca !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 8px 12px !important;
+  margin: 12px 0 0 !important;
+}
+
+.dark .swal2-popup:not(.swal2-toast) .swal2-validation-message {
+  background: rgba(127, 29, 29, 0.35) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(248, 113, 113, 0.35) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swal2-popup:not(.swal2-toast) {
+    --swal2-show-animation: none;
+    --swal2-hide-animation: none;
+  }
+  .swal2-popup:not(.swal2-toast) .swal2-styled {
+    transition: none !important;
+  }
+}

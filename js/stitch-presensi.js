@@ -346,10 +346,10 @@
       Swal.fire({
         title: 'Presensi Pulang',
         html: `
-          <p class="text-xs text-slate-500 mb-3">Pilih jenis presensi pulang hari ini:</p>
-          <div class="text-left space-y-2">
-            <label class="text-[11px] font-bold text-slate-600 block">Lokasi / Kegiatan Lapangan (isi hanya bila Pulang dari Lapangan):</label>
-            <input id="swalKetPulangLuar" type="text" placeholder="Contoh: Rapat koordinasi di Kantor Bupati..." class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-blue-500" />
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">Pilih jenis presensi pulang hari ini:</p>
+          <div class="text-left space-y-1.5">
+            <label for="swalKetPulangLuar" class="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">Lokasi / Kegiatan Lapangan <span class="font-normal text-slate-400">(wajib bila dari lapangan)</span></label>
+            <input id="swalKetPulangLuar" type="text" placeholder="Contoh: Rapat koordinasi di Kantor Bupati..." class="w-full min-h-[44px] px-3.5 py-2.5 text-[13px] rounded-[14px] border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 transition-colors" />
           </div>
         `,
         icon: 'question',
@@ -357,7 +357,6 @@
         showDenyButton: true,
         confirmButtonColor: '#e11d48',
         denyButtonColor: '#d97706',
-        cancelButtonColor: '#64748b',
         confirmButtonText: 'Pulang di Kantor',
         denyButtonText: 'Pulang dari Lapangan',
         cancelButtonText: 'Batal',
