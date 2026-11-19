@@ -118,8 +118,8 @@
     if (k.status !== STATUS.PENDING) return '<span class="text-slate-400 text-[11px]">Selesai</span>';
     const id = esc(k.id_ket);
     return `<div class="inline-flex items-center gap-1.5">
-      <button type="button" data-ket-id="${id}" data-ket-status="${STATUS.OK}" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold active:scale-95">Setujui</button>
-      <button type="button" data-ket-id="${id}" data-ket-status="${STATUS.NO}" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold active:scale-95">Tolak</button>
+      <button type="button" data-ket-id="${id}" data-ket-status="${STATUS.OK}" class="min-h-[40px] px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold active:scale-95 cursor-pointer">Setujui</button>
+      <button type="button" data-ket-id="${id}" data-ket-status="${STATUS.NO}" class="min-h-[40px] px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold active:scale-95 cursor-pointer">Tolak</button>
     </div>`;
   }
 

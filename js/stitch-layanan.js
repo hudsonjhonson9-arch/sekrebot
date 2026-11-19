@@ -145,12 +145,13 @@
       const container = document.getElementById('pmRowsContainer');
       if (!container) return;
       const today = new Date().toISOString().split('T')[0];
+      const tglId = 'pmTgl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
       const row = document.createElement('div');
       row.className = 'pm-row grid grid-cols-1 sm:grid-cols-12 gap-2 items-center p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs shadow-xs';
       row.innerHTML = `
         <div class="sm:col-span-3">
           <label class="block text-[10px] text-slate-400 font-semibold mb-0.5">Tgl Pemeliharaan</label>
-          <input type="date" class="pm-tgl w-full p-1.5 border rounded-lg dark:bg-slate-800 font-mono text-[11px]" value="${data.tgl || today}" />
+          <input id="${tglId}" type="date" class="pm-tgl w-full p-1.5 border rounded-lg dark:bg-slate-800 font-mono text-[11px]" value="${data.tgl || today}" />
         </div>
         <div class="sm:col-span-3">
           <label class="block text-[10px] text-slate-400 font-semibold mb-0.5">Jenis Pemeliharaan</label>
@@ -174,6 +175,9 @@
         </div>
       `;
       container.appendChild(row);
+      if (window.StitchPicker && typeof window.StitchPicker.enhanceDate === 'function') {
+        window.StitchPicker.enhanceDate(tglId);
+      }
       updatePmTotalBiaya();
     }
 

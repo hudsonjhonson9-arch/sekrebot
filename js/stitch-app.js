@@ -995,7 +995,11 @@
       return p;
     }
 
-    function switchMainView(viewName, updateHash = true) {
+    function escHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function switchMainView(viewName, updateHash = true, sectionId = null) {
       const target = (viewName === 'riwayat') ? 'riwayat-full' : (viewName === 'profile' || viewName === 'jadwal') ? 'profil' : viewName;
       const views = ['presensi', 'riwayat-full', 'arsip', 'aset', 'profil', 'kiosk', 'admin', 'sppd', 'tpp'];
       if (!views.includes(target)) return;
@@ -1092,7 +1096,13 @@
         stopKioskCamera();
       }
 
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (sectionId) {
+        requestAnimationFrame(() => {
+          document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
 
     function switchMobileTab(tabName) {
@@ -1208,8 +1218,76 @@
       }
     }
 
-    /* ── 7. CETAK TPP (CALCULATED FROM POSTGRESQL) ──────────────────── */
+    /* ── 7. CETAK TPP ────────────────────────────────────────────────── */
     let _lastTppPayload = null;
+    function renderTppTable(data = _lastTppPayload?.data || []) {
+      const tbody = document.getElementById('tppTableBody');
+      if (!tbody) return;
+      if (!Array.isArray(data) || !data.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-400">Belum ada data rekapitulasi TPP.</td></tr>';
+        return;
+      }
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        tbody.innerHTML = data.map(u => `
+          <tr>
+            <td colspan="7" class="py-2 px-0">
+              <div class="w-full max-w-full overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3.5 flex flex-col gap-2.5">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0 flex-1">
+                    <p class="font-bold text-sm text-slate-900 dark:text-white truncate">${escHtml(u.nama)}</p>
+                    <p class="text-[11px] font-mono text-slate-400 truncate">${escHtml(u.nip)}</p>
+                  </div>
+                  <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold shrink-0 whitespace-nowrap">${escHtml(u.disiplin)}</span>
+                </div>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">${escHtml(u.jabatan || '-')} • ${escHtml(u.pangkat || '-')}</p>
+                <div class="grid grid-cols-4 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-center">
+                  <div>
+                    <span class="block text-[10px] text-slate-400">Hari Kerja</span>
+                    <span class="font-mono font-bold text-xs text-slate-800 dark:text-slate-200 tabular-nums">${escHtml(u.hariKerja)}</span>
+                  </div>
+                  <div>
+                    <span class="block text-[10px] text-slate-400">Hadir</span>
+                    <span class="font-mono font-bold text-xs text-emerald-600 tabular-nums">${escHtml(u.hadir)}</span>
+                  </div>
+                  <div>
+                    <span class="block text-[10px] text-slate-400">Telat</span>
+                    <span class="font-mono font-bold text-xs text-amber-600 tabular-nums">${escHtml(u.terlambat)}</span>
+                  </div>
+                  <div>
+                    <span class="block text-[10px] text-slate-400">Potongan</span>
+                    <span class="font-mono font-bold text-xs text-rose-600 dark:text-rose-400 tabular-nums">${escHtml(u.potongan)}</span>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+        return;
+      }
+      tbody.innerHTML = data.map(u => `
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+          <td class="p-3">
+            <span class="font-bold">${escHtml(u.nama)}</span>
+            <p class="text-[11px] font-mono text-slate-400">${escHtml(u.nip)}</p>
+          </td>
+          <td class="p-3">
+            <span>${escHtml(u.jabatan || '-')}</span>
+            <p class="text-[10px] text-slate-400">${escHtml(u.pangkat || '-')}</p>
+          </td>
+          <td class="p-3 text-center font-mono tabular-nums">${escHtml(u.hariKerja)}</td>
+          <td class="p-3 text-center font-mono font-bold text-emerald-600 tabular-nums">${escHtml(u.hadir)}</td>
+          <td class="p-3 text-center font-mono text-amber-600 tabular-nums">${escHtml(u.terlambat)}</td>
+          <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold">${escHtml(u.disiplin)}</span></td>
+          <td class="p-3 text-right font-mono font-bold text-slate-500 tabular-nums">${escHtml(u.potongan)}</td>
+        </tr>
+      `).join('');
+    }
+    const _tppMq = window.matchMedia('(min-width: 768px)');
+    const _onTppBpChange = () => { if (_lastTppPayload?.data) renderTppTable(_lastTppPayload.data); };
+    if (_tppMq.addEventListener) _tppMq.addEventListener('change', _onTppBpChange);
+    else if (_tppMq.addListener) _tppMq.addListener(_onTppBpChange);
+
     async function loadTppData() {
       const tbody = document.getElementById('tppTableBody');
       try {
@@ -1217,28 +1295,10 @@
         const json = await res.json();
         if (json.ok && json.data) {
           _lastTppPayload = json;
-          if (tbody) {
-            tbody.innerHTML = json.data.map(u => `
-              <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                <td class="p-3">
-                  <span class="font-bold">${u.nama}</span>
-                  <p class="text-[11px] font-mono text-slate-400">${u.nip}</p>
-                </td>
-                <td class="p-3">
-                  <span>${u.jabatan || '-'}</span>
-                  <p class="text-[10px] text-slate-400">${u.pangkat || '-'}</p>
-                </td>
-                <td class="p-3 text-center font-mono">${u.hariKerja}</td>
-                <td class="p-3 text-center font-mono font-bold text-emerald-600">${u.hadir}</td>
-                <td class="p-3 text-center font-mono text-amber-600">${u.terlambat}</td>
-                <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold">${u.disiplin}</span></td>
-                <td class="p-3 text-right font-mono font-bold text-slate-500">${u.potongan}</td>
-              </tr>
-            `).join('');
-          }
+          renderTppTable(json.data);
         }
       } catch (e) {
-        if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-rose-500">Gagal menghitung TPP: ${e.message}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-rose-500">Gagal menghitung TPP: ${escHtml(e.message)}</td></tr>`;
       }
     }
 
@@ -1573,6 +1633,16 @@
       }
     }
 
+    function editAdminHolidayStitch(tanggal, nama) {
+      const dateEl = document.getElementById('adminLiburDate');
+      const nameEl = document.getElementById('adminLiburName') || document.getElementById('adminLiburNama');
+      if (dateEl) dateEl.value = tanggal || '';
+      if (nameEl) {
+        nameEl.value = nama || '';
+        nameEl.focus();
+      }
+    }
+
     function renderAdminHolidaysList(holidays) {
       const box = document.getElementById('adminHolidaysList');
       if (!box) return;
@@ -1581,12 +1651,15 @@
         return;
       }
       box.innerHTML = holidays.map(h => `
-        <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/70 text-xs">
-          <div class="min-w-0 pr-2">
-            <p class="font-bold text-slate-800 dark:text-slate-100 truncate">${h.nama || 'Hari Libur'}</p>
-            <p class="text-[10px] font-mono text-slate-400">${h.tanggal}</p>
+        <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/70 text-xs">
+          <div class="min-w-0 flex-1 pr-2">
+            <p class="font-bold text-slate-800 dark:text-slate-100 truncate">${escHtml(h.nama || 'Hari Libur')}</p>
+            <p class="text-[10px] font-mono text-slate-400">${escHtml(h.tanggal)}</p>
           </div>
-          <button type="button" onclick="deleteAdminHolidayStitch('${h.tanggal}')" class="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 text-[10px] font-bold flex-shrink-0 cursor-pointer">Hapus</button>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button type="button" data-libur-tgl="${escHtml(h.tanggal)}" data-libur-nama="${escHtml(h.nama || '')}" onclick="editAdminHolidayStitch(this.dataset.liburTgl, this.dataset.liburNama)" class="min-h-[40px] px-3 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 text-[11px] font-bold flex-shrink-0 cursor-pointer">Edit</button>
+            <button type="button" data-libur-tgl="${escHtml(h.tanggal)}" onclick="deleteAdminHolidayStitch(this.dataset.liburTgl)" class="min-h-[40px] px-3 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 text-[11px] font-bold flex-shrink-0 cursor-pointer">Hapus</button>
+          </div>
         </div>
       `).join('');
     }
