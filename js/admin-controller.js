@@ -219,7 +219,13 @@
       const streetLayer = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
       const satLayer = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri World Imagery' });
       streetLayer.addTo(map);
-      const marker = window.L.marker([initLat, initLon], { draggable: true }).addTo(map);
+      const stitchPinIcon = window.L.divIcon({
+        className: 'stitch-geo-pin',
+        html: '<div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 4px 6px rgba(15,23,42,0.35));"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#2563eb" stroke="#ffffff" stroke-width="1.8"/><circle cx="12" cy="9" r="2.8" fill="#ffffff"/></svg></div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 30]
+      });
+      const marker = window.L.marker([initLat, initLon], { draggable: true, icon: stitchPinIcon }).addTo(map);
       const circle = window.L.circle([initLat, initLon], { radius: initRad, color: '#2563eb', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 2 }).addTo(map);
 
       const syncFromInputs = () => {

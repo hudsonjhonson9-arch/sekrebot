@@ -35,6 +35,7 @@
   let _harianPayload = null;
   let _logsList = [];
   let _instansiList = [];
+  let _instansiMap = {};
   let _instansiLoaded = false;
   let _usersCache = [];
   let _signersMap = new Map();
@@ -2012,7 +2013,13 @@
       });
       _geoStreetLayer.addTo(_geoMap);
 
-      _geoMarker = w.L.marker([lat, lon], { draggable: true }).addTo(_geoMap);
+      const stitchPinIcon = w.L.divIcon({
+        className: 'stitch-geo-pin',
+        html: '<div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 4px 6px rgba(15,23,42,0.35));"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#2563eb" stroke="#ffffff" stroke-width="1.8"/><circle cx="12" cy="9" r="2.8" fill="#ffffff"/></svg></div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 30]
+      });
+      _geoMarker = w.L.marker([lat, lon], { draggable: true, icon: stitchPinIcon }).addTo(_geoMap);
       _geoCircle = w.L.circle([lat, lon], {
         radius: rad,
         color: '#2563eb',
