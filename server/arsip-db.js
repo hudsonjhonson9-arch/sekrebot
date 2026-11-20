@@ -5,6 +5,23 @@
 
 const BIDANG_BANKDATA = [3, 4, 5];
 
+// Per-key async mutex untuk mencegah race condition auto-nomor & versioning
+const _serialLocks = new Map();
+async function withSerialLock(key, fn) {
+  const prev = _serialLocks.get(key) || Promise.resolve();
+  let release;
+  const cur = new Promise((r) => { release = r; });
+  const tail = prev.then(() => cur);
+  _serialLocks.set(key, tail);
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release();
+    if (_serialLocks.get(key) === tail) _serialLocks.delete(key);
+  }
+}
+
 const BD_CONF = {
   iku: { valA: 'target', valB: 'capaian' },
   ikk: { valA: 'target', valB: 'capaian' },
@@ -195,23 +212,30 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
       const docId = Number(mDocVer[1]);
       const b = req.body || {};
       const actorName = req.user?.name || req.user?.username || 'Admin';
-      await doQuery(`CREATE TABLE IF NOT EXISTS doc_versions (id SERIAL PRIMARY KEY, doc_id INT NOT NULL, versi INT NOT NULL DEFAULT 1, url TEXT, ukuran TEXT, catatan TEXT, uploader_name TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
-      const cur = await doQuery(`SELECT COALESCE(versi, 1)::int AS v, url, ukuran FROM bapperida_dokumen WHERE id = $1`, [docId]);
-      const nextV = (cur.rows[0]?.v || 1) + 1;
-      await doQuery(
-        `INSERT INTO doc_versions (doc_id, versi, url, ukuran, catatan, uploader_name) VALUES ($1, $2, $3, $4, $5, $6)`,
-        [docId, nextV, b.url || cur.rows[0]?.url || '', b.ukuran || b.size || '', b.catatan || b.note || `Revisi versi ${nextV}`, actorName]
-      );
-      await doQuery(
-        `UPDATE bapperida_dokumen SET versi = $1, url = COALESCE(NULLIF($2, ''), url), ukuran = COALESCE(NULLIF($3, ''), ukuran) WHERE id = $4`,
-        [nextV, b.url || '', b.ukuran || b.size || '', docId]
-      );
-      try {
-        await doQuery(
-          `INSERT INTO doc_history (doc_id, action, actor_id, actor_name, note) VALUES ($1, 'new_version', $2, $3, $4)`,
-          [docId, req.user?.nip || '', actorName, `Unggah versi v${nextV}: ${b.catatan || b.note || ''}`]
+      const nextV = await withSerialLock(`doc-ver:${docId}`, async () => {
+        await doQuery(`CREATE TABLE IF NOT EXISTS doc_versions (id SERIAL PRIMARY KEY, doc_id INT NOT NULL, versi INT NOT NULL DEFAULT 1, url TEXT, ukuran TEXT, catatan TEXT, uploader_name TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
+        const upd = await doQuery(
+          `UPDATE bapperida_dokumen
+           SET versi = COALESCE(versi, 1) + 1,
+               url = COALESCE(NULLIF($1, ''), url),
+               ukuran = COALESCE(NULLIF($2, ''), ukuran)
+           WHERE id = $3
+           RETURNING versi, url, ukuran`,
+          [b.url || '', b.ukuran || b.size || '', docId]
         );
-      } catch { /* ignore */ }
+        const row = upd.rows[0] || { versi: 2, url: b.url || '', ukuran: b.ukuran || '' };
+        await doQuery(
+          `INSERT INTO doc_versions (doc_id, versi, url, ukuran, catatan, uploader_name) VALUES ($1, $2, $3, $4, $5, $6)`,
+          [docId, row.versi, b.url || row.url || '', b.ukuran || b.size || row.ukuran || '', b.catatan || b.note || `Revisi versi ${row.versi}`, actorName]
+        );
+        try {
+          await doQuery(
+            `INSERT INTO doc_history (doc_id, action, actor_id, actor_name, note) VALUES ($1, 'new_version', $2, $3, $4)`,
+            [docId, req.user?.nip || '', actorName, `Unggah versi v${row.versi}: ${b.catatan || b.note || ''}`]
+          );
+        } catch { /* ignore */ }
+        return row.versi;
+      });
       res.status(201).json({ ok: true, versi: nextV });
       return true;
     } catch (err) {
@@ -936,23 +960,26 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
     try {
       const b = req.body || {};
       const tahun = parseInt(b.tahun, 10) || new Date().getFullYear();
-      const cnt = await doQuery(`SELECT COUNT(*)::int AS c FROM agenda_surat_masuk WHERE tahun = $1`, [tahun]);
-      const urut = (cnt.rows[0]?.c || 0) + 1;
-      const nomorAgenda = b.nomor_agenda || `SM-${String(urut).padStart(3, '0')}/${tahun}`;
       const actor = req.user?.nip || req.user?.name || 'Admin';
-      const { rows } = await doQuery(
-        `INSERT INTO agenda_surat_masuk
-         (tahun, nomor_agenda, tanggal_terima, nomor_surat_asli, tanggal_surat, asal_surat, perihal, sifat, kode_klasifikasi, file_url, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-         RETURNING *`,
-        [
-          tahun, nomorAgenda, b.tanggal_terima || b.tanggal_surat || new Date().toISOString().slice(0, 10),
-          b.nomor_surat_asli || '', b.tanggal_surat || new Date().toISOString().slice(0, 10),
-          b.asal_surat || '', b.perihal || '', b.sifat || 'Biasa', b.kode_klasifikasi || '050',
-          b.file_url || null, actor,
-        ]
-      );
-      res.status(201).json({ ok: true, item: rows[0] });
+      const item = await withSerialLock(`agenda-sm:${tahun}`, async () => {
+        const cnt = await doQuery(`SELECT COUNT(*)::int AS c FROM agenda_surat_masuk WHERE tahun = $1`, [tahun]);
+        const urut = (cnt.rows[0]?.c || 0) + 1;
+        const nomorAgenda = b.nomor_agenda || `SM-${String(urut).padStart(3, '0')}/${tahun}`;
+        const { rows } = await doQuery(
+          `INSERT INTO agenda_surat_masuk
+           (tahun, nomor_agenda, tanggal_terima, nomor_surat_asli, tanggal_surat, asal_surat, perihal, sifat, kode_klasifikasi, file_url, created_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           RETURNING *`,
+          [
+            tahun, nomorAgenda, b.tanggal_terima || b.tanggal_surat || new Date().toISOString().slice(0, 10),
+            b.nomor_surat_asli || '', b.tanggal_surat || new Date().toISOString().slice(0, 10),
+            b.asal_surat || '', b.perihal || '', b.sifat || 'Biasa', b.kode_klasifikasi || '050',
+            b.file_url || null, actor,
+          ]
+        );
+        return rows[0];
+      });
+      res.status(201).json({ ok: true, item });
       return true;
     } catch (err) {
       console.error('[arsip-db] POST /api/agenda/surat-masuk error:', err);
@@ -1092,25 +1119,28 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
     try {
       const b = req.body || {};
       const tahun = parseInt(b.tahun, 10) || new Date().getFullYear();
-      const maxRes = await doQuery(`SELECT COALESCE(MAX(nomor_urut), 0)::int AS max_urut FROM agenda_surat_keluar WHERE tahun = $1`, [tahun]);
-      const urut = (maxRes.rows[0]?.max_urut || 0) + 1;
-      const kode = b.kode_klasifikasi || '050';
-      const nomorSurat = b.nomor_surat || `${kode}/${String(urut).padStart(3, '0')}/BAPPERIDA/${tahun}`;
       const actor = req.user?.nip || req.user?.name || 'Admin';
-      const { rows } = await doQuery(
-        `INSERT INTO agenda_surat_keluar
-         (tahun, nomor_agenda, nomor_surat, kode_klasifikasi, nomor_urut, tanggal_surat, tujuan_surat, perihal, sifat, bidang_pengonsep, penandatangan, file_final_url, status, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-         RETURNING *`,
-        [
-          tahun, `SK-${String(urut).padStart(3, '0')}/${tahun}`, nomorSurat, kode, urut,
-          b.tanggal_surat || new Date().toISOString().slice(0, 10),
-          b.tujuan_surat || '', b.perihal || '', b.sifat || 'Biasa',
-          b.bidang_pengonsep || 'Sekretariat', b.penandatangan || 'Kepala BAPPERIDA',
-          b.file_final_url || b.file_url || null, b.status || 'Terbit', actor,
-        ]
-      );
-      res.status(201).json({ ok: true, item: rows[0] });
+      const item = await withSerialLock(`agenda-sk:${tahun}`, async () => {
+        const maxRes = await doQuery(`SELECT COALESCE(MAX(nomor_urut), 0)::int AS max_urut FROM agenda_surat_keluar WHERE tahun = $1`, [tahun]);
+        const urut = (maxRes.rows[0]?.max_urut || 0) + 1;
+        const kode = b.kode_klasifikasi || '050';
+        const nomorSurat = b.nomor_surat || `${kode}/${String(urut).padStart(3, '0')}/BAPPERIDA/${tahun}`;
+        const { rows } = await doQuery(
+          `INSERT INTO agenda_surat_keluar
+           (tahun, nomor_agenda, nomor_surat, kode_klasifikasi, nomor_urut, tanggal_surat, tujuan_surat, perihal, sifat, bidang_pengonsep, penandatangan, file_final_url, status, created_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+           RETURNING *`,
+          [
+            tahun, `SK-${String(urut).padStart(3, '0')}/${tahun}`, nomorSurat, kode, urut,
+            b.tanggal_surat || new Date().toISOString().slice(0, 10),
+            b.tujuan_surat || '', b.perihal || '', b.sifat || 'Biasa',
+            b.bidang_pengonsep || 'Sekretariat', b.penandatangan || 'Kepala BAPPERIDA',
+            b.file_final_url || b.file_url || null, b.status || 'Terbit', actor,
+          ]
+        );
+        return rows[0];
+      });
+      res.status(201).json({ ok: true, item });
       return true;
     } catch (err) {
       console.error('[arsip-db] POST /api/agenda/surat-keluar error:', err);
@@ -1207,35 +1237,38 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
       const b = req.body || {};
       const tahun = parseInt(b.tahun, 10) || new Date().getFullYear();
       const jenis = b.jenis_sppd === 'LUAR_DAERAH' ? 'LUAR_DAERAH' : 'DALAM_DAERAH';
-      const cnt = await doQuery(`SELECT COUNT(*)::int AS c FROM agenda_sppd WHERE tahun = $1 AND jenis_sppd = $2`, [tahun, jenis]);
-      const urut = (cnt.rows[0]?.c || 0) + 1;
-      const pad = String(urut).padStart(3, '0');
-      const kode = jenis === 'LUAR_DAERAH' ? '094' : '090';
-      const { rows } = await doQuery(
-        `INSERT INTO agenda_sppd
-         (jenis_sppd, tahun, nomor_register, nomor_spt, nomor_sppd, tanggal_spt, pejabat_perintah,
-          pelaksana_nip, pelaksana_nama, pelaksana_pangkat, pelaksana_jabatan, pengikut,
-          maksud_perjalanan, tempat_berangkat, tempat_tujuan, provinsi_tujuan, rute_perjalanan,
-          alat_angkutan, tanggal_berangkat, tanggal_kembali, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14, $15, $16, $17, $18, $19, $20, $21)
-         RETURNING *`,
-        [
-          jenis, tahun, pad,
-          b.nomor_spt || `${kode}/${pad}/SPT/BAPPERIDA/${tahun}`,
-          b.nomor_sppd || `${kode}/${pad}/SPPD/BAPPERIDA/${tahun}`,
-          b.tanggal_spt || b.tanggal_berangkat || new Date().toISOString().slice(0, 10),
-          b.pejabat_perintah || 'Kepala BAPPERIDA',
-          b.pelaksana_nip || '', b.pelaksana_nama || '', b.pelaksana_pangkat || '', b.pelaksana_jabatan || '',
-          JSON.stringify(Array.isArray(b.pengikut) ? b.pengikut : []),
-          b.maksud_perjalanan || '', b.tempat_berangkat || 'Waikabubak',
-          b.tempat_tujuan || '', b.provinsi_tujuan || 'Nusa Tenggara Timur', b.rute_perjalanan || '',
-          b.alat_angkutan || 'Kendaraan Dinas Roda 4',
-          b.tanggal_berangkat || new Date().toISOString().slice(0, 10),
-          b.tanggal_kembali || b.tanggal_berangkat || new Date().toISOString().slice(0, 10),
-          b.status || 'Terbit',
-        ]
-      );
-      res.status(201).json({ ok: true, item: rows[0] });
+      const item = await withSerialLock(`agenda-sppd:${tahun}:${jenis}`, async () => {
+        const cnt = await doQuery(`SELECT COUNT(*)::int AS c FROM agenda_sppd WHERE tahun = $1 AND jenis_sppd = $2`, [tahun, jenis]);
+        const urut = (cnt.rows[0]?.c || 0) + 1;
+        const pad = String(urut).padStart(3, '0');
+        const kode = jenis === 'LUAR_DAERAH' ? '094' : '090';
+        const { rows } = await doQuery(
+          `INSERT INTO agenda_sppd
+           (jenis_sppd, tahun, nomor_register, nomor_spt, nomor_sppd, tanggal_spt, pejabat_perintah,
+            pelaksana_nip, pelaksana_nama, pelaksana_pangkat, pelaksana_jabatan, pengikut,
+            maksud_perjalanan, tempat_berangkat, tempat_tujuan, provinsi_tujuan, rute_perjalanan,
+            alat_angkutan, tanggal_berangkat, tanggal_kembali, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+           RETURNING *`,
+          [
+            jenis, tahun, pad,
+            b.nomor_spt || `${kode}/${pad}/SPT/BAPPERIDA/${tahun}`,
+            b.nomor_sppd || `${kode}/${pad}/SPPD/BAPPERIDA/${tahun}`,
+            b.tanggal_spt || b.tanggal_berangkat || new Date().toISOString().slice(0, 10),
+            b.pejabat_perintah || 'Kepala BAPPERIDA',
+            b.pelaksana_nip || '', b.pelaksana_nama || '', b.pelaksana_pangkat || '', b.pelaksana_jabatan || '',
+            JSON.stringify(Array.isArray(b.pengikut) ? b.pengikut : []),
+            b.maksud_perjalanan || '', b.tempat_berangkat || 'Waikabubak',
+            b.tempat_tujuan || '', b.provinsi_tujuan || 'Nusa Tenggara Timur', b.rute_perjalanan || '',
+            b.alat_angkutan || 'Kendaraan Dinas Roda 4',
+            b.tanggal_berangkat || new Date().toISOString().slice(0, 10),
+            b.tanggal_kembali || b.tanggal_berangkat || new Date().toISOString().slice(0, 10),
+            b.status || 'Terbit',
+          ]
+        );
+        return rows[0];
+      });
+      res.status(201).json({ ok: true, item });
       return true;
     } catch (err) {
       console.error('[arsip-db] POST /api/agenda/sppd error:', err);

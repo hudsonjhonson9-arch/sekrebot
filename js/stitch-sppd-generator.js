@@ -65,6 +65,7 @@
   }
 
   let _wewenangCache = null;
+  let _wewenangPromise = null;
 
   function getAuthToken() {
     try { return w.localStorage?.getItem('token') || w.sessionStorage?.getItem('token') || ''; } catch { return ''; }
@@ -72,17 +73,23 @@
 
   async function loadWewenang(force = false) {
     if (_wewenangCache && !force) return _wewenangCache;
-    try {
-      const headers = {};
-      const tok = getAuthToken();
-      if (tok) headers.Authorization = `Bearer ${tok}`;
-      const res = await fetch('/api/arsip/p/api/agenda/wewenang', { headers, credentials: 'include' });
-      const data = await res.json().catch(() => ({}));
-      _wewenangCache = data?.data || data?.wewenang || (data && typeof data === 'object' && !Array.isArray(data) && !data.ok ? data : {}) || {};
-    } catch {
-      _wewenangCache = _wewenangCache || {};
-    }
-    return _wewenangCache;
+    if (_wewenangPromise && !force) return _wewenangPromise;
+    _wewenangPromise = (async () => {
+      try {
+        const headers = {};
+        const tok = getAuthToken();
+        if (tok) headers.Authorization = `Bearer ${tok}`;
+        const res = await fetch('/api/arsip/p/api/agenda/wewenang', { headers, credentials: 'include' });
+        const data = await res.json().catch(() => ({}));
+        _wewenangCache = data?.data || data?.wewenang || (data && typeof data === 'object' && !Array.isArray(data) && !data.ok ? data : {}) || {};
+      } catch {
+        _wewenangCache = _wewenangCache || {};
+      } finally {
+        _wewenangPromise = null;
+      }
+      return _wewenangCache;
+    })();
+    return _wewenangPromise;
   }
 
   function enrichWithWewenang(item = {}, wewOverride = null) {

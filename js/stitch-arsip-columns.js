@@ -228,16 +228,27 @@
     };
   }
 
+  let _docsReqId = 0;
+  let _docsAbortCtrl = null;
+
   async function loadArsipDocs() {
+    const reqId = ++_docsReqId;
+    if (_docsAbortCtrl) {
+      try { _docsAbortCtrl.abort(); } catch { /* ignore */ }
+    }
+    _docsAbortCtrl = typeof AbortController === 'function' ? new AbortController() : null;
+    const signal = _docsAbortCtrl?.signal;
+
     const colDocs = d.getElementById('arsipColDocs');
     if (colDocs) {
       colDocs.innerHTML = '<div class="py-12 text-center text-xs text-slate-400 flex flex-col items-center gap-2"><span class="material-symbols-outlined text-2xl text-primary animate-spin">progress_activity</span><span>Memuat pustaka dokumen...</span></div>';
     }
 
     // 1. Cek role arsipdigital (peta-ekonomi)
-    fetch('/api/arsip/me')
+    fetch('/api/arsip/me', { signal })
       .then((r) => (r.ok ? r.json() : null))
       .then((m) => {
+        if (reqId !== _docsReqId) return;
         if (m && m.ok) {
           _isAdminArsip = Boolean(m.isAdmin);
           const rb = d.getElementById('arsipColRoleBadge');
@@ -249,13 +260,15 @@
     // 2. Muat dokumen dari /api/stitch/arsip/mobile-data (peta-ekonomi + DB lokal)
     try {
       let list = [];
-      const res = await fetch('/api/stitch/arsip/mobile-data');
+      const res = await fetch('/api/stitch/arsip/mobile-data', { signal });
       const json = await res.json().catch(() => ({}));
+      if (reqId !== _docsReqId) return;
       if (res.ok && json.ok && Array.isArray(json.documents)) {
         list = json.documents;
       } else {
-        const r2 = await fetch('/api/arsip/docs');
+        const r2 = await fetch('/api/arsip/docs', { signal });
         const j2 = await r2.json().catch(() => ({}));
+        if (reqId !== _docsReqId) return;
         list = Array.isArray(j2) ? j2 : (Array.isArray(j2.data) ? j2.data : (Array.isArray(j2.documents) ? j2.documents : []));
       }
 
@@ -263,6 +276,7 @@
       populateYearFilter();
       applyFilters();
     } catch (err) {
+      if (err?.name === 'AbortError' || reqId !== _docsReqId) return;
       if (colDocs) {
         colDocs.innerHTML = `<div class="p-8 text-center text-xs text-rose-500">Gagal memuat dokumen: ${esc(err?.message || 'Koneksi terganggu')}</div>`;
       }
@@ -311,23 +325,25 @@
     renderDocList(_filteredDocs);
   }
 
+  let _bulkInFlight = false;
   async function runBulkAction(action) {
-    if (!_bulkSelected.size) return;
-    const ids = Array.from(_bulkSelected);
-    const labelMap = { publish: 'Publikasikan', archive: 'Arsipkan', delete: 'Hapus Permanen' };
-    if (w.Swal) {
-      const cf = await w.Swal.fire({
-        icon: action === 'delete' ? 'warning' : 'question',
-        title: `${labelMap[action] || action} ${ids.length} Dokumen?`,
-        text: action === 'delete' ? 'Dokumen terpilih akan dihapus permanen.' : 'Perubahan akan diterapkan ke seluruh dokumen terpilih.',
-        showCancelButton: true,
-        confirmButtonText: labelMap[action] || 'Lanjutkan',
-        cancelButtonText: 'Batal',
-        confirmButtonColor: action === 'delete' ? '#e11d48' : '#2563eb',
-      });
-      if (!cf.isConfirmed) return;
-    }
+    if (_bulkInFlight || !_bulkSelected.size) return;
+    _bulkInFlight = true;
     try {
+      const ids = Array.from(_bulkSelected);
+      const labelMap = { publish: 'Publikasikan', archive: 'Arsipkan', delete: 'Hapus Permanen' };
+      if (w.Swal) {
+        const cf = await w.Swal.fire({
+          icon: action === 'delete' ? 'warning' : 'question',
+          title: `${labelMap[action] || action} ${ids.length} Dokumen?`,
+          text: action === 'delete' ? 'Dokumen terpilih akan dihapus permanen.' : 'Perubahan akan diterapkan ke seluruh dokumen terpilih.',
+          showCancelButton: true,
+          confirmButtonText: labelMap[action] || 'Lanjutkan',
+          cancelButtonText: 'Batal',
+          confirmButtonColor: action === 'delete' ? '#e11d48' : '#2563eb',
+        });
+        if (!cf.isConfirmed) return;
+      }
       const res = await fetch('/api/arsip/docs/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -340,6 +356,8 @@
       await loadArsipDocs();
     } catch (err) {
       if (w.Swal) w.Swal.fire('Gagal', err?.message || 'Tidak dapat menjalankan aksi massal.', 'error');
+    } finally {
+      _bulkInFlight = false;
     }
   }
 

@@ -743,19 +743,22 @@
   }
 
   let _cekSuratTimer = null;
+  let _cekSuratSeq = 0;
   function checkNomorSuratKeluar(inputEl) {
     if (_suratMode !== 'keluar' || !inputEl) return;
     const modal = inputEl.closest('#modalArsipAgendaSurat, #drawerMobileAgendaSurat');
     const stEl = modal?.querySelector('[data-surat-nomor-status]');
     const nomor = (inputEl.value || '').trim();
     if (!stEl) return;
-    if (!nomor) { stEl.classList.add('hidden'); return; }
+    const seq = ++_cekSuratSeq;
     clearTimeout(_cekSuratTimer);
+    if (!nomor) { stEl.classList.add('hidden'); return; }
     _cekSuratTimer = setTimeout(async () => {
       try {
         const exId = modal?.dataset.editId || '';
         const r = await fetch(`/api/arsip/p/api/agenda/surat-keluar/cek-nomor?nomor=${encodeURIComponent(nomor)}&excludeId=${encodeURIComponent(exId)}`);
         const j = await r.json().catch(() => ({}));
+        if (seq !== _cekSuratSeq) return;
         stEl.classList.remove('hidden');
         if (j.tersedia === false) {
           stEl.className = 'text-[10px] font-bold mt-1 text-rose-600';
@@ -764,24 +767,27 @@
           stEl.className = 'text-[10px] font-bold mt-1 text-emerald-600';
           stEl.textContent = 'Nomor surat tersedia';
         }
-      } catch { stEl.classList.add('hidden'); }
+      } catch { if (seq === _cekSuratSeq) stEl.classList.add('hidden'); }
     }, 350);
   }
 
   let _cekSppdTimer = null;
+  let _cekSppdSeq = 0;
   function checkNomorSppd(inputEl) {
     if (!inputEl) return;
     const modal = inputEl.closest('#modalArsipAgendaSppd, #drawerMobileAgendaSppd');
     const stEl = modal?.querySelector('[data-sppd-nomor-status]');
     const nomor = (inputEl.value || '').trim();
     if (!stEl) return;
-    if (!nomor) { stEl.classList.add('hidden'); return; }
+    const seq = ++_cekSppdSeq;
     clearTimeout(_cekSppdTimer);
+    if (!nomor) { stEl.classList.add('hidden'); return; }
     _cekSppdTimer = setTimeout(async () => {
       try {
         const exId = modal?.dataset.editId || '';
         const r = await fetch(`/api/arsip/p/api/agenda/sppd/cek-nomor?nomor=${encodeURIComponent(nomor)}&excludeId=${encodeURIComponent(exId)}`);
         const j = await r.json().catch(() => ({}));
+        if (seq !== _cekSppdSeq) return;
         stEl.classList.remove('hidden');
         if (j.tersedia === false) {
           stEl.className = 'text-[10px] font-bold mt-1 text-rose-600';
@@ -790,7 +796,7 @@
           stEl.className = 'text-[10px] font-bold mt-1 text-emerald-600';
           stEl.textContent = 'Nomor SPPD tersedia';
         }
-      } catch { stEl.classList.add('hidden'); }
+      } catch { if (seq === _cekSppdSeq) stEl.classList.add('hidden'); }
     }, 350);
   }
 
@@ -843,17 +849,23 @@
     root.querySelectorAll('input[type="date"]').forEach((i) => w.StitchPicker.enhanceDate?.(i));
   }
 
+  let _pegawaiPromise = null;
   async function ensurePegawaiLoaded() {
     if (_pegawaiList.length) return _pegawaiList;
-    try {
-      const r = await fetch('/api/arsip/p/api/agenda/pegawai-list');
-      const j = await r.json().catch(() => ({}));
-      _pegawaiList = Array.isArray(j.items) ? j.items : (Array.isArray(j) ? j : []);
-    } catch (_) {}
-    d.querySelectorAll('datalist#agendaPegawaiDatalist').forEach((dl) => {
-      dl.innerHTML = _pegawaiList.map((p) => `<option value="${esc(p.nama || p.username || '')}">${esc(p.nip ? `${p.nama || p.username} (${p.nip})` : (p.nama || ''))}</option>`).join('');
-    });
-    return _pegawaiList;
+    if (_pegawaiPromise) return _pegawaiPromise;
+    _pegawaiPromise = (async () => {
+      try {
+        const r = await fetch('/api/arsip/p/api/agenda/pegawai-list');
+        const j = await r.json().catch(() => ({}));
+        _pegawaiList = Array.isArray(j.items) ? j.items : (Array.isArray(j) ? j : []);
+      } catch { /* ignore */ }
+      d.querySelectorAll('datalist#agendaPegawaiDatalist').forEach((dl) => {
+        dl.innerHTML = _pegawaiList.map((p) => `<option value="${esc(p.nama || p.username || '')}">${esc(p.nip ? `${p.nama || p.username} (${p.nip})` : (p.nama || ''))}</option>`).join('');
+      });
+      _pegawaiPromise = null;
+      return _pegawaiList;
+    })();
+    return _pegawaiPromise;
   }
 
   /* ── DESKTOP TAB ROUTING ──────────────────────────────────────────────── */
@@ -1023,10 +1035,20 @@
     win.document.close();
   }
 
+  let _suratReqId = 0;
+  let _suratAbortCtrl = null;
+
   async function loadAgendaSurat() {
     const tbody = d.getElementById('agendaSuratBody');
     const countEl = d.getElementById('agendaSuratCount');
     if (!tbody) return;
+
+    const reqId = ++_suratReqId;
+    if (_suratAbortCtrl) {
+      try { _suratAbortCtrl.abort(); } catch { /* ignore */ }
+    }
+    _suratAbortCtrl = typeof AbortController === 'function' ? new AbortController() : null;
+    const signal = _suratAbortCtrl?.signal;
 
     tbody.innerHTML = renderSkeletonRows(6, 5);
 
@@ -1037,13 +1059,15 @@
     const params = new URLSearchParams({ tahun, limit: '80' });
     if (q) params.set('q', q);
 
-    const ep = _suratMode === 'masuk'
+    const modeAtReq = _suratMode;
+    const ep = modeAtReq === 'masuk'
       ? `/api/arsip/p/api/agenda/surat-masuk?${params.toString()}`
       : `/api/arsip/p/api/agenda/surat-keluar?${params.toString()}`;
 
     try {
-      const res = await fetch(ep);
+      const res = await fetch(ep, { signal });
       const json = await res.json().catch(() => ({}));
+      if (reqId !== _suratReqId || modeAtReq !== _suratMode) return;
       if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`);
       let items = Array.isArray(json.items) ? json.items : (Array.isArray(json) ? json : []);
       if (sifatFilter) items = items.filter((it) => String(it.sifat || 'Biasa').toLowerCase() === sifatFilter.toLowerCase());
@@ -1089,6 +1113,7 @@
         `;
       }).join('');
     } catch (err) {
+      if (err?.name === 'AbortError' || reqId !== _suratReqId) return;
       if (countEl) countEl.textContent = '0 surat';
       tbody.innerHTML = `<tr><td colspan="6" class="py-10 text-center text-xs text-rose-500">Gagal memuat agenda surat: ${esc(err?.message || 'Koneksi terganggu')}</td></tr>`;
     }
@@ -1415,7 +1440,10 @@
     });
   }
 
+  let _submittingSurat = false;
+
   async function submitSurat(btnEl) {
+    if (_submittingSurat) return;
     const m = btnEl?.closest('#modalArsipAgendaSurat, #drawerMobileAgendaSurat') || d.getElementById('modalArsipAgendaSurat');
     if (!m) return;
     const editId = m.dataset.editId || '';
@@ -1440,6 +1468,7 @@
     }
 
     const orig = btnEl ? btnEl.innerHTML : '';
+    _submittingSurat = true;
     if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Menyimpan...'; }
 
     const baseEp = isMasuk ? '/api/arsip/p/api/agenda/surat-masuk' : '/api/arsip/p/api/agenda/surat-keluar';
@@ -1463,6 +1492,7 @@
     } catch (err) {
       if (w.Swal) w.Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', text: err?.message || 'Koneksi terganggu.' });
     } finally {
+      _submittingSurat = false;
       if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = orig; }
     }
   }
@@ -1479,10 +1509,20 @@
     loadAgendaSppd();
   }
 
+  let _sppdReqId = 0;
+  let _sppdAbortCtrl = null;
+
   async function loadAgendaSppd() {
     const tbody = d.getElementById('agendaSppdBody');
     const countEl = d.getElementById('agendaSppdCount');
     if (!tbody) return;
+
+    const reqId = ++_sppdReqId;
+    if (_sppdAbortCtrl) {
+      try { _sppdAbortCtrl.abort(); } catch { /* ignore */ }
+    }
+    _sppdAbortCtrl = typeof AbortController === 'function' ? new AbortController() : null;
+    const signal = _sppdAbortCtrl?.signal;
 
     tbody.innerHTML = renderSkeletonRows(6, 5);
 
@@ -1495,8 +1535,9 @@
     if (q) params.set('q', q);
 
     try {
-      const res = await fetch(`/api/arsip/p/api/agenda/sppd?${params.toString()}`);
+      const res = await fetch(`/api/arsip/p/api/agenda/sppd?${params.toString()}`, { signal });
       const json = await res.json().catch(() => ({}));
+      if (reqId !== _sppdReqId) return;
       if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`);
       let items = Array.isArray(json.items) ? json.items : (Array.isArray(json) ? json : []);
       if (statusFilter) items = items.filter((it) => String(it.status || '').toLowerCase() === statusFilter.toLowerCase());
@@ -1543,6 +1584,7 @@
         `;
       }).join('');
     } catch (err) {
+      if (err?.name === 'AbortError' || reqId !== _sppdReqId) return;
       if (countEl) countEl.textContent = '0 SPPD';
       tbody.innerHTML = `<tr><td colspan="6" class="py-10 text-center text-xs text-rose-500">Gagal memuat register SPPD: ${esc(err?.message || 'Koneksi terganggu')}</td></tr>`;
     }
@@ -1972,7 +2014,10 @@
     });
   }
 
+  let _submittingSppd = false;
+
   async function submitSppd(btnEl) {
+    if (_submittingSppd) return;
     const m = btnEl?.closest('#modalArsipAgendaSppd, #drawerMobileAgendaSppd') || d.getElementById('modalArsipAgendaSppd');
     if (!m) return;
     const editId = m.dataset.editId || '';
@@ -2007,6 +2052,7 @@
     }
 
     const orig = btnEl ? btnEl.innerHTML : '';
+    _submittingSppd = true;
     if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Menyimpan...'; }
 
     const payload = {
@@ -2057,6 +2103,7 @@
     } catch (err) {
       if (w.Swal) w.Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', text: err?.message || 'Koneksi terganggu.' });
     } finally {
+      _submittingSppd = false;
       if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = orig; }
     }
   }
