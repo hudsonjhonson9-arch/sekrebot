@@ -42,6 +42,12 @@ export function createArsipRouter(deps = {}) {
   });
 
   async function forward(req, res, target) {
+    // 0. Daftar pegawai untuk SPPD/SPT selalu gunakan data pegawai lokal yang lengkap dengan NIP, Pangkat, Golongan & Jabatan
+    if (target.startsWith('/api/agenda/pegawai-list')) {
+      const handled = await handleArsipDbRequest(req, res, target, doQuery);
+      if (handled) return;
+    }
+
     if (!siap()) {
       return res.status(503).json({
         ok: false,

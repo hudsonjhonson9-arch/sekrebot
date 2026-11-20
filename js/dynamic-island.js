@@ -670,8 +670,9 @@
     S.fire = function (...args) {
       if (args.length === 0) return Promise.resolve({ isConfirmed: true });
       const opts = toIslandOpts(args);
-      // Dialog berisi input/form/preConfirm tetap pakai SweetAlert asli (belum didukung kapsul)
-      const needsForm = opts.input || typeof opts.preConfirm === 'function' || opts.imageUrl ||
+      // Dialog berisi input/form/preConfirm atau konten HTML kaya tetap pakai SweetAlert asli
+      const isRichHtml = typeof opts.html === 'string' && (opts.html.length > 120 || /<(table|ul|ol|section|header|div\b[^>]*class)/i.test(opts.html) || opts.isRichModal);
+      const needsForm = opts.input || typeof opts.preConfirm === 'function' || opts.imageUrl || isRichHtml ||
         (typeof opts.html === 'string' && /<(input|select|textarea|form)\b/i.test(opts.html));
       if (needsForm && origFire) return origFire.apply(this, args);
       // Dialog "Memuat/Menyimpan..." (didOpen -> Swal.showLoading()) jadi kapsul loading

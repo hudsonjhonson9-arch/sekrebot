@@ -671,9 +671,16 @@
   }
 
   function onPelaksanaPicked(inputEl) {
-    const val = (inputEl?.value || '').trim();
-    const pg = _pegawaiList.find((x) => (x.nama || x.username || '').toLowerCase() === val.toLowerCase());
+    const rawVal = (inputEl?.value || '').trim();
+    if (!rawVal) return;
+    const val = rawVal.toLowerCase();
+    const pg = _pegawaiList.find((x) => {
+      const nm = (x.nama || x.username || '').trim().toLowerCase();
+      const np = String(x.nip || '').trim().toLowerCase();
+      return nm === val || np === val || val.startsWith(nm) || (np && val.includes(np));
+    });
     if (!pg) return;
+    if (rawVal.includes('(') && (pg.nama || pg.username)) inputEl.value = pg.nama || pg.username;
     const container = inputEl.closest('[data-sppd-pengikut-row]') || inputEl.closest('#modalArsipAgendaSppd, #drawerMobileAgendaSppd');
     if (!container) return;
     if (container.hasAttribute('data-sppd-pengikut-row')) {

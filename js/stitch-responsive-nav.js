@@ -678,7 +678,7 @@
         document.querySelectorAll('header [data-portal-user-avatar]').forEach((dv) => {
           if (avatarSrc) {
             dv.classList.add('overflow-hidden', 'relative');
-            dv.innerHTML = `<img src="${avatarSrc}" alt="${ini}" class="w-full h-full object-cover" onerror="this.remove();this.parentElement.textContent='${ini}'">`;
+            dv.innerHTML = `<img src="${avatarSrc}" alt="${ini}" class="w-full h-full object-cover" onerror="const p=this.parentElement;this.remove();if(p)p.textContent='${ini}';">`;
           } else {
             dv.textContent = ini;
           }
@@ -693,7 +693,7 @@
           if ((t === 'CW' || t === 'AA' || t === '--') && dv.children.length === 0) {
             if (avatarSrc) {
               dv.classList.add('overflow-hidden', 'relative');
-              dv.innerHTML = `<img src="${avatarSrc}" alt="${ini}" class="w-full h-full object-cover" onerror="this.remove();this.parentElement.textContent='${ini}'">`;
+              dv.innerHTML = `<img src="${avatarSrc}" alt="${ini}" class="w-full h-full object-cover" onerror="const p=this.parentElement;this.remove();if(p)p.textContent='${ini}';">`;
             } else {
               dv.textContent = ini;
             }
