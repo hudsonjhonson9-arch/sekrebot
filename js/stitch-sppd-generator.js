@@ -138,237 +138,535 @@
     }
   }
 
-  function kopHtml(kop) {
+  function renderKopHtml(t, compact = false) {
+    const logoSrc = getLogoAbsUrl();
+    const isSekda = t.KopJenis === 'SEKDA';
+    const titleFontSize = isSekda ? (compact ? '15pt' : '16pt') : (compact ? '12pt' : '13pt');
     return `
-      <table class="kop-table">
+      <table style="width: 100%; border-bottom: 3px double #000; padding-bottom: 6px; margin-bottom: ${compact ? '10px' : '14px'}; border-collapse: collapse;">
         <tr>
-          <td class="kop-logo"><img src="${esc(getLogoAbsUrl())}" alt="Logo Sumba Barat" width="68" height="76"></td>
-          <td class="kop-text">
-            <div class="kop-pemkab">${esc(kop.pemkab)}</div>
-            <div class="kop-instansi">${esc(kop.instansi)}</div>
-            <div class="kop-sub">${esc(kop.alamat)}</div>
-            <div class="kop-sub">${esc(kop.kontak)}</div>
-            <div class="kop-kota">${esc(kop.kota)}</div>
+          <td style="width: 82px; vertical-align: middle; text-align: center; padding-right: 6px;">
+            <img src="${esc(logoSrc)}" alt="Lambang Kabupaten Sumba Barat" crossorigin="anonymous" style="width: ${compact ? '68px' : '74px'}; height: auto; display: inline-block; object-fit: contain;" />
+          </td>
+          <td style="text-align: center; vertical-align: middle; font-family: Arial, Helvetica, sans-serif; padding-right: 30px;">
+            <div style="font-size: ${compact ? '12pt' : '13pt'}; font-weight: bold; letter-spacing: 0.3px; line-height: 1.2;">${esc(t.KopPemkab)}</div>
+            <div style="font-size: ${titleFontSize}; font-weight: bold; margin: 2px 0; line-height: 1.2; letter-spacing: ${isSekda ? '1.5px' : '0.2px'};">${t.KopInstansiHtml}</div>
+            <div style="font-size: ${compact ? '8.5pt' : '9pt'}; margin-top: 2px; line-height: 1.3;">${esc(t.KopAlamat)}<br/>${esc(t.KopKontak)}</div>
+            <div style="font-size: ${compact ? '9.5pt' : '10pt'}; font-weight: bold; letter-spacing: 2.5px; margin-top: 2px;">${esc(t.KopKota)}</div>
           </td>
         </tr>
       </table>
-      <div class="kop-line"></div>
     `;
   }
 
   function baseCss(paper = 'F4') {
     const pageSize = paper === 'A4' ? '210mm 297mm' : '215mm 330mm';
     return `
-      @page { size: ${pageSize}; margin: 14mm 16mm 14mm 18mm; }
-      body { font-family: 'Times New Roman', Georgia, serif; font-size: 11.5pt; color: #000; line-height: 1.4; margin: 0; padding: 14px; }
-      .kop-table { width: 100%; border-collapse: collapse; }
-      .kop-logo { width: 78px; vertical-align: middle; text-align: center; }
-      .kop-text { text-align: center; vertical-align: middle; }
-      .kop-pemkab { font-size: 13pt; font-weight: bold; letter-spacing: 0.4px; }
-      .kop-instansi { font-size: 13.5pt; font-weight: bold; letter-spacing: 0.3px; }
-      .kop-sub { font-size: 9.5pt; font-style: italic; }
-      .kop-kota { font-size: 10.5pt; font-weight: bold; letter-spacing: 3px; margin-top: 2px; }
-      .kop-line { border-top: 3px solid #000; border-bottom: 1px solid #000; height: 2px; margin: 6px 0 14px; }
-      .doc-title { text-align: center; font-size: 13pt; font-weight: bold; text-decoration: underline; letter-spacing: 1px; }
-      .doc-nomor { text-align: center; font-size: 11pt; margin-bottom: 14px; }
-      table.meta { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-      table.meta td { vertical-align: top; padding: 3px 4px; }
-      table.grid { width: 100%; border-collapse: collapse; font-size: 10.5pt; }
-      table.grid td, table.grid th { border: 1px solid #000; padding: 5px 7px; vertical-align: top; }
-      .ttd-wrap { margin-top: 22px; width: 46%; margin-left: auto; text-align: left; }
-      .ttd-space { height: 64px; }
-      .page-break { page-break-before: always; margin-top: 28px; }
+      @page { size: ${pageSize}; margin: 12mm 14mm 12mm 16mm; }
+      body { font-family: Arial, 'Times New Roman', sans-serif; color: #000; background: #fff; margin: 0; padding: 14px; }
       .toolbar-print { position: fixed; top: 10px; right: 12px; display: flex; gap: 8px; z-index: 99; }
       .toolbar-print button { padding: 8px 14px; border: none; border-radius: 8px; background: #2563eb; color: #fff; font-family: system-ui, sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; }
-      @media print { .toolbar-print { display: none !important; } body { padding: 0; } }
+      @media print { .toolbar-print, .screen-page-divider { display: none !important; } body { padding: 0; } }
     `;
   }
 
-  function bangunHtmlSPT(rawIt = {}, opts = {}) {
+  function buildDocTags(rawIt = {}, person = null) {
     const it = enrichWithWewenang(rawIt);
     const kop = resolveKop(it);
-    const dasarLines = String(it.dasar_hukum || it.dasar_surat || 'Dokumen Pelaksanaan Anggaran (DPA) BAPPERIDA Kabupaten Sumba Barat Tahun Anggaran ' + (it.tahun || new Date().getFullYear()))
-      .split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-    const tglSpt = tanggalID(it.tanggal_spt || it.tanggal_berangkat || new Date().toISOString().slice(0, 10));
-    const tglBerangkat = tanggalID(it.tanggal_berangkat);
-    const tglKembali = tanggalID(it.tanggal_kembali);
-    const lama = formatLamaHari(it.tanggal_berangkat, it.tanggal_kembali);
-    const jabatanTtd = formatJabatanTtd(it, kop);
-    const pengikut = parsePengikutList(it.pengikut);
-    const allPelaksana = [
-      { nama: it.pelaksana_nama || '-', nip: it.pelaksana_nip || '-', pangkat: it.pelaksana_pangkat || '-', jabatan: it.pelaksana_jabatan || 'Aparatur Sipil Negara BAPPERIDA' },
-      ...pengikut.filter((p) => p && (p.nama || p.name)).map((p) => ({
-        nama: p.nama || p.name, nip: p.nip || '-', pangkat: p.pangkat || '-', jabatan: p.jabatan || 'Aparatur Sipil Negara BAPPERIDA',
+    const isSekda = kop === KOP_PRESETS.SEKDA;
+    const wew = it.wewenang || {};
+    const parafArr = Array.isArray(wew.paraf) && wew.paraf.length
+      ? wew.paraf
+      : ['Sekretaris BAPPERIDA', 'Kepala Bidang PPE', 'Kasubbag Umum & Kepegawaian'];
+    const sek = wew.sekretaris || {};
+    const bid = wew.bidang || wew.pptk || {};
+    const tahun = it.tahun || new Date().getFullYear();
+    const dasarRaw = it.dasar_hukum || it.dasar_surat || `DPA Bapperida Kabupaten Sumba Barat TA ${tahun}`;
+    const dasarRows = String(dasarRaw).split(/\r?\n/).map((s) => s.trim()).filter(Boolean).map((s, idx) => ({
+      No: idx + 1,
+      Teks: s.replace(/^\d+\.\s*/, ''),
+    }));
+    const pengikut = parsePengikutList(it.pengikut).filter((p) => p && (p.nama || p.name));
+    const pelaksana = [
+      {
+        No: 1,
+        Nama: it.pelaksana_nama || '-',
+        PangkatGol: it.pelaksana_pangkat || '-',
+        NIP: it.pelaksana_nip ? `NIP. ${it.pelaksana_nip}` : '-',
+        Jabatan: it.pelaksana_jabatan || '-',
+      },
+      ...pengikut.map((p, idx) => ({
+        No: idx + 2,
+        Nama: p.nama || p.name,
+        PangkatGol: p.pangkat || '-',
+        NIP: p.nip ? `NIP. ${p.nip}` : '-',
+        Jabatan: p.jabatan || '-',
       })),
     ];
-    const parafArr = Array.isArray(it.wewenang?.paraf) ? it.wewenang.paraf.filter(Boolean) : [];
-    const parafHtml = parafArr.length ? `
-      <table style="border-collapse:collapse;font-size:8.5pt;margin-top:16px;width:210px;">
-        <tr><th colspan="2" style="border:1px solid #000;padding:3px 6px;text-align:center;">PARAF HIERARKI</th></tr>
-        ${parafArr.map((j) => `<tr><td style="border:1px solid #000;padding:3px 6px;">${esc(j)}</td><td style="border:1px solid #000;width:52px;"></td></tr>`).join('')}
-      </table>
-    ` : '';
 
-    return `<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>Surat Tugas - ${esc(it.nomor_spt || 'SPT')}</title><style>${baseCss(opts.paper || 'F4')}</style></head><body>
+    const targetNama = person?.nama || person?.name || it.pelaksana_nama || '-';
+    const targetNip = person?.nip ?? it.pelaksana_nip ?? '-';
+    const targetPangkat = person?.pangkat ?? it.pelaksana_pangkat ?? '-';
+    const targetJabatan = person?.jabatan ?? it.pelaksana_jabatan ?? '-';
+    const targetNomorSppd = person?.nomor_sppd || it.nomor_sppd || it.nomor_spt || '-';
+    const targetTingkat = person?.tingkat_biaya || it.tingkat_biaya || (it.jenis_sppd === 'LUAR_DAERAH' ? 'Tingkat B' : 'Tingkat C');
+    const pptkNama = person?.pptk_nama || bid.nama || 'BERLIAN MAGU WERU,S.Sos';
+    const pptkNip = person?.pptk_nip || bid.nip || '19690619 200503 1 001';
+    const pptkJabatan = person?.pptk_jabatan || bid.jabatan || 'KEPALA BIDANG PPE';
+
+    return {
+      KopJenis: isSekda ? 'SEKDA' : 'BAPPERIDA',
+      KopPemkab: kop.pemkab,
+      KopInstansiHtml: isSekda ? 'SEKRETARIAT DAERAH' : 'BADAN PERENCANAAN PEMBANGUNAN, RISET DAN INOVASI<br/>DAERAH',
+      KopAlamat: kop.alamat,
+      KopKontak: kop.kontak,
+      KopKota: kop.kota,
+      Nomor: it.nomor_spt || it.nomor_sppd || '-',
+      NomorSPPD: targetNomorSppd,
+      Dasar: dasarRaw,
+      dasarRows,
+      pelaksana,
+      Untuk: it.maksud_perjalanan || '-',
+      Paraf1: parafArr[0] || 'Sekretaris BAPPERIDA',
+      Paraf2: parafArr[1] || 'Kepala Bidang PPE',
+      Paraf3: parafArr[2] || 'Kasubbag Umum & Kepegawaian',
+      DitetapkanDi: it.ditetapkan_di || it.tempat_berangkat || 'Waikabubak',
+      TanggalSurat: tanggalID(it.tanggal_spt || it.tanggal_berangkat || new Date().toISOString().slice(0, 10)),
+      TanggalPenetapan: tanggalID(it.tanggal_spt || it.tanggal_berangkat || new Date().toISOString().slice(0, 10)),
+      JabatanTtd: formatJabatanTtd(it, kop).toUpperCase(),
+      KepalaNama: it.penandatangan_nama || 'CHARLES HERMANA WERU, S.Sos',
+      KepalaPangkat: it.penandatangan_pangkat || 'Pembina Utama Muda – IV/c',
+      KepalaNIP: it.penandatangan_nip || '19721102 200112 1 001',
+      KpaNama: it.penandatangan_nama || 'CHARLES HERMANA WERU, S.Sos',
+      Nama: targetNama,
+      NIP: targetNip || '-',
+      PangkatGolongan: targetPangkat || '-',
+      JabatanInstansi: targetJabatan || '-',
+      TingkatBiaya: targetTingkat,
+      Maksud: it.maksud_perjalanan || '-',
+      AlatAngkut: it.alat_angkutan || 'Kendaraan Dinas Roda 4',
+      TempatBerangkat: it.tempat_berangkat || 'Waikabubak',
+      TempatTujuan: it.tempat_tujuan || '-',
+      TempatBerangkatRomawiI: it.tempat_berangkat || 'Waikabubak',
+      TempatTujuanBerangkat: it.tempat_tujuan || '-',
+      TanggalBerangkatRomawiI: tanggalID(it.tanggal_berangkat),
+      LamaHari: formatLamaHari(it.tanggal_berangkat, it.tanggal_kembali),
+      TanggalBerangkat: tanggalID(it.tanggal_berangkat),
+      TanggalKembali: tanggalID(it.tanggal_kembali),
+      Instansi: kop.anggaranInstansi,
+      MataAnggaran: it.subkegiatan_nama || `DPA Tahun Anggaran ${tahun}`,
+      PPTKJabatan: pptkJabatan,
+      BidangNama: pptkNama,
+      BidangNIP: pptkNip,
+      SekretarisJabatan: (sek.jabatan || 'SEKRETARIS BAPPERIDA').toUpperCase(),
+      SekretarisNama: sek.nama || 'IMANUEL MOSES KALEGOTAN, ST.,M.Si',
+      SekretarisNIP: sek.nip || '19800315 200501 1 011',
+    };
+  }
+
+  function bangunHtmlSPT(rawIt = {}, opts = {}) {
+    const t = buildDocTags(rawIt, null);
+    return `<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>Surat Tugas - ${esc(t.Nomor)}</title><style>${baseCss(opts.paper || 'F4')}</style></head><body>
       <div class="toolbar-print"><button onclick="window.print()">Cetak / Simpan PDF</button></div>
-      ${kopHtml(kop)}
-      <div class="doc-title">SURAT PERINTAH TUGAS</div>
-      <div class="doc-nomor">Nomor : ${esc(it.nomor_spt || '090/___/SPT/BAPPERIDA/' + (it.tahun || new Date().getFullYear()))}</div>
+      <div style="font-family: Arial, 'Times New Roman', sans-serif; color: #000; background: #fff; padding: 6px 10px; max-width: 780px; margin: 0 auto; line-height: 1.4; box-sizing: border-box;">
+        ${renderKopHtml(t, false)}
 
-      <table class="meta">
-        <tr>
-          <td style="width:95px;font-weight:bold;">Dasar</td>
-          <td style="width:14px;">:</td>
-          <td>${dasarLines.map((l, i) => `<div style="margin-bottom:3px;">${dasarLines.length > 1 ? `${i + 1}. ` : ''}${esc(l)}</div>`).join('')}</td>
-        </tr>
-      </table>
-
-      <div style="text-align:center;font-weight:bold;letter-spacing:1.5px;margin:10px 0;">MEMERINTAHKAN :</div>
-
-      <table class="meta">
-        <tr>
-          <td style="width:95px;font-weight:bold;">Kepada</td>
-          <td style="width:14px;">:</td>
-          <td>
-            ${allPelaksana.map((p, idx) => `
-              <table style="width:100%;border-collapse:collapse;${idx > 0 ? 'margin-top:8px;' : ''}">
-                <tr><td style="width:${allPelaksana.length > 1 ? '22px' : '0px'};vertical-align:top;font-weight:bold;">${allPelaksana.length > 1 ? `${idx + 1}.` : ''}</td><td style="width:110px;">Nama</td><td style="width:12px;">:</td><td style="font-weight:bold;">${esc(p.nama)}</td></tr>
-                <tr><td></td><td>NIP</td><td>:</td><td>${esc(p.nip)}</td></tr>
-                <tr><td></td><td>Pangkat / Gol.</td><td>:</td><td>${esc(p.pangkat)}</td></tr>
-                <tr><td></td><td>Jabatan</td><td>:</td><td>${esc(p.jabatan)}</td></tr>
-              </table>
-            `).join('')}
-          </td>
-        </tr>
-        <tr>
-          <td style="font-weight:bold;padding-top:10px;">Untuk</td>
-          <td style="padding-top:10px;">:</td>
-          <td style="padding-top:10px;">
-            <div>1. Melaksanakan perjalanan dinas dalam rangka <strong>${esc(it.maksud_perjalanan || '-')}</strong> bertempat di <strong>${esc(it.tempat_tujuan || '-')}</strong>.</div>
-            <div>2. Lamanya perjalanan dinas selama <strong>${esc(lama)}</strong>, terhitung mulai tanggal <strong>${esc(tglBerangkat)}</strong> sampai dengan <strong>${esc(tglKembali)}</strong>.</div>
-            <div>3. Melaporkan hasil pelaksanaan tugas secara tertulis kepada pimpinan setelah kembali dari perjalanan dinas.</div>
-          </td>
-        </tr>
-      </table>
-
-      <div style="margin-top:12px;">Demikian Surat Perintah Tugas ini diberikan untuk dilaksanakan dengan penuh tanggung jawab.</div>
-
-      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-top:20px;">
-        <div>${parafHtml}</div>
-        <div class="ttd-wrap" style="margin-top:0;">
-          <div>Ditetapkan di : ${esc(it.ditetapkan_di || it.tempat_berangkat || 'Waikabubak')}</div>
-          <div>Pada tanggal : ${esc(tglSpt)}</div>
-          <div style="margin-top:8px;font-weight:bold;text-transform:uppercase;">${esc(jabatanTtd)},</div>
-          <div class="ttd-space"></div>
-          <div style="font-weight:bold;text-decoration:underline;">${esc(it.penandatangan_nama)}</div>
-          <div>${esc(it.penandatangan_pangkat || '')}</div>
-          <div>NIP. ${esc(it.penandatangan_nip)}</div>
+        <div style="text-align: center; margin-bottom: 16px;">
+          <div style="font-size: 12.5pt; font-weight: bold; text-decoration: underline; letter-spacing: 0.8px;">SURAT PERINTAH TUGAS</div>
+          <div style="font-size: 10.5pt; margin-top: 2px; font-weight: bold;">Nomor : ${esc(t.Nomor)}</div>
         </div>
+
+        <table style="width: 100%; font-size: 10.5pt; margin-bottom: 12px; border-collapse: collapse;">
+          <tr>
+            <td style="width: 85px; vertical-align: top; font-weight: bold; padding: 2px 0;">Dasar</td>
+            <td style="width: 16px; vertical-align: top; text-align: center; padding: 2px 0;">:</td>
+            <td style="vertical-align: top; line-height: 1.45; padding: 2px 0;">
+              <table style="width: 100%; border-collapse: collapse;">
+                ${t.dasarRows.map((dr) => `
+                  <tr>
+                    <td style="width: 22px; vertical-align: top; padding: 1px 0;">${dr.No}.</td>
+                    <td style="vertical-align: top; padding: 1px 0; text-align: justify;">${esc(dr.Teks)}</td>
+                  </tr>
+                `).join('')}
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <div style="text-align: center; font-size: 11pt; font-weight: bold; letter-spacing: 0.8px; margin: 12px 0 10px;">
+          MEMERINTAHKAN :
+        </div>
+
+        <table style="width: 100%; font-size: 10.5pt; margin-bottom: 14px; border-collapse: collapse;">
+          <tr>
+            <td style="width: 85px; vertical-align: top; font-weight: bold; padding: 2px 0;">Kepada</td>
+            <td style="width: 16px; vertical-align: top; text-align: center; padding: 2px 0;">:</td>
+            <td style="vertical-align: top; padding: 2px 0;">
+              <table style="width: 100%; border-collapse: collapse;">
+                ${t.pelaksana.map((p) => `
+                  <tr>
+                    <td style="width: 22px; vertical-align: top; padding: 1px 0;">${p.No}.</td>
+                    <td style="width: 115px; vertical-align: top; padding: 1px 0;">Nama</td>
+                    <td style="width: 14px; vertical-align: top; padding: 1px 0; text-align: center;">:</td>
+                    <td style="vertical-align: top; padding: 1px 0; font-weight: bold;">${esc(p.Nama)}</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td style="vertical-align: top; padding: 1px 0;">Pangkat / Gol</td>
+                    <td style="vertical-align: top; padding: 1px 0; text-align: center;">:</td>
+                    <td style="vertical-align: top; padding: 1px 0;">${esc(p.PangkatGol)}</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td style="vertical-align: top; padding: 1px 0;">NIP</td>
+                    <td style="vertical-align: top; padding: 1px 0; text-align: center;">:</td>
+                    <td style="vertical-align: top; padding: 1px 0;">${esc(p.NIP)}</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td style="vertical-align: top; padding: 1px 0;">Jabatan</td>
+                    <td style="vertical-align: top; padding: 1px 0; text-align: center;">:</td>
+                    <td style="vertical-align: top; padding: 1px 0;">${esc(p.Jabatan)}</td>
+                  </tr>
+                  <tr><td colspan="4" style="height: 6px;"></td></tr>
+                `).join('')}
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <table style="width: 100%; font-size: 10.5pt; margin-bottom: 20px; border-collapse: collapse;">
+          <tr>
+            <td style="width: 85px; vertical-align: top; font-weight: bold; padding: 2px 0;">Untuk</td>
+            <td style="width: 16px; vertical-align: top; text-align: center; padding: 2px 0;">:</td>
+            <td style="vertical-align: top; line-height: 1.45; padding: 2px 0;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="width: 22px; vertical-align: top;">1.</td>
+                  <td style="vertical-align: top; text-align: justify;">${esc(t.Untuk)}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <table style="width: 100%; font-size: 10pt; margin-top: 18px; border-collapse: collapse;">
+          <tr>
+            <td style="width: 46%; vertical-align: bottom; padding-right: 12px;">
+              <table style="border: 1px solid #000; border-collapse: collapse; font-size: 8.5pt; width: 230px;">
+                <tr>
+                  <th style="border: 1px solid #000; padding: 3px 5px; text-align: center; width: 26px;">NO</th>
+                  <th style="border: 1px solid #000; padding: 3px 6px; text-align: center;" colspan="2">Paraf Hirarki</th>
+                </tr>
+                <tr><td style="border: 1px solid #000; text-align: center; padding: 3px;">1.</td><td style="border: 1px solid #000; padding: 3px 6px;">${esc(t.Paraf1)}</td><td style="border: 1px solid #000; width: 42px; padding: 3px;"></td></tr>
+                <tr><td style="border: 1px solid #000; text-align: center; padding: 3px;">2.</td><td style="border: 1px solid #000; padding: 3px 6px;">${esc(t.Paraf2)}</td><td style="border: 1px solid #000; padding: 3px;"></td></tr>
+                <tr><td style="border: 1px solid #000; text-align: center; padding: 3px;">3.</td><td style="border: 1px solid #000; padding: 3px 6px;">${esc(t.Paraf3)}</td><td style="border: 1px solid #000; padding: 3px;"></td></tr>
+              </table>
+            </td>
+            <td style="width: 54%; vertical-align: top; text-align: left; padding-left: 16px;">
+              <table style="border-collapse: collapse; font-size: 10pt; margin-bottom: 6px;">
+                <tr><td style="width: 95px; padding: 1px 0;">Ditetapkan di</td><td style="width: 12px; text-align: center;">:</td><td style="padding: 1px 0;">${esc(t.DitetapkanDi)}</td></tr>
+                <tr><td style="padding: 1px 0;">Pada Tanggal</td><td style="text-align: center;">:</td><td style="padding: 1px 0;">${esc(t.TanggalSurat)}</td></tr>
+              </table>
+              <div style="text-align: center; font-weight: bold; margin-top: 6px; line-height: 1.3;">
+                ${esc(t.JabatanTtd)}<br/>KABUPATEN SUMBA BARAT,
+              </div>
+              <div style="height: 56px;"></div>
+              <div style="text-align: center;">
+                <div style="font-weight: bold; text-decoration: underline;">${esc(t.KepalaNama)}</div>
+                <div>${esc(t.KepalaPangkat)}</div>
+                <div>NIP. ${esc(t.KepalaNIP)}</div>
+              </div>
+            </td>
+          </tr>
+        </table>
       </div>
     </body></html>`;
   }
 
   function bangunHtmlSPPD(rawIt = {}, opts = {}) {
-    const it = enrichWithWewenang(rawIt);
-    const kop = resolveKop(it);
-    const tglSpt = tanggalID(it.tanggal_spt || it.tanggal_berangkat || new Date().toISOString().slice(0, 10));
-    const tglBerangkat = tanggalID(it.tanggal_berangkat);
-    const tglKembali = tanggalID(it.tanggal_kembali);
-    const lama = formatLamaHari(it.tanggal_berangkat, it.tanggal_kembali);
-    const jabatanTtd = formatJabatanTtd(it, kop);
-    const pengikut = parsePengikutList(it.pengikut).filter((p) => p && (p.nama || p.name));
-    const pptk = it.wewenang?.bidang || it.wewenang?.pptk || {};
-    const sek = it.wewenang?.sekretaris || {};
-    const visumJabatan = (pptk.jabatan || sek.jabatan || jabatanTtd).toUpperCase();
-    const visumNama = pptk.nama || sek.nama || it.penandatangan_nama;
-    const visumNip = pptk.nip || sek.nip || it.penandatangan_nip;
-
-    return `<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>SPPD - ${esc(it.nomor_sppd || 'SPPD')}</title><style>${baseCss(opts.paper || 'F4')}</style></head><body>
+    const t = buildDocTags(rawIt, opts.person || null);
+    return `<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>SPPD - ${esc(t.NomorSPPD)}</title><style>${baseCss(opts.paper || 'F4')}</style></head><body>
       <div class="toolbar-print"><button onclick="window.print()">Cetak / Simpan PDF</button></div>
-      ${kopHtml(kop)}
-      <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-        <table style="font-size:10pt;border-collapse:collapse;">
-          <tr><td>Lembar Ke</td><td>: I</td></tr>
-          <tr><td>Kode No.</td><td>: ${esc(it.jenis_sppd === 'LUAR_DAERAH' ? '094' : '090')}</td></tr>
-          <tr><td>Nomor</td><td>: ${esc(it.nomor_sppd || '090/___/SPPD/BAPPERIDA/' + (it.tahun || new Date().getFullYear()))}</td></tr>
-        </table>
-      </div>
-      <div class="doc-title">SURAT PERJALANAN DINAS (SPD)</div>
-      <div class="doc-nomor"></div>
+      <div style="font-family: Arial, 'Times New Roman', sans-serif; color: #000; background: #fff; padding: 2px 4px; max-width: 780px; margin: 0 auto; line-height: 1.25; box-sizing: border-box;">
+        <div class="sppd-page-1" style="padding-bottom: 8px;">
+          ${renderKopHtml(t, true)}
 
-      <table class="grid">
-        <tr><td style="width:28px;text-align:center;">1.</td><td style="width:38%;">Pejabat Pembuat Komitmen / Pemberi Perintah</td><td>${esc(jabatanTtd)}</td></tr>
-        <tr><td style="text-align:center;">2.</td><td>Nama / NIP Pegawai yang melaksanakan perjalanan dinas</td><td><strong>${esc(it.pelaksana_nama || '-')}</strong><br>NIP. ${esc(it.pelaksana_nip || '-')}</td></tr>
-        <tr><td style="text-align:center;">3.</td><td>a. Pangkat dan Golongan<br>b. Jabatan / Instansi<br>c. Tingkat Biaya Perjalanan Dinas</td><td>a. ${esc(it.pelaksana_pangkat || '-')}<br>b. ${esc(it.pelaksana_jabatan || 'ASN BAPPERIDA Kab. Sumba Barat')}<br>c. ${esc(it.tingkat_biaya || (it.jenis_sppd === 'LUAR_DAERAH' ? 'Luar Daerah' : 'Dalam Daerah'))}</td></tr>
-        <tr><td style="text-align:center;">4.</td><td>Maksud Perjalanan Dinas</td><td>${esc(it.maksud_perjalanan || '-')}</td></tr>
-        <tr><td style="text-align:center;">5.</td><td>Alat Angkutan yang dipergunakan</td><td>${esc(it.alat_angkutan || 'Kendaraan Dinas Roda 4')}</td></tr>
-        <tr><td style="text-align:center;">6.</td><td>a. Tempat Berangkat<br>b. Tempat Tujuan</td><td>a. ${esc(it.tempat_berangkat || 'Waikabubak')}<br>b. ${esc(it.tempat_tujuan || '-')}</td></tr>
-        <tr><td style="text-align:center;">7.</td><td>a. Lamanya Perjalanan Dinas<br>b. Tanggal Berangkat<br>c. Tanggal harus kembali</td><td>a. ${esc(lama)}<br>b. ${esc(tglBerangkat)}<br>c. ${esc(tglKembali)}</td></tr>
-        <tr><td style="text-align:center;">8.</td><td>Pengikut</td><td>${pengikut.length ? pengikut.map((p, i) => `${i + 1}. ${esc(p.nama || p.name)}`).join('<br>') : '-'}</td></tr>
-        <tr><td style="text-align:center;">9.</td><td>Pembebanan Anggaran<br>a. Instansi<br>b. Akun / Sub Kegiatan</td><td><br>a. ${esc(kop.anggaranInstansi)}<br>b. ${esc(it.subkegiatan_nama || ('DPA Tahun Anggaran ' + (it.tahun || new Date().getFullYear())))}</td></tr>
-        <tr><td style="text-align:center;">10.</td><td>Keterangan Lain-lain</td><td>Nomor SPT: ${esc(it.nomor_spt || '-')}</td></tr>
-      </table>
+          <table style="width: 100%; font-size: 9pt; margin-bottom: 4px; border-collapse: collapse;">
+            <tr>
+              <td style="width: 55%;"></td>
+              <td style="width: 45%;">
+                <table style="width: 100%; font-size: 9.5pt; border-collapse: collapse;">
+                  <tr><td style="width: 78px; padding: 1px 0;">Lembar ke</td><td style="width: 10px;">:</td><td></td></tr>
+                  <tr><td style="padding: 1px 0;">Kode No</td><td>:</td><td></td></tr>
+                  <tr><td style="padding: 1px 0;">Nomor</td><td>:</td><td><b>${esc(t.NomorSPPD)}</b></td></tr>
+                </table>
+              </td>
+            </tr>
+          </table>
 
-      <div class="ttd-wrap">
-        <div>Dikeluarkan di : ${esc(it.ditetapkan_di || it.tempat_berangkat || 'Waikabubak')}</div>
-        <div>Pada tanggal : ${esc(tglSpt)}</div>
-        <div style="margin-top:8px;font-weight:bold;text-transform:uppercase;">${esc(jabatanTtd)},</div>
-        <div class="ttd-space"></div>
-        <div style="font-weight:bold;text-decoration:underline;">${esc(it.penandatangan_nama)}</div>
-        <div>${esc(it.penandatangan_pangkat || '')}</div>
-        <div>NIP. ${esc(it.penandatangan_nip)}</div>
-      </div>
+          <div style="text-align: center; margin-bottom: 10px;">
+            <div style="font-size: 11.5pt; font-weight: bold; text-decoration: underline; letter-spacing: 0.5px;">SURAT PERJALANAN DINAS (SPD)</div>
+          </div>
 
-      <!-- HALAMAN 2: LEMBAR VISUM I-VI -->
-      <div class="page-break">
-        <table class="grid">
-          <tr>
-            <td style="width:50%;"></td>
-            <td style="width:50%;">
-              <strong>I. Berangkat dari :</strong> ${esc(it.tempat_berangkat || 'Waikabubak')}<br>
-              Ke : ${esc(it.tempat_tujuan || '-')}<br>
-              Pada Tanggal : ${esc(tglBerangkat)}<br>
-              <div style="margin-top:6px;font-weight:bold;">${esc(visumJabatan)},</div>
-              <div style="height:48px;"></div>
-              <div style="font-weight:bold;text-decoration:underline;">${esc(visumNama)}</div>
-              <div>NIP. ${esc(visumNip)}</div>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <strong>II. Tiba di :</strong> ${esc(it.tempat_tujuan || '-')}<br>
-              Pada Tanggal : ${esc(tglBerangkat)}<br>
-              Kepala / Pejabat Setempat,<div style="height:52px;"></div>
-              ( ................................................. )<br>NIP.
-            </td>
-            <td>
-              <strong>Berangkat dari :</strong> ${esc(it.tempat_tujuan || '-')}<br>
-              Ke : ${esc(it.tempat_berangkat || 'Waikabubak')}<br>
-              Pada Tanggal : ${esc(tglKembali)}<br>
-              Kepala / Pejabat Setempat,<div style="height:36px;"></div>
-              ( ................................................. )<br>NIP.
-            </td>
-          </tr>
-          <tr>
-            <td><strong>III. Tiba di :</strong> ..........................<br>Pada Tanggal : ..........................<div style="height:50px;"></div>( ................................................. )</td>
-            <td><strong>Berangkat dari :</strong> ..........................<br>Ke : ..........................<br>Pada Tanggal : ..........................<div style="height:34px;"></div>( ................................................. )</td>
-          </tr>
-          <tr>
-            <td>
-              <strong>IV. Tiba kembali di :</strong> ${esc(it.tempat_berangkat || 'Waikabubak')}<br>
-              Pada Tanggal : ${esc(tglKembali)}<br>
-              <div style="font-size:9.5pt;margin-top:4px;">Telah diperiksa dengan keterangan bahwa perjalanan tersebut di atas benar dilakukan atas perintahnya dan semata-mata untuk kepentingan jabatan.</div>
-            </td>
-            <td>
-              <strong>${esc(jabatanTtd)},</strong>
-              <div style="height:56px;"></div>
-              <div style="font-weight:bold;text-decoration:underline;">${esc(it.penandatangan_nama)}</div>
-              <div>NIP. ${esc(it.penandatangan_nip)}</div>
-            </td>
-          </tr>
-          <tr><td colspan="2"><strong>V. Catatan Lain-lain :</strong> -</td></tr>
-          <tr><td colspan="2" style="font-size:9.5pt;"><strong>VI. PERHATIAN :</strong> Pejabat yang berwenang menerbitkan SPD, pegawai yang melakukan perjalanan dinas, para pejabat yang mengesahkan tanggal berangkat/tiba, serta bendahara pengeluaran bertanggung jawab berdasarkan peraturan-peraturan Keuangan Negara apabila negara menderita rugi akibat kesalahan, kelalaian, dan kealpaannya.</td></tr>
-        </table>
+          <table style="width: 100%; border: 1px solid #000; border-collapse: collapse; font-size: 9pt; table-layout: fixed;">
+            <colgroup>
+              <col style="width: 26px;" />
+              <col style="width: 220px;" />
+              <col style="width: 22px;" />
+              <col style="width: auto;" />
+            </colgroup>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;">1.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Pengguna Anggaran / Kuasa Pengguna Anggaran</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">:</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px; font-weight: bold;">${esc(t.KpaNama)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;">2.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Nama / NIP Pegawai yang melaksanakan perjalanan Dinas</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">:</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;"><b>${esc(t.Nama)}</b><br/>NIP. ${esc(t.NIP)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;">3.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Pangkat dan Golongan</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">a.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">${esc(t.PangkatGolongan)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;"></td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Jabatan / Instansi</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">b.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">${esc(t.JabatanInstansi)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;"></td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Tingkat Biaya Perjalanan Dinas</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">c.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">${esc(t.TingkatBiaya)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;">4.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Maksud perjalanan dinas</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">:</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px; text-align: justify;">${esc(t.Maksud)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;">5.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Alat angkut yang digunakan</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">:</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">${esc(t.AlatAngkut)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;">6.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Tempat berangkat</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">a.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">${esc(t.TempatBerangkat)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;"></td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Tempat tujuan</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">b.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">${esc(t.TempatTujuan)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;">7.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Lamanya perjalanan dinas</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">a.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">${esc(t.LamaHari)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;"></td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Tanggal berangkat</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">b.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">${esc(t.TanggalBerangkat)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;"></td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Tanggal harus kembali</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">c.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">${esc(t.TanggalKembali)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;">8.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Pengikut : Nama</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;"></td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 0;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
+                  <tr>
+                    <td style="width: 50%; border-right: 1px solid #000; text-align: center; padding: 2px 4px;">Tanggal Lahir</td>
+                    <td style="width: 50%; text-align: center; padding: 2px 4px;">Keterangan</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;"></td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px; line-height: 1.3;">1.<br/>2.<br/>3.<br/>4.<br/>5.</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;"></td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 0;">
+                <table style="width: 100%; height: 100%; min-height: 48px; border-collapse: collapse; font-size: 8.5pt;">
+                  <tr><td style="width: 50%; border-right: 1px solid #000;">&nbsp;</td><td style="width: 50%;">&nbsp;</td></tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;">9.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Pembebanan anggaran</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">:</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;"></td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;"></td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Instansi</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">a.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">${esc(t.Instansi)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;"></td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Mata anggaran</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">b.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">${esc(t.MataAnggaran)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 4px;">10.</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">Keterangan lain-lain</td>
+              <td style="border: 1px solid #000; text-align: center; vertical-align: top; padding: 3px 2px;">:</td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 3px 6px;">-</td>
+            </tr>
+          </table>
+
+          <table style="width: 100%; font-size: 9pt; margin-top: 10px; border-collapse: collapse;">
+            <tr>
+              <td style="width: 44%; vertical-align: bottom; padding-right: 10px;">
+                <table style="border: 1px solid #000; border-collapse: collapse; font-size: 8pt; width: 210px;">
+                  <tr><th style="border: 1px solid #000; padding: 2px 4px; text-align: center; width: 24px;">NO</th><th style="border: 1px solid #000; padding: 2px 5px; text-align: center;" colspan="2">Paraf Hirarki</th></tr>
+                  <tr><td style="border: 1px solid #000; text-align: center; padding: 2px;">1.</td><td style="border: 1px solid #000; padding: 2px 5px;">${esc(t.Paraf1)}</td><td style="border: 1px solid #000; width: 34px;"></td></tr>
+                  <tr><td style="border: 1px solid #000; text-align: center; padding: 2px;">2.</td><td style="border: 1px solid #000; padding: 2px 5px;">${esc(t.Paraf2)}</td><td style="border: 1px solid #000;"></td></tr>
+                  <tr><td style="border: 1px solid #000; text-align: center; padding: 2px;">3.</td><td style="border: 1px solid #000; padding: 2px 5px;">${esc(t.Paraf3)}</td><td style="border: 1px solid #000;"></td></tr>
+                </table>
+              </td>
+              <td style="width: 56%; vertical-align: top; padding-left: 12px;">
+                <table style="border-collapse: collapse; font-size: 9pt; margin-bottom: 3px;">
+                  <tr><td style="width: 85px;">Ditetapkan di</td><td style="width: 10px; text-align: center;">:</td><td>${esc(t.DitetapkanDi)}</td></tr>
+                  <tr><td>Pada Tanggal</td><td style="text-align: center;">:</td><td>${esc(t.TanggalPenetapan)}</td></tr>
+                </table>
+                <div style="text-align: center; font-weight: bold; margin-top: 3px; line-height: 1.25; font-size: 9pt;">
+                  ${esc(t.JabatanTtd)}<br/>KABUPATEN SUMBA BARAT,
+                </div>
+                <div style="height: 38px;"></div>
+                <div style="text-align: center; font-size: 9pt;">
+                  <div style="font-weight: bold; text-decoration: underline;">${esc(t.KepalaNama)}</div>
+                  <div>${esc(t.KepalaPangkat)}</div>
+                  <div>NIP. ${esc(t.KepalaNIP)}</div>
+                </div>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="screen-page-divider" style="border-top: 2px dashed #cbd5e1; margin: 16px 0 18px; position: relative; text-align: center;">
+          <span style="background: #f1f5f9; color: #475569; font-family: sans-serif; font-size: 10px; font-weight: 700; padding: 2px 10px; border-radius: 99px; position: relative; top: -9px; letter-spacing: 0.5px;">
+            LEMBAR II — VISUM &amp; PENGESAHAN PERJALANAN DINAS
+          </span>
+        </div>
+
+        <div style="page-break-before: always; break-before: page; box-sizing: border-box;" class="sppd-page-2">
+          <table style="width: 100%; border: 1px solid #000; border-collapse: collapse; font-size: 8.5pt; table-layout: fixed; line-height: 1.25;">
+            <tr>
+              <td style="border: 1px solid #000; width: 48%; vertical-align: top; padding: 4px 6px;">&nbsp;</td>
+              <td style="border: 1px solid #000; width: 52%; vertical-align: top; padding: 4px 6px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
+                  <tr><td style="width: 16px; vertical-align: top; font-weight: bold;">I.</td><td style="width: 95px; vertical-align: top;">Berangkat dari<br/><span style="font-size: 7.5pt;">(Tempat Kedudukan)</span></td><td style="width: 8px; vertical-align: top;">:</td><td style="vertical-align: top; font-weight: bold;">${esc(t.TempatBerangkatRomawiI)}</td></tr>
+                  <tr><td></td><td style="vertical-align: top;">Ke</td><td style="vertical-align: top;">:</td><td style="vertical-align: top; font-weight: bold;">${esc(t.TempatTujuanBerangkat)}</td></tr>
+                  <tr><td></td><td style="vertical-align: top;">Pada Tanggal</td><td style="vertical-align: top;">:</td><td style="vertical-align: top;">${esc(t.TanggalBerangkatRomawiI)}</td></tr>
+                </table>
+                <div style="text-align: center; margin-top: 4px;">
+                  <div style="font-weight: bold; line-height: 1.2;">${esc(String(t.PPTKJabatan || 'KEPALA BIDANG PPE').toUpperCase())},</div>
+                  <div style="height: 28px;"></div>
+                  <div style="font-weight: bold; text-decoration: underline;">${esc(t.BidangNama)}</div>
+                  <div>NIP. ${esc(t.BidangNIP)}</div>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 4px 6px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
+                  <tr><td style="width: 18px; vertical-align: top; font-weight: bold;">II.</td><td style="width: 70px; vertical-align: top;">Tiba di</td><td style="width: 8px; vertical-align: top;">:</td><td style="vertical-align: top;">${esc(t.TempatTujuan)}</td></tr>
+                  <tr><td></td><td style="vertical-align: top;">Pada Tanggal</td><td style="vertical-align: top;">:</td><td style="vertical-align: top;">${esc(t.TanggalBerangkat)}</td></tr>
+                  <tr><td></td><td colspan="3" style="padding-top: 1px;">Kepala / Pejabat :</td></tr>
+                </table>
+                <div style="height: 28px;"></div>
+                <div style="text-align: center; font-size: 8.5pt;">( ............................................................ )<br/><span style="display: inline-block; width: 85%; text-align: left;">NIP.</span></div>
+              </td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 4px 6px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
+                  <tr><td style="width: 85px; vertical-align: top;">Berangkat dari</td><td style="width: 8px; vertical-align: top;">:</td><td style="vertical-align: top;">${esc(t.TempatTujuan)}</td></tr>
+                  <tr><td style="vertical-align: top;">Ke</td><td style="vertical-align: top;">:</td><td style="vertical-align: top;">${esc(t.TempatBerangkat)}</td></tr>
+                  <tr><td style="vertical-align: top;">Pada Tanggal</td><td style="vertical-align: top;">:</td><td style="vertical-align: top;">${esc(t.TanggalKembali)}</td></tr>
+                  <tr><td colspan="3" style="padding-top: 1px;">Kepala / Pejabat :</td></tr>
+                </table>
+                <div style="height: 24px;"></div>
+                <div style="text-align: center; font-size: 8.5pt;">( ............................................................ )<br/><span style="display: inline-block; width: 85%; text-align: left;">NIP.</span></div>
+              </td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 4px 6px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
+                  <tr><td style="width: 18px; vertical-align: top; font-weight: bold;">III.</td><td style="width: 70px; vertical-align: top;">Tiba di</td><td style="width: 8px; vertical-align: top;">:</td><td style="vertical-align: top;"></td></tr>
+                  <tr><td></td><td style="vertical-align: top;">Pada Tanggal</td><td style="vertical-align: top;">:</td><td style="vertical-align: top;"></td></tr>
+                  <tr><td></td><td colspan="3" style="padding-top: 1px;">Kepala / Pejabat :</td></tr>
+                </table>
+                <div style="height: 24px;"></div>
+                <div style="text-align: center; font-size: 8.5pt;">( ............................................................ )<br/><span style="display: inline-block; width: 85%; text-align: left;">NIP.</span></div>
+              </td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 4px 6px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
+                  <tr><td style="width: 85px; vertical-align: top;">Berangkat dari</td><td style="width: 8px; vertical-align: top;">:</td><td style="vertical-align: top;"></td></tr>
+                  <tr><td style="vertical-align: top;">Ke</td><td style="vertical-align: top;">:</td><td style="vertical-align: top;"></td></tr>
+                  <tr><td style="vertical-align: top;">Pada Tanggal</td><td style="vertical-align: top;">:</td><td style="vertical-align: top;"></td></tr>
+                  <tr><td colspan="3" style="padding-top: 1px;">Kepala / Pejabat :</td></tr>
+                </table>
+                <div style="height: 22px;"></div>
+                <div style="text-align: center; font-size: 8.5pt;">( ............................................................ )<br/><span style="display: inline-block; width: 85%; text-align: left;">NIP.</span></div>
+              </td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 4px 6px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
+                  <tr><td style="width: 20px; vertical-align: top; font-weight: bold;">IV.</td><td style="width: 65px; vertical-align: top;">Tiba<br/>pada<br/>Tanggal</td><td style="width: 8px; vertical-align: top;">:<br/>:</td><td style="vertical-align: top;">${esc(t.TempatBerangkat)}<br/>${esc(t.TanggalKembali)}</td></tr>
+                </table>
+                <div style="text-align: center; margin-top: 6px;">
+                  <div style="font-weight: bold; line-height: 1.2;">${esc(t.SekretarisJabatan)}<br/>KABUPATEN SUMBA BARAT</div>
+                  <div style="height: 28px;"></div>
+                  <div style="font-weight: bold; text-decoration: underline;">${esc(t.SekretarisNama)}</div>
+                  <div style="font-weight: bold;">NIP. ${esc(t.SekretarisNIP)}</div>
+                </div>
+              </td>
+              <td style="border: 1px solid #000; vertical-align: top; padding: 4px 6px;">
+                <div style="text-align: justify; line-height: 1.3; font-size: 8.5pt;">
+                  Telah diperiksa, dengan keterangan bahwa perjalanan tersebut diatas benar dilakukan atas perintahnya dan semata-mata untuk kepentingan jabatan dalam waktu yang sesingkat-singkatnya.
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2" style="border: 1px solid #000; padding: 3px 6px; font-size: 8.5pt; line-height: 1.25;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 8.5pt;"><tr><td style="width: 20px; vertical-align: top; font-weight: bold;">V.</td><td style="vertical-align: top;">Catatan Lain-lain</td></tr></table>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2" style="border: 1px solid #000; padding: 3px 6px; font-size: 8.5pt; line-height: 1.25;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
+                  <tr>
+                    <td style="width: 20px; vertical-align: top; font-weight: bold;">VI.</td>
+                    <td style="vertical-align: top; text-align: justify;"><b>PERHATIAN:</b><br/>Pengguna Anggaran/Kuasa Pengguna Anggaran yang menerbitkan SPD, pejabat/pegawai/pihak lain yang melakukan perjalanan dinas, para pejabat yang mengesahkan tanggal berangkat/tiba serta bendahara pengeluaran bertanggung jawab berdasarkan peraturan-peraturan Keuangan Daerah apabila Negara menderita rugi akibat kesalahan kelalaian dan kearsipannya.</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </div>
       </div>
     </body></html>`;
   }
@@ -719,10 +1017,7 @@
     const renderFrame = () => {
       const itCur = activeItem();
       const person = curPersonIdx >= 0 ? pengikut[curPersonIdx] : null;
-      const mergedItem = person
-        ? { ...itCur, pelaksana_nama: person.nama || itCur.pelaksana_nama, pelaksana_nip: person.nip || itCur.pelaksana_nip, pelaksana_pangkat: person.pangkat || itCur.pelaksana_pangkat, pelaksana_jabatan: person.jabatan || itCur.pelaksana_jabatan }
-        : itCur;
-      const html = curMode === 'spt' ? bangunHtmlSPT(itCur, { paper: curPaper }) : bangunHtmlSPPD(mergedItem, { paper: curPaper });
+      const html = curMode === 'spt' ? bangunHtmlSPT(itCur, { paper: curPaper }) : bangunHtmlSPPD(itCur, { paper: curPaper, person });
       const cleanHtml = html.replace(/<div class="toolbar-print">[\s\S]*?<\/div>/i, '');
       const frame = wrap.querySelector('#stitchSppdPreviewFrame');
       if (frame) frame.srcdoc = cleanHtml;
