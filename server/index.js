@@ -208,20 +208,76 @@ function simapoGate(req, res, next) {
 
 export function createApp() {
   const app = express();
+  app.disable('x-powered-by');
   // 16mb: base64 10 MB ≈ 13.3 MB JSON, sisa ruang untuk field lain
   app.use(express.json({ limit: '16mb' }));
   app.use(gzipCompression());
 
   const requireRole = createRequireRole({ query });
 
+  // HTTP Security Headers (Cloudflare Security Audit hardening)
   app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    if (req.secure || String(req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https') {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+  });
+
+  // Strict CORS Allowlist (jangan pernah refleksikan Origin sembarangan dengan Credentials=true)
+  const extraOrigins = String(process.env.ALLOWED_ORIGINS || process.env.FRONTEND_ORIGIN || '')
+    .split(',')
+    .map((o) => o.trim().toLowerCase())
+    .filter(Boolean);
+
+  function isAllowedOrigin(origin, hostHeader) {
+    if (!origin) return false;
+    const low = String(origin).trim().toLowerCase();
+    if (extraOrigins.includes(low)) return true;
+    try {
+      const u = new URL(low);
+      if (hostHeader && u.host.toLowerCase() === String(hostHeader).toLowerCase()) return true;
+      if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return true;
+      if (u.hostname.endsWith('.mindcloud.my.id') || u.hostname === 'mindcloud.my.id') return true;
+      if (u.hostname === 'web.telegram.org' || u.hostname.endsWith('.telegram.org')) return true;
+    } catch {
+      return false;
+    }
+    return false;
+  }
+
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && isAllowedOrigin(origin, req.headers.host)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      appendVary(res, 'Origin');
+    }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
     if (req.method === 'OPTIONS') {
       return res.status(204).end();
     }
+    next();
+  });
+
+  // Sliding-window rate limiter ringan untuk proteksi brute-force endpoint login/register
+  const authHits = new Map();
+  const AUTH_WINDOW_MS = 5 * 60_000;
+  const AUTH_MAX_HITS = Number(process.env.AUTH_RATE_LIMIT || 30);
+  app.use(['/api/auth/login', '/api/auth/register'], (req, res, next) => {
+    if (req.method !== 'POST' || process.env.NODE_ENV === 'test') return next();
+    const key = String(req.ip || req.socket?.remoteAddress || 'unknown');
+    const now = Date.now();
+    const list = (authHits.get(key) || []).filter((ts) => now - ts < AUTH_WINDOW_MS);
+    if (list.length >= AUTH_MAX_HITS) {
+      return res.status(429).json({ ok: false, message: 'Terlalu banyak percobaan login. Coba lagi dalam beberapa menit.' });
+    }
+    list.push(now);
+    authHits.set(key, list);
+    if (authHits.size > 5000) authHits.clear();
     next();
   });
 
@@ -372,7 +428,16 @@ export function createApp() {
   app.use('/api/admin/roles', requireRole(ABSEN_ROLES), absenRolesRouter);
   app.use('/api/absen-roles', requireRole(ABSEN_ROLES), absenRolesRouter);
 
-  // Layanan berkas statis antarmuka Stitch (index.html, login.html, catalog, js, css)
+  // Blokir akses publik ke direktori/file sensitif sebelum express.static melayani root
+  const BLOCKED_STATIC_RE = /^\/(server|db|tests|scripts|graphify-out|node_modules|docs|google-apps-script|catalog)(\/|$)|^\/(package(-lock)?\.json|Dockerfile|nginx\.conf|AGENTS\.md|vite\.config\.\w+|eslint\.config\.\w+|.*\.md|.*\.sql|.*\.test\.js|.*\.mjs)$/i;
+  app.use((req, res, next) => {
+    if (BLOCKED_STATIC_RE.test(req.path || '')) {
+      return res.status(404).end();
+    }
+    next();
+  });
+
+  // Layanan berkas statis antarmuka Stitch (index.html, login.html, js, css)
   const publicDir = path.resolve(import.meta.dirname, '..');
   app.use(express.static(publicDir, {
     maxAge: '1h',
