@@ -8,10 +8,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 
 describe('Desktop Real Database Integration', () => {
-  test('rekap.html contains dynamic tbody and real API call', () => {
+  test('rekap.html menggunakan shared rekap engine dan tanpa data demo statis', () => {
     const html = fs.readFileSync(path.join(rootDir, 'rekap.html'), 'utf8');
-    assert.ok(html.includes('id="rekapTableBody"'), 'Missing id="rekapTableBody" in rekap.html');
-    assert.ok(html.includes('/api/stitch/rekap-tpp'), 'Missing /api/stitch/rekap-tpp fetch in rekap.html');
+    const rekapJs = fs.readFileSync(path.join(rootDir, 'js', 'stitch-admin-rekap.js'), 'utf8');
+    assert.ok(html.includes('js/stitch-admin-rekap.js'), 'Missing js/stitch-admin-rekap.js in rekap.html');
+    assert.ok(html.includes('js/stitch-rekap.js'), 'Missing js/stitch-rekap.js in rekap.html');
+    assert.ok(rekapJs.includes('/api/stitch/rekap-tpp'), 'Missing /api/stitch/rekap-tpp fetch in stitch-admin-rekap.js');
     assert.ok(!/<tbody[^>]*>\s*<!-- Row 1 -->\s*<tr[^>]*>[\s\S]*?Charles Hermana Weru/i.test(html), 'Found static demo rows in rekap.html');
   });
 
@@ -22,10 +24,16 @@ describe('Desktop Real Database Integration', () => {
     assert.ok(!/<tbody[^>]*>\s*<!-- Row 1 -->\s*<tr[^>]*>[\s\S]*?Charles Hermana Weru/i.test(html), 'Found static demo rows in aset-kir.html');
   });
 
-  test('arsip.html contains dynamic tbody and real API call', () => {
+  test('arsip.html menggunakan 3-Pane Columns View + Agenda Surat & SPPD real API', () => {
     const html = fs.readFileSync(path.join(rootDir, 'arsip.html'), 'utf8');
-    assert.ok(html.includes('id="arsipTableBody"'), 'Missing id="arsipTableBody" in arsip.html');
-    assert.ok(html.includes('/api/stitch/arsip/mobile-data'), 'Missing /api/stitch/arsip/mobile-data fetch in arsip.html');
+    const colJs = fs.readFileSync(path.join(rootDir, 'js', 'stitch-arsip-columns.js'), 'utf8');
+    const agJs = fs.readFileSync(path.join(rootDir, 'js', 'stitch-arsip-agenda.js'), 'utf8');
+    assert.ok(html.includes('id="arsipColDocs"'), 'Missing id="arsipColDocs" in arsip.html');
+    assert.ok(html.includes('id="agendaSuratBody"'), 'Missing id="agendaSuratBody" in arsip.html');
+    assert.ok(html.includes('id="agendaSppdBody"'), 'Missing id="agendaSppdBody" in arsip.html');
+    assert.ok(colJs.includes('/api/stitch/arsip/mobile-data'), 'Missing /api/stitch/arsip/mobile-data fetch in stitch-arsip-columns.js');
+    assert.ok(agJs.includes('/api/arsip/p/api/agenda/surat-masuk'), 'Missing /api/arsip/p/api/agenda/surat-masuk in stitch-arsip-agenda.js');
+    assert.ok(agJs.includes('/api/arsip/p/api/agenda/sppd'), 'Missing /api/arsip/p/api/agenda/sppd in stitch-arsip-agenda.js');
     assert.ok(!/<tbody[^>]*>\s*<!-- Row 1 -->\s*<tr[^>]*>[\s\S]*?Charles Hermana Weru/i.test(html), 'Found static demo rows in arsip.html');
   });
 

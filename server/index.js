@@ -220,7 +220,12 @@ export function createApp() {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    if (req.secure || String(req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https') {
+    const isHttps = Boolean(
+      req.socket?.encrypted ||
+      req.connection?.encrypted ||
+      String(req.headers?.['x-forwarded-proto'] || '').toLowerCase() === 'https'
+    );
+    if (isHttps) {
       res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
     next();
