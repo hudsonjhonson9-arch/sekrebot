@@ -413,7 +413,8 @@
           });
           if (res.ok) {
             console.log('[Auth] Active session verified for NIP:', activeNip, '- Redirecting to dashboard...');
-            window.location.replace('index.html');
+            const targetUrl = (window.StitchRoute && typeof window.StitchRoute.getLandingUrl === 'function') ? window.StitchRoute.getLandingUrl() : (window.innerWidth >= 1024 ? 'desktop.html' : 'index.html');
+            window.location.replace(targetUrl);
             return;
           }
         } catch (_) {}

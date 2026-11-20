@@ -156,9 +156,10 @@
               else localStorage.removeItem('MY_INSTANSI');
             } catch (_) {}
 
-            // Jika berada di halaman standalone login.html, navigasi ke index.html
+            // Jika berada di halaman standalone login.html, navigasi ke landing sesuai viewport/mode
             if (window.location && (window.location.pathname.endsWith('login.html') || window.location.href.includes('login.html'))) {
-              window.location.href = 'index.html';
+              const targetUrl = (window.StitchRoute && typeof window.StitchRoute.getLandingUrl === 'function') ? window.StitchRoute.getLandingUrl() : (window.innerWidth >= 1024 ? 'desktop.html' : 'index.html');
+              window.location.href = targetUrl;
               return;
             }
 

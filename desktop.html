@@ -730,7 +730,11 @@
     // ── 5. LOAD POSTGRESQL MASTER DATA & USER LOGS ─────────────────────
     async function loadMasterData() {
       try {
-        const defaultNip = '200206302025061002';
+        let activeNip = '';
+        try {
+          activeNip = (localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || '').trim();
+        } catch (_) {}
+        const defaultNip = activeNip || '200206302025061002';
         await selectDesktopUser(defaultNip);
       } catch (err) {
         console.error('[Stitch Desktop] Bootstrap error:', err);

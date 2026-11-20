@@ -269,6 +269,17 @@
     const sidebarAside = document.querySelector('aside.w-72');
     const sidebarNav = sidebarAside ? sidebarAside.querySelector('nav') : null;
 
+    // 0. Upgrade tombol "Mode HP (Mobile)" di header ke index.html?mode=mobile
+    document.querySelectorAll('header a[href="index.html"]').forEach((link) => {
+      link.setAttribute('href', 'index.html?mode=mobile');
+      if (!link.dataset.stitchMobileBound) {
+        link.dataset.stitchMobileBound = '1';
+        link.addEventListener('click', () => {
+          try { sessionStorage.setItem('stitch_ui_mode', 'mobile'); } catch (_) {}
+        });
+      }
+    });
+
     // 1. Suntikkan Submenu Panel Admin di Sidebar Desktop (hover/klik untuk buka)
     if (sidebarNav && !document.getElementById('stitchStandaloneAdminSubmenu')) {
       const adminLink = sidebarNav.querySelector('a[href="admin.html"]');

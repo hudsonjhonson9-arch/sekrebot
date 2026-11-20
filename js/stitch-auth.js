@@ -155,6 +155,64 @@
     });
   };
 
+  /* ── ROUTING MODE DESKTOP VS MOBILE ── */
+  const UI_MODE_KEY = 'stitch_ui_mode';
+  (function syncUiModeFromQuery() {
+    try {
+      const params = new URLSearchParams(location.search || '');
+      const mode = (params.get('mode') || '').toLowerCase();
+      if (mode === 'mobile' || mode === 'desktop') {
+        sessionStorage.setItem(UI_MODE_KEY, mode);
+      }
+    } catch (_) {}
+  })();
+
+  function isDesktopViewport() {
+    return window.innerWidth >= 1024;
+  }
+
+  function getUiMode() {
+    try { return sessionStorage.getItem(UI_MODE_KEY); } catch (_) { return null; }
+  }
+
+  function getAdminMode() {
+    try { return localStorage.getItem('stitch_admin_mode'); } catch (_) { return null; }
+  }
+
+  function getLandingUrl() {
+    if (isDesktopViewport() && getUiMode() !== 'mobile' && getAdminMode() !== 'mobile') {
+      return 'desktop.html';
+    }
+    return 'index.html';
+  }
+
+  function shouldAutoRedirectToDesktop() {
+    const current = (location.pathname.split('/').pop() || '').toLowerCase();
+    if (current !== 'index.html' && current !== '') return false;
+    if (!isDesktopViewport()) return false;
+    if (!getToken()) return false;
+    if (getUiMode() === 'mobile') return false;
+    if (getAdminMode() === 'mobile') return false;
+    try {
+      const params = new URLSearchParams(location.search || '');
+      if (params.get('view') === 'admin') return false;
+    } catch (_) {}
+    const h = (location.hash || '').toLowerCase();
+    if (h.startsWith('#admin') || h.startsWith('#kiosk')) return false;
+    return true;
+  }
+
+  window.StitchRoute = {
+    isDesktopViewport: isDesktopViewport,
+    getLandingUrl: getLandingUrl,
+    shouldAutoRedirectToDesktop: shouldAutoRedirectToDesktop
+  };
+
+  if (window.StitchRoute.shouldAutoRedirectToDesktop()) {
+    window.location.replace('desktop.html');
+    return;
+  }
+
   /* ── PENGALIHAN MODE (opt-in) ──
    * Tiap fitur tetap file sendiri, sehingga refresh tetap di halaman yang sama.
    * Pengalihan ke versi SPA index.html HANYA terjadi bila pengguna memilih

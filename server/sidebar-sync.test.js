@@ -66,5 +66,8 @@ test('Header portal desktop memiliki switcher ke Mode HP (Mobile) dan tautan kem
 
   // Index mobile memiliki shortcut ke desktop.html
   const indexHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  assert.ok(indexHtml.includes('href="desktop.html"'), 'index.html harus memiliki shortcut ke desktop.html');
+  assert.ok(
+    indexHtml.includes('href="desktop.html"') || indexHtml.includes('href="desktop.html?mode=desktop"'),
+    'index.html harus memiliki shortcut ke desktop.html'
+  );
 });
