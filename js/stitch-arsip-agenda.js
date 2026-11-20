@@ -218,51 +218,188 @@
     }
   }
 
-  function showSppdGenerateMenu(item) {
-    if (!item || !w.Swal || !w.SppdGenerator) return;
+  /* ── CLEAN STITCH MODAL & FLOATING POPOVER (NO DYNAMIC ISLAND HIJACK) ─── */
+  function closeStitchOverlay(id) {
+    const el = d.getElementById(id);
+    if (el) el.remove();
+  }
+
+  function closeActionPopover() {
+    const pop = d.getElementById('stitchAgendaPopover');
+    if (pop) pop.remove();
+  }
+
+  d.addEventListener('click', (ev) => {
+    const pop = d.getElementById('stitchAgendaPopover');
+    if (pop && !pop.contains(ev.target) && !ev.target.closest('[data-sppd-pop-trigger]')) {
+      pop.remove();
+    }
+  });
+  d.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') {
+      closeActionPopover();
+      closeStitchOverlay('stitchAgendaDetailOverlay');
+      closeStitchOverlay('stitchAgendaSpjOverlay');
+    }
+  });
+
+  function openSppdPopover(btnEl, idx) {
+    const item = _sppdItems[idx];
+    if (!item || !btnEl) return;
+    const existing = d.getElementById('stitchAgendaPopover');
+    if (existing && existing.dataset.idx === String(idx)) {
+      existing.remove();
+      return;
+    }
+    closeActionPopover();
+
     let pengikut = [];
     try { pengikut = Array.isArray(item.pengikut) ? item.pengikut : JSON.parse(item.pengikut || '[]'); } catch (_) {}
+
+    const pop = d.createElement('div');
+    pop.id = 'stitchAgendaPopover';
+    pop.dataset.idx = String(idx);
+    pop.className = 'fixed z-[98] w-60 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl p-1.5 flex flex-col gap-0.5 text-left';
+
+    const pengikutHtml = pengikut.length
+      ? `<div class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">SPPD Pengikut (.docx)</div>` +
+        pengikut.map((p, pi) => `
+          <button type="button" data-pop-act="sppd-pk" data-pk-idx="${pi}" class="w-full px-2.5 py-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/50 text-slate-700 dark:text-slate-200 hover:text-[#2563eb] text-xs font-medium flex items-center gap-2 cursor-pointer text-left">
+            <span class="material-symbols-outlined text-[16px] text-[#2563eb]">person</span>
+            <span class="truncate">${esc(p.nama || `Pengikut ${pi + 1}`)}</span>
+          </button>`).join('')
+      : '';
+
+    pop.innerHTML = `
+      <div class="px-2.5 py-1.5 border-b border-slate-100 dark:border-slate-800 mb-0.5">
+        <div class="text-[11px] font-bold text-slate-900 dark:text-white truncate">${esc(item.pelaksana_nama || '-')}</div>
+        <div class="text-[10px] font-mono text-slate-400 truncate">${esc(item.nomor_sppd || item.nomor_spt || '-')}</div>
+      </div>
+      <button type="button" data-pop-act="detail" class="w-full px-2.5 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[17px] text-slate-500">visibility</span>
+        <span>Detail Agenda SPPD</span>
+      </button>
+      <div class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Generate Dokumen Resmi</div>
+      <button type="button" data-pop-act="docx-spt" class="w-full px-2.5 py-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/50 text-slate-700 dark:text-slate-200 hover:text-[#2563eb] text-xs font-semibold flex items-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[17px] text-[#2563eb]">description</span>
+        <span>Unduh SPT (.docx)</span>
+      </button>
+      <button type="button" data-pop-act="docx-sppd" class="w-full px-2.5 py-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/50 text-slate-700 dark:text-slate-200 hover:text-[#2563eb] text-xs font-semibold flex items-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[17px] text-[#2563eb]">article</span>
+        <span>Unduh SPPD (.docx)</span>
+      </button>
+      ${pengikutHtml}
+      <button type="button" data-pop-act="print-spt" class="w-full px-2.5 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[17px] text-slate-500">print</span>
+        <span>Cetak / PDF SPT</span>
+      </button>
+      <button type="button" data-pop-act="print-sppd" class="w-full px-2.5 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[17px] text-slate-500">print</span>
+        <span>Cetak / PDF SPPD</span>
+      </button>
+      <div class="h-px bg-slate-100 dark:bg-slate-800 my-1"></div>
+      <button type="button" data-pop-act="spj" class="w-full px-2.5 py-2 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[17px]">folder_check</span>
+        <span>Kelola LPJ / LHP &amp; SPJ</span>
+      </button>
+      <div class="h-px bg-slate-100 dark:bg-slate-800 my-1"></div>
+      <button type="button" data-pop-act="delete" class="w-full px-2.5 py-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[17px]">delete</span>
+        <span>Hapus Agenda SPPD</span>
+      </button>
+    `;
+
+    d.body.appendChild(pop);
+
+    // Position cleanly near trigger button without overflowing viewport
+    const rect = btnEl.getBoundingClientRect();
+    const popRect = pop.getBoundingClientRect();
+    let left = rect.right - popRect.width;
+    if (left < 12) left = 12;
+    let top = rect.bottom + 6;
+    if (top + popRect.height > w.innerHeight - 12) {
+      top = Math.max(12, rect.top - popRect.height - 6);
+    }
+    pop.style.left = `${left}px`;
+    pop.style.top = `${top}px`;
+
+    pop.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('button[data-pop-act]');
+      if (!btn) return;
+      const act = btn.dataset.popAct;
+      closeActionPopover();
+      if (act === 'detail') showSppdDetail(idx);
+      else if (act === 'docx-spt') w.SppdGenerator?.unduhWordSPT(item);
+      else if (act === 'docx-sppd') w.SppdGenerator?.unduhWordSPPD(item);
+      else if (act === 'sppd-pk') {
+        const p = pengikut[Number(btn.dataset.pkIdx)];
+        if (p) w.SppdGenerator?.unduhWordSPPD(item, p);
+      }
+      else if (act === 'print-spt') w.SppdGenerator?.cetakSPT(item);
+      else if (act === 'print-sppd') w.SppdGenerator?.cetakSPPD(item);
+      else if (act === 'spj') openSppdSpjModal(item.id);
+      else if (act === 'delete') deleteSppd(item.id);
+    });
+  }
+
+  function showSppdGenerateMenu(item) {
+    if (!item || !w.SppdGenerator) return;
+    closeStitchOverlay('stitchAgendaDetailOverlay');
+    let pengikut = [];
+    try { pengikut = Array.isArray(item.pengikut) ? item.pengikut : JSON.parse(item.pengikut || '[]'); } catch (_) {}
+
     const pengikutBtns = pengikut.length
-      ? `<div class="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-1.5">
-          <div class="text-[11px] font-bold text-slate-500">Unduh SPPD (.docx) Pengikut:</div>
-          <div class="flex flex-wrap gap-1.5">${pengikut.map((p, idx) => `<button type="button" data-gen-pengikut="${idx}" class="px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-[11px] font-bold cursor-pointer">${esc(p.nama || `Pengikut ${idx + 1}`)}</button>`).join('')}</div>
+      ? `<div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+          <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Unduh SPPD (.docx) Pengikut:</div>
+          <div class="flex flex-wrap gap-1.5">${pengikut.map((p, idx) => `<button type="button" data-gen-pengikut="${idx}" class="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-xs font-bold cursor-pointer">${esc(p.nama || `Pengikut ${idx + 1}`)}</button>`).join('')}</div>
         </div>`
       : '';
 
-    w.Swal.fire({
-      title: 'Generate Dokumen SPT & SPPD (Template Resmi)',
-      width: 520,
-      html: `
-        <div class="text-left text-xs space-y-3">
-          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-            <div class="font-bold text-slate-900 dark:text-white">${esc(item.pelaksana_nama || '-')} &rarr; ${esc(item.tempat_tujuan || '-')}</div>
-            <div class="font-mono text-[11px] text-primary mt-0.5">${esc(item.nomor_spt || '')} ${item.nomor_sppd ? '• ' + esc(item.nomor_sppd) : ''}</div>
+    const wrap = d.createElement('div');
+    wrap.id = 'stitchAgendaDetailOverlay';
+    wrap.className = 'fixed inset-0 z-[96] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4';
+    wrap.innerHTML = `
+      <div class="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">task_alt</span></span>
+            <div>
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">SPPD Tersimpan • Generate Dokumen</h3>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">Unduh langsung .docx dari template resmi UMA DATA</p>
+            </div>
           </div>
-          <div class="grid grid-cols-2 gap-2">
-            <button type="button" id="btnGenWordSpt" class="py-2.5 px-3 rounded-xl bg-[#2563eb] text-white font-bold cursor-pointer">Unduh SPT (.docx)</button>
-            <button type="button" id="btnGenWordSppd" class="py-2.5 px-3 rounded-xl bg-[#2563eb] text-white font-bold cursor-pointer">Unduh SPPD (.docx)</button>
-            <button type="button" id="btnGenCetakSpt" class="py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold cursor-pointer">Cetak / PDF SPT</button>
-            <button type="button" id="btnGenCetakSppd" class="py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold cursor-pointer">Cetak / PDF SPPD</button>
+          <button type="button" data-close-ov class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-[18px]">close</span></button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700">
+            <div class="text-sm font-bold text-slate-900 dark:text-white">${esc(item.pelaksana_nama || '-')} &rarr; ${esc(item.tempat_tujuan || '-')}</div>
+            <div class="font-mono text-xs text-primary mt-0.5">${esc(item.nomor_spt || '')} ${item.nomor_sppd ? '• ' + esc(item.nomor_sppd) : ''}</div>
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <button type="button" id="btnGenWordSpt" class="py-2.5 px-3 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"><span class="material-symbols-outlined text-[17px]">description</span><span>Unduh SPT (.docx)</span></button>
+            <button type="button" id="btnGenWordSppd" class="py-2.5 px-3 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"><span class="material-symbols-outlined text-[17px]">article</span><span>Unduh SPPD (.docx)</span></button>
+            <button type="button" id="btnGenCetakSpt" class="py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"><span class="material-symbols-outlined text-[17px]">print</span><span>Cetak / PDF SPT</span></button>
+            <button type="button" id="btnGenCetakSppd" class="py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"><span class="material-symbols-outlined text-[17px]">print</span><span>Cetak / PDF SPPD</span></button>
           </div>
           ${pengikutBtns}
         </div>
-      `,
-      showConfirmButton: true,
-      confirmButtonText: 'Tutup',
-      confirmButtonColor: '#64748b',
-      didOpen: (el) => {
-        el.querySelector('#btnGenWordSpt')?.addEventListener('click', () => w.SppdGenerator.unduhWordSPT(item));
-        el.querySelector('#btnGenWordSppd')?.addEventListener('click', () => w.SppdGenerator.unduhWordSPPD(item));
-        el.querySelector('#btnGenCetakSpt')?.addEventListener('click', () => w.SppdGenerator.cetakSPT(item));
-        el.querySelector('#btnGenCetakSppd')?.addEventListener('click', () => w.SppdGenerator.cetakSPPD(item));
-        el.querySelectorAll('[data-gen-pengikut]').forEach((b) => {
-          b.addEventListener('click', () => {
-            const p = pengikut[Number(b.dataset.genPengikut)];
-            if (p) w.SppdGenerator.unduhWordSPPD(item, p);
-          });
-        });
-      },
+        <div class="px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex justify-end">
+          <button type="button" data-close-ov class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Tutup</button>
+        </div>
+      </div>
+    `;
+    wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('[data-close-ov]')) wrap.remove(); });
+    wrap.querySelector('#btnGenWordSpt')?.addEventListener('click', () => w.SppdGenerator.unduhWordSPT(item));
+    wrap.querySelector('#btnGenWordSppd')?.addEventListener('click', () => w.SppdGenerator.unduhWordSPPD(item));
+    wrap.querySelector('#btnGenCetakSpt')?.addEventListener('click', () => w.SppdGenerator.cetakSPT(item));
+    wrap.querySelector('#btnGenCetakSppd')?.addEventListener('click', () => w.SppdGenerator.cetakSPPD(item));
+    wrap.querySelectorAll('[data-gen-pengikut]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const p = pengikut[Number(b.dataset.genPengikut)];
+        if (p) w.SppdGenerator.unduhWordSPPD(item, p);
+      });
     });
+    d.body.appendChild(wrap);
   }
 
   function onPelaksanaPicked(inputEl) {
@@ -506,7 +643,8 @@
 
   function showSuratDetail(idx) {
     const item = _suratItems[idx];
-    if (!item || !w.Swal) return;
+    if (!item) return;
+    closeStitchOverlay('stitchAgendaDetailOverlay');
     const isMasuk = _suratMode === 'masuk';
     const diteruskan = Array.isArray(item.diteruskan_kepada) ? item.diteruskan_kepada.join(', ') : (item.diteruskan_kepada || '');
     const rows = [
@@ -523,24 +661,28 @@
     ].filter(Boolean);
 
     const fileUrl = item.file_url || item.file_final_url || item.drive_url || '';
-    const html = `
-      <div class="text-left text-xs divide-y divide-slate-100 dark:divide-slate-800">
-        ${rows.map(([k, v]) => `<div class="py-2 flex justify-between gap-4"><span class="text-slate-500 shrink-0">${esc(k)}</span><span class="font-semibold text-slate-900 dark:text-white text-right">${esc(v)}</span></div>`).join('')}
-        ${fileUrl ? `<div class="pt-3"><a href="${esc(fileUrl)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#2563eb] text-white font-bold text-xs">Buka Lampiran Berkas</a></div>` : ''}
+    const wrap = d.createElement('div');
+    wrap.id = 'stitchAgendaDetailOverlay';
+    wrap.className = 'fixed inset-0 z-[96] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4';
+    wrap.innerHTML = `
+      <div class="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <h3 class="text-base font-bold text-slate-900 dark:text-white">${isMasuk ? 'Detail Surat Masuk' : 'Detail Surat Keluar'}</h3>
+          <button type="button" data-close-ov class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-[18px]">close</span></button>
+        </div>
+        <div class="p-6 overflow-y-auto text-xs divide-y divide-slate-100 dark:divide-slate-800">
+          ${rows.map(([k, v]) => `<div class="py-2.5 flex justify-between gap-4"><span class="text-slate-500 dark:text-slate-400 shrink-0">${esc(k)}</span><span class="font-semibold text-slate-900 dark:text-white text-right">${esc(v)}</span></div>`).join('')}
+        </div>
+        <div class="px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-end gap-2 flex-wrap">
+          ${fileUrl ? `<a href="${esc(fileUrl)}" target="_blank" rel="noopener noreferrer" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">Buka Lampiran</a>` : ''}
+          ${isMasuk ? `<button type="button" id="btnOvDisposisi" class="px-3.5 py-2 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold cursor-pointer">Lembar Disposisi</button>` : ''}
+          <button type="button" data-close-ov class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Tutup</button>
+        </div>
       </div>
     `;
-    w.Swal.fire({
-      title: isMasuk ? 'Detail Surat Masuk' : 'Detail Surat Keluar',
-      html,
-      width: 540,
-      showDenyButton: isMasuk,
-      denyButtonText: 'Lembar Disposisi',
-      denyButtonColor: '#0f172a',
-      confirmButtonText: 'Tutup',
-      confirmButtonColor: '#2563eb',
-    }).then((res) => {
-      if (res.isDenied && isMasuk) openDisposisiModal(item.id);
-    });
+    wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('[data-close-ov]')) wrap.remove(); });
+    wrap.querySelector('#btnOvDisposisi')?.addEventListener('click', () => { wrap.remove(); openDisposisiModal(item.id); });
+    d.body.appendChild(wrap);
   }
 
   async function openDisposisiModal(suratId) {
@@ -779,11 +921,12 @@
             <td class="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">${esc(tglRange)}</td>
             <td class="px-4 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-[230px] truncate">${esc(item.maksud_perjalanan || '-')}</td>
             <td class="px-4 py-3 whitespace-nowrap text-right">
-              <div class="inline-flex items-center gap-1.5">
+              <div class="inline-flex items-center gap-2">
                 ${statusPill(item.status || 'Tercatat')}
-                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.generateSppdByIndex(${i})" class="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold cursor-pointer" title="Generate SPT & SPPD">Cetak/Word</button>
-                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.openSppdSpjModal(${item.id})" class="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-[10px] font-bold cursor-pointer">LHP/SPJ</button>
-                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.deleteSppd(${item.id})" title="Hapus" class="p-1 rounded-lg text-slate-400 hover:text-rose-600 cursor-pointer"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+                <button type="button" data-sppd-pop-trigger onclick="event.stopPropagation(); window.ArsipAgenda?.openSppdPopover(this, ${i})" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-slate-700 dark:text-slate-200 hover:text-[#2563eb] text-[11px] font-bold transition-colors cursor-pointer">
+                  <span>Aksi</span>
+                  <span class="material-symbols-outlined text-[15px]">expand_more</span>
+                </button>
               </div>
             </td>
           </tr>
@@ -797,68 +940,301 @@
 
   function showSppdDetail(idx) {
     const item = _sppdItems[idx];
-    if (!item || !w.Swal) return;
+    if (!item) return;
+    closeStitchOverlay('stitchAgendaDetailOverlay');
+    let pengikut = [];
+    try { pengikut = Array.isArray(item.pengikut) ? item.pengikut : JSON.parse(item.pengikut || '[]'); } catch (_) {}
+    let berkasSpj = [];
+    try { berkasSpj = Array.isArray(item.berkas_spj) ? item.berkas_spj : JSON.parse(item.berkas_spj || '[]'); } catch (_) {}
+
     const rows = [
       ['Nomor SPPD', item.nomor_sppd || '-'],
       ['Nomor SPT', item.nomor_spt || '-'],
       ['Jenis Perjalanan', item.jenis_sppd === 'LUAR_DAERAH' ? 'Luar Daerah' : 'Dalam Daerah'],
       ['Pejabat Perintah', item.pejabat_perintah || 'Kepala BAPPERIDA'],
-      ['Pelaksana', item.pelaksana_nama || '-'],
-      ['Tempat Tujuan', item.tempat_tujuan || '-'],
-      ['Tanggal Berangkat', fmtDate(item.tanggal_berangkat)],
-      ['Tanggal Kembali', fmtDate(item.tanggal_kembali)],
+      ['Pelaksana Utama', `${item.pelaksana_nama || '-'}${item.pelaksana_nip ? ' (NIP ' + item.pelaksana_nip + ')' : ''}`],
+      pengikut.length ? ['Pengikut', pengikut.map((p) => p.nama).filter(Boolean).join(', ')] : null,
+      ['Tempat Berangkat / Tujuan', `${item.tempat_berangkat || 'Waikabubak'} → ${item.tempat_tujuan || '-'}`],
+      ['Jadwal Perjalanan', `${fmtDate(item.tanggal_berangkat)} – ${fmtDate(item.tanggal_kembali)}`],
       ['Alat Angkutan', item.alat_angkutan || '-'],
       ['Maksud Perjalanan', item.maksud_perjalanan || '-'],
       ['Status', item.status || 'Tercatat'],
-    ];
-    const lhp = item.file_lhp_url || '';
-    const html = `
-      <div class="text-left text-xs divide-y divide-slate-100 dark:divide-slate-800">
-        ${rows.map(([k, v]) => `<div class="py-2 flex justify-between gap-4"><span class="text-slate-500 shrink-0">${esc(k)}</span><span class="font-semibold text-slate-900 dark:text-white text-right">${esc(v)}</span></div>`).join('')}
-        ${lhp ? `<div class="pt-3"><a href="${esc(lhp)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs">Buka Berkas LHP / SPJ</a></div>` : ''}
+      berkasSpj.length ? ['Lampiran SPJ', `${berkasSpj.length} berkas bukti terunggah`] : null,
+    ].filter(Boolean);
+
+    const wrap = d.createElement('div');
+    wrap.id = 'stitchAgendaDetailOverlay';
+    wrap.className = 'fixed inset-0 z-[96] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4';
+    wrap.innerHTML = `
+      <div class="w-full max-w-xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">flight_takeoff</span></span>
+            <div>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">Detail Agenda SPPD</h3>
+              <p class="text-[11px] font-mono text-slate-500 dark:text-slate-400">${esc(item.nomor_sppd || item.nomor_spt || '-')}</p>
+            </div>
+          </div>
+          <button type="button" data-close-ov class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-[18px]">close</span></button>
+        </div>
+        <div class="p-6 overflow-y-auto text-xs divide-y divide-slate-100 dark:divide-slate-800">
+          ${rows.map(([k, v]) => `<div class="py-2.5 flex justify-between gap-4"><span class="text-slate-500 dark:text-slate-400 shrink-0">${esc(k)}</span><span class="font-semibold text-slate-900 dark:text-white text-right">${esc(v)}</span></div>`).join('')}
+        </div>
+        <div class="px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-between gap-2 flex-wrap">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button type="button" id="btnDetDocxSpt" class="px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-xs font-bold cursor-pointer">Unduh SPT (.docx)</button>
+            <button type="button" id="btnDetDocxSppd" class="px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-xs font-bold cursor-pointer">Unduh SPPD (.docx)</button>
+            <button type="button" id="btnDetSpj" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer">Kelola LPJ / SPJ</button>
+          </div>
+          <button type="button" data-close-ov class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Tutup</button>
+        </div>
       </div>
     `;
-    w.Swal.fire({
-      title: 'Detail Agenda SPPD',
-      html,
-      width: 540,
-      showDenyButton: true,
-      denyButtonText: 'Tautkan LHP / SPJ',
-      denyButtonColor: '#0f172a',
-      confirmButtonText: 'Tutup',
-      confirmButtonColor: '#2563eb',
-    }).then((res) => {
-      if (res.isDenied) openSppdSpjModal(item.id);
-    });
+    wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('[data-close-ov]')) wrap.remove(); });
+    wrap.querySelector('#btnDetDocxSpt')?.addEventListener('click', () => w.SppdGenerator?.unduhWordSPT(item));
+    wrap.querySelector('#btnDetDocxSppd')?.addEventListener('click', () => w.SppdGenerator?.unduhWordSPPD(item));
+    wrap.querySelector('#btnDetSpj')?.addEventListener('click', () => { wrap.remove(); openSppdSpjModal(item.id); });
+    d.body.appendChild(wrap);
   }
 
+  /* ── KELOLA LPJ / LHP & SPJ SPPD (100% UMA DATA PARITY) ───────────────── */
   async function openSppdSpjModal(id) {
-    if (!w.Swal || !id) return;
-    const { value: url } = await w.Swal.fire({
-      title: 'Tautkan Berkas LHP / SPJ SPPD',
-      input: 'url',
-      inputLabel: 'URL Google Drive Berkas Laporan Hasil Perjalanan / SPJ',
-      inputPlaceholder: 'https://drive.google.com/file/d/...',
-      showCancelButton: true,
-      confirmButtonText: 'Simpan LHP / SPJ',
-      cancelButtonText: 'Batal',
-      confirmButtonColor: '#2563eb',
-    });
-    if (!url) return;
-    try {
-      const r = await fetch(`/api/arsip/p/api/agenda/sppd/${id}/spj`, {
+    const item = _sppdItems.find((x) => String(x.id) === String(id));
+    if (!item) return;
+    closeStitchOverlay('stitchAgendaSpjOverlay');
+
+    let berkasList = [];
+    try { berkasList = Array.isArray(item.berkas_spj) ? [...item.berkas_spj] : JSON.parse(item.berkas_spj || '[]'); } catch (_) { berkasList = []; }
+
+    const wrap = d.createElement('div');
+    wrap.id = 'stitchAgendaSpjOverlay';
+    wrap.className = 'fixed inset-0 z-[96] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4';
+    wrap.innerHTML = `
+      <div class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">folder_check</span></span>
+            <div>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">Kelola LPJ / LHP &amp; Berkas SPJ SPPD</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">${esc(item.pelaksana_nama || '-')} • ${esc(item.nomor_sppd || item.nomor_spt || '-')}</p>
+            </div>
+          </div>
+          <button type="button" data-close-spj class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-[19px]">close</span></button>
+        </div>
+
+        <div class="p-6 overflow-y-auto flex flex-col gap-5 text-xs">
+          <!-- Status Pertanggungjawaban -->
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Status Pertanggungjawaban SPPD</label>
+            <select id="spjFieldStatus" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white">
+              <option value="Pengajuan" ${item.status === 'Pengajuan' ? 'selected' : ''}>Pengajuan</option>
+              <option value="Terbit" ${item.status === 'Terbit' ? 'selected' : ''}>Terbit / Sedang Berjalan</option>
+              <option value="Laporan Masuk" ${item.status === 'Laporan Masuk' ? 'selected' : ''}>Laporan Masuk (LHP Terunggah)</option>
+              <option value="Selesai" ${item.status === 'Selesai' ? 'selected' : ''}>SPJ Lengkap / Selesai</option>
+            </select>
+          </div>
+
+          <!-- 3 Dokumen Utama (LHP, Scan SPT, Scan SPPD/Visum) -->
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+              <span class="w-1 h-4 rounded-full bg-[#2563eb]"></span>
+              <span>Dokumen Utama Perjalanan Dinas</span>
+            </div>
+
+            ${[
+              ['lhp', 'Laporan Hasil Perjalanan (LHP)', item.file_lhp_url || ''],
+              ['spt', 'Scan SPT Resmi Bertanda Tangan', item.file_spt_url || ''],
+              ['sppd', 'Scan SPPD & Lembar Visum', item.file_sppd_url || ''],
+            ].map(([key, label, val]) => `
+              <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex flex-col gap-2">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                  <label class="font-bold text-slate-800 dark:text-slate-200">${label}</label>
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" data-spj-up-btn="${key}" class="px-2.5 py-1 rounded-lg bg-[#2563eb] hover:bg-blue-700 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer">
+                      <span class="material-symbols-outlined text-[14px]">upload_file</span>
+                      <span>Upload ke Drive</span>
+                    </button>
+                    <input type="file" data-spj-up-inp="${key}" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp" class="hidden">
+                    ${val ? `<a href="${esc(val)}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold">Buka</a>` : ''}
+                  </div>
+                </div>
+                <input id="spjField_${key}" type="url" value="${esc(val)}" placeholder="https://drive.google.com/file/d/... (otomatis terisi saat upload)" class="w-full h-10 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+                <div id="spjStatus_${key}" class="text-[10px] text-slate-400"></div>
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- Lampiran Bukti SPJ / Kwitansi (Multi-item) -->
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+              <span class="w-1 h-4 rounded-full bg-emerald-600"></span>
+              <span>Lampiran Bukti SPJ / Kwitansi</span>
+            </div>
+            <div id="spjBerkasListBox" class="flex flex-col gap-2"></div>
+            <div class="p-3.5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 flex flex-col gap-2.5">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input id="spjBaruNama" type="text" placeholder="Nama Bukti (mis. Tiket, Bill Hotel, BBM)" class="h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+                <input id="spjBaruUrl" type="url" placeholder="URL Drive atau klik Upload File..." class="h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+              </div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" id="spjBaruUploadBtn" class="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold flex items-center gap-1 cursor-pointer">
+                  <span class="material-symbols-outlined text-[15px]">upload_file</span>
+                  <span>Upload Bukti SPJ</span>
+                </button>
+                <input type="file" id="spjBaruFileInp" accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.docx" class="hidden">
+                <button type="button" id="spjBaruAddBtn" class="px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-700 text-white text-[11px] font-bold cursor-pointer">+ Tambah ke Daftar</button>
+                <span id="spjBaruStatus" class="text-[11px] text-slate-400"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-end gap-2.5">
+          <button type="button" data-close-spj class="px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Batal</button>
+          <button type="button" id="btnSaveSpjAll" class="px-5 py-2.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold shadow-sm cursor-pointer">Simpan LPJ &amp; Berkas SPJ</button>
+        </div>
+      </div>
+    `;
+
+    const renderBerkasList = () => {
+      const box = wrap.querySelector('#spjBerkasListBox');
+      if (!box) return;
+      if (!berkasList.length) {
+        box.innerHTML = '<div class="text-[11px] text-slate-400 py-2">Belum ada lampiran bukti SPJ (tiket/hotel/kwitansi) ditambahkan.</div>';
+        return;
+      }
+      box.innerHTML = berkasList.map((b, bi) => `
+        <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700">
+          <div class="min-w-0">
+            <div class="font-bold text-slate-800 dark:text-slate-200 truncate">${esc(b.nama || `Bukti ${bi + 1}`)}</div>
+            <div class="text-[10px] font-mono text-slate-400 truncate">${esc(b.url || '')}</div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            ${b.url ? `<a href="${esc(b.url)}" target="_blank" rel="noopener noreferrer" class="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] text-[11px] font-bold">Buka</a>` : ''}
+            <button type="button" data-del-spj="${bi}" class="px-2 py-1 rounded-lg text-rose-600 hover:bg-rose-50 text-[11px] font-bold cursor-pointer">Hapus</button>
+          </div>
+        </div>
+      `).join('');
+      box.querySelectorAll('[data-del-spj]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          berkasList.splice(Number(btn.dataset.delSpj), 1);
+          renderBerkasList();
+        });
+      });
+    };
+
+    const uploadToDrive = async (file, statusEl) => {
+      if (statusEl) statusEl.textContent = `Mengunggah "${file.name}" ke Google Drive...`;
+      const dataBase64 = await readBlobAsBase64(file);
+      const r = await fetch('/api/arsip/docs/upload-file', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file_lhp_url: url, url }),
+        body: JSON.stringify({ filename: file.name, mimeType: file.type || 'application/octet-stream', dataBase64 }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || j.ok === false) throw new Error(j.message || `HTTP ${r.status}`);
-      w.Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Status SPPD diperbarui menjadi Laporan Masuk.' });
-      loadAgendaSppd();
-      loadMobileAgendaSppd();
-    } catch (err) {
-      w.Swal.fire({ icon: 'error', title: 'Gagal', text: err?.message || 'Koneksi terganggu.' });
-    }
+      const url = j.url || (j.fileId ? `https://drive.google.com/file/d/${j.fileId}/view` : '');
+      if (statusEl) statusEl.textContent = `Berhasil diunggah: ${file.name}`;
+      return url;
+    };
+
+    wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('[data-close-spj]')) wrap.remove(); });
+
+    ['lhp', 'spt', 'sppd'].forEach((key) => {
+      const btn = wrap.querySelector(`[data-spj-up-btn="${key}"]`);
+      const inp = wrap.querySelector(`[data-spj-up-inp="${key}"]`);
+      btn?.addEventListener('click', () => inp?.click());
+      inp?.addEventListener('change', async () => {
+        const f = inp.files?.[0];
+        if (!f) return;
+        const st = wrap.querySelector(`#spjStatus_${key}`);
+        try {
+          const url = await uploadToDrive(f, st);
+          const field = wrap.querySelector(`#spjField_${key}`);
+          if (field && url) field.value = url;
+          if (key === 'lhp') {
+            const stSel = wrap.querySelector('#spjFieldStatus');
+            if (stSel && (stSel.value === 'Pengajuan' || stSel.value === 'Terbit')) {
+              stSel.value = 'Laporan Masuk';
+              refreshPickersIn(wrap);
+            }
+          }
+        } catch (err) {
+          if (st) st.textContent = `Gagal upload: ${err?.message}`;
+        } finally {
+          inp.value = '';
+        }
+      });
+    });
+
+    wrap.querySelector('#spjBaruUploadBtn')?.addEventListener('click', () => wrap.querySelector('#spjBaruFileInp')?.click());
+    wrap.querySelector('#spjBaruFileInp')?.addEventListener('change', async (ev) => {
+      const f = ev.target.files?.[0];
+      if (!f) return;
+      const st = wrap.querySelector('#spjBaruStatus');
+      try {
+        const url = await uploadToDrive(f, st);
+        const nmInp = wrap.querySelector('#spjBaruNama');
+        const nama = (nmInp?.value || '').trim() || f.name.replace(/\.[^.]+$/, '');
+        berkasList.push({ nama, url });
+        if (nmInp) nmInp.value = '';
+        const uInp = wrap.querySelector('#spjBaruUrl');
+        if (uInp) uInp.value = '';
+        renderBerkasList();
+      } catch (err) {
+        if (st) st.textContent = `Gagal: ${err?.message}`;
+      } finally {
+        ev.target.value = '';
+      }
+    });
+
+    wrap.querySelector('#spjBaruAddBtn')?.addEventListener('click', () => {
+      const nm = (wrap.querySelector('#spjBaruNama')?.value || '').trim();
+      const ur = (wrap.querySelector('#spjBaruUrl')?.value || '').trim();
+      if (!nm || !ur) return;
+      berkasList.push({ nama: nm, url: ur });
+      wrap.querySelector('#spjBaruNama').value = '';
+      wrap.querySelector('#spjBaruUrl').value = '';
+      renderBerkasList();
+    });
+
+    wrap.querySelector('#btnSaveSpjAll')?.addEventListener('click', async (ev) => {
+      const btn = ev.currentTarget;
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
+      try {
+        const body = {
+          file_lhp_url: (wrap.querySelector('#spjField_lhp')?.value || '').trim(),
+          file_spt_url: (wrap.querySelector('#spjField_spt')?.value || '').trim(),
+          file_sppd_url: (wrap.querySelector('#spjField_sppd')?.value || '').trim(),
+          berkas_spj: berkasList,
+          status: wrap.querySelector('#spjFieldStatus')?.value || 'Laporan Masuk',
+        };
+        const r = await fetch(`/api/arsip/p/api/agenda/sppd/${item.id}/spj`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || j.ok === false) throw new Error(j.message || `HTTP ${r.status}`);
+        wrap.remove();
+        if (typeof w.showDynamicIsland === 'function') {
+          w.showDynamicIsland({ type: 'success', title: 'LPJ & SPJ Tersimpan', message: `Status diperbarui menjadi ${body.status}.` });
+        }
+        loadAgendaSppd();
+        loadMobileAgendaSppd();
+      } catch (err) {
+        if (w.Swal) w.Swal.fire({ icon: 'error', title: 'Gagal Menyimpan LPJ', text: err?.message || 'Koneksi terganggu.' });
+      } finally {
+        btn.disabled = false;
+        btn.textContent = orig;
+      }
+    });
+
+    d.body.appendChild(wrap);
+    renderBerkasList();
+    refreshPickersIn(wrap);
   }
 
   async function deleteSppd(id) {
@@ -1164,9 +1540,10 @@
             <div class="flex items-center justify-between pt-1.5 border-t border-slate-100 dark:border-slate-800">
               <span class="font-mono text-[10px] text-slate-400">${esc(fmtDate(item.tanggal_berangkat))} – ${esc(fmtDate(item.tanggal_kembali))}</span>
               <div class="flex items-center gap-1.5">
-                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.generateSppdByIndex(${i})" class="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold cursor-pointer">Cetak/Word</button>
-                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.openSppdSpjModal(${item.id})" class="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-[10px] font-bold cursor-pointer">LHP/SPJ</button>
-                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.deleteSppd(${item.id})" class="px-2 py-1 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[10px] font-semibold cursor-pointer">Hapus</button>
+                <button type="button" data-sppd-pop-trigger onclick="event.stopPropagation(); window.ArsipAgenda?.openSppdPopover(this, ${i})" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-bold cursor-pointer">
+                  <span>Aksi</span>
+                  <span class="material-symbols-outlined text-[14px]">expand_more</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1207,6 +1584,7 @@
     openSuratCameraScan,
     onPelaksanaPicked,
     addPengikutRow,
+    openSppdPopover,
     generateSppdByIndex(idx) {
       const item = _sppdItems[idx];
       if (item) showSppdGenerateMenu(item);

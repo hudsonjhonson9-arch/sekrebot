@@ -929,15 +929,27 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
   if (mSppdSpj && (method === 'POST' || method === 'PATCH')) {
     try {
       const b = req.body || {};
-      const lhpUrl = b.file_lhp_url || b.url || '';
+      const lhpUrl = b.file_lhp_url ?? b.url ?? '';
+      const sptUrl = b.file_spt_url ?? '';
+      const sppdUrl = b.file_sppd_url ?? '';
+      const status = b.status || (lhpUrl ? 'Laporan Masuk' : 'Terbit');
+      const berkasSpj = Array.isArray(b.berkas_spj) ? JSON.stringify(b.berkas_spj) : null;
       const { rows } = await doQuery(
-        `UPDATE agenda_sppd SET file_lhp_url = COALESCE(NULLIF($1, ''), file_lhp_url), status = 'Laporan Masuk', updated_at = NOW() WHERE id = $2 RETURNING *`,
-        [lhpUrl, Number(mSppdSpj[1])]
+        `UPDATE agenda_sppd
+         SET file_lhp_url = COALESCE(NULLIF($1, ''), file_lhp_url),
+             file_spt_url = COALESCE(NULLIF($2, ''), file_spt_url),
+             file_sppd_url = COALESCE(NULLIF($3, ''), file_sppd_url),
+             berkas_spj = COALESCE($4::jsonb, berkas_spj),
+             status = COALESCE(NULLIF($5, ''), status),
+             updated_at = NOW()
+         WHERE id = $6 RETURNING *`,
+        [lhpUrl, sptUrl, sppdUrl, berkasSpj, status, Number(mSppdSpj[1])]
       );
       res.json({ ok: true, item: rows[0] });
       return true;
     } catch (err) {
-      res.status(500).json({ ok: false, message: 'Gagal menyimpan SPJ/LHP SPPD' });
+      console.error('[arsip-db] sppd/spj error:', err);
+      res.status(500).json({ ok: false, message: 'Gagal menyimpan LPJ/SPJ SPPD: ' + err.message });
       return true;
     }
   }
