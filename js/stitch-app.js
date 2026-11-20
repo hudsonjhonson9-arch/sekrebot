@@ -1254,6 +1254,8 @@
           if (typeof initAdminGeofenceMap === 'function') {
             requestAnimationFrame(() => initAdminGeofenceMap());
           }
+        } else if (effectiveSection === 'adminSectionJamLibur') {
+          window.loadMobileKontrolAkumulasi?.();
         } else if (effectiveSection === 'dev') {
           window.renderDevHealthMatrix?.();
           window.renderDevLogTable?.();

@@ -776,6 +776,158 @@
     }
   });
 
+  /* ── Kontrol Absen (Jam Jaga) & Peringatan Akumulasi (Mobile) ──────── */
+  function getMobInstansiId() {
+    try {
+      return (localStorage.getItem('_sess_inst')
+        || localStorage.getItem('MY_INSTANSI')
+        || w._session?.instansi_id
+        || 'bapperida').trim() || 'bapperida';
+    } catch (_) {
+      return 'bapperida';
+    }
+  }
+
+  function normalizeMobJam(raw) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(raw || '').trim());
+    if (!m) return '';
+    const hh = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return '';
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  }
+
+  async function loadMobileKontrolAkumulasi() {
+    const instId = getMobInstansiId();
+    const kEnabled = el('mobKontrolEnabled');
+    const kTol = el('mobKontrolToleransi');
+    const kTimes = el('mobKontrolTimesInput');
+    const aEnabled = el('mobAkumulasiEnabled');
+    const aAmbang = el('mobAkumulasiAmbang');
+
+    if (!kEnabled && !aEnabled) return;
+
+    const tasks = [];
+    if (kEnabled || kTol || kTimes) {
+      tasks.push(
+        requestJson(`/api/kontrol-absen?instansi_id=${encodeURIComponent(instId)}`)
+          .then((json) => {
+            const cfg = json.data?.config || json.config || {};
+            if (kEnabled) kEnabled.checked = !!cfg.enabled;
+            if (kTol) kTol.value = parseInt(cfg.toleransi, 10) || 30;
+            if (kTimes) {
+              const list = Array.isArray(cfg.times)
+                ? cfg.times.map((t) => normalizeMobJam(t.jam)).filter(Boolean)
+                : [];
+              kTimes.value = list.join(', ');
+            }
+          })
+          .catch((err) => {
+            console.warn('[mobile-admin] gagal memuat kontrol-absen:', err.message);
+          })
+      );
+    }
+
+    if (aEnabled || aAmbang) {
+      tasks.push(
+        requestJson(`/api/peringatan-akumulasi?instansi_id=${encodeURIComponent(instId)}`)
+          .then((json) => {
+            const cfg = json.data?.config || json.config || {};
+            if (aEnabled) aEnabled.checked = !!cfg.enabled;
+            if (aAmbang) {
+              const val = parseInt(cfg.ambang_menit, 10) || 435;
+              aAmbang.value = Math.min(Math.max(val, 30), 1440);
+            }
+          })
+          .catch((err) => {
+            console.warn('[mobile-admin] gagal memuat peringatan-akumulasi:', err.message);
+          })
+      );
+    }
+
+    await Promise.all(tasks);
+  }
+
+  async function saveMobileKontrolAbsen() {
+    const kEnabled = el('mobKontrolEnabled');
+    const kTol = el('mobKontrolToleransi');
+    const kTimes = el('mobKontrolTimesInput');
+    const btn = el('btnSaveMobKontrol');
+
+    const rawTokens = String(kTimes?.value || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const seen = new Set();
+    const times = [];
+    for (const tok of rawTokens) {
+      const jam = normalizeMobJam(tok);
+      if (!jam) {
+        notify('error', 'Format Jam Tidak Valid', `Jam "${tok}" harus berformat HH:MM (contoh: 10:00, 12:00).`);
+        if (kTimes) kTimes.focus();
+        return;
+      }
+      if (!seen.has(jam)) {
+        seen.add(jam);
+        times.push({ jam, aktif: true });
+      }
+    }
+
+    const tolParsed = parseInt(kTol?.value, 10);
+    const toleransi = Number.isFinite(tolParsed) && tolParsed > 0 ? tolParsed : 30;
+    if (kTol) kTol.value = toleransi;
+    if (kTimes) kTimes.value = times.map((t) => t.jam).join(', ');
+    const enabled = !!kEnabled?.checked;
+
+    if (btn) btn.disabled = true;
+    try {
+      await requestJson('/api/kontrol-absen', {
+        method: 'POST',
+        body: JSON.stringify({
+          instansi_id: getMobInstansiId(),
+          enabled,
+          toleransi,
+          times
+        })
+      });
+      notify('success', 'Kontrol Absen Tersimpan', `Jam Jaga ${enabled ? 'aktif' : 'nonaktif'} (${times.length} jadwal, toleransi ${toleransi} menit).`);
+    } catch (err) {
+      notify('error', 'Gagal Menyimpan Kontrol Absen', err.message);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function saveMobilePeringatanAkumulasi() {
+    const aEnabled = el('mobAkumulasiEnabled');
+    const aAmbang = el('mobAkumulasiAmbang');
+    const btn = el('btnSaveMobAkumulasi');
+
+    const raw = parseInt(aAmbang?.value, 10);
+    const ambang_menit = Math.min(Math.max(Number.isFinite(raw) ? raw : 435, 30), 1440);
+    if (aAmbang) aAmbang.value = ambang_menit;
+    const enabled = !!aEnabled?.checked;
+
+    if (btn) btn.disabled = true;
+    try {
+      await requestJson('/api/peringatan-akumulasi', {
+        method: 'POST',
+        body: JSON.stringify({
+          instansi_id: getMobInstansiId(),
+          enabled,
+          ambang_menit
+        })
+      });
+      const jam = Math.floor(ambang_menit / 60);
+      const sisa = ambang_menit % 60;
+      notify('success', 'Peringatan Akumulasi Tersimpan', `Notifikasi ${enabled ? 'aktif' : 'nonaktif'} pada ambang ${jam}j ${sisa}m (${ambang_menit} menit).`);
+    } catch (err) {
+      notify('error', 'Gagal Menyimpan Peringatan Akumulasi', err.message);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
   w.loadAdminPegawaiMobile = loadAdminPegawaiMobile;
   w.filterAdminPegawaiMobile = filterAdminPegawaiMobile;
   w.setAdminPegawaiFilter = setAdminPegawaiFilter;
@@ -793,4 +945,7 @@
   w.setRoleDetailMode = setRoleDetailMode;
   w.renderRoleDetailUsers = renderRoleDetailUsers;
   w.applyRoleFilterToPegawai = applyRoleFilterToPegawai;
+  w.loadMobileKontrolAkumulasi = loadMobileKontrolAkumulasi;
+  w.saveMobileKontrolAbsen = saveMobileKontrolAbsen;
+  w.saveMobilePeringatanAkumulasi = saveMobilePeringatanAkumulasi;
 })(window);

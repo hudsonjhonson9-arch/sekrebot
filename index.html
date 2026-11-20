@@ -873,6 +873,65 @@
             </div>
             <div id="adminHolidaysList" class="max-h-72 overflow-y-auto space-y-1.5 pr-1"></div>
           </div>
+
+          <!-- Kontrol Absen (Jam Jaga) & Peringatan Akumulasi -->
+          <div class="pt-3 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Kontrol Absen (Jam Jaga) -->
+            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+              <div class="flex items-center justify-between gap-2">
+                <div>
+                  <h4 class="text-xs font-extrabold text-slate-900 dark:text-white">Kontrol Absen (Jam Jaga)</h4>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400">Jadwal cek kehadiran tengah hari &amp; toleransi WITA.</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input id="mobKontrolEnabled" type="checkbox" class="sr-only peer" aria-label="Aktifkan Kontrol Absen Jam Jaga" />
+                  <div class="w-10 h-5 bg-slate-300 dark:bg-slate-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                <div class="sm:col-span-4">
+                  <label for="mobKontrolToleransi" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">Toleransi (Menit)</label>
+                  <input id="mobKontrolToleransi" type="number" min="0" max="180" value="30" class="mt-1 w-full min-h-[42px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold tabular-nums text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+                </div>
+                <div class="sm:col-span-8">
+                  <label for="mobKontrolTimesInput" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">Daftar Jam Jaga (HH:MM, pisahkan koma)</label>
+                  <input id="mobKontrolTimesInput" type="text" placeholder="10:00, 12:00" class="mt-1 w-full min-h-[42px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold tabular-nums text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+                </div>
+              </div>
+              <div class="flex justify-end">
+                <button id="btnSaveMobKontrol" type="button" onclick="saveMobileKontrolAbsen()" class="min-h-[40px] px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer">
+                  <span class="material-symbols-outlined text-[16px]">save</span>
+                  <span>Simpan Kontrol Absen</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Peringatan Akumulasi -->
+            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3 flex flex-col justify-between">
+              <div class="space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                  <div>
+                    <h4 class="text-xs font-extrabold text-slate-900 dark:text-white">Peringatan Akumulasi</h4>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400">Notifikasi saat akumulasi keterlambatan melewati ambang.</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input id="mobAkumulasiEnabled" type="checkbox" class="sr-only peer" aria-label="Aktifkan Peringatan Akumulasi" />
+                    <div class="w-10 h-5 bg-slate-300 dark:bg-slate-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+                <div>
+                  <label for="mobAkumulasiAmbang" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">Ambang Batas (Menit, 30 - 1440)</label>
+                  <input id="mobAkumulasiAmbang" type="number" min="30" max="1440" value="435" class="mt-1 w-full min-h-[42px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold tabular-nums text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+                </div>
+              </div>
+              <div class="flex justify-end">
+                <button id="btnSaveMobAkumulasi" type="button" onclick="saveMobilePeringatanAkumulasi()" class="min-h-[40px] px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer">
+                  <span class="material-symbols-outlined text-[16px]">save</span>
+                  <span>Simpan Peringatan Akumulasi</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -648,7 +648,6 @@
     // Action Buttons
     const btnPdf = document.getElementById('btn-export-pdf');
     const btnExcel = document.getElementById('btn-export-excel');
-    const btnTelegram = document.getElementById('btn-telegram-sync');
 
     if (btnPdf) {
       btnPdf.addEventListener('click', () => {
@@ -662,12 +661,6 @@
     if (btnExcel) {
       btnExcel.addEventListener('click', () => {
         showToast('Mengunduh spreadsheet rekapitulasi presensi ASN (.xlsx)...');
-      });
-    }
-
-    if (btnTelegram) {
-      btnTelegram.addEventListener('click', () => {
-        showToast('Rekapitulasi otomatis berhasil dikirim ke grup Telegram Kepegawaian!');
       });
     }
 
@@ -961,8 +954,102 @@
     }
     const btnTg = document.getElementById('btn-telegram-sync');
     if (btnTg) {
-      btnTg.onclick = () => {
-        window.location.href = 'index.html?view=admin&panel=rekap';
+      btnTg.onclick = async () => {
+        if (typeof Swal === 'undefined') return;
+        const blnNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+        const now = new Date();
+        const fmtYmd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const periode = document.getElementById('filter-periode')?.value || 'month';
+        let dari = '';
+        let sampai = '';
+        let tanggal_label = '';
+
+        if (periode === 'today') {
+          dari = fmtYmd(now);
+          sampai = dari;
+          tanggal_label = `${now.getDate()} ${blnNames[now.getMonth()]} ${now.getFullYear()}`;
+        } else if (periode === 'week') {
+          const day = now.getDay() || 7;
+          const mon = new Date(now);
+          mon.setDate(now.getDate() - (day - 1));
+          const fri = new Date(mon);
+          fri.setDate(mon.getDate() + 4);
+          dari = fmtYmd(mon);
+          sampai = fmtYmd(fri);
+          tanggal_label = `${dari} s.d. ${sampai}`;
+        } else if (periode === 'prev_month') {
+          const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          const end = new Date(now.getFullYear(), now.getMonth(), 0);
+          dari = fmtYmd(start);
+          sampai = fmtYmd(end);
+          tanggal_label = `${blnNames[start.getMonth()]} ${start.getFullYear()}`;
+        } else {
+          const start = new Date(now.getFullYear(), now.getMonth(), 1);
+          const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          dari = fmtYmd(start);
+          sampai = fmtYmd(end);
+          tanggal_label = `${blnNames[start.getMonth()]} ${start.getFullYear()}`;
+        }
+
+        const savedChatId = localStorage.getItem('stitch_tg_chat_id') || '';
+        const promptRes = await Swal.fire({
+          title: 'Kirim Rekap ke Telegram',
+          text: `Periode ${tanggal_label} (${_rawRekapList.length} pegawai)`,
+          input: 'text',
+          inputLabel: 'Chat ID Telegram Tujuan',
+          inputValue: savedChatId,
+          inputPlaceholder: 'Contoh: -1001234567890 atau 123456789',
+          showCancelButton: true,
+          confirmButtonText: 'Kirim Rekap',
+          cancelButtonText: 'Batal',
+          inputValidator: (v) => {
+            if (!String(v || '').trim()) return 'Chat ID Telegram wajib diisi.';
+            return null;
+          }
+        });
+
+        if (!promptRes.isConfirmed) return;
+        const chat_id = String(promptRes.value || '').trim();
+        try {
+          localStorage.setItem('stitch_tg_chat_id', chat_id);
+        } catch (_) {}
+
+        Swal.fire({
+          title: 'Mengirim ke Telegram...',
+          text: 'Menyiapkan dokumen rekapitulasi absensi BAPPERIDA.',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
+        });
+
+        try {
+          const res = await fetch('/api/kirim-rekap', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id,
+              dari,
+              sampai,
+              tanggal_label,
+              instansi_name: 'BAPPERIDA',
+              pegawai: _rawRekapList
+            })
+          });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json || json.ok === false) {
+            throw new Error((json && json.message) || `HTTP ${res.status}`);
+          }
+          await Swal.fire({
+            icon: 'success',
+            title: 'Terkirim ke Telegram',
+            text: json.message || 'Rekapitulasi berhasil dikirim ke Telegram.'
+          });
+        } catch (err) {
+          await Swal.fire({
+            icon: 'error',
+            title: 'Gagal Mengirim Rekap',
+            text: err.message || 'Terjadi kesalahan saat mengirim rekap ke Telegram.'
+          });
+        }
       };
     }
   });

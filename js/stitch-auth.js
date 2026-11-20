@@ -130,7 +130,7 @@
     }
   }
 
-  const STITCH_RE = /^(https?:\/\/[^/]+)?\/api\/(stitch|media|dev|auth\/devices|instansi-list|instansi-update|password-toggle)(\/|\?|$)/;
+  const STITCH_RE = /^(https?:\/\/[^/]+)?\/api\/(stitch|media|dev|auth\/devices|instansi-list|instansi-update|password-toggle|kontrol-absen|peringatan-akumulasi|kirim-rekap)(\/|\?|$)/;
   const origFetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
     try {

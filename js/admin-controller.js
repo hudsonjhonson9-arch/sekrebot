@@ -730,6 +730,235 @@
       });
     }
 
+    // ── Kontrol Absen (Jam Jaga) ─────────────────────────────────────────────
+    const kontrolEnabledEl = $('adminKontrolEnabled');
+    const kontrolToleransiEl = $('adminKontrolToleransi');
+    const kontrolTimesListEl = $('adminKontrolTimesList');
+    const kontrolNewTimeEl = $('adminKontrolNewTime');
+    const btnAddKontrolTime = $('btnAddKontrolTime');
+    const btnSaveKontrolAbsen = $('btnSaveKontrolAbsen');
+
+    if (kontrolNewTimeEl && window.StitchPicker && typeof window.StitchPicker.enhanceTime === 'function') {
+      window.StitchPicker.enhanceTime(kontrolNewTimeEl, {
+        minHour: 6,
+        maxHour: 20,
+        stepMin: 15,
+        placeholder: 'HH:MM'
+      });
+    }
+
+    let kontrolTimes = [{ jam: '10:00', aktif: true }];
+
+    function normalizeJamHm(raw) {
+      const m = /^(\d{1,2}):(\d{2})$/.exec(String(raw || '').trim());
+      if (!m) return '';
+      const hh = parseInt(m[1], 10);
+      const mm = parseInt(m[2], 10);
+      if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return '';
+      return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    }
+
+    function renderKontrolTimes() {
+      if (!kontrolTimesListEl) return;
+      if (!kontrolTimes.length) {
+        kontrolTimesListEl.innerHTML = '<span class="text-xs text-on-surface-variant">Belum ada jam jaga. Tambahkan jam di atas lalu simpan.</span>';
+        return;
+      }
+      kontrolTimesListEl.innerHTML = kontrolTimes.map((t, idx) => {
+        const isActive = t.aktif !== false;
+        const chipCls = isActive
+          ? 'bg-primary-fixed text-on-primary-fixed border-primary/30'
+          : 'bg-surface-container text-on-surface-variant border-outline-variant/40 opacity-75';
+        return `
+          <div class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full border text-xs font-mono font-bold tabular-nums ${chipCls}">
+            <button type="button" data-toggle-kontrol-idx="${idx}" title="${isActive ? 'Nonaktifkan jam ini' : 'Aktifkan jam ini'}" class="inline-flex items-center gap-1.5 cursor-pointer">
+              <span class="w-1.5 h-1.5 rounded-full ${isActive ? 'bg-primary' : 'bg-outline'}"></span>
+              <span>${escapeHtml(t.jam)}</span>
+            </button>
+            <button type="button" data-remove-kontrol-idx="${idx}" aria-label="Hapus jam ${escapeHtml(t.jam)}" class="w-5 h-5 rounded-full hover:bg-error/15 hover:text-error inline-flex items-center justify-center transition-colors cursor-pointer">
+              <span class="material-symbols-outlined text-[14px]">close</span>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    if (kontrolTimesListEl) {
+      kontrolTimesListEl.addEventListener('click', function (ev) {
+        const removeBtn = ev.target.closest('[data-remove-kontrol-idx]');
+        if (removeBtn) {
+          const idx = parseInt(removeBtn.getAttribute('data-remove-kontrol-idx'), 10);
+          if (Number.isFinite(idx) && idx >= 0 && idx < kontrolTimes.length) {
+            kontrolTimes.splice(idx, 1);
+            renderKontrolTimes();
+          }
+          return;
+        }
+        const toggleBtn = ev.target.closest('[data-toggle-kontrol-idx]');
+        if (toggleBtn) {
+          const idx = parseInt(toggleBtn.getAttribute('data-toggle-kontrol-idx'), 10);
+          if (Number.isFinite(idx) && idx >= 0 && idx < kontrolTimes.length) {
+            kontrolTimes[idx].aktif = kontrolTimes[idx].aktif === false;
+            renderKontrolTimes();
+          }
+        }
+      });
+    }
+
+    if (btnAddKontrolTime && kontrolNewTimeEl) {
+      btnAddKontrolTime.addEventListener('click', function () {
+        const jam = normalizeJamHm(kontrolNewTimeEl.value);
+        if (!jam) {
+          notifyToast('warning', 'Format Jam Tidak Valid', 'Gunakan format HH:MM (contoh: 10:00).');
+          return;
+        }
+        const existing = kontrolTimes.find((t) => t.jam === jam);
+        if (existing) {
+          existing.aktif = true;
+          renderKontrolTimes();
+          notifyToast('info', 'Jam Sudah Terdaftar', `Jam jaga ${jam} diaktifkan kembali.`);
+          return;
+        }
+        kontrolTimes.push({ jam, aktif: true });
+        kontrolTimes.sort((a, b) => a.jam.localeCompare(b.jam));
+        renderKontrolTimes();
+      });
+    }
+
+    if (kontrolEnabledEl || kontrolTimesListEl) {
+      try {
+        const res = await fetch(`/api/kontrol-absen?instansi_id=${encodeURIComponent(activeInstansiId || instId)}`);
+        const json = await res.json().catch(() => null);
+        if (res.ok && json && json.ok !== false) {
+          const cfg = json.data?.config || json.config || {};
+          if (kontrolEnabledEl) kontrolEnabledEl.checked = !!cfg.enabled;
+          if (kontrolToleransiEl) kontrolToleransiEl.value = parseInt(cfg.toleransi, 10) || 30;
+          if (Array.isArray(cfg.times)) {
+            kontrolTimes = cfg.times
+              .map((t) => ({ jam: normalizeJamHm(t.jam), aktif: t.aktif !== false }))
+              .filter((t) => t.jam);
+          }
+        }
+      } catch (err) {
+        console.warn('[admin] gagal memuat kontrol-absen:', err.message);
+      }
+      renderKontrolTimes();
+    }
+
+    if (btnSaveKontrolAbsen) {
+      btnSaveKontrolAbsen.addEventListener('click', async function () {
+        const tolParsed = parseInt(kontrolToleransiEl?.value, 10);
+        const toleransi = Number.isFinite(tolParsed) && tolParsed > 0 ? tolParsed : 30;
+        if (kontrolToleransiEl) kontrolToleransiEl.value = toleransi;
+        const enabled = !!kontrolEnabledEl?.checked;
+        const times = kontrolTimes
+          .map((t) => ({ jam: normalizeJamHm(t.jam), aktif: t.aktif !== false }))
+          .filter((t) => t.jam);
+
+        btnSaveKontrolAbsen.disabled = true;
+        try {
+          const res = await fetch('/api/kontrol-absen', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              instansi_id: activeInstansiId || instId,
+              enabled,
+              toleransi,
+              times
+            })
+          });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json || json.ok === false) {
+            throw new Error((json && json.message) || `HTTP ${res.status}`);
+          }
+          notifyToast(
+            'success',
+            'Kontrol Absen Tersimpan',
+            `Jam Jaga ${enabled ? 'aktif' : 'nonaktif'} (${times.length} jadwal, toleransi ${toleransi} menit).`
+          );
+        } catch (err) {
+          notifyToast('error', 'Gagal Menyimpan Kontrol Absen', err.message);
+        } finally {
+          btnSaveKontrolAbsen.disabled = false;
+        }
+      });
+    }
+
+    // ── Peringatan Akumulasi Keterlambatan ───────────────────────────────────
+    const akumulasiEnabledEl = $('adminAkumulasiEnabled');
+    const akumulasiAmbangEl = $('adminAkumulasiAmbang');
+    const akumulasiAmbangLabelEl = $('adminAkumulasiAmbangLabel');
+    const btnSaveAkumulasi = $('btnSaveAkumulasi');
+
+    function updateAkumulasiAmbangLabel() {
+      if (!akumulasiAmbangEl || !akumulasiAmbangLabelEl) return;
+      const raw = parseInt(akumulasiAmbangEl.value, 10);
+      const mins = Math.min(Math.max(Number.isFinite(raw) ? raw : 435, 30), 1440);
+      const jam = Math.floor(mins / 60);
+      const sisa = mins % 60;
+      akumulasiAmbangLabelEl.textContent = `${jam}j ${sisa}m (${mins} menit)`;
+    }
+
+    if (akumulasiAmbangEl) {
+      akumulasiAmbangEl.addEventListener('input', updateAkumulasiAmbangLabel);
+    }
+
+    if (akumulasiEnabledEl || akumulasiAmbangEl) {
+      try {
+        const res = await fetch(`/api/peringatan-akumulasi?instansi_id=${encodeURIComponent(activeInstansiId || instId)}`);
+        const json = await res.json().catch(() => null);
+        if (res.ok && json && json.ok !== false) {
+          const cfg = json.data?.config || json.config || {};
+          if (akumulasiEnabledEl) akumulasiEnabledEl.checked = !!cfg.enabled;
+          if (akumulasiAmbangEl) {
+            const val = parseInt(cfg.ambang_menit, 10) || 435;
+            akumulasiAmbangEl.value = Math.min(Math.max(val, 30), 1440);
+          }
+        }
+      } catch (err) {
+        console.warn('[admin] gagal memuat peringatan-akumulasi:', err.message);
+      }
+      updateAkumulasiAmbangLabel();
+    }
+
+    if (btnSaveAkumulasi) {
+      btnSaveAkumulasi.addEventListener('click', async function () {
+        const raw = parseInt(akumulasiAmbangEl?.value, 10);
+        const ambang_menit = Math.min(Math.max(Number.isFinite(raw) ? raw : 435, 30), 1440);
+        if (akumulasiAmbangEl) akumulasiAmbangEl.value = ambang_menit;
+        updateAkumulasiAmbangLabel();
+        const enabled = !!akumulasiEnabledEl?.checked;
+
+        btnSaveAkumulasi.disabled = true;
+        try {
+          const res = await fetch('/api/peringatan-akumulasi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              instansi_id: activeInstansiId || instId,
+              enabled,
+              ambang_menit
+            })
+          });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json || json.ok === false) {
+            throw new Error((json && json.message) || `HTTP ${res.status}`);
+          }
+          const jam = Math.floor(ambang_menit / 60);
+          const sisa = ambang_menit % 60;
+          notifyToast(
+            'success',
+            'Peringatan Akumulasi Tersimpan',
+            `Notifikasi ${enabled ? 'aktif' : 'nonaktif'} pada ambang ${jam}j ${sisa}m (${ambang_menit} menit).`
+          );
+        } catch (err) {
+          notifyToast('error', 'Gagal Menyimpan Peringatan Akumulasi', err.message);
+        } finally {
+          btnSaveAkumulasi.disabled = false;
+        }
+      });
+    }
+
     if (!core) return;
 
     if (btn && lat && lon && rad) {
