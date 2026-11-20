@@ -122,6 +122,21 @@
           action: () => callSwitch('tpp')
         }
       ]
+    },
+    {
+      id: 'developer',
+      title: 'Developer & Diagnostik',
+      items: [
+        {
+          key: 'admin:dev',
+          panel: 'dev',
+          label: 'Developer & Diagnostik',
+          hint: 'Kesehatan 8 subsistem & log error',
+          icon: 'terminal',
+          tone: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60',
+          action: () => callSwitch('admin', true, 'dev')
+        }
+      ]
     }
   ];
 

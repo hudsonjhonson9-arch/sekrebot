@@ -295,7 +295,8 @@
           { href: 'index.html#admin:adminSectionRoles', icon: 'manage_accounts', label: 'Kelola Role & Hak' },
           { href: 'index.html#admin:adminSectionGeofence', icon: 'share_location', label: 'Geofencing Lokasi' },
           { href: 'index.html#admin:adminSectionJamLibur', icon: 'schedule', label: 'Jam Kerja & Libur' },
-          { href: 'cetak-tpp.html', icon: 'receipt_long', label: 'Cetak Rekap TPP' }
+          { href: 'cetak-tpp.html', icon: 'receipt_long', label: 'Cetak Rekap TPP' },
+          { href: 'index.html#admin:dev', icon: 'terminal', label: 'Developer & Diagnostik' }
         ];
         subWrap.innerHTML = adminSubs.map((s) => `
           <a href="${s.href}" title="${s.label}" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium">

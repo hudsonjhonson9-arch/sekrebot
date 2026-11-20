@@ -130,7 +130,7 @@
     }
   }
 
-  const STITCH_RE = /^(https?:\/\/[^/]+)?\/api\/(stitch|media)(\/|\?|$)/;
+  const STITCH_RE = /^(https?:\/\/[^/]+)?\/api\/(stitch|media|dev)(\/|\?|$)/;
   const origFetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
     try {

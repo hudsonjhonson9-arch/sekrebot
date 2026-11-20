@@ -152,11 +152,20 @@ export function createDevTracker(options = {}) {
   function getDevAuthHeaders() {
     const headers = {};
     let token = null;
-    if (typeof _nativeToken !== 'undefined' && _nativeToken) {
+    if (typeof window !== 'undefined' && typeof window.getStitchToken === 'function') {
+      token = window.getStitchToken();
+    }
+    if (!token && typeof _nativeToken !== 'undefined' && _nativeToken) {
       token = _nativeToken;
-    } else if (typeof localStorage !== 'undefined') {
-      try { token = localStorage.getItem('_native_token'); } catch (_) {}
-    } else if (typeof window !== 'undefined' && window._session?.token) {
+    }
+    if (!token && typeof localStorage !== 'undefined') {
+      try {
+        token = localStorage.getItem('_native_token')
+          || localStorage.getItem('native_token')
+          || localStorage.getItem('_sess_token');
+      } catch (_) {}
+    }
+    if (!token && typeof window !== 'undefined' && window._session?.token) {
       token = window._session.token;
     }
     if (token) {
@@ -191,7 +200,7 @@ export function createDevTracker(options = {}) {
         };
       },
       face_ai: async () => {
-        if (typeof window !== 'undefined' && window.checkHumanJsCache) {
+        if (typeof window !== 'undefined' && typeof window.checkHumanJsCache === 'function') {
           const cached = await window.checkHumanJsCache();
           return {
             ok: !!cached,
@@ -199,7 +208,26 @@ export function createDevTracker(options = {}) {
             message: cached ? 'Model Human.js Offline Ready di Cache' : 'Cache model belum diunduh (butuh internet)',
           };
         }
-        return { ok: true, message: 'Modul Face AI Siap' };
+        const humanLoaded = typeof window !== 'undefined' && Boolean(window.Human || window.HumanInstance);
+        let idbAvailable = false;
+        if (typeof indexedDB !== 'undefined') {
+          try {
+            if (typeof indexedDB.databases === 'function') {
+              const dbs = await indexedDB.databases();
+              idbAvailable = Array.isArray(dbs) && dbs.some((d) => /human|tensorflow|tfjs/i.test(d.name || ''));
+            } else {
+              idbAvailable = true;
+            }
+          } catch (_) {
+            idbAvailable = false;
+          }
+        }
+        return {
+          ok: true,
+          message: humanLoaded
+            ? 'Runtime Human.js Aktif'
+            : (idbAvailable ? 'Cache Model IndexedDB Tersedia' : 'Modul Face AI Siap'),
+        };
       },
       geolocation: async () => {
         if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -208,8 +236,8 @@ export function createDevTracker(options = {}) {
         return { ok: true, message: 'GPS Geolocation API Tersedia' };
       },
       client_storage: async () => {
-        let idbOk = typeof indexedDB !== 'undefined';
-        let lsOk = typeof localStorage !== 'undefined';
+        const idbOk = typeof indexedDB !== 'undefined';
+        const lsOk = typeof localStorage !== 'undefined';
         return {
           ok: idbOk && lsOk,
           message: idbOk && lsOk ? 'IndexedDB & LocalStorage Siap' : 'Penyimpanan lokal terbatas',
@@ -220,6 +248,25 @@ export function createDevTracker(options = {}) {
       },
       n8n_webhook: async () => {
         return { ok: true, message: 'Integrasi Webhook n8n Siap' };
+      },
+      server_memory: async () => {
+        const t0 = Date.now();
+        const res = await fetch('/api/dev/health', { headers: getDevAuthHeaders() });
+        const lat = Date.now() - t0;
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const mem = data.memory || {};
+        const rssMb = Math.round((Number(mem.rss) || 0) / (1024 * 1024));
+        const heapUsedMb = Math.round((Number(mem.heapUsed) || 0) / (1024 * 1024));
+        const heapTotalMb = Math.round((Number(mem.heapTotal) || 0) / (1024 * 1024));
+        const highUsage = rssMb > 1536;
+        return {
+          ok: !highUsage && (rssMb > 0 || heapUsedMb > 0),
+          warning: highUsage,
+          latencyMs: lat,
+          message: `RSS ${rssMb} MB • Heap ${heapUsedMb}/${heapTotalMb || heapUsedMb} MB`,
+          details: mem,
+        };
       },
     };
   }
@@ -261,21 +308,65 @@ if (typeof window !== 'undefined') {
     });
   }
 
-  // Helper UI functions
+  function escapeHtml(val) {
+    return String(val ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[c]));
+  }
+
+  function updateDiagMetaUI(diag) {
+    if (!diag) return;
+    const badge = document.getElementById('devDiagScoreBadge');
+    if (badge) {
+      badge.textContent = `Skor: ${diag.score}% (${diag.passed}/${diag.total})`;
+      const allGood = diag.failed === 0 && diag.score === 100;
+      const warnOnly = diag.failed === 0 && diag.score < 100;
+      badge.className = allGood
+        ? 'inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold font-mono tabular-nums'
+        : warnOnly
+          ? 'inline-flex items-center px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-xs font-bold font-mono tabular-nums'
+          : 'inline-flex items-center px-3 py-1 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-xs font-bold font-mono tabular-nums';
+    }
+
+    const summary = document.getElementById('devDiagSummary');
+    if (summary) {
+      summary.classList.remove('hidden');
+      summary.style.display = 'block';
+      const timeStr = new Date().toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZone: 'Asia/Makassar',
+      });
+      summary.innerHTML = `<span class="font-bold text-slate-900 dark:text-white">Hasil Pengujian:</span> ${diag.passed} dari ${diag.total} subsistem operasional (<span class="font-mono font-bold tabular-nums">${diag.score}%</span>) &bull; Diperiksa pukul <span class="font-mono tabular-nums">${escapeHtml(timeStr)} WITA</span>.`;
+    }
+  }
+
+  // Helper UI functions (Stitch UI Design System)
   window.renderDevHealthMatrix = async function (diagResults = null) {
     const container = document.getElementById('devHealthMatrix');
     if (!container) return;
 
     let results = diagResults;
     if (!results && window.DEV_TRACKER) {
-      container.innerHTML = `<div style="padding:16px;text-align:center;color:var(--muted);font-size:11px"><i class="fas fa-sync fa-spin"></i> Memeriksa status kesehatan fitur...</div>`;
+      container.innerHTML = `
+        <div class="col-span-full py-6 px-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+          <span class="material-symbols-outlined text-[18px] text-[#2563eb] animate-spin">progress_activity</span>
+          <span>Memeriksa status kesehatan 8 subsistem...</span>
+        </div>`;
       try {
         const diag = await window.DEV_TRACKER.runDiagnostics();
         results = diag.results;
-        const badge = document.getElementById('devDiagScoreBadge');
-        if (badge) badge.textContent = `Skor: ${diag.score}%`;
+        updateDiagMetaUI(diag);
       } catch (e) {
-        container.innerHTML = `<div style="padding:12px;color:var(--danger)">Gagal memuat diagnostik: ${e.message}</div>`;
+        container.innerHTML = `
+          <div class="col-span-full p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs font-semibold text-rose-700 dark:text-rose-300">
+            Gagal memuat diagnostik: ${escapeHtml(e.message)}
+          </div>`;
         return;
       }
     }
@@ -283,44 +374,57 @@ if (typeof window !== 'undefined') {
     if (!results) return;
 
     const subsysLabels = {
-      database: { name: 'PostgreSQL Database', icon: 'fa-archive' },
-      backend_api: { name: 'Backend Express API', icon: 'fa-desktop' },
-      face_ai: { name: 'Face AI Biometrik (Human.js)', icon: 'fa-id-card' },
-      geolocation: { name: 'GPS Geolocation & Buffer', icon: 'fa-map-marker-alt' },
-      client_storage: { name: 'IndexedDB & Local Storage', icon: 'fa-save' },
-      telegram_sync: { name: 'Telegram Bot Notifikasi', icon: 'fa-envelope-open-text' },
-      n8n_webhook: { name: 'Integrasi Webhook n8n', icon: 'fa-link' },
+      database: { name: 'PostgreSQL Database', icon: 'database' },
+      backend_api: { name: 'Backend Express API', icon: 'dns' },
+      face_ai: { name: 'Face AI Biometrik', icon: 'face' },
+      geolocation: { name: 'GPS Geolocation', icon: 'my_location' },
+      client_storage: { name: 'IndexedDB & Storage', icon: 'hard_drive' },
+      telegram_sync: { name: 'Telegram Bot Gateway', icon: 'send' },
+      n8n_webhook: { name: 'Webhook Integrasi n8n', icon: 'webhook' },
+      server_memory: { name: 'Memori Server Node.js', icon: 'memory' },
     };
 
     let html = '';
     for (const [key, res] of Object.entries(results)) {
-      const meta = subsysLabels[key] || { name: key.toUpperCase(), icon: 'fa-cog' };
+      const meta = subsysLabels[key] || { name: key.toUpperCase(), icon: 'settings' };
       const isOk = res.status === 'OK';
       const isWarn = res.status === 'WARN';
-      const statusColor = isOk ? '#22c55e' : (isWarn ? '#f59e0b' : '#ef4444');
-      const statusBg = isOk ? 'rgba(34,197,94,0.12)' : (isWarn ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)');
-      const statusBorder = isOk ? 'rgba(34,197,94,0.25)' : (isWarn ? 'rgba(245,158,11,0.25)' : 'rgba(239,68,68,0.25)');
+      const iconTone = isOk
+        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
+        : isWarn
+          ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'
+          : 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400';
+      const badgeTone = isOk
+        ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800/70'
+        : isWarn
+          ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border-amber-200/80 dark:border-amber-800/70'
+          : 'bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border-rose-200/80 dark:border-rose-800/70';
+      const statusTextTone = isOk
+        ? 'text-emerald-600 dark:text-emerald-400'
+        : isWarn
+          ? 'text-amber-600 dark:text-amber-400'
+          : 'text-rose-600 dark:text-rose-400';
       const statusLabel = isOk ? 'Normal' : (isWarn ? 'Warning' : 'Error');
 
       html += `
-        <div class="dev-health-card">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span style="width:28px;height:28px;border-radius:8px;background:${statusBg};color:${statusColor};display:flex;align-items:center;justify-content:center;font-size:13px">
-                <i class="fas ${meta.icon}"></i>
+        <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/90 dark:border-slate-700/80 flex flex-col justify-between gap-2.5 transition-colors">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="w-8 h-8 rounded-xl ${iconTone} flex items-center justify-center shrink-0">
+                <span class="material-symbols-outlined text-[18px]">${meta.icon}</span>
               </span>
-              <strong style="font-size:12px;color:var(--white)">${meta.name}</strong>
+              <strong class="text-xs font-bold text-slate-900 dark:text-white leading-snug truncate">${escapeHtml(meta.name)}</strong>
             </div>
-            <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:${statusBg};color:${statusColor};border:1px solid ${statusBorder}">
+            <span class="px-2 py-0.5 rounded-full border text-[10px] font-bold shrink-0 ${badgeTone}">
               ${statusLabel}
             </span>
           </div>
-          <div style="font-size:11px;color:var(--muted);line-height:1.35;margin-top:4px">
-            ${res.message || '—'}
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.05);font-size:10px;color:var(--muted)">
-            <span>Latensi: <strong style="font-variant-numeric:tabular-nums;color:var(--white)">${res.latencyMs || 0} ms</strong></span>
-            <span>Status: <strong style="color:${statusColor}">${res.status}</strong></span>
+          <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed break-words">
+            ${escapeHtml(res.message || '-')}
+          </p>
+          <div class="flex items-center justify-between pt-2 border-t border-slate-200/70 dark:border-slate-700/70 text-[10.5px] text-slate-500 dark:text-slate-400">
+            <span>Latensi: <strong class="font-mono tabular-nums text-slate-800 dark:text-slate-200">${Number(res.latencyMs) || 0} ms</strong></span>
+            <span>Status: <strong class="font-mono ${statusTextTone}">${escapeHtml(res.status)}</strong></span>
           </div>
         </div>
       `;
@@ -339,7 +443,10 @@ if (typeof window !== 'undefined') {
     const logs = window.DEV_TRACKER.getLogs({ level, search });
 
     if (!logs.length) {
-      container.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">Tidak ada log aktivitas sesuai kriteria.</div>`;
+      container.innerHTML = `
+        <div class="py-8 px-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-dashed border-slate-200 dark:border-slate-700 text-center text-xs text-slate-500 dark:text-slate-400">
+          Tidak ada log aktivitas sesuai kriteria filter.
+        </div>`;
       return;
     }
 
@@ -348,29 +455,32 @@ if (typeof window !== 'undefined') {
       const isErr = l.level === 'ERROR';
       const isWarn = l.level === 'WARN';
       const isDebug = l.level === 'DEBUG';
-      const badgeBg = isErr ? 'rgba(239,68,68,0.15)' : (isWarn ? 'rgba(245,158,11,0.15)' : (isDebug ? 'rgba(148,163,184,0.15)' : 'rgba(59,130,246,0.15)'));
-      const badgeColor = isErr ? '#ef4444' : (isWarn ? '#f59e0b' : (isDebug ? '#94a3b8' : '#3b82f6'));
+      const badgeTone = isErr
+        ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300'
+        : isWarn
+          ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300'
+          : isDebug
+            ? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+            : 'bg-blue-100 dark:bg-blue-950/70 text-[#2563eb] dark:text-blue-300';
 
-      const detailsJson = l.details ? JSON.stringify(l.details, null, 2).replace(/"/g, '&quot;') : '';
-      const hasDetails = !!detailsJson;
+      const detailsJson = l.details ? escapeHtml(JSON.stringify(l.details, null, 2)) : '';
+      const hasDetails = Boolean(detailsJson);
 
       html += `
-        <div class="dev-log-entry">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10.5px">
-            <div style="display:flex;align-items:center;gap:6px">
-              <span style="padding:1px 6px;border-radius:4px;font-weight:700;font-size:9.5px;background:${badgeBg};color:${badgeColor}">${l.level}</span>
-              <span style="color:var(--gold);font-weight:600">[${l.module}]</span>
-              <strong style="color:var(--white)">${l.action}</strong>
+        <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80 flex flex-col gap-1.5">
+          <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div class="flex flex-wrap items-center gap-1.5 min-w-0">
+              <span class="px-2 py-0.5 rounded-md font-mono font-bold text-[10px] shrink-0 ${badgeTone}">${escapeHtml(l.level)}</span>
+              <span class="font-mono font-bold text-[11px] text-[#2563eb] dark:text-blue-400 shrink-0">[${escapeHtml(l.module)}]</span>
+              <span class="font-semibold text-slate-800 dark:text-slate-100 break-words">${escapeHtml(l.action)}</span>
             </div>
-            <span style="font-variant-numeric:tabular-nums;color:var(--muted);font-size:9.5px">${l.timeWita || l.timestamp}</span>
+            <span class="font-mono tabular-nums text-[10.5px] text-slate-500 dark:text-slate-400 shrink-0">${escapeHtml(l.timeWita || l.timestamp)}</span>
           </div>
           ${hasDetails ? `
-            <div style="margin-top:4px">
-              <details style="cursor:pointer">
-                <summary style="font-size:9.5px;color:var(--muted);opacity:0.8">Detail Payload / Stack Trace</summary>
-                <pre style="margin-top:4px;padding:6px;background:rgba(0,0,0,0.4);border-radius:6px;font-size:10px;color:#a5f3fc;overflow-x:auto">${detailsJson}</pre>
-              </details>
-            </div>
+            <details class="mt-0.5">
+              <summary class="cursor-pointer text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-[#2563eb] dark:hover:text-blue-400 select-none">Detail Payload / Stack Trace</summary>
+              <pre class="mt-1.5 p-2.5 rounded-xl bg-slate-900 text-slate-100 font-mono text-[10.5px] overflow-x-auto leading-relaxed">${detailsJson}</pre>
+            </details>
           ` : ''}
         </div>
       `;
@@ -380,35 +490,39 @@ if (typeof window !== 'undefined') {
   };
 
   window.runDevDiagnostics = async function () {
-    const btn = document.getElementById('btnRunDevDiag');
-    const oldText = btn ? btn.innerHTML : '';
-    if (btn) {
+    const buttons = ['btnRunDevDiag', 'btnRunDiagnostics']
+      .map((id) => document.getElementById(id))
+      .filter(Boolean);
+    const savedHtml = buttons.map((b) => b.innerHTML);
+
+    buttons.forEach((btn) => {
       btn.disabled = true;
-      btn.innerHTML = `<i class="fas fa-sync fa-spin"></i> <span>Menjalankan Diagnostik...</span>`;
-    }
+      btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span><span>Memeriksa 8 Subsistem...</span>';
+    });
 
     try {
       if (window.DEV_TRACKER) {
         const diag = await window.DEV_TRACKER.runDiagnostics();
-        const badge = document.getElementById('devDiagScoreBadge');
-        if (badge) badge.textContent = `Skor: ${diag.score}%`;
-
-        const summary = document.getElementById('devDiagSummary');
-        if (summary) {
-          summary.style.display = 'block';
-          summary.innerHTML = `<strong>Hasil Pengujian:</strong> ${diag.passed} dari ${diag.total} subsistem operasional (Skor: ${diag.score}%). Waktu pengujian: ${new Date().toLocaleTimeString('id-ID')}.`;
-        }
-
-        if (window.renderDevHealthMatrix) window.renderDevHealthMatrix(diag.results);
+        updateDiagMetaUI(diag);
+        if (window.renderDevHealthMatrix) await window.renderDevHealthMatrix(diag.results);
         if (window.renderDevLogTable) window.renderDevLogTable();
+        return diag;
       }
+      return null;
     } catch (e) {
-      alert('Gagal menjalankan diagnostik: ' + e.message);
-    } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = oldText;
+      if (typeof window.showDynamicIsland === 'function') {
+        window.showDynamicIsland({ type: 'error', title: 'Diagnostik Gagal', message: e.message });
+      } else if (window.Swal) {
+        window.Swal.fire('Diagnostik Gagal', e.message, 'error');
+      } else {
+        alert('Gagal menjalankan diagnostik: ' + e.message);
       }
+      return null;
+    } finally {
+      buttons.forEach((btn, idx) => {
+        btn.disabled = false;
+        btn.innerHTML = savedHtml[idx];
+      });
     }
   };
 
@@ -427,11 +541,28 @@ if (typeof window !== 'undefined') {
     URL.revokeObjectURL(url);
   };
 
-  window.clearDevLogs = function () {
-    if (confirm('Yakin ingin membersihkan seluruh riwayat log developer?')) {
-      if (window.DEV_TRACKER) {
-        window.DEV_TRACKER.clearLogs();
-        if (window.renderDevLogTable) window.renderDevLogTable();
+  window.clearDevLogs = async function () {
+    let confirmed = false;
+    if (window.Swal) {
+      const r = await window.Swal.fire({
+        title: 'Bersihkan Log Developer?',
+        text: 'Seluruh riwayat log aktivitas & error lokal akan dihapus.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#2563eb',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Bersihkan',
+        cancelButtonText: 'Batal',
+      });
+      confirmed = Boolean(r.isConfirmed);
+    } else {
+      confirmed = confirm('Yakin ingin membersihkan seluruh riwayat log developer?');
+    }
+    if (confirmed && window.DEV_TRACKER) {
+      window.DEV_TRACKER.clearLogs();
+      if (window.renderDevLogTable) window.renderDevLogTable();
+      if (typeof window.showDynamicIsland === 'function') {
+        window.showDynamicIsland({ type: 'info', title: 'Log Dibersihkan', message: 'Riwayat log developer telah dikosongkan.' });
       }
     }
   };

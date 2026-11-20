@@ -1110,7 +1110,10 @@
       try {
         localStorage.setItem('stitch_active_view', target);
         if (updateHash) {
-          const hashVal = (target === 'riwayat-full') ? 'riwayat' : target;
+          const normSec = (sectionId === 'adminSectionDev') ? 'dev' : sectionId;
+          const hashVal = (target === 'riwayat-full')
+            ? 'riwayat'
+            : (target === 'admin' && normSec ? `admin:${normSec}` : target);
           if (window.location.hash !== '#' + hashVal) {
             history.replaceState(null, null, '#' + hashVal);
           }
@@ -1163,7 +1166,8 @@
         }
       }
 
-      const effectiveSection = (target === 'admin') ? (sectionId || 'adminSectionMonitoring') : sectionId;
+      const normalizedSection = (sectionId === 'adminSectionDev') ? 'dev' : sectionId;
+      const effectiveSection = (target === 'admin') ? (normalizedSection || 'adminSectionMonitoring') : normalizedSection;
 
       if (target === 'admin') {
         const panelMeta = {
@@ -1201,6 +1205,11 @@
             title: 'Jam Kerja WITA & Hari Libur',
             sub: 'Konfigurasi jadwal masuk/pulang, toleransi keterlambatan, dan hari libur.',
             saveBtn: true
+          },
+          dev: {
+            title: 'Developer & Diagnostik',
+            sub: 'Pemantauan kesehatan 8 subsistem aplikasi, uji diagnostik, dan log aktivitas sistem.',
+            saveBtn: false
           }
         };
         const activeMeta = panelMeta[effectiveSection] || panelMeta.adminSectionMonitoring;
@@ -1245,6 +1254,9 @@
           if (typeof initAdminGeofenceMap === 'function') {
             requestAnimationFrame(() => initAdminGeofenceMap());
           }
+        } else if (effectiveSection === 'dev') {
+          window.renderDevHealthMatrix?.();
+          window.renderDevLogTable?.();
         }
       } else if (target === 'sppd') {
         loadViewOnce('sppd', () => Promise.all([

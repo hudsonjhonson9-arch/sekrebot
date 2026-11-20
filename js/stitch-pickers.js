@@ -1028,6 +1028,7 @@
     enhanceSelect('regPangkat', { searchable: true });
     enhanceSelect('malSelectAset', { searchable: true, placeholder: 'Pilih aset...' });
     enhanceSelect('mapSelectAset', { searchable: true, placeholder: 'Pilih aset...' });
+    enhanceSelect('devLogLevelFilter', { searchable: false });
   }
 
   document.addEventListener('DOMContentLoaded', initDefaultPickers);

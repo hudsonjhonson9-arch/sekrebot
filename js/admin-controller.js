@@ -309,6 +309,34 @@
       thresholdSlider.addEventListener('change', saveFaceSettings);
     }
 
+    // Developer & Diagnostik: hubungkan tombol uji, filter log, & auto-run saat DOMContentLoaded
+    const btnRunDiag = $('btnRunDiagnostics');
+    if (btnRunDiag) {
+      btnRunDiag.addEventListener('click', function () {
+        if (typeof window.runDevDiagnostics === 'function') {
+          window.runDevDiagnostics();
+        }
+      });
+    }
+    const devLogFilter = $('devLogLevelFilter');
+    if (devLogFilter) {
+      devLogFilter.addEventListener('change', function () {
+        if (typeof window.renderDevLogTable === 'function') window.renderDevLogTable();
+      });
+    }
+    const devLogSearch = $('devLogSearchInput');
+    if (devLogSearch) {
+      devLogSearch.addEventListener('input', function () {
+        if (typeof window.renderDevLogTable === 'function') window.renderDevLogTable();
+      });
+    }
+    if (typeof window.runDevDiagnostics === 'function') {
+      window.runDevDiagnostics();
+    }
+    if (typeof window.renderDevLogTable === 'function') {
+      window.renderDevLogTable();
+    }
+
     if (!core) return;
 
     if (btn && lat && lon && rad) {

@@ -119,85 +119,80 @@
 </button></div>
 </div>
 <!-- SECTION 1: Health Matrix Live (Developer & Diagnostik Live Card) -->
-<div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md">
+<div id="devHealthCard" class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
 <div class="flex items-center gap-space-md">
-<div class="w-10 h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center">
+<div class="w-10 h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
 <span class="material-symbols-outlined text-[24px]">health_metrics</span>
 </div>
 <div class="flex flex-col">
-<div class="flex items-center gap-space-sm">
+<div class="flex flex-wrap items-center gap-space-sm">
 <h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Status Arsitektur Subsistem</h2>
-<span class="text-label-sm text-secondary font-semibold font-mono">8/8 Normal</span>
+<span id="devDiagScoreBadge" class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold font-mono tabular-nums">Memeriksa...</span>
 </div>
 <span class="font-body-sm text-body-sm text-on-surface-variant">
-            Pemeriksaan heartbeat otomatis komponen HADIR Daerah setiap 30 detik.
+            Pemeriksaan live 8 subsistem aplikasi (PostgreSQL, API, Face AI, GPS, Storage, Telegram, Webhook n8n, Memori Server).
           </span>
 </div>
 </div>
-<button class="flex items-center gap-space-xs px-space-md py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary font-label-lg text-label-lg transition-all active:scale-95" id="btnRunDiagnostics" type="button">
+<button class="min-h-[44px] flex items-center justify-center gap-space-xs px-space-md py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary font-label-lg text-label-lg transition-all active:scale-95 cursor-pointer shrink-0" id="btnRunDiagnostics" type="button">
 <span class="material-symbols-outlined text-[18px]">sync</span>
-<span>Uji Diagnostik</span>
+<span>Uji Diagnostik Sekarang</span>
 </button>
 </div>
-<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-space-sm">
-<div class="bg-surface-container-low rounded-lg p-2.5 flex flex-col justify-between gap-1">
-<div class="flex items-center justify-between">
-<span class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">Supabase DB</span>
-<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<div id="devHealthMatrix" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-sm">
+  <div class="col-span-full py-6 px-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center gap-2 text-xs font-medium text-slate-500">
+    <span class="material-symbols-outlined text-[18px] text-primary animate-spin">progress_activity</span>
+    <span>Menyiapkan pemeriksaan subsistem...</span>
+  </div>
 </div>
-<span class="text-[12px] font-mono text-secondary font-medium">24ms</span>
+<div id="devDiagSummary" class="hidden text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5"></div>
 </div>
-<div class="bg-surface-container-low rounded-lg p-2.5 flex flex-col justify-between gap-1">
-<div class="flex items-center justify-between">
-<span class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">API Gateway</span>
-<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<!-- SECTION 1B: Log Aktivitas & Error Console -->
+<div id="devLogCard" class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md">
+<div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[22px]">terminal</span>
 </div>
-<span class="text-[12px] font-mono text-secondary font-medium">200 OK</span>
-</div>
-<div class="bg-surface-container-low rounded-lg p-2.5 flex flex-col justify-between gap-1">
-<div class="flex items-center justify-between">
-<span class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">AI Human.js</span>
-<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-</div>
-<span class="text-[12px] font-mono text-secondary font-medium">1024-dim</span>
-</div>
-<div class="bg-surface-container-low rounded-lg p-2.5 flex flex-col justify-between gap-1">
-<div class="flex items-center justify-between">
-<span class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">GPS Satelit</span>
-<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-</div>
-<span class="text-[12px] font-mono text-secondary font-medium">&lt;8m prec</span>
-</div>
-<div class="bg-surface-container-low rounded-lg p-2.5 flex flex-col justify-between gap-1">
-<div class="flex items-center justify-between">
-<span class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">Storage</span>
-<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-</div>
-<span class="text-[12px] font-mono text-secondary font-medium">R/W OK</span>
-</div>
-<div class="bg-surface-container-low rounded-lg p-2.5 flex flex-col justify-between gap-1">
-<div class="flex items-center justify-between">
-<span class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">Telegram Bot</span>
-<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-</div>
-<span class="text-[12px] font-mono text-secondary font-medium">Polling</span>
-</div>
-<div class="bg-surface-container-low rounded-lg p-2.5 flex flex-col justify-between gap-1">
-<div class="flex items-center justify-between">
-<span class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">Webhook n8n</span>
-<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-</div>
-<span class="text-[12px] font-mono text-secondary font-medium">Idle</span>
-</div>
-<div class="bg-surface-container-low rounded-lg p-2.5 flex flex-col justify-between gap-1">
-<div class="flex items-center justify-between">
-<span class="font-label-sm text-label-sm text-on-surface-variant font-medium truncate">NTP Server</span>
-<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-</div>
-<span class="text-[12px] font-mono text-secondary font-medium">Synced</span>
+<div class="flex flex-col">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Log Aktivitas &amp; Error Console</h2>
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+            Riwayat diagnostik, aktivitas modul, dan tangkapan runtime error aplikasi.
+          </span>
 </div>
 </div>
+<div class="flex flex-wrap items-center gap-2">
+<button type="button" onclick="window.exportDevLogs && window.exportDevLogs('json')" class="min-h-[40px] px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer">
+<span class="material-symbols-outlined text-[16px]">download</span>
+<span>Ekspor JSON</span>
+</button>
+<button type="button" onclick="window.exportDevLogs && window.exportDevLogs('txt')" class="min-h-[40px] px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer">
+<span class="material-symbols-outlined text-[16px]">description</span>
+<span>Ekspor TXT</span>
+</button>
+<button type="button" onclick="window.clearDevLogs && window.clearDevLogs()" class="min-h-[40px] px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer">
+<span class="material-symbols-outlined text-[16px]">delete</span>
+<span>Bersihkan</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+<div class="sm:col-span-4">
+<select id="devLogLevelFilter" aria-label="Filter Level Log" class="w-full min-h-[44px] bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-primary">
+<option value="ALL">Semua Level</option>
+<option value="ERROR">ERROR</option>
+<option value="WARN">WARN</option>
+<option value="INFO">INFO</option>
+<option value="DEBUG">DEBUG</option>
+</select>
+</div>
+<div class="sm:col-span-8 relative">
+<span class="material-symbols-outlined text-[18px] text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">search</span>
+<input id="devLogSearchInput" type="text" placeholder="Cari modul, pesan aktivitas, atau stack error..." class="w-full min-h-[44px] bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 outline-none focus:border-primary" />
+</div>
+</div>
+<div id="devLogViewer" class="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1"></div>
 </div>
 <!-- SECTION 4: Terminal Meja Absen (Kiosk Mode Banner / Top Operational Shortcut) -->
 <div class="bg-gradient-to-r from-primary to-primary-container text-on-primary rounded-2xl p-space-lg shadow-sm flex flex-col lg:flex-row items-center justify-between gap-space-md">
@@ -477,22 +472,12 @@
       });
       btn.classList.add('bg-primary', 'text-on-primary', 'shadow-sm');
       btn.classList.remove('text-on-surface-variant', 'hover:bg-surface-container-high');
+      if (btn.dataset.tab === 'tab-diagnostics') {
+        const card = document.getElementById('devHealthCard');
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     });
   });
-
-  // Diagnostic Test Toast Effect
-  const diagBtn = document.getElementById('btnRunDiagnostics');
-  if (diagBtn) {
-    diagBtn.addEventListener('click', () => {
-      diagBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span><span>Memeriksa 8 Simpul...</span>';
-      setTimeout(() => {
-        diagBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">check_circle</span><span>100% Semua Node Sehat</span>';
-        setTimeout(() => {
-          diagBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">sync</span><span>Uji Diagnostik Sekarang</span>';
-        }, 2500);
-      }, 900);
-    });
-  }
 
   // Live WITA Clock
   function updateAdminClock() {
@@ -514,6 +499,7 @@
 <script defer src="js/lib/leaflet.min.js"></script>
 <script type="module" src="/js/app-core.js"></script>
 <script src="/js/admin-core.js"></script>
+<script type="module" src="js/dev-tools.js"></script>
 <script type="module" src="/js/admin-controller.js"></script>
 
 <script>
