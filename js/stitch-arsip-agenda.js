@@ -708,6 +708,15 @@
         <input data-pk="jabatan" type="text" placeholder="Jabatan" class="flex-1 h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
         <button type="button" onclick="this.closest('[data-sppd-pengikut-row]').remove()" class="px-2.5 h-9 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 text-xs font-bold cursor-pointer" title="Hapus Pengikut">Hapus</button>
       </div>
+      <details class="sm:col-span-2 text-[11px] text-slate-500">
+        <summary class="cursor-pointer font-semibold text-[#2563eb] hover:underline select-none">Pengaturan Per-Personil (Nomor SPPD, Tingkat Biaya, PPTK Romawi I)</summary>
+        <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input data-pk="nomor_sppd" type="text" placeholder="Nomor SPPD khusus (opsional)" class="h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-mono text-slate-900 dark:text-white">
+          <input data-pk="tingkat_biaya" type="text" placeholder="Tingkat Biaya (mis. Tingkat C)" class="h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-900 dark:text-white">
+          <input data-pk="pptk_nama" list="agendaPegawaiDatalist" type="text" placeholder="Nama PPTK / Pengesah Visum I (opsional)" class="h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-900 dark:text-white">
+          <input data-pk="pptk_nip" type="text" placeholder="NIP PPTK (opsional)" class="h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-mono text-slate-900 dark:text-white">
+        </div>
+      </details>
     `;
     wrap.appendChild(row);
   }
@@ -718,14 +727,71 @@
     modal.querySelectorAll('[data-sppd-pengikut-row]').forEach((row) => {
       const nama = (row.querySelector('[data-pk="nama"]')?.value || '').trim();
       if (!nama) return;
+      const g = (k) => (row.querySelector(`[data-pk="${k}"]`)?.value || '').trim();
       list.push({
         nama,
-        nip: (row.querySelector('[data-pk="nip"]')?.value || '').trim(),
-        pangkat: (row.querySelector('[data-pk="pangkat"]')?.value || '').trim(),
-        jabatan: (row.querySelector('[data-pk="jabatan"]')?.value || '').trim(),
+        nip: g('nip'),
+        pangkat: g('pangkat'),
+        jabatan: g('jabatan'),
+        nomor_sppd: g('nomor_sppd') || undefined,
+        tingkat_biaya: g('tingkat_biaya') || undefined,
+        pptk_nama: g('pptk_nama') || undefined,
+        pptk_nip: g('pptk_nip') || undefined,
       });
     });
     return list;
+  }
+
+  let _cekSuratTimer = null;
+  function checkNomorSuratKeluar(inputEl) {
+    if (_suratMode !== 'keluar' || !inputEl) return;
+    const modal = inputEl.closest('#modalArsipAgendaSurat, #drawerMobileAgendaSurat');
+    const stEl = modal?.querySelector('[data-surat-nomor-status]');
+    const nomor = (inputEl.value || '').trim();
+    if (!stEl) return;
+    if (!nomor) { stEl.classList.add('hidden'); return; }
+    clearTimeout(_cekSuratTimer);
+    _cekSuratTimer = setTimeout(async () => {
+      try {
+        const exId = modal?.dataset.editId || '';
+        const r = await fetch(`/api/arsip/p/api/agenda/surat-keluar/cek-nomor?nomor=${encodeURIComponent(nomor)}&excludeId=${encodeURIComponent(exId)}`);
+        const j = await r.json().catch(() => ({}));
+        stEl.classList.remove('hidden');
+        if (j.tersedia === false) {
+          stEl.className = 'text-[10px] font-bold mt-1 text-rose-600';
+          stEl.textContent = `Nomor sudah dipakai${j.bentrok?.perihal ? ': ' + j.bentrok.perihal : ''}`;
+        } else {
+          stEl.className = 'text-[10px] font-bold mt-1 text-emerald-600';
+          stEl.textContent = 'Nomor surat tersedia';
+        }
+      } catch { stEl.classList.add('hidden'); }
+    }, 350);
+  }
+
+  let _cekSppdTimer = null;
+  function checkNomorSppd(inputEl) {
+    if (!inputEl) return;
+    const modal = inputEl.closest('#modalArsipAgendaSppd, #drawerMobileAgendaSppd');
+    const stEl = modal?.querySelector('[data-sppd-nomor-status]');
+    const nomor = (inputEl.value || '').trim();
+    if (!stEl) return;
+    if (!nomor) { stEl.classList.add('hidden'); return; }
+    clearTimeout(_cekSppdTimer);
+    _cekSppdTimer = setTimeout(async () => {
+      try {
+        const exId = modal?.dataset.editId || '';
+        const r = await fetch(`/api/arsip/p/api/agenda/sppd/cek-nomor?nomor=${encodeURIComponent(nomor)}&excludeId=${encodeURIComponent(exId)}`);
+        const j = await r.json().catch(() => ({}));
+        stEl.classList.remove('hidden');
+        if (j.tersedia === false) {
+          stEl.className = 'text-[10px] font-bold mt-1 text-rose-600';
+          stEl.textContent = `Nomor SPPD bentrok${j.bentrok?.pelaksana_nama ? ' (' + j.bentrok.pelaksana_nama + ')' : ''}`;
+        } else {
+          stEl.className = 'text-[10px] font-bold mt-1 text-emerald-600';
+          stEl.textContent = 'Nomor SPPD tersedia';
+        }
+      } catch { stEl.classList.add('hidden'); }
+    }, 350);
   }
 
   function resolveTabFromHash() {
@@ -1332,6 +1398,9 @@
     set('pihak', isMasuk ? (item.asal_surat || '') : (item.tujuan_surat || ''));
     set('perihal', item.perihal || '');
     set('bidang', item.bidang_pengonsep || 'Sekretariat');
+    set('penandatangan', item.penandatangan || 'Kepala BAPPERIDA');
+    set('status', item.status || 'Terbit');
+    set('file_draft_url', item.file_draft_url || '');
     set('keterangan', item.keterangan || '');
     set('file_url', item.file_url || item.file_final_url || item.drive_url || '');
     m.classList.remove('hidden');
@@ -1357,7 +1426,11 @@
     const tanggal = v('tanggal') || new Date().toISOString().slice(0, 10);
     const pihak = v('pihak');
     const perihal = v('perihal');
+    const isMasuk = _suratMode === 'masuk';
     const bidang = v('bidang') || 'Sekretariat';
+    const penandatangan = v('penandatangan') || 'Kepala BAPPERIDA';
+    const status = v('status') || (isMasuk ? 'Diterima' : 'Terbit');
+    const fileDraftUrl = v('file_draft_url');
     const keterangan = v('keterangan');
     const fileUrl = v('file_url');
 
@@ -1369,12 +1442,11 @@
     const orig = btnEl ? btnEl.innerHTML : '';
     if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Menyimpan...'; }
 
-    const isMasuk = _suratMode === 'masuk';
     const baseEp = isMasuk ? '/api/arsip/p/api/agenda/surat-masuk' : '/api/arsip/p/api/agenda/surat-keluar';
     const ep = editId ? `${baseEp}/${editId}` : baseEp;
     const body = isMasuk
       ? { nomor_surat_asli: nomor, kode_klasifikasi: kode, sifat, tanggal_surat: tanggal, tanggal_terima: tanggal, asal_surat: pihak, perihal, keterangan, file_url: fileUrl || null, tahun: Number(tanggal.slice(0, 4)) }
-      : { nomor_surat: nomor, kode_klasifikasi: kode, sifat, tanggal_surat: tanggal, tujuan_surat: pihak, perihal, bidang_pengonsep: bidang, keterangan, file_final_url: fileUrl || null, tahun: Number(tanggal.slice(0, 4)) };
+      : { nomor_surat: nomor, kode_klasifikasi: kode, sifat, tanggal_surat: tanggal, tujuan_surat: pihak, perihal, bidang_pengonsep: bidang, penandatangan, status, file_draft_url: fileDraftUrl || null, keterangan, file_final_url: fileUrl || null, tahun: Number(tanggal.slice(0, 4)) };
 
     try {
       const res = await fetch(ep, {
@@ -1882,6 +1954,10 @@
         s('nip', p.nip);
         s('pangkat', p.pangkat);
         s('jabatan', p.jabatan);
+        s('nomor_sppd', p.nomor_sppd);
+        s('tingkat_biaya', p.tingkat_biaya);
+        s('pptk_nama', p.pptk_nama);
+        s('pptk_nip', p.pptk_nip);
       });
     }
     m.classList.remove('hidden');
@@ -2166,6 +2242,8 @@
     openDisposisiModal,
     deleteSurat,
     previewNomorSuratKeluar,
+    checkNomorSuratKeluar,
+    checkNomorSppd,
     openSuratModal,
     closeSuratModal,
     submitSurat,

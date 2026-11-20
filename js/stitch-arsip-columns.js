@@ -282,14 +282,110 @@
     return doc.type || doc.bidang || 'Lainnya';
   }
 
+  const _bulkSelected = new Set();
+
+  function updateBulkBar() {
+    const bar = d.getElementById('arsipDocBulkBar');
+    const cnt = d.getElementById('arsipDocBulkCount');
+    if (!bar) return;
+    if (_bulkSelected.size > 0) {
+      bar.classList.remove('hidden');
+      if (cnt) cnt.textContent = `${_bulkSelected.size} dipilih`;
+    } else {
+      bar.classList.add('hidden');
+    }
+  }
+
+  function toggleSelectDoc(id, ev) {
+    if (ev) ev.stopPropagation();
+    const key = String(id);
+    if (_bulkSelected.has(key)) _bulkSelected.delete(key);
+    else _bulkSelected.add(key);
+    updateBulkBar();
+    renderDocList(_filteredDocs);
+  }
+
+  function clearSelection() {
+    _bulkSelected.clear();
+    updateBulkBar();
+    renderDocList(_filteredDocs);
+  }
+
+  async function runBulkAction(action) {
+    if (!_bulkSelected.size) return;
+    const ids = Array.from(_bulkSelected);
+    const labelMap = { publish: 'Publikasikan', archive: 'Arsipkan', delete: 'Hapus Permanen' };
+    if (w.Swal) {
+      const cf = await w.Swal.fire({
+        icon: action === 'delete' ? 'warning' : 'question',
+        title: `${labelMap[action] || action} ${ids.length} Dokumen?`,
+        text: action === 'delete' ? 'Dokumen terpilih akan dihapus permanen.' : 'Perubahan akan diterapkan ke seluruh dokumen terpilih.',
+        showCancelButton: true,
+        confirmButtonText: labelMap[action] || 'Lanjutkan',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: action === 'delete' ? '#e11d48' : '#2563eb',
+      });
+      if (!cf.isConfirmed) return;
+    }
+    try {
+      const res = await fetch('/api/arsip/docs/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ids }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.ok === false) throw new Error(json.message || `HTTP ${res.status}`);
+      clearSelection();
+      if (w.Swal) w.Swal.fire({ icon: 'success', title: 'Berhasil', text: `${ids.length} dokumen diperbarui.`, timer: 1600, showConfirmButton: false });
+      await loadArsipDocs();
+    } catch (err) {
+      if (w.Swal) w.Swal.fire('Gagal', err?.message || 'Tidak dapat menjalankan aksi massal.', 'error');
+    }
+  }
+
+  function populateBidangFilter() {
+    const sel = d.getElementById('arsipColBidangFilter');
+    if (!sel) return;
+    const cur = sel.value;
+    const bidangs = Array.from(new Set(_allDocs.map((x) => x.bidang || x.sector).filter(Boolean))).sort();
+    sel.innerHTML = '<option value="">Semua Bidang</option>' + bidangs.map((b) => `<option value="${esc(b)}">${esc(b)}</option>`).join('');
+    if (cur && bidangs.includes(cur)) sel.value = cur;
+  }
+
+  function resetFilters() {
+    ['arsipColSearch', 'arsipColStatusFilter', 'arsipColBidangFilter', 'arsipColYearFilter'].forEach((id) => {
+      const el = d.getElementById(id);
+      if (el) el.value = '';
+    });
+    _selectedFolder = null;
+    applyFilters();
+  }
+
+  function statusBadgeCls(st) {
+    const s = String(st || '').toLowerCase();
+    if (s.includes('setuju') || s.includes('valid') || s.includes('selesai')) return 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300';
+    if (s.includes('tolak')) return 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300';
+    if (s.includes('review')) return 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300';
+    if (s.includes('arsip')) return 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300';
+    return 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
+  }
+
   function applyFilters() {
+    populateBidangFilter();
     const q = (d.getElementById('arsipColSearch')?.value || '').trim().toLowerCase();
     const yr = (d.getElementById('arsipColYearFilter')?.value || '').trim();
+    const st = (d.getElementById('arsipColStatusFilter')?.value || '').trim().toLowerCase();
+    const bd = (d.getElementById('arsipColBidangFilter')?.value || '').trim().toLowerCase();
+
+    const resetBtn = d.getElementById('btnResetDocFilters');
+    if (resetBtn) resetBtn.classList.toggle('hidden', !(q || yr || st || bd || _selectedFolder));
 
     const base = _allDocs.filter((doc) => {
       if (yr && doc.year !== yr) return false;
+      if (st && String(doc.status || '').toLowerCase() !== st) return false;
+      if (bd && String(doc.bidang || doc.sector || '').toLowerCase() !== bd) return false;
       if (q) {
-        const hay = [doc.title, doc.type, doc.bidang, doc.sector, doc.nomorDokumen, doc.uploader, doc.year, doc.desc]
+        const hay = [doc.title, doc.type, doc.bidang, doc.sector, doc.nomorDokumen, doc.uploader, doc.year, doc.desc, doc.status]
           .join(' ')
           .toLowerCase();
         if (!hay.includes(q)) return false;
@@ -378,23 +474,30 @@
     el.innerHTML = items.map((doc) => {
       const fi = fileBadgeInfo(doc);
       const isSelected = doc.id === _selectedDocId;
+      const isChecked = _bulkSelected.has(String(doc.id));
       return `
         <div role="button" tabindex="0"
           onclick="window.ArsipColumns.peekDoc('${esc(doc.id)}')"
           ondblclick="window.ArsipColumns.openDoc('${esc(doc.id)}')"
           class="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800/80 cursor-pointer transition-colors border-l-[3px] ${isSelected ? 'bg-blue-50/80 dark:bg-blue-950/40 border-l-[#2563eb]' : 'border-l-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50'}">
+          <input type="checkbox" ${isChecked ? 'checked' : ''} aria-label="Pilih dokumen"
+            onclick="window.ArsipColumns.toggleSelectDoc('${esc(doc.id)}', event)"
+            class="w-4 h-4 rounded accent-[#2563eb] shrink-0 cursor-pointer">
           <div class="w-9 h-9 rounded-xl ${fi.cls} flex items-center justify-center shrink-0">
             <span class="material-symbols-outlined text-[19px]">${fi.icon}</span>
           </div>
           <div class="flex-1 min-w-0">
-            <div class="text-xs font-bold text-slate-900 dark:text-white truncate">${esc(doc.title)}</div>
-            <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-              ${esc([doc.type, doc.sector].filter(Boolean).join(' • '))}${doc.nomorDokumen ? ' • ' + esc(doc.nomorDokumen) : ''}
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-bold text-slate-900 dark:text-white truncate">${esc(doc.title)}</span>
+              ${doc.publik ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 shrink-0">Publik</span>' : ''}
+            </div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5 flex items-center gap-1.5">
+              <span class="truncate">${esc([doc.type, doc.sector].filter(Boolean).join(' • '))}${doc.nomorDokumen ? ' • ' + esc(doc.nomorDokumen) : ''}</span>
             </div>
           </div>
-          <div class="hidden sm:flex flex-col items-end shrink-0 text-right">
-            <span class="text-[11px] font-mono tabular-nums text-slate-600 dark:text-slate-300">${esc(doc.tanggalDokumen || doc.year)}</span>
-            <span class="text-[10px] font-mono tabular-nums text-slate-400">${esc(doc.size)}</span>
+          <div class="hidden sm:flex flex-col items-end shrink-0 text-right gap-0.5">
+            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${statusBadgeCls(doc.status)}">${esc(doc.status || 'Draft')}</span>
+            <span class="text-[10px] font-mono tabular-nums text-slate-400">${esc(doc.tanggalDokumen || doc.year)}</span>
           </div>
           <span class="material-symbols-outlined text-[16px] text-slate-400 shrink-0">chevron_right</span>
         </div>
@@ -447,8 +550,9 @@
             <h3 class="text-sm font-bold text-slate-900 dark:text-white leading-snug break-words">${esc(doc.title)}</h3>
             <div class="flex flex-wrap gap-1.5 mt-2">
               <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${fi.cls}">${esc(fi.label)}</span>
-              <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">${esc(doc.publik ? 'Publik' : 'Internal')}</span>
-              <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${esc(doc.year)}</span>
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${statusBadgeCls(doc.status)}">${esc(doc.status || 'Draft')}</span>
+              <button type="button" onclick="window.ArsipColumns.togglePublikDoc('${esc(doc.id)}')" title="Klik untuk ubah visibilitas Publik/Internal" class="px-2 py-0.5 rounded-md text-[10px] font-bold cursor-pointer ${doc.publik ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">${esc(doc.publik ? 'Publik' : 'Internal')}</button>
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">v${esc(doc.versi || 1)}</span>
               ${files.length > 1 ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300">${files.length} berkas</span>` : ''}
             </div>
           </div>
@@ -471,12 +575,38 @@
                    <span>Buka / Unduh Berkas</span>
                  </a>`
               : `<button type="button" disabled class="w-full py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 text-xs font-semibold cursor-not-allowed">Berkas belum tertaut</button>`}
-            ${hasUrl
-              ? `<button type="button" onclick="window.ArsipColumns.copyUrl('${esc(activeUrl).replace(/'/g, "\\'")}')" class="w-full py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
-                   <span class="material-symbols-outlined text-[15px]">content_copy</span>
-                   <span>Salin Tautan</span>
-                 </button>`
-              : ''}
+
+            <!-- Aksi Manajemen Dokumen (UMA DATA Parity) -->
+            <div class="grid grid-cols-2 gap-1.5">
+              <button type="button" onclick="window.ArsipColumns.openEditDocModal('${esc(doc.id)}')" class="py-2 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-slate-700 dark:text-slate-200 hover:text-[#2563eb] text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">edit</span>
+                <span>Edit</span>
+              </button>
+              <button type="button" onclick="window.ArsipColumns.openStatusDocModal('${esc(doc.id)}')" class="py-2 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-slate-700 dark:text-slate-200 hover:text-emerald-700 text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">task_alt</span>
+                <span>Status</span>
+              </button>
+              <button type="button" onclick="window.ArsipColumns.openShareDocModal('${esc(doc.id)}')" class="py-2 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-700 dark:text-slate-200 hover:text-indigo-700 text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">share</span>
+                <span>Bagikan</span>
+              </button>
+              <button type="button" onclick="window.ArsipColumns.openHistoryVersionsModal('${esc(doc.id)}')" class="py-2 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/60 text-slate-700 dark:text-slate-200 hover:text-amber-700 text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">history</span>
+                <span>Versi &amp; Log</span>
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-1.5">
+              ${hasUrl
+                ? `<button type="button" onclick="window.ArsipColumns.copyUrl('${esc(activeUrl).replace(/'/g, "\\'")}')" class="py-2 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-[11px] font-semibold flex items-center justify-center gap-1 cursor-pointer">
+                     <span class="material-symbols-outlined text-[14px]">content_copy</span>
+                     <span>Salin Link</span>
+                   </button>`
+                : '<div></div>'}
+              <button type="button" onclick="window.ArsipColumns.deleteDoc('${esc(doc.id)}')" class="py-2 px-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[14px]">delete</span>
+                <span>Hapus</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -751,10 +881,383 @@
     }
   }
 
+  /* ── MANAJEMEN DOKUMEN LENGKAP (UMA DATA DocDetail PARITY) ─────────────── */
+  function findDocById(docId) {
+    return _allDocs.find((x) => String(x.id) === String(docId)) || _filteredDocs.find((x) => String(x.id) === String(docId)) || null;
+  }
+
+  async function togglePublikDoc(docId) {
+    const doc = findDocById(docId);
+    if (!doc) return;
+    const nextVal = !doc.publik;
+    try {
+      const res = await fetch(`/api/arsip/docs/${encodeURIComponent(doc.id)}/publik`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ publik: nextVal }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      doc.publik = nextVal;
+      renderDocList(_filteredDocs);
+      renderPreviewPane(doc, _previewFileIdx);
+      if (w.Swal) w.Swal.fire({ icon: 'success', title: nextVal ? 'Dokumen Dipublikasikan' : 'Disetel Internal', timer: 1400, showConfirmButton: false });
+    } catch (err) {
+      if (w.Swal) w.Swal.fire('Gagal', err?.message || 'Tidak dapat mengubah status publik.', 'error');
+    }
+  }
+
+  function openEditDocModal(docId) {
+    const doc = findDocById(docId);
+    if (!doc) return;
+    d.getElementById('stitchDocActionOverlay')?.remove();
+    const wrap = d.createElement('div');
+    wrap.id = 'stitchDocActionOverlay';
+    wrap.className = 'fixed inset-0 z-[97] bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4';
+    wrap.innerHTML = `
+      <div class="w-full max-w-xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <h3 class="text-base font-bold text-slate-900 dark:text-white">Edit Metadata Dokumen</h3>
+          <button type="button" data-close-doc-ov class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-[18px]">close</span></button>
+        </div>
+        <div class="p-6 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+          <div class="sm:col-span-2">
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Judul Dokumen *</label>
+            <input id="edDocTitle" type="text" value="${esc(doc.title)}" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Kategori</label>
+            <input id="edDocType" type="text" value="${esc(doc.type)}" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Sektor</label>
+            <input id="edDocSector" type="text" value="${esc(doc.sector)}" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Bidang</label>
+            <input id="edDocBidang" type="text" value="${esc(doc.bidang)}" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Nomor Dokumen</label>
+            <input id="edDocNomor" type="text" value="${esc(doc.nomorDokumen)}" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tags (pisahkan koma)</label>
+            <input id="edDocTags" type="text" value="${esc(Array.isArray(doc.tags) ? doc.tags.join(', ') : (doc.tagsRaw || ''))}" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Deskripsi</label>
+            <textarea id="edDocDesc" rows="3" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${esc(doc.desc)}</textarea>
+          </div>
+        </div>
+        <div class="px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+          <button type="button" data-close-doc-ov class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Batal</button>
+          <button type="button" id="btnSaveEditDoc" class="px-5 py-2 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold cursor-pointer">Simpan Perubahan</button>
+        </div>
+      </div>
+    `;
+    wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('[data-close-doc-ov]')) wrap.remove(); });
+    wrap.querySelector('#btnSaveEditDoc')?.addEventListener('click', async () => {
+      const judul = wrap.querySelector('#edDocTitle').value.trim();
+      if (!judul) return;
+      try {
+        const res = await fetch(`/api/arsip/docs/${encodeURIComponent(doc.id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            judul,
+            kategori: wrap.querySelector('#edDocType').value.trim(),
+            tipe: wrap.querySelector('#edDocSector').value.trim(),
+            bidang: wrap.querySelector('#edDocBidang').value.trim(),
+            nomor_dokumen: wrap.querySelector('#edDocNomor').value.trim(),
+            tags: wrap.querySelector('#edDocTags').value.trim(),
+            desc: wrap.querySelector('#edDocDesc').value.trim(),
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        wrap.remove();
+        if (w.Swal) w.Swal.fire({ icon: 'success', title: 'Metadata Diperbarui', timer: 1400, showConfirmButton: false });
+        await loadArsipDocs();
+      } catch (err) {
+        if (w.Swal) w.Swal.fire('Gagal', err?.message || 'Gagal memperbarui dokumen.', 'error');
+      }
+    });
+    d.body.appendChild(wrap);
+  }
+
+  function openStatusDocModal(docId) {
+    const doc = findDocById(docId);
+    if (!doc) return;
+    d.getElementById('stitchDocActionOverlay')?.remove();
+    const statuses = ['Draft', 'Review', 'Disetujui', 'Diarsipkan', 'Ditolak'];
+    const wrap = d.createElement('div');
+    wrap.id = 'stitchDocActionOverlay';
+    wrap.className = 'fixed inset-0 z-[97] bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4';
+    wrap.innerHTML = `
+      <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <h3 class="text-base font-bold text-slate-900 dark:text-white">Verifikasi &amp; Ubah Status</h3>
+          <button type="button" data-close-doc-ov class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-[18px]">close</span></button>
+        </div>
+        <div class="p-6 space-y-4 text-xs">
+          <div class="font-bold text-slate-800 dark:text-slate-100 truncate">${esc(doc.title)}</div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Pilih Status Baru</label>
+            <select id="stDocNext" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-semibold">
+              ${statuses.map((s) => `<option value="${s}" ${(doc.status || 'Draft') === s ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Catatan Verifikasi / Review</label>
+            <textarea id="stDocNote" rows="3" placeholder="Tambahkan catatan persetujuan atau alasan penolakan..." class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${esc(doc.reviewNote || '')}</textarea>
+          </div>
+        </div>
+        <div class="px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+          <button type="button" data-close-doc-ov class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Batal</button>
+          <button type="button" id="btnSaveDocStatus" class="px-5 py-2 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold cursor-pointer">Simpan Status</button>
+        </div>
+      </div>
+    `;
+    wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('[data-close-doc-ov]')) wrap.remove(); });
+    wrap.querySelector('#btnSaveDocStatus')?.addEventListener('click', async () => {
+      const status = wrap.querySelector('#stDocNext').value;
+      const note = wrap.querySelector('#stDocNote').value.trim();
+      try {
+        const res = await fetch(`/api/arsip/docs/${encodeURIComponent(doc.id)}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status, note }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        wrap.remove();
+        if (w.Swal) w.Swal.fire({ icon: 'success', title: `Status: ${status}`, timer: 1400, showConfirmButton: false });
+        await loadArsipDocs();
+      } catch (err) {
+        if (w.Swal) w.Swal.fire('Gagal', err?.message || 'Gagal memperbarui status.', 'error');
+      }
+    });
+    d.body.appendChild(wrap);
+  }
+
+  async function openShareDocModal(docId) {
+    const doc = findDocById(docId);
+    if (!doc) return;
+    d.getElementById('stitchDocActionOverlay')?.remove();
+    let shares = [];
+    const fetchShares = async () => {
+      try {
+        const r = await fetch(`/api/arsip/p/api/docs/${encodeURIComponent(doc.id)}/shares`);
+        const j = await r.json().catch(() => ({}));
+        shares = Array.isArray(j.items) ? j.items : (Array.isArray(j) ? j : []);
+      } catch { shares = []; }
+    };
+    await fetchShares();
+
+    const wrap = d.createElement('div');
+    wrap.id = 'stitchDocActionOverlay';
+    wrap.className = 'fixed inset-0 z-[97] bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4';
+    wrap.innerHTML = `
+      <div class="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 dark:text-white">Bagikan Tautan Dokumen</h3>
+            <p class="text-[11px] text-slate-500 truncate max-w-[340px]">${esc(doc.title)}</p>
+          </div>
+          <button type="button" data-close-doc-ov class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-[18px]">close</span></button>
+        </div>
+        <div class="p-6 overflow-y-auto space-y-4 text-xs">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input id="shDocLabel" type="text" placeholder="Label tautan (mis. Untuk Bappeda)" class="sm:col-span-2 h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <select id="shDocDays" class="h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <option value="0">Tanpa Batas</option>
+              <option value="7">7 Hari</option>
+              <option value="30">30 Hari</option>
+            </select>
+          </div>
+          <button type="button" id="btnCreateShare" class="w-full py-2.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white font-bold cursor-pointer">Buat Tautan Berbagi Baru</button>
+          <div id="shDocList" class="space-y-2"></div>
+        </div>
+      </div>
+    `;
+    const renderList = () => {
+      const box = wrap.querySelector('#shDocList');
+      if (!box) return;
+      if (!shares.length) {
+        box.innerHTML = '<div class="text-center text-slate-400 py-4">Belum ada tautan berbagi aktif.</div>';
+        return;
+      }
+      box.innerHTML = shares.map((s) => {
+        const shareUrl = `${w.location.origin}/share/${s.token || s.id}`;
+        return `
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700 flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <div class="font-bold text-slate-800 dark:text-slate-100 truncate">${esc(s.label || 'Tautan Publik')}</div>
+              <div class="font-mono text-[10px] text-slate-400 truncate">${esc(shareUrl)} ${s.expires_at ? '• s/d ' + esc(s.expires_at) : ''}</div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button type="button" data-copy-sh="${esc(shareUrl)}" class="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] font-bold text-[11px] cursor-pointer">Salin</button>
+              <button type="button" data-del-sh="${s.id}" class="p-1 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      box.querySelectorAll('[data-copy-sh]').forEach((b) => {
+        b.addEventListener('click', () => {
+          if (navigator.clipboard) navigator.clipboard.writeText(b.dataset.copySh).catch(() => {});
+          b.textContent = 'Tersalin';
+        });
+      });
+      box.querySelectorAll('[data-del-sh]').forEach((b) => {
+        b.addEventListener('click', async () => {
+          await fetch(`/api/arsip/p/api/docs/${encodeURIComponent(doc.id)}/shares/${b.dataset.delSh}`, { method: 'DELETE' }).catch(() => {});
+          await fetchShares();
+          renderList();
+        });
+      });
+    };
+    wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('[data-close-doc-ov]')) wrap.remove(); });
+    wrap.querySelector('#btnCreateShare')?.addEventListener('click', async () => {
+      const label = wrap.querySelector('#shDocLabel').value.trim() || 'Tautan Publik';
+      const days = Number(wrap.querySelector('#shDocDays').value) || 0;
+      await fetch(`/api/arsip/p/api/docs/${encodeURIComponent(doc.id)}/shares`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label, days }),
+      });
+      wrap.querySelector('#shDocLabel').value = '';
+      await fetchShares();
+      renderList();
+    });
+    d.body.appendChild(wrap);
+    renderList();
+  }
+
+  async function openHistoryVersionsModal(docId) {
+    const doc = findDocById(docId);
+    if (!doc) return;
+    d.getElementById('stitchDocActionOverlay')?.remove();
+    let history = [];
+    let versions = [];
+    const loadAll = async () => {
+      const [hRes, vRes] = await Promise.all([
+        fetch(`/api/arsip/docs/${encodeURIComponent(doc.id)}/history`).then((r) => r.json()).catch(() => []),
+        fetch(`/api/arsip/p/api/docs/${encodeURIComponent(doc.id)}/versions`).then((r) => r.json()).catch(() => ({ items: [] })),
+      ]);
+      history = Array.isArray(hRes) ? hRes : (Array.isArray(hRes?.items) ? hRes.items : []);
+      versions = Array.isArray(vRes?.items) ? vRes.items : (Array.isArray(vRes) ? vRes : []);
+    };
+    await loadAll();
+
+    const wrap = d.createElement('div');
+    wrap.id = 'stitchDocActionOverlay';
+    wrap.className = 'fixed inset-0 z-[97] bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4';
+    wrap.innerHTML = `
+      <div class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 dark:text-white">Riwayat Aktivitas &amp; Versi Dokumen</h3>
+            <p class="text-[11px] text-slate-500 truncate max-w-[420px]">${esc(doc.title)} (Saat ini v${esc(doc.versi || 1)})</p>
+          </div>
+          <button type="button" data-close-doc-ov class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-[18px]">close</span></button>
+        </div>
+        <div class="p-6 overflow-y-auto space-y-5 text-xs">
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 space-y-2.5">
+            <div class="font-bold text-slate-800 dark:text-slate-100">Unggah Versi Revisi Baru</div>
+            <input id="verDocUrl" type="url" placeholder="Tautan Drive revisi baru atau unggah file di bawah..." class="w-full h-9 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+            <div class="flex flex-wrap items-center gap-2">
+              <input id="verDocNote" type="text" placeholder="Catatan revisi (mis. Perbaikan tabel lampiran)..." class="flex-1 min-w-[180px] h-9 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+              <button type="button" id="btnAddVersion" class="px-4 h-9 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white font-bold cursor-pointer">Simpan Revisi</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Daftar Versi (${versions.length})</div>
+            <div class="space-y-1.5">
+              ${versions.length ? versions.map((v) => `
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700 flex items-center justify-between gap-2">
+                  <div>
+                    <span class="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950 text-[#2563eb] font-mono font-bold text-[10px]">v${esc(v.versi)}</span>
+                    <span class="font-semibold text-slate-800 dark:text-slate-100 ml-1.5">${esc(v.catatan || 'Revisi dokumen')}</span>
+                    <div class="text-[10px] font-mono text-slate-400 mt-0.5">${esc(v.created_at || '')} • ${esc(v.uploader_name || '')}</div>
+                  </div>
+                  ${v.url ? `<a href="${esc(v.url)}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[#2563eb] font-bold text-[11px]">Buka</a>` : ''}
+                </div>`).join('') : '<div class="text-slate-400 italic">Belum ada riwayat versi tambahan.</div>'}
+            </div>
+          </div>
+
+          <div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Log Aktivitas (${history.length})</div>
+            <div class="space-y-1.5">
+              ${history.length ? history.map((h) => `
+                <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="font-bold text-slate-800 dark:text-slate-100">${esc(h.actor_name || 'Sistem')} • ${esc(h.action || 'aktivitas')}</span>
+                    <span class="font-mono text-[10px] text-slate-400">${esc(h.created_at || '')}</span>
+                  </div>
+                  ${h.to_status || h.note ? `<div class="text-slate-500 mt-0.5">${h.to_status ? `Status → <strong>${esc(h.to_status)}</strong> ` : ''}${esc(h.note || '')}</div>` : ''}
+                </div>`).join('') : '<div class="text-slate-400 italic">Belum ada log aktivitas tercatat.</div>'}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('[data-close-doc-ov]')) wrap.remove(); });
+    wrap.querySelector('#btnAddVersion')?.addEventListener('click', async () => {
+      const url = wrap.querySelector('#verDocUrl').value.trim();
+      const catatan = wrap.querySelector('#verDocNote').value.trim() || 'Revisi dokumen';
+      try {
+        const res = await fetch(`/api/arsip/p/api/docs/${encodeURIComponent(doc.id)}/versions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, catatan }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        wrap.remove();
+        if (w.Swal) w.Swal.fire({ icon: 'success', title: 'Versi Baru Disimpan', timer: 1400, showConfirmButton: false });
+        await loadArsipDocs();
+      } catch (err) {
+        if (w.Swal) w.Swal.fire('Gagal', err?.message || 'Gagal menyimpan versi baru.', 'error');
+      }
+    });
+    d.body.appendChild(wrap);
+  }
+
+  async function deleteDoc(docId) {
+    const doc = findDocById(docId);
+    if (!doc) return;
+    if (w.Swal) {
+      const cf = await w.Swal.fire({
+        icon: 'warning',
+        title: 'Hapus Dokumen?',
+        text: `"${doc.title}" akan dihapus permanen dari Arsip Digital.`,
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#e11d48',
+      });
+      if (!cf.isConfirmed) return;
+    }
+    try {
+      const res = await fetch(`/api/arsip/docs/${encodeURIComponent(doc.id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (w.Swal) w.Swal.fire({ icon: 'success', title: 'Dokumen Dihapus', timer: 1400, showConfirmButton: false });
+      await loadArsipDocs();
+    } catch (err) {
+      if (w.Swal) w.Swal.fire('Gagal', err?.message || 'Gagal menghapus dokumen.', 'error');
+    }
+  }
+
   w.ArsipColumns = {
     init: loadArsipDocs,
     reload: loadArsipDocs,
     applyFilters,
+    resetFilters,
+    toggleSelectDoc,
+    clearSelection,
+    runBulkAction,
+    togglePublikDoc,
+    openEditDocModal,
+    openStatusDocModal,
+    openShareDocModal,
+    openHistoryVersionsModal,
+    deleteDoc,
     selectFolder(name) {
       _selectedFolder = name;
       applyFilters();

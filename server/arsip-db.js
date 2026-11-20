@@ -104,7 +104,7 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
   }
 
   const mDocPublik = pathname.match(/^\/api\/docs\/([^/]+)\/publik$/);
-  if (mDocPublik && method === 'PATCH') {
+  if (mDocPublik && (method === 'PATCH' || method === 'POST')) {
     const docId = mDocPublik[1];
     try {
       const publik = Boolean(req.body?.publik);
@@ -119,7 +119,7 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
   }
 
   const mDocStatus = pathname.match(/^\/api\/docs\/([^/]+)\/status$/);
-  if (mDocStatus && method === 'PATCH') {
+  if (mDocStatus && (method === 'PATCH' || method === 'POST')) {
     const docId = mDocStatus[1];
     const { status, note } = req.body || {};
     try {
@@ -137,12 +137,135 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
            VALUES ($1, 'status_change', $2, $3, $4, $5)`,
           [docId, status, actorNip, actorName, note || '']
         );
-      } catch (_) {}
+      } catch { /* ignore */ }
       res.json({ ok: true, message: 'Status berhasil diperbarui' });
       return true;
     } catch (err) {
       console.error('[arsip-db] /api/docs/:id/status error:', err);
       res.status(500).json({ error: 'Gagal memperbarui status dokumen' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/docs/bulk' && method === 'POST') {
+    try {
+      const { action, ids } = req.body || {};
+      const cleanIds = Array.isArray(ids) ? ids.map((x) => Number(x)).filter((n) => Number.isFinite(n) && n > 0) : [];
+      if (!cleanIds.length) {
+        res.status(400).json({ ok: false, message: 'Pilih minimal 1 dokumen.' });
+        return true;
+      }
+      if (action === 'archive') {
+        await doQuery(`UPDATE bapperida_dokumen SET status = 'Diarsipkan' WHERE id = ANY($1::int[])`, [cleanIds]);
+      } else if (action === 'publish') {
+        await doQuery(`UPDATE bapperida_dokumen SET publik = true, status = 'Disetujui' WHERE id = ANY($1::int[])`, [cleanIds]);
+      } else if (action === 'delete') {
+        await doQuery(`DELETE FROM bapperida_dokumen WHERE id = ANY($1::int[])`, [cleanIds]);
+      } else {
+        res.status(400).json({ ok: false, message: 'Aksi bulk tidak dikenali.' });
+        return true;
+      }
+      res.json({ ok: true, count: cleanIds.length, action });
+      return true;
+    } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal menjalankan aksi massal: ' + err.message });
+      return true;
+    }
+  }
+
+  const mDocVer = pathname.match(/^\/api\/docs\/([^/]+)\/versions$/);
+  if (mDocVer && method === 'GET') {
+    try {
+      await doQuery(`CREATE TABLE IF NOT EXISTS doc_versions (id SERIAL PRIMARY KEY, doc_id INT NOT NULL, versi INT NOT NULL DEFAULT 1, url TEXT, ukuran TEXT, catatan TEXT, uploader_name TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
+      const { rows } = await doQuery(
+        `SELECT id, doc_id, versi, url, ukuran, catatan, uploader_name,
+                TO_CHAR(created_at, 'DD Mon YYYY HH24:MI') AS created_at
+         FROM doc_versions WHERE doc_id = $1 ORDER BY versi DESC, id DESC`,
+        [Number(mDocVer[1])]
+      );
+      res.json({ ok: true, items: rows });
+      return true;
+    } catch {
+      res.json({ ok: true, items: [] });
+      return true;
+    }
+  }
+  if (mDocVer && method === 'POST') {
+    try {
+      const docId = Number(mDocVer[1]);
+      const b = req.body || {};
+      const actorName = req.user?.name || req.user?.username || 'Admin';
+      await doQuery(`CREATE TABLE IF NOT EXISTS doc_versions (id SERIAL PRIMARY KEY, doc_id INT NOT NULL, versi INT NOT NULL DEFAULT 1, url TEXT, ukuran TEXT, catatan TEXT, uploader_name TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
+      const cur = await doQuery(`SELECT COALESCE(versi, 1)::int AS v, url, ukuran FROM bapperida_dokumen WHERE id = $1`, [docId]);
+      const nextV = (cur.rows[0]?.v || 1) + 1;
+      await doQuery(
+        `INSERT INTO doc_versions (doc_id, versi, url, ukuran, catatan, uploader_name) VALUES ($1, $2, $3, $4, $5, $6)`,
+        [docId, nextV, b.url || cur.rows[0]?.url || '', b.ukuran || b.size || '', b.catatan || b.note || `Revisi versi ${nextV}`, actorName]
+      );
+      await doQuery(
+        `UPDATE bapperida_dokumen SET versi = $1, url = COALESCE(NULLIF($2, ''), url), ukuran = COALESCE(NULLIF($3, ''), ukuran) WHERE id = $4`,
+        [nextV, b.url || '', b.ukuran || b.size || '', docId]
+      );
+      try {
+        await doQuery(
+          `INSERT INTO doc_history (doc_id, action, actor_id, actor_name, note) VALUES ($1, 'new_version', $2, $3, $4)`,
+          [docId, req.user?.nip || '', actorName, `Unggah versi v${nextV}: ${b.catatan || b.note || ''}`]
+        );
+      } catch { /* ignore */ }
+      res.status(201).json({ ok: true, versi: nextV });
+      return true;
+    } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal menyimpan versi baru: ' + err.message });
+      return true;
+    }
+  }
+
+  const mDocShareDel = pathname.match(/^\/api\/docs\/([^/]+)\/shares\/([^/]+)$/);
+  if (mDocShareDel && method === 'DELETE') {
+    try {
+      await doQuery(`DELETE FROM doc_shares WHERE id = $1 AND doc_id = $2`, [Number(mDocShareDel[2]), Number(mDocShareDel[1])]);
+      res.json({ ok: true, message: 'Tautan berbagi dicabut' });
+      return true;
+    } catch {
+      res.status(500).json({ ok: false, message: 'Gagal mencabut tautan berbagi' });
+      return true;
+    }
+  }
+
+  const mDocShares = pathname.match(/^\/api\/docs\/([^/]+)\/shares$/);
+  if (mDocShares && method === 'GET') {
+    try {
+      await doQuery(`CREATE TABLE IF NOT EXISTS doc_shares (id SERIAL PRIMARY KEY, doc_id INT NOT NULL, token TEXT NOT NULL, label TEXT, expires_at TIMESTAMPTZ, created_by TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
+      const { rows } = await doQuery(
+        `SELECT id, doc_id, token, label, TO_CHAR(expires_at, 'DD Mon YYYY') AS expires_at, created_by,
+                TO_CHAR(created_at, 'DD Mon YYYY HH24:MI') AS created_at
+         FROM doc_shares WHERE doc_id = $1 ORDER BY id DESC`,
+        [Number(mDocShares[1])]
+      );
+      res.json({ ok: true, items: rows });
+      return true;
+    } catch {
+      res.json({ ok: true, items: [] });
+      return true;
+    }
+  }
+  if (mDocShares && method === 'POST') {
+    try {
+      const docId = Number(mDocShares[1]);
+      const b = req.body || {};
+      const actorName = req.user?.name || req.user?.username || 'Admin';
+      const token = Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+      const days = parseInt(b.days || b.expireDays, 10) || 0;
+      const exp = days > 0 ? new Date(Date.now() + days * 86400000).toISOString() : null;
+      await doQuery(`CREATE TABLE IF NOT EXISTS doc_shares (id SERIAL PRIMARY KEY, doc_id INT NOT NULL, token TEXT NOT NULL, label TEXT, expires_at TIMESTAMPTZ, created_by TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
+      const { rows } = await doQuery(
+        `INSERT INTO doc_shares (doc_id, token, label, expires_at, created_by) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [docId, token, b.label || 'Tautan Publik', exp, actorName]
+      );
+      res.status(201).json({ ok: true, item: rows[0] });
+      return true;
+    } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal membuat tautan berbagi: ' + err.message });
       return true;
     }
   }
@@ -180,6 +303,55 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
     } catch (err) {
       console.error('[arsip-db] /api/docs/:id error:', err);
       res.status(500).json({ error: 'Gagal mengambil dokumen' });
+      return true;
+    }
+  }
+
+  if (mDocSingle && method === 'PUT') {
+    const docId = Number(mDocSingle[1]);
+    const b = req.body || {};
+    try {
+      const actorName = req.user?.name || req.user?.username || 'Admin';
+      const tagsStr = Array.isArray(b.tags) ? b.tags.join(', ') : (b.tags ?? null);
+      const { rows } = await doQuery(
+        `UPDATE bapperida_dokumen
+         SET judul = COALESCE(NULLIF($1, ''), judul),
+             kategori = COALESCE(NULLIF($2, ''), kategori),
+             tipe = COALESCE($3, tipe),
+             bidang = COALESCE($4, bidang),
+             "desc" = COALESCE($5, "desc"),
+             tags = COALESCE($6, tags),
+             nomor_dokumen = COALESCE($7, nomor_dokumen),
+             tanggal_dokumen = COALESCE(NULLIF($8, '')::date, tanggal_dokumen)
+         WHERE id = $9 RETURNING *`,
+        [
+          b.judul || b.title || '', b.kategori || b.type || '', b.tipe ?? b.sector ?? null,
+          b.bidang ?? null, b.desc ?? null, tagsStr, b.nomor_dokumen ?? b.nomor ?? null,
+          b.tanggal_dokumen || b.tanggal || '', docId,
+        ]
+      );
+      try {
+        await doQuery(
+          `INSERT INTO doc_history (doc_id, action, actor_id, actor_name, note) VALUES ($1, 'edit', $2, $3, 'Perbarui metadata dokumen')`,
+          [docId, req.user?.nip || '', actorName]
+        );
+      } catch { /* ignore */ }
+      res.json({ ok: true, item: rows[0] });
+      return true;
+    } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal memperbarui dokumen: ' + err.message });
+      return true;
+    }
+  }
+
+  if (mDocSingle && method === 'DELETE') {
+    const docId = Number(mDocSingle[1]);
+    try {
+      await doQuery(`DELETE FROM bapperida_dokumen WHERE id = $1`, [docId]);
+      res.json({ ok: true, message: 'Dokumen dihapus' });
+      return true;
+    } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal menghapus dokumen: ' + err.message });
       return true;
     }
   }
