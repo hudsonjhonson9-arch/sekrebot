@@ -13,7 +13,8 @@ describe('Desktop Real Database Integration', () => {
     const rekapJs = fs.readFileSync(path.join(rootDir, 'js', 'stitch-admin-rekap.js'), 'utf8');
     assert.ok(html.includes('js/stitch-admin-rekap.js'), 'Missing js/stitch-admin-rekap.js in rekap.html');
     assert.ok(html.includes('js/stitch-rekap.js'), 'Missing js/stitch-rekap.js in rekap.html');
-    assert.ok(rekapJs.includes('/api/stitch/rekap-tpp'), 'Missing /api/stitch/rekap-tpp fetch in stitch-admin-rekap.js');
+    assert.ok(rekapJs.includes('/api/stitch/rekap-range'), 'Missing /api/stitch/rekap-range fetch in stitch-admin-rekap.js');
+    assert.ok(rekapJs.includes('/api/stitch/rekap-harian'), 'Missing /api/stitch/rekap-harian fetch in stitch-admin-rekap.js');
     assert.ok(!/<tbody[^>]*>\s*<!-- Row 1 -->\s*<tr[^>]*>[\s\S]*?Charles Hermana Weru/i.test(html), 'Found static demo rows in rekap.html');
   });
 
