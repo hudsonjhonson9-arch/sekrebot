@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkOpenwaStatus, restartOpenwaSession, createOpenwaWatchdog } from './openwa-health.js';
+import { checkOpenwaStatus, restartOpenwaSession, getOpenwaQr, createOpenwaWatchdog } from './openwa-health.js';
 
 test('checkOpenwaStatus mengembalikan NOT_CONFIGURED bila url kosong', async () => {
   const res = await checkOpenwaStatus({ url: '' });
@@ -86,4 +86,19 @@ test('watchdog otomatis merestart saat STOPPED dan mematuhi cooldown, tapi tidak
   const r = await wdQr.checkNow({ allowAutoRestart: true });
   assert.equal(r.status, 'SCAN_QR');
   assert.equal(qrRestarts, 0);
+});
+
+test('getOpenwaQr mengembalikan qrDataUrl saat sesi berstatus SCAN_QR', async () => {
+  const fakeFetch = async (url) => {
+    if (String(url).endsWith('/api/sessions')) {
+      return new Response(JSON.stringify([{ id: 's1', name: 'default', status: 'SCAN_QR' }]), { status: 200 });
+    }
+    return new Response(JSON.stringify({ qr: 'data:image/png;base64,iVBORw0KGgo=' }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  const res = await getOpenwaQr({ url: 'https://wa.example.com', session: 'default' }, fakeFetch);
+  assert.equal(res.ok, true);
+  assert.equal(res.qrDataUrl, 'data:image/png;base64,iVBORw0KGgo=');
 });

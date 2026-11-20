@@ -1,6 +1,7 @@
 import express from 'express';
 import crypto from 'node:crypto';
 import { sameInstansi } from './auth.js';
+import { waChatId } from './keterangan-notify.js';
 
 const MEDIA = new Set(['ADMIN','SUPERADMIN','KEPALA','SEKRETARIS','KABID','IRBAN']);
 const ROLES = ['USER','ADMIN','SUPERADMIN','KEPALA','SEKRETARIS','KABID','IRBAN','INSPEKTUR','BENDAHARA BARANG'];
@@ -26,7 +27,7 @@ function scope(req, requested) {
 function ok(res, data = {}, message) { return res.json({ ok: true, ...(message ? { message } : {}), ...data }); }
 function fail(res, status, message) { return res.status(status).json({ ok: false, message }); }
 
-export function createCoreAdminRouter({ query, openwaWatchdog = null, getSchedulerActive = null } = {}) {
+export function createCoreAdminRouter({ query, openwaWatchdog = null, sendWhatsApp = null, getSchedulerActive = null } = {}) {
   const router = express.Router();
 
   // ── Master instansi & bidang ──────────────────────────────────────────────
@@ -352,6 +353,45 @@ router.post('/lokasi-update', async(req,res)=>{if(requireMedia(req,res))return;t
     } catch (e) {
       console.error('[dev/openwa/restart]', e);
       return fail(res, 500, 'Gagal mengirim perintah restart OpenWA.');
+    }
+  });
+
+  // Ambil QR Code OpenWA saat sesi butuh scan ulang (SCAN_QR)
+  router.get('/dev/openwa/qr', async (req, res) => {
+    if (requireMedia(req, res)) return;
+    if (!openwaWatchdog) {
+      return fail(res, 503, 'Layanan OpenWA belum dikonfigurasi pada server.');
+    }
+    try {
+      const result = await openwaWatchdog.getQr();
+      if (!result.ok) {
+        return res.status(409).json({ ok: false, ...result });
+      }
+      return ok(res, result);
+    } catch (e) {
+      console.error('[dev/openwa/qr]', e);
+      return fail(res, 500, 'Gagal mengambil QR Code OpenWA.');
+    }
+  });
+
+  // Kirim pesan tes WhatsApp via OpenWA dari panel Developer
+  router.post('/dev/openwa/test', async (req, res) => {
+    if (requireMedia(req, res)) return;
+    if (typeof sendWhatsApp !== 'function') {
+      return fail(res, 503, 'Pengirim OpenWA belum dikonfigurasi pada server.');
+    }
+    const rawTarget = s(req.body?.target || req.body?.chat_id || '');
+    const target = rawTarget.includes('@') ? rawTarget : waChatId(rawTarget);
+    if (!target) {
+      return fail(res, 400, 'Nomor HP atau JID grup WhatsApp tujuan wajib diisi.');
+    }
+    const text = s(req.body?.text) || `[TES OPENWA] Koneksi WhatsApp Gateway BAPPERIDA aktif (${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Makassar' })} WITA).`;
+    try {
+      await sendWhatsApp({ chatId: target, text });
+      return ok(res, { target, message: `Pesan tes WhatsApp berhasil dikirim ke ${target}.` });
+    } catch (e) {
+      console.error('[dev/openwa/test]', e);
+      return fail(res, 502, `Gagal mengirim pesan WA: ${e?.message || 'OpenWA error'}`);
     }
   });
 

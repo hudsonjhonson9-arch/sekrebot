@@ -310,6 +310,7 @@ export function createApp() {
   app.use('/api', requireRole(ABSEN_ROLES), createCoreAdminRouter({
     query,
     openwaWatchdog: app.locals.openwaWatchdog,
+    sendWhatsApp,
     getSchedulerActive: () => process.env.SCHEDULER !== 'off',
   }));
 

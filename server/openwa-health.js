@@ -151,6 +151,56 @@ export async function restartOpenwaSession(cfg = {}, fetchFn = fetch) {
   return { ok: false, status: 'ERROR', sessionId: sid, message: lastErr };
 }
 
+export async function getOpenwaQr(cfg = {}, fetchFn = fetch) {
+  const base = cleanBase(cfg.url);
+  const session = String(cfg.session || 'default').trim() || 'default';
+  if (!base) {
+    return { ok: false, message: 'OPENWA_URL belum diatur di server.' };
+  }
+  const current = await checkOpenwaStatus(cfg, fetchFn);
+  if (current.ok) {
+    return { ok: true, alreadyConnected: true, status: current.status, message: `Sesi ${current.sessionName} sudah terhubung (${current.status}).` };
+  }
+  const sid = current.sessionId || session;
+  const encSid = encodeURIComponent(sid);
+  const urls = [
+    `${base}/api/sessions/${encSid}/qr`,
+    `${base}/api/sessions/${encSid}/auth/qr`,
+  ];
+  let lastErr = 'QR Code tidak tersedia. Pastikan sesi OpenWA dalam status SCAN_QR.';
+  for (const url of urls) {
+    try {
+      const res = await fetchWithTimeout(fetchFn, url, {
+        method: 'GET',
+        headers: buildHeaders(cfg.apiKey, false),
+      }, 6000);
+      if (!res.ok) {
+        if (res.status !== 404) lastErr = `OpenWA HTTP ${res.status}`;
+        continue;
+      }
+      const ct = String(res.headers.get('content-type') || '');
+      if (ct.startsWith('image/')) {
+        const b64 = Buffer.from(await res.arrayBuffer()).toString('base64');
+        return { ok: true, qrDataUrl: `data:${ct};base64,${b64}`, sessionId: sid };
+      }
+      const json = await res.json().catch(() => ({}));
+      const raw = json.qr || json.qrcode || json.dataUrl || json.base64 || json.data?.qr || json.data?.qrcode || '';
+      if (raw) {
+        const isImg = String(raw).startsWith('data:image/');
+        return {
+          ok: true,
+          qrDataUrl: isImg ? String(raw) : null,
+          qrRaw: isImg ? null : String(raw),
+          sessionId: sid,
+        };
+      }
+    } catch (err) {
+      lastErr = err?.name === 'AbortError' ? 'Timeout mengambil QR OpenWA' : (err?.message || lastErr);
+    }
+  }
+  return { ok: false, status: current.status, sessionId: sid, message: lastErr };
+}
+
 export function createOpenwaWatchdog({
   url = '',
   apiKey = '',
@@ -234,5 +284,9 @@ export function createOpenwaWatchdog({
     };
   }
 
-  return { checkNow, restartNow, start, stop, getState };
+  async function getQr() {
+    return getOpenwaQr(cfg, fetchFn);
+  }
+
+  return { checkNow, restartNow, getQr, start, stop, getState };
 }

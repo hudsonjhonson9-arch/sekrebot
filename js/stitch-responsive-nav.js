@@ -11,10 +11,47 @@
 
   const STORAGE_WIDTH = 'stitch_sidebar_width';
   const STORAGE_PINNED = 'stitch_sidebar_pinned';
+  const STORAGE_THEME = 'stitch_theme';
   const COLLAPSED_WIDTH = 72;
   const MIN_WIDTH = 220;
   const MAX_WIDTH = 380;
   const DEFAULT_WIDTH = 264;
+
+  // Terapkan tema tersimpan segera agar tidak terjadi flash putih saat dark mode aktif
+  try {
+    const savedTheme = localStorage.getItem(STORAGE_THEME);
+    if (savedTheme === 'dark') document.documentElement.classList.add('dark');
+    else if (savedTheme === 'light') document.documentElement.classList.remove('dark');
+  } catch (_) {}
+
+  function resolvePortalAvatarSrc(raw) {
+    const s = String(raw || '').trim();
+    if (!s || s === 'null' || s === 'undefined') return '';
+    if (s.startsWith('data:image')) return s;
+    const tok = (typeof window.getStitchToken === 'function' && window.getStitchToken())
+      || localStorage.getItem('_native_token')
+      || localStorage.getItem('native_token')
+      || localStorage.getItem('_sess_token')
+      || '';
+    const q = tok ? ('?token=' + encodeURIComponent(tok)) : '';
+    const rawM = s.match(/^\/api\/media\/raw\/([^/?#]+)/);
+    if (rawM && rawM[1]) return '/api/media/raw/' + encodeURIComponent(decodeURIComponent(rawM[1])) + q;
+    const driveM = s.match(/\/file\/d\/([-\w]{5,200})/) || s.match(/\/d\/([-\w]{5,200})/) || s.match(/[?&]id=([-\w]{5,200})/);
+    if (driveM && driveM[1]) return '/api/media/raw/' + encodeURIComponent(driveM[1]) + q;
+    if (s.startsWith('/') || s.startsWith('http://') || s.startsWith('https://')) return s;
+    return '';
+  }
+
+  function isAdminRole() {
+    try {
+      const uObj = JSON.parse(localStorage.getItem('tg_user_obj_v5') || 'null') || {};
+      const role = String(uObj.role || uObj.Role || localStorage.getItem('MY_ROLE') || '').toUpperCase();
+      if (uObj.is_admin === true) return true;
+      return ['ADMIN', 'SUPERADMIN', 'SUPER ADMIN', 'KEPALA', 'SEKRETARIS', 'KABID', 'IRBAN'].includes(role);
+    } catch (_) {
+      return false;
+    }
+  }
 
   function clampWidth(val) {
     const n = parseInt(val, 10);
@@ -261,6 +298,68 @@
             pointer-events: none;
             opacity: 0;
           }
+          /* Portal Desktop Polish: header 68px, container terpusat max-w-1440px, sidebar scroll halus */
+          body.stitch-standalone-shell header {
+            height: 68px !important;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+          }
+          body.stitch-standalone-shell main {
+            padding-top: 84px !important;
+            padding-bottom: 40px !important;
+          }
+          body.stitch-standalone-shell main > div:first-child {
+            max-width: 1440px;
+            margin-left: auto;
+            margin-right: auto;
+          }
+          body.stitch-standalone-shell aside.w-72 nav {
+            overflow-y: auto;
+            max-height: calc(100vh - 180px);
+          }
+        }
+        /* Dark Mode Surface & Text Bridge untuk seluruh halaman Portal Desktop */
+        html.dark body {
+          background-color: #0b1120 !important;
+          color: #f1f5f9 !important;
+        }
+        html.dark .bg-surface,
+        html.dark .bg-surface-bright {
+          background-color: #0b1120 !important;
+        }
+        html.dark .bg-surface-container-lowest,
+        html.dark .bg-surface-container-lowest\/90 {
+          background-color: #0f172a !important;
+          border-color: rgba(51, 65, 85, 0.7) !important;
+        }
+        html.dark .bg-surface-container-low,
+        html.dark .bg-surface-container {
+          background-color: #1e293b !important;
+        }
+        html.dark .bg-surface-container-high,
+        html.dark .bg-surface-container-highest {
+          background-color: #334155 !important;
+        }
+        html.dark .text-on-surface,
+        html.dark .text-on-background {
+          color: #f1f5f9 !important;
+        }
+        html.dark .text-on-surface-variant {
+          color: #94a3b8 !important;
+        }
+        html.dark header {
+          border-bottom-color: rgba(51, 65, 85, 0.75) !important;
+        }
+        html.dark table thead tr {
+          background-color: #1e293b !important;
+          color: #cbd5e1 !important;
+        }
+        html.dark table tbody tr:hover {
+          background-color: rgba(30, 41, 59, 0.65) !important;
+        }
+        html.dark input:not([type="checkbox"]):not([type="radio"]),
+        html.dark textarea,
+        html.dark select {
+          color: #f1f5f9;
         }
       `;
       document.head.appendChild(style);
@@ -280,40 +379,128 @@
       }
     });
 
-    // 1. Suntikkan Submenu Panel Admin di Sidebar Desktop (hover/klik untuk buka)
+    // 0b. Suntikkan tombol Dark/Light Mode Toggle di header portal desktop
+    const headerRight = document.querySelector('header > div:last-child');
+    if (headerRight && !document.getElementById('stitchDesktopThemeBtn')) {
+      const themeBtn = document.createElement('button');
+      themeBtn.id = 'stitchDesktopThemeBtn';
+      themeBtn.type = 'button';
+      themeBtn.setAttribute('aria-label', 'Ganti tema gelap atau terang');
+      themeBtn.className = 'w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-amber-300 flex items-center justify-center transition-colors cursor-pointer shrink-0';
+      const syncThemeBtn = () => {
+        const isDark = document.documentElement.classList.contains('dark');
+        themeBtn.title = isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap';
+        themeBtn.innerHTML = `<span class="material-symbols-outlined text-[19px]">${isDark ? 'light_mode' : 'dark_mode'}</span>`;
+      };
+      themeBtn.addEventListener('click', () => {
+        const nextDark = !document.documentElement.classList.contains('dark');
+        document.documentElement.classList.toggle('dark', nextDark);
+        try { localStorage.setItem(STORAGE_THEME, nextDark ? 'dark' : 'light'); } catch (_) {}
+        syncThemeBtn();
+      });
+      syncThemeBtn();
+      const modeHpLink = headerRight.querySelector('a[href*="index.html"]');
+      if (modeHpLink) modeHpLink.insertAdjacentElement('afterend', themeBtn);
+      else headerRight.prepend(themeBtn);
+    }
+
+    // 0c. Hubungkan tombol lonceng Pemberitahuan di header ke /api/stitch/notifications
+    const bellBtn = document.querySelector('header button[aria-label="Pemberitahuan"]');
+    if (bellBtn && !bellBtn.dataset.stitchBellBound) {
+      bellBtn.dataset.stitchBellBound = '1';
+      const bellDot = bellBtn.querySelector('span.bg-error, span.bg-rose-500');
+      const activeNip = (localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || '').trim();
+      let cachedNotifs = [];
+      if (activeNip) {
+        fetch('/api/stitch/notifications?nip=' + encodeURIComponent(activeNip))
+          .then((r) => (r.ok ? r.json() : null))
+          .then((json) => {
+            cachedNotifs = Array.isArray(json?.data) ? json.data : [];
+            if (bellDot) bellDot.style.display = cachedNotifs.length > 0 ? '' : 'none';
+          })
+          .catch(() => {
+            if (bellDot) bellDot.style.display = 'none';
+          });
+      } else if (bellDot) {
+        bellDot.style.display = 'none';
+      }
+      bellBtn.addEventListener('click', () => {
+        const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const bodyHtml = cachedNotifs.length
+          ? `<div class="flex flex-col gap-2 text-left max-h-72 overflow-y-auto">${cachedNotifs.slice(0, 12).map((n) => `
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
+                <div class="text-xs font-bold text-slate-900 dark:text-white">${esc(n.title || n.judul || 'Notifikasi')}</div>
+                <div class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">${esc(n.message || n.pesan || '-')}</div>
+              </div>`).join('')}</div>`
+          : '<p class="text-xs text-slate-500 dark:text-slate-400 py-4">Belum ada pemberitahuan baru saat ini.</p>';
+        if (window.Swal) {
+          window.Swal.fire({ title: 'Pemberitahuan', html: bodyHtml, confirmButtonText: 'Tutup', confirmButtonColor: '#2563eb' });
+        }
+      });
+    }
+
+    // 1. Submenu Panel Admin di Sidebar Desktop (collapsible + sembunyikan untuk non-admin)
     if (sidebarNav && !document.getElementById('stitchStandaloneAdminSubmenu')) {
       const adminLink = sidebarNav.querySelector('a[href="admin.html"]');
       if (adminLink) {
-        const subWrap = document.createElement('div');
-        subWrap.id = 'stitchStandaloneAdminSubmenu';
-        subWrap.className = 'mt-0.5 ml-3 pl-3 border-l border-slate-700/80 flex flex-col gap-0.5 overflow-hidden transition-all';
-        const adminSubs = [
-          { href: 'index.html#admin:adminSectionMonitoring', icon: 'monitoring', label: 'Monitoring Hari Ini' },
-          { href: 'index.html#admin:adminSectionIzin', icon: 'rule', label: 'Konfirmasi Izin' },
-          { href: 'index.html#admin:adminSectionRekap', icon: 'analytics', label: 'Rekap Semua Pegawai' },
-          { href: 'index.html#admin:adminSectionPegawai', icon: 'face', label: 'Master Pegawai & AI' },
-          { href: 'index.html#admin:adminSectionRoles', icon: 'manage_accounts', label: 'Kelola Role & Hak' },
-          { href: 'index.html#admin:adminSectionGeofence', icon: 'share_location', label: 'Geofencing Lokasi' },
-          { href: 'index.html#admin:adminSectionJamLibur', icon: 'schedule', label: 'Jam Kerja & Libur' },
-          { href: 'cetak-tpp.html', icon: 'receipt_long', label: 'Cetak Rekap TPP' },
-          { href: 'index.html#admin:dev', icon: 'terminal', label: 'Developer & Diagnostik' }
-        ];
-        subWrap.innerHTML = adminSubs.map((s) => `
-          <a href="${s.href}" title="${s.label}" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium">
-            <span class="material-symbols-outlined text-[16px] text-slate-500">${s.icon}</span>
-            <span>${s.label}</span>
-          </a>
-        `).join('');
-        adminLink.insertAdjacentElement('afterend', subWrap);
+        if (!isAdminRole()) {
+          adminLink.style.display = 'none';
+        } else {
+          const isOnAdmin = (location.pathname.split('/').pop() || '').toLowerCase() === 'admin.html';
+          let subOpen = isOnAdmin;
+
+          const chevron = document.createElement('button');
+          chevron.id = 'stitchAdminSubToggle';
+          chevron.type = 'button';
+          chevron.title = 'Tampilkan/sembunyikan submenu admin';
+          chevron.className = 'ml-auto w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700/70 transition-transform';
+          chevron.innerHTML = '<span class="material-symbols-outlined text-[16px]">expand_more</span>';
+          adminLink.appendChild(chevron);
+
+          const subWrap = document.createElement('div');
+          subWrap.id = 'stitchStandaloneAdminSubmenu';
+          subWrap.className = 'mt-0.5 ml-3 pl-3 border-l border-slate-700/80 flex flex-col gap-0.5 overflow-hidden transition-all';
+          const adminSubs = [
+            { href: 'index.html#admin:adminSectionMonitoring', icon: 'monitoring', label: 'Monitoring Hari Ini' },
+            { href: 'index.html#admin:adminSectionIzin', icon: 'rule', label: 'Konfirmasi Izin' },
+            { href: 'rekap.html', icon: 'analytics', label: 'Rekap Semua Pegawai' },
+            { href: 'index.html#admin:adminSectionPegawai', icon: 'face', label: 'Master Pegawai & AI' },
+            { href: 'index.html#admin:adminSectionRoles', icon: 'manage_accounts', label: 'Kelola Role & Hak' },
+            { href: 'index.html#admin:adminSectionGeofence', icon: 'share_location', label: 'Geofencing Lokasi' },
+            { href: 'index.html#admin:adminSectionJamLibur', icon: 'schedule', label: 'Jam Kerja & Libur' },
+            { href: 'cetak-tpp.html', icon: 'receipt_long', label: 'Cetak Rekap TPP' },
+            { href: 'index.html#admin:dev', icon: 'terminal', label: 'Developer & Diagnostik' }
+          ];
+          subWrap.innerHTML = adminSubs.map((s) => `
+            <a href="${s.href}" title="${s.label}" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium">
+              <span class="material-symbols-outlined text-[16px] text-slate-500">${s.icon}</span>
+              <span>${s.label}</span>
+            </a>
+          `).join('');
+          adminLink.insertAdjacentElement('afterend', subWrap);
+
+          const syncSub = () => {
+            subWrap.style.display = subOpen ? 'flex' : 'none';
+            chevron.style.transform = subOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+          };
+          chevron.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            subOpen = !subOpen;
+            syncSub();
+          });
+          syncSub();
+        }
       }
     }
 
-    // 2. Sinkronisasi profil user login asli pada top header halaman desktop (ganti placeholder statis)
+    // 2. Sinkronisasi profil & foto avatar user login asli pada top header halaman desktop
     try {
       const uObj = JSON.parse(localStorage.getItem('tg_user_obj_v5') || 'null') || {};
       const realNama = uObj.username || uObj.nama || localStorage.getItem('MY_NAME') || '';
       const realNip = uObj.NIP || uObj.nip || localStorage.getItem('MY_NIP') || '';
       const realJab = uObj.Jabatan || uObj.jabatan || localStorage.getItem('MY_ROLE') || 'Pegawai';
+      const avatarSrc = resolvePortalAvatarSrc(uObj.face_photo || uObj.foto_wajah || '');
       if (realNama) {
         const parts = realNama.trim().split(/\s+/).filter((p) => !p.includes('.'));
         const ini = (parts.length > 1 ? (parts[0][0] + parts[1][0]) : (parts[0]?.[0] || 'P')).toUpperCase();
@@ -323,7 +510,15 @@
           else if (txt.includes('197211022001121001')) sp.textContent = `NIP ${realNip || '-'} • ${realJab}`;
         });
         document.querySelectorAll('header div').forEach((dv) => {
-          if ((dv.textContent || '').trim() === 'CW' && dv.children.length === 0) dv.textContent = ini;
+          const t = (dv.textContent || '').trim();
+          if ((t === 'CW' || t === 'AA' || t === '--') && dv.children.length === 0) {
+            if (avatarSrc) {
+              dv.classList.add('overflow-hidden', 'relative');
+              dv.innerHTML = `<img src="${avatarSrc}" alt="${ini}" class="w-full h-full object-cover" onerror="this.remove();this.parentElement.textContent='${ini}'">`;
+            } else {
+              dv.textContent = ini;
+            }
+          }
         });
       }
     } catch (_) {}

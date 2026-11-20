@@ -467,7 +467,11 @@ if (typeof window !== 'undefined') {
           <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/70 dark:border-slate-700/70 text-[10.5px] text-slate-500 dark:text-slate-400">
             <span>Latensi: <strong class="font-mono tabular-nums text-slate-800 dark:text-slate-200">${Number(res.latencyMs) || 0} ms</strong></span>
             ${key === 'openwa_gateway'
-              ? `<button type="button" onclick="restartOpenwaFromDev(this)" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#2563eb] hover:bg-blue-700 text-white text-[10px] font-bold transition-colors cursor-pointer"><span class="material-symbols-outlined text-[13px]">restart_alt</span><span>Start / Restart</span></button>`
+              ? `<div class="flex items-center gap-1.5 flex-wrap justify-end">
+                   <button type="button" onclick="restartOpenwaFromDev(this)" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[#2563eb] hover:bg-blue-700 text-white text-[10px] font-bold transition-colors cursor-pointer"><span class="material-symbols-outlined text-[13px]">restart_alt</span><span>Start</span></button>
+                   <button type="button" onclick="showOpenwaQrFromDev()" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-200/80 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 text-[10px] font-bold transition-colors cursor-pointer"><span class="material-symbols-outlined text-[13px]">qr_code_2</span><span>QR</span></button>
+                   <button type="button" onclick="testOpenwaFromDev()" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition-colors cursor-pointer"><span class="material-symbols-outlined text-[13px]">send</span><span>Tes</span></button>
+                 </div>`
               : `<span>Status: <strong class="font-mono ${statusTextTone}">${escapeHtml(res.status)}</strong></span>`}
           </div>
         </div>
@@ -655,6 +659,80 @@ if (typeof window !== 'undefined') {
         btnEl.disabled = false;
         btnEl.innerHTML = origHtml;
       }
+    }
+  };
+
+  function getDevBearerHeaders(withJson = false) {
+    const h = withJson ? { 'Content-Type': 'application/json' } : {};
+    const tok = (typeof window.getStitchToken === 'function' && window.getStitchToken())
+      || localStorage.getItem('_native_token')
+      || localStorage.getItem('native_token')
+      || localStorage.getItem('_sess_token')
+      || '';
+    if (tok) h['Authorization'] = 'Bearer ' + tok;
+    return h;
+  }
+
+  window.showOpenwaQrFromDev = async function () {
+    try {
+      const res = await fetch('/api/dev/openwa/qr', { headers: getDevBearerHeaders(false) });
+      const data = await res.json().catch(() => ({}));
+      if (data.alreadyConnected) {
+        if (window.Swal) {
+          window.Swal.fire({ icon: 'success', title: 'OpenWA Sudah Terhubung', text: data.message });
+        }
+        return;
+      }
+      if (!res.ok || !data.ok) {
+        if (window.Swal) {
+          window.Swal.fire({ icon: 'info', title: 'QR OpenWA Belum Tersedia', text: data.message || `HTTP ${res.status}` });
+        }
+        return;
+      }
+      if (window.Swal) {
+        const qrHtml = data.qrDataUrl
+          ? `<div class="flex flex-col items-center gap-3"><img src="${escapeHtml(data.qrDataUrl)}" alt="QR OpenWA" class="w-60 h-60 rounded-2xl border border-slate-200 p-2 bg-white shadow-sm"><p class="text-xs text-slate-500">Pindai QR ini dari WhatsApp &gt; Perangkat Tertaut.</p></div>`
+          : `<pre class="text-[11px] font-mono bg-slate-100 p-3 rounded-xl overflow-x-auto text-left">${escapeHtml(data.qrRaw || '')}</pre>`;
+        window.Swal.fire({ title: 'QR Code OpenWA', html: qrHtml, confirmButtonText: 'Tutup', confirmButtonColor: '#2563eb' });
+      }
+    } catch (e) {
+      if (window.Swal) window.Swal.fire({ icon: 'error', title: 'Gagal Mengambil QR', text: e.message || 'Koneksi gagal' });
+    }
+  };
+
+  window.testOpenwaFromDev = async function () {
+    if (!window.Swal) return;
+    const saved = localStorage.getItem('stitch_openwa_test_target') || '';
+    const ask = await window.Swal.fire({
+      title: 'Tes Kirim WhatsApp (OpenWA)',
+      input: 'text',
+      inputValue: saved,
+      inputLabel: 'Nomor HP (0812...) atau JID Grup (... @g.us)',
+      inputPlaceholder: 'Contoh: 081234567890',
+      showCancelButton: true,
+      confirmButtonText: 'Kirim Pesan Tes',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb',
+    });
+    if (!ask.isConfirmed || !String(ask.value || '').trim()) return;
+    const target = String(ask.value).trim();
+    try { localStorage.setItem('stitch_openwa_test_target', target); } catch (_) {}
+    try {
+      const res = await fetch('/api/dev/openwa/test', {
+        method: 'POST',
+        headers: getDevBearerHeaders(true),
+        body: JSON.stringify({ target }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) {
+        window.DEV_TRACKER?.log('INFO', 'OPENWA', data.message || 'Tes WA terkirim', data);
+        window.Swal.fire({ icon: 'success', title: 'Pesan WA Terkirim', text: data.message });
+      } else {
+        window.DEV_TRACKER?.log('ERROR', 'OPENWA', data.message || `HTTP ${res.status}`, data);
+        window.Swal.fire({ icon: 'error', title: 'Gagal Kirim WA', text: data.message || `HTTP ${res.status}` });
+      }
+    } catch (e) {
+      window.Swal.fire({ icon: 'error', title: 'Koneksi Gagal', text: e.message || 'Gagal menghubungi server' });
     }
   };
 }
