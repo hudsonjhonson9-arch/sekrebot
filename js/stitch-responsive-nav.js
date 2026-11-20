@@ -436,18 +436,53 @@
       } else if (bellDot) {
         bellDot.style.display = 'none';
       }
-      bellBtn.addEventListener('click', () => {
+      bellBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const existing = document.getElementById('stitchHeaderNotifPopover');
+        if (existing) { existing.remove(); return; }
         const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-        const bodyHtml = cachedNotifs.length
-          ? `<div class="flex flex-col gap-2 text-left max-h-72 overflow-y-auto">${cachedNotifs.slice(0, 12).map((n) => `
-              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
-                <div class="text-xs font-bold text-slate-900 dark:text-white">${esc(n.title || n.judul || 'Notifikasi')}</div>
-                <div class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">${esc(n.message || n.pesan || '-')}</div>
-              </div>`).join('')}</div>`
-          : '<p class="text-xs text-slate-500 dark:text-slate-400 py-4">Belum ada pemberitahuan baru saat ini.</p>';
-        if (window.Swal) {
-          window.Swal.fire({ title: 'Pemberitahuan', html: bodyHtml, confirmButtonText: 'Tutup', confirmButtonColor: '#2563eb' });
-        }
+        const pop = document.createElement('div');
+        pop.id = 'stitchHeaderNotifPopover';
+        pop.className = 'fixed z-[98] w-[340px] max-w-[calc(100vw-24px)] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 shadow-2xl overflow-hidden flex flex-col';
+        pop.innerHTML = `
+          <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] flex items-center justify-center">
+                <span class="material-symbols-outlined text-[16px]">notifications</span>
+              </span>
+              <span class="text-xs font-extrabold text-slate-900 dark:text-white">Pemberitahuan</span>
+              ${cachedNotifs.length ? `<span class="px-1.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] text-[10px] font-mono font-bold">${cachedNotifs.length}</span>` : ''}
+            </div>
+            <button type="button" data-close-notif class="w-7 h-7 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 flex items-center justify-center cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">close</span>
+            </button>
+          </div>
+          <div class="p-3 flex flex-col gap-2 max-h-80 overflow-y-auto">
+            ${cachedNotifs.length
+              ? cachedNotifs.slice(0, 15).map((n) => `
+                  <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/70">
+                    <div class="text-xs font-bold text-slate-900 dark:text-white">${esc(n.title || n.judul || 'Notifikasi')}</div>
+                    <div class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">${esc(n.message || n.pesan || '-')}</div>
+                  </div>`).join('')
+              : '<div class="py-8 text-center text-xs text-slate-400">Belum ada pemberitahuan baru saat ini.</div>'}
+          </div>
+        `;
+        document.body.appendChild(pop);
+        const rect = bellBtn.getBoundingClientRect();
+        const popW = pop.getBoundingClientRect().width || 340;
+        let left = rect.right - popW;
+        if (left < 12) left = 12;
+        pop.style.left = `${left}px`;
+        pop.style.top = `${rect.bottom + 8}px`;
+
+        const closePop = (e) => {
+          if (!e || e.target?.closest?.('[data-close-notif]') || (!pop.contains(e.target) && !bellBtn.contains(e.target))) {
+            pop.remove();
+            document.removeEventListener('click', closePop);
+          }
+        };
+        pop.querySelector('[data-close-notif]')?.addEventListener('click', () => closePop(null));
+        setTimeout(() => document.addEventListener('click', closePop), 0);
       });
     }
 

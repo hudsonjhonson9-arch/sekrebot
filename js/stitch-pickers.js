@@ -1023,7 +1023,7 @@
   function openDateRangePanel(triggerEl) {
     const meta = rangeRegistry.get(triggerEl);
     if (!meta) return;
-    if (activePortal && activePortal.trigger === triggerEl) {
+    if (activePicker && activePicker.trigger === triggerEl) {
       closeAll();
       return;
     }
@@ -1140,7 +1140,7 @@
     render();
     positionPortal(panel, triggerEl, 310, 410);
     setTriggerActive(triggerEl, true);
-    activePortal = { panel, trigger: triggerEl, input: meta.startInput };
+    activePicker = { id: 'date-range', panel, trigger: triggerEl };
   }
 
   function enhanceDateRange(triggerTarget, startTarget, endTarget, opts = {}) {
