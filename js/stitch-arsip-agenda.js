@@ -106,17 +106,108 @@
     }
   }
 
+  /* ── PURE-JS MULTI-PAGE JPEG-TO-PDF BUILDER (ZERO DEPENDENCY) ──────────── */
+  function buildMultiPagePdfBlob(jpegDataUrls, paper = 'A4') {
+    const pageW = paper === 'F4' ? 609.45 : 595.28; // pt (215mm vs 210mm)
+    const pageH = paper === 'F4' ? 935.43 : 841.89; // pt (330mm vs 297mm)
+    const chunks = [];
+    const offsets = [0];
+    let byteLen = 0;
+
+    const pushStr = (s) => {
+      const b = new TextEncoder().encode(s);
+      chunks.push(b);
+      byteLen += b.length;
+    };
+    const pushBytes = (u8) => {
+      chunks.push(u8);
+      byteLen += u8.length;
+    };
+    const b64ToBytes = (dataUrl) => {
+      const bin = atob(dataUrl.split(',')[1] || '');
+      const u8 = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i += 1) u8[i] = bin.charCodeAt(i);
+      return u8;
+    };
+    const getJpegDim = (u8) => {
+      let i = 2;
+      while (i < u8.length - 8) {
+        if (u8[i] === 0xFF && (u8[i + 1] === 0xC0 || u8[i + 1] === 0xC2)) {
+          return { h: (u8[i + 5] << 8) | u8[i + 6], w: (u8[i + 7] << 8) | u8[i + 8] };
+        }
+        const segLen = (u8[i + 2] << 8) | u8[i + 3];
+        if (!segLen) break;
+        i += 2 + segLen;
+      }
+      return { w: 1200, h: 1600 };
+    };
+
+    const pages = jpegDataUrls.map((du) => {
+      const bytes = b64ToBytes(du);
+      const dim = getJpegDim(bytes);
+      return { bytes, w: dim.w, h: dim.h };
+    });
+
+    pushStr('%PDF-1.4\n%\xFF\xFF\xFF\xFF\n');
+
+    // Obj 1: Catalog, Obj 2: Pages
+    const startObj = 3;
+    const pageObjIds = [];
+    pages.forEach((_, idx) => pageObjIds.push(startObj + idx * 3));
+
+    offsets.push(byteLen);
+    pushStr('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+
+    offsets.push(byteLen);
+    pushStr(`2 0 obj\n<< /Type /Pages /Kids [${pageObjIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pages.length} >>\nendobj\n`);
+
+    pages.forEach((pg, idx) => {
+      const pageId = startObj + idx * 3;
+      const imgId = pageId + 1;
+      const contId = pageId + 2;
+
+      const scale = Math.min((pageW - 24) / pg.w, (pageH - 24) / pg.h);
+      const drawW = (pg.w * scale).toFixed(2);
+      const drawH = (pg.h * scale).toFixed(2);
+      const offX = ((pageW - Number(drawW)) / 2).toFixed(2);
+      const offY = ((pageH - Number(drawH)) / 2).toFixed(2);
+
+      offsets.push(byteLen);
+      pushStr(`${pageId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW.toFixed(2)} ${pageH.toFixed(2)}] /Resources << /XObject << /Im0 ${imgId} 0 R >> >> /Contents ${contId} 0 R >>\nendobj\n`);
+
+      offsets.push(byteLen);
+      pushStr(`${imgId} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${pg.w} /Height ${pg.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${pg.bytes.length} >>\nstream\n`);
+      pushBytes(pg.bytes);
+      pushStr('\nendstream\nendobj\n');
+
+      const streamStr = `q ${drawW} 0 0 ${drawH} ${offX} ${offY} cm /Im0 Do Q\n`;
+      offsets.push(byteLen);
+      pushStr(`${contId} 0 obj\n<< /Length ${streamStr.length} >>\nstream\n${streamStr}endstream\nendobj\n`);
+    });
+
+    const xrefOffset = byteLen;
+    pushStr(`xref\n0 ${offsets.length}\n0000000000 65535 f \n`);
+    for (let i = 1; i < offsets.length; i += 1) {
+      pushStr(`${String(offsets[i]).padStart(10, '0')} 00000 n \n`);
+    }
+    pushStr(`trailer\n<< /Size ${offsets.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
+    return new Blob(chunks, { type: 'application/pdf' });
+  }
+
   async function openSuratCameraScan(btnEl) {
     const modal = btnEl?.closest('#modalArsipAgendaSurat, #drawerMobileAgendaSurat');
-    if (!w.Swal) return;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      w.Swal.fire('Kamera Tidak Tersedia', 'Browser/perangkat tidak mendukung akses kamera langsung. Gunakan tombol Upload Dokumen.', 'warning');
+      if (w.Swal) w.Swal.fire('Kamera Tidak Tersedia', 'Browser/perangkat tidak mendukung akses kamera langsung. Gunakan tombol Upload Dokumen.', 'warning');
       return;
     }
 
+    closeStitchOverlay('stitchDocScannerOverlay');
     let stream = null;
-    let capturedBlob = null;
     let facing = 'environment';
+    let filterMode = 'enhance'; // 'original' | 'enhance' | 'bw'
+    let paperSize = 'A4';
+    const pages = []; // [{ dataUrl }]
+    let activeIdx = -1; // -1 = live camera, >=0 = preview captured page
 
     const stopCam = () => {
       if (stream) {
@@ -125,96 +216,236 @@
       }
     };
 
-    const startCam = async (videoEl) => {
-      stopCam();
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing }, width: { ideal: 1600 }, height: { ideal: 1200 } }, audio: false });
-      } catch (_) {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      }
-      if (videoEl) {
-        videoEl.srcObject = stream;
-        await videoEl.play().catch(() => {});
-      }
-    };
-
-    const res = await w.Swal.fire({
-      title: 'Scan Dokumen Surat (Kamera)',
-      width: 560,
-      html: `
-        <div class="flex flex-col gap-3">
-          <div class="relative rounded-2xl overflow-hidden bg-slate-950 aspect-[4/3] flex items-center justify-center">
-            <video id="swalScanVideo" autoplay playsinline class="w-full h-full object-cover"></video>
-            <img id="swalScanPreview" class="hidden w-full h-full object-contain bg-slate-900" alt="Hasil scan">
-            <canvas id="swalScanCanvas" class="hidden"></canvas>
+    const wrap = d.createElement('div');
+    wrap.id = 'stitchDocScannerOverlay';
+    wrap.className = 'fixed inset-0 z-[99] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4';
+    wrap.innerHTML = `
+      <div class="w-full max-w-3xl max-h-[94vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
+        <div class="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+          <div class="flex items-center gap-2.5">
+            <span class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] flex items-center justify-center">
+              <span class="material-symbols-outlined text-[20px]">document_scanner</span>
+            </span>
+            <div>
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Pemindai Dokumen Multi-Halaman</h3>
+              <p id="scanSubInfo" class="text-[11px] text-slate-500 dark:text-slate-400">0 halaman dipindai • Ekspor otomatis ke PDF</p>
+            </div>
           </div>
-          <div class="flex items-center justify-center gap-2">
-            <button type="button" id="swalScanFlipBtn" class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Balik Kamera</button>
-            <button type="button" id="swalScanSnapBtn" class="px-4 py-2 rounded-xl bg-[#2563eb] text-white text-xs font-bold cursor-pointer">Ambil Foto Dokumen</button>
-            <button type="button" id="swalScanRetakeBtn" class="hidden px-3 py-2 rounded-xl bg-amber-100 text-amber-800 text-xs font-bold cursor-pointer">Foto Ulang</button>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <div class="inline-flex p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-bold">
+              <button type="button" data-scan-paper="A4" class="px-2 py-1 rounded-md bg-slate-900 text-white cursor-pointer">A4</button>
+              <button type="button" data-scan-paper="F4" class="px-2 py-1 rounded-md text-slate-500 cursor-pointer">F4</button>
+            </div>
+            <div class="inline-flex p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-bold">
+              <button type="button" data-scan-filter="original" class="px-2 py-1 rounded-md text-slate-500 cursor-pointer">Asli</button>
+              <button type="button" data-scan-filter="enhance" class="px-2 py-1 rounded-md bg-[#2563eb] text-white cursor-pointer">Tajam</button>
+              <button type="button" data-scan-filter="bw" class="px-2 py-1 rounded-md text-slate-500 cursor-pointer">B&amp;W</button>
+            </div>
+            <button type="button" data-close-scan class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center cursor-pointer">
+              <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
           </div>
         </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: 'Unggah Hasil Scan',
-      cancelButtonText: 'Batal',
-      confirmButtonColor: '#2563eb',
-      didOpen: async (popup) => {
-        const video = popup.querySelector('#swalScanVideo');
-        const img = popup.querySelector('#swalScanPreview');
-        const canvas = popup.querySelector('#swalScanCanvas');
-        const snapBtn = popup.querySelector('#swalScanSnapBtn');
-        const retakeBtn = popup.querySelector('#swalScanRetakeBtn');
-        const flipBtn = popup.querySelector('#swalScanFlipBtn');
-        try {
-          await startCam(video);
-        } catch (err) {
-          w.Swal.showValidationMessage('Gagal mengakses kamera: ' + (err?.message || 'Izin ditolak'));
-        }
-        flipBtn?.addEventListener('click', async () => {
-          facing = facing === 'environment' ? 'user' : 'environment';
-          await startCam(video).catch(() => {});
-        });
-        snapBtn?.addEventListener('click', () => {
-          if (!video.videoWidth) return;
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          canvas.toBlob((blob) => {
-            if (!blob) return;
-            capturedBlob = blob;
-            img.src = URL.createObjectURL(blob);
-            video.classList.add('hidden');
-            img.classList.remove('hidden');
-            snapBtn.classList.add('hidden');
-            retakeBtn.classList.remove('hidden');
-          }, 'image/jpeg', 0.9);
-        });
-        retakeBtn?.addEventListener('click', () => {
-          capturedBlob = null;
-          img.classList.add('hidden');
-          video.classList.remove('hidden');
-          retakeBtn.classList.add('hidden');
-          snapBtn.classList.remove('hidden');
-        });
-      },
-      willClose: () => stopCam(),
-      preConfirm: () => {
-        if (!capturedBlob) {
-          w.Swal.showValidationMessage('Ambil foto dokumen terlebih dahulu sebelum mengunggah.');
-          return false;
-        }
-        return capturedBlob;
-      },
+
+        <div class="flex-1 bg-slate-950 relative min-h-[300px] sm:min-h-[380px] flex items-center justify-center overflow-hidden">
+          <video id="stScanVideo" autoplay playsinline class="w-full h-full max-h-[52vh] object-contain"></video>
+          <img id="stScanPreviewImg" class="hidden w-full h-full max-h-[52vh] object-contain" alt="Halaman hasil scan">
+          <canvas id="stScanCanvas" class="hidden"></canvas>
+          <div id="stScanFlash" class="pointer-events-none absolute inset-0 bg-white opacity-0 transition-opacity duration-150"></div>
+          <div id="stScanGuide" class="pointer-events-none absolute inset-6 sm:inset-10 border-2 border-dashed border-white/50 rounded-2xl"></div>
+        </div>
+
+        <!-- Strip Thumbnail Halaman -->
+        <div id="stScanStrip" class="hidden px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 flex items-center gap-2 overflow-x-auto"></div>
+
+        <div class="px-5 py-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button type="button" id="stScanFlipBtn" class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1 cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">flip_camera_ios</span>
+              <span>Kamera</span>
+            </button>
+            <button type="button" id="stScanBackCamBtn" class="hidden px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1 cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">add_a_photo</span>
+              <span>Tambah Halaman</span>
+            </button>
+            <button type="button" id="stScanRotateBtn" class="hidden px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1 cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">rotate_right</span>
+              <span>Putar</span>
+            </button>
+            <button type="button" id="stScanDelPageBtn" class="hidden px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 text-xs font-bold flex items-center gap-1 cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">delete</span>
+              <span>Hapus Hal</span>
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" id="stScanSnapBtn" class="px-4 py-2 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer">
+              <span class="material-symbols-outlined text-[17px]">photo_camera</span>
+              <span>Ambil Halaman</span>
+            </button>
+            <button type="button" id="stScanUploadBtn" disabled class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer">
+              <span class="material-symbols-outlined text-[17px]">cloud_upload</span>
+              <span id="stScanUploadLbl">Unggah PDF</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    d.body.appendChild(wrap);
+
+    const video = wrap.querySelector('#stScanVideo');
+    const img = wrap.querySelector('#stScanPreviewImg');
+    const canvas = wrap.querySelector('#stScanCanvas');
+    const guide = wrap.querySelector('#stScanGuide');
+    const strip = wrap.querySelector('#stScanStrip');
+    const subInfo = wrap.querySelector('#scanSubInfo');
+    const snapBtn = wrap.querySelector('#stScanSnapBtn');
+    const backCamBtn = wrap.querySelector('#stScanBackCamBtn');
+    const rotBtn = wrap.querySelector('#stScanRotateBtn');
+    const delBtn = wrap.querySelector('#stScanDelPageBtn');
+    const uploadBtn = wrap.querySelector('#stScanUploadBtn');
+    const uploadLbl = wrap.querySelector('#stScanUploadLbl');
+
+    const startCam = async () => {
+      stopCam();
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing }, width: { ideal: 1654 }, height: { ideal: 1240 } }, audio: false });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+      video.srcObject = stream;
+      await video.play().catch(() => {});
+    };
+
+    const renderUi = () => {
+      const inPreview = activeIdx >= 0 && pages[activeIdx];
+      video.classList.toggle('hidden', inPreview);
+      guide.classList.toggle('hidden', inPreview);
+      img.classList.toggle('hidden', !inPreview);
+      snapBtn.classList.toggle('hidden', inPreview);
+      backCamBtn.classList.toggle('hidden', !inPreview);
+      rotBtn.classList.toggle('hidden', !inPreview);
+      delBtn.classList.toggle('hidden', !inPreview);
+      if (inPreview) img.src = pages[activeIdx].dataUrl;
+
+      subInfo.textContent = `${pages.length} halaman dipindai • Kertas ${paperSize} • Ekspor PDF`;
+      uploadBtn.disabled = pages.length === 0;
+      uploadLbl.textContent = pages.length > 1 ? `Unggah PDF (${pages.length} Hal)` : 'Unggah PDF';
+
+      strip.classList.toggle('hidden', pages.length === 0);
+      strip.innerHTML = pages.map((p, i) => `
+        <div class="relative shrink-0 group">
+          <button type="button" data-pg-idx="${i}" class="w-12 h-16 rounded-lg overflow-hidden border-2 ${i === activeIdx ? 'border-[#2563eb]' : 'border-slate-200 dark:border-slate-700'} bg-white cursor-pointer block">
+            <img src="${p.dataUrl}" class="w-full h-full object-cover" alt="Hal ${i + 1}">
+          </button>
+          <span class="absolute bottom-0.5 right-0.5 px-1 rounded bg-slate-900/80 text-white text-[9px] font-mono font-bold">${i + 1}</span>
+        </div>
+      `).join('');
+      strip.querySelectorAll('[data-pg-idx]').forEach((b) => {
+        b.addEventListener('click', () => { activeIdx = Number(b.dataset.pgIdx); renderUi(); });
+      });
+    };
+
+    const applyFilterStr = () => {
+      if (filterMode === 'bw') return 'grayscale(1) contrast(1.45) brightness(1.08)';
+      if (filterMode === 'enhance') return 'contrast(1.15) brightness(1.04) saturate(1.06)';
+      return 'none';
+    };
+
+    const closeAll = () => { stopCam(); wrap.remove(); };
+    wrap.addEventListener('click', (e) => {
+      if (e.target === wrap || e.target.closest('[data-close-scan]')) closeAll();
     });
 
-    if (!res.isConfirmed || !res.value) return;
+    wrap.querySelectorAll('[data-scan-paper]').forEach((b) => {
+      b.addEventListener('click', () => {
+        paperSize = b.dataset.scanPaper;
+        wrap.querySelectorAll('[data-scan-paper]').forEach((x) => {
+          x.className = x.dataset.scanPaper === paperSize ? 'px-2 py-1 rounded-md bg-slate-900 text-white cursor-pointer' : 'px-2 py-1 rounded-md text-slate-500 cursor-pointer';
+        });
+        renderUi();
+      });
+    });
+
+    wrap.querySelectorAll('[data-scan-filter]').forEach((b) => {
+      b.addEventListener('click', () => {
+        filterMode = b.dataset.scanFilter;
+        wrap.querySelectorAll('[data-scan-filter]').forEach((x) => {
+          x.className = x.dataset.scanFilter === filterMode ? 'px-2 py-1 rounded-md bg-[#2563eb] text-white cursor-pointer' : 'px-2 py-1 rounded-md text-slate-500 cursor-pointer';
+        });
+        video.style.filter = applyFilterStr();
+      });
+    });
+
+    wrap.querySelector('#stScanFlipBtn')?.addEventListener('click', async () => {
+      facing = facing === 'environment' ? 'user' : 'environment';
+      activeIdx = -1;
+      renderUi();
+      await startCam().catch(() => {});
+    });
+
+    snapBtn.addEventListener('click', () => {
+      if (!video.videoWidth) return;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.filter = applyFilterStr();
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.filter = 'none';
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+      pages.push({ dataUrl });
+      activeIdx = pages.length - 1;
+      const fl = wrap.querySelector('#stScanFlash');
+      if (fl) { fl.style.opacity = '0.85'; setTimeout(() => { fl.style.opacity = '0'; }, 120); }
+      renderUi();
+    });
+
+    backCamBtn.addEventListener('click', () => { activeIdx = -1; renderUi(); });
+
+    rotBtn.addEventListener('click', () => {
+      if (activeIdx < 0 || !pages[activeIdx]) return;
+      const im = new Image();
+      im.onload = () => {
+        canvas.width = im.height;
+        canvas.height = im.width;
+        const ctx = canvas.getContext('2d');
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(Math.PI / 2);
+        ctx.drawImage(im, -im.width / 2, -im.height / 2);
+        pages[activeIdx].dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+        renderUi();
+      };
+      im.src = pages[activeIdx].dataUrl;
+    });
+
+    delBtn.addEventListener('click', () => {
+      if (activeIdx < 0) return;
+      pages.splice(activeIdx, 1);
+      activeIdx = pages.length ? Math.min(activeIdx, pages.length - 1) : -1;
+      renderUi();
+    });
+
+    uploadBtn.addEventListener('click', async () => {
+      if (!pages.length) return;
+      uploadBtn.disabled = true;
+      uploadLbl.textContent = 'Mengunggah...';
+      try {
+        const pdfBlob = buildMultiPagePdfBlob(pages.map((p) => p.dataUrl), paperSize);
+        const fname = `Scan_Dokumen_${paperSize}_${pages.length}hal_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.pdf`;
+        closeAll();
+        await uploadSuratAttachment(pdfBlob, fname, 'application/pdf', modal);
+      } catch (err) {
+        uploadBtn.disabled = false;
+        renderUi();
+        if (w.Swal) w.Swal.fire('Gagal Mengunggah', err?.message || 'Koneksi terganggu.', 'error');
+      }
+    });
+
     try {
-      const fname = `Scan_Surat_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.jpg`;
-      await uploadSuratAttachment(res.value, fname, 'image/jpeg', modal);
+      video.style.filter = applyFilterStr();
+      await startCam();
     } catch (err) {
-      w.Swal.fire('Gagal Mengunggah Hasil Scan', err?.message || 'Koneksi terganggu.', 'error');
+      closeAll();
+      if (w.Swal) w.Swal.fire('Gagal Akses Kamera', err?.message || 'Izin kamera ditolak.', 'error');
     }
   }
 
@@ -241,6 +472,9 @@
       closeStitchOverlay('stitchAgendaDetailOverlay');
       closeStitchOverlay('stitchAgendaSpjOverlay');
       closeStitchOverlay('stitchSppdPreviewOverlay');
+      closeStitchOverlay('stitchDisposisiOverlay');
+      closeStitchOverlay('stitchWewenangOverlay');
+      closeStitchOverlay('stitchDocScannerOverlay');
     }
   });
 
@@ -284,6 +518,10 @@
         <span class="material-symbols-outlined text-[17px] text-slate-500">visibility</span>
         <span>Detail Agenda SPPD</span>
       </button>
+      <button type="button" data-pop-act="edit" class="w-full px-2.5 py-2 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-950/50 text-amber-700 dark:text-amber-300 text-xs font-semibold flex items-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[17px]">edit</span>
+        <span>Edit Agenda SPPD</span>
+      </button>
       <div class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Generate Dokumen Resmi</div>
       <button type="button" data-pop-act="docx-spt" class="w-full px-2.5 py-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/50 text-slate-700 dark:text-slate-200 hover:text-[#2563eb] text-xs font-semibold flex items-center gap-2 cursor-pointer">
         <span class="material-symbols-outlined text-[17px] text-[#2563eb]">description</span>
@@ -292,6 +530,10 @@
       <button type="button" data-pop-act="docx-sppd" class="w-full px-2.5 py-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/50 text-slate-700 dark:text-slate-200 hover:text-[#2563eb] text-xs font-semibold flex items-center gap-2 cursor-pointer">
         <span class="material-symbols-outlined text-[17px] text-[#2563eb]">article</span>
         <span>Unduh SPPD (.docx)</span>
+      </button>
+      <button type="button" data-pop-act="bundle-zip" class="w-full px-2.5 py-2 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[17px]">folder_zip</span>
+        <span>Unduh Paket ZIP (Semua)</span>
       </button>
       ${pengikutHtml}
       <button type="button" data-pop-act="print-spt" class="w-full px-2.5 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-2 cursor-pointer">
@@ -335,8 +577,10 @@
       closeActionPopover();
       if (act === 'preview') w.SppdGenerator?.openPreviewModal(item, 'spt');
       else if (act === 'detail') showSppdDetail(idx);
+      else if (act === 'edit') openEditSppdModal(idx);
       else if (act === 'docx-spt') w.SppdGenerator?.unduhWordSPT(item);
       else if (act === 'docx-sppd') w.SppdGenerator?.unduhWordSPPD(item);
+      else if (act === 'bundle-zip') w.SppdGenerator?.downloadSppdBundleZip(item);
       else if (act === 'sppd-pk') {
         const p = pengikut[Number(btn.dataset.pkIdx)];
         if (p) w.SppdGenerator?.unduhWordSPPD(item, p);
@@ -345,6 +589,79 @@
       else if (act === 'print-sppd') w.SppdGenerator?.cetakSPPD(item);
       else if (act === 'spj') openSppdSpjModal(item.id);
       else if (act === 'delete') deleteSppd(item.id);
+    });
+  }
+
+  function openSuratPopover(btnEl, idx) {
+    const item = _suratItems[idx];
+    if (!item || !btnEl) return;
+    const existing = d.getElementById('stitchAgendaPopover');
+    if (existing && existing.dataset.suratIdx === String(idx)) {
+      existing.remove();
+      return;
+    }
+    closeActionPopover();
+
+    const isMasuk = _suratMode === 'masuk';
+    const fileUrl = item.file_url || item.file_final_url || item.drive_url || '';
+    const pop = d.createElement('div');
+    pop.id = 'stitchAgendaPopover';
+    pop.dataset.suratIdx = String(idx);
+    pop.className = 'fixed z-[98] w-56 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl p-1.5 flex flex-col gap-0.5 text-left';
+    pop.innerHTML = `
+      <div class="px-2.5 py-1.5 border-b border-slate-100 dark:border-slate-800 mb-0.5">
+        <div class="text-[11px] font-bold text-slate-900 dark:text-white truncate">${esc(isMasuk ? (item.asal_surat || '-') : (item.tujuan_surat || '-'))}</div>
+        <div class="text-[10px] font-mono text-slate-400 truncate">${esc(isMasuk ? (item.nomor_agenda || '-') : (item.nomor_surat || '-'))}</div>
+      </div>
+      <button type="button" data-sp-act="detail" class="w-full px-2.5 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[17px] text-slate-500">visibility</span>
+        <span>Detail &amp; Pratinjau Berkas</span>
+      </button>
+      ${isMasuk ? `
+      <button type="button" data-sp-act="disposisi" class="w-full px-2.5 py-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/50 text-[#2563eb] dark:text-blue-300 text-xs font-bold flex items-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[17px]">assignment_turned_in</span>
+        <span>Disposisi Berjenjang</span>
+      </button>
+      <button type="button" data-sp-act="cetak-disp" class="w-full px-2.5 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[17px] text-slate-500">print</span>
+        <span>Cetak Lembar Disposisi</span>
+      </button>` : ''}
+      ${fileUrl ? `
+      <a href="${esc(fileUrl)}" target="_blank" rel="noopener noreferrer" class="w-full px-2.5 py-2 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
+        <span class="material-symbols-outlined text-[17px]">open_in_new</span>
+        <span>Buka Lampiran Drive</span>
+      </a>` : ''}
+      <button type="button" data-sp-act="edit" class="w-full px-2.5 py-2 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-950/50 text-amber-700 dark:text-amber-300 text-xs font-semibold flex items-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[17px]">edit</span>
+        <span>Edit Agenda Surat</span>
+      </button>
+      <div class="h-px bg-slate-100 dark:bg-slate-800 my-1"></div>
+      <button type="button" data-sp-act="delete" class="w-full px-2.5 py-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[17px]">delete</span>
+        <span>Hapus Surat</span>
+      </button>
+    `;
+    d.body.appendChild(pop);
+
+    const rect = btnEl.getBoundingClientRect();
+    const popRect = pop.getBoundingClientRect();
+    let left = rect.right - popRect.width;
+    if (left < 12) left = 12;
+    let top = rect.bottom + 6;
+    if (top + popRect.height > w.innerHeight - 12) top = Math.max(12, rect.top - popRect.height - 6);
+    pop.style.left = `${left}px`;
+    pop.style.top = `${top}px`;
+
+    pop.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('button[data-sp-act]');
+      if (!btn) return;
+      const act = btn.dataset.spAct;
+      closeActionPopover();
+      if (act === 'detail') showSuratDetail(idx);
+      else if (act === 'disposisi') openDisposisiModal(item.id, item);
+      else if (act === 'cetak-disp') cetakLembarDisposisi(item);
+      else if (act === 'edit') openEditSuratModal(idx);
+      else if (act === 'delete') deleteSurat(item.id);
     });
   }
 
@@ -529,16 +846,129 @@
     loadAgendaSurat();
   }
 
+  function renderSkeletonRows(cols = 6, rows = 4) {
+    return Array.from({ length: rows }).map(() => `
+      <tr class="border-b border-slate-100 dark:border-slate-800/70 animate-pulse">
+        ${Array.from({ length: cols }).map((_, ci) => `<td class="px-4 py-3.5"><div class="h-3.5 rounded-lg bg-slate-200/80 dark:bg-slate-800 ${ci === 0 ? 'w-24' : ci === cols - 1 ? 'w-16 ml-auto' : 'w-32'}"></div></td>`).join('')}
+      </tr>
+    `).join('');
+  }
+
+  function buildDrivePreviewSrc(url) {
+    if (!url) return '';
+    const m = String(url).match(/\/d\/([a-zA-Z0-9_-]+)/) || String(url).match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (m) return `https://drive.google.com/file/d/${m[1]}/preview`;
+    return url;
+  }
+
+  async function cetakLembarDisposisi(surat, historyOverride = null) {
+    if (!surat) return;
+    let history = historyOverride;
+    if (!history) {
+      try {
+        const r = await fetch(`/api/arsip/p/api/agenda/surat-masuk/${surat.id}/disposisi`);
+        const j = await r.json().catch(() => ({}));
+        history = Array.isArray(j.items) ? j.items : (Array.isArray(j) ? j : []);
+      } catch { history = []; }
+    }
+    const allTujuan = new Set();
+    const allArahan = new Set();
+    history.forEach((h) => {
+      const tj = Array.isArray(h.diteruskan_kepada) ? h.diteruskan_kepada : (h.diteruskan_kepada ? [h.diteruskan_kepada] : []);
+      const ar = Array.isArray(h.arahan) ? h.arahan : (h.arahan ? [h.arahan] : []);
+      tj.forEach((x) => allTujuan.add(String(x)));
+      ar.forEach((x) => allArahan.add(String(x)));
+    });
+    const logoUrl = new URL('images/Lambang_Kabupaten_Sumba_Barat.png', w.location.href).href;
+    const win = w.open('', '_blank', 'width=860,height=980');
+    if (!win) {
+      if (w.Swal) w.Swal.fire('Pop-up Diblokir', 'Izinkan pop-up untuk mencetak Lembar Disposisi.', 'warning');
+      return;
+    }
+    const html = `<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>Lembar Disposisi - ${esc(surat.nomor_agenda || '')}</title>
+      <style>
+        @page { size: A4; margin: 14mm; }
+        body { font-family: 'Times New Roman', serif; font-size: 11pt; color: #000; margin: 0; padding: 14px; }
+        .kop { display: flex; align-items: center; gap: 14px; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 10px; }
+        .kop img { width: 62px; height: auto; }
+        .kop-t { flex: 1; text-align: center; }
+        .kop-t .a { font-size: 13pt; font-weight: bold; }
+        .kop-t .b { font-size: 13.5pt; font-weight: bold; }
+        .kop-t .c { font-size: 9pt; font-style: italic; }
+        h2 { text-align: center; margin: 8px 0 10px; font-size: 13pt; letter-spacing: 2px; text-decoration: underline; }
+        table.box { width: 100%; border-collapse: collapse; }
+        table.box td, table.box th { border: 1px solid #000; padding: 6px 8px; vertical-align: top; }
+        .chk { display: inline-block; width: 13px; height: 13px; border: 1px solid #000; text-align: center; line-height: 12px; font-size: 10px; margin-right: 6px; font-weight: bold; }
+        .row-chk { margin: 3px 0; }
+        .print-btn { position: fixed; top: 10px; right: 12px; padding: 8px 14px; background: #2563eb; color: #fff; border: 0; border-radius: 8px; font-weight: 700; cursor: pointer; }
+        @media print { .print-btn { display: none; } body { padding: 0; } }
+      </style>
+    </head><body>
+      <button class="print-btn" onclick="window.print()">Cetak Lembar Disposisi</button>
+      <div class="kop">
+        <img src="${esc(logoUrl)}" alt="Logo">
+        <div class="kop-t">
+          <div class="a">PEMERINTAH KABUPATEN SUMBA BARAT</div>
+          <div class="b">BADAN PERENCANAAN PEMBANGUNAN, RISET DAN INOVASI DAERAH</div>
+          <div class="c">Jl. Wee Karou Nomor – Waikabubak, Provinsi Nusa Tenggara Timur</div>
+        </div>
+      </div>
+      <h2>LEMBAR DISPOSISI</h2>
+      <table class="box">
+        <tr>
+          <td style="width:50%;"><strong>Surat Dari :</strong><br>${esc(surat.asal_surat || '-')}</td>
+          <td style="width:50%;"><strong>Diterima Tanggal :</strong> ${esc(fmtDate(surat.tanggal_terima || surat.tanggal_surat))}<br><strong>No. Agenda :</strong> ${esc(surat.nomor_agenda || '-')}<br><strong>Sifat :</strong> ${esc(surat.sifat || 'Biasa')}</td>
+        </tr>
+        <tr>
+          <td><strong>Nomor Surat :</strong> ${esc(surat.nomor_surat_asli || '-')}</td>
+          <td><strong>Tanggal Surat :</strong> ${esc(fmtDate(surat.tanggal_surat))}</td>
+        </tr>
+        <tr>
+          <td colspan="2"><strong>Perihal :</strong><br>${esc(surat.perihal || '-')}</td>
+        </tr>
+        <tr>
+          <td>
+            <div style="font-weight:bold;margin-bottom:6px;text-decoration:underline;">DITERUSKAN KEPADA SDR :</div>
+            ${DITERUSKAN_OPTIONS.map((opt) => `<div class="row-chk"><span class="chk">${allTujuan.has(opt) ? '&#10003;' : '&nbsp;'}</span>${esc(opt)}</div>`).join('')}
+          </td>
+          <td>
+            <div style="font-weight:bold;margin-bottom:6px;text-decoration:underline;">DISPOSISI / PETUNJUK :</div>
+            ${ARAHAN_OPTIONS.map((opt) => `<div class="row-chk"><span class="chk">${allArahan.has(opt) ? '&#10003;' : '&nbsp;'}</span>${esc(opt)}</div>`).join('')}
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" style="min-height:110px;">
+            <div style="font-weight:bold;margin-bottom:6px;">CATATAN / INSTRUKSI PIMPINAN :</div>
+            ${history.length
+              ? history.map((h) => `<div style="margin-bottom:6px;"><strong>${esc(h.pemberi_disposisi || 'Pimpinan')}</strong> (${esc(fmtDate(h.tanggal_disposisi))}): ${esc(h.catatan_instruksi || (Array.isArray(h.arahan) ? h.arahan.join('; ') : '-'))}</div>`).join('')
+              : '<div style="height:80px;"></div>'}
+          </td>
+        </tr>
+      </table>
+      <div style="margin-top:24px;width:44%;margin-left:auto;text-align:center;">
+        <div>Waikabubak, ${esc(fmtDate(new Date().toISOString().slice(0, 10)))}</div>
+        <div style="font-weight:bold;margin-top:4px;">KEPALA BAPPERIDA,</div>
+        <div style="height:62px;"></div>
+        <div style="font-weight:bold;text-decoration:underline;">( .............................................. )</div>
+      </div>
+    </body></html>`;
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  }
+
   async function loadAgendaSurat() {
     const tbody = d.getElementById('agendaSuratBody');
     const countEl = d.getElementById('agendaSuratCount');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="6" class="py-12 text-center text-xs text-slate-400"><span class="material-symbols-outlined text-xl text-primary animate-spin align-middle mr-2">progress_activity</span>Memuat agenda surat...</td></tr>';
+    tbody.innerHTML = renderSkeletonRows(6, 5);
 
     const tahun = d.getElementById('agendaSuratYear')?.value || String(new Date().getFullYear());
     const q = (d.getElementById('agendaSuratSearch')?.value || '').trim();
-    const params = new URLSearchParams({ tahun, limit: '60' });
+    const sifatFilter = (d.getElementById('agendaSuratSifat')?.value || '').trim();
+    const statusFilter = (d.getElementById('agendaSuratStatus')?.value || '').trim();
+    const params = new URLSearchParams({ tahun, limit: '80' });
     if (q) params.set('q', q);
 
     const ep = _suratMode === 'masuk'
@@ -549,11 +979,17 @@
       const res = await fetch(ep);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`);
-      _suratItems = Array.isArray(json.items) ? json.items : (Array.isArray(json) ? json : []);
-      if (countEl) countEl.textContent = `${_suratItems.length} surat`;
+      let items = Array.isArray(json.items) ? json.items : (Array.isArray(json) ? json : []);
+      if (sifatFilter) items = items.filter((it) => String(it.sifat || 'Biasa').toLowerCase() === sifatFilter.toLowerCase());
+      if (statusFilter) items = items.filter((it) => String(it.status_tindaklanjut || it.status || '').toLowerCase() === statusFilter.toLowerCase());
+      _suratItems = items;
+      if (countEl) {
+        const dispCnt = _suratMode === 'masuk' ? _suratItems.filter((it) => String(it.status || '').toLowerCase().includes('dispos')).length : 0;
+        countEl.textContent = _suratMode === 'masuk' && dispCnt ? `${_suratItems.length} surat • ${dispCnt} didisposisi` : `${_suratItems.length} surat`;
+      }
 
       if (!_suratItems.length) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-xs text-slate-400">Belum ada data ${_suratMode === 'masuk' ? 'Surat Masuk' : 'Surat Keluar'} untuk tahun ${esc(tahun)}.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-xs text-slate-400">Belum ada data ${_suratMode === 'masuk' ? 'Surat Masuk' : 'Surat Keluar'} untuk filter ini.</td></tr>`;
         return;
       }
 
@@ -565,11 +1001,12 @@
         const tgl = _suratMode === 'masuk' ? fmtDate(item.tanggal_terima || item.tanggal_surat) : fmtDate(item.tanggal_surat);
         const pihak = _suratMode === 'masuk' ? (item.asal_surat || '-') : (item.tujuan_surat || '-');
         const st = item.status_tindaklanjut || item.status || 'Tercatat';
+        const hasFile = Boolean(item.file_url || item.file_final_url || item.drive_url);
 
         return `
           <tr class="border-b border-slate-100 dark:border-slate-800/80 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer" onclick="window.ArsipAgenda?.showSuratDetail(${i})">
             <td class="px-4 py-3 font-mono text-xs font-bold text-slate-900 dark:text-white whitespace-nowrap">
-              <div class="flex items-center gap-1.5">${esc(noAgenda)} ${sifatPill(item.sifat)}</div>
+              <div class="flex items-center gap-1.5">${esc(noAgenda)} ${sifatPill(item.sifat)}${hasFile ? '<span class="material-symbols-outlined text-[14px] text-emerald-600" title="Ada Lampiran">attach_file</span>' : ''}</div>
               <div class="text-[10px] font-normal text-slate-400 truncate max-w-[180px]">${esc(noSub)}</div>
             </td>
             <td class="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">${esc(tgl)}</td>
@@ -577,11 +1014,10 @@
             <td class="px-4 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-[280px] truncate">${esc(item.perihal || '-')}</td>
             <td class="px-4 py-3 whitespace-nowrap">${statusPill(st)}</td>
             <td class="px-4 py-3 text-right whitespace-nowrap">
-              <div class="inline-flex items-center gap-1.5">
-                ${_suratMode === 'masuk' ? `<button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.openDisposisiModal(${item.id})" class="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-[11px] font-bold cursor-pointer">Disposisi</button>` : ''}
-                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.showSuratDetail(${i})" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-semibold cursor-pointer">Detail</button>
-                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.deleteSurat(${item.id})" title="Hapus" class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"><span class="material-symbols-outlined text-[16px]">delete</span></button>
-              </div>
+              <button type="button" data-sppd-pop-trigger onclick="event.stopPropagation(); window.ArsipAgenda?.openSuratPopover(this, ${i})" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-slate-700 dark:text-slate-200 hover:text-[#2563eb] text-[11px] font-bold transition-colors cursor-pointer">
+                <span>Aksi</span>
+                <span class="material-symbols-outlined text-[15px]">expand_more</span>
+              </button>
             </td>
           </tr>
         `;
@@ -612,103 +1048,209 @@
     ].filter(Boolean);
 
     const fileUrl = item.file_url || item.file_final_url || item.drive_url || '';
+    const previewSrc = buildDrivePreviewSrc(fileUrl);
     const wrap = d.createElement('div');
     wrap.id = 'stitchAgendaDetailOverlay';
-    wrap.className = 'fixed inset-0 z-[96] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4';
+    wrap.className = 'fixed inset-0 z-[96] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4';
     wrap.innerHTML = `
-      <div class="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="w-full ${fileUrl ? 'max-w-4xl' : 'max-w-lg'} bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]">
         <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <h3 class="text-base font-bold text-slate-900 dark:text-white">${isMasuk ? 'Detail Surat Masuk' : 'Detail Surat Keluar'}</h3>
           <button type="button" data-close-ov class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-[18px]">close</span></button>
         </div>
-        <div class="p-6 overflow-y-auto text-xs divide-y divide-slate-100 dark:divide-slate-800">
-          ${rows.map(([k, v]) => `<div class="py-2.5 flex justify-between gap-4"><span class="text-slate-500 dark:text-slate-400 shrink-0">${esc(k)}</span><span class="font-semibold text-slate-900 dark:text-white text-right">${esc(v)}</span></div>`).join('')}
+        <div class="flex-1 overflow-y-auto grid grid-cols-1 ${fileUrl ? 'lg:grid-cols-2' : ''} divide-y lg:divide-y-0 lg:divide-x divide-slate-100 dark:divide-slate-800">
+          <div class="p-6 text-xs divide-y divide-slate-100 dark:divide-slate-800">
+            ${rows.map(([k, v]) => `<div class="py-2.5 flex justify-between gap-4"><span class="text-slate-500 dark:text-slate-400 shrink-0">${esc(k)}</span><span class="font-semibold text-slate-900 dark:text-white text-right">${esc(v)}</span></div>`).join('')}
+          </div>
+          ${fileUrl ? `
+          <div class="p-4 bg-slate-50 dark:bg-slate-950/60 flex flex-col gap-2 min-h-[340px]">
+            <div class="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <span>Pratinjau Lampiran</span>
+              <a href="${esc(fileUrl)}" target="_blank" rel="noopener noreferrer" class="text-[#2563eb] hover:underline normal-case">Buka Tab Baru</a>
+            </div>
+            <iframe src="${esc(previewSrc)}" class="w-full flex-1 min-h-[320px] rounded-xl border border-slate-200 dark:border-slate-800 bg-white" title="Pratinjau Lampiran Surat"></iframe>
+          </div>` : ''}
         </div>
         <div class="px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-end gap-2 flex-wrap">
-          ${fileUrl ? `<a href="${esc(fileUrl)}" target="_blank" rel="noopener noreferrer" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">Buka Lampiran</a>` : ''}
-          ${isMasuk ? `<button type="button" id="btnOvDisposisi" class="px-3.5 py-2 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold cursor-pointer">Lembar Disposisi</button>` : ''}
+          <button type="button" id="btnOvEditSurat" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold cursor-pointer">Edit Surat</button>
+          ${isMasuk ? `<button type="button" id="btnOvCetakDisp" class="px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer">Cetak Disposisi</button>` : ''}
+          ${isMasuk ? `<button type="button" id="btnOvDisposisi" class="px-3.5 py-2 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold cursor-pointer">Disposisi Berjenjang</button>` : ''}
           <button type="button" data-close-ov class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Tutup</button>
         </div>
       </div>
     `;
     wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('[data-close-ov]')) wrap.remove(); });
-    wrap.querySelector('#btnOvDisposisi')?.addEventListener('click', () => { wrap.remove(); openDisposisiModal(item.id); });
+    wrap.querySelector('#btnOvDisposisi')?.addEventListener('click', () => { wrap.remove(); openDisposisiModal(item.id, item); });
+    wrap.querySelector('#btnOvCetakDisp')?.addEventListener('click', () => cetakLembarDisposisi(item));
+    wrap.querySelector('#btnOvEditSurat')?.addEventListener('click', () => { wrap.remove(); openEditSuratModal(idx); });
     d.body.appendChild(wrap);
   }
 
-  async function openDisposisiModal(suratId) {
-    if (!w.Swal || !suratId) return;
+  async function openDisposisiModal(suratId, suratObj = null) {
+    if (!suratId) return;
+    closeStitchOverlay('stitchDisposisiOverlay');
+    const surat = suratObj || _suratItems.find((x) => Number(x.id) === Number(suratId)) || { id: suratId };
     let history = [];
-    try {
-      const r = await fetch(`/api/arsip/p/api/agenda/surat-masuk/${suratId}/disposisi`);
-      const j = await r.json().catch(() => ({}));
-      history = Array.isArray(j.items) ? j.items : (Array.isArray(j) ? j : []);
-    } catch (_) {}
+    const fetchHist = async () => {
+      try {
+        const r = await fetch(`/api/arsip/p/api/agenda/surat-masuk/${suratId}/disposisi`);
+        const j = await r.json().catch(() => ({}));
+        history = Array.isArray(j.items) ? j.items : (Array.isArray(j) ? j : []);
+      } catch { history = []; }
+    };
+    await fetchHist();
 
-    const histHtml = history.length
-      ? `<div class="mb-3 max-h-32 overflow-y-auto flex flex-col gap-1.5">${history.map((h) => `
-          <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-left text-[11px] border border-slate-200/70 dark:border-slate-700">
+    const wrap = d.createElement('div');
+    wrap.id = 'stitchDisposisiOverlay';
+    wrap.className = 'fixed inset-0 z-[97] bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5';
+
+    const renderBody = () => {
+      const histBox = wrap.querySelector('#stDispHistBox');
+      if (!histBox) return;
+      if (!history.length) {
+        histBox.innerHTML = '<div class="text-[11px] text-slate-400 italic py-2">Belum ada riwayat disposisi untuk surat ini.</div>';
+        return;
+      }
+      histBox.innerHTML = history.map((h) => `
+        <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700 flex items-start justify-between gap-2">
+          <div class="min-w-0 text-[11px]">
             <div class="font-bold text-slate-900 dark:text-white">${esc(Array.isArray(h.diteruskan_kepada) ? h.diteruskan_kepada.join(', ') : (h.diteruskan_kepada || '-'))}</div>
-            <div class="text-slate-600 dark:text-slate-300">${esc(h.catatan_instruksi || (Array.isArray(h.arahan) ? h.arahan.join('; ') : ''))}</div>
-            <div class="text-[10px] text-slate-400 font-mono mt-0.5">${esc(fmtDate(h.tanggal_disposisi))} • ${esc(h.pemberi_disposisi || '')}</div>
-          </div>`).join('')}</div>`
-      : '';
+            <div class="text-slate-600 dark:text-slate-300 mt-0.5">${esc(Array.isArray(h.arahan) ? h.arahan.join('; ') : (h.arahan || ''))}${h.catatan_instruksi ? ` — ${esc(h.catatan_instruksi)}` : ''}</div>
+            <div class="text-[10px] font-mono text-slate-400 mt-1">${esc(fmtDate(h.tanggal_disposisi))} • ${esc(h.pemberi_disposisi || 'Pimpinan')}</div>
+          </div>
+          <button type="button" data-del-disp="${h.id}" title="Hapus entri" class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer shrink-0">
+            <span class="material-symbols-outlined text-[16px]">delete</span>
+          </button>
+        </div>
+      `).join('');
+      histBox.querySelectorAll('[data-del-disp]').forEach((b) => {
+        b.addEventListener('click', async () => {
+          const id = b.dataset.delDisp;
+          try {
+            await fetch(`/api/arsip/p/api/agenda/disposisi/${id}`, { method: 'DELETE' });
+            await fetchHist();
+            renderBody();
+          } catch { /* ignore */ }
+        });
+      });
+    };
 
-    const { value: formValues } = await w.Swal.fire({
-      title: 'Lembar Disposisi Surat Masuk',
-      width: 560,
-      html: `
-        ${histHtml}
-        <div class="text-left flex flex-col gap-3 text-xs">
+    wrap.innerHTML = `
+      <div class="w-full max-w-2xl max-h-[92vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
+        <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
           <div>
-            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Diteruskan Kepada *</label>
-            <select id="swalDispTujuan" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
-              ${DITERUSKAN_OPTIONS.map((o) => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}
-            </select>
+            <h3 class="text-base font-bold text-slate-900 dark:text-white">Disposisi Berjenjang Surat Masuk</h3>
+            <p class="text-[11px] font-mono text-slate-500">${esc(surat.nomor_agenda || `#${suratId}`)} • ${esc(surat.asal_surat || '')}</p>
           </div>
-          <div>
-            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Arahan Pimpinan *</label>
-            <select id="swalDispArahan" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
-              ${ARAHAN_OPTIONS.map((o) => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Batas Waktu (Opsional)</label>
-            <input id="swalDispBatas" type="date" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Catatan / Instruksi Tambahan</label>
-            <textarea id="swalDispCatatan" rows="2" placeholder="Instruksi khusus..." class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"></textarea>
+          <div class="flex items-center gap-1.5">
+            <button type="button" id="stDispPrintBtn" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1 cursor-pointer">
+              <span class="material-symbols-outlined text-[15px]">print</span>
+              <span>Cetak Lembar</span>
+            </button>
+            <button type="button" data-close-disp class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center cursor-pointer">
+              <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
           </div>
         </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: 'Kirim Disposisi',
-      cancelButtonText: 'Batal',
-      confirmButtonColor: '#2563eb',
-      preConfirm: () => ({
-        diteruskan_kepada: [d.getElementById('swalDispTujuan')?.value || ''],
-        arahan: [d.getElementById('swalDispArahan')?.value || ''],
-        batas_waktu: d.getElementById('swalDispBatas')?.value || null,
-        catatan_instruksi: (d.getElementById('swalDispCatatan')?.value || '').trim(),
-      }),
+
+        <div class="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+          <div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Riwayat Disposisi</div>
+            <div id="stDispHistBox" class="flex flex-col gap-2 max-h-40 overflow-y-auto"></div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-200 mb-1">Pemberi Disposisi</label>
+              <select id="stDispPemberi" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <option value="Kepala BAPPERIDA">Kepala BAPPERIDA</option>
+                <option value="Sekretaris BAPPERIDA">Sekretaris BAPPERIDA</option>
+                <option value="Kepala Bidang">Kepala Bidang</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-200 mb-1">Batas Waktu (Opsional)</label>
+              <input id="stDispBatas" type="date" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700">
+              <div class="text-[11px] font-bold text-slate-700 dark:text-slate-200 mb-2">Diteruskan Kepada (Pilih 1 atau lebih) *</div>
+              <div class="space-y-1.5 max-h-44 overflow-y-auto">
+                ${DITERUSKAN_OPTIONS.map((o) => `
+                  <label class="flex items-center gap-2 cursor-pointer text-[11px] text-slate-700 dark:text-slate-200">
+                    <input type="checkbox" name="stDispTujuan" value="${esc(o)}" class="accent-[#2563eb] rounded">
+                    <span>${esc(o)}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700">
+              <div class="text-[11px] font-bold text-slate-700 dark:text-slate-200 mb-2">Arahan / Petunjuk Pimpinan *</div>
+              <div class="space-y-1.5 max-h-44 overflow-y-auto">
+                ${ARAHAN_OPTIONS.map((o) => `
+                  <label class="flex items-center gap-2 cursor-pointer text-[11px] text-slate-700 dark:text-slate-200">
+                    <input type="checkbox" name="stDispArahan" value="${esc(o)}" class="accent-[#2563eb] rounded">
+                    <span>${esc(o)}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-200 mb-1">Catatan / Instruksi Tambahan</label>
+            <textarea id="stDispCatatan" rows="2" placeholder="Tulis instruksi khusus..." class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"></textarea>
+          </div>
+        </div>
+
+        <div class="px-5 py-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+          <button type="button" data-close-disp class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Tutup</button>
+          <button type="button" id="stDispSaveBtn" class="px-5 py-2 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold shadow-sm cursor-pointer">Kirim Disposisi</button>
+        </div>
+      </div>
+    `;
+
+    wrap.addEventListener('click', (e) => {
+      if (e.target === wrap || e.target.closest('[data-close-disp]')) wrap.remove();
+    });
+    wrap.querySelector('#stDispPrintBtn')?.addEventListener('click', () => cetakLembarDisposisi(surat, history));
+    wrap.querySelector('#stDispSaveBtn')?.addEventListener('click', async () => {
+      const diteruskan = Array.from(wrap.querySelectorAll('input[name="stDispTujuan"]:checked')).map((el) => el.value);
+      const arahan = Array.from(wrap.querySelectorAll('input[name="stDispArahan"]:checked')).map((el) => el.value);
+      if (!diteruskan.length || !arahan.length) {
+        if (w.Swal) w.Swal.fire('Perhatian', 'Pilih minimal 1 tujuan dan 1 arahan disposisi.', 'warning');
+        return;
+      }
+      try {
+        const r = await fetch(`/api/arsip/p/api/agenda/surat-masuk/${suratId}/disposisi`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pemberi_disposisi: wrap.querySelector('#stDispPemberi').value,
+            diteruskan_kepada: diteruskan,
+            arahan,
+            batas_waktu: wrap.querySelector('#stDispBatas').value || null,
+            catatan_instruksi: wrap.querySelector('#stDispCatatan').value.trim(),
+          }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || j.ok === false) throw new Error(j.message || `HTTP ${r.status}`);
+        await fetchHist();
+        renderBody();
+        wrap.querySelectorAll('input[type="checkbox"]').forEach((c) => { c.checked = false; });
+        wrap.querySelector('#stDispCatatan').value = '';
+        loadAgendaSurat();
+        loadMobileAgendaSurat();
+        if (w.Swal) w.Swal.fire({ icon: 'success', title: 'Disposisi Dicatat', timer: 1400, showConfirmButton: false });
+      } catch (err) {
+        if (w.Swal) w.Swal.fire({ icon: 'error', title: 'Gagal', text: err?.message || 'Koneksi terganggu.' });
+      }
     });
 
-    if (!formValues) return;
-    try {
-      const r = await fetch(`/api/arsip/p/api/agenda/surat-masuk/${suratId}/disposisi`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formValues),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || j.ok === false) throw new Error(j.message || `HTTP ${r.status}`);
-      w.Swal.fire({ icon: 'success', title: 'Disposisi Tersimpan', text: 'Lembar disposisi berhasil dicatat.' });
-      loadAgendaSurat();
-      loadMobileAgendaSurat();
-    } catch (err) {
-      w.Swal.fire({ icon: 'error', title: 'Gagal', text: err?.message || 'Koneksi terganggu.' });
-    }
+    d.body.appendChild(wrap);
+    renderBody();
   }
 
   async function deleteSurat(id) {
@@ -754,6 +1296,7 @@
   function openSuratModal(targetId) {
     const m = d.getElementById(targetId || 'modalArsipAgendaSurat') || d.getElementById('drawerMobileAgendaSurat');
     if (!m) return;
+    delete m.dataset.editId;
     const isMasuk = _suratMode === 'masuk';
     const titleEl = m.querySelector('[data-surat-modal-title]');
     if (titleEl) titleEl.textContent = isMasuk ? 'Catat Agenda Surat Masuk' : 'Catat Agenda Surat Keluar';
@@ -769,16 +1312,44 @@
     refreshPickersIn(m);
   }
 
+  function openEditSuratModal(idx) {
+    const item = _suratItems[idx];
+    if (!item) return;
+    const m = d.getElementById('modalArsipAgendaSurat') || d.getElementById('drawerMobileAgendaSurat');
+    if (!m) return;
+    m.dataset.editId = String(item.id);
+    const isMasuk = _suratMode === 'masuk';
+    const titleEl = m.querySelector('[data-surat-modal-title]');
+    if (titleEl) titleEl.textContent = isMasuk ? 'Edit Agenda Surat Masuk' : 'Edit Agenda Surat Keluar';
+    const lblPihak = m.querySelector('[data-surat-pihak-label]');
+    if (lblPihak) lblPihak.textContent = isMasuk ? 'Asal Surat *' : 'Tujuan Surat *';
+    m.querySelectorAll('[data-surat-keluar-only]').forEach((el) => el.classList.toggle('hidden', isMasuk));
+    const set = (k, val) => { const el = m.querySelector(`[data-surat-field="${k}"]`); if (el) el.value = val ?? ''; };
+    set('nomor', isMasuk ? (item.nomor_surat_asli || '') : (item.nomor_surat || ''));
+    set('kode', item.kode_klasifikasi || '050');
+    set('sifat', item.sifat || 'Biasa');
+    set('tanggal', String(item.tanggal_surat || '').slice(0, 10) || new Date().toISOString().slice(0, 10));
+    set('pihak', isMasuk ? (item.asal_surat || '') : (item.tujuan_surat || ''));
+    set('perihal', item.perihal || '');
+    set('bidang', item.bidang_pengonsep || 'Sekretariat');
+    set('keterangan', item.keterangan || '');
+    set('file_url', item.file_url || item.file_final_url || item.drive_url || '');
+    m.classList.remove('hidden');
+    m.classList.add('flex');
+    refreshPickersIn(m);
+  }
+
   function closeSuratModal() {
     ['modalArsipAgendaSurat', 'drawerMobileAgendaSurat'].forEach((id) => {
       const m = d.getElementById(id);
-      if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+      if (m) { delete m.dataset.editId; m.classList.add('hidden'); m.classList.remove('flex'); }
     });
   }
 
   async function submitSurat(btnEl) {
     const m = btnEl?.closest('#modalArsipAgendaSurat, #drawerMobileAgendaSurat') || d.getElementById('modalArsipAgendaSurat');
     if (!m) return;
+    const editId = m.dataset.editId || '';
     const v = (k) => (m.querySelector(`[data-surat-field="${k}"]`)?.value || '').trim();
     const nomor = v('nomor');
     const kode = v('kode') || '050';
@@ -799,21 +1370,22 @@
     if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Menyimpan...'; }
 
     const isMasuk = _suratMode === 'masuk';
-    const ep = isMasuk ? '/api/arsip/p/api/agenda/surat-masuk' : '/api/arsip/p/api/agenda/surat-keluar';
+    const baseEp = isMasuk ? '/api/arsip/p/api/agenda/surat-masuk' : '/api/arsip/p/api/agenda/surat-keluar';
+    const ep = editId ? `${baseEp}/${editId}` : baseEp;
     const body = isMasuk
       ? { nomor_surat_asli: nomor, kode_klasifikasi: kode, sifat, tanggal_surat: tanggal, tanggal_terima: tanggal, asal_surat: pihak, perihal, keterangan, file_url: fileUrl || null, tahun: Number(tanggal.slice(0, 4)) }
       : { nomor_surat: nomor, kode_klasifikasi: kode, sifat, tanggal_surat: tanggal, tujuan_surat: pihak, perihal, bidang_pengonsep: bidang, keterangan, file_final_url: fileUrl || null, tahun: Number(tanggal.slice(0, 4)) };
 
     try {
       const res = await fetch(ep, {
-        method: 'POST',
+        method: editId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json.ok === false) throw new Error(json.message || `HTTP ${res.status}`);
       closeSuratModal();
-      if (w.Swal) w.Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Agenda surat berhasil dicatat.' });
+      if (w.Swal) w.Swal.fire({ icon: 'success', title: editId ? 'Diperbarui' : 'Tersimpan', text: editId ? 'Agenda surat berhasil diperbarui.' : 'Agenda surat berhasil dicatat.' });
       loadAgendaSurat();
       loadMobileAgendaSurat();
     } catch (err) {
@@ -840,23 +1412,30 @@
     const countEl = d.getElementById('agendaSppdCount');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="6" class="py-12 text-center text-xs text-slate-400"><span class="material-symbols-outlined text-xl text-primary animate-spin align-middle mr-2">progress_activity</span>Memuat register SPPD...</td></tr>';
+    tbody.innerHTML = renderSkeletonRows(6, 5);
 
     const tahun = d.getElementById('agendaSppdYear')?.value || String(new Date().getFullYear());
     const q = (d.getElementById('agendaSppdSearch')?.value || '').trim();
-    const params = new URLSearchParams({ tahun, limit: '60' });
+    const statusFilter = (d.getElementById('agendaSppdStatus')?.value || '').trim();
+    const params = new URLSearchParams({ tahun, limit: '80' });
     if (_sppdJenis) params.set('jenis', _sppdJenis);
+    if (statusFilter) params.set('status', statusFilter);
     if (q) params.set('q', q);
 
     try {
       const res = await fetch(`/api/arsip/p/api/agenda/sppd?${params.toString()}`);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`);
-      _sppdItems = Array.isArray(json.items) ? json.items : (Array.isArray(json) ? json : []);
-      if (countEl) countEl.textContent = `${_sppdItems.length} SPPD`;
+      let items = Array.isArray(json.items) ? json.items : (Array.isArray(json) ? json : []);
+      if (statusFilter) items = items.filter((it) => String(it.status || '').toLowerCase() === statusFilter.toLowerCase());
+      _sppdItems = items;
+      if (countEl) {
+        const selesaiCnt = _sppdItems.filter((it) => /selesai|laporan/i.test(String(it.status || ''))).length;
+        countEl.textContent = selesaiCnt ? `${_sppdItems.length} SPPD • ${selesaiCnt} selesai/LPJ` : `${_sppdItems.length} SPPD`;
+      }
 
       if (!_sppdItems.length) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-xs text-slate-400">Belum ada data Agenda SPPD untuk tahun ${esc(tahun)}.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-xs text-slate-400">Belum ada data Agenda SPPD untuk filter ini.</td></tr>`;
         return;
       }
 
@@ -864,11 +1443,19 @@
         const noSppd = item.nomor_sppd || item.nomor_spt || `#${item.id || i + 1}`;
         const noSpt = item.nomor_spt && item.nomor_sppd ? item.nomor_spt : (item.jenis_sppd === 'LUAR_DAERAH' ? 'Luar Daerah' : 'Dalam Daerah');
         const tglRange = `${fmtDate(item.tanggal_berangkat)} – ${fmtDate(item.tanggal_kembali)}`;
+        let pkCnt = 0;
+        try { const arr = Array.isArray(item.pengikut) ? item.pengikut : JSON.parse(item.pengikut || '[]'); pkCnt = arr.length; } catch { pkCnt = 0; }
         return `
           <tr class="border-b border-slate-100 dark:border-slate-800/80 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer" onclick="window.ArsipAgenda?.showSppdDetail(${i})">
             <td class="px-4 py-3 font-mono text-xs font-bold text-slate-900 dark:text-white whitespace-nowrap">${esc(noSppd)}<div class="text-[10px] font-normal text-slate-400">${esc(noSpt)}</div></td>
-            <td class="px-4 py-3 text-xs font-semibold text-slate-800 dark:text-slate-200 max-w-[180px] truncate">${esc(item.pelaksana_nama || '-')}</td>
-            <td class="px-4 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-[170px] truncate">${esc(item.tempat_tujuan || '-')}</td>
+            <td class="px-4 py-3 text-xs font-semibold text-slate-800 dark:text-slate-200 max-w-[190px]">
+              <div class="truncate">${esc(item.pelaksana_nama || '-')}</div>
+              ${pkCnt ? `<div class="text-[10px] font-semibold text-[#2563eb]">+${pkCnt} pengikut</div>` : ''}
+            </td>
+            <td class="px-4 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-[170px]">
+              <div class="truncate font-medium">${esc(item.tempat_tujuan || '-')}</div>
+              <div class="text-[10px] text-slate-400 truncate">${esc(item.alat_angkutan || '')}</div>
+            </td>
             <td class="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">${esc(tglRange)}</td>
             <td class="px-4 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-[230px] truncate">${esc(item.maksud_perjalanan || '-')}</td>
             <td class="px-4 py-3 whitespace-nowrap text-right">
@@ -1232,6 +1819,7 @@
   function openSppdModal(targetId) {
     const m = d.getElementById(targetId || 'modalArsipAgendaSppd') || d.getElementById('drawerMobileAgendaSppd');
     if (!m) return;
+    delete m.dataset.editId;
     ensurePegawaiLoaded();
     const today = new Date().toISOString().slice(0, 10);
     const yr = today.slice(0, 4);
@@ -1249,16 +1837,69 @@
     refreshPickersIn(m);
   }
 
+  function openEditSppdModal(idx) {
+    const item = _sppdItems[idx];
+    if (!item) return;
+    const m = d.getElementById('modalArsipAgendaSppd') || d.getElementById('drawerMobileAgendaSppd');
+    if (!m) return;
+    m.dataset.editId = String(item.id);
+    ensurePegawaiLoaded();
+    const set = (k, val) => { const el = m.querySelector(`[data-sppd-field="${k}"]`); if (el) el.value = val ?? ''; };
+    set('jenis', item.jenis_sppd || 'DALAM_DAERAH');
+    set('kop_surat', item.kop_surat || 'BAPPERIDA');
+    set('pejabat', item.pejabat_perintah || 'Kepala BAPPERIDA');
+    set('nomor_spt', item.nomor_spt || '');
+    set('nomor_sppd', item.nomor_sppd || '');
+    set('tanggal_spt', String(item.tanggal_spt || '').slice(0, 10));
+    set('ditetapkan_di', item.ditetapkan_di || 'Waikabubak');
+    set('dasar_hukum', item.dasar_hukum || '');
+    set('tingkat_biaya', item.tingkat_biaya || '');
+    set('pelaksana', item.pelaksana_nama || '');
+    set('pelaksana_nip', item.pelaksana_nip || '');
+    set('pelaksana_pangkat', item.pelaksana_pangkat || '');
+    set('pelaksana_jabatan', item.pelaksana_jabatan || '');
+    set('tempat_berangkat', item.tempat_berangkat || 'Waikabubak');
+    set('tujuan', item.tempat_tujuan || '');
+    set('provinsi_tujuan', item.provinsi_tujuan || 'Nusa Tenggara Timur');
+    set('rute_perjalanan', item.rute_perjalanan || '');
+    set('maksud', item.maksud_perjalanan || '');
+    set('berangkat', String(item.tanggal_berangkat || '').slice(0, 10));
+    set('kembali', String(item.tanggal_kembali || '').slice(0, 10));
+    set('angkutan', item.alat_angkutan || 'Kendaraan Dinas Roda 4');
+    set('subkegiatan_nama', item.subkegiatan_nama || '');
+
+    const pkWrap = m.querySelector('[data-sppd-pengikut-list]');
+    if (pkWrap) {
+      pkWrap.innerHTML = '';
+      let pks = [];
+      try { pks = Array.isArray(item.pengikut) ? item.pengikut : JSON.parse(item.pengikut || '[]'); } catch { pks = []; }
+      pks.forEach((p) => {
+        addPengikutRow(pkWrap);
+        const last = pkWrap.lastElementChild;
+        if (!last) return;
+        const s = (k, val) => { const el = last.querySelector(`[data-pk="${k}"]`); if (el) el.value = val || ''; };
+        s('nama', p.nama || p.name);
+        s('nip', p.nip);
+        s('pangkat', p.pangkat);
+        s('jabatan', p.jabatan);
+      });
+    }
+    m.classList.remove('hidden');
+    m.classList.add('flex');
+    refreshPickersIn(m);
+  }
+
   function closeSppdModal() {
     ['modalArsipAgendaSppd', 'drawerMobileAgendaSppd'].forEach((id) => {
       const m = d.getElementById(id);
-      if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+      if (m) { delete m.dataset.editId; m.classList.add('hidden'); m.classList.remove('flex'); }
     });
   }
 
   async function submitSppd(btnEl) {
     const m = btnEl?.closest('#modalArsipAgendaSppd, #drawerMobileAgendaSppd') || d.getElementById('modalArsipAgendaSppd');
     if (!m) return;
+    const editId = m.dataset.editId || '';
     const v = (k) => (m.querySelector(`[data-sppd-field="${k}"]`)?.value || '').trim();
     const pelaksana_nama = v('pelaksana');
     const pelaksana_nip = v('pelaksana_nip');
@@ -1320,8 +1961,9 @@
     };
 
     try {
-      const res = await fetch('/api/arsip/p/api/agenda/sppd', {
-        method: 'POST',
+      const ep = editId ? `/api/arsip/p/api/agenda/sppd/${editId}` : '/api/arsip/p/api/agenda/sppd';
+      const res = await fetch(ep, {
+        method: editId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
@@ -1331,16 +1973,21 @@
       loadAgendaSppd();
       loadMobileAgendaSppd();
       const savedItem = { ...payload, ...(json.item || {}) };
-      if (w.SppdGenerator) {
+      if (!editId && w.SppdGenerator) {
         showSppdGenerateMenu(savedItem);
       } else if (w.Swal) {
-        w.Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Agenda SPPD berhasil dicatat.' });
+        w.Swal.fire({ icon: 'success', title: editId ? 'Diperbarui' : 'Tersimpan', text: editId ? 'Agenda SPPD berhasil diperbarui.' : 'Agenda SPPD berhasil dicatat.' });
       }
     } catch (err) {
       if (w.Swal) w.Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', text: err?.message || 'Koneksi terganggu.' });
     } finally {
       if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = orig; }
     }
+  }
+
+  async function openWewenang() {
+    await ensurePegawaiLoaded();
+    w.SppdGenerator?.openWewenangModal(_pegawaiCache || []);
   }
 
   function todayOrNow() {
@@ -1432,7 +2079,10 @@
             </div>
             <div class="pt-1.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-1.5">
               ${_mSuratMode === 'masuk' ? `<button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.openDisposisiModal(${item.id})" class="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-[11px] font-bold cursor-pointer">Disposisi</button>` : ''}
-              <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.deleteSurat(${item.id})" class="px-2 py-1 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-semibold cursor-pointer">Hapus</button>
+              <button type="button" data-sppd-pop-trigger onclick="event.stopPropagation(); window.ArsipAgenda?.openSuratPopover(this, ${i})" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-bold cursor-pointer">
+                <span>Aksi</span>
+                <span class="material-symbols-outlined text-[14px]">expand_more</span>
+              </button>
             </div>
           </div>
         `;
@@ -1537,7 +2187,12 @@
     openSuratCameraScan,
     onPelaksanaPicked,
     addPengikutRow,
+    openSuratPopover,
     openSppdPopover,
+    openEditSuratModal,
+    openEditSppdModal,
+    cetakLembarDisposisi,
+    openWewenang,
     generateSppdByIndex(idx) {
       const item = _sppdItems[idx];
       if (item) showSppdGenerateMenu(item);

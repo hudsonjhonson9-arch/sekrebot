@@ -4,7 +4,7 @@ import { query as queryDb } from './db.js';
 import { gasUpsert } from './gas.js';
 import { roleArsip, R_ADMIN } from './arsip-role.js';
 import { handleArsipDbRequest } from './arsip-db.js';
-import { renderSppdDocxBuffer } from './arsip-sppd-docx.js';
+import { renderSppdDocxBuffer, renderSppdBundleZipBuffer } from './arsip-sppd-docx.js';
 
 // Proxy ke API arsipdigital (peta-ekonomi). Token arsip_session di-mint di sini
 // dari req.user.nip, bukan dari cookie browser — jadi panel arsip native tidak
@@ -99,6 +99,22 @@ export function createArsipRouter(deps = {}) {
     } catch (err) {
       console.error('[arsip] sppd-docx error:', err);
       res.status(500).json({ ok: false, message: 'Gagal membuat dokumen Word dari template: ' + err.message });
+    }
+  });
+
+  // Unduh Paket ZIP (1 SPT + semua SPPD pelaksana & pengikut)
+  router.post('/sppd-bundle-zip', (req, res) => {
+    try {
+      const { item = {} } = req.body || {};
+      const buf = renderSppdBundleZipBuffer(item);
+      const cleanNo = String(item.nomor_sppd || item.nomor_spt || 'SPPD').replace(/[/\\?%*:|"<>]/g, '_');
+      const filename = `Paket_SPPD_${cleanNo}.zip`;
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buf);
+    } catch (err) {
+      console.error('[arsip] sppd-bundle-zip error:', err);
+      res.status(500).json({ ok: false, message: 'Gagal membuat paket ZIP SPPD: ' + err.message });
     }
   });
 

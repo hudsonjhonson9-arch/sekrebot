@@ -704,7 +704,7 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
       const { rows } = await doQuery(`SELECT "NIP" AS nip, username AS nama, COALESCE("Jabatan", '') AS jabatan FROM user_list ORDER BY username ASC`);
       res.json({ ok: true, items: rows });
       return true;
-    } catch (err) {
+    } catch {
       res.status(500).json({ ok: false, message: 'Gagal mengambil daftar pegawai' });
       return true;
     }
@@ -715,8 +715,37 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
       const { rows } = await doQuery(`SELECT id, nama_bidang AS nama FROM bidang_list WHERE instansi_id = 'bapperida' ORDER BY id ASC`);
       res.json({ ok: true, items: rows });
       return true;
-    } catch (err) {
+    } catch {
       res.status(500).json({ ok: false, message: 'Gagal mengambil daftar bidang' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/agenda/wewenang' && method === 'GET') {
+    try {
+      await doQuery(`CREATE TABLE IF NOT EXISTS agenda_wewenang (id INT PRIMARY KEY DEFAULT 1, data JSONB NOT NULL DEFAULT '{}'::jsonb, updated_at TIMESTAMPTZ DEFAULT NOW())`);
+      const { rows } = await doQuery(`SELECT data FROM agenda_wewenang WHERE id = 1 LIMIT 1`);
+      res.json({ ok: true, data: rows[0]?.data || {} });
+      return true;
+    } catch {
+      res.json({ ok: true, data: {} });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/agenda/wewenang' && method === 'POST') {
+    try {
+      const payload = req.body?.data || req.body || {};
+      await doQuery(`CREATE TABLE IF NOT EXISTS agenda_wewenang (id INT PRIMARY KEY DEFAULT 1, data JSONB NOT NULL DEFAULT '{}'::jsonb, updated_at TIMESTAMPTZ DEFAULT NOW())`);
+      await doQuery(
+        `INSERT INTO agenda_wewenang (id, data, updated_at) VALUES (1, $1::jsonb, NOW())
+         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+        [JSON.stringify(payload)]
+      );
+      res.json({ ok: true, data: payload });
+      return true;
+    } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal menyimpan pengaturan wewenang: ' + err.message });
       return true;
     }
   }
@@ -756,7 +785,7 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
       const { rows } = await doQuery(`SELECT * FROM agenda_disposisi WHERE surat_masuk_id = $1 ORDER BY id DESC`, [Number(mSmDisp[1])]);
       res.json({ ok: true, items: rows });
       return true;
-    } catch (err) {
+    } catch {
       res.status(500).json({ ok: false, message: 'Gagal mengambil disposisi' });
       return true;
     }
@@ -790,14 +819,72 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
     }
   }
 
-  const mSmDel = pathname.match(/^\/api\/agenda\/surat-masuk\/(\d+)$/);
-  if (mSmDel && method === 'DELETE') {
+  const mDispDel = pathname.match(/^\/api\/agenda\/disposisi\/(\d+)$/);
+  if (mDispDel && method === 'DELETE') {
     try {
-      await doQuery(`DELETE FROM agenda_surat_masuk WHERE id = $1`, [Number(mSmDel[1])]);
-      res.json({ ok: true, message: 'Surat masuk dihapus' });
+      await doQuery(`DELETE FROM agenda_disposisi WHERE id = $1`, [Number(mDispDel[1])]);
+      res.json({ ok: true, message: 'Entri disposisi dihapus' });
+      return true;
+    } catch {
+      res.status(500).json({ ok: false, message: 'Gagal menghapus entri disposisi' });
+      return true;
+    }
+  }
+
+  const mSmItem = pathname.match(/^\/api\/agenda\/surat-masuk\/(\d+)$/);
+  if (mSmItem && method === 'PUT') {
+    try {
+      const b = req.body || {};
+      const { rows } = await doQuery(
+        `UPDATE agenda_surat_masuk
+         SET tanggal_terima = COALESCE(NULLIF($1, '')::date, tanggal_terima),
+             nomor_surat_asli = COALESCE($2, nomor_surat_asli),
+             tanggal_surat = COALESCE(NULLIF($3, '')::date, tanggal_surat),
+             asal_surat = COALESCE($4, asal_surat),
+             perihal = COALESCE($5, perihal),
+             sifat = COALESCE(NULLIF($6, ''), sifat),
+             kode_klasifikasi = COALESCE(NULLIF($7, ''), kode_klasifikasi),
+             file_url = COALESCE(NULLIF($8, ''), file_url),
+             status = COALESCE(NULLIF($9, ''), status),
+             updated_at = NOW()
+         WHERE id = $10 RETURNING *`,
+        [
+          b.tanggal_terima || '', b.nomor_surat_asli ?? null, b.tanggal_surat || '',
+          b.asal_surat ?? null, b.perihal ?? null, b.sifat || '',
+          b.kode_klasifikasi || '', b.file_url || '', b.status || '',
+          Number(mSmItem[1]),
+        ]
+      );
+      res.json({ ok: true, item: rows[0] });
       return true;
     } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal memperbarui surat masuk: ' + err.message });
+      return true;
+    }
+  }
+  if (mSmItem && method === 'DELETE') {
+    try {
+      await doQuery(`DELETE FROM agenda_surat_masuk WHERE id = $1`, [Number(mSmItem[1])]);
+      res.json({ ok: true, message: 'Surat masuk dihapus' });
+      return true;
+    } catch {
       res.status(500).json({ ok: false, message: 'Gagal menghapus surat masuk' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/agenda/surat-keluar/cek-nomor' && method === 'GET') {
+    try {
+      const nomor = String(query.nomor || '').trim();
+      const excludeId = parseInt(query.excludeId, 10) || 0;
+      const { rows } = await doQuery(
+        `SELECT id, nomor_surat, perihal FROM agenda_surat_keluar WHERE LOWER(TRIM(nomor_surat)) = LOWER($1) AND id != $2 LIMIT 1`,
+        [nomor, excludeId]
+      );
+      res.json({ ok: true, tersedia: rows.length === 0, bentrok: rows[0] || null });
+      return true;
+    } catch {
+      res.json({ ok: true, tersedia: true, bentrok: null });
       return true;
     }
   }
@@ -813,7 +900,7 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
       const nomor = `${kode}/${String(nextUrut).padStart(3, '0')}/BAPPERIDA/${ROMAN[bulanIdx]}/${tahun}`;
       res.json({ ok: true, nomor_urut: nextUrut, nomor_surat: nomor });
       return true;
-    } catch (err) {
+    } catch {
       res.status(500).json({ ok: false, message: 'Gagal membuat preview nomor surat' });
       return true;
     }
@@ -850,14 +937,64 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
     }
   }
 
-  const mSkDel = pathname.match(/^\/api\/agenda\/surat-keluar\/(\d+)$/);
-  if (mSkDel && method === 'DELETE') {
+  const mSkItem = pathname.match(/^\/api\/agenda\/surat-keluar\/(\d+)$/);
+  if (mSkItem && method === 'PUT') {
     try {
-      await doQuery(`DELETE FROM agenda_surat_keluar WHERE id = $1`, [Number(mSkDel[1])]);
-      res.json({ ok: true, message: 'Surat keluar dihapus' });
+      const b = req.body || {};
+      const { rows } = await doQuery(
+        `UPDATE agenda_surat_keluar
+         SET nomor_surat = COALESCE(NULLIF($1, ''), nomor_surat),
+             kode_klasifikasi = COALESCE(NULLIF($2, ''), kode_klasifikasi),
+             tanggal_surat = COALESCE(NULLIF($3, '')::date, tanggal_surat),
+             tujuan_surat = COALESCE($4, tujuan_surat),
+             perihal = COALESCE($5, perihal),
+             sifat = COALESCE(NULLIF($6, ''), sifat),
+             bidang_pengonsep = COALESCE(NULLIF($7, ''), bidang_pengonsep),
+             penandatangan = COALESCE(NULLIF($8, ''), penandatangan),
+             file_final_url = COALESCE(NULLIF($9, ''), file_final_url),
+             status = COALESCE(NULLIF($10, ''), status),
+             updated_at = NOW()
+         WHERE id = $11 RETURNING *`,
+        [
+          b.nomor_surat || '', b.kode_klasifikasi || '', b.tanggal_surat || '',
+          b.tujuan_surat ?? null, b.perihal ?? null, b.sifat || '',
+          b.bidang_pengonsep || '', b.penandatangan || '',
+          b.file_final_url || b.file_url || '', b.status || '',
+          Number(mSkItem[1]),
+        ]
+      );
+      res.json({ ok: true, item: rows[0] });
       return true;
     } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal memperbarui surat keluar: ' + err.message });
+      return true;
+    }
+  }
+  if (mSkItem && method === 'DELETE') {
+    try {
+      await doQuery(`DELETE FROM agenda_surat_keluar WHERE id = $1`, [Number(mSkItem[1])]);
+      res.json({ ok: true, message: 'Surat keluar dihapus' });
+      return true;
+    } catch {
       res.status(500).json({ ok: false, message: 'Gagal menghapus surat keluar' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/agenda/sppd/cek-nomor' && method === 'GET') {
+    try {
+      const nomor = String(query.nomor || '').trim();
+      const excludeId = parseInt(query.excludeId, 10) || 0;
+      const { rows } = await doQuery(
+        `SELECT id, nomor_sppd, nomor_spt, pelaksana_nama FROM agenda_sppd
+         WHERE (LOWER(TRIM(nomor_sppd)) = LOWER($1) OR LOWER(TRIM(nomor_spt)) = LOWER($1) OR LOWER(TRIM(nomor_register)) = LOWER($1))
+           AND id != $2 LIMIT 1`,
+        [nomor, excludeId]
+      );
+      res.json({ ok: true, tersedia: rows.length === 0, bentrok: rows[0] || null });
+      return true;
+    } catch {
+      res.json({ ok: true, tersedia: true, bentrok: null });
       return true;
     }
   }
@@ -877,7 +1014,7 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
         nomor_sppd: `${kode}/${pad}/SPPD/BAPPERIDA/${tahun}`,
       });
       return true;
-    } catch (err) {
+    } catch {
       res.status(500).json({ ok: false, message: 'Gagal membuat preview nomor SPPD' });
       return true;
     }
@@ -954,13 +1091,58 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
     }
   }
 
-  const mSppdDel = pathname.match(/^\/api\/agenda\/sppd\/(\d+)$/);
-  if (mSppdDel && method === 'DELETE') {
+  const mSppdItem = pathname.match(/^\/api\/agenda\/sppd\/(\d+)$/);
+  if (mSppdItem && method === 'PUT') {
     try {
-      await doQuery(`DELETE FROM agenda_sppd WHERE id = $1`, [Number(mSppdDel[1])]);
-      res.json({ ok: true, message: 'Agenda SPPD dihapus' });
+      const b = req.body || {};
+      const jenis = b.jenis_sppd === 'LUAR_DAERAH' ? 'LUAR_DAERAH' : (b.jenis_sppd === 'DALAM_DAERAH' ? 'DALAM_DAERAH' : null);
+      const { rows } = await doQuery(
+        `UPDATE agenda_sppd
+         SET jenis_sppd = COALESCE($1, jenis_sppd),
+             nomor_spt = COALESCE(NULLIF($2, ''), nomor_spt),
+             nomor_sppd = COALESCE(NULLIF($3, ''), nomor_sppd),
+             tanggal_spt = COALESCE(NULLIF($4, '')::date, tanggal_spt),
+             pejabat_perintah = COALESCE(NULLIF($5, ''), pejabat_perintah),
+             pelaksana_nip = COALESCE($6, pelaksana_nip),
+             pelaksana_nama = COALESCE(NULLIF($7, ''), pelaksana_nama),
+             pelaksana_pangkat = COALESCE($8, pelaksana_pangkat),
+             pelaksana_jabatan = COALESCE($9, pelaksana_jabatan),
+             pengikut = COALESCE($10::jsonb, pengikut),
+             maksud_perjalanan = COALESCE($11, maksud_perjalanan),
+             tempat_berangkat = COALESCE(NULLIF($12, ''), tempat_berangkat),
+             tempat_tujuan = COALESCE($13, tempat_tujuan),
+             provinsi_tujuan = COALESCE(NULLIF($14, ''), provinsi_tujuan),
+             rute_perjalanan = COALESCE($15, rute_perjalanan),
+             alat_angkutan = COALESCE(NULLIF($16, ''), alat_angkutan),
+             tanggal_berangkat = COALESCE(NULLIF($17, '')::date, tanggal_berangkat),
+             tanggal_kembali = COALESCE(NULLIF($18, '')::date, tanggal_kembali),
+             status = COALESCE(NULLIF($19, ''), status),
+             updated_at = NOW()
+         WHERE id = $20 RETURNING *`,
+        [
+          jenis, b.nomor_spt || '', b.nomor_sppd || '', b.tanggal_spt || '',
+          b.pejabat_perintah || '', b.pelaksana_nip ?? null, b.pelaksana_nama || '',
+          b.pelaksana_pangkat ?? null, b.pelaksana_jabatan ?? null,
+          Array.isArray(b.pengikut) ? JSON.stringify(b.pengikut) : null,
+          b.maksud_perjalanan ?? null, b.tempat_berangkat || '', b.tempat_tujuan ?? null,
+          b.provinsi_tujuan || '', b.rute_perjalanan ?? null, b.alat_angkutan || '',
+          b.tanggal_berangkat || '', b.tanggal_kembali || '', b.status || '',
+          Number(mSppdItem[1]),
+        ]
+      );
+      res.json({ ok: true, item: rows[0] });
       return true;
     } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal memperbarui agenda SPPD: ' + err.message });
+      return true;
+    }
+  }
+  if (mSppdItem && method === 'DELETE') {
+    try {
+      await doQuery(`DELETE FROM agenda_sppd WHERE id = $1`, [Number(mSppdItem[1])]);
+      res.json({ ok: true, message: 'Agenda SPPD dihapus' });
+      return true;
+    } catch {
       res.status(500).json({ ok: false, message: 'Gagal menghapus agenda SPPD' });
       return true;
     }

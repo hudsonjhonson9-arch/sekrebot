@@ -256,3 +256,49 @@ export function renderSppdDocxBuffer(kind, item, person = null) {
   doc.render(tags);
   return doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' });
 }
+
+export function renderSppdBundleZipBuffer(item = {}) {
+  const bundle = new PizZip();
+  const safeNo = (v, fb) => String(v || fb).replace(/[/\\?%*:|"<>]/g, '_');
+  const safeName = (v) => String(v || 'Pelaksana').replace(/[^a-zA-Z0-9_-]+/g, '_');
+
+  // 1. Surat Tugas (SPT)
+  const sptBuf = renderSppdDocxBuffer('spt', item, null);
+  bundle.file(`01_Surat_Tugas_${safeNo(item.nomor_spt, 'SPT')}.docx`, sptBuf);
+
+  // 2. SPPD Pelaksana Utama
+  const mainPerson = {
+    nama: item.pelaksana_nama || 'Pelaksana',
+    nip: item.pelaksana_nip || '',
+    pangkat: item.pelaksana_pangkat || '',
+    jabatan: item.pelaksana_jabatan || '',
+  };
+  const mainBuf = renderSppdDocxBuffer('sppd', item, mainPerson);
+  bundle.file(`02_SPPD_${safeNo(item.nomor_sppd, 'SPPD')}_${safeName(mainPerson.nama)}.docx`, mainBuf);
+
+  // 3. SPPD Pengikut
+  let pengikut = [];
+  if (Array.isArray(item.pengikut)) {
+    pengikut = item.pengikut;
+  } else if (typeof item.pengikut === 'string' && item.pengikut.trim().startsWith('[')) {
+    try { pengikut = JSON.parse(item.pengikut); } catch { pengikut = []; }
+  }
+  pengikut.forEach((p, idx) => {
+    const nama = p?.nama || p?.name;
+    if (!nama) return;
+    const pBuf = renderSppdDocxBuffer('sppd', item, {
+      nama,
+      nip: p.nip || '',
+      pangkat: p.pangkat || '',
+      jabatan: p.jabatan || '',
+      tingkat_biaya: p.tingkat_biaya || '',
+      pptk_nama: p.pptk_nama || '',
+      pptk_nip: p.pptk_nip || '',
+      pptk_jabatan: p.pptk_jabatan || '',
+    });
+    const num = String(idx + 3).padStart(2, '0');
+    bundle.file(`${num}_SPPD_${safeNo(p.nomor_sppd || item.nomor_sppd, 'SPPD')}_${safeName(nama)}.docx`, pBuf);
+  });
+
+  return bundle.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
+}
