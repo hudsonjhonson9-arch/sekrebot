@@ -299,19 +299,25 @@
             pointer-events: none;
             opacity: 0;
           }
-          /* Portal Desktop Polish: header 68px, container terpusat max-w-1440px, sidebar scroll halus */
+          /* Portal Desktop Polish: header 68px, container terpusat max-w-1440px, padding seragam & tabular-nums */
           body.stitch-standalone-shell header {
             height: 68px !important;
+            padding-left: 28px !important;
+            padding-right: 28px !important;
             border-bottom: 1px solid rgba(226, 232, 240, 0.85);
           }
           body.stitch-standalone-shell main {
-            padding-top: 84px !important;
-            padding-bottom: 40px !important;
+            padding: 88px 28px 48px !important;
+            min-height: 100vh;
           }
           body.stitch-standalone-shell main > div:first-child {
             max-width: 1440px;
             margin-left: auto;
             margin-right: auto;
+          }
+          body.stitch-standalone-shell table td,
+          body.stitch-standalone-shell table th {
+            font-variant-numeric: tabular-nums;
           }
           body.stitch-standalone-shell aside.w-72 nav {
             overflow-y: auto;
@@ -504,6 +510,16 @@
       if (realNama) {
         const parts = realNama.trim().split(/\s+/).filter((p) => !p.includes('.'));
         const ini = (parts.length > 1 ? (parts[0][0] + parts[1][0]) : (parts[0]?.[0] || 'P')).toUpperCase();
+        document.querySelectorAll('header [data-portal-user-name]').forEach((sp) => { sp.textContent = realNama; });
+        document.querySelectorAll('header [data-portal-user-meta]').forEach((sp) => { sp.textContent = `NIP ${realNip || '-'} • ${realJab}`; });
+        document.querySelectorAll('header [data-portal-user-avatar]').forEach((dv) => {
+          if (avatarSrc) {
+            dv.classList.add('overflow-hidden', 'relative');
+            dv.innerHTML = `<img src="${avatarSrc}" alt="${ini}" class="w-full h-full object-cover" onerror="this.remove();this.parentElement.textContent='${ini}'">`;
+          } else {
+            dv.textContent = ini;
+          }
+        });
         document.querySelectorAll('header span').forEach((sp) => {
           const txt = (sp.textContent || '').trim();
           if (txt === 'Charles Hermana Weru, S.Sos') sp.textContent = realNama;
