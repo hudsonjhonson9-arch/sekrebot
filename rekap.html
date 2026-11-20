@@ -137,14 +137,18 @@
           <button type="button" data-rekap-preset="30_hari" onclick="setAdminRekapPreset('30_hari')" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">30 Hari</button>
           <button type="button" data-rekap-preset="bulan_lalu" onclick="setAdminRekapPreset('bulan_lalu')" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Bulan Lalu</button>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label for="adminRekapDari" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Dari Tanggal</label>
-            <input type="date" id="adminRekapDari" class="w-full" />
-          </div>
-          <div>
-            <label for="adminRekapSampai" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Sampai Tanggal</label>
-            <input type="date" id="adminRekapSampai" class="w-full" />
+            <label for="adminRekapRangeTrigger" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Periode Tanggal (Dari – Sampai)</label>
+            <input type="hidden" id="adminRekapDari" />
+            <input type="hidden" id="adminRekapSampai" />
+            <button type="button" id="adminRekapRangeTrigger" class="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-500 text-xs font-semibold text-slate-900 dark:text-white flex items-center justify-between gap-2 transition-colors cursor-pointer">
+              <span class="flex items-center gap-2 min-w-0">
+                <span class="material-symbols-outlined text-[18px] text-[#2563eb] shrink-0">calendar_month</span>
+                <span data-sp-range-label class="truncate font-mono tabular-nums">Pilih rentang tanggal</span>
+              </span>
+              <span class="material-symbols-outlined text-[18px] text-slate-400 shrink-0">expand_more</span>
+            </button>
           </div>
           <div>
             <label for="adminRekapSearch" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Cari Pegawai / Log</label>
@@ -418,9 +422,10 @@
       setInterval(updateRekapClock, 1000);
 
       if (window.StitchPicker) {
+        if (typeof window.StitchPicker.enhanceDateRange === 'function') {
+          window.StitchPicker.enhanceDateRange('adminRekapRangeTrigger', 'adminRekapDari', 'adminRekapSampai', { placeholder: 'Pilih rentang tanggal' });
+        }
         if (typeof window.StitchPicker.enhanceDate === 'function') {
-          window.StitchPicker.enhanceDate('adminRekapDari', { placeholder: 'Dari tanggal' });
-          window.StitchPicker.enhanceDate('adminRekapSampai', { placeholder: 'Sampai tanggal' });
           window.StitchPicker.enhanceDate('adminRekapTanggalHarian', { placeholder: 'Tanggal hadir' });
         }
         if (typeof window.StitchPicker.enhanceSelect === 'function') {

@@ -997,6 +997,182 @@
     return btn;
   }
 
+  /* ── SINGLE DATE RANGE PICKER (1 trigger -> start + end hidden inputs) ─── */
+  const rangeRegistry = new Map();
+
+  function updateRangeLabel(triggerEl) {
+    const meta = rangeRegistry.get(triggerEl);
+    if (!meta) return;
+    const s = (meta.startInput.value || '').trim();
+    const e = (meta.endInput.value || '').trim();
+    const lbl = triggerEl.querySelector('[data-sp-range-label]');
+    if (!lbl) return;
+    if (s && e) {
+      lbl.textContent = s === e ? formatDateDisplay(s) : `${formatDateDisplay(s)} – ${formatDateDisplay(e)}`;
+      lbl.classList.remove('text-slate-400', 'dark:text-slate-500');
+      lbl.classList.add('text-slate-900', 'dark:text-white');
+    } else if (s) {
+      lbl.textContent = `${formatDateDisplay(s)} – ...`;
+      lbl.classList.remove('text-slate-400', 'dark:text-slate-500');
+    } else {
+      lbl.textContent = meta.placeholder || 'Pilih rentang tanggal';
+      lbl.classList.add('text-slate-400', 'dark:text-slate-500');
+    }
+  }
+
+  function openDateRangePanel(triggerEl) {
+    const meta = rangeRegistry.get(triggerEl);
+    if (!meta) return;
+    if (activePortal && activePortal.trigger === triggerEl) {
+      closeAll();
+      return;
+    }
+    closeAll();
+
+    const startParsed = parseIsoDate(meta.startInput.value) || parseIsoDate(new Date().toISOString().slice(0, 10));
+    let viewYear = startParsed.year;
+    let viewMonth = startParsed.month;
+    let draftStart = (meta.startInput.value || '').trim();
+    let draftEnd = (meta.endInput.value || '').trim();
+    let pickingEnd = false;
+
+    const panel = document.createElement('div');
+    panel.className = 'sp-panel fixed z-[9999] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-2xl p-3.5 w-[310px] select-none';
+
+    const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    const DAYS_HDR = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+
+    const commitRange = (s, e) => {
+      const a = s <= e ? s : e;
+      const b = s <= e ? e : s;
+      meta.startInput.value = a;
+      meta.endInput.value = b;
+      updateRangeLabel(triggerEl);
+      dispatchChange(meta.startInput);
+      dispatchChange(meta.endInput);
+      closeAll();
+    };
+
+    const render = () => {
+      const firstDay = new Date(Date.UTC(viewYear, viewMonth, 1));
+      const offset = (firstDay.getUTCDay() + 6) % 7;
+      const daysInMonth = new Date(Date.UTC(viewYear, viewMonth + 1, 0)).getUTCDate();
+      const todayIso = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+
+      let cells = '';
+      for (let i = 0; i < offset; i += 1) cells += '<div class="h-9"></div>';
+      for (let day = 1; day <= daysInMonth; day += 1) {
+        const iso = toIsoDate(viewYear, viewMonth, day);
+        const isStart = draftStart && iso === draftStart;
+        const isEnd = draftEnd && iso === draftEnd;
+        const lo = draftStart && draftEnd ? (draftStart < draftEnd ? draftStart : draftEnd) : '';
+        const hi = draftStart && draftEnd ? (draftStart < draftEnd ? draftEnd : draftStart) : '';
+        const inBetween = lo && hi && iso > lo && iso < hi;
+        const isToday = iso === todayIso;
+
+        let cls = 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl';
+        if (isStart || isEnd) {
+          cls = 'bg-[#2563eb] text-white font-bold shadow-sm rounded-xl';
+        } else if (inBetween) {
+          cls = 'bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 font-semibold rounded-lg';
+        } else if (isToday) {
+          cls = 'text-[#2563eb] font-bold ring-1 ring-[#2563eb]/40 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40';
+        }
+        cells += `<button type="button" data-rng-iso="${iso}" class="h-9 w-full text-xs font-mono tabular-nums flex items-center justify-center transition-colors cursor-pointer ${cls}">${day}</button>`;
+      }
+
+      panel.innerHTML = `
+        <div class="flex items-center justify-between mb-2.5">
+          <button type="button" data-rng-prev class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+          </button>
+          <span class="text-xs font-extrabold text-slate-900 dark:text-white">${MONTH_NAMES[viewMonth]} ${viewYear}</span>
+          <button type="button" data-rng-next class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+          </button>
+        </div>
+        <div class="mb-2 px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 text-[11px] text-slate-600 dark:text-slate-300 flex items-center justify-between">
+          <span>${pickingEnd ? 'Pilih tanggal akhir...' : 'Klik tanggal mulai'}</span>
+          <span class="font-mono font-bold text-[#2563eb]">${draftStart ? formatDateDisplay(draftStart) : '-'}${draftEnd ? ' – ' + formatDateDisplay(draftEnd) : ''}</span>
+        </div>
+        <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 uppercase mb-1">
+          ${DAYS_HDR.map((h) => `<div>${h}</div>`).join('')}
+        </div>
+        <div class="grid grid-cols-7 gap-1">${cells}</div>
+        <div class="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+          <button type="button" data-rng-today class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-[11px] font-bold text-slate-700 dark:text-slate-200 cursor-pointer">Hari Ini</button>
+          <button type="button" data-rng-month class="px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 text-[11px] font-bold text-[#2563eb] dark:text-blue-300 cursor-pointer">Bulan Ini</button>
+        </div>
+      `;
+
+      panel.querySelector('[data-rng-prev]')?.addEventListener('click', () => {
+        viewMonth -= 1;
+        if (viewMonth < 0) { viewMonth = 11; viewYear -= 1; }
+        render();
+      });
+      panel.querySelector('[data-rng-next]')?.addEventListener('click', () => {
+        viewMonth += 1;
+        if (viewMonth > 11) { viewMonth = 0; viewYear += 1; }
+        render();
+      });
+      panel.querySelectorAll('[data-rng-iso]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const picked = btn.dataset.rngIso;
+          if (!pickingEnd) {
+            draftStart = picked;
+            draftEnd = '';
+            pickingEnd = true;
+            render();
+          } else {
+            commitRange(draftStart, picked);
+          }
+        });
+      });
+      panel.querySelector('[data-rng-today]')?.addEventListener('click', () => commitRange(todayIso, todayIso));
+      panel.querySelector('[data-rng-month]')?.addEventListener('click', () => {
+        const dNow = parseIsoDate(todayIso);
+        const first = toIsoDate(dNow.year, dNow.month, 1);
+        commitRange(first, todayIso);
+      });
+    };
+
+    document.body.appendChild(panel);
+    render();
+    positionPortal(panel, triggerEl, 310, 410);
+    setTriggerActive(triggerEl, true);
+    activePortal = { panel, trigger: triggerEl, input: meta.startInput };
+  }
+
+  function enhanceDateRange(triggerTarget, startTarget, endTarget, opts = {}) {
+    const triggerEl = resolveElement(triggerTarget);
+    const startInput = resolveElement(startTarget);
+    const endInput = resolveElement(endTarget);
+    if (!triggerEl || !startInput || !endInput) return null;
+    if (rangeRegistry.has(triggerEl)) {
+      updateRangeLabel(triggerEl);
+      return triggerEl;
+    }
+
+    rangeRegistry.set(triggerEl, {
+      startInput,
+      endInput,
+      placeholder: opts.placeholder || 'Pilih rentang tanggal',
+    });
+
+    triggerEl.addEventListener('click', (e) => {
+      e.preventDefault();
+      openDateRangePanel(triggerEl);
+    });
+
+    hookValueProperty(startInput, HTMLInputElement.prototype, () => updateRangeLabel(triggerEl));
+    hookValueProperty(endInput, HTMLInputElement.prototype, () => updateRangeLabel(triggerEl));
+    startInput.addEventListener('change', () => updateRangeLabel(triggerEl));
+    endInput.addEventListener('change', () => updateRangeLabel(triggerEl));
+
+    updateRangeLabel(triggerEl);
+    return triggerEl;
+  }
+
   function updateDateLabelOrTime(inp) {
     if (registry.times.has(inp)) updateTimeLabel(inp);
     if (registry.dates.has(inp)) updateDateLabel(inp);
@@ -1006,6 +1182,7 @@
     registry.selects.forEach((_, sel) => refreshSelect(sel));
     registry.dates.forEach((_, inp) => updateDateLabel(inp));
     registry.times.forEach((_, inp) => updateTimeLabel(inp));
+    rangeRegistry.forEach((_, trig) => updateRangeLabel(trig));
   }
 
   function initDefaultPickers() {
@@ -1037,6 +1214,7 @@
     enhanceSelect,
     refreshSelect,
     enhanceDate,
+    enhanceDateRange,
     enhanceTime,
     refreshAll,
     closeAll

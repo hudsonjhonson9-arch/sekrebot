@@ -342,10 +342,16 @@
   function initAdminRekapPanel() {
     if (!_inited) {
       _inited = true;
-      if (w.StitchPicker && typeof w.StitchPicker.enhanceDate === 'function') {
-        if (d.getElementById('adminRekapDari')) w.StitchPicker.enhanceDate('adminRekapDari', { placeholder: 'Dari tanggal' });
-        if (d.getElementById('adminRekapSampai')) w.StitchPicker.enhanceDate('adminRekapSampai', { placeholder: 'Sampai tanggal' });
-        if (d.getElementById('adminRekapTanggalHarian')) w.StitchPicker.enhanceDate('adminRekapTanggalHarian', { placeholder: 'Tanggal hadir' });
+      if (w.StitchPicker) {
+        if (d.getElementById('adminRekapRangeTrigger') && typeof w.StitchPicker.enhanceDateRange === 'function') {
+          w.StitchPicker.enhanceDateRange('adminRekapRangeTrigger', 'adminRekapDari', 'adminRekapSampai', { placeholder: 'Pilih rentang tanggal' });
+        } else if (typeof w.StitchPicker.enhanceDate === 'function') {
+          if (d.getElementById('adminRekapDari')) w.StitchPicker.enhanceDate('adminRekapDari', { placeholder: 'Dari tanggal' });
+          if (d.getElementById('adminRekapSampai')) w.StitchPicker.enhanceDate('adminRekapSampai', { placeholder: 'Sampai tanggal' });
+        }
+        if (typeof w.StitchPicker.enhanceDate === 'function' && d.getElementById('adminRekapTanggalHarian')) {
+          w.StitchPicker.enhanceDate('adminRekapTanggalHarian', { placeholder: 'Tanggal hadir' });
+        }
       }
       if (w.StitchPicker && typeof w.StitchPicker.enhanceSelect === 'function') {
         if (d.getElementById('adminRekapRoleFilter')) w.StitchPicker.enhanceSelect('adminRekapRoleFilter', { searchable: false });
@@ -1088,7 +1094,7 @@
     html += '</div><div class="grid grid-cols-7 gap-1.5">';
 
     for (let i = 0; i < offset; i++) {
-      html += '<div class="h-11 rounded-xl"></div>';
+      html += '<div class="h-14 rounded-xl"></div>';
     }
     for (let day = 1; day <= daysInMonth; day++) {
       const iso = `${ym}-${pad(day)}`;
@@ -1096,10 +1102,15 @@
       const isSelected = _calState.selectedDate === iso;
       const ring = isSelected ? 'ring-2 ring-blue-600 ring-offset-1 dark:ring-offset-slate-900' : '';
       const masukTxt = info.log && info.log.masuk != null ? toHHMM(toMin(info.log.masuk)) : '';
+      const pulangTxt = info.log && info.log.pulang != null ? toHHMM(toMin(info.log.pulang)) : '';
+      const timeLines = (masukTxt || pulangTxt)
+        ? `<span class="text-[9px] font-mono leading-tight mt-0.5 opacity-95">${masukTxt || '--:--'}</span>
+           <span class="text-[8.5px] font-mono leading-tight ${pulangTxt ? 'text-blue-700 dark:text-blue-300 font-bold' : 'opacity-45'}">${pulangTxt || '--:--'}</span>`
+        : `<span class="text-[8px] font-bold leading-none mt-1 uppercase opacity-80">${esc(info.code === 'OUT' || info.code === 'FUTURE' || info.code === 'LIBUR' ? '' : info.code.slice(0, 5))}</span>`;
       html += `
-        <button type="button" onclick="selectAdminRekapCalendarDay('${iso}')" title="${esc(info.label)}" class="h-11 rounded-xl border ${info.cls} ${ring} flex flex-col items-center justify-center p-1 transition-all hover:brightness-95 cursor-pointer tabular-nums">
+        <button type="button" onclick="selectAdminRekapCalendarDay('${iso}')" title="${esc(info.label)}${pulangTxt ? ' • Pulang ' + pulangTxt : ''}" class="h-14 rounded-xl border ${info.cls} ${ring} flex flex-col items-center justify-center p-1 transition-all hover:brightness-95 cursor-pointer tabular-nums">
           <span class="text-xs font-extrabold leading-none">${day}</span>
-          ${masukTxt ? `<span class="text-[9px] font-mono leading-none mt-0.5 opacity-90">${masukTxt}</span>` : `<span class="text-[8px] font-bold leading-none mt-0.5 uppercase opacity-80">${esc(info.code === 'OUT' || info.code === 'FUTURE' || info.code === 'LIBUR' ? '' : info.code.slice(0, 5))}</span>`}
+          ${timeLines}
         </button>`;
     }
     html += '</div>';
@@ -1133,7 +1144,7 @@
           </div>
           <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700">
             <span class="text-[9px] font-sans text-slate-400 block">Pulang</span>
-            <strong class="text-slate-900 dark:text-white">${mOut !== null ? toHHMM(mOut) : '-'}</strong>
+            <strong class="${mOut !== null ? 'text-slate-900 dark:text-white' : 'text-amber-600 dark:text-amber-400 font-sans text-[11px]'}">${mOut !== null ? toHHMM(mOut) : 'Belum absen'}</strong>
           </div>
           <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700">
             <span class="text-[9px] font-sans text-slate-400 block">Durasi</span>
