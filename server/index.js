@@ -15,6 +15,7 @@ import { createArsipRouter } from './arsip.js';
 import { verifyInitData } from './telegram.js';
 import { createAttendanceDataRouter } from './attendance-data.js';
 import { createKeteranganNotify, openwaSender, telegramSender, wahaSender } from './keterangan-notify.js';
+import { createOpenwaWatchdog } from './openwa-health.js';
 import { createScheduler } from './scheduler.js';
 import { createOvertimeRouter } from './overtime.js';
 import { createNotifyRouter } from './notify.js';
@@ -291,6 +292,7 @@ export function createApp() {
   // absen lewat Telegram; peringatan akumulasi lewat Telegram PM + WA pribadi
   // pegawai (chatId dihitung dari nomorhp tiap pengiriman). WhatsApp grup tetap
   // hanya untuk keterangan (lihat notifyKeterangan di atas).
+  app.locals.openwaWatchdog = createOpenwaWatchdog(openwaCfg || {});
   app.locals.scheduler = createScheduler({
     query,
     sendTelegram,
@@ -305,7 +307,11 @@ export function createApp() {
   // jam, periode, lokasi, dan kontrol instansinya sendiri. Endpoint tulis dan
   // daftar lintas-instansi (instansi-list, admin-list) tetap ditolak untuk
   // non-media oleh requireMedia di dalam core-admin.js.
-  app.use('/api', requireRole(ABSEN_ROLES), createCoreAdminRouter({ query }));
+  app.use('/api', requireRole(ABSEN_ROLES), createCoreAdminRouter({
+    query,
+    openwaWatchdog: app.locals.openwaWatchdog,
+    getSchedulerActive: () => process.env.SCHEDULER !== 'off',
+  }));
 
   // Pairing perangkat Meja hanya SUPERADMIN: yang menerbitkan token perangkat adalah
   // sesi Telegram, bukan InitData Meja. Kalau endpoint ini dibiarkan terbuka, siapa pun
@@ -390,11 +396,14 @@ if (isMain) {
   initAbsenRolesTable({ query }).catch((e) => console.error('[rbac] initAbsenRolesTable error:', e.message));
   // Pengganti cron n8n. Matikan dengan SCHEDULER=off (mis. saat debugging).
   if (process.env.SCHEDULER !== 'off') app.locals.scheduler.start();
+  // Auto-watchdog OpenWA tiap 5 menit: otomatis start ulang sesi bila STOPPED/DISCONNECTED.
+  if (process.env.OPENWA_WATCHDOG !== 'off') app.locals.openwaWatchdog.start();
   for (const sig of ['SIGINT', 'SIGTERM']) {
     process.on(sig, () => {
       // N-1: response yang sudah started tapi belum ended menahan callback server.close(),
       // jadi jangan bergantung pada callback itu — drop koneksi, lalu keluar tanpa syarat.
       app.locals.scheduler.stop();
+      app.locals.openwaWatchdog.stop();
       server.close();
       server.closeAllConnections?.();
       closePool().finally(() => process.exit(0));

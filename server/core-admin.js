@@ -26,7 +26,7 @@ function scope(req, requested) {
 function ok(res, data = {}, message) { return res.json({ ok: true, ...(message ? { message } : {}), ...data }); }
 function fail(res, status, message) { return res.status(status).json({ ok: false, message }); }
 
-export function createCoreAdminRouter({ query } = {}) {
+export function createCoreAdminRouter({ query, openwaWatchdog = null, getSchedulerActive = null } = {}) {
   const router = express.Router();
 
   // ── Master instansi & bidang ──────────────────────────────────────────────
@@ -287,6 +287,23 @@ router.post('/lokasi-update', async(req,res)=>{if(requireMedia(req,res))return;t
       console.error('[dev/health db check]', e);
     }
 
+    const openwa = openwaWatchdog
+      ? await openwaWatchdog.checkNow({ allowAutoRestart: false })
+      : {
+          configured: Boolean(process.env.OPENWA_URL),
+          ok: false,
+          status: process.env.OPENWA_URL ? 'UNKNOWN' : 'NOT_CONFIGURED',
+          sessionName: process.env.OPENWA_SESSION || 'default',
+          latencyMs: 0,
+          watchdogActive: false,
+          autoRestartCount: 0,
+          message: process.env.OPENWA_URL ? 'Watchdog belum aktif.' : 'OPENWA_URL belum diatur di server.',
+        };
+
+    const tgConfigured = Boolean(process.env.TELEGRAM_BOT_TOKEN);
+    const gasConfigured = Boolean(process.env.GAS_WEBAPP_URL);
+    const schedulerActive = typeof getSchedulerActive === 'function' ? Boolean(getSchedulerActive()) : false;
+
     const mem = process.memoryUsage ? process.memoryUsage() : {};
     return ok(res, {
       timestamp: new Date().toISOString(),
@@ -295,6 +312,22 @@ router.post('/lokasi-update', async(req,res)=>{if(requireMedia(req,res))return;t
         ok: dbOk,
         latencyMs,
       },
+      openwa,
+      telegram: {
+        configured: tgConfigured,
+        ok: tgConfigured,
+        message: tgConfigured ? 'TELEGRAM_BOT_TOKEN aktif di server' : 'TELEGRAM_BOT_TOKEN belum diatur di server',
+      },
+      media: {
+        configured: gasConfigured,
+        ok: gasConfigured,
+        message: gasConfigured ? 'Google Drive Media (GAS) terkonfigurasi' : 'GAS_WEBAPP_URL belum diatur di server',
+      },
+      scheduler: {
+        ok: true,
+        active: schedulerActive,
+        message: schedulerActive ? 'Cron Scheduler aktif (WITA)' : 'Cron Scheduler standby',
+      },
       memory: {
         heapUsed: mem.heapUsed || 0,
         heapTotal: mem.heapTotal || 0,
@@ -302,6 +335,24 @@ router.post('/lokasi-update', async(req,res)=>{if(requireMedia(req,res))return;t
       },
       nodeVersion: process.version,
     });
+  });
+
+  // Start / Restart sesi OpenWA secara manual dari panel Developer Admin
+  router.post('/dev/openwa/restart', async (req, res) => {
+    if (requireMedia(req, res)) return;
+    if (!openwaWatchdog) {
+      return fail(res, 503, 'Layanan OpenWA belum dikonfigurasi pada server.');
+    }
+    try {
+      const result = await openwaWatchdog.restartNow();
+      if (!result.ok) {
+        return res.status(502).json({ ok: false, ...result });
+      }
+      return ok(res, result);
+    } catch (e) {
+      console.error('[dev/openwa/restart]', e);
+      return fail(res, 500, 'Gagal mengirim perintah restart OpenWA.');
+    }
   });
 
   return router;

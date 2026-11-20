@@ -175,11 +175,24 @@ export function createDevTracker(options = {}) {
   }
 
   function getDefaultProbers() {
+    let healthPromise = null;
+    const fetchServerHealth = () => {
+      if (!healthPromise) {
+        const t0 = Date.now();
+        healthPromise = fetch('/api/dev/health', { headers: getDevAuthHeaders() })
+          .then(async (res) => {
+            const lat = Date.now() - t0;
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            return { data, lat };
+          });
+      }
+      return healthPromise;
+    };
+
     return {
       database: async () => {
-        const res = await fetch('/api/dev/health', { headers: getDevAuthHeaders() });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const { data } = await fetchServerHealth();
         return {
           ok: !!(data.db && data.db.ok),
           latencyMs: data.db?.latencyMs || 0,
@@ -187,16 +200,71 @@ export function createDevTracker(options = {}) {
         };
       },
       backend_api: async () => {
-        const t0 = Date.now();
-        const res = await fetch('/api/dev/health', { headers: getDevAuthHeaders() });
-        const lat = Date.now() - t0;
-        if (!res.ok) throw new Error(`API Responded with status ${res.status}`);
-        const data = await res.json();
+        const { data, lat } = await fetchServerHealth();
         const up = data.uptime ? `${Math.floor(data.uptime / 60)}m` : '0m';
+        const sched = data.scheduler?.active ? ' • Scheduler Aktif' : '';
         return {
           ok: true,
           latencyMs: lat,
-          message: `Express API Normal (Uptime: ${up}, Node ${data.nodeVersion || ''})`,
+          message: `Express API Normal (Uptime: ${up}, Node ${data.nodeVersion || ''}${sched})`,
+        };
+      },
+      openwa_gateway: async () => {
+        const { data } = await fetchServerHealth();
+        const ow = data.openwa || {};
+        if (!ow.configured) {
+          return {
+            ok: false,
+            warning: true,
+            latencyMs: 0,
+            message: ow.message || 'OPENWA_URL belum diatur di environment server.',
+            details: ow,
+          };
+        }
+        const wdNote = ow.watchdogActive
+          ? ` • Auto-Watchdog 5m${ow.autoRestartCount ? ` (Auto-start: ${ow.autoRestartCount}x)` : ''}`
+          : '';
+        return {
+          ok: !!ow.ok,
+          warning: !ow.ok && ow.status === 'SCAN_QR',
+          latencyMs: Number(ow.latencyMs) || 0,
+          message: `${ow.message || ow.status || 'Tidak aktif'}${wdNote}`,
+          details: ow,
+        };
+      },
+      telegram_bot: async () => {
+        const { data } = await fetchServerHealth();
+        const tg = data.telegram || {};
+        return {
+          ok: !!tg.ok,
+          warning: !tg.configured,
+          latencyMs: 0,
+          message: tg.message || (tg.configured ? 'Bot Telegram aktif' : 'TELEGRAM_BOT_TOKEN belum diatur'),
+        };
+      },
+      media_drive: async () => {
+        const { data } = await fetchServerHealth();
+        const md = data.media || {};
+        return {
+          ok: !!md.ok,
+          warning: !md.configured,
+          latencyMs: 0,
+          message: md.message || (md.configured ? 'Google Drive Media (GAS) siap' : 'GAS_WEBAPP_URL belum diatur'),
+        };
+      },
+      server_memory: async () => {
+        const { data, lat } = await fetchServerHealth();
+        const mem = data.memory || {};
+        const rssMb = Math.round((Number(mem.rss) || 0) / (1024 * 1024));
+        const heapUsedMb = Math.round((Number(mem.heapUsed) || 0) / (1024 * 1024));
+        const heapTotalMb = Math.round((Number(mem.heapTotal) || 0) / (1024 * 1024));
+        const highUsage = rssMb > 1536;
+        return {
+          ok: !highUsage && (rssMb > 0 || heapUsedMb > 0),
+          warning: highUsage,
+          latencyMs: lat,
+          message: `RSS ${rssMb} MB • Heap ${heapUsedMb}/${heapTotalMb || heapUsedMb} MB`,
+          details: mem,
         };
       },
       face_ai: async () => {
@@ -229,43 +297,17 @@ export function createDevTracker(options = {}) {
             : (idbAvailable ? 'Cache Model IndexedDB Tersedia' : 'Modul Face AI Siap'),
         };
       },
-      geolocation: async () => {
-        if (typeof navigator === 'undefined' || !navigator.geolocation) {
-          return { ok: false, message: 'Browser tidak mendukung Geolocation GPS' };
-        }
-        return { ok: true, message: 'GPS Geolocation API Tersedia' };
-      },
-      client_storage: async () => {
+      client_env: async () => {
+        const gpsOk = typeof navigator !== 'undefined' && Boolean(navigator.geolocation);
         const idbOk = typeof indexedDB !== 'undefined';
         const lsOk = typeof localStorage !== 'undefined';
+        const allOk = gpsOk && idbOk && lsOk;
         return {
-          ok: idbOk && lsOk,
-          message: idbOk && lsOk ? 'IndexedDB & LocalStorage Siap' : 'Penyimpanan lokal terbatas',
-        };
-      },
-      telegram_sync: async () => {
-        return { ok: true, message: 'Bot Notifikasi Telegram Siap' };
-      },
-      n8n_webhook: async () => {
-        return { ok: true, message: 'Integrasi Webhook n8n Siap' };
-      },
-      server_memory: async () => {
-        const t0 = Date.now();
-        const res = await fetch('/api/dev/health', { headers: getDevAuthHeaders() });
-        const lat = Date.now() - t0;
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        const mem = data.memory || {};
-        const rssMb = Math.round((Number(mem.rss) || 0) / (1024 * 1024));
-        const heapUsedMb = Math.round((Number(mem.heapUsed) || 0) / (1024 * 1024));
-        const heapTotalMb = Math.round((Number(mem.heapTotal) || 0) / (1024 * 1024));
-        const highUsage = rssMb > 1536;
-        return {
-          ok: !highUsage && (rssMb > 0 || heapUsedMb > 0),
-          warning: highUsage,
-          latencyMs: lat,
-          message: `RSS ${rssMb} MB • Heap ${heapUsedMb}/${heapTotalMb || heapUsedMb} MB`,
-          details: mem,
+          ok: allOk,
+          warning: !allOk,
+          message: allOk
+            ? 'GPS Geolocation, IndexedDB & LocalStorage Siap'
+            : `Terbatas (GPS: ${gpsOk ? 'OK' : 'Off'}, Storage: ${idbOk && lsOk ? 'OK' : 'Off'})`,
         };
       },
     };
@@ -375,13 +417,13 @@ if (typeof window !== 'undefined') {
 
     const subsysLabels = {
       database: { name: 'PostgreSQL Database', icon: 'database' },
-      backend_api: { name: 'Backend Express API', icon: 'dns' },
-      face_ai: { name: 'Face AI Biometrik', icon: 'face' },
-      geolocation: { name: 'GPS Geolocation', icon: 'my_location' },
-      client_storage: { name: 'IndexedDB & Storage', icon: 'hard_drive' },
-      telegram_sync: { name: 'Telegram Bot Gateway', icon: 'send' },
-      n8n_webhook: { name: 'Webhook Integrasi n8n', icon: 'webhook' },
+      backend_api: { name: 'Backend Express & Cron', icon: 'dns' },
+      openwa_gateway: { name: 'OpenWA WhatsApp Gateway', icon: 'chat' },
+      telegram_bot: { name: 'Telegram Bot Gateway', icon: 'send' },
+      media_drive: { name: 'Google Drive Media (GAS)', icon: 'cloud_done' },
       server_memory: { name: 'Memori Server Node.js', icon: 'memory' },
+      face_ai: { name: 'Face AI Biometrik', icon: 'face' },
+      client_env: { name: 'GPS & Client Storage', icon: 'my_location' },
     };
 
     let html = '';
@@ -422,9 +464,11 @@ if (typeof window !== 'undefined') {
           <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed break-words">
             ${escapeHtml(res.message || '-')}
           </p>
-          <div class="flex items-center justify-between pt-2 border-t border-slate-200/70 dark:border-slate-700/70 text-[10.5px] text-slate-500 dark:text-slate-400">
+          <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/70 dark:border-slate-700/70 text-[10.5px] text-slate-500 dark:text-slate-400">
             <span>Latensi: <strong class="font-mono tabular-nums text-slate-800 dark:text-slate-200">${Number(res.latencyMs) || 0} ms</strong></span>
-            <span>Status: <strong class="font-mono ${statusTextTone}">${escapeHtml(res.status)}</strong></span>
+            ${key === 'openwa_gateway'
+              ? `<button type="button" onclick="restartOpenwaFromDev(this)" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#2563eb] hover:bg-blue-700 text-white text-[10px] font-bold transition-colors cursor-pointer"><span class="material-symbols-outlined text-[13px]">restart_alt</span><span>Start / Restart</span></button>`
+              : `<span>Status: <strong class="font-mono ${statusTextTone}">${escapeHtml(res.status)}</strong></span>`}
           </div>
         </div>
       `;
@@ -563,6 +607,53 @@ if (typeof window !== 'undefined') {
       if (window.renderDevLogTable) window.renderDevLogTable();
       if (typeof window.showDynamicIsland === 'function') {
         window.showDynamicIsland({ type: 'info', title: 'Log Dibersihkan', message: 'Riwayat log developer telah dikosongkan.' });
+      }
+    }
+  };
+
+  window.restartOpenwaFromDev = async function (btnEl) {
+    const origHtml = btnEl ? btnEl.innerHTML : '';
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.innerHTML = '<span class="material-symbols-outlined text-[13px] animate-spin">progress_activity</span><span>Memulai...</span>';
+    }
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      const tok = (typeof window.getStitchToken === 'function' && window.getStitchToken())
+        || localStorage.getItem('_native_token')
+        || localStorage.getItem('native_token')
+        || localStorage.getItem('_sess_token')
+        || '';
+      if (tok) headers['Authorization'] = 'Bearer ' + tok;
+
+      const res = await fetch('/api/dev/openwa/restart', { method: 'POST', headers });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) {
+        window.DEV_TRACKER?.log('INFO', 'OPENWA', data.message || 'Restart OpenWA dikirim', data);
+        if (typeof window.showDynamicIsland === 'function') {
+          window.showDynamicIsland({ type: 'success', title: 'OpenWA Dimulai Ulang', message: data.message || 'Sesi OpenWA sedang dinyalakan.' });
+        } else if (window.Swal) {
+          window.Swal.fire({ icon: 'success', title: 'OpenWA Dimulai Ulang', text: data.message || 'Sesi OpenWA sedang dinyalakan.' });
+        }
+        setTimeout(() => { window.runDevDiagnostics?.(); }, 1500);
+      } else {
+        const msg = data.message || `HTTP ${res.status}`;
+        window.DEV_TRACKER?.log('ERROR', 'OPENWA', `Gagal restart OpenWA: ${msg}`, data);
+        if (window.Swal) {
+          window.Swal.fire({ icon: 'error', title: 'Gagal Restart OpenWA', text: msg });
+        } else if (typeof window.showDynamicIsland === 'function') {
+          window.showDynamicIsland({ type: 'error', title: 'Gagal Restart OpenWA', message: msg });
+        }
+      }
+    } catch (e) {
+      window.DEV_TRACKER?.log('ERROR', 'OPENWA', e.message || 'Gagal menghubungi server');
+      if (window.Swal) {
+        window.Swal.fire({ icon: 'error', title: 'Koneksi Gagal', text: e.message || 'Gagal menghubungi server' });
+      }
+    } finally {
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.innerHTML = origHtml;
       }
     }
   };

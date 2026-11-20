@@ -1413,9 +1413,10 @@ test('GET /api/media/raw/:fileId menemukan id dari BENTUK export=view (tanda tan
     });
     const res = await get(h, '/api/media/raw/1AbCdEfGhIjKlMnOpQrStUvWxYz');
     assert.equal(res.status, 200);
-    // Dua LIKE harus terkirim: id harus dicocokkan ke kedua bentuk URL.
-    assert.equal(seen[0].length, 2, JSON.stringify(seen[0]));
+    // Tiga LIKE harus terkirim: /file/d/<id>/, export=view&id=<id>, dan thumbnail ?id=<id>.
+    assert.equal(seen[0].length, 3, JSON.stringify(seen[0]));
     assert.equal(seen[0][1].includes('export=view&id=1AbCdEfGhIjKlMnOpQrStUvWxYz'), true);
+    assert.equal(seen[0][2].includes('?id=1AbCdEfGhIjKlMnOpQrStUvWxYz'), true);
     assert.equal(res.contentType, 'image/png');
     assert.equal(res.bytes.length, 2);
   } finally {

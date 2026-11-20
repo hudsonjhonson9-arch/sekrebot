@@ -109,9 +109,11 @@ test('runDiagnostics: menangani prober warning, gagal, dan exception', async () 
   assert.strictEqual(diag.results.crashed.message, 'ECONNREFUSED');
 });
 
-test('runDiagnostics default probers: memeriksa 8 subsistem termasuk server_memory', async () => {
+test('runDiagnostics default probers: memeriksa 8 subsistem riil termasuk openwa_gateway & server_memory tanpa n8n', async () => {
   const origFetch = globalThis.fetch;
+  let fetchCalls = 0;
   globalThis.fetch = async (url) => {
+    fetchCalls++;
     assert.strictEqual(url, '/api/dev/health');
     return {
       ok: true,
@@ -122,6 +124,10 @@ test('runDiagnostics default probers: memeriksa 8 subsistem termasuk server_memo
           uptime: 360,
           nodeVersion: 'v22.0.0',
           db: { ok: true, latencyMs: 9 },
+          openwa: { configured: true, ok: true, status: 'WORKING', sessionName: 'default', latencyMs: 42, watchdogActive: true, autoRestartCount: 1, message: 'Sesi default aktif (WORKING)' },
+          telegram: { configured: true, ok: true, message: 'TELEGRAM_BOT_TOKEN aktif di server' },
+          media: { configured: true, ok: true, message: 'Google Drive Media (GAS) terkonfigurasi' },
+          scheduler: { ok: true, active: true },
           memory: {
             rss: 128 * 1024 * 1024,
             heapUsed: 64 * 1024 * 1024,
@@ -136,19 +142,25 @@ test('runDiagnostics default probers: memeriksa 8 subsistem termasuk server_memo
     const tracker = createDevTracker({ storageKey: null, maxLogs: 10 });
     const diag = await tracker.runDiagnostics();
 
+    assert.strictEqual(fetchCalls, 1, 'semua prober server harus berbagi 1 request /api/dev/health');
     assert.strictEqual(diag.total, 8);
     assert.deepStrictEqual(Object.keys(diag.results), [
       'database',
       'backend_api',
-      'face_ai',
-      'geolocation',
-      'client_storage',
-      'telegram_sync',
-      'n8n_webhook',
+      'openwa_gateway',
+      'telegram_bot',
+      'media_drive',
       'server_memory',
+      'face_ai',
+      'client_env',
     ]);
+    assert.strictEqual('n8n_webhook' in diag.results, false);
     assert.strictEqual(diag.results.database.status, 'OK');
     assert.strictEqual(diag.results.backend_api.status, 'OK');
+    assert.strictEqual(diag.results.openwa_gateway.status, 'OK');
+    assert.match(diag.results.openwa_gateway.message, /Auto-Watchdog 5m/);
+    assert.strictEqual(diag.results.telegram_bot.status, 'OK');
+    assert.strictEqual(diag.results.media_drive.status, 'OK');
     assert.strictEqual(diag.results.face_ai.status, 'OK');
     assert.strictEqual(diag.results.server_memory.status, 'OK');
     assert.match(diag.results.server_memory.message, /RSS 128 MB/);

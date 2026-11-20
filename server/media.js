@@ -69,11 +69,11 @@ const SIGNATURE_LIST_SQL = `SELECT t."nip", t.signature
 // tetap ikut terhitung. LIMIT 50: di luar itu, 403 sudah cukup — jangan diam-diam
 // jadi 200 untuk pegawai ke-51 yang kebetulan satu instansi.
 const RAW_OWNER_SQL = `SELECT u."instansi_id" FROM "user_list" u
-  WHERE u."face_photo" LIKE $1 OR u."face_photo" LIKE $2
+  WHERE u."face_photo" LIKE $1 OR u."face_photo" LIKE $2 OR u."face_photo" LIKE $3
   UNION
   SELECT u."instansi_id" FROM "tanda_tangan" t
   LEFT JOIN "user_list" u ON u."NIP" = t.nip
-  WHERE t.signature LIKE $1 OR t.signature LIKE $2
+  WHERE t.signature LIKE $1 OR t.signature LIKE $2 OR t.signature LIKE $3
   LIMIT 50`;
 
 const ok = (res, body) => res.json({ ok: true, ...body });
@@ -548,17 +548,25 @@ export function createMediaRouter({ query, gasUpsert }) {
       if (!fileId) return fail(res, 400, 'fileId tidak valid');
 
       const rows = (
-        await query(RAW_OWNER_SQL, [`%/file/d/${fileId}/%`, `%export=view&id=${fileId}%`])
+        await query(RAW_OWNER_SQL, [`%/file/d/${fileId}/%`, `%export=view&id=${fileId}%`, `%?id=${fileId}%`])
       ).rows;
       if (!rows.length) return fail(res, 404, 'File tidak ditemukan');
 
       const allowed = rows.some((r) => sameInstansi(req.user, norm(r.instansi_id)));
       if (!allowed) return fail(res, 403, 'Forbidden');
 
-      const upstream = await fetch(`https://drive.google.com/uc?export=download&id=${fileId}`);
+      let upstream = await fetch(`https://drive.google.com/uc?export=download&id=${fileId}`);
+      let type = upstream.ok ? (upstream.headers.get('content-type') || '') : '';
+      if (!upstream.ok || !type.startsWith('image/')) {
+        // Fallback ke endpoint thumbnail Google Drive (sering lebih stabil saat uc?export=download rate-limit)
+        const thumbRes = await fetch(`https://drive.google.com/thumbnail?id=${fileId}&sz=w800`);
+        const thumbType = thumbRes.ok ? (thumbRes.headers.get('content-type') || '') : '';
+        if (thumbRes.ok && thumbType.startsWith('image/')) {
+          upstream = thumbRes;
+          type = thumbType;
+        }
+      }
       if (!upstream.ok) return fail(res, 502, 'Layanan penyimpanan sedang bermasalah');
-
-      const type = upstream.headers.get('content-type') || '';
       if (!type.startsWith('image/')) return fail(res, 415, 'Bukan file gambar');
 
       res.setHeader('Content-Type', type);
