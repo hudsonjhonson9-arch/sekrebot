@@ -299,6 +299,15 @@
             pointer-events: none;
             opacity: 0;
           }
+          body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) > div:last-child {
+            opacity: 0;
+            max-height: 0;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            border-top-width: 0 !important;
+            overflow: hidden;
+            pointer-events: none;
+          }
           /* Portal Desktop Polish: header 68px, container terpusat max-w-1440px, padding seragam & tabular-nums */
           body.stitch-standalone-shell header {
             height: 68px !important;

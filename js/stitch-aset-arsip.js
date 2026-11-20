@@ -54,11 +54,13 @@
           populateAsetSelectDropdowns();
           renderMobilePersonalAssets();
         } else {
-          listContainer.innerHTML = `<div class="p-4 text-center text-xs text-rose-500">Gagal memuat inventaris: ${json.message}</div>`;
+          const safeMsg = String(json.message || 'Gagal memuat data').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+          listContainer.innerHTML = `<div class="p-4 text-center text-xs text-rose-500">Gagal memuat inventaris: ${safeMsg}</div>`;
         }
       } catch (err) {
         console.error('loadRealMobileAsetData error:', err);
-        listContainer.innerHTML = `<div class="p-4 text-center text-xs text-rose-500">Koneksi database SIMAPO terganggu: ${err.message}</div>`;
+        const safeErr = String(err?.message || 'Koneksi terganggu').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        listContainer.innerHTML = `<div class="p-4 text-center text-xs text-rose-500">Koneksi inventaris terganggu: ${safeErr}</div>`;
       }
     }
 
@@ -894,8 +896,8 @@
           if (elTotalDocs) elTotalDocs.textContent = st.totalDocs || 91;
 
           if (st.kategoriBreakdown && st.kategoriBreakdown.length > 0) {
-            if (elKat1) elKat1.textContent = st.kategoriBreakdown[0]?.count || 35;
-            if (elKat2) elKat2.textContent = (st.kategoriBreakdown[1]?.count || 13) + (st.kategoriBreakdown[2]?.count || 9);
+            if (elKat1) elKat1.textContent = st.kategoriBreakdown[0]?.count ?? 0;
+            if (elKat2) elKat2.textContent = (st.kategoriBreakdown[1]?.count ?? 0) + (st.kategoriBreakdown[2]?.count ?? 0);
           }
 
           renderArsipCategoryChips(st.kategoriBreakdown || []);
@@ -903,11 +905,13 @@
           _mobileArsipDocs = json.documents || [];
           renderMobileArsipDocs();
         } else {
-          container.innerHTML = `<div class="p-4 text-center text-xs text-rose-500">Gagal memuat arsip: ${json.message}</div>`;
+          const safeMsg = String(json.message || 'Gagal memuat data').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+          container.innerHTML = `<div class="p-4 text-center text-xs text-rose-500">Gagal memuat arsip: ${safeMsg}</div>`;
         }
       } catch (err) {
         console.error('loadRealMobileArsipData error:', err);
-        container.innerHTML = `<div class="p-4 text-center text-xs text-rose-500">Koneksi database arsip terganggu: ${err.message}</div>`;
+        const safeErr = String(err?.message || 'Koneksi terganggu').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        container.innerHTML = `<div class="p-4 text-center text-xs text-rose-500">Koneksi arsip terganggu: ${safeErr}</div>`;
       }
     }
 

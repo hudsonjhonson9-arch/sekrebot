@@ -360,38 +360,22 @@
   </button>
 </div>
 </div>
-<!-- Security / Vault Status Widget -->
-<div class="bg-gradient-to-br from-surface-container-high to-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(100,116,139,0.05)] flex flex-col gap-space-xs">
-<div class="flex items-center gap-space-xs text-primary font-title-md text-title-md">
-<span class="material-symbols-outlined text-[20px]">lock</span>
-<span>Keamanan Vault</span>
+<!-- Integrasi Arsip Digital (peta-ekonomi) -->
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm border border-outline-variant/30 flex flex-col gap-2.5">
+<div class="flex items-center justify-between gap-2">
+<div class="flex items-center gap-2 text-primary font-title-md text-title-md">
+<span class="material-symbols-outlined text-[20px]">cloud_done</span>
+<span>Arsip Digital (Peta Ekonomi)</span>
+</div>
+<span id="arsipRoleBadge" class="px-2 py-0.5 rounded-full bg-surface-container text-primary font-mono text-[10px] font-bold">Memeriksa...</span>
 </div>
 <p class="font-body-sm text-body-sm text-on-surface-variant">
-          Penyimpanan terenkripsi algoritma AES-256 GCM level militer dengan replikasi cloud terdistribusi di Pusat Data Nasional (PDN).
+          Terhubung langsung ke repositori dokumen <span class="font-mono font-semibold text-on-surface">/api/arsip</span> (arsipdigital.mindcloud.my.id) dengan fallback PostgreSQL lokal.
         </p>
-<div class="mt-2 pt-2 bg-surface-container-lowest/80 p-2.5 rounded-xl flex items-center justify-between">
-<div class="flex items-center gap-2">
-<span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
-<span class="font-label-sm text-label-sm font-semibold text-on-surface">Auto-Sync PDN</span>
-</div>
-<span class="font-mono text-label-sm text-label-sm text-on-surface-variant tabular-nums">10 Menit lalu</span>
-</div>
-</div>
-<!-- Quick Storage Indicator -->
-<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(100,116,139,0.05)] flex flex-col gap-2">
-<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Statistik Format Berkas</span>
-<div class="flex items-center justify-between text-body-sm font-body-sm">
-<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-error"></span>PDF / PDF-A</span>
-<span class="font-mono tabular-nums text-on-surface font-medium">94.8%</span>
-</div>
-<div class="flex items-center justify-between text-body-sm font-body-sm">
-<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-secondary"></span>Signed XML/P7S</span>
-<span class="font-mono tabular-nums text-on-surface font-medium">4.2%</span>
-</div>
-<div class="flex items-center justify-between text-body-sm font-body-sm">
-<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-tertiary"></span>Dokumen Lainnya</span>
-<span class="font-mono tabular-nums text-on-surface font-medium">1.0%</span>
-</div>
+<button type="button" onclick="handleUnggahArsip()" class="w-full py-2 px-3 rounded-xl bg-primary text-on-primary text-xs font-bold hover:opacity-90 transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+<span class="material-symbols-outlined text-[16px]">upload_file</span>
+<span>Unggah Dokumen Baru</span>
+</button>
 </div>
 </div>
 <!-- Right Depository Table & Controls (Col span 9 ~ 75%) -->
@@ -431,13 +415,13 @@
 <table class="w-full text-left">
 <thead>
 <tr class="bg-surface-container-low/60 text-on-surface-variant font-label-md text-label-md">
-<th class="py-3.5 px-4 font-semibold w-12 text-center">No</th>
-<th class="py-3.5 px-4 font-semibold min-w-[220px]">Nama Dokumen &amp; Kode Arsip</th>
-<th class="py-3.5 px-4 font-semibold min-w-[130px]">Kategori</th>
-<th class="py-3.5 px-4 font-semibold min-w-[200px]">Pemilik Dokumen</th>
-<th class="py-3.5 px-4 font-semibold min-w-[140px]">Tgl &amp; Ukuran</th>
-<th class="py-3.5 px-4 font-semibold min-w-[180px]">Integritas TTE (Hash)</th>
-<th class="py-3.5 px-4 font-semibold text-right pr-6 min-w-[120px]">Aksi</th>
+<th class="py-3.5 px-3 font-semibold w-10 text-center">No</th>
+<th class="py-3.5 px-3 font-semibold min-w-[180px]">Nama Dokumen &amp; Kode</th>
+<th class="py-3.5 px-3 font-semibold min-w-[110px]">Kategori</th>
+<th class="py-3.5 px-3 font-semibold min-w-[150px]">Pengunggah</th>
+<th class="py-3.5 px-3 font-semibold min-w-[110px]">Tgl &amp; Ukuran</th>
+<th class="py-3.5 px-3 font-semibold min-w-[120px]">Status</th>
+<th class="py-3.5 px-3 font-semibold text-right pr-4 min-w-[96px]">Aksi</th>
 </tr>
 </thead>
 <tbody id="arsipTableBody" class="divide-y divide-surface-container-high/50 text-on-surface text-body-sm">
@@ -1025,20 +1009,95 @@
     });
   }
 
-  function handleUnggahArsip() {
-    Swal.fire({
-      icon: 'info',
-      title: 'Unggah Dokumen / SK',
-      text: 'Pengunggahan dokumen dan penautan berkas arsip dilakukan melalui modul Arsip di Mode Mobile Portal BAPPERIDA.',
+  // Cek role arsipdigital (peta-ekonomi) untuk indikator akses tulis
+  (async function syncArsipRoleBadge() {
+    const badge = document.getElementById('arsipRoleBadge');
+    if (!badge) return;
+    try {
+      const r = await fetch('/api/arsip/me');
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.ok) {
+        badge.textContent = d.isAdmin ? 'Admin Arsip' : (d.role || 'Pembaca');
+      } else {
+        badge.textContent = 'Terhubung';
+      }
+    } catch (_) {
+      badge.textContent = 'Mode Baca';
+    }
+  })();
+
+  async function handleUnggahArsip() {
+    const res = await Swal.fire({
+      title: 'Unggah Dokumen Arsip (Peta Ekonomi)',
+      html: `
+        <div class="text-left space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Judul Dokumen</label>
+            <input id="swalArsipJudul" type="text" placeholder="Contoh: Laporan RFK Bulan November 2026" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Kategori</label>
+              <input id="swalArsipKat" type="text" value="Administrasi Umum" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tahun</label>
+              <input id="swalArsipTahun" type="number" value="${new Date().getFullYear()}" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-mono outline-none">
+            </div>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tautan Google Drive / Berkas</label>
+            <input id="swalArsipUrl" type="url" placeholder="https://drive.google.com/file/d/..." class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Keterangan (Opsional)</label>
+            <textarea id="swalArsipDesc" rows="2" placeholder="Ringkasan isi dokumen..." class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none"></textarea>
+          </div>
+        </div>
+      `,
       showCancelButton: true,
-      confirmButtonText: 'Buka Portal Mobile Arsip',
+      confirmButtonText: 'Simpan ke Arsip',
       cancelButtonText: 'Batal',
-      confirmButtonColor: '#2563eb'
-    }).then((res) => {
-      if (res.isConfirmed) {
-        window.location.href = 'index.html?mode=mobile#arsip';
+      confirmButtonColor: '#2563eb',
+      preConfirm: () => {
+        const title = (document.getElementById('swalArsipJudul')?.value || '').trim();
+        const type = (document.getElementById('swalArsipKat')?.value || 'Administrasi Umum').trim();
+        const year = Number(document.getElementById('swalArsipTahun')?.value || new Date().getFullYear());
+        const url = (document.getElementById('swalArsipUrl')?.value || '').trim();
+        const desc = (document.getElementById('swalArsipDesc')?.value || '').trim();
+        if (!title) {
+          Swal.showValidationMessage('Judul dokumen wajib diisi.');
+          return false;
+        }
+        return { title, type, year, url, desc };
       }
     });
+    if (!res.isConfirmed || !res.value) return;
+    try {
+      const postRes = await fetch('/api/arsip/docs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          judul: res.value.title,
+          title: res.value.title,
+          kategori: res.value.type,
+          tahun: res.value.year,
+          file_url: res.value.url,
+          url: res.value.url,
+          deskripsi: res.value.desc,
+          publik: true
+        })
+      });
+      const postJson = await postRes.json().catch(() => ({}));
+      if (postRes.ok && postJson.ok !== false) {
+        Swal.fire({ icon: 'success', title: 'Dokumen Tersimpan', text: 'Dokumen berhasil ditambahkan ke Arsip Digital.' });
+        loadRealArsipData();
+      } else {
+        Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', text: postJson.message || `HTTP ${postRes.status}` });
+      }
+    } catch (e) {
+      Swal.fire({ icon: 'error', title: 'Koneksi Gagal', text: e.message || 'Tidak dapat menghubungi server arsip.' });
+    }
   }
 
   function openVerifyTteModal() {

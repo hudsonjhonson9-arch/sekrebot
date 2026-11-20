@@ -31,7 +31,8 @@
           `).join('');
         }
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-rose-500 font-bold">Gagal memuat agenda_sppd: ${err.message}</td></tr>`;
+        const safeErr = String(err?.message || 'Koneksi terganggu').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-rose-500 font-bold">Gagal memuat data SPPD: ${safeErr}</td></tr>`;
       }
     }
 
@@ -266,7 +267,8 @@
           renderKirPemeliharaanTable();
         }
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-rose-500">Gagal memuat SIMAPO.pemeliharaan: ${err.message}</td></tr>`;
+        const safeErr = String(err?.message || 'Koneksi terganggu').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-rose-500">Gagal memuat data pemeliharaan aset: ${safeErr}</td></tr>`;
       }
     }
 
