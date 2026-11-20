@@ -423,10 +423,15 @@
                   <p class="text-[10px] text-slate-400">Arsip Dokumen Terpusat</p>
                 </div>
               </div>
-              <a href="arsip.html" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1 shadow-sm transition-all cursor-pointer">
-                <span class="material-symbols-outlined text-[16px]">open_in_new</span>
-                <span>Portal Web</span>
-              </a>
+              <div class="flex items-center gap-1.5">
+                <button type="button" onclick="window.ArsipColumns && window.ArsipColumns.openUploadModal()" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer">
+                  <span class="material-symbols-outlined text-[16px]">add</span>
+                  <span>Tambah</span>
+                </button>
+                <a href="arsip.html" class="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer" title="Buka Portal Desktop Arsip">
+                  <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+                </a>
+              </div>
             </div>
 
             <!-- Mini Storage Metric -->
@@ -486,6 +491,71 @@
               <span>Buka Portal Web Arsip Desktop</span>
               <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
             </a>
+          </div>
+
+          <!-- Mobile Bottom Drawer: Tambah Dokumen Arsip (peta-ekonomi) -->
+          <div id="drawerMobileArsipUpload" class="hidden fixed inset-0 z-[95] bg-slate-950/60 backdrop-blur-xs items-end justify-center" onclick="if(event.target===this) window.ArsipColumns?.closeUploadModal()">
+            <div class="w-full max-w-[460px] bg-white dark:bg-slate-900 rounded-t-3xl p-5 shadow-2xl border-t border-slate-200 dark:border-slate-800 max-h-[88vh] overflow-y-auto flex flex-col gap-3.5">
+              <div class="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto"></div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-sm font-bold text-slate-900 dark:text-white">Tambah Dokumen Arsip</h3>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400">Terhubung langsung ke Arsip Digital (Peta Ekonomi)</p>
+                </div>
+                <button type="button" onclick="window.ArsipColumns?.closeUploadModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+              </div>
+              <div class="flex gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80">
+                <button type="button" data-arsip-upload-mode="file" onclick="window.ArsipColumns?.setUploadMode('file')" class="flex-1 py-2 rounded-xl bg-[#2563eb] text-white text-xs font-bold">Upload Berkas</button>
+                <button type="button" data-arsip-upload-mode="gdrive" onclick="window.ArsipColumns?.setUploadMode('gdrive')" class="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold">Tautan Google Drive</button>
+              </div>
+              <div data-arsip-file-pane class="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-center cursor-pointer hover:border-[#2563eb] transition-colors" onclick="this.querySelector('input[type=file]').click()">
+                <span class="material-symbols-outlined text-2xl text-[#2563eb]">cloud_upload</span>
+                <p data-arsip-file-label class="text-xs text-slate-600 dark:text-slate-300 font-medium mt-1">Pilih berkas PDF / Word / Excel (maks. 10 MB)</p>
+                <input type="file" class="hidden" onchange="window.ArsipColumns?.onFilePicked(this)">
+              </div>
+              <div data-arsip-gdrive-pane class="hidden">
+                <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">URL Google Drive</label>
+                <input data-arsip-field="url" type="url" placeholder="https://drive.google.com/file/d/..." class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">Judul Dokumen</label>
+                <input data-arsip-field="title" type="text" placeholder="Contoh: Laporan RFK Bulan Ini" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+              </div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">Kategori</label>
+                  <input data-arsip-field="type" type="text" value="Administrasi Umum" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">Tahun</label>
+                  <input data-arsip-field="year" type="number" value="2026" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">Sektor / Bidang</label>
+                  <input data-arsip-field="sector" type="text" value="Umum" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">Nomor Dokumen</label>
+                  <input data-arsip-field="nomor" type="text" placeholder="Opsional" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+                </div>
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">Keterangan</label>
+                <textarea data-arsip-field="desc" rows="2" placeholder="Ringkasan dokumen (opsional)..." class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]"></textarea>
+              </div>
+              <label class="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                <input data-arsip-field="publik" type="checkbox" checked class="rounded accent-[#2563eb]">
+                <span>Tampilkan ke seluruh pegawai (Publik Instansi)</span>
+              </label>
+              <button type="button" onclick="window.ArsipColumns?.submitUpload(this)" class="w-full py-3 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md">
+                <span class="material-symbols-outlined text-[17px]">upload_file</span>
+                <span>Simpan Dokumen ke Arsip</span>
+              </button>
+            </div>
           </div>
 
         </div>
@@ -575,7 +645,7 @@
             </a>
           </div>
 
-        </div>
+                  </div>
       </div>
     </section>
 
@@ -3266,6 +3336,7 @@
   <script src="js/stitch-rekap.js"></script>
   <script src="js/stitch-layanan.js"></script>
   <script src="js/stitch-aset-arsip.js"></script>
+  <script src="js/stitch-arsip-columns.js"></script>
   <script src="js/stitch-admin-mobile.js"></script>
   <script src="js/stitch-admin-rekap.js"></script>
 </body>
