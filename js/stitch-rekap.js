@@ -1,4 +1,28 @@
-/* Stitch Rekap Bulanan, Riwayat Harian & Cetak PDF Resmi (F4 + Paraf/TTD) */
+/* Stitch Rekap Bulanan, Riwayat Harian & Cetak PDF Resmi (F4/A4/Letter + Paraf/TTD) */
+    if (typeof window.resolveBioImageSrc !== 'function') {
+      window.resolveBioImageSrc = function resolveBioImageSrc(raw) {
+        const s = String(raw ?? '').trim();
+        if (!s || s === 'null' || s === 'undefined') return '';
+        if (s.startsWith('data:image')) return s;
+        const tok = (typeof window.getStitchToken === 'function' && window.getStitchToken())
+          || localStorage.getItem('_native_token')
+          || localStorage.getItem('native_token')
+          || localStorage.getItem('_sess_token')
+          || '';
+        const q = tok ? ('?token=' + encodeURIComponent(tok)) : '';
+        const rawMatch = s.match(/^\/api\/media\/raw\/([^/?#]+)/);
+        if (rawMatch && rawMatch[1]) {
+          return '/api/media/raw/' + encodeURIComponent(decodeURIComponent(rawMatch[1])) + q;
+        }
+        const m = s.match(/\/file\/d\/([-\w]{5,200})/) || s.match(/\/d\/([-\w]{5,200})/) || s.match(/[?&]id=([-\w]{5,200})/);
+        if (m && m[1]) {
+          return '/api/media/raw/' + encodeURIComponent(m[1]) + q;
+        }
+        if (s.startsWith('/') || s.startsWith('http://') || s.startsWith('https://')) return s;
+        return '';
+      };
+    }
+
     /* ── REKAP BULANAN (menggantikan Riwayat) ─────────────────────────── */
     let rekapMonth = new Date().toISOString().slice(0, 7); // 'YYYY-MM'
 
@@ -261,12 +285,26 @@
       if (modal) modal.classList.toggle('hidden');
     }
 
-    /* ── PDF HARIAN: Daftar Hadir Pegawai (format sama dengan D:\Code\absensi) ── */
-    async function sigToDataUrl(sig) {
-      if (!sig || sig.length < 10) return null;
-      if (sig.startsWith('data:image')) return sig;
+    /* ── PDF HARIAN & RENTANG: Daftar Hadir / Rekap Pegawai (F4/A4/Letter + Paraf/TTD) ── */
+    function resolveImg(raw) {
+      const resolved = typeof window.resolveBioImageSrc === 'function' ? window.resolveBioImageSrc(raw) : '';
+      if (!resolved) return '';
+      if (resolved.startsWith('/api/media/raw/') && !resolved.includes('token=')) {
+        const tok = (typeof window.getStitchToken === 'function' && window.getStitchToken())
+          || localStorage.getItem('_native_token')
+          || localStorage.getItem('native_token')
+          || localStorage.getItem('_sess_token')
+          || '';
+        if (tok) return resolved + (resolved.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(tok);
+      }
+      return resolved;
+    }
+
+    async function fetchImageAsDataUrl(sig) {
+      if (!sig || String(sig).length < 10) return null;
+      if (String(sig).startsWith('data:image')) return sig;
       try {
-        const url = typeof window.resolveBioImageSrc === 'function' ? window.resolveBioImageSrc(sig) : sig;
+        const url = resolveImg(sig) || String(sig);
         if (!url) return null;
         const res = await fetch(url, { credentials: 'include' });
         if (!res.ok) return null;
@@ -275,72 +313,188 @@
         return await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.onerror = () => r(null); f.readAsDataURL(blob); });
       } catch (_) { return null; }
     }
+    const sigToDataUrl = fetchImageAsDataUrl;
 
-    async function exportHarianPDF(tanggal) {
+    function _normalizePdfOpts(pdfOpts) {
+      const o = Object.assign({
+        paper: 'f4',
+        orientation: 'p',
+        fontSize: 7.5,
+        margin: 14,
+        signer: null,
+        kopOverride: null,
+        returnBase64: false
+      }, pdfOpts || {});
+      const pKey = String(o.paper || 'f4').toLowerCase();
+      const format = pKey === 'a4' ? 'a4' : (pKey === 'letter' ? 'letter' : [215, 330]);
+      const orientation = String(o.orientation || 'p').toLowerCase().startsWith('l') ? 'l' : 'p';
+      const fontSize = Number(o.fontSize) > 0 ? Number(o.fontSize) : 7.5;
+      const margin = Number(o.margin) > 0 ? Number(o.margin) : 14;
+      const kopInstansi = (o.kopOverride && o.kopOverride.instansi)
+        ? String(o.kopOverride.instansi).trim()
+        : 'BADAN PERENCANAAN PEMBANGUNAN RISET DAN INOVASI DAERAH';
+      const kopAlamat = (o.kopOverride && o.kopOverride.alamat)
+        ? String(o.kopOverride.alamat).trim()
+        : 'Jl. Weekarou, Waikabubak, Sumba Barat, Nusa Tenggara Timur';
+      return { ...o, format, orientation, fontSize, margin, kopInstansi, kopAlamat };
+    }
+
+    async function _loadKopLogo() {
+      return await new Promise(r => {
+        const i = new Image();
+        i.onload = () => r(i);
+        i.onerror = () => r(null);
+        i.src = document.querySelector('img[src*="Lambang_Kabupaten_Sumba_Barat"]')?.src || 'Lambang_Kabupaten_Sumba_Barat.png';
+      });
+    }
+
+    function _drawKopHeader(doc, { logo, W, margin, kopInstansi, kopAlamat, docTitle, docPeriode }) {
+      const cx = W / 2 + 10;
+      const maxKopW = Math.max(80, W - margin * 2 - 36);
+      if (logo) { try { doc.addImage(logo, 'PNG', margin + 2, 10, 20, 23, undefined, 'FAST'); } catch (_) {} }
+      doc.setFont('times', 'bold'); doc.setFontSize(11);
+      doc.text('PEMERINTAH KABUPATEN SUMBA BARAT', cx, 15, { align: 'center' });
+      doc.setFontSize(14);
+      const instLines = doc.splitTextToSize(kopInstansi.toUpperCase(), maxKopW);
+      let yCur = 20.5;
+      instLines.forEach((ln) => { doc.text(ln, cx, yCur, { align: 'center' }); yCur += 5.2; });
+      doc.setFont('times', 'normal'); doc.setFontSize(7.5);
+      const addrLines = doc.splitTextToSize(kopAlamat, maxKopW);
+      addrLines.forEach((ln) => { doc.text(ln, cx, yCur + 0.5, { align: 'center' }); yCur += 3.5; });
+      if (!kopAlamat.toUpperCase().includes('WAIKABUBAK')) {
+        doc.text('WAIKABUBAK', cx, yCur + 0.5, { align: 'center' });
+        yCur += 3.5;
+      }
+      const dividerY = Math.max(37, yCur + 1.5);
+      doc.setLineWidth(0.7); doc.line(margin, dividerY, W - margin, dividerY);
+      doc.setLineWidth(0.2); doc.line(margin, dividerY + 0.8, W - margin, dividerY + 0.8);
+
+      const titleY = dividerY + 8.5;
+      doc.setFontSize(11); doc.setFont('times', 'bold');
+      doc.text(docTitle, W / 2, titleY, { align: 'center' });
+      doc.setFont('times', 'normal'); doc.setFontSize(9.5);
+      doc.text(docPeriode, W / 2, titleY + 5.2, { align: 'center' });
+      return titleY + 11;
+    }
+
+    function _drawSignerBlock(doc, { W, H, margin, fy, signer, signerSig }) {
+      if (fy + 52 > H) { doc.addPage(); fy = 25; }
+      const sx = W - Math.max(55, margin + 40);
+      doc.setFont('times', 'normal'); doc.setFontSize(10);
+      doc.text(`Waikabubak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, sx, fy, { align: 'center' });
+      doc.text('Mengetahui,', sx, fy + 5.5, { align: 'center' });
+      doc.text(signer?.jabatan || 'Kepala Badan', sx, fy + 10.5, { align: 'center' });
+      if (signerSig) {
+        try {
+          doc.addImage(signerSig, signerSig.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG', sx - 15, fy + 13, 30, 15, undefined, 'FAST');
+        } catch (_) {}
+      }
+      doc.setFont('times', 'bold');
+      doc.text(signer?.nama || '__________________________', sx, fy + 35, { align: 'center' });
+      doc.setFont('times', 'normal');
+      if (signer?.pangkat) {
+        doc.text(signer.pangkat, sx, fy + 40, { align: 'center' });
+        doc.text(`NIP. ${signer.nip || '..........................................'}`, sx, fy + 45, { align: 'center' });
+      } else {
+        doc.text(`NIP. ${signer?.nip || '..........................................'}`, sx, fy + 40, { align: 'center' });
+      }
+    }
+
+    async function exportHarianPDF(dataOrTanggal, pdfOpts) {
       if (!window.jspdf || !window.jspdf.jsPDF) {
-        showDynamicIsland({ type: 'warning', title: 'Library PDF Sedang Dimuat', message: 'Silakan coba sesaat lagi.' });
-        return;
+        if (typeof showDynamicIsland === 'function') {
+          showDynamicIsland({ type: 'warning', title: 'Library PDF Sedang Dimuat', message: 'Silakan coba sesaat lagi.' });
+        }
+        return null;
       }
       try {
-        const res = await fetch('/api/stitch/rekap-harian?tanggal=' + encodeURIComponent(tanggal));
-        const json = await res.json();
-        if (!json.ok) throw new Error(json.message || 'Gagal memuat data.');
+        const opts = _normalizePdfOpts(pdfOpts);
+        let json = null;
+        let tanggal = '';
+        if (dataOrTanggal && typeof dataOrTanggal === 'object' && Array.isArray(dataOrTanggal.data)) {
+          json = dataOrTanggal;
+          tanggal = String(json.tanggal || document.getElementById('adminRekapTanggalHarian')?.value || new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)).slice(0, 10);
+        } else {
+          tanggal = typeof dataOrTanggal === 'string' && dataOrTanggal.trim()
+            ? dataOrTanggal.trim().slice(0, 10)
+            : (document.getElementById('adminRekapTanggalHarian')?.value || document.getElementById('rekapRangeDari')?.value || new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10));
+          const instId = document.getElementById('adminRekapInstansiFilter')?.value || '';
+          const instQ = instId && instId !== 'all' ? ('&instansi_id=' + encodeURIComponent(instId)) : '';
+          const res = await fetch('/api/stitch/rekap-harian?tanggal=' + encodeURIComponent(tanggal) + instQ);
+          json = await res.json();
+          if (!json.ok) throw new Error(json.message || 'Gagal memuat data.');
+        }
 
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: [215, 330] }); // F4
+        const doc = new jsPDF({ orientation: opts.orientation, unit: 'mm', format: opts.format });
         if (typeof doc.autoTable !== 'function') throw new Error('Plugin tabel PDF (autoTable) belum dimuat.');
-        const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), margin = 10;
-        const cx = W / 2 + 10;
+        const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), margin = opts.margin;
 
-        const logo = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = document.querySelector('img[src*="Lambang_Kabupaten_Sumba_Barat"]')?.src || 'Lambang_Kabupaten_Sumba_Barat.png'; });
+        const rowsData = json.data || [];
+        const signer = opts.signer || json.kepala || null;
+        const logo = await _loadKopLogo();
         const sigs = new Map();
-        await Promise.all(json.data.map(async r => { const s = await sigToDataUrl(r.signature); if (s) sigs.set(r.nip, s); }));
-        const kepalaSig = json.kepala ? await sigToDataUrl(json.kepala.signature) : null;
+        await Promise.all(rowsData.map(async (r, idx) => {
+          const s = await fetchImageAsDataUrl(resolveImg(r.signature));
+          if (s) sigs.set(String(r.nip || r.id || idx), s);
+        }));
+        const signerSig = signer && signer.signature ? await fetchImageAsDataUrl(resolveImg(signer.signature)) : null;
 
         const label = new Date(tanggal + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
         const stats = { hadir: 0, sakit: 0, izin: 0, tugas: 0, tubel: 0, cuti: 0, tb: 0 };
-        const body = json.data.map((p, i) => {
+        const isMagang = Boolean(json.isMagang || opts.isMagang);
+        const body = rowsData.map((p, i) => {
           const k = (p.ket || '').toUpperCase();
           if (k.startsWith('TUBEL')) stats.tubel++; else if (k.startsWith('CUTI')) stats.cuti++;
           else if (k.startsWith('SAKIT')) stats.sakit++; else if (k.startsWith('IZIN')) stats.izin++;
           else if (k.startsWith('TUGAS') || k.startsWith('DL')) stats.tugas++;
-          else if (p.jamMasuk) stats.hadir++; else stats.tb++;
-          return [i + 1, `${p.nama}\nNIP. ${p.nip || '—'}`, (p.jabatan || '—') + (p.pangkat ? `\n(${p.pangkat})` : ''),
-                  p.jamMasuk || '—', '', p.jamPulang || '—', '', p.ket || '—'];
+          else if (p.jamMasuk && p.jamMasuk !== '-' && p.jamMasuk !== '—') stats.hadir++; else stats.tb++;
+          return [
+            i + 1,
+            `${p.nama}\n${isMagang ? 'ID' : 'NIP'}. ${p.nip || '—'}`,
+            (p.jabatan || '—') + (!isMagang && p.pangkat ? `\n(${p.pangkat})` : ''),
+            p.jamMasuk || '—',
+            '',
+            p.jamPulang || '—',
+            '',
+            p.ket || '—'
+          ];
         });
 
-        const dividerY = 37, titleY = dividerY + 9;
+        const startY = _drawKopHeader(doc, {
+          logo,
+          W,
+          margin,
+          kopInstansi: opts.kopInstansi,
+          kopAlamat: opts.kopAlamat,
+          docTitle: isMagang ? 'DAFTAR HADIR MAGANG / LAINNYA' : 'DAFTAR HADIR PEGAWAI',
+          docPeriode: `Periode: ${label}`
+        });
+
         doc.autoTable({
-          startY: titleY + 11.5,
+          startY,
           margin: { top: 20, left: margin, right: margin, bottom: 20 },
-          head: [['No', 'Nama / NIP', 'Jabatan / Pangkat', 'Jam\nMasuk', 'Paraf\nMasuk', 'Jam\nPulang', 'Paraf\nPulang', 'Ket']],
-          body, theme: 'grid',
+          head: [['No', isMagang ? 'Nama / ID' : 'Nama / NIP', isMagang ? 'Jabatan / Bidang' : 'Jabatan / Pangkat', 'Jam\nMasuk', 'Paraf\nMasuk', 'Jam\nPulang', 'Paraf\nPulang', 'Ket']],
+          body,
+          theme: 'grid',
           headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center', lineWidth: 0.1 },
-          styles: { font: 'times', fontSize: 7.5, cellPadding: 2, valign: 'middle', overflow: 'linebreak' },
+          styles: { font: 'times', fontSize: opts.fontSize, cellPadding: 2, valign: 'middle', overflow: 'linebreak' },
           rowPageBreak: 'avoid',
-          columnStyles: { 0: { halign: 'center', cellWidth: 7 }, 3: { halign: 'center', cellWidth: 16 }, 4: { cellWidth: 22, minCellHeight: 14 }, 5: { halign: 'center', cellWidth: 16 }, 6: { cellWidth: 22, minCellHeight: 14 } },
+          columnStyles: {
+            0: { halign: 'center', cellWidth: 7 },
+            3: { halign: 'center', cellWidth: 16 },
+            4: { cellWidth: 22, minCellHeight: 14 },
+            5: { halign: 'center', cellWidth: 16 },
+            6: { cellWidth: 22, minCellHeight: 14 }
+          },
           didDrawCell: (d) => {
             if (d.cell.section !== 'body' || (d.column.index !== 4 && d.column.index !== 6)) return;
-            const p = json.data[d.row.index], s = p && sigs.get(p.nip);
+            const p = rowsData[d.row.index];
+            const s = p && sigs.get(String(p.nip || p.id || d.row.index));
             const jam = d.column.index === 4 ? p?.jamMasuk : p?.jamPulang;
-            if (s && jam) { try { doc.addImage(s, s.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG', d.cell.x + 2, d.cell.y + 2, 18, 10, undefined, 'FAST'); } catch (_) {} }
-          },
-          didDrawPage: (d) => {
-            if (d.pageNumber !== 1) return;
-            if (logo) { try { doc.addImage(logo, 'PNG', margin + 5, 10, 22, 25, undefined, 'FAST'); } catch (_) {} }
-            doc.setFont('times', 'bold'); doc.setFontSize(11);
-            doc.text('PEMERINTAH KABUPATEN SUMBA BARAT', cx, 15, { align: 'center' });
-            doc.setFontSize(15);
-            doc.text('BADAN PERENCANAAN PEMBANGUNAN RISET DAN INOVASI DAERAH', cx, 20, { align: 'center', maxWidth: W - 55 });
-            doc.setFont('times', 'normal'); doc.setFontSize(7.5);
-            doc.text('Jl. Weekarou, Waikabubak, Sumba Barat, Nusa Tenggara Timur', cx, 29, { align: 'center' });
-            doc.text('WAIKABUBAK', cx, 32.5, { align: 'center' });
-            doc.setLineWidth(0.7); doc.line(margin + 5, dividerY, W - margin - 5, dividerY);
-            doc.setLineWidth(0.2); doc.line(margin + 5, dividerY + 0.8, W - margin - 5, dividerY + 0.8);
-            doc.setFontSize(11); doc.setFont('times', 'bold');
-            doc.text('DAFTAR HADIR PEGAWAI', W / 2, titleY, { align: 'center' });
-            doc.setFont('times', 'normal');
-            doc.text(`Periode: ${label}`, W / 2, titleY + 5.5, { align: 'center' });
+            if (s && jam && jam !== '-' && jam !== '—') {
+              try { doc.addImage(s, s.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG', d.cell.x + 2, d.cell.y + 2, 18, 10, undefined, 'FAST'); } catch (_) {}
+            }
           }
         });
 
@@ -350,27 +504,16 @@
         doc.setFont('times', 'normal'); doc.setFontSize(9);
         doc.text(`Hadir: ${stats.hadir} | Sakit: ${stats.sakit} | Izin: ${stats.izin} | Tugas/DL: ${stats.tugas} | Tubel: ${stats.tubel} | Cuti: ${stats.cuti} | TB: ${stats.tb}`, margin, y + 6);
 
-        let fy = y + 20;
-        if (fy + 45 > H) { doc.addPage(); fy = 25; }
-        const sx = W - 60, kp = json.kepala;
-        doc.setFontSize(10);
-        doc.text(`Waikabubak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, sx, fy, { align: 'center' });
-        doc.text('Mengetahui,', sx, fy + 6, { align: 'center' });
-        doc.text(kp?.jabatan || 'Kepala Badan', sx, fy + 11, { align: 'center' });
-        if (kepalaSig) { try { doc.addImage(kepalaSig, kepalaSig.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG', sx - 15, fy + 14, 30, 15, undefined, 'FAST'); } catch (_) {} }
-        doc.setFont('times', 'bold');
-        doc.text(kp?.nama || '__________________________', sx, fy + 38, { align: 'center' });
-        doc.setFont('times', 'normal');
-        if (kp?.pangkat) {
-          doc.text(kp.pangkat, sx, fy + 48, { align: 'center' });
-          doc.text(`NIP. ${kp.nip || '..........................................'}`, sx, fy + 53, { align: 'center' });
-        } else {
-          doc.text(`NIP. ${kp?.nip || '..........................................'}`, sx, fy + 48, { align: 'center' });
-        }
+        _drawSignerBlock(doc, { W, H, margin, fy: y + 18, signer, signerSig });
 
+        if (opts.returnBase64 === true) {
+          return doc.output('datauristring');
+        }
         doc.save(`Daftar_Hadir_${tanggal}.pdf`);
+        return doc;
       } catch (e) {
-        Swal.fire('Gagal membuat PDF', e.message, 'error');
+        if (typeof Swal !== 'undefined') Swal.fire('Gagal membuat PDF', e.message, 'error');
+        return null;
       }
     }
 
@@ -522,12 +665,21 @@
       const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       let dari = iso(now), sampai = iso(now);
       if (preset === 'minggu_ini') {
-        const dow = (now.getDay() + 6) % 7; // Senin = 0
-        const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow);
+        const dow = (now.getDay() + 6) % 7;
+        dari = iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow));
+      } else if (preset === 'minggu_lalu') {
+        const dow = (now.getDay() + 6) % 7;
+        const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow - 7);
+        const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
         dari = iso(mon);
+        sampai = iso(sun);
       } else if (preset === 'bulan_ini') {
-        const first = new Date(now.getFullYear(), now.getMonth(), 1);
-        dari = iso(first);
+        dari = iso(new Date(now.getFullYear(), now.getMonth(), 1));
+      } else if (preset === '30_hari') {
+        dari = iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29));
+      } else if (preset === 'bulan_lalu') {
+        dari = iso(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+        sampai = iso(new Date(now.getFullYear(), now.getMonth(), 0));
       }
       const dEl = document.getElementById('rekapRangeDari');
       const sEl = document.getElementById('rekapRangeSampai');
@@ -540,42 +692,53 @@
       if (document.getElementById('rekapRangeDari')) setRekapRangePreset('bulan_ini');
     });
 
-    async function exportRekapRangePDF() {
-      const dari = (document.getElementById('rekapRangeDari')?.value || '').trim();
-      const sampai = (document.getElementById('rekapRangeSampai')?.value || '').trim();
+    async function exportRekapRangePDF(data, pdfOpts) {
+      // Allow calling exportRekapRangePDF(pdfOpts) without data arg
+      if (data && typeof data === 'object' && !Array.isArray(data.data) && !data.dari && !pdfOpts) {
+        pdfOpts = data;
+        data = null;
+      }
+      const opts = _normalizePdfOpts(pdfOpts);
+      const hasPayload = Boolean(data && typeof data === 'object' && Array.isArray(data.data));
+      const dari = (hasPayload && data.dari ? String(data.dari) : (document.getElementById('rekapRangeDari')?.value || document.getElementById('adminRekapDari')?.value || '')).trim();
+      const sampai = (hasPayload && data.sampai ? String(data.sampai) : (document.getElementById('rekapRangeSampai')?.value || document.getElementById('adminRekapSampai')?.value || '')).trim();
+
       if (!dari || !sampai) {
-        Swal.fire('Rentang Belum Dipilih', 'Pilih tanggal Dari dan Sampai terlebih dahulu.', 'warning');
-        return;
+        if (typeof Swal !== 'undefined') Swal.fire('Rentang Belum Dipilih', 'Pilih tanggal Dari dan Sampai terlebih dahulu.', 'warning');
+        return null;
       }
       if (dari > sampai) {
-        Swal.fire('Rentang Tidak Valid', 'Tanggal Dari tidak boleh lebih besar dari Sampai.', 'warning');
-        return;
+        if (typeof Swal !== 'undefined') Swal.fire('Rentang Tidak Valid', 'Tanggal Dari tidak boleh lebih besar dari Sampai.', 'warning');
+        return null;
       }
-      // Jika 1 hari yang sama, gunakan format Daftar Hadir Harian lengkap dengan kolom Paraf
-      if (dari === sampai) {
-        return exportHarianPDF(dari);
+      if (!hasPayload && dari === sampai) {
+        return exportHarianPDF(dari, opts);
       }
       if (!window.jspdf || !window.jspdf.jsPDF) {
-        showDynamicIsland({ type: 'warning', title: 'Library PDF Sedang Dimuat', message: 'Silakan coba sesaat lagi.' });
-        return;
+        if (typeof showDynamicIsland === 'function') {
+          showDynamicIsland({ type: 'warning', title: 'Library PDF Sedang Dimuat', message: 'Silakan coba sesaat lagi.' });
+        }
+        return null;
       }
 
       try {
-        const res = await fetch(`/api/stitch/rekap-range?dari=${encodeURIComponent(dari)}&sampai=${encodeURIComponent(sampai)}`);
-        const json = await res.json();
-        if (!json.ok) throw new Error(json.message || 'Gagal memuat rekap rentang tanggal.');
+        let json = data;
+        if (!hasPayload) {
+          const instId = document.getElementById('adminRekapInstansiFilter')?.value || '';
+          const instQ = instId && instId !== 'all' ? ('&instansi_id=' + encodeURIComponent(instId)) : '';
+          const res = await fetch(`/api/stitch/rekap-range?dari=${encodeURIComponent(dari)}&sampai=${encodeURIComponent(sampai)}${instQ}`);
+          json = await res.json();
+          if (!json.ok) throw new Error(json.message || 'Gagal memuat rekap rentang tanggal.');
+        }
 
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: [215, 330] }); // F4 Portrait
-        const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), margin = 10, cx = W / 2 + 10;
+        const doc = new jsPDF({ orientation: opts.orientation, unit: 'mm', format: opts.format });
+        if (typeof doc.autoTable !== 'function') throw new Error('Plugin tabel PDF (autoTable) belum dimuat.');
+        const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), margin = opts.margin;
 
-        const logo = await new Promise(r => {
-          const i = new Image();
-          i.onload = () => r(i);
-          i.onerror = () => r(null);
-          i.src = document.querySelector('img[src*="Lambang_Kabupaten_Sumba_Barat"]')?.src || 'Lambang_Kabupaten_Sumba_Barat.png';
-        });
-        const kepalaSig = json.kepala ? await sigToDataUrl(json.kepala.signature) : null;
+        const signer = opts.signer || json.kepala || null;
+        const logo = await _loadKopLogo();
+        const signerSig = signer && signer.signature ? await fetchImageAsDataUrl(resolveImg(signer.signature)) : null;
 
         const toHHMM = (mins) => {
           if (!mins || mins <= 0) return '00:00';
@@ -583,9 +746,11 @@
           return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         };
 
+        const isMagang = Boolean(json.isMagang || opts.isMagang);
         const stats = { hadir: 0, sakit: 0, izin: 0, tugas: 0, tubel: 0, cuti: 0, tb: 0 };
         const body = (json.data || []).map((p, i) => {
-          stats.hadir += (p.hadir || 0);
+          const hadir = Number(p.hadir ?? p.masuk ?? 0);
+          stats.hadir += hadir;
           stats.sakit += (p.sakit || 0);
           stats.izin += (p.izin || 0);
           stats.tugas += (p.tugas || 0);
@@ -593,17 +758,17 @@
           stats.cuti += (p.cuti || 0);
           stats.tb += (p.alpa || 0);
 
-          const mLambat = p.menit_terlambat || 0;
-          const mCepat = p.menit_lebih_awal || 0;
+          const mLambat = Number(p.menit_terlambat ?? p.menit_terlambat_periode ?? 0);
+          const mCepat = Number(p.menit_lebih_awal ?? p.menit_lebih_awal_periode ?? 0);
           const mAlpa = (p.alpa || 0) * 450;
           const totalM = mLambat + mCepat + mAlpa;
           const ist = (p.izin || 0) + (p.sakit || 0) + (p.tugas || 0) + (p.cuti || 0) + (p.tubel || 0);
 
           return [
             i + 1,
-            `${p.nama}\nNIP. ${p.nip || '—'}`,
-            (p.jabatan || '—') + (p.pangkat ? `\n(${p.pangkat})` : ''),
-            p.hadir || 0,
+            `${p.nama}\n${isMagang ? 'ID' : 'NIP'}. ${p.nip || '—'}`,
+            (p.jabatan || '—') + (!isMagang && p.pangkat ? `\n(${p.pangkat})` : ''),
+            hadir,
             `${mLambat} m (${p.lambat_count || 0}x)`,
             `${mCepat} m`,
             ist,
@@ -612,15 +777,24 @@
           ];
         });
 
-        const dividerY = 37, titleY = dividerY + 9;
+        const startY = _drawKopHeader(doc, {
+          logo,
+          W,
+          margin,
+          kopInstansi: opts.kopInstansi,
+          kopAlamat: opts.kopAlamat,
+          docTitle: isMagang ? 'REKAPITULASI KEHADIRAN MAGANG / LAINNYA' : 'REKAPITULASI KEHADIRAN PEGAWAI',
+          docPeriode: `Periode: ${dari} s.d. ${sampai} (${json.hariKerja || 0} Hari Kerja)`
+        });
+
         doc.autoTable({
-          startY: titleY + 11.5,
+          startY,
           margin: { top: 20, left: margin, right: margin, bottom: 20 },
-          head: [['No', 'Nama / NIP', 'Jabatan', 'Hadir', 'Lambat\n(Menit)', 'Cepat\n(Menit)', 'I/S/T/C', 'Alpa', 'Akumulasi\n(JJ:MM)']],
+          head: [['No', isMagang ? 'Nama / ID' : 'Nama / NIP', 'Jabatan', 'Hadir', 'Lambat\n(Menit)', 'Cepat\n(Menit)', 'I/S/T/C', 'Alpa', 'Akumulasi\n(JJ:MM)']],
           body,
           theme: 'grid',
           headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center', lineWidth: 0.1 },
-          styles: { font: 'times', fontSize: 7.5, cellPadding: 2, valign: 'middle', overflow: 'linebreak' },
+          styles: { font: 'times', fontSize: opts.fontSize, cellPadding: 2, valign: 'middle', overflow: 'linebreak' },
           rowPageBreak: 'avoid',
           columnStyles: {
             0: { halign: 'center', cellWidth: 7 },
@@ -630,24 +804,6 @@
             6: { halign: 'center', cellWidth: 14 },
             7: { halign: 'center', cellWidth: 12 },
             8: { halign: 'center', cellWidth: 18 }
-          },
-          didDrawPage: (d) => {
-            if (d.pageNumber !== 1) return;
-            if (logo) { try { doc.addImage(logo, 'PNG', margin + 5, 10, 22, 25, undefined, 'FAST'); } catch (_) {} }
-            doc.setFont('times', 'bold'); doc.setFontSize(11);
-            doc.text('PEMERINTAH KABUPATEN SUMBA BARAT', cx, 15, { align: 'center' });
-            doc.setFontSize(15);
-            doc.text('BADAN PERENCANAAN PEMBANGUNAN RISET DAN INOVASI DAERAH', cx, 20, { align: 'center', maxWidth: W - 55 });
-            doc.setFont('times', 'normal'); doc.setFontSize(7.5);
-            doc.text('Jl. Weekarou, Waikabubak, Sumba Barat, Nusa Tenggara Timur', cx, 29, { align: 'center' });
-            doc.text('WAIKABUBAK', cx, 32.5, { align: 'center' });
-            doc.setLineWidth(0.7); doc.line(margin + 5, dividerY, W - margin - 5, dividerY);
-            doc.setLineWidth(0.2); doc.line(margin + 5, dividerY + 0.8, W - margin - 5, dividerY + 0.8);
-
-            doc.setFontSize(11); doc.setFont('times', 'bold');
-            doc.text('DAFTAR HADIR PEGAWAI', W / 2, titleY, { align: 'center' });
-            doc.setFont('times', 'normal');
-            doc.text(`Periode: ${dari} s.d. ${sampai} (${json.hariKerja || 0} Hari Kerja)`, W / 2, titleY + 5.5, { align: 'center' });
           }
         });
 
@@ -657,27 +813,24 @@
         doc.setFont('times', 'normal'); doc.setFontSize(9);
         doc.text(`Hadir: ${stats.hadir} | Sakit: ${stats.sakit} | Izin: ${stats.izin} | Tugas/DL: ${stats.tugas} | Tubel: ${stats.tubel} | Cuti: ${stats.cuti} | TB: ${stats.tb}`, margin, y + 6);
 
-        let fy = y + 20;
-        if (fy + 45 > H) { doc.addPage(); fy = 25; }
-        const sx = W - 60, kp = json.kepala;
-        doc.setFontSize(10);
-        doc.text(`Waikabubak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, sx, fy, { align: 'center' });
-        doc.text('Mengetahui,', sx, fy + 6, { align: 'center' });
-        doc.text(kp?.jabatan || 'Kepala Badan', sx, fy + 11, { align: 'center' });
-        if (kepalaSig) { try { doc.addImage(kepalaSig, kepalaSig.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG', sx - 15, fy + 14, 30, 15, undefined, 'FAST'); } catch (_) {} }
-        doc.setFont('times', 'bold');
-        doc.text(kp?.nama || '__________________________', sx, fy + 38, { align: 'center' });
-        doc.setFont('times', 'normal');
-        if (kp?.pangkat) {
-          doc.text(kp.pangkat, sx, fy + 48, { align: 'center' });
-          doc.text(`NIP. ${kp.nip || '..........................................'}`, sx, fy + 53, { align: 'center' });
-        } else {
-          doc.text(`NIP. ${kp?.nip || '..........................................'}`, sx, fy + 48, { align: 'center' });
-        }
+        _drawSignerBlock(doc, { W, H, margin, fy: y + 18, signer, signerSig });
 
+        if (opts.returnBase64 === true) {
+          return doc.output('datauristring');
+        }
         doc.save(`Rekap_HADIR_${dari}_${sampai}.pdf`);
-        showDynamicIsland({ type: 'download', title: 'PDF Rekap Rentang Tersimpan', message: `Periode ${dari} s.d. ${sampai} berhasil diunduh.` });
+        if (typeof showDynamicIsland === 'function') {
+          showDynamicIsland({ type: 'download', title: 'PDF Rekap Rentang Tersimpan', message: `Periode ${dari} s.d. ${sampai} berhasil diunduh.` });
+        }
+        return doc;
       } catch (e) {
-        Swal.fire('Gagal membuat PDF', e.message, 'error');
+        if (typeof Swal !== 'undefined') Swal.fire('Gagal membuat PDF', e.message, 'error');
+        return null;
       }
     }
+
+    window.fetchImageAsDataUrl = fetchImageAsDataUrl;
+    window.exportHarianPDF = exportHarianPDF;
+    window.exportRekapRangePDF = exportRekapRangePDF;
+    window.exportRiwayatPDF = exportRiwayatPDF;
+    window.setRekapRangePreset = setRekapRangePreset;

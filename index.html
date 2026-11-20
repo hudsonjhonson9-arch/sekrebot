@@ -952,9 +952,12 @@
         <!-- Controls: Mode Rentang -->
         <div id="adminRekapControlsRange" class="space-y-3">
           <div class="flex flex-wrap items-center gap-1.5">
-            <button type="button" onclick="setAdminRekapPreset('hari_ini')" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Hari Ini</button>
-            <button type="button" onclick="setAdminRekapPreset('minggu_ini')" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Minggu Ini</button>
-            <button type="button" onclick="setAdminRekapPreset('bulan_ini')" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-xs font-bold text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800 cursor-pointer">Bulan Ini</button>
+            <button type="button" data-rekap-preset="hari_ini" onclick="setAdminRekapPreset('hari_ini')" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Hari Ini</button>
+            <button type="button" data-rekap-preset="minggu_ini" onclick="setAdminRekapPreset('minggu_ini')" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Minggu Ini</button>
+            <button type="button" data-rekap-preset="minggu_lalu" onclick="setAdminRekapPreset('minggu_lalu')" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Minggu Lalu</button>
+            <button type="button" data-rekap-preset="bulan_ini" onclick="setAdminRekapPreset('bulan_ini')" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-xs font-bold text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800 cursor-pointer">Bulan Ini</button>
+            <button type="button" data-rekap-preset="30_hari" onclick="setAdminRekapPreset('30_hari')" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">30 Hari</button>
+            <button type="button" data-rekap-preset="bulan_lalu" onclick="setAdminRekapPreset('bulan_lalu')" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Bulan Lalu</button>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
@@ -990,6 +993,30 @@
           </div>
         </div>
 
+        <!-- Compact Filters: Instansi / Role / Bidang -->
+        <div class="flex flex-col sm:flex-row gap-3">
+          <div id="adminRekapInstansiWrap" class="hidden flex-1 min-w-0">
+            <label for="adminRekapInstansiFilter" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Instansi</label>
+            <select id="adminRekapInstansiFilter" class="w-full">
+              <option value="all">Semua Instansi</option>
+            </select>
+          </div>
+          <div class="flex-1 min-w-0">
+            <label for="adminRekapRoleFilter" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Tipe Pegawai</label>
+            <select id="adminRekapRoleFilter" class="w-full">
+              <option value="all">Semua Pegawai</option>
+              <option value="pegawai">ASN / Pegawai</option>
+              <option value="magang">Magang / Non-ASN</option>
+            </select>
+          </div>
+          <div class="flex-1 min-w-0">
+            <label for="adminRekapBidangFilter" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Bidang / Unit</label>
+            <select id="adminRekapBidangFilter" class="w-full">
+              <option value="all">Semua Bidang</option>
+            </select>
+          </div>
+        </div>
+
         <!-- Action Buttons -->
         <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
           <button type="button" onclick="loadAdminRekapData()" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
@@ -1011,6 +1038,10 @@
           <button type="button" onclick="exportAdminRekapXLSX()" class="min-h-[44px] px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
             <span class="material-symbols-outlined text-[18px]">table_view</span>
             <span>Unduh Excel (.xlsx)</span>
+          </button>
+          <button type="button" onclick="sendAdminRekapToTelegram()" class="min-h-[44px] px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">send</span>
+            <span>Telegram</span>
           </button>
         </div>
 
@@ -3073,9 +3104,61 @@
           <span class="material-symbols-outlined text-[20px]">close</span>
         </button>
       </div>
+      <details class="border-b border-slate-100 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/40 shrink-0 group">
+        <summary class="px-4 sm:px-6 py-2.5 flex items-center justify-between gap-2 cursor-pointer select-none list-none text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 transition-colors">
+          <span class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] text-blue-600 dark:text-blue-400">tune</span>
+            <span>Pengaturan Cetak &amp; Penandatangan</span>
+          </span>
+          <span class="material-symbols-outlined text-[18px] text-slate-400 transition-transform group-open:rotate-180">expand_more</span>
+        </summary>
+        <div class="px-4 sm:px-6 pb-3.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-2.5 text-xs">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div>
+              <label for="rekapOptPaper" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Ukuran Kertas</label>
+              <select id="rekapOptPaper" class="w-full">
+                <option value="f4" selected>F4 (215x330 mm)</option>
+                <option value="a4">A4 (210x297 mm)</option>
+                <option value="letter">Letter</option>
+              </select>
+            </div>
+            <div>
+              <label for="rekapOptOrientation" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Orientasi</label>
+              <select id="rekapOptOrientation" class="w-full">
+                <option value="p" selected>Portrait</option>
+                <option value="l">Landscape</option>
+              </select>
+            </div>
+            <div>
+              <label for="rekapOptFontSize" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Ukuran Font (pt)</label>
+              <input type="number" id="rekapOptFontSize" min="5" max="12" step="0.5" value="7.5" class="w-full min-h-[44px] px-3 py-2 text-xs font-mono font-bold tabular-nums rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+            </div>
+            <div>
+              <label for="rekapOptSigner" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Penandatangan</label>
+              <select id="rekapOptSigner" class="w-full">
+                <option value="">Kepala Badan (Default)</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label for="rekapKopInstansi" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Nama Instansi Kop</label>
+              <input type="text" id="rekapKopInstansi" placeholder="Otomatis sesuai instansi" class="w-full min-h-[40px] px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+            </div>
+            <div>
+              <label for="rekapKopAlamat" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">Alamat Kop</label>
+              <input type="text" id="rekapKopAlamat" placeholder="Otomatis sesuai instansi" class="w-full min-h-[40px] px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+            </div>
+          </div>
+        </div>
+      </details>
       <div id="adminRekapPreviewBody" class="flex-1 overflow-auto p-3 sm:p-6 bg-slate-100 dark:bg-slate-950"></div>
       <div class="px-4 sm:px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-wrap items-center justify-end gap-2 shrink-0">
         <button type="button" onclick="closeAdminRekapPreview()" class="min-h-[42px] px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Tutup</button>
+        <button type="button" onclick="sendAdminRekapToTelegram()" class="min-h-[42px] px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer">
+          <span class="material-symbols-outlined text-[18px]">send</span>
+          <span>Kirim Telegram</span>
+        </button>
         <button type="button" onclick="exportAdminRekapXLSX()" class="min-h-[42px] px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer">
           <span class="material-symbols-outlined text-[18px]">table_view</span>
           <span>Unduh Excel (.xlsx)</span>
@@ -3130,15 +3213,18 @@
           <select id="adminLogJenisSelect" class="w-full">
             <option value="MASUK">MASUK</option>
             <option value="PULANG">PULANG</option>
-            <option value="PULANG LUAR">PULANG LUAR</option>
-            <option value="DI LUAR JAM MASUK">DI LUAR JAM MASUK</option>
-            <option value="DI LUAR JAM PULANG">DI LUAR JAM PULANG</option>
             <option value="IZIN">IZIN</option>
             <option value="SAKIT">SAKIT</option>
             <option value="TUGAS">TUGAS / DINAS LUAR</option>
-            <option value="CUTI">CUTI</option>
             <option value="TUBEL">TUBEL</option>
+            <option value="CUTI">CUTI</option>
+            <option value="DL">DL</option>
+            <option value="TB">TB</option>
             <option value="TANPA BERITA">TANPA BERITA</option>
+            <option value="ALPA">ALPA</option>
+            <option value="DI LUAR JAM MASUK">DI LUAR JAM MASUK</option>
+            <option value="DI LUAR JAM PULANG">DI LUAR JAM PULANG</option>
+            <option value="PULANG LUAR">PULANG LUAR</option>
           </select>
         </div>
         <div>
