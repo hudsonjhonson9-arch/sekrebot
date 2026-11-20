@@ -240,6 +240,7 @@
       closeActionPopover();
       closeStitchOverlay('stitchAgendaDetailOverlay');
       closeStitchOverlay('stitchAgendaSpjOverlay');
+      closeStitchOverlay('stitchSppdPreviewOverlay');
     }
   });
 
@@ -275,6 +276,10 @@
         <div class="text-[11px] font-bold text-slate-900 dark:text-white truncate">${esc(item.pelaksana_nama || '-')}</div>
         <div class="text-[10px] font-mono text-slate-400 truncate">${esc(item.nomor_sppd || item.nomor_spt || '-')}</div>
       </div>
+      <button type="button" data-pop-act="preview" class="w-full px-2.5 py-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/50 text-[#2563eb] dark:text-blue-300 text-xs font-bold flex items-center gap-2 cursor-pointer">
+        <span class="material-symbols-outlined text-[17px]">preview</span>
+        <span>Pratinjau SPT &amp; SPPD</span>
+      </button>
       <button type="button" data-pop-act="detail" class="w-full px-2.5 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-2 cursor-pointer">
         <span class="material-symbols-outlined text-[17px] text-slate-500">visibility</span>
         <span>Detail Agenda SPPD</span>
@@ -328,7 +333,8 @@
       if (!btn) return;
       const act = btn.dataset.popAct;
       closeActionPopover();
-      if (act === 'detail') showSppdDetail(idx);
+      if (act === 'preview') w.SppdGenerator?.openPreviewModal(item, 'spt');
+      else if (act === 'detail') showSppdDetail(idx);
       else if (act === 'docx-spt') w.SppdGenerator?.unduhWordSPT(item);
       else if (act === 'docx-sppd') w.SppdGenerator?.unduhWordSPPD(item);
       else if (act === 'sppd-pk') {
@@ -344,62 +350,7 @@
 
   function showSppdGenerateMenu(item) {
     if (!item || !w.SppdGenerator) return;
-    closeStitchOverlay('stitchAgendaDetailOverlay');
-    let pengikut = [];
-    try { pengikut = Array.isArray(item.pengikut) ? item.pengikut : JSON.parse(item.pengikut || '[]'); } catch (_) {}
-
-    const pengikutBtns = pengikut.length
-      ? `<div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-          <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Unduh SPPD (.docx) Pengikut:</div>
-          <div class="flex flex-wrap gap-1.5">${pengikut.map((p, idx) => `<button type="button" data-gen-pengikut="${idx}" class="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-xs font-bold cursor-pointer">${esc(p.nama || `Pengikut ${idx + 1}`)}</button>`).join('')}</div>
-        </div>`
-      : '';
-
-    const wrap = d.createElement('div');
-    wrap.id = 'stitchAgendaDetailOverlay';
-    wrap.className = 'fixed inset-0 z-[96] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4';
-    wrap.innerHTML = `
-      <div class="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
-        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <span class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">task_alt</span></span>
-            <div>
-              <h3 class="text-sm font-bold text-slate-900 dark:text-white">SPPD Tersimpan • Generate Dokumen</h3>
-              <p class="text-[11px] text-slate-500 dark:text-slate-400">Unduh langsung .docx dari template resmi UMA DATA</p>
-            </div>
-          </div>
-          <button type="button" data-close-ov class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-[18px]">close</span></button>
-        </div>
-        <div class="p-6 space-y-4">
-          <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700">
-            <div class="text-sm font-bold text-slate-900 dark:text-white">${esc(item.pelaksana_nama || '-')} &rarr; ${esc(item.tempat_tujuan || '-')}</div>
-            <div class="font-mono text-xs text-primary mt-0.5">${esc(item.nomor_spt || '')} ${item.nomor_sppd ? '• ' + esc(item.nomor_sppd) : ''}</div>
-          </div>
-          <div class="grid grid-cols-2 gap-2.5">
-            <button type="button" id="btnGenWordSpt" class="py-2.5 px-3 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"><span class="material-symbols-outlined text-[17px]">description</span><span>Unduh SPT (.docx)</span></button>
-            <button type="button" id="btnGenWordSppd" class="py-2.5 px-3 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"><span class="material-symbols-outlined text-[17px]">article</span><span>Unduh SPPD (.docx)</span></button>
-            <button type="button" id="btnGenCetakSpt" class="py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"><span class="material-symbols-outlined text-[17px]">print</span><span>Cetak / PDF SPT</span></button>
-            <button type="button" id="btnGenCetakSppd" class="py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"><span class="material-symbols-outlined text-[17px]">print</span><span>Cetak / PDF SPPD</span></button>
-          </div>
-          ${pengikutBtns}
-        </div>
-        <div class="px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex justify-end">
-          <button type="button" data-close-ov class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Tutup</button>
-        </div>
-      </div>
-    `;
-    wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('[data-close-ov]')) wrap.remove(); });
-    wrap.querySelector('#btnGenWordSpt')?.addEventListener('click', () => w.SppdGenerator.unduhWordSPT(item));
-    wrap.querySelector('#btnGenWordSppd')?.addEventListener('click', () => w.SppdGenerator.unduhWordSPPD(item));
-    wrap.querySelector('#btnGenCetakSpt')?.addEventListener('click', () => w.SppdGenerator.cetakSPT(item));
-    wrap.querySelector('#btnGenCetakSppd')?.addEventListener('click', () => w.SppdGenerator.cetakSPPD(item));
-    wrap.querySelectorAll('[data-gen-pengikut]').forEach((b) => {
-      b.addEventListener('click', () => {
-        const p = pengikut[Number(b.dataset.genPengikut)];
-        if (p) w.SppdGenerator.unduhWordSPPD(item, p);
-      });
-    });
-    d.body.appendChild(wrap);
+    w.SppdGenerator.openPreviewModal(item, 'spt');
   }
 
   function onPelaksanaPicked(inputEl) {
@@ -982,8 +933,9 @@
         </div>
         <div class="px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-between gap-2 flex-wrap">
           <div class="flex items-center gap-1.5 flex-wrap">
-            <button type="button" id="btnDetDocxSpt" class="px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-xs font-bold cursor-pointer">Unduh SPT (.docx)</button>
-            <button type="button" id="btnDetDocxSppd" class="px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-xs font-bold cursor-pointer">Unduh SPPD (.docx)</button>
+            <button type="button" id="btnDetPreview" class="px-3 py-2 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold cursor-pointer">Pratinjau Dokumen</button>
+            <button type="button" id="btnDetDocxSpt" class="px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-xs font-bold cursor-pointer">SPT (.docx)</button>
+            <button type="button" id="btnDetDocxSppd" class="px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-xs font-bold cursor-pointer">SPPD (.docx)</button>
             <button type="button" id="btnDetSpj" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer">Kelola LPJ / SPJ</button>
           </div>
           <button type="button" data-close-ov class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Tutup</button>
@@ -991,6 +943,7 @@
       </div>
     `;
     wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('[data-close-ov]')) wrap.remove(); });
+    wrap.querySelector('#btnDetPreview')?.addEventListener('click', () => { wrap.remove(); w.SppdGenerator?.openPreviewModal(item, 'spt'); });
     wrap.querySelector('#btnDetDocxSpt')?.addEventListener('click', () => w.SppdGenerator?.unduhWordSPT(item));
     wrap.querySelector('#btnDetDocxSppd')?.addEventListener('click', () => w.SppdGenerator?.unduhWordSPPD(item));
     wrap.querySelector('#btnDetSpj')?.addEventListener('click', () => { wrap.remove(); openSppdSpjModal(item.id); });

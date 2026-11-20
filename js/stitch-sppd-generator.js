@@ -331,9 +331,151 @@
     }
   }
 
+  function openPreviewModal(item, initialMode = 'spt') {
+    if (!item) return;
+    const prev = d.getElementById('stitchSppdPreviewOverlay');
+    if (prev) prev.remove();
+
+    let pengikut = [];
+    try { pengikut = Array.isArray(item.pengikut) ? item.pengikut : JSON.parse(item.pengikut || '[]'); } catch (_) {}
+
+    let curMode = initialMode === 'sppd' ? 'sppd' : 'spt'; // 'spt' | 'sppd'
+    let curPersonIdx = -1; // -1 = pelaksana utama, >=0 = pengikut[idx]
+    let curPaper = 'F4';
+
+    const wrap = d.createElement('div');
+    wrap.id = 'stitchSppdPreviewOverlay';
+    wrap.className = 'fixed inset-0 z-[97] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5';
+    wrap.innerHTML = `
+      <div class="w-full max-w-5xl h-[92vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 flex-wrap">
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[20px]">preview</span>
+            </span>
+            <div class="min-w-0">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white truncate">Pratinjau Dokumen SPT &amp; SPPD</h3>
+              <p class="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate">${esc(item.pelaksana_nama || '-')} • ${esc(item.nomor_sppd || item.nomor_spt || '-')}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <!-- Switcher Dokumen -->
+            <div class="inline-flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+              <button type="button" data-pv-tab="spt" class="px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer">Surat Tugas (SPT)</button>
+              <button type="button" data-pv-tab="sppd" class="px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer">SPPD</button>
+            </div>
+            <!-- Switcher Kertas -->
+            <div class="inline-flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+              <button type="button" data-pv-paper="F4" class="px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold cursor-pointer">F4</button>
+              <button type="button" data-pv-paper="A4" class="px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold cursor-pointer">A4</button>
+            </div>
+            <button type="button" data-close-pv class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer">
+              <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Bar Personil (muncul jika mode SPPD dan ada pengikut) -->
+        <div id="pvPersonBar" class="hidden px-5 py-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 flex items-center gap-1.5 overflow-x-auto">
+          <span class="text-[11px] font-bold text-slate-500 shrink-0 mr-1">Personil:</span>
+          <button type="button" data-pv-person="-1" class="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 cursor-pointer">${esc(item.pelaksana_nama || 'Utama')}</button>
+          ${pengikut.map((p, i) => `<button type="button" data-pv-person="${i}" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold shrink-0 cursor-pointer">${esc(p.nama || `Pengikut ${i + 1}`)}</button>`).join('')}
+        </div>
+
+        <!-- Live Iframe Preview -->
+        <div class="flex-1 bg-slate-200/80 dark:bg-slate-950 p-3 sm:p-5 overflow-auto flex justify-center">
+          <div class="w-full max-w-[820px] bg-white rounded-xl shadow-lg overflow-hidden min-h-full">
+            <iframe id="stitchSppdPreviewFrame" title="Pratinjau Dokumen" class="w-full h-full min-h-[680px] border-0 bg-white"></iframe>
+          </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="px-5 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/80 flex items-center justify-between gap-2 flex-wrap">
+          <span class="text-[11px] text-slate-500 dark:text-slate-400">Template Word resmi: <code class="font-mono text-primary">spt_template.docx</code> &amp; <code class="font-mono text-primary">sppd_template.docx</code></span>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button type="button" id="pvBtnPrint" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">print</span>
+              <span>Cetak / Simpan PDF</span>
+            </button>
+            <button type="button" id="pvBtnDocx" class="px-4 py-2 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">download</span>
+              <span id="pvBtnDocxLbl">Unduh SPT (.docx)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const renderFrame = () => {
+      const person = curPersonIdx >= 0 ? pengikut[curPersonIdx] : null;
+      const mergedItem = person
+        ? { ...item, pelaksana_nama: person.nama || item.pelaksana_nama, pelaksana_nip: person.nip || item.pelaksana_nip, pelaksana_pangkat: person.pangkat || item.pelaksana_pangkat, pelaksana_jabatan: person.jabatan || item.pelaksana_jabatan }
+        : item;
+      const html = curMode === 'spt' ? bangunHtmlSPT(item, { paper: curPaper }) : bangunHtmlSPPD(mergedItem, { paper: curPaper });
+      const cleanHtml = html.replace(/<div class="toolbar-print">[\s\S]*?<\/div>/i, '');
+      const frame = wrap.querySelector('#stitchSppdPreviewFrame');
+      if (frame) frame.srcdoc = cleanHtml;
+
+      wrap.querySelectorAll('[data-pv-tab]').forEach((b) => {
+        const act = b.dataset.pvTab === curMode;
+        b.className = act
+          ? 'px-3 py-1.5 rounded-lg bg-[#2563eb] text-white text-xs font-bold shadow-xs cursor-pointer'
+          : 'px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 text-xs font-semibold cursor-pointer';
+      });
+      wrap.querySelectorAll('[data-pv-paper]').forEach((b) => {
+        const act = b.dataset.pvPaper === curPaper;
+        b.className = act
+          ? 'px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[11px] font-mono font-bold cursor-pointer'
+          : 'px-2.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 text-[11px] font-mono font-semibold cursor-pointer';
+      });
+
+      const pBar = wrap.querySelector('#pvPersonBar');
+      if (pBar) pBar.classList.toggle('hidden', !(curMode === 'sppd' && pengikut.length > 0));
+      wrap.querySelectorAll('[data-pv-person]').forEach((b) => {
+        const act = Number(b.dataset.pvPerson) === curPersonIdx;
+        b.className = act
+          ? 'px-2.5 py-1 rounded-lg bg-[#2563eb] text-white text-[11px] font-bold shrink-0 cursor-pointer'
+          : 'px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-semibold shrink-0 cursor-pointer';
+      });
+
+      const lbl = wrap.querySelector('#pvBtnDocxLbl');
+      if (lbl) lbl.textContent = curMode === 'spt' ? 'Unduh SPT (.docx)' : 'Unduh SPPD (.docx)';
+    };
+
+    wrap.addEventListener('click', (e) => {
+      if (e.target === wrap || e.target.closest('[data-close-pv]')) wrap.remove();
+    });
+    wrap.querySelectorAll('[data-pv-tab]').forEach((b) => {
+      b.addEventListener('click', () => { curMode = b.dataset.pvTab; renderFrame(); });
+    });
+    wrap.querySelectorAll('[data-pv-paper]').forEach((b) => {
+      b.addEventListener('click', () => { curPaper = b.dataset.pvPaper; renderFrame(); });
+    });
+    wrap.querySelectorAll('[data-pv-person]').forEach((b) => {
+      b.addEventListener('click', () => { curPersonIdx = Number(b.dataset.pvPerson); renderFrame(); });
+    });
+    wrap.querySelector('#pvBtnPrint')?.addEventListener('click', () => {
+      const frame = wrap.querySelector('#stitchSppdPreviewFrame');
+      if (frame?.contentWindow) {
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+      }
+    });
+    wrap.querySelector('#pvBtnDocx')?.addEventListener('click', () => {
+      const person = curPersonIdx >= 0 ? pengikut[curPersonIdx] : null;
+      if (curMode === 'spt') downloadDocxFromTemplate('spt', item, null);
+      else downloadDocxFromTemplate('sppd', item, person);
+    });
+
+    d.body.appendChild(wrap);
+    renderFrame();
+  }
+
   w.SppdGenerator = {
     bangunHtmlSPT,
     bangunHtmlSPPD,
+    openPreviewModal,
     cetakSPT(item, paper = 'F4') {
       openPrintWindow(bangunHtmlSPT(item, { paper }));
     },
