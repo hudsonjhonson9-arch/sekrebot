@@ -220,9 +220,18 @@
 
   function showSppdGenerateMenu(item) {
     if (!item || !w.Swal || !w.SppdGenerator) return;
+    let pengikut = [];
+    try { pengikut = Array.isArray(item.pengikut) ? item.pengikut : JSON.parse(item.pengikut || '[]'); } catch (_) {}
+    const pengikutBtns = pengikut.length
+      ? `<div class="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-1.5">
+          <div class="text-[11px] font-bold text-slate-500">Unduh SPPD (.docx) Pengikut:</div>
+          <div class="flex flex-wrap gap-1.5">${pengikut.map((p, idx) => `<button type="button" data-gen-pengikut="${idx}" class="px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-[11px] font-bold cursor-pointer">${esc(p.nama || `Pengikut ${idx + 1}`)}</button>`).join('')}</div>
+        </div>`
+      : '';
+
     w.Swal.fire({
-      title: 'Generate Dokumen SPT & SPPD',
-      width: 500,
+      title: 'Generate Dokumen SPT & SPPD (Template Resmi)',
+      width: 520,
       html: `
         <div class="text-left text-xs space-y-3">
           <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
@@ -230,23 +239,88 @@
             <div class="font-mono text-[11px] text-primary mt-0.5">${esc(item.nomor_spt || '')} ${item.nomor_sppd ? '• ' + esc(item.nomor_sppd) : ''}</div>
           </div>
           <div class="grid grid-cols-2 gap-2">
-            <button type="button" id="btnGenCetakSpt" class="py-2.5 px-3 rounded-xl bg-[#2563eb] text-white font-bold cursor-pointer">Cetak / PDF SPT</button>
-            <button type="button" id="btnGenCetakSppd" class="py-2.5 px-3 rounded-xl bg-[#2563eb] text-white font-bold cursor-pointer">Cetak / PDF SPPD</button>
-            <button type="button" id="btnGenWordSpt" class="py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold cursor-pointer">Unduh Word SPT (.doc)</button>
-            <button type="button" id="btnGenWordSppd" class="py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold cursor-pointer">Unduh Word SPPD (.doc)</button>
+            <button type="button" id="btnGenWordSpt" class="py-2.5 px-3 rounded-xl bg-[#2563eb] text-white font-bold cursor-pointer">Unduh SPT (.docx)</button>
+            <button type="button" id="btnGenWordSppd" class="py-2.5 px-3 rounded-xl bg-[#2563eb] text-white font-bold cursor-pointer">Unduh SPPD (.docx)</button>
+            <button type="button" id="btnGenCetakSpt" class="py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold cursor-pointer">Cetak / PDF SPT</button>
+            <button type="button" id="btnGenCetakSppd" class="py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold cursor-pointer">Cetak / PDF SPPD</button>
           </div>
+          ${pengikutBtns}
         </div>
       `,
       showConfirmButton: true,
       confirmButtonText: 'Tutup',
       confirmButtonColor: '#64748b',
       didOpen: (el) => {
-        el.querySelector('#btnGenCetakSpt')?.addEventListener('click', () => w.SppdGenerator.cetakSPT(item));
-        el.querySelector('#btnGenCetakSppd')?.addEventListener('click', () => w.SppdGenerator.cetakSPPD(item));
         el.querySelector('#btnGenWordSpt')?.addEventListener('click', () => w.SppdGenerator.unduhWordSPT(item));
         el.querySelector('#btnGenWordSppd')?.addEventListener('click', () => w.SppdGenerator.unduhWordSPPD(item));
+        el.querySelector('#btnGenCetakSpt')?.addEventListener('click', () => w.SppdGenerator.cetakSPT(item));
+        el.querySelector('#btnGenCetakSppd')?.addEventListener('click', () => w.SppdGenerator.cetakSPPD(item));
+        el.querySelectorAll('[data-gen-pengikut]').forEach((b) => {
+          b.addEventListener('click', () => {
+            const p = pengikut[Number(b.dataset.genPengikut)];
+            if (p) w.SppdGenerator.unduhWordSPPD(item, p);
+          });
+        });
       },
     });
+  }
+
+  function onPelaksanaPicked(inputEl) {
+    const val = (inputEl?.value || '').trim();
+    const pg = _pegawaiList.find((x) => (x.nama || x.username || '').toLowerCase() === val.toLowerCase());
+    if (!pg) return;
+    const container = inputEl.closest('[data-sppd-pengikut-row]') || inputEl.closest('#modalArsipAgendaSppd, #drawerMobileAgendaSppd');
+    if (!container) return;
+    if (container.hasAttribute('data-sppd-pengikut-row')) {
+      const nip = container.querySelector('[data-pk="nip"]');
+      const pkt = container.querySelector('[data-pk="pangkat"]');
+      const jab = container.querySelector('[data-pk="jabatan"]');
+      if (nip && pg.nip) nip.value = pg.nip;
+      if (pkt && pg.pangkat) pkt.value = pg.pangkat;
+      if (jab && pg.jabatan) jab.value = pg.jabatan;
+    } else {
+      const nip = container.querySelector('[data-sppd-field="pelaksana_nip"]');
+      const pkt = container.querySelector('[data-sppd-field="pelaksana_pangkat"]');
+      const jab = container.querySelector('[data-sppd-field="pelaksana_jabatan"]');
+      if (nip && pg.nip) nip.value = pg.nip;
+      if (pkt && pg.pangkat) pkt.value = pg.pangkat;
+      if (jab && pg.jabatan) jab.value = pg.jabatan;
+    }
+  }
+
+  function addPengikutRow(btnEl) {
+    const modal = btnEl?.closest('#modalArsipAgendaSppd, #drawerMobileAgendaSppd');
+    const wrap = modal?.querySelector('[data-sppd-pengikut-list]');
+    if (!wrap) return;
+    const row = d.createElement('div');
+    row.setAttribute('data-sppd-pengikut-row', '1');
+    row.className = 'p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-2 gap-2 relative';
+    row.innerHTML = `
+      <input data-pk="nama" list="agendaPegawaiDatalist" onchange="window.ArsipAgenda?.onPelaksanaPicked(this)" type="text" placeholder="Nama Pengikut / Anggota Tim..." class="h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      <input data-pk="nip" type="text" placeholder="NIP" class="h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      <input data-pk="pangkat" type="text" placeholder="Pangkat / Golongan" class="h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      <div class="flex gap-1.5">
+        <input data-pk="jabatan" type="text" placeholder="Jabatan" class="flex-1 h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+        <button type="button" onclick="this.closest('[data-sppd-pengikut-row]').remove()" class="px-2.5 h-9 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 text-xs font-bold cursor-pointer" title="Hapus Pengikut">Hapus</button>
+      </div>
+    `;
+    wrap.appendChild(row);
+  }
+
+  function collectPengikut(modal) {
+    if (!modal) return [];
+    const list = [];
+    modal.querySelectorAll('[data-sppd-pengikut-row]').forEach((row) => {
+      const nama = (row.querySelector('[data-pk="nama"]')?.value || '').trim();
+      if (!nama) return;
+      list.push({
+        nama,
+        nip: (row.querySelector('[data-pk="nip"]')?.value || '').trim(),
+        pangkat: (row.querySelector('[data-pk="pangkat"]')?.value || '').trim(),
+        jabatan: (row.querySelector('[data-pk="jabatan"]')?.value || '').trim(),
+      });
+    });
+    return list;
   }
 
   function resolveTabFromHash() {
@@ -831,9 +905,16 @@
     if (!m) return;
     ensurePegawaiLoaded();
     const today = new Date().toISOString().slice(0, 10);
+    const yr = today.slice(0, 4);
     m.querySelectorAll('input, textarea').forEach((el) => {
-      el.value = el.type === 'date' ? today : '';
+      if (el.type === 'date') el.value = today;
+      else if (el.dataset.sppdField === 'tempat_berangkat' || el.dataset.sppdField === 'ditetapkan_di') el.value = 'Waikabubak';
+      else if (el.dataset.sppdField === 'dasar_hukum') el.value = `DPA Bapperida Kabupaten Sumba Barat TA ${yr}`;
+      else if (el.dataset.sppdField === 'subkegiatan_nama') el.value = 'Koordinasi dan Penyusunan Dokumen Perencanaan Pembangunan Daerah';
+      else el.value = '';
     });
+    const pkWrap = m.querySelector('[data-sppd-pengikut-list]');
+    if (pkWrap) pkWrap.innerHTML = '';
     m.classList.remove('hidden');
     m.classList.add('flex');
     refreshPickersIn(m);
@@ -851,15 +932,28 @@
     if (!m) return;
     const v = (k) => (m.querySelector(`[data-sppd-field="${k}"]`)?.value || '').trim();
     const pelaksana_nama = v('pelaksana');
+    const pelaksana_nip = v('pelaksana_nip');
+    const pelaksana_pangkat = v('pelaksana_pangkat');
+    const pelaksana_jabatan = v('pelaksana_jabatan');
+    const tempat_berangkat = v('tempat_berangkat') || 'Waikabubak';
     const tempat_tujuan = v('tujuan');
+    const provinsi_tujuan = v('provinsi_tujuan') || 'Nusa Tenggara Timur';
+    const rute_perjalanan = v('rute_perjalanan');
     const maksud_perjalanan = v('maksud');
     const jenis_sppd = v('jenis') || 'DALAM_DAERAH';
-    const tanggal_berangkat = v('berangkat') || new Date().toISOString().slice(0, 10);
+    const kop_surat = v('kop_surat') || 'BAPPERIDA';
+    const tingkat_biaya = v('tingkat_biaya') || (jenis_sppd === 'LUAR_DAERAH' ? 'Tingkat B' : 'Tingkat C');
+    const dasar_hukum = v('dasar_hukum') || `DPA Bapperida Kabupaten Sumba Barat TA ${new Date().getFullYear()}`;
+    const ditetapkan_di = v('ditetapkan_di') || 'Waikabubak';
+    const tanggal_spt = v('tanggal_spt') || new Date().toISOString().slice(0, 10);
+    const tanggal_berangkat = v('berangkat') || todayOrNow();
     const tanggal_kembali = v('kembali') || tanggal_berangkat;
     const alat_angkutan = v('angkutan') || 'Kendaraan Dinas Roda 4';
     const pejabat_perintah = v('pejabat') || 'Kepala BAPPERIDA';
+    const subkegiatan_nama = v('subkegiatan_nama');
     const nomor_spt = v('nomor_spt');
     const nomor_sppd = v('nomor_sppd');
+    const pengikut = collectPengikut(m);
 
     if (!pelaksana_nama || !tempat_tujuan || !maksud_perjalanan) {
       if (w.Swal) w.Swal.fire('Perhatian', 'Nama pelaksana, tempat tujuan, dan maksud perjalanan wajib diisi.', 'warning');
@@ -869,34 +963,45 @@
     const orig = btnEl ? btnEl.innerHTML : '';
     if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Menyimpan...'; }
 
+    const payload = {
+      jenis_sppd,
+      kop_surat,
+      pejabat_perintah,
+      nomor_spt: nomor_spt || undefined,
+      nomor_sppd: nomor_sppd || undefined,
+      tanggal_spt,
+      ditetapkan_di,
+      dasar_hukum,
+      tingkat_biaya,
+      pelaksana_nama,
+      pelaksana_nip,
+      pelaksana_pangkat,
+      pelaksana_jabatan,
+      pengikut,
+      tempat_berangkat,
+      tempat_tujuan,
+      provinsi_tujuan,
+      rute_perjalanan,
+      maksud_perjalanan,
+      tanggal_berangkat,
+      tanggal_kembali,
+      alat_angkutan,
+      subkegiatan_nama,
+      tahun: Number(tanggal_berangkat.slice(0, 4)),
+    };
+
     try {
       const res = await fetch('/api/arsip/p/api/agenda/sppd', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jenis_sppd,
-          pejabat_perintah,
-          nomor_spt: nomor_spt || undefined,
-          nomor_sppd: nomor_sppd || undefined,
-          pelaksana_nama,
-          tempat_tujuan,
-          maksud_perjalanan,
-          tanggal_berangkat,
-          tanggal_kembali,
-          alat_angkutan,
-          tahun: Number(tanggal_berangkat.slice(0, 4)),
-        }),
+        body: JSON.stringify(payload),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json.ok === false) throw new Error(json.message || `HTTP ${res.status}`);
       closeSppdModal();
       loadAgendaSppd();
       loadMobileAgendaSppd();
-      const savedItem = json.item || {
-        jenis_sppd, pejabat_perintah, nomor_spt, nomor_sppd, pelaksana_nama,
-        tempat_tujuan, maksud_perjalanan, tanggal_berangkat, tanggal_kembali, alat_angkutan,
-        tahun: Number(tanggal_berangkat.slice(0, 4)),
-      };
+      const savedItem = { ...payload, ...(json.item || {}) };
       if (w.SppdGenerator) {
         showSppdGenerateMenu(savedItem);
       } else if (w.Swal) {
@@ -907,6 +1012,10 @@
     } finally {
       if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = orig; }
     }
+  }
+
+  function todayOrNow() {
+    return new Date().toISOString().slice(0, 10);
   }
 
   /* ── MOBILE #view-arsip SUB-MENU (Dokumen | Agenda Surat | Agenda SPPD) ── */
@@ -1096,6 +1205,8 @@
     loadMobileAgendaSppd,
     uploadSuratFile,
     openSuratCameraScan,
+    onPelaksanaPicked,
+    addPengikutRow,
     generateSppdByIndex(idx) {
       const item = _sppdItems[idx];
       if (item) showSppdGenerateMenu(item);

@@ -895,9 +895,10 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
       const { rows } = await doQuery(
         `INSERT INTO agenda_sppd
          (jenis_sppd, tahun, nomor_register, nomor_spt, nomor_sppd, tanggal_spt, pejabat_perintah,
-          pelaksana_nip, pelaksana_nama, maksud_perjalanan, tempat_tujuan, provinsi_tujuan,
+          pelaksana_nip, pelaksana_nama, pelaksana_pangkat, pelaksana_jabatan, pengikut,
+          maksud_perjalanan, tempat_berangkat, tempat_tujuan, provinsi_tujuan, rute_perjalanan,
           alat_angkutan, tanggal_berangkat, tanggal_kembali, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14, $15, $16, $17, $18, $19, $20, $21)
          RETURNING *`,
         [
           jenis, tahun, pad,
@@ -905,8 +906,10 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
           b.nomor_sppd || `${kode}/${pad}/SPPD/BAPPERIDA/${tahun}`,
           b.tanggal_spt || b.tanggal_berangkat || new Date().toISOString().slice(0, 10),
           b.pejabat_perintah || 'Kepala BAPPERIDA',
-          b.pelaksana_nip || '', b.pelaksana_nama || '', b.maksud_perjalanan || '',
-          b.tempat_tujuan || '', b.provinsi_tujuan || 'Nusa Tenggara Timur',
+          b.pelaksana_nip || '', b.pelaksana_nama || '', b.pelaksana_pangkat || '', b.pelaksana_jabatan || '',
+          JSON.stringify(Array.isArray(b.pengikut) ? b.pengikut : []),
+          b.maksud_perjalanan || '', b.tempat_berangkat || 'Waikabubak',
+          b.tempat_tujuan || '', b.provinsi_tujuan || 'Nusa Tenggara Timur', b.rute_perjalanan || '',
           b.alat_angkutan || 'Kendaraan Dinas Roda 4',
           b.tanggal_berangkat || new Date().toISOString().slice(0, 10),
           b.tanggal_kembali || b.tanggal_berangkat || new Date().toISOString().slice(0, 10),

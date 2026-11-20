@@ -305,6 +305,32 @@
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
   }
 
+  async function downloadDocxFromTemplate(kind, item, person = null) {
+    const isSpt = kind === 'spt';
+    const cleanNo = String(isSpt ? (item?.nomor_spt || 'SPT') : (item?.nomor_sppd || 'SPPD')).replace(/[/\\?%*:|"<>]/g, '_');
+    const safeName = String(person?.nama || item?.pelaksana_nama || (isSpt ? 'SPT' : 'SPPD')).replace(/[^a-zA-Z0-9_-]+/g, '_');
+    try {
+      const r = await fetch('/api/arsip/sppd-docx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind, item, person }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = d.createElement('a');
+      a.href = url;
+      a.download = isSpt ? `Surat_Tugas_${cleanNo}.docx` : `SPPD_${cleanNo}_${safeName}.docx`;
+      d.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+      return true;
+    } catch (_) {
+      downloadWord(isSpt ? bangunHtmlSPT(item) : bangunHtmlSPPD(item), `${isSpt ? 'SPT' : 'SPPD'}_${safeName}.doc`);
+      return false;
+    }
+  }
+
   w.SppdGenerator = {
     bangunHtmlSPT,
     bangunHtmlSPPD,
@@ -315,12 +341,10 @@
       openPrintWindow(bangunHtmlSPPD(item, { paper }));
     },
     unduhWordSPT(item) {
-      const safe = String(item?.pelaksana_nama || 'SPT').replace(/[^a-zA-Z0-9_-]+/g, '_');
-      downloadWord(bangunHtmlSPT(item), `SPT_${safe}.doc`);
+      return downloadDocxFromTemplate('spt', item, null);
     },
-    unduhWordSPPD(item) {
-      const safe = String(item?.pelaksana_nama || 'SPPD').replace(/[^a-zA-Z0-9_-]+/g, '_');
-      downloadWord(bangunHtmlSPPD(item), `SPPD_${safe}.doc`);
+    unduhWordSPPD(item, person = null) {
+      return downloadDocxFromTemplate('sppd', item, person);
     },
   };
 })(window, document);

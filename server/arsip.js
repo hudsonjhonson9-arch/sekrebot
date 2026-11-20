@@ -4,6 +4,7 @@ import { query as queryDb } from './db.js';
 import { gasUpsert } from './gas.js';
 import { roleArsip, R_ADMIN } from './arsip-role.js';
 import { handleArsipDbRequest } from './arsip-db.js';
+import { renderSppdDocxBuffer } from './arsip-sppd-docx.js';
 
 // Proxy ke API arsipdigital (peta-ekonomi). Token arsip_session di-mint di sini
 // dari req.user.nip, bukan dari cookie browser — jadi panel arsip native tidak
@@ -82,6 +83,24 @@ export function createArsipRouter(deps = {}) {
       res.status(502).json({ ok: false, message: 'Gagal menghubungi server arsip' });
     }
   }
+
+  // Generate DOCX SPT / SPPD memakai template resmi peta-ekonomi (spt_template.docx & sppd_template.docx)
+  router.post('/sppd-docx', (req, res) => {
+    try {
+      const { kind = 'sppd', item = {}, person = null } = req.body || {};
+      const buf = renderSppdDocxBuffer(kind, item, person);
+      const isSpt = String(kind).toLowerCase() === 'spt';
+      const cleanNo = String(isSpt ? (item.nomor_spt || 'SPT') : (item.nomor_sppd || 'SPPD')).replace(/[/\\?%*:|"<>]/g, '_');
+      const nama = String(person?.nama || item.pelaksana_nama || 'Pelaksana').replace(/[^a-zA-Z0-9_-]+/g, '_');
+      const filename = isSpt ? `Surat_Tugas_${cleanNo}.docx` : `SPPD_${cleanNo}_${nama}.docx`;
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buf);
+    } catch (err) {
+      console.error('[arsip] sppd-docx error:', err);
+      res.status(500).json({ ok: false, message: 'Gagal membuat dokumen Word dari template: ' + err.message });
+    }
+  });
 
   // Upload file ke Drive lewat Apps Script, balikan { fileId, url }. Bukan proxy:
   // GAS dipanggil langsung dari server absensi (secret GAS tidak pernah ke browser).
