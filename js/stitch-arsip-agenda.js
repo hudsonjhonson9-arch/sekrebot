@@ -48,6 +48,207 @@
     el.classList.toggle('flex', show);
   }
 
+  /* ── SCAN KAMERA & UPLOAD DOKUMEN LAMPIRAN SURAT (MASUK & KELUAR) ──────── */
+  function readBlobAsBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const res = String(reader.result || '');
+        const idx = res.indexOf('base64,');
+        resolve(idx >= 0 ? res.slice(idx + 7) : res);
+      };
+      reader.onerror = () => reject(new Error('Gagal membaca berkas.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function uploadSuratAttachment(blob, filename, mimeType, modalEl) {
+    const statusEl = modalEl?.querySelector('[data-surat-upload-status]');
+    if (statusEl) {
+      statusEl.textContent = `Mengunggah "${filename}" ke Google Drive...`;
+      statusEl.className = 'text-[11px] font-semibold text-blue-600 dark:text-blue-400 mt-1';
+    }
+    const dataBase64 = await readBlobAsBase64(blob);
+    const upRes = await fetch('/api/arsip/docs/upload-file', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename, mimeType: mimeType || 'application/octet-stream', dataBase64 }),
+    });
+    const upJson = await upRes.json().catch(() => ({}));
+    if (!upRes.ok || upJson.ok === false) {
+      throw new Error(upJson.message || `Gagal mengunggah berkas (HTTP ${upRes.status})`);
+    }
+    const finalUrl = upJson.url || (upJson.fileId ? `https://drive.google.com/file/d/${upJson.fileId}/view` : '');
+    const urlInp = modalEl?.querySelector('[data-surat-field="file_url"]');
+    if (urlInp && finalUrl) urlInp.value = finalUrl;
+    if (statusEl) {
+      statusEl.textContent = `Berhasil diunggah: ${filename}`;
+      statusEl.className = 'text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1';
+    }
+    return finalUrl;
+  }
+
+  async function uploadSuratFile(inputEl) {
+    const file = inputEl?.files?.[0];
+    if (!file) return;
+    const modal = inputEl.closest('#modalArsipAgendaSurat, #drawerMobileAgendaSurat');
+    try {
+      await uploadSuratAttachment(file, file.name, file.type || 'application/pdf', modal);
+    } catch (err) {
+      const statusEl = modal?.querySelector('[data-surat-upload-status]');
+      if (statusEl) {
+        statusEl.textContent = `Gagal unggah: ${err?.message || 'Koneksi terganggu'}`;
+        statusEl.className = 'text-[11px] font-semibold text-rose-600 mt-1';
+      }
+      if (w.Swal) w.Swal.fire('Gagal Mengunggah', err?.message || 'Koneksi terganggu.', 'error');
+    } finally {
+      inputEl.value = '';
+    }
+  }
+
+  async function openSuratCameraScan(btnEl) {
+    const modal = btnEl?.closest('#modalArsipAgendaSurat, #drawerMobileAgendaSurat');
+    if (!w.Swal) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      w.Swal.fire('Kamera Tidak Tersedia', 'Browser/perangkat tidak mendukung akses kamera langsung. Gunakan tombol Upload Dokumen.', 'warning');
+      return;
+    }
+
+    let stream = null;
+    let capturedBlob = null;
+    let facing = 'environment';
+
+    const stopCam = () => {
+      if (stream) {
+        stream.getTracks().forEach((t) => t.stop());
+        stream = null;
+      }
+    };
+
+    const startCam = async (videoEl) => {
+      stopCam();
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing }, width: { ideal: 1600 }, height: { ideal: 1200 } }, audio: false });
+      } catch (_) {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+      if (videoEl) {
+        videoEl.srcObject = stream;
+        await videoEl.play().catch(() => {});
+      }
+    };
+
+    const res = await w.Swal.fire({
+      title: 'Scan Dokumen Surat (Kamera)',
+      width: 560,
+      html: `
+        <div class="flex flex-col gap-3">
+          <div class="relative rounded-2xl overflow-hidden bg-slate-950 aspect-[4/3] flex items-center justify-center">
+            <video id="swalScanVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+            <img id="swalScanPreview" class="hidden w-full h-full object-contain bg-slate-900" alt="Hasil scan">
+            <canvas id="swalScanCanvas" class="hidden"></canvas>
+          </div>
+          <div class="flex items-center justify-center gap-2">
+            <button type="button" id="swalScanFlipBtn" class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Balik Kamera</button>
+            <button type="button" id="swalScanSnapBtn" class="px-4 py-2 rounded-xl bg-[#2563eb] text-white text-xs font-bold cursor-pointer">Ambil Foto Dokumen</button>
+            <button type="button" id="swalScanRetakeBtn" class="hidden px-3 py-2 rounded-xl bg-amber-100 text-amber-800 text-xs font-bold cursor-pointer">Foto Ulang</button>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Unggah Hasil Scan',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb',
+      didOpen: async (popup) => {
+        const video = popup.querySelector('#swalScanVideo');
+        const img = popup.querySelector('#swalScanPreview');
+        const canvas = popup.querySelector('#swalScanCanvas');
+        const snapBtn = popup.querySelector('#swalScanSnapBtn');
+        const retakeBtn = popup.querySelector('#swalScanRetakeBtn');
+        const flipBtn = popup.querySelector('#swalScanFlipBtn');
+        try {
+          await startCam(video);
+        } catch (err) {
+          w.Swal.showValidationMessage('Gagal mengakses kamera: ' + (err?.message || 'Izin ditolak'));
+        }
+        flipBtn?.addEventListener('click', async () => {
+          facing = facing === 'environment' ? 'user' : 'environment';
+          await startCam(video).catch(() => {});
+        });
+        snapBtn?.addEventListener('click', () => {
+          if (!video.videoWidth) return;
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((blob) => {
+            if (!blob) return;
+            capturedBlob = blob;
+            img.src = URL.createObjectURL(blob);
+            video.classList.add('hidden');
+            img.classList.remove('hidden');
+            snapBtn.classList.add('hidden');
+            retakeBtn.classList.remove('hidden');
+          }, 'image/jpeg', 0.9);
+        });
+        retakeBtn?.addEventListener('click', () => {
+          capturedBlob = null;
+          img.classList.add('hidden');
+          video.classList.remove('hidden');
+          retakeBtn.classList.add('hidden');
+          snapBtn.classList.remove('hidden');
+        });
+      },
+      willClose: () => stopCam(),
+      preConfirm: () => {
+        if (!capturedBlob) {
+          w.Swal.showValidationMessage('Ambil foto dokumen terlebih dahulu sebelum mengunggah.');
+          return false;
+        }
+        return capturedBlob;
+      },
+    });
+
+    if (!res.isConfirmed || !res.value) return;
+    try {
+      const fname = `Scan_Surat_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.jpg`;
+      await uploadSuratAttachment(res.value, fname, 'image/jpeg', modal);
+    } catch (err) {
+      w.Swal.fire('Gagal Mengunggah Hasil Scan', err?.message || 'Koneksi terganggu.', 'error');
+    }
+  }
+
+  function showSppdGenerateMenu(item) {
+    if (!item || !w.Swal || !w.SppdGenerator) return;
+    w.Swal.fire({
+      title: 'Generate Dokumen SPT & SPPD',
+      width: 500,
+      html: `
+        <div class="text-left text-xs space-y-3">
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <div class="font-bold text-slate-900 dark:text-white">${esc(item.pelaksana_nama || '-')} &rarr; ${esc(item.tempat_tujuan || '-')}</div>
+            <div class="font-mono text-[11px] text-primary mt-0.5">${esc(item.nomor_spt || '')} ${item.nomor_sppd ? '• ' + esc(item.nomor_sppd) : ''}</div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="btnGenCetakSpt" class="py-2.5 px-3 rounded-xl bg-[#2563eb] text-white font-bold cursor-pointer">Cetak / PDF SPT</button>
+            <button type="button" id="btnGenCetakSppd" class="py-2.5 px-3 rounded-xl bg-[#2563eb] text-white font-bold cursor-pointer">Cetak / PDF SPPD</button>
+            <button type="button" id="btnGenWordSpt" class="py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold cursor-pointer">Unduh Word SPT (.doc)</button>
+            <button type="button" id="btnGenWordSppd" class="py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold cursor-pointer">Unduh Word SPPD (.doc)</button>
+          </div>
+        </div>
+      `,
+      showConfirmButton: true,
+      confirmButtonText: 'Tutup',
+      confirmButtonColor: '#64748b',
+      didOpen: (el) => {
+        el.querySelector('#btnGenCetakSpt')?.addEventListener('click', () => w.SppdGenerator.cetakSPT(item));
+        el.querySelector('#btnGenCetakSppd')?.addEventListener('click', () => w.SppdGenerator.cetakSPPD(item));
+        el.querySelector('#btnGenWordSpt')?.addEventListener('click', () => w.SppdGenerator.unduhWordSPT(item));
+        el.querySelector('#btnGenWordSppd')?.addEventListener('click', () => w.SppdGenerator.unduhWordSPPD(item));
+      },
+    });
+  }
+
   function resolveTabFromHash() {
     const h = String(w.location.hash || '').replace(/^#/, '').toLowerCase();
     if (h === 'agenda-surat') return 'agenda-surat';
@@ -506,6 +707,7 @@
             <td class="px-4 py-3 whitespace-nowrap text-right">
               <div class="inline-flex items-center gap-1.5">
                 ${statusPill(item.status || 'Tercatat')}
+                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.generateSppdByIndex(${i})" class="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold cursor-pointer" title="Generate SPT & SPPD">Cetak/Word</button>
                 <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.openSppdSpjModal(${item.id})" class="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-[10px] font-bold cursor-pointer">LHP/SPJ</button>
                 <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.deleteSppd(${item.id})" title="Hapus" class="p-1 rounded-lg text-slate-400 hover:text-rose-600 cursor-pointer"><span class="material-symbols-outlined text-[16px]">delete</span></button>
               </div>
@@ -688,9 +890,18 @@
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json.ok === false) throw new Error(json.message || `HTTP ${res.status}`);
       closeSppdModal();
-      if (w.Swal) w.Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Agenda SPPD berhasil dicatat.' });
       loadAgendaSppd();
       loadMobileAgendaSppd();
+      const savedItem = json.item || {
+        jenis_sppd, pejabat_perintah, nomor_spt, nomor_sppd, pelaksana_nama,
+        tempat_tujuan, maksud_perjalanan, tanggal_berangkat, tanggal_kembali, alat_angkutan,
+        tahun: Number(tanggal_berangkat.slice(0, 4)),
+      };
+      if (w.SppdGenerator) {
+        showSppdGenerateMenu(savedItem);
+      } else if (w.Swal) {
+        w.Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Agenda SPPD berhasil dicatat.' });
+      }
     } catch (err) {
       if (w.Swal) w.Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', text: err?.message || 'Koneksi terganggu.' });
     } finally {
@@ -844,7 +1055,8 @@
             <div class="flex items-center justify-between pt-1.5 border-t border-slate-100 dark:border-slate-800">
               <span class="font-mono text-[10px] text-slate-400">${esc(fmtDate(item.tanggal_berangkat))} – ${esc(fmtDate(item.tanggal_kembali))}</span>
               <div class="flex items-center gap-1.5">
-                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.openSppdSpjModal(${item.id})" class="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-[10px] font-bold cursor-pointer">LHP/SPJ</button>
+                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.generateSppdByIndex(${i})" class="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold cursor-pointer">Cetak/Word</button>
+                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.openSppdSpjModal(${item.id})" class="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-[10px] font-bold cursor-pointer">LHP/SPJ</button>
                 <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.deleteSppd(${item.id})" class="px-2 py-1 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[10px] font-semibold cursor-pointer">Hapus</button>
               </div>
             </div>
@@ -882,6 +1094,12 @@
     loadMobileAgendaSurat,
     setMobileSppdJenis,
     loadMobileAgendaSppd,
+    uploadSuratFile,
+    openSuratCameraScan,
+    generateSppdByIndex(idx) {
+      const item = _sppdItems[idx];
+      if (item) showSppdGenerateMenu(item);
+    },
   };
 
   function boot() {
