@@ -109,10 +109,11 @@ function tagsTtdParaf(it) {
   const t = { ...TTD_DEFAULT, ...rawTtd };
   const prefix = t.status && t.status !== 'Definitif' ? `${t.status} ` : '';
   const paraf = parseJson(it.paraf, []);
-  let baseJabatan = t.jabatan || kop.defaultJabatanTtd || TTD_DEFAULT.jabatan;
+  let baseJabatan = rawTtd.jabatan || it.pejabat_perintah || kop.defaultJabatanTtd || TTD_DEFAULT.jabatan;
   if (kop.key === 'SEKDA' && (!rawTtd.jabatan || /kepala bapperida/i.test(rawTtd.jabatan)) && it.pejabat_perintah && /sekretaris daerah|sekda|bupati/i.test(it.pejabat_perintah)) {
     baseJabatan = it.pejabat_perintah;
   }
+  const jabatanTtd = (prefix + baseJabatan).toUpperCase();
   return {
     KopJenis: kop.key,
     KopLabel: kop.label,
@@ -123,7 +124,8 @@ function tagsTtdParaf(it) {
     KopAlamat: kop.alamat,
     KopKontak: kop.kontak,
     KopKota: kop.kota,
-    KepalaJabatan: (prefix + baseJabatan).toUpperCase(),
+    JabatanTtd: jabatanTtd,
+    KepalaJabatan: jabatanTtd,
     KepalaNama: t.nama || TTD_DEFAULT.nama,
     KepalaPangkat: t.pangkat || TTD_DEFAULT.pangkat,
     KepalaNIP: t.nip || TTD_DEFAULT.nip,
@@ -248,6 +250,7 @@ export function renderSppdDocxBuffer(kind, item, person = null) {
     delimiters: { start: '{', end: '}' },
     paragraphLoop: true,
     linebreaks: true,
+    nullGetter: () => '',
   });
   const tags = isSpt ? bangunTagsSPT(item) : bangunTagsSPPD(item, person);
   doc.render(tags);
