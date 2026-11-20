@@ -928,6 +928,24 @@
 
         <div class="p-5 flex flex-col gap-4 overflow-y-auto">
           
+          <!-- Sub-Menu Aset Mobile: Aset Saya | Pemeliharaan | Pengaturan -->
+          <div class="p-1 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center gap-1">
+            <button type="button" data-m-aset-tab="aset" onclick="window.AsetSettings?.switchMobileAsetTab('aset')" class="flex-1 py-2 px-2 rounded-xl bg-[#2563eb] text-white text-[11px] font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[15px]">inventory_2</span>
+              <span>Aset Saya</span>
+            </button>
+            <button type="button" data-m-aset-tab="pemeliharaan" onclick="window.AsetSettings?.switchMobileAsetTab('pemeliharaan')" class="flex-1 py-2 px-2 rounded-xl text-slate-600 dark:text-slate-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[15px]">build</span>
+              <span>Pemeliharaan</span>
+            </button>
+            <button type="button" data-m-aset-tab="pengaturan" onclick="window.AsetSettings?.switchMobileAsetTab('pengaturan')" class="flex-1 py-2 px-2 rounded-xl text-slate-600 dark:text-slate-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[15px]">tune</span>
+              <span>Pengaturan</span>
+            </button>
+          </div>
+
+          <!-- TAB 1 MOBILE: ASET SAYA & OPERASIONAL -->
+          <div id="mobileAsetTabUtama" class="flex flex-col gap-4">
           <!-- Scan Barcode Hero Card -->
           <div onclick="openMobileQrScanModal()" class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-4 text-white shadow-md flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all" title="Buka Kamera Pemindai QR & Barcode BMD">
             <div class="flex flex-col gap-1 max-w-[240px]">
@@ -983,6 +1001,41 @@
               <span class="text-[10px] text-slate-400">Tiket Pemeliharaan</span>
             </button>
           </div>
+          </div>
+
+          <!-- TAB 2 MOBILE: PEMELIHARAAN ASET -->
+          <div id="mobileAsetTabPemeliharaan" class="hidden flex-col gap-3">
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="text-xs font-bold text-slate-900 dark:text-white">Riwayat Pemeliharaan Aset</h3>
+              <button type="button" onclick="window.AsetSettings?.openCatatPemeliharaanModal()" class="px-3 py-1.5 rounded-xl bg-[#2563eb] text-white text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">add</span>
+                <span>Catat</span>
+              </button>
+            </div>
+            <div id="mobileAsetPemeliharaanList" class="flex flex-col gap-2.5"></div>
+          </div>
+
+          <!-- TAB 3 MOBILE: PENGATURAN ASET (RUANGAN KIR & EKSPOR EXCEL) -->
+          <div id="mobileAsetTabPengaturan" class="hidden flex-col gap-3.5">
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="text-xs font-bold text-slate-900 dark:text-white">Ruangan &amp; PJ KIR</h3>
+              <button type="button" onclick="window.AsetSettings?.openRuanganModal(-1)" class="px-3 py-1.5 rounded-xl bg-[#2563eb] text-white text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">add</span>
+                <span>Ruangan</span>
+              </button>
+            </div>
+            <div id="mobileAsetRuanganList" class="flex flex-col gap-2"></div>
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button type="button" onclick="window.AsetSettings?.downloadPermen47Excel()" class="p-3 rounded-xl bg-emerald-600 text-white text-xs font-bold flex flex-col items-center gap-1 shadow-xs cursor-pointer">
+                <span class="material-symbols-outlined text-[19px]">table_view</span>
+                <span>Excel Permen 47</span>
+              </button>
+              <button type="button" onclick="window.AsetSettings?.downloadKartuPemeliharaanExcel()" class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold flex flex-col items-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[19px] text-primary">download</span>
+                <span>Kartu Pemeliharaan</span>
+              </button>
+            </div>
+          </div>
 
           <!-- Bottom Link to Desktop Portal -->
           <div class="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
@@ -993,7 +1046,7 @@
             </a>
           </div>
 
-                  </div>
+        </div>
       </div>
     </section>
 
@@ -3690,6 +3743,7 @@
   <script src="js/stitch-rekap.js"></script>
   <script src="js/stitch-layanan.js"></script>
   <script src="js/stitch-aset-arsip.js"></script>
+  <script src="js/stitch-aset-settings.js"></script>
   <script src="js/stitch-arsip-columns.js"></script>
   <script src="js/stitch-arsip-agenda.js"></script>
   <script src="js/stitch-admin-mobile.js"></script>

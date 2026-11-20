@@ -158,7 +158,7 @@
       .concat((_bastData.pegawai || []).map((p) => `<option value="${esc(p.id)}" ${String(p.id) === String(asset.pegawai_id || '') ? 'selected' : ''}>${esc(p.nama)} (${esc(p.nip || '-')})</option>`))
       .join('');
 
-    const { value: fv } = await w.Swal.fire({
+    const swalRes = await w.Swal.fire({
       title: `Atur Unit: ${esc(asset.nama_barang || 'Aset')}`,
       width: 560,
       html: `
@@ -186,9 +186,13 @@
         </div>
       `,
       showCancelButton: true,
+      showDenyButton: true,
       confirmButtonText: 'Simpan Perubahan',
+      denyButtonText: 'Hapus Unit',
       cancelButtonText: 'Batal',
       confirmButtonColor: '#2563eb',
+      denyButtonColor: '#dc2626',
+      didOpen: (el) => refreshPickers(el),
       preConfirm: () => ({
         aset_id: asset.id,
         ruangan_id: d.getElementById('swAsRuang')?.value || '',
@@ -198,7 +202,35 @@
       }),
     });
 
-    if (!fv) return;
+    if (swalRes.isDenied) {
+      const cf = await w.Swal.fire({
+        icon: 'warning',
+        title: 'Hapus Unit Aset?',
+        text: `Unit "${asset.nama_barang || asset.id}" akan dihapus permanen dari SIMAPO.`,
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#dc2626',
+      });
+      if (!cf.isConfirmed) return;
+      try {
+        const r = await fetch('/api/simapo/unit-delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aset_id: asset.id }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.ok) throw new Error(j.message || `HTTP ${r.status}`);
+        w.Swal.fire({ icon: 'success', title: 'Unit Dihapus', text: 'Data unit aset berhasil dihapus.' });
+        if (typeof w.loadRealAsetData === 'function') w.loadRealAsetData();
+      } catch (err) {
+        w.Swal.fire({ icon: 'error', title: 'Gagal Menghapus', text: err?.message || 'Koneksi terganggu.' });
+      }
+      return;
+    }
+
+    const fv = swalRes.value;
+    if (!swalRes.isConfirmed || !fv) return;
     try {
       const r = await fetch('/api/simapo/bast-assign', {
         method: 'POST',
@@ -297,6 +329,7 @@
       confirmButtonText: 'Simpan Pemeliharaan',
       cancelButtonText: 'Batal',
       confirmButtonColor: '#2563eb',
+      didOpen: (el) => refreshPickers(el),
       preConfirm: () => ({
         barang_id: d.getElementById('swPmBarang')?.value || '',
         tgl_pemeliharaan: d.getElementById('swPmTgl')?.value || today,
@@ -419,7 +452,111 @@
       ensureBastData(true).then(renderRuanganTable),
       loadPejabatSettings(),
       loadKategoriList(),
+      loadBastHistory(),
     ]);
+  }
+
+  async function loadBastHistory() {
+    const tbody = d.getElementById('asetBastHistoryBody');
+    if (!tbody) return;
+    try {
+      const r = await fetch('/api/simapo/bast-history');
+      const j = await r.json().catch(() => ({}));
+      const items = Array.isArray(j.data) ? j.data : [];
+      if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-xs text-slate-400">Belum ada riwayat Berita Acara Serah Terima (BAST).</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.slice(0, 20).map((b) => `
+        <tr class="border-b border-slate-100 dark:border-slate-800/80">
+          <td class="px-4 py-2.5 font-mono text-xs font-bold text-primary whitespace-nowrap">${esc(b.nomor || '-')}</td>
+          <td class="px-4 py-2.5 text-xs font-semibold text-slate-900 dark:text-white">${esc(b.pegawai_nama || '-')}<div class="text-[10px] font-mono text-slate-400">${esc(b.pegawai_nip || '')}</div></td>
+          <td class="px-4 py-2.5 font-mono text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">${esc(String(b.tanggal || b.createdat || '-').slice(0, 10))}</td>
+          <td class="px-4 py-2.5 font-mono text-xs font-bold text-slate-800 dark:text-slate-200 text-right whitespace-nowrap">${esc(b.total_aset || 0)} unit • ${esc(formatRp(b.total_nilai))}</td>
+        </tr>
+      `).join('');
+    } catch (_) {
+      tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-xs text-slate-400">Akses riwayat BAST khusus Pengelola Barang.</td></tr>';
+    }
+  }
+
+  function downloadPermen47Excel() {
+    w.open('/api/simapo/laporan-permen47/xlsx', '_blank', 'noopener');
+  }
+
+  function downloadKartuPemeliharaanExcel() {
+    w.open('/api/simapo/kartu-pemeliharaan/xlsx', '_blank', 'noopener');
+  }
+
+  /* ── MOBILE #view-aset SUB-MENU (Aset Saya | Pemeliharaan | Pengaturan) ── */
+  let _mAsetTab = 'aset';
+
+  function switchMobileAsetTab(tab) {
+    _mAsetTab = (tab === 'pemeliharaan' || tab === 'pengaturan') ? tab : 'aset';
+    togglePanel('mobileAsetTabUtama', _mAsetTab === 'aset');
+    togglePanel('mobileAsetTabPemeliharaan', _mAsetTab === 'pemeliharaan');
+    togglePanel('mobileAsetTabPengaturan', _mAsetTab === 'pengaturan');
+
+    d.querySelectorAll('[data-m-aset-tab]').forEach((btn) => {
+      const act = btn.dataset.mAsetTab === _mAsetTab;
+      btn.className = act
+        ? 'flex-1 py-2 px-2 rounded-xl bg-[#2563eb] text-white text-[11px] font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1'
+        : 'flex-1 py-2 px-2 rounded-xl text-slate-600 dark:text-slate-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1';
+    });
+
+    if (_mAsetTab === 'pemeliharaan') loadMobilePemeliharaan();
+    if (_mAsetTab === 'pengaturan') loadMobilePengaturan();
+  }
+
+  async function loadMobilePemeliharaan() {
+    const box = d.getElementById('mobileAsetPemeliharaanList');
+    if (!box) return;
+    box.innerHTML = '<div class="py-8 text-center text-xs text-slate-400">Memuat riwayat pemeliharaan...</div>';
+    try {
+      const r = await fetch('/api/stitch/aset/pemeliharaan');
+      const j = await r.json().catch(() => ({}));
+      const rows = Array.isArray(j.data) ? j.data : [];
+      if (!rows.length) {
+        box.innerHTML = '<div class="p-6 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">Belum ada catatan pemeliharaan aset.</div>';
+        return;
+      }
+      box.innerHTML = rows.slice(0, 30).map((p) => `
+        <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xs flex flex-col gap-1">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-bold text-slate-900 dark:text-white truncate">${esc(p.nama_barang || '-')}</span>
+            <span class="font-mono text-[11px] font-bold text-primary shrink-0">${esc(formatRp(p.biaya))}</span>
+          </div>
+          <div class="text-[11px] text-slate-600 dark:text-slate-300">${esc(p.jenis_pemeliharaan || '-')} • ${esc(p.nama_penyedia || '-')}</div>
+          <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <span>${esc(String(p.tgl_pemeliharaan || '-').slice(0, 10))}</span>
+            <span class="truncate max-w-[180px]">${esc(p.keterangan || '')}</span>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      box.innerHTML = `<div class="p-6 text-center text-xs text-rose-500">Gagal memuat: ${esc(err?.message)}</div>`;
+    }
+  }
+
+  async function loadMobilePengaturan() {
+    const box = d.getElementById('mobileAsetRuanganList');
+    if (!box) return;
+    box.innerHTML = '<div class="py-6 text-center text-xs text-slate-400">Memuat daftar ruangan KIR...</div>';
+    await ensureBastData(true);
+    const list = _bastData.ruangan || [];
+    if (!list.length) {
+      box.innerHTML = '<div class="p-5 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">Belum ada ruangan KIR terdaftar.</div>';
+      return;
+    }
+    box.innerHTML = list.map((r, i) => `
+      <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xs flex items-center justify-between gap-2">
+        <div class="min-w-0">
+          <div class="text-xs font-bold text-slate-900 dark:text-white truncate">${esc(r.nama || '-')} <span class="font-mono text-[10px] text-primary">(${esc(r.kode || '-')})</span></div>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate">PJ: ${esc(r.penanggung_nama || 'Belum ditetapkan')}</div>
+        </div>
+        <button type="button" onclick="window.AsetSettings?.openRuanganModal(${i})" class="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-[11px] font-bold shrink-0 cursor-pointer">Atur PJ</button>
+      </div>
+    `).join('');
   }
 
   function renderRuanganTable() {
@@ -477,6 +614,7 @@
       confirmButtonText: 'Simpan Ruangan',
       cancelButtonText: 'Batal',
       confirmButtonColor: '#2563eb',
+      didOpen: (el) => refreshPickers(el),
       preConfirm: () => {
         const sel = d.getElementById('swRgPj');
         const opt = sel?.selectedOptions?.[0];
@@ -617,6 +755,12 @@
     savePejabatSettings,
     addKategori,
     deleteKategori,
+    loadBastHistory,
+    downloadPermen47Excel,
+    downloadKartuPemeliharaanExcel,
+    switchMobileAsetTab,
+    loadMobilePemeliharaan,
+    loadMobilePengaturan,
   };
 
   function boot() {
