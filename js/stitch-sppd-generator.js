@@ -568,6 +568,7 @@
       if (!p) return;
       wrap.querySelector('#wewKepalaNama').value = p.nama || p.username || '';
       wrap.querySelector('#wewKepalaNip').value = p.nip || '';
+      if (p.pangkat) wrap.querySelector('#wewKepalaPangkat').value = p.pangkat;
       if (p.jabatan) wrap.querySelector('#wewKepalaJabatan').value = p.jabatan.toUpperCase();
     });
     wrap.querySelector('#btnSaveWewenang')?.addEventListener('click', async () => {

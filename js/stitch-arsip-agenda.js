@@ -680,16 +680,16 @@
       const nip = container.querySelector('[data-pk="nip"]');
       const pkt = container.querySelector('[data-pk="pangkat"]');
       const jab = container.querySelector('[data-pk="jabatan"]');
-      if (nip && pg.nip) nip.value = pg.nip;
-      if (pkt && pg.pangkat) pkt.value = pg.pangkat;
-      if (jab && pg.jabatan) jab.value = pg.jabatan;
+      if (nip) nip.value = pg.nip || '';
+      if (pkt) pkt.value = pg.pangkat || pg.golongan || '';
+      if (jab) jab.value = pg.jabatan || '';
     } else {
       const nip = container.querySelector('[data-sppd-field="pelaksana_nip"]');
       const pkt = container.querySelector('[data-sppd-field="pelaksana_pangkat"]');
       const jab = container.querySelector('[data-sppd-field="pelaksana_jabatan"]');
-      if (nip && pg.nip) nip.value = pg.nip;
-      if (pkt && pg.pangkat) pkt.value = pg.pangkat;
-      if (jab && pg.jabatan) jab.value = pg.jabatan;
+      if (nip) nip.value = pg.nip || '';
+      if (pkt) pkt.value = pg.pangkat || pg.golongan || '';
+      if (jab) jab.value = pg.jabatan || '';
     }
   }
 
@@ -1987,7 +1987,7 @@
 
   async function openWewenang() {
     await ensurePegawaiLoaded();
-    w.SppdGenerator?.openWewenangModal(_pegawaiCache || []);
+    w.SppdGenerator?.openWewenangModal(_pegawaiList || []);
   }
 
   function todayOrNow() {

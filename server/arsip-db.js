@@ -701,7 +701,17 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
   // 4b. Agenda Master & Write Fallbacks (peta-ekonomi parity)
   if (pathname === '/api/agenda/pegawai-list' && method === 'GET') {
     try {
-      const { rows } = await doQuery(`SELECT "NIP" AS nip, username AS nama, COALESCE("Jabatan", '') AS jabatan FROM user_list ORDER BY username ASC`);
+      const { rows } = await doQuery(`
+        SELECT id,
+               "NIP" AS nip,
+               username AS nama,
+               COALESCE(pangkat, '') AS pangkat,
+               COALESCE("Jabatan", '') AS jabatan,
+               COALESCE(bidang, '') AS bidang
+        FROM user_list
+        WHERE (status_aktif = true OR status_aktif IS NULL)
+        ORDER BY username ASC
+      `);
       res.json({ ok: true, items: rows });
       return true;
     } catch {
