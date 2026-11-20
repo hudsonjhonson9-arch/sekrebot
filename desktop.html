@@ -17,6 +17,7 @@
   <script src="js/dynamic-island.js"></script>
   <script src="js/lib/qrcode.min.js"></script>
   <script src="js/stitch-auth.js"></script>
+  <script src="js/auto-absen-login.js"></script>
   <script src="js/stitch-pickers.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 
@@ -636,6 +637,9 @@
       startDesktopCamera();
       syncRealGPS();
       await Promise.all([loadBootstrap(), loadMasterData()]);
+      if (window.AutoAbsenLogin && typeof window.AutoAbsenLogin.consumeAutoAbsenNotice === 'function') {
+        window.AutoAbsenLogin.consumeAutoAbsenNotice();
+      }
     });
 
     // ── 2. LIVE CLOCK (WITA UTC+8) ────────────────────────────────────

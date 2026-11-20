@@ -201,7 +201,10 @@
 
               state.isLoggedIn = true;
               if (overlayEl) overlayEl.style.display = 'none';
-              if (typeof showDynamicIsland === 'function') {
+              const consumedAutoNotice = (window.AutoAbsenLogin && typeof window.AutoAbsenLogin.consumeAutoAbsenNotice === 'function')
+                ? window.AutoAbsenLogin.consumeAutoAbsenNotice()
+                : false;
+              if (!consumedAutoNotice && typeof showDynamicIsland === 'function') {
                 showDynamicIsland({ type: 'success', title: 'Login Berhasil', message: `Selamat datang, ${user.nama || userNip}` });
               }
               return;
@@ -209,6 +212,18 @@
 
             if (overlayEl) overlayEl.style.display = 'none';
             location.reload();
+          };
+
+          const maybeAutoAbsenAfterFace = async () => {
+            const chkEl = document.getElementById('chkAutoAbsenLogin');
+            const autoEnabled = chkEl ? Boolean(chkEl.checked) : true;
+            if (window.AutoAbsenLogin && typeof window.AutoAbsenLogin.tryAutoAbsenAfterFaceLogin === 'function') {
+              await window.AutoAbsenLogin.tryAutoAbsenAfterFaceLogin({
+                nip: userNip,
+                token: sessionToken,
+                autoEnabled
+              });
+            }
           };
 
           if (requireFace) {
@@ -251,7 +266,8 @@
                           const faceOk = await syncFaceToServer(targetId, camResult.dataUrl, camResult.descriptor, user.nama, new Date().toISOString());
                           if (!faceOk) throw new Error('Gagal menyimpan data wajah ke server. Hubungi Admin.');
                           alert('Wajah berhasil didaftarkan! Selamat datang.');
-                          finalizeLogin();
+                          await maybeAutoAbsenAfterFace();
+                          await finalizeLogin();
                        } catch (err) {
                           alert(' ' + err.message);
                           setNativeToken(null);
@@ -351,6 +367,7 @@
 
                     // Threshold 0.50 untuk kemiripan wajah
                     if (similarity >= 0.50) {
+                       await maybeAutoAbsenAfterFace();
                        await finalizeLogin();
                     } else {
                        alert(`Verifikasi Gagal!\n${failReason}`);

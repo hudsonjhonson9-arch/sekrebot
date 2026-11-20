@@ -407,6 +407,10 @@
               if (hv) switchMainView(hv, false, hs || null);
             });
           }
+
+          if (!opts.keepOverlay && isAuthed && window.AutoAbsenLogin && typeof window.AutoAbsenLogin.consumeAutoAbsenNotice === 'function') {
+            window.AutoAbsenLogin.consumeAutoAbsenNotice();
+          }
         }
       } catch (err) {
         console.error('[Stitch DB] Bootstrap failed:', err);

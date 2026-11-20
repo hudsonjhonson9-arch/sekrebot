@@ -209,6 +209,12 @@
             </span>
           </div>
 
+          <!-- Auto-Presensi Masuk saat Verifikasi Wajah -->
+          <label for="chkAutoAbsenLogin" class="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-surface-container-low/70 border border-outline-variant/40 cursor-pointer select-none transition-colors hover:bg-surface-container-low">
+            <input id="chkAutoAbsenLogin" type="checkbox" checked class="w-4 h-4 rounded text-primary focus:ring-primary/30 border-outline-variant transition shrink-0"/>
+            <span class="text-[11.5px] font-medium text-on-surface-variant leading-snug">Langsung catat Presensi Masuk setelah verifikasi wajah</span>
+          </label>
+
           <!-- Primary Submit Action Button -->
           <button id="btnLogin" onclick="handleAuthAction('login')" class="w-full min-h-[50px] bg-primary-container hover:bg-blue-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 action-elevation tap-press transition-all duration-150 cursor-pointer mt-2" type="button">
             <span>Masuk Sekarang</span>
@@ -371,6 +377,7 @@
   <script src="js/face-mount.js"></script>
   <script type="module" src="js/face-quality.js"></script>
   <script src="js/face.js"></script>
+  <script src="js/auto-absen-login.js"></script>
   <script src="js/auth.js"></script>
 
   <script>
