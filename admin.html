@@ -100,26 +100,25 @@
 </div>
 <!-- Tab Bar Navigasi Admin -->
 <div class="bg-surface-container-lowest rounded-2xl p-space-xs shadow-sm">
-<div class="flex items-center gap-space-xs overflow-x-auto" id="adminTabs"><button class="tab-btn flex items-center gap-space-xs px-space-md py-2 rounded-xl font-label-lg text-label-lg transition-all bg-primary text-on-primary shadow-sm" data-tab="tab-ops" type="button">
+<div class="flex items-center gap-space-xs overflow-x-auto" id="adminTabs"><button class="tab-btn flex items-center gap-space-xs px-space-md py-2 rounded-xl font-label-lg text-label-lg transition-all bg-primary text-on-primary shadow-sm cursor-pointer shrink-0" data-tab="tab-ops" type="button">
 <span class="material-symbols-outlined text-[18px]">how_to_reg</span>
 <span>Operasional &amp; Kehadiran</span>
-<span class="ml-1 px-1.5 py-0.5 rounded-md text-[11px] font-bold bg-error text-on-error">3</span>
 </button>
-<button class="tab-btn flex items-center gap-space-xs px-space-md py-2 rounded-xl font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-tab="tab-pepegawaian" type="button">
-<span class="material-symbols-outlined text-[18px]">badge</span>
-<span>Manajemen Pegawai &amp; Face AI</span>
+<button class="tab-btn flex items-center gap-space-xs px-space-md py-2 rounded-xl font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer shrink-0" data-tab="tab-pepegawaian" type="button">
+<span class="material-symbols-outlined text-[18px]">shield_person</span>
+<span>Keamanan, Perangkat &amp; Instansi</span>
 </button>
-<button class="tab-btn flex items-center gap-space-xs px-space-md py-2 rounded-xl font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-tab="tab-config" type="button">
+<button class="tab-btn flex items-center gap-space-xs px-space-md py-2 rounded-xl font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer shrink-0" data-tab="tab-config" type="button">
 <span class="material-symbols-outlined text-[18px]">tune</span>
-<span>Konfigurasi Geofence &amp; Jam</span>
+<span>Geofence, Jam &amp; Biometrik</span>
 </button>
-<button class="tab-btn flex items-center gap-space-xs px-space-md py-2 rounded-xl font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high transition-all" data-tab="tab-diagnostics" type="button">
+<button class="tab-btn flex items-center gap-space-xs px-space-md py-2 rounded-xl font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer shrink-0" data-tab="tab-diagnostics" type="button">
 <span class="material-symbols-outlined text-[18px]">terminal</span>
-<span>Status Diagnostik</span>
+<span>Developer &amp; OpenWA</span>
 </button></div>
 </div>
 <!-- SECTION 1: Health Matrix Live (Developer & Diagnostik Live Card) -->
-<div id="devHealthCard" class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
+<div id="devHealthCard" data-admin-tab="tab-diagnostics" class="hidden bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
 <div class="flex items-center gap-space-md">
 <div class="w-10 h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
@@ -149,7 +148,7 @@
 <div id="devDiagSummary" class="hidden text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5"></div>
 </div>
 <!-- SECTION 1B: Log Aktivitas & Error Console -->
-<div id="devLogCard" class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
+<div id="devLogCard" data-admin-tab="tab-diagnostics" class="hidden bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
 <div class="flex items-center gap-space-md">
 <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -195,7 +194,7 @@
 <div id="devLogViewer" class="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1"></div>
 </div>
 <!-- SECTION 4: Terminal Meja Absen & Pairing Perangkat -->
-<div id="adminDevicePairingSection" class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden flex flex-col">
+<div id="adminDevicePairingSection" data-admin-tab="tab-pepegawaian" class="hidden bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden flex flex-col">
 <div class="bg-gradient-to-r from-primary to-primary-container text-on-primary p-space-lg flex flex-col lg:flex-row items-start lg:items-center justify-between gap-space-md">
 <div class="flex items-center gap-space-md">
 <div class="w-11 h-11 rounded-xl bg-on-primary/10 flex items-center justify-center shrink-0">
@@ -238,7 +237,7 @@
 </div>
 </div>
 <!-- SECTION 2: Pengaturan Aturan & Kebijakan (Geofence, Biometric Face, Jam Kerja) -->
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+<div data-admin-tab="tab-config" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
 <!-- LEFT: Pengaturan Jam Kerja Instansi (5 Cols) -->
 <div class="lg:col-span-5 bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col justify-between gap-space-md">
 <div class="flex flex-col gap-1">
@@ -378,7 +377,7 @@
 </div>
 </div>
 <!-- SECTION 2.5: Kontrol Absen (Jam Jaga) & Peringatan Akumulasi Keterlambatan -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg">
+<div data-admin-tab="tab-config" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-space-lg">
   <!-- Kontrol Absen (Jam Jaga) -->
   <div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col justify-between gap-space-md border border-outline-variant/30">
     <div class="flex flex-col gap-space-md">
@@ -469,7 +468,7 @@
   </div>
 </div>
 <!-- SECTION 2A: Keamanan Login & Identitas Instansi -->
-<div id="adminSecurityInstansiCard" class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
+<div id="adminSecurityInstansiCard" data-admin-tab="tab-pepegawaian" class="hidden bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
 <div class="flex items-center gap-space-md">
 <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -523,7 +522,7 @@
 </div>
 </div>
 <!-- SECTION 2B: Monitoring Presensi Hari Ini (data live, logika bersama dengan mobile) -->
-<div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md">
+<div data-admin-tab="tab-ops" class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
 <div class="flex flex-col">
 <span class="font-headline-sm text-headline-sm text-on-surface">Monitoring Presensi Hari Ini</span>
@@ -548,7 +547,7 @@
 </div>
 </div>
 <!-- SECTION 3: Tabel Persetujuan Izin & Keterangan Pegawai (Pending Requests) -->
-<div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md">
+<div data-admin-tab="tab-ops" class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
 <div class="flex items-center gap-space-xs">
 <span class="material-symbols-outlined text-[24px] text-primary">assignment_late</span>
@@ -589,7 +588,7 @@
 </div>
 </div>
 <!-- Operational Footer Metrics / Quick Actions Strip -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md pb-space-md">
+<div data-admin-tab="tab-ops" class="grid grid-cols-1 md:grid-cols-3 gap-space-md pb-space-md">
 <div class="p-space-md rounded-2xl bg-surface-container-lowest shadow-sm flex items-center gap-space-sm">
 <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
 <span class="material-symbols-outlined text-[20px]">cloud_sync</span>
@@ -620,21 +619,47 @@
 </div>
 </div>
 <script>
-  // Tab switcher simple toggle micro-interaction
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => {
-        b.classList.remove('bg-primary', 'text-on-primary', 'shadow-sm');
-        b.classList.add('text-on-surface-variant', 'hover:bg-surface-container-high');
-      });
-      btn.classList.add('bg-primary', 'text-on-primary', 'shadow-sm');
-      btn.classList.remove('text-on-surface-variant', 'hover:bg-surface-container-high');
-      if (btn.dataset.tab === 'tab-diagnostics') {
-        const card = document.getElementById('devHealthCard');
-        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+  // Real Tab Switcher untuk Panel Admin Desktop (mendukung hash #tab-ops | #tab-pepegawaian | #tab-config | #tab-diagnostics)
+  function setAdminDesktopTab(tabId, updateHash) {
+    const valid = ['tab-ops', 'tab-pepegawaian', 'tab-config', 'tab-diagnostics'];
+    const target = valid.includes(tabId) ? tabId : 'tab-ops';
+
+    document.querySelectorAll('.tab-btn').forEach((b) => {
+      const active = b.dataset.tab === target;
+      b.classList.toggle('bg-primary', active);
+      b.classList.toggle('text-on-primary', active);
+      b.classList.toggle('shadow-sm', active);
+      b.classList.toggle('text-on-surface-variant', !active);
+      b.classList.toggle('hover:bg-surface-container-high', !active);
     });
+
+    document.querySelectorAll('[data-admin-tab]').forEach((panel) => {
+      panel.classList.toggle('hidden', panel.dataset.adminTab !== target);
+    });
+
+    if (updateHash) {
+      try { history.replaceState(null, '', '#' + target); } catch (_) {}
+    }
+    if (target === 'tab-config') {
+      setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 80);
+    }
+    if (target === 'tab-diagnostics') {
+      if (typeof window.runDevDiagnostics === 'function') window.runDevDiagnostics();
+      if (typeof window.renderDevLogTable === 'function') window.renderDevLogTable();
+    }
+  }
+
+  document.querySelectorAll('.tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => setAdminDesktopTab(btn.dataset.tab, true));
   });
+
+  window.addEventListener('hashchange', () => {
+    const h = (location.hash || '').replace(/^#/, '');
+    if (h.startsWith('tab-')) setAdminDesktopTab(h, false);
+  });
+
+  const initHash = (location.hash || '').replace(/^#/, '');
+  setAdminDesktopTab(initHash.startsWith('tab-') ? initHash : 'tab-ops', false);
 
   // Live WITA Clock
   function updateAdminClock() {
@@ -653,9 +678,8 @@
 
 
 
-<script defer src="js/lib/leaflet.min.js"></script>
+<script src="js/lib/leaflet.min.js"></script>
 <script src="js/stitch-pickers.js"></script>
-<script type="module" src="/js/app-core.js"></script>
 <script src="/js/admin-core.js"></script>
 <script type="module" src="js/dev-tools.js"></script>
 <script type="module" src="/js/admin-controller.js"></script>

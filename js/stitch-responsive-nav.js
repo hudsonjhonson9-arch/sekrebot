@@ -42,12 +42,13 @@
     return '';
   }
 
-  function isAdminRole() {
+  function isExplicitNonAdmin() {
     try {
       const uObj = JSON.parse(localStorage.getItem('tg_user_obj_v5') || 'null') || {};
-      const role = String(uObj.role || uObj.Role || localStorage.getItem('MY_ROLE') || '').toUpperCase();
-      if (uObj.is_admin === true) return true;
-      return ['ADMIN', 'SUPERADMIN', 'SUPER ADMIN', 'KEPALA', 'SEKRETARIS', 'KABID', 'IRBAN'].includes(role);
+      if (uObj.is_admin === true) return false;
+      const role = String(uObj.role || uObj.Role || localStorage.getItem('MY_ROLE') || '').trim().toUpperCase();
+      if (!role) return false; // Jangan sembunyikan link bila cache role belum terisi
+      return ['USER', 'PEGAWAI', 'BENDAHARA BARANG', 'INSPEKTUR'].includes(role);
     } catch (_) {
       return false;
     }
@@ -443,7 +444,7 @@
     if (sidebarNav && !document.getElementById('stitchStandaloneAdminSubmenu')) {
       const adminLink = sidebarNav.querySelector('a[href="admin.html"]');
       if (adminLink) {
-        if (!isAdminRole()) {
+        if (isExplicitNonAdmin()) {
           adminLink.style.display = 'none';
         } else {
           const isOnAdmin = (location.pathname.split('/').pop() || '').toLowerCase() === 'admin.html';
@@ -461,15 +462,14 @@
           subWrap.id = 'stitchStandaloneAdminSubmenu';
           subWrap.className = 'mt-0.5 ml-3 pl-3 border-l border-slate-700/80 flex flex-col gap-0.5 overflow-hidden transition-all';
           const adminSubs = [
-            { href: 'index.html#admin:adminSectionMonitoring', icon: 'monitoring', label: 'Monitoring Hari Ini' },
-            { href: 'index.html#admin:adminSectionIzin', icon: 'rule', label: 'Konfirmasi Izin' },
+            { href: 'admin.html#tab-ops', icon: 'monitoring', label: 'Operasional & Izin' },
+            { href: 'admin.html#tab-pepegawaian', icon: 'shield_person', label: 'Keamanan & Perangkat' },
+            { href: 'admin.html#tab-config', icon: 'share_location', label: 'Geofence & Jam Kerja' },
+            { href: 'admin.html#tab-diagnostics', icon: 'terminal', label: 'Developer & OpenWA' },
             { href: 'rekap.html', icon: 'analytics', label: 'Rekap Semua Pegawai' },
-            { href: 'index.html#admin:adminSectionPegawai', icon: 'face', label: 'Master Pegawai & AI' },
-            { href: 'index.html#admin:adminSectionRoles', icon: 'manage_accounts', label: 'Kelola Role & Hak' },
-            { href: 'index.html#admin:adminSectionGeofence', icon: 'share_location', label: 'Geofencing Lokasi' },
-            { href: 'index.html#admin:adminSectionJamLibur', icon: 'schedule', label: 'Jam Kerja & Libur' },
             { href: 'cetak-tpp.html', icon: 'receipt_long', label: 'Cetak Rekap TPP' },
-            { href: 'index.html#admin:dev', icon: 'terminal', label: 'Developer & Diagnostik' }
+            { href: 'index.html#admin:adminSectionPegawai', icon: 'face', label: 'Master Pegawai & AI' },
+            { href: 'index.html#admin:adminSectionRoles', icon: 'manage_accounts', label: 'Kelola Role & Hak' }
           ];
           subWrap.innerHTML = adminSubs.map((s) => `
             <a href="${s.href}" title="${s.label}" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium">

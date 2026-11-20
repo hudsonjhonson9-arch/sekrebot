@@ -272,6 +272,9 @@
       };
       if (btnStreet) btnStreet.addEventListener('click', () => setLayer('street'));
       if (btnSat) btnSat.addEventListener('click', () => setLayer('satellite'));
+      window.addEventListener('resize', () => {
+        setTimeout(() => { try { map.invalidateSize(); } catch (_) {} }, 80);
+      });
       setTimeout(() => map.invalidateSize(), 150);
     }
 
