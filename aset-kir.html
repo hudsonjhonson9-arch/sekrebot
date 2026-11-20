@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <html lang="id"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="js/stitch-auth.js"></script><script src="https://cdn.tailwindcss.com"></script><script src="js/dynamic-island.js"></script><script id="tailwind-config">tailwind.config = {
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="js/lib/sweetalert2.all.min.js"></script><script src="js/stitch-auth.js"></script><script src="https://cdn.tailwindcss.com"></script><script src="js/dynamic-island.js"></script><script id="tailwind-config">tailwind.config = {
   darkMode: "class",
   theme: {
     extend: {
@@ -195,11 +195,11 @@
 <p class="font-body-md text-body-md text-on-surface-variant">Pengelolaan Barang Milik Daerah (BMD), peminjaman kendaraan dinas operasional, dan barcode audit inventaris fisik.</p>
 </div>
 <div class="flex items-center gap-space-sm flex-wrap sm:flex-nowrap">
-<button class="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-dim text-on-surface font-label-lg text-label-lg transition-all shadow-sm" type="button">
+<button onclick="openAsetScanModal()" class="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-dim text-on-surface font-label-lg text-label-lg transition-all shadow-sm cursor-pointer" type="button">
 <span class="material-symbols-outlined text-[20px] text-primary">qr_code_scanner</span>
 <span>Scan Barcode Aset</span>
 </button>
-<button class="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary-container font-label-lg text-label-lg transition-all shadow-md" type="button">
+<button onclick="openTambahAsetInfo()" class="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary-container font-label-lg text-label-lg transition-all shadow-md cursor-pointer" type="button">
 <span class="material-symbols-outlined text-[20px]">add_circle</span>
 <span>Tambah Aset / KIB Baru</span>
 </button>
@@ -213,7 +213,7 @@
 <div class="flex flex-col gap-space-xs">
 <span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Total Aset Terdata</span>
 <div class="flex items-baseline gap-space-xs">
-<span id="asetStatTotal" class="font-time-display text-time-display text-on-surface font-mono tabular-nums leading-none">359</span>
+<span id="asetStatTotal" class="font-time-display text-time-display text-on-surface font-mono tabular-nums leading-none">0</span>
 <span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Unit BMD</span>
 </div>
 </div>
@@ -222,8 +222,8 @@
 </div>
 </div>
 <div class="mt-space-md pt-space-xs bg-surface-container-low -mx-space-md -mb-space-md px-space-md py-2 flex items-center justify-between">
-<span class="font-label-sm text-label-sm text-on-surface-variant">Nilai Buku Total:</span>
-<span id="asetStatNilaiBuku" class="font-label-md text-label-md text-on-surface font-mono tabular-nums font-bold">Rp 3.840.500.000</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Nilai Buku Termuat:</span>
+<span id="asetStatNilaiBuku" class="font-label-md text-label-md text-on-surface font-mono tabular-nums font-bold">Rp 0</span>
 </div>
 </div>
 <!-- Card 2 -->
@@ -232,7 +232,7 @@
 <div class="flex flex-col gap-space-xs">
 <span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Kendaraan Dinas Aktif</span>
 <div class="flex items-baseline gap-space-xs">
-<span id="asetStatKendaraan" class="font-time-display text-time-display text-on-surface font-mono tabular-nums leading-none">8</span>
+<span id="asetStatKendaraan" class="font-time-display text-time-display text-on-surface font-mono tabular-nums leading-none">0</span>
 <span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Unit (Roda 4 &amp; 2)</span>
 </div>
 </div>
@@ -240,12 +240,10 @@
 <span class="material-symbols-outlined text-[24px]">directions_car</span>
 </div>
 </div>
-<div class="mt-space-md pt-space-xs bg-surface-container-low -mx-space-md -mb-space-md px-space-md py-2 flex items-center gap-space-sm font-mono text-[11px] text-on-surface">
-<span class="text-secondary font-semibold">4 Ready</span>
+<div id="asetStatKendaraanSub" class="mt-space-md pt-space-xs bg-surface-container-low -mx-space-md -mb-space-md px-space-md py-2 flex items-center gap-space-sm font-mono text-[11px] text-on-surface">
+<span class="text-secondary font-semibold">0 Kondisi Baik</span>
 <span class="text-outline-variant">•</span>
-<span class="text-primary font-semibold">3 SPPD</span>
-<span class="text-outline-variant">•</span>
-<span class="text-tertiary font-semibold">1 Servis</span>
+<span class="text-tertiary font-semibold">0 Perlu Servis</span>
 </div>
 </div>
 <!-- Card 3 -->
@@ -254,8 +252,8 @@
 <div class="flex flex-col gap-space-xs">
 <span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Inventaris Ruangan (KIR)</span>
 <div class="flex items-baseline gap-space-xs">
-<span id="asetStatRuangan" class="font-time-display text-time-display text-on-surface font-mono tabular-nums leading-none">14</span>
-<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Ruang Kerja</span>
+<span id="asetStatRuangan" class="font-time-display text-time-display text-on-surface font-mono tabular-nums leading-none">0</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Lokasi / Ruang</span>
 </div>
 </div>
 <div class="w-11 h-11 rounded-lg bg-surface-container flex items-center justify-center text-primary">
@@ -263,10 +261,10 @@
 </div>
 </div>
 <div class="mt-space-md pt-space-xs bg-surface-container-low -mx-space-md -mb-space-md px-space-md py-2 flex items-center justify-between">
-<span class="font-label-sm text-label-sm text-on-surface-variant">Status Sensus Fisik:</span>
-<span class="inline-flex items-center gap-1 font-label-sm text-label-sm text-secondary font-bold">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Kondisi Baik:</span>
+<span id="asetStatKondisiBadge" class="inline-flex items-center gap-1 font-label-sm text-label-sm text-secondary font-bold">
 <span class="material-symbols-outlined text-[14px]">check_circle</span>
-          Sem. II 2024 Klop
+          0% Terverifikasi
         </span>
 </div>
 </div>
@@ -276,7 +274,7 @@
 <div class="flex flex-col gap-space-xs">
 <span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Pengajuan Pinjam</span>
 <div class="flex items-baseline gap-space-xs">
-<span class="font-time-display text-time-display text-tertiary font-mono tabular-nums leading-none">2</span>
+<span id="asetStatPinjam" class="font-time-display text-time-display text-tertiary font-mono tabular-nums leading-none">0</span>
 <span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Permohonan</span>
 </div>
 </div>
@@ -286,28 +284,28 @@
 </div>
 <div class="mt-space-md pt-space-xs bg-surface-container-low -mx-space-md -mb-space-md px-space-md py-2 flex items-center justify-between">
 <span class="font-label-sm text-label-sm text-on-surface-variant">Verifikasi:</span>
-<span class="font-label-sm text-label-sm text-tertiary font-semibold">Kasubag Umum &amp; Kepegawaian</span>
+<span id="asetStatPinjamSub" class="font-label-sm text-label-sm text-tertiary font-semibold">Kasubag Umum &amp; Kepegawaian</span>
 </div>
 </div>
 </div>
 <!-- Sub-tab Navigation (Pill Switcher) -->
-<div class="bg-surface-container-low p-1.5 rounded-xl flex items-center gap-space-xs overflow-x-auto">
-<button class="px-space-md py-2 rounded-lg bg-surface-container-lowest text-primary font-label-lg text-label-lg shadow-sm flex items-center gap-space-xs shrink-0 font-semibold" type="button">
+<div id="asetKibTabs" class="bg-surface-container-low p-1.5 rounded-xl flex items-center gap-space-xs overflow-x-auto">
+<button data-kib="all" onclick="setAsetKibFilter('all')" class="aset-kib-tab px-space-md py-2 rounded-lg bg-surface-container-lowest text-primary font-label-lg text-label-lg shadow-sm flex items-center gap-space-xs shrink-0 font-semibold cursor-pointer transition-all" type="button">
 <span class="material-symbols-outlined text-[18px]">format_list_bulleted</span>
-<span>1. KIB &amp; Inventaris Ruang (KIR)</span>
+<span>1. Semua KIB &amp; Inventaris Ruang (KIR)</span>
 </button>
-<button class="px-space-md py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-lg text-label-lg transition-all flex items-center gap-space-xs shrink-0" type="button">
+<button data-kib="B" onclick="setAsetKibFilter('B')" class="aset-kib-tab px-space-md py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-lg text-label-lg transition-all flex items-center gap-space-xs shrink-0 cursor-pointer" type="button">
 <span class="material-symbols-outlined text-[18px]">commute</span>
-<span>2. Peminjaman Kendaraan Dinas (SPPD)</span>
-<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-mono text-[11px] font-bold">2 Menunggu</span>
+<span>2. KIB-B &amp; Kendaraan Dinas</span>
 </button>
-<button class="px-space-md py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-lg text-label-lg transition-all flex items-center gap-space-xs shrink-0" type="button">
+<button data-kib="E" onclick="setAsetKibFilter('E')" class="aset-kib-tab px-space-md py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-lg text-label-lg transition-all flex items-center gap-space-xs shrink-0 cursor-pointer" type="button">
+<span class="material-symbols-outlined text-[18px]">inventory_2</span>
+<span>3. KIB-E &amp; Peralatan Ruangan</span>
+</button>
+<button data-kib="servis" onclick="setAsetKibFilter('servis')" class="aset-kib-tab px-space-md py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-lg text-label-lg transition-all flex items-center gap-space-xs shrink-0 cursor-pointer" type="button">
 <span class="material-symbols-outlined text-[18px]">build</span>
-<span>3. Jadwal Pemeliharaan &amp; Servis</span>
-</button>
-<button class="px-space-md py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-lg text-label-lg transition-all flex items-center gap-space-xs shrink-0" type="button">
-<span class="material-symbols-outlined text-[18px]">sync_alt</span>
-<span>4. Berita Acara Rekonsiliasi (BPKAD)</span>
+<span>4. Perlu Pemeliharaan &amp; Servis</span>
+<span id="asetServisBadge" class="hidden px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-mono text-[11px] font-bold">0</span>
 </button>
 </div>
 <!-- Main Content Split / Grid -->
@@ -318,30 +316,25 @@
 <div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col md:flex-row items-center gap-space-sm">
 <div class="relative w-full md:flex-1">
 <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
-<input class="w-full pl-10 pr-space-md py-2.5 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md placeholder:text-outline focus:outline-none focus:bg-surface-container transition-all" placeholder="Cari no. register KIB, nama barang, merk/tipe..." type="text"/>
+<input id="asetSearchInput" class="w-full pl-10 pr-space-md py-2.5 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md placeholder:text-outline focus:outline-none focus:bg-surface-container transition-all" placeholder="Cari no. register KIB, nama barang, nopol, ruangan, atau merk/tipe..." type="text"/>
 </div>
 <div class="flex items-center gap-space-sm w-full md:w-auto">
 <div class="relative flex-1 md:w-52">
-<select class="w-full appearance-none pl-3.5 pr-8 py-2.5 rounded-lg bg-surface-container-low text-on-surface font-label-md text-label-md focus:outline-none focus:bg-surface-container transition-all cursor-pointer">
-<option>Semua Ruangan (14 Ruang)</option>
-<option>Bidang Litbang &amp; Inovasi</option>
-<option>Bidang Perencanaan Ekonomi</option>
-<option>Ruang Kepala Badan</option>
-<option>Ruang Server &amp; IT Data Center</option>
-<option>Sekretariat (Pool Kendaraan)</option>
+<select id="asetRoomFilter" class="w-full appearance-none pl-3.5 pr-8 py-2.5 rounded-lg bg-surface-container-low text-on-surface font-label-md text-label-md focus:outline-none focus:bg-surface-container transition-all cursor-pointer">
+<option value="">Semua Ruangan</option>
 </select>
 <span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] pointer-events-none">arrow_drop_down</span>
 </div>
 <div class="relative flex-1 md:w-44">
-<select class="w-full appearance-none pl-3.5 pr-8 py-2.5 rounded-lg bg-surface-container-low text-on-surface font-label-md text-label-md focus:outline-none focus:bg-surface-container transition-all cursor-pointer">
-<option>Kondisi: Semua</option>
-<option>Kondisi: Baik (B)</option>
-<option>Kondisi: Rusak Ringan (RR)</option>
-<option>Kondisi: Rusak Berat (RB)</option>
+<select id="asetConditionFilter" class="w-full appearance-none pl-3.5 pr-8 py-2.5 rounded-lg bg-surface-container-low text-on-surface font-label-md text-label-md focus:outline-none focus:bg-surface-container transition-all cursor-pointer">
+<option value="">Kondisi: Semua</option>
+<option value="baik">Kondisi: Baik</option>
+<option value="kurang">Kondisi: Kurang Baik</option>
+<option value="rusak">Kondisi: Rusak</option>
 </select>
 <span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] pointer-events-none">arrow_drop_down</span>
 </div>
-<button class="w-10 h-10 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-all shrink-0" title="Download Excel Laporan BMD" type="button">
+<button id="asetExportCsvBtn" onclick="exportAsetCsv()" class="w-10 h-10 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-all shrink-0 cursor-pointer" title="Download CSV / Excel Laporan BMD" type="button">
 <span class="material-symbols-outlined text-[20px]">file_download</span>
 </button>
 </div>
@@ -375,22 +368,10 @@
 </div>
 <!-- Table Footer / Pagination -->
 <div class="bg-surface-container-low px-space-md py-3 flex flex-col sm:flex-row items-center justify-between gap-space-sm">
-<span class="font-label-md text-label-md text-on-surface-variant">
-            Menampilkan <span class="font-mono tabular-nums font-bold text-on-surface">5</span> dari <span class="font-mono tabular-nums font-bold text-on-surface">412</span> unit BMD BAPPERIDA Sumba Barat
+<span id="asetPaginationInfo" class="font-label-md text-label-md text-on-surface-variant">
+            Menampilkan <span id="asetShownCount" class="font-mono tabular-nums font-bold text-on-surface">0</span> dari <span id="asetTotalFiltered" class="font-mono tabular-nums font-bold text-on-surface">0</span> unit BMD BAPPERIDA Sumba Barat
           </span>
-<div class="flex items-center gap-1">
-<button class="w-8 h-8 rounded bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-all disabled:opacity-50" disabled="" type="button">
-<span class="material-symbols-outlined text-[16px]">chevron_left</span>
-</button>
-<button class="w-8 h-8 rounded bg-primary text-on-primary font-mono text-[12px] font-bold" type="button">1</button>
-<button class="w-8 h-8 rounded hover:bg-surface-container text-on-surface font-mono text-[12px] font-medium transition-all" type="button">2</button>
-<button class="w-8 h-8 rounded hover:bg-surface-container text-on-surface font-mono text-[12px] font-medium transition-all" type="button">3</button>
-<span class="px-1 text-outline font-mono text-[12px]">…</span>
-<button class="w-8 h-8 rounded hover:bg-surface-container text-on-surface font-mono text-[12px] font-medium transition-all" type="button">83</button>
-<button class="w-8 h-8 rounded bg-surface-container hover:bg-surface-container-high text-on-surface flex items-center justify-center transition-all" type="button">
-<span class="material-symbols-outlined text-[16px]">chevron_right</span>
-</button>
-</div>
+<div id="asetPaginationControls" class="flex items-center gap-1"></div>
 </div>
 </div>
 </div>
@@ -405,7 +386,7 @@
 </div>
 <div class="flex flex-col">
 <h2 class="font-headline-sm text-headline-sm text-on-surface leading-tight">Persetujuan Pinjam Unit Cepat</h2>
-<span class="font-label-sm text-label-sm text-tertiary font-semibold">2 Berkas SPPD Menunggu Konfirmasi</span>
+<span id="asetApprovalSubtitle" class="font-label-sm text-label-sm text-tertiary font-semibold">Memeriksa antrean permohonan...</span>
 </div>
 </div>
 <span class="flex h-2.5 w-2.5 relative">
@@ -413,73 +394,14 @@
 <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-tertiary"></span>
 </span>
 </div>
-<div class="flex flex-col gap-space-sm">
-<!-- Request Item 1 -->
-<div class="bg-surface-container-low rounded-xl p-3.5 flex flex-col gap-2.5">
-<div class="flex items-start justify-between gap-2">
-<div class="flex items-center gap-2">
-<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-mono font-bold text-[12px]">SU</div>
-<div>
-<div class="font-label-lg text-label-lg text-on-surface leading-none">Stefanus Umbu K., ST</div>
-<div class="font-body-sm text-body-sm text-on-surface-variant">Bidang Litbang &amp; Inovasi</div>
-</div>
-</div>
-<span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-high text-primary font-mono font-semibold">SPPD/2024/182</span>
-</div>
-<div class="bg-surface-container-lowest rounded-lg p-2.5 flex flex-col gap-1">
-<div class="flex items-center gap-1.5 font-label-md text-label-md text-on-surface font-semibold">
-<span class="material-symbols-outlined text-[16px] text-primary">directions_car</span>
-                Toyota Hilux ED 8042 WA
-              </div>
-<div class="flex items-center gap-1 text-[11px] text-on-surface-variant">
-<span class="material-symbols-outlined text-[14px]">pin_drop</span>
-<span>Survey Lapangan Irigasi Wanokaka</span>
-</div>
-<div class="flex items-center gap-1 text-[11px] text-on-surface-variant font-mono tabular-nums">
-<span class="material-symbols-outlined text-[14px]">calendar_today</span>
-<span>25 Okt - 27 Okt 2024 (3 Hari)</span>
-</div>
-</div>
-<div class="grid grid-cols-2 gap-2 mt-1">
-<button class="py-2 px-3 rounded-lg bg-surface-container hover:bg-error-container hover:text-on-error-container text-on-surface-variant font-label-md text-label-md font-semibold transition-all text-center" type="button">Tolak</button>
-<button class="py-2 px-3 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md font-semibold transition-all shadow-sm text-center" type="button">Setujui SPPD</button>
-</div>
-</div>
-<!-- Request Item 2 -->
-<div class="bg-surface-container-low rounded-xl p-3.5 flex flex-col gap-2.5">
-<div class="flex items-start justify-between gap-2">
-<div class="flex items-center gap-2">
-<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-mono font-bold text-[12px]">MS</div>
-<div>
-<div class="font-label-lg text-label-lg text-on-surface leading-none">Maria D. Soba, S.Sos</div>
-<div class="font-body-sm text-body-sm text-on-surface-variant">Bidang Perencanaan Makro</div>
-</div>
-</div>
-<span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-high text-primary font-mono font-semibold">SPPD/2024/185</span>
-</div>
-<div class="bg-surface-container-lowest rounded-lg p-2.5 flex flex-col gap-1">
-<div class="flex items-center gap-1.5 font-label-md text-label-md text-on-surface font-semibold">
-<span class="material-symbols-outlined text-[16px] text-primary">videocam</span>
-                Proyektor Epson EB-2250U
-              </div>
-<div class="flex items-center gap-1 text-[11px] text-on-surface-variant">
-<span class="material-symbols-outlined text-[14px]">pin_drop</span>
-<span>Rakor Renja Bappeda Prov. NTT (Kupang)</span>
-</div>
-<div class="flex items-center gap-1 text-[11px] text-on-surface-variant font-mono tabular-nums">
-<span class="material-symbols-outlined text-[14px]">calendar_today</span>
-<span>28 Okt - 30 Okt 2024</span>
-</div>
-</div>
-<div class="grid grid-cols-2 gap-2 mt-1">
-<button class="py-2 px-3 rounded-lg bg-surface-container hover:bg-error-container hover:text-on-error-container text-on-surface-variant font-label-md text-label-md font-semibold transition-all text-center" type="button">Tolak</button>
-<button class="py-2 px-3 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md font-semibold transition-all shadow-sm text-center" type="button">Setujui SPPD</button>
-</div>
-</div>
+<div id="asetApprovalList" class="flex flex-col gap-space-sm">
+  <div class="bg-surface-container-low rounded-xl p-4 text-center text-body-sm text-on-surface-variant">
+    Memuat antrean peminjaman unit SIMAPO...
+  </div>
 </div>
 </div>
 <!-- Card 2: Physical Verification QR Code KIR Generator -->
-<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-md">
+<div id="asetStickerCard" class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-md">
 <div class="flex items-center justify-between">
 <div class="flex items-center gap-space-xs">
 <div class="w-8 h-8 rounded-lg bg-secondary-container/30 text-secondary flex items-center justify-center">
@@ -501,7 +423,7 @@
 <span class="font-label-sm text-[9px] text-on-surface-variant leading-none">BAPPERIDA • KARTU INVENTARIS RUANGAN</span>
 </div>
 </div>
-<span class="font-mono text-[9px] text-on-surface-variant font-semibold">T.A 2024</span>
+<span id="asetStickerTahun" class="font-mono text-[9px] text-on-surface-variant font-semibold">T.A -</span>
 </div>
 <div class="flex items-center gap-space-md pt-1">
 <!-- Inline SVG QR Simulation -->
@@ -512,25 +434,25 @@
 </div>
 <div class="flex flex-col gap-1 min-w-0">
 <div class="flex flex-col">
-<span class="font-label-sm text-[9px] text-on-surface-variant uppercase">Kode Barang (KIB-B)</span>
-<span class="font-mono tabular-nums font-bold text-on-surface text-[12px] truncate">02.01.03.01.002</span>
+<span id="asetStickerKib" class="font-label-sm text-[9px] text-on-surface-variant uppercase">Kode Barang (KIB)</span>
+<span id="asetStickerKode" class="font-mono tabular-nums font-bold text-on-surface text-[12px] truncate">-</span>
 </div>
 <div class="flex flex-col">
-<span class="font-label-sm text-[9px] text-on-surface-variant uppercase">NUSP Register</span>
-<span class="font-mono tabular-nums font-semibold text-primary text-[11px]">2021-000142</span>
+<span class="font-label-sm text-[9px] text-on-surface-variant uppercase">NUSP / Kode Aset</span>
+<span id="asetStickerNusp" class="font-mono tabular-nums font-semibold text-primary text-[11px] truncate">-</span>
 </div>
 <div class="flex flex-col">
-<span class="font-label-sm text-[9px] text-on-surface-variant uppercase">Kode Lokasi</span>
-<span class="font-mono text-[10px] text-on-surface">12.21.05.02.01.00</span>
+<span class="font-label-sm text-[9px] text-on-surface-variant uppercase">Lokasi KIR</span>
+<span id="asetStickerLokasi" class="font-mono text-[10px] text-on-surface truncate">-</span>
 </div>
 </div>
 </div>
 <div class="pt-1.5 flex items-center justify-between text-[10px] text-on-surface-variant font-mono">
-<span>Status: Terverifikasi</span>
-<span class="text-secondary font-bold">Audit OK (KIR-04)</span>
+<span id="asetStickerNama" class="truncate max-w-[170px]">Pilih unit di tabel</span>
+<span id="asetStickerStatus" class="text-secondary font-bold shrink-0">SIMAPO-KIR</span>
 </div>
 </div>
-<button class="w-full py-2.5 px-space-md rounded-xl bg-surface-container-high hover:bg-surface-dim text-on-surface font-label-lg text-label-lg transition-all flex items-center justify-center gap-space-xs shadow-sm" type="button">
+<button onclick="openSelectedAsetBarcode()" class="w-full py-2.5 px-space-md rounded-xl bg-surface-container-high hover:bg-surface-dim text-on-surface font-label-lg text-label-lg transition-all flex items-center justify-center gap-space-xs shadow-sm cursor-pointer" type="button">
 <span class="material-symbols-outlined text-[18px] text-primary">print</span>
 <span>Cetak Label QR Stiker Aset</span>
 </button>
@@ -555,11 +477,40 @@
 
 <script>
   let _rawAsetList = [];
+  let _filteredAsetList = [];
   let _activeKibFilter = 'all';
+  let _asetPage = 1;
+  const ASET_PAGE_SIZE = 15;
+  let _selectedAset = null;
+
+  function escapeAsetHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function formatAsetRupiah(val) {
+    const num = Number(val) || 0;
+    return 'Rp ' + num.toLocaleString('id-ID');
+  }
+
+  function isVehicleAsset(a) {
+    const nama = (a.nama_barang || '').toLowerCase();
+    return Boolean(a.no_polisi) || /\b(motor|mobil|toyota|yamaha|hilux|rush|strada|pickup|kendaraan)\b/i.test(nama);
+  }
+
+  function getAssetKibCode(a) {
+    if (a.kib) return String(a.kib).toUpperCase().replace(/^KIB-?/i, '');
+    return isVehicleAsset(a) ? 'B' : 'E';
+  }
 
   document.addEventListener('DOMContentLoaded', () => {
     loadRealAsetData();
-    setupAsetSearch();
+    loadPendingPinjamList();
+    setupAsetFilters();
   });
 
   async function loadRealAsetData() {
@@ -570,9 +521,6 @@
 
       if (json.ok) {
         const stats = json.stats || {};
-        const elTotal = document.getElementById('asetStatTotal');
-        if (elTotal) elTotal.textContent = stats.totalUnit || 359;
-
         // Combine personal assets (vehicles) and katalog assets
         const combined = [...(json.personalAssets || []), ...(json.katalogAssets || [])];
         const unique = [];
@@ -584,13 +532,162 @@
           }
         }
         _rawAsetList = unique;
-        renderAsetRows(_rawAsetList);
+
+        updateAsetKpis(stats, _rawAsetList);
+        populateAsetRoomFilter(_rawAsetList);
+        applyAsetFilters();
       } else {
+        _rawAsetList = [];
+        updateAsetKpis({}, []);
+        applyAsetFilters();
         if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-on-surface-variant font-medium">Tidak ada data aset ditemukan di database.</td></tr>';
       }
     } catch (err) {
       console.error('loadRealAsetData error:', err);
-      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-error font-medium">Koneksi database SIMAPO gagal: ${err.message}</td></tr>`;
+      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-error font-medium">Koneksi database SIMAPO gagal: ${escapeAsetHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  function updateAsetKpis(stats, list) {
+    const totalUnit = stats.totalUnit ?? list.length;
+    const elTotal = document.getElementById('asetStatTotal');
+    if (elTotal) elTotal.textContent = totalUnit;
+
+    const totalNilai = list.reduce((sum, item) => sum + (Number(item.nilaiperolehan) || 0), 0);
+    const elNilai = document.getElementById('asetStatNilaiBuku');
+    if (elNilai) elNilai.textContent = formatAsetRupiah(totalNilai);
+
+    const vehicles = list.filter(isVehicleAsset);
+    const vehicleGood = vehicles.filter(v => !(v.kondisi || '').toLowerCase().includes('rusak') && !(v.kondisi || '').toLowerCase().includes('kurang')).length;
+    const vehicleServis = vehicles.length - vehicleGood;
+
+    const elKendaraan = document.getElementById('asetStatKendaraan');
+    if (elKendaraan) elKendaraan.textContent = vehicles.length;
+    const elKendaraanSub = document.getElementById('asetStatKendaraanSub');
+    if (elKendaraanSub) {
+      elKendaraanSub.innerHTML = `
+        <span class="text-secondary font-semibold">${vehicleGood} Kondisi Baik</span>
+        <span class="text-outline-variant">•</span>
+        <span class="text-tertiary font-semibold">${vehicleServis} Perlu Servis</span>
+      `;
+    }
+
+    const rooms = new Set(list.map(a => (a.nama_ruangan || '').trim()).filter(Boolean));
+    const elRuangan = document.getElementById('asetStatRuangan');
+    if (elRuangan) elRuangan.textContent = rooms.size;
+
+    const goodCount = list.filter(a => {
+      const k = (a.kondisi || 'Baik').toLowerCase();
+      return k.includes('baik') && !k.includes('kurang');
+    }).length;
+    const persenBaik = stats.persenBaik || (list.length > 0 ? ((goodCount / list.length) * 100).toFixed(1) + '%' : '0%');
+    const elKondisiBadge = document.getElementById('asetStatKondisiBadge');
+    if (elKondisiBadge) {
+      elKondisiBadge.innerHTML = `<span class="material-symbols-outlined text-[14px]">check_circle</span> ${escapeAsetHtml(persenBaik)} Baik`;
+    }
+
+    const servisCount = list.filter(a => {
+      const k = (a.kondisi || '').toLowerCase();
+      return k.includes('rusak') || k.includes('kurang');
+    }).length;
+    const elServisBadge = document.getElementById('asetServisBadge');
+    if (elServisBadge) {
+      elServisBadge.textContent = servisCount;
+      elServisBadge.classList.toggle('hidden', servisCount === 0);
+    }
+  }
+
+  function populateAsetRoomFilter(list) {
+    const sel = document.getElementById('asetRoomFilter');
+    if (!sel) return;
+    const current = sel.value;
+    const rooms = [...new Set(list.map(a => (a.nama_ruangan || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    sel.innerHTML = `<option value="">Semua Ruangan (${rooms.length} Ruang)</option>` +
+      rooms.map(r => `<option value="${escapeAsetHtml(r)}">${escapeAsetHtml(r)}</option>`).join('');
+    if (rooms.includes(current)) sel.value = current;
+  }
+
+  function setAsetKibFilter(kib) {
+    _activeKibFilter = kib || 'all';
+    _asetPage = 1;
+
+    document.querySelectorAll('#asetKibTabs .aset-kib-tab').forEach(btn => {
+      const active = btn.dataset.kib === _activeKibFilter;
+      btn.className = active
+        ? 'aset-kib-tab px-space-md py-2 rounded-lg bg-surface-container-lowest text-primary font-label-lg text-label-lg shadow-sm flex items-center gap-space-xs shrink-0 font-semibold cursor-pointer transition-all'
+        : 'aset-kib-tab px-space-md py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-label-lg text-label-lg transition-all flex items-center gap-space-xs shrink-0 cursor-pointer';
+    });
+
+    applyAsetFilters();
+  }
+
+  function setupAsetFilters() {
+    const searchInput = document.getElementById('asetSearchInput');
+    const roomFilter = document.getElementById('asetRoomFilter');
+    const condFilter = document.getElementById('asetConditionFilter');
+
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        _asetPage = 1;
+        applyAsetFilters();
+      });
+    }
+    if (roomFilter) {
+      roomFilter.addEventListener('change', () => {
+        _asetPage = 1;
+        applyAsetFilters();
+      });
+    }
+    if (condFilter) {
+      condFilter.addEventListener('change', () => {
+        _asetPage = 1;
+        applyAsetFilters();
+      });
+    }
+  }
+
+  function applyAsetFilters() {
+    const q = (document.getElementById('asetSearchInput')?.value || '').toLowerCase().trim();
+    const room = (document.getElementById('asetRoomFilter')?.value || '').trim();
+    const cond = (document.getElementById('asetConditionFilter')?.value || '').toLowerCase().trim();
+
+    _filteredAsetList = _rawAsetList.filter(a => {
+      const kibCode = getAssetKibCode(a);
+      const kLower = (a.kondisi || 'Baik').toLowerCase();
+
+      if (_activeKibFilter === 'B' && kibCode !== 'B' && !isVehicleAsset(a)) return false;
+      if (_activeKibFilter === 'E' && (kibCode === 'B' || isVehicleAsset(a))) return false;
+      if (_activeKibFilter === 'servis' && !kLower.includes('rusak') && !kLower.includes('kurang')) return false;
+
+      if (room && (a.nama_ruangan || '').trim() !== room) return false;
+
+      if (cond === 'baik' && (!kLower.includes('baik') || kLower.includes('kurang'))) return false;
+      if (cond === 'kurang' && !kLower.includes('kurang')) return false;
+      if (cond === 'rusak' && !kLower.includes('rusak')) return false;
+
+      if (q) {
+        const hay = [
+          a.nama_barang, a.nomorinventaris, a.no_polisi, a.kode_aset,
+          a.kodebarang, a.merk_type, a.spesifikasi, a.nama_ruangan, kibCode
+        ].filter(Boolean).join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    const totalPages = Math.max(1, Math.ceil(_filteredAsetList.length / ASET_PAGE_SIZE));
+    if (_asetPage > totalPages) _asetPage = totalPages;
+
+    renderAsetRows(_filteredAsetList);
+    renderAsetPagination();
+
+    if (_filteredAsetList.length > 0) {
+      const stillExists = _selectedAset && _filteredAsetList.some(a => String(a.id) === String(_selectedAset.id));
+      if (!stillExists) {
+        updateAsetStickerCard(_filteredAsetList[0]);
+      }
+    } else {
+      updateAsetStickerCard(null);
     }
   }
 
@@ -599,63 +696,67 @@
     if (!tbody) return;
 
     if (items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-on-surface-variant font-medium">Tidak ada aset yang sesuai kriteria pencarian.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-on-surface-variant font-medium">Tidak ada aset yang sesuai kriteria filter atau pencarian.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = items.map((a, idx) => {
-      const isVehicle = a.no_polisi || (a.nama_barang && (a.nama_barang.toLowerCase().includes('motor') || a.nama_barang.toLowerCase().includes('mobil') || a.nama_barang.toLowerCase().includes('toyota') || a.nama_barang.toLowerCase().includes('yamaha')));
-      const icon = isVehicle ? 'directions_car' : 'inventory_2';
-      const kib = a.kib ? `KIB-${a.kib}` : (isVehicle ? 'KIB-B' : 'KIB-E');
+    const start = (_asetPage - 1) * ASET_PAGE_SIZE;
+    const pageItems = items.slice(start, start + ASET_PAGE_SIZE);
+
+    tbody.innerHTML = pageItems.map((a, localIdx) => {
+      const globalIdx = start + localIdx;
+      const kib = `KIB-${getAssetKibCode(a)}`;
       const nusp = a.nomorinventaris ? `NUSP: ${a.nomorinventaris}` : (a.kode_aset || '-');
       const kondisi = a.kondisi || 'Baik';
       const kondisiLower = kondisi.toLowerCase();
-      const badgeKondisi = kondisiLower.includes('rusak') 
+      const badgeKondisi = kondisiLower.includes('rusak')
         ? 'bg-error-container text-on-error-container'
         : kondisiLower.includes('kurang')
           ? 'bg-amber-100 text-amber-800'
           : 'bg-secondary-container text-on-secondary-container';
 
-      const thn = a.tahunperolehan ? `Thn ${a.tahunperolehan}` : 'TA 2021';
+      const thn = a.tahunperolehan ? `Thn ${a.tahunperolehan}` : 'TA -';
       const ruangan = a.nama_ruangan || 'Operasional BAPPERIDA';
       const pemegang = a.status_pemegang || (a.no_polisi ? 'Dinas Operasional' : 'Inventaris Ruangan');
+      const isSelected = _selectedAset && String(_selectedAset.id) === String(a.id);
+      const rowHighlight = isSelected ? 'bg-primary-fixed/20' : 'hover:bg-surface-container-low/50';
 
       return `
-        <tr class="hover:bg-surface-container-low/50 transition-colors">
-          <td class="py-3.5 px-space-md text-center font-mono tabular-nums text-on-surface-variant">${idx + 1}</td>
+        <tr onclick="selectAsetRow(${globalIdx})" class="${rowHighlight} transition-colors cursor-pointer">
+          <td class="py-3.5 px-space-md text-center font-mono tabular-nums text-on-surface-variant">${globalIdx + 1}</td>
           <td class="py-3.5 px-space-md whitespace-nowrap">
             <div class="flex items-center gap-space-xs">
               <span class="material-symbols-outlined text-[18px] text-primary">qr_code_2</span>
-              <span class="font-mono tabular-nums font-semibold text-primary">${kib}</span>
+              <span class="font-mono tabular-nums font-semibold text-primary">${escapeAsetHtml(kib)}</span>
             </div>
-            <span class="font-mono text-[11px] text-on-surface-variant">${nusp}</span>
+            <span class="font-mono text-[11px] text-on-surface-variant">${escapeAsetHtml(nusp)}</span>
           </td>
           <td class="py-3.5 px-space-md">
-            <div class="font-title-md text-title-md text-on-surface leading-tight font-semibold">${a.nama_barang}</div>
-            <div class="font-mono tabular-nums text-on-surface-variant text-[12px]">${[a.no_polisi, a.merk_type, a.spesifikasi].filter(Boolean).join(' • ') || 'Spesifikasi Standar BMD'}</div>
+            <div class="font-title-md text-title-md text-on-surface leading-tight font-semibold">${escapeAsetHtml(a.nama_barang)}</div>
+            <div class="font-mono tabular-nums text-on-surface-variant text-[12px]">${escapeAsetHtml([a.no_polisi, a.merk_type, a.spesifikasi].filter(Boolean).join(' • ') || 'Spesifikasi Standar BMD')}</div>
           </td>
           <td class="py-3.5 px-space-md whitespace-nowrap">
-            <div class="font-label-md text-label-md text-on-surface font-medium">${ruangan}</div>
-            <span class="font-label-sm text-label-sm text-on-surface-variant font-mono">${pemegang}</span>
+            <div class="font-label-md text-label-md text-on-surface font-medium">${escapeAsetHtml(ruangan)}</div>
+            <span class="font-label-sm text-label-sm text-on-surface-variant font-mono">${escapeAsetHtml(pemegang)}</span>
           </td>
           <td class="py-3.5 px-space-md whitespace-nowrap">
             <span class="inline-flex items-center px-2 py-0.5 rounded-full font-label-sm text-label-sm font-bold ${badgeKondisi}">
-              ${kondisi}
+              ${escapeAsetHtml(kondisi)}
             </span>
-            <span class="font-mono text-[11px] text-on-surface-variant block mt-0.5">${thn}</span>
+            <span class="font-mono text-[11px] text-on-surface-variant block mt-0.5">${escapeAsetHtml(thn)}</span>
           </td>
           <td class="py-3.5 px-space-md whitespace-nowrap">
             <span class="inline-flex items-center gap-1 font-label-sm text-label-sm text-secondary font-semibold">
               <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-              Tersedia
+              Terdata
             </span>
           </td>
           <td class="py-3.5 px-space-md text-right whitespace-nowrap">
             <div class="inline-flex items-center gap-1">
-              <button onclick="alert('Barcode Aset: ' + '${a.kode_aset || a.nomorinventaris}')" class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary transition-all cursor-pointer" title="Cetak Label Barcode">
+              <button type="button" onclick="event.stopPropagation(); openAsetBarcode(${globalIdx})" class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary transition-all cursor-pointer" title="Cetak Label Barcode">
                 <span class="material-symbols-outlined text-[18px]">print</span>
               </button>
-              <button onclick="alert('Detail Aset: ' + '${a.nama_barang}' + '\nLokasi: ' + '${ruangan}' + '\nKondisi: ' + '${kondisi}')" class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant transition-all cursor-pointer" title="Lihat Detail">
+              <button type="button" onclick="event.stopPropagation(); openAsetDetail(${globalIdx})" class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant transition-all cursor-pointer" title="Lihat Detail">
                 <span class="material-symbols-outlined text-[18px]">visibility</span>
               </button>
             </div>
@@ -665,23 +766,420 @@
     }).join('');
   }
 
-  function setupAsetSearch() {
-    const searchInput = document.querySelector('input[type="text"][placeholder*="Cari"]');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        const val = e.target.value.toLowerCase().trim();
-        if (!val) {
-          renderAsetRows(_rawAsetList);
-          return;
+  function renderAsetPagination() {
+    const total = _filteredAsetList.length;
+    const shownEl = document.getElementById('asetShownCount');
+    const totalEl = document.getElementById('asetTotalFiltered');
+    const controlsEl = document.getElementById('asetPaginationControls');
+
+    const start = total === 0 ? 0 : (_asetPage - 1) * ASET_PAGE_SIZE + 1;
+    const end = Math.min(total, _asetPage * ASET_PAGE_SIZE);
+
+    if (shownEl) shownEl.textContent = total === 0 ? '0' : `${start} - ${end}`;
+    if (totalEl) totalEl.textContent = String(total);
+
+    if (!controlsEl) return;
+    const totalPages = Math.max(1, Math.ceil(total / ASET_PAGE_SIZE));
+    let html = `
+      <button type="button" onclick="goToAsetPage(${_asetPage - 1})" ${_asetPage <= 1 ? 'disabled' : ''} class="w-8 h-8 rounded bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-all disabled:opacity-50 cursor-pointer">
+        <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+      </button>
+    `;
+    for (let p = 1; p <= totalPages; p++) {
+      if (totalPages > 6 && p > 2 && p < totalPages - 1 && Math.abs(p - _asetPage) > 1) {
+        if (p === 3 || p === totalPages - 2) {
+          html += '<span class="px-1 text-outline font-mono text-[12px]">...</span>';
         }
-        const filtered = _rawAsetList.filter(a => 
-          (a.nama_barang && a.nama_barang.toLowerCase().includes(val)) ||
-          (a.nomorinventaris && a.nomorinventaris.toLowerCase().includes(val)) ||
-          (a.no_polisi && a.no_polisi.toLowerCase().includes(val)) ||
-          (a.kode_aset && a.kode_aset.toLowerCase().includes(val))
-        );
-        renderAsetRows(filtered);
+        continue;
+      }
+      const cls = p === _asetPage
+        ? 'w-8 h-8 rounded bg-primary text-on-primary font-mono text-[12px] font-bold cursor-pointer'
+        : 'w-8 h-8 rounded hover:bg-surface-container text-on-surface font-mono text-[12px] font-medium transition-all cursor-pointer';
+      html += `<button type="button" onclick="goToAsetPage(${p})" class="${cls}">${p}</button>`;
+    }
+    html += `
+      <button type="button" onclick="goToAsetPage(${_asetPage + 1})" ${_asetPage >= totalPages ? 'disabled' : ''} class="w-8 h-8 rounded bg-surface-container hover:bg-surface-container-high text-on-surface flex items-center justify-center transition-all disabled:opacity-50 cursor-pointer">
+        <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+      </button>
+    `;
+    controlsEl.innerHTML = html;
+  }
+
+  function goToAsetPage(page) {
+    const totalPages = Math.max(1, Math.ceil(_filteredAsetList.length / ASET_PAGE_SIZE));
+    if (page < 1 || page > totalPages) return;
+    _asetPage = page;
+    renderAsetRows(_filteredAsetList);
+    renderAsetPagination();
+  }
+
+  function selectAsetRow(idx) {
+    const item = _filteredAsetList[idx];
+    if (!item) return;
+    updateAsetStickerCard(item);
+    renderAsetRows(_filteredAsetList);
+  }
+
+  function updateAsetStickerCard(item) {
+    _selectedAset = item;
+    const tahunEl = document.getElementById('asetStickerTahun');
+    const kibEl = document.getElementById('asetStickerKib');
+    const kodeEl = document.getElementById('asetStickerKode');
+    const nuspEl = document.getElementById('asetStickerNusp');
+    const lokasiEl = document.getElementById('asetStickerLokasi');
+    const namaEl = document.getElementById('asetStickerNama');
+    const statusEl = document.getElementById('asetStickerStatus');
+
+    if (!item) {
+      if (tahunEl) tahunEl.textContent = 'T.A -';
+      if (kibEl) kibEl.textContent = 'Kode Barang (KIB)';
+      if (kodeEl) kodeEl.textContent = '-';
+      if (nuspEl) nuspEl.textContent = '-';
+      if (lokasiEl) lokasiEl.textContent = '-';
+      if (namaEl) namaEl.textContent = 'Belum ada aset dipilih';
+      if (statusEl) statusEl.textContent = 'STANDBY';
+      return;
+    }
+
+    const kib = `KIB-${getAssetKibCode(item)}`;
+    if (tahunEl) tahunEl.textContent = `T.A ${item.tahunperolehan || '-'}`;
+    if (kibEl) kibEl.textContent = `Kode Barang (${kib})`;
+    if (kodeEl) kodeEl.textContent = item.kodebarang || item.kode_aset || '-';
+    if (nuspEl) nuspEl.textContent = item.nomorinventaris || item.kode_aset || item.id;
+    if (lokasiEl) lokasiEl.textContent = item.nama_ruangan || 'Operasional BAPPERIDA';
+    if (namaEl) namaEl.textContent = item.nama_barang || '-';
+    if (statusEl) statusEl.textContent = item.kondisi || 'Baik';
+  }
+
+  function showAsetBarcodeModal(a) {
+    if (!a) return;
+    const kib = `KIB-${getAssetKibCode(a)}`;
+    const kodeLabel = a.kode_aset || a.nomorinventaris || `SIMAPO-${a.id}`;
+    const qrString = a.qrcode || `SIMAPO-${a.id}`;
+
+    Swal.fire({
+      title: 'Label Barcode &amp; Stiker KIR',
+      html: `
+        <div class="text-left space-y-3 text-xs">
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+              <span class="font-extrabold uppercase tracking-tight text-slate-900 dark:text-white">PEMKAB SUMBA BARAT • BAPPERIDA</span>
+              <span class="font-mono text-[11px] text-blue-600 font-bold">${escapeAsetHtml(kib)}</span>
+            </div>
+            <div class="font-bold text-sm text-slate-900 dark:text-white">${escapeAsetHtml(a.nama_barang)}</div>
+            <div class="grid grid-cols-2 gap-2 font-mono text-[11px]">
+              <div>
+                <div class="text-slate-400 text-[10px]">NUSP / Kode Aset</div>
+                <div class="font-semibold text-slate-800 dark:text-slate-200 break-all">${escapeAsetHtml(kodeLabel)}</div>
+              </div>
+              <div>
+                <div class="text-slate-400 text-[10px]">Kode Barang / Tahun</div>
+                <div class="font-semibold text-slate-800 dark:text-slate-200">${escapeAsetHtml(a.kodebarang || '-')} (${escapeAsetHtml(a.tahunperolehan || '-')})</div>
+              </div>
+              <div>
+                <div class="text-slate-400 text-[10px]">Lokasi KIR</div>
+                <div class="font-semibold text-slate-800 dark:text-slate-200">${escapeAsetHtml(a.nama_ruangan || 'Operasional BAPPERIDA')}</div>
+              </div>
+              <div>
+                <div class="text-slate-400 text-[10px]">ID QR SIMAPO</div>
+                <div class="font-semibold text-blue-600 dark:text-blue-400 break-all">${escapeAsetHtml(qrString)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: 'Cetak Halaman Label',
+      denyButtonText: 'Salin Kode QR',
+      cancelButtonText: 'Tutup',
+      confirmButtonColor: '#2563eb',
+      denyButtonColor: '#006c49'
+    }).then((res) => {
+      if (res.isConfirmed) {
+        window.print();
+      } else if (res.isDenied && navigator.clipboard) {
+        navigator.clipboard.writeText(qrString).then(() => {
+          Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Kode QR disalin', showConfirmButton: false, timer: 1800 });
+        }).catch(() => {});
+      }
+    });
+  }
+
+  function openAsetBarcode(idx) {
+    const a = _filteredAsetList[idx];
+    if (!a) return;
+    updateAsetStickerCard(a);
+    showAsetBarcodeModal(a);
+  }
+
+  function openSelectedAsetBarcode() {
+    const target = _selectedAset || _filteredAsetList[0];
+    if (!target) {
+      Swal.fire('Belum Ada Aset', 'Silakan tunggu atau pilih aset pada tabel terlebih dahulu.', 'info');
+      return;
+    }
+    showAsetBarcodeModal(target);
+  }
+
+  function showAsetDetailModal(a) {
+    if (!a) return;
+    const kib = `KIB-${getAssetKibCode(a)}`;
+    const html = `
+      <div class="text-left space-y-2.5 text-xs">
+        <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-0.5">${escapeAsetHtml(kib)} • ${escapeAsetHtml(a.kodebarang || '-')}</div>
+          <div class="font-bold text-sm text-slate-900 dark:text-white">${escapeAsetHtml(a.nama_barang)}</div>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${escapeAsetHtml([a.merk_type, a.spesifikasi].filter(Boolean).join(' • ') || 'Spesifikasi Standar BMD')}</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+            <div class="text-[10px] uppercase text-slate-400 font-bold">NUSP / Kode Aset</div>
+            <div class="font-mono font-semibold text-slate-800 dark:text-slate-200 mt-0.5 break-all">${escapeAsetHtml(a.nomorinventaris || a.kode_aset || '-')}</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+            <div class="text-[10px] uppercase text-slate-400 font-bold">Lokasi KIR</div>
+            <div class="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">${escapeAsetHtml(a.nama_ruangan || 'Operasional BAPPERIDA')}</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+            <div class="text-[10px] uppercase text-slate-400 font-bold">Kondisi &amp; Tahun</div>
+            <div class="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">${escapeAsetHtml(a.kondisi || 'Baik')} • ${escapeAsetHtml(a.tahunperolehan || '-')}</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+            <div class="text-[10px] uppercase text-slate-400 font-bold">Nilai Perolehan</div>
+            <div class="font-mono font-bold text-blue-600 dark:text-blue-400 mt-0.5">${escapeAsetHtml(formatAsetRupiah(a.nilaiperolehan))}</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+            <div class="text-[10px] uppercase text-slate-400 font-bold">Pemegang / Status</div>
+            <div class="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">${escapeAsetHtml(a.nama_pegawai || a.status_pemegang || 'Inventaris Ruangan')}</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+            <div class="text-[10px] uppercase text-slate-400 font-bold">Nomor Polisi</div>
+            <div class="font-mono font-semibold text-slate-800 dark:text-slate-200 mt-0.5">${escapeAsetHtml(a.no_polisi || '-')}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    Swal.fire({
+      title: 'Detail Unit Aset BMD',
+      html,
+      showCancelButton: true,
+      confirmButtonText: 'Lihat Barcode KIR',
+      cancelButtonText: 'Tutup',
+      confirmButtonColor: '#2563eb'
+    }).then((res) => {
+      if (res.isConfirmed) {
+        showAsetBarcodeModal(a);
+      }
+    });
+  }
+
+  function openAsetDetail(idx) {
+    const a = _filteredAsetList[idx];
+    if (!a) return;
+    updateAsetStickerCard(a);
+    renderAsetRows(_filteredAsetList);
+    showAsetDetailModal(a);
+  }
+
+  function openAsetScanModal() {
+    Swal.fire({
+      title: 'Scan / Cari Barcode Aset',
+      input: 'text',
+      inputLabel: 'Masukkan Kode Aset, NUSP, QR SIMAPO, atau No. Polisi',
+      inputPlaceholder: 'Contoh: ED 2780 WB atau SIMAPO-...',
+      showCancelButton: true,
+      confirmButtonText: 'Cari di SIMAPO',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb',
+      showLoaderOnConfirm: true,
+      preConfirm: async (kode) => {
+        const q = (kode || '').trim();
+        if (!q) {
+          Swal.showValidationMessage('Masukkan kode barcode, NUSP, atau nomor polisi aset.');
+          return false;
+        }
+        try {
+          const res = await fetch(`/api/stitch/aset/scan?q=${encodeURIComponent(q)}`);
+          const json = await res.json();
+          if (!res.ok || !json.ok || !json.asset) {
+            Swal.showValidationMessage(json.message || `Aset "${q}" tidak ditemukan.`);
+            return false;
+          }
+          return json.asset;
+        } catch (err) {
+          Swal.showValidationMessage('Gagal menghubungi server scan SIMAPO: ' + err.message);
+          return false;
+        }
+      },
+      allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        const found = result.value;
+        if (!_rawAsetList.some(item => String(item.id) === String(found.id))) {
+          _rawAsetList.unshift(found);
+          applyAsetFilters();
+        }
+        updateAsetStickerCard(found);
+        showAsetDetailModal(found);
+      }
+    });
+  }
+
+  function openTambahAsetInfo() {
+    Swal.fire({
+      icon: 'info',
+      title: 'Registrasi &amp; Pelaporan Aset',
+      text: 'Untuk mengajukan peminjaman unit atau melaporkan kerusakan aset, gunakan layanan cepat pada Mode Mobile Portal BAPPERIDA.',
+      showCancelButton: true,
+      confirmButtonText: 'Buka Portal Mobile Aset',
+      cancelButtonText: 'Tutup',
+      confirmButtonColor: '#2563eb'
+    }).then((res) => {
+      if (res.isConfirmed) {
+        window.location.href = 'index.html?mode=mobile#aset';
+      }
+    });
+  }
+
+  function exportAsetCsv() {
+    const list = _filteredAsetList.length ? _filteredAsetList : _rawAsetList;
+    if (!list.length) {
+      Swal.fire('Data Kosong', 'Belum ada data aset yang dapat diekspor.', 'info');
+      return;
+    }
+
+    const headers = [
+      'No', 'KIB', 'Kode Barang', 'Nomor Inventaris', 'Kode Aset',
+      'Nama Barang', 'Merk / Tipe', 'Spesifikasi', 'No Polisi',
+      'Lokasi Ruangan', 'Pemegang', 'Kondisi', 'Tahun Perolehan', 'Nilai Perolehan'
+    ];
+    const csvEscape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = list.map((a, i) => [
+      i + 1,
+      `KIB-${getAssetKibCode(a)}`,
+      a.kodebarang || '',
+      a.nomorinventaris || '',
+      a.kode_aset || '',
+      a.nama_barang || '',
+      a.merk_type || '',
+      a.spesifikasi || '',
+      a.no_polisi || '',
+      a.nama_ruangan || 'Operasional BAPPERIDA',
+      a.status_pemegang || (a.no_polisi ? 'Dinas Operasional' : 'Inventaris Ruangan'),
+      a.kondisi || 'Baik',
+      a.tahunperolehan || '',
+      Number(a.nilaiperolehan) || 0
+    ].map(csvEscape).join(','));
+
+    const csvContent = '\uFEFF' + [headers.map(csvEscape).join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Laporan-BMD-SIMAPO-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: `Mengekspor ${list.length} unit BMD ke CSV`,
+      showConfirmButton: false,
+      timer: 2200
+    });
+  }
+
+  async function loadPendingPinjamList() {
+    const container = document.getElementById('asetApprovalList');
+    const subtitle = document.getElementById('asetApprovalSubtitle');
+    const statPinjam = document.getElementById('asetStatPinjam');
+    const statPinjamSub = document.getElementById('asetStatPinjamSub');
+    if (!container) return;
+
+    try {
+      const res = await fetch('/api/simapo/admin-pinjam-list');
+      if (!res.ok) {
+        if (subtitle) subtitle.textContent = 'Akses khusus Bendahara / Admin Barang';
+        if (statPinjam) statPinjam.textContent = '0';
+        container.innerHTML = `
+          <div class="bg-surface-container-low rounded-xl p-4 text-center space-y-2">
+            <div class="text-body-sm text-on-surface-variant">Panel persetujuan aktif untuk pengelola aset SIMAPO.</div>
+            <button type="button" onclick="openTambahAsetInfo()" class="px-3 py-1.5 rounded-lg bg-primary text-on-primary text-label-md font-semibold cursor-pointer">Ajukan Pinjam via Mobile</button>
+          </div>
+        `;
+        return;
+      }
+      const json = await res.json();
+      const items = (json.data || []).filter(p => String(p.status || '').toUpperCase() === 'MENUNGGU');
+      if (statPinjam) statPinjam.textContent = items.length;
+      if (statPinjamSub) statPinjamSub.textContent = items.length ? `${items.length} Menunggu Persetujuan` : 'Tidak ada antrean';
+      if (subtitle) subtitle.textContent = `${items.length} Permohonan Menunggu Konfirmasi`;
+
+      if (!items.length) {
+        container.innerHTML = '<div class="bg-surface-container-low rounded-xl p-4 text-center text-body-sm text-on-surface-variant">Belum ada pengajuan peminjaman unit yang menunggu persetujuan.</div>';
+        return;
+      }
+
+      container.innerHTML = items.slice(0, 4).map(p => {
+        const initials = String(p.nama_peminjam || 'ASN').split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || 'AS';
+        return `
+          <div class="bg-surface-container-low rounded-xl p-3.5 flex flex-col gap-2.5">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-mono font-bold text-[12px] shrink-0">${escapeAsetHtml(initials)}</div>
+                <div class="min-w-0">
+                  <div class="font-label-lg text-label-lg text-on-surface leading-none truncate">${escapeAsetHtml(p.nama_peminjam || p.userid)}</div>
+                  <div class="font-body-sm text-body-sm text-on-surface-variant font-mono">${escapeAsetHtml(p.kodebarang || '-')}</div>
+                </div>
+              </div>
+              <span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-high text-primary font-mono font-semibold shrink-0">${escapeAsetHtml(p.status || 'MENUNGGU')}</span>
+            </div>
+            <div class="bg-surface-container-lowest rounded-lg p-2.5 flex flex-col gap-1">
+              <div class="font-label-md text-label-md text-on-surface font-semibold truncate">${escapeAsetHtml(p.nama_barang || 'Unit BMD')}</div>
+              <div class="text-[11px] text-on-surface-variant truncate">${escapeAsetHtml(p.tujuanpeminjaman || '-')}</div>
+              <div class="text-[11px] text-on-surface-variant font-mono tabular-nums">${escapeAsetHtml(p.tanggalmulai || '-')} s/d ${escapeAsetHtml(p.tanggalselesai || '-')}</div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-1">
+              <button type="button" onclick="handleAdminPinjamAction('${escapeAsetHtml(p.id)}', 'DITOLAK')" class="py-2 px-3 rounded-lg bg-surface-container hover:bg-error-container hover:text-on-error-container text-on-surface-variant font-label-md text-label-md font-semibold transition-all text-center cursor-pointer">Tolak</button>
+              <button type="button" onclick="handleAdminPinjamAction('${escapeAsetHtml(p.id)}', 'DIPINJAM')" class="py-2 px-3 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md font-semibold transition-all shadow-sm text-center cursor-pointer">Setujui</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (_) {
+      if (subtitle) subtitle.textContent = 'Antrean peminjaman SIMAPO';
+      container.innerHTML = '<div class="bg-surface-container-low rounded-xl p-4 text-center text-body-sm text-on-surface-variant">Tidak dapat memuat antrean peminjaman saat ini.</div>';
+    }
+  }
+
+  async function handleAdminPinjamAction(pinjamId, status) {
+    try {
+      const res = await fetch('/api/simapo/admin-pinjam-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: pinjamId, status })
       });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        Swal.fire('Gagal', json.message || 'Gagal memperbarui status peminjaman.', 'error');
+        return;
+      }
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: status === 'DIPINJAM' ? 'Peminjaman disetujui' : 'Peminjaman ditolak',
+        showConfirmButton: false,
+        timer: 2000
+      });
+      loadPendingPinjamList();
+    } catch (err) {
+      Swal.fire('Kesalahan Jaringan', err.message, 'error');
     }
   }
 </script>

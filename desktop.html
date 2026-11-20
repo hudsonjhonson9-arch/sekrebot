@@ -17,6 +17,7 @@
   <script src="js/dynamic-island.js"></script>
   <script src="js/lib/qrcode.min.js"></script>
   <script src="js/stitch-auth.js"></script>
+  <script src="js/stitch-pickers.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Stitch Design System Configuration -->
@@ -144,7 +145,7 @@
         </div>
         <div class="flex items-center gap-1.5 text-slate-200 text-xs font-semibold">
           <span class="material-symbols-outlined text-[15px] text-emerald-400">near_me</span>
-          <span>Geofence Presensi (200m)</span>
+          <span id="sidebarGeofenceText">Geofence Presensi</span>
         </div>
       </div>
     </div>
@@ -178,19 +179,19 @@
         </a>
 
         <!-- GPS Live Accuracy Pill -->
-        <button onclick="syncRealGPS()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary-container text-on-secondary-container text-xs font-semibold hover:opacity-90 transition-opacity" title="Sinkronisasi posisi GPS">
-          <span class="w-2 h-2 rounded-full bg-secondary"></span>
-          <span id="headerGpsStatusText">Kantor BAPPERIDA (~12m)</span>
+        <button id="headerGpsPill" onclick="syncRealGPS()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer" title="Sinkronisasi posisi GPS">
+          <span id="headerGpsDot" class="w-2 h-2 rounded-full bg-slate-400 animate-pulse"></span>
+          <span id="headerGpsStatusText">Mencari sinyal GPS...</span>
         </button>
 
         <!-- User Identity Badge (Clean, Authenticated ASN) -->
         <div class="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl bg-surface-container border border-outline-variant/40">
           <div id="desktopUserAvatar" class="w-8 h-8 rounded-lg bg-primary text-on-primary font-bold text-xs flex items-center justify-center overflow-hidden">
-            <span id="desktopUserInitials">AA</span>
+            <span id="desktopUserInitials">--</span>
           </div>
           <div class="flex flex-col text-left">
-            <span id="desktopUserName" class="text-xs font-bold text-on-surface leading-tight max-w-[170px] truncate">Achmad Aqil Susanto</span>
-            <span id="desktopUserNip" class="text-[10px] font-mono text-on-surface-variant">NIP. 200206302025061002</span>
+            <span id="desktopUserName" class="text-xs font-bold text-on-surface leading-tight max-w-[170px] truncate">Memuat...</span>
+            <span id="desktopUserNip" class="text-[10px] font-mono text-on-surface-variant">NIP. -</span>
           </div>
         </div>
       </div>
@@ -212,13 +213,11 @@
               </span>
               <span class="text-xs text-on-surface-variant font-medium">BAPPERIDA Kab. Sumba Barat</span>
             </div>
-            <h1 class="text-xl font-extrabold text-on-surface tracking-tight" id="greetingName">Meja Admin: 
-              Halo, Achmad Aqil Susanto, S.Kom
-            </h1>
+            <h1 class="text-xl font-extrabold text-on-surface tracking-tight" id="greetingName">Memuat profil pegawai...</h1>
             <div class="flex items-center gap-2 text-on-surface-variant text-xs">
-              <span class="font-mono font-medium text-on-surface" id="greetingNip">NIP. 200206302025061002</span>
+              <span class="font-mono font-medium text-on-surface" id="greetingNip">NIP. -</span>
               <span class="text-outline-variant">•</span>
-              <span class="text-on-surface font-semibold" id="greetingUserNama">Pranata Komputer Ahli Pertama</span>
+              <span class="text-on-surface font-semibold" id="greetingUserNama">-</span>
               <span class="text-outline-variant">•</span>
               <span class="text-emerald-700 font-semibold font-mono">Status: Aktif</span>
             </div>
@@ -269,16 +268,16 @@
                 <!-- Fallback Profile Avatar if Camera Not Started -->
                 <div id="desktopCameraFallback" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-900 text-white p-6">
                   <div class="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center text-3xl font-extrabold mb-3 shadow-lg">
-                    <span id="fallbackInitials">AA</span>
+                    <span id="fallbackInitials">--</span>
                   </div>
-                  <span class="text-sm font-bold" id="fallbackName">Achmad Aqil Susanto</span>
+                  <span class="text-sm font-bold" id="fallbackName">Memuat...</span>
                   <span class="text-xs text-slate-400 mt-1 font-mono">Verifikasi Biometrik Pegawai</span>
                 </div>
 
                 <!-- Bottom Status Pill Overlay -->
                 <div class="absolute bottom-3 inset-x-3 flex items-center justify-between pointer-events-none">
                   <span id="cameraIdentifiedPill" class="px-3.5 py-1 rounded-full bg-slate-950/80 text-white text-xs font-semibold backdrop-blur-md">
-                    Achmad Aqil Susanto • Terverifikasi
+                    Memuat identitas...
                   </span>
                   <span class="px-2.5 py-1 rounded-full bg-slate-950/80 text-slate-300 text-[10px] font-mono">
                     PostgreSQL Sync
@@ -338,9 +337,9 @@
               </div>
               <div class="mt-4 pt-3 border-t border-outline-variant/20">
                 <div class="flex items-center justify-between text-xs text-on-surface-variant mb-1.5 font-mono">
-                  <span>07:15</span>
+                  <span id="shiftStartLabel">--:--</span>
                   <span class="font-bold text-blue-600" id="shiftProgressLabel">Progres Shift Pagi (0%)</span>
-                  <span>14:30</span>
+                  <span id="shiftEndLabel">--:--</span>
                 </div>
                 <div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
                   <div id="shiftProgressBar" class="h-full bg-blue-600 rounded-full w-[0%] transition-all duration-500"></div>
@@ -384,24 +383,24 @@
                   <span class="material-symbols-outlined text-blue-600 text-[20px]">location_on</span>
                   <span class="text-xs font-bold text-on-surface">Lokasi &amp; Geofence</span>
                 </div>
-                <span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold flex items-center gap-1 border border-emerald-200">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                  <span id="geofencePill">Radius Valid (~12m)</span>
+                <span id="geofencePillWrap" class="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold flex items-center gap-1 border border-slate-200 dark:border-slate-700">
+                  <span id="geofencePillDot" class="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse"></span>
+                  <span id="geofencePill">Menunggu GPS...</span>
                 </span>
               </div>
 
               <div class="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col gap-1.5 text-xs">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-2">
                   <span class="text-on-surface-variant">Titik Presensi:</span>
-                  <span class="font-bold text-on-surface">Kantor BAPPERIDA Sumba Barat</span>
+                  <span id="geofenceOfficeName" class="font-bold text-on-surface text-right truncate max-w-[210px]">Memuat...</span>
                 </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-on-surface-variant">Alamat:</span>
-                  <span class="text-on-surface truncate max-w-[210px]">Jl. Weekarou, Kota Waikabubak</span>
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-on-surface-variant">Radius / Akurasi:</span>
+                  <span id="geofenceAccuracyInfo" class="text-on-surface font-mono font-semibold truncate max-w-[210px]">-</span>
                 </div>
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-2">
                   <span class="text-on-surface-variant">Koordinat:</span>
-                  <span class="font-mono font-bold text-on-surface tabular-nums">-9.648769, 119.389232</span>
+                  <span id="geofenceCoordsText" class="font-mono font-bold text-on-surface tabular-nums">-</span>
                 </div>
               </div>
             </div>
@@ -438,7 +437,7 @@
                 <span class="material-symbols-outlined text-[20px]">check_circle</span>
               </div>
               <div class="my-2">
-                <span id="metricHadirCount" class="font-mono text-3xl font-extrabold text-on-surface tabular-nums">10</span>
+                <span id="metricHadirCount" class="font-mono text-3xl font-extrabold text-on-surface tabular-nums">0</span>
                 <span class="text-xs font-mono text-on-surface-variant font-medium">Hari</span>
               </div>
               <span class="text-[11px] font-mono text-emerald-600 font-bold">Kehadiran Sah</span>
@@ -464,7 +463,7 @@
                 <span class="material-symbols-outlined text-[20px]">assignment_turned_in</span>
               </div>
               <div class="my-2">
-                <span id="metricIzinCount" class="font-mono text-3xl font-extrabold text-on-surface tabular-nums">1</span>
+                <span id="metricIzinCount" class="font-mono text-3xl font-extrabold text-on-surface tabular-nums">0</span>
                 <span class="text-xs font-mono text-on-surface-variant font-medium">Pengajuan</span>
               </div>
               <span class="text-[11px] text-blue-600 font-medium">Tercatat di SIMPEG</span>
@@ -477,9 +476,9 @@
                 <span class="material-symbols-outlined text-[20px]">timer</span>
               </div>
               <div class="my-2">
-                <span id="metricTotalJam" class="font-mono text-3xl font-extrabold text-indigo-600 tabular-nums">85 Jam</span>
+                <span id="metricTotalJam" class="font-mono text-3xl font-extrabold text-indigo-600 tabular-nums">0 Jam</span>
               </div>
-              <span class="text-[11px] text-indigo-600 font-bold">Akumulasi Bulan Ini</span>
+              <span class="text-[11px] text-indigo-600 font-bold">Akumulasi Minggu Ini</span>
             </div>
           </div>
         </div>
@@ -546,7 +545,7 @@
       </div>
 
       <div class="p-3 rounded-xl bg-blue-50/80 dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300">
-        <span class="font-bold" id="modalUserName">Achmad Aqil Susanto</span> • <span class="font-mono text-slate-500" id="modalUserNip">NIP. 200206302025061002</span>
+        <span class="font-bold" id="modalUserName">Memuat...</span> • <span class="font-mono text-slate-500" id="modalUserNip">NIP. -</span>
       </div>
 
       <div class="space-y-3">
@@ -601,20 +600,42 @@
       currentUser: null,
       allUsers: [],
       userLogs: [],
+      renderedDays: [],
       metrics: { hadir: 0, terlambat: 0, cuti: 0 },
       cameraStream: null,
       currentFilter: 'all',
-      userLocation: { lat: -9.648769, lng: 119.389232, distMeters: 12, accuracy: 12 }
+      userLocation: null,
+      officeLocation: null,
+      shift: { masuk: '07:30', pulang: '16:00' }
     };
 
     let selectedKetJenis = 'IZIN';
 
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function parseTimeToMins(hhmm, fallbackMins) {
+      const m = String(hhmm || '').match(/^(\d{1,2}):(\d{2})/);
+      if (!m) return fallbackMins;
+      return Number(m[1]) * 60 + Number(m[2]);
+    }
+
     // ── 1. INITIALIZATION ─────────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', async () => {
+      if (window.StitchPicker) {
+        window.StitchPicker.enhanceDate(document.getElementById('desktopKetTglMulai'));
+        window.StitchPicker.enhanceDate(document.getElementById('desktopKetTglSelesai'));
+      }
       startDesktopLiveClock();
       startDesktopCamera();
       syncRealGPS();
-      await loadMasterData();
+      await Promise.all([loadBootstrap(), loadMasterData()]);
     });
 
     // ── 2. LIVE CLOCK (WITA UTC+8) ────────────────────────────────────
@@ -640,17 +661,26 @@
         if (hDate) hDate.textContent = dateStr;
         if (heroDate) heroDate.textContent = `${dateStr} • Kab. Sumba Barat`;
 
-        // Shift Progress (07:15 to 14:30 = 435 mins)
+        // Shift Progress from DB shift
+        const shiftMasuk = state.shift?.masuk || '07:30';
+        const shiftPulang = state.shift?.pulang || '16:00';
+        const sLabel = document.getElementById('shiftStartLabel');
+        const eLabel = document.getElementById('shiftEndLabel');
+        if (sLabel) sLabel.textContent = shiftMasuk;
+        if (eLabel) eLabel.textContent = shiftPulang;
+
         const curMins = now.getHours() * 60 + now.getMinutes();
-        const startMins = 7 * 60 + 15; // 07:15
-        const endMins = 14 * 60 + 30;  // 14:30
+        const startMins = parseTimeToMins(shiftMasuk, 7 * 60 + 30);
+        const endMins = parseTimeToMins(shiftPulang, 16 * 60);
         let pct = 0;
-        if (curMins >= endMins) pct = 100;
-        else if (curMins > startMins) pct = Math.round(((curMins - startMins) / (endMins - startMins)) * 100);
+        if (endMins > startMins) {
+          if (curMins >= endMins) pct = 100;
+          else if (curMins > startMins) pct = Math.round(((curMins - startMins) / (endMins - startMins)) * 100);
+        }
 
         const pLabel = document.getElementById('shiftProgressLabel');
         const pBar = document.getElementById('shiftProgressBar');
-        if (pLabel) pLabel.textContent = `Progres Shift Pagi (${pct}%)`;
+        if (pLabel) pLabel.textContent = `Progres Shift (${pct}%)`;
         if (pBar) pBar.style.width = `${pct}%`;
       }
       setInterval(tick, 1000);
@@ -669,40 +699,132 @@
       return R * c;
     }
 
-    function syncRealGPS() {
-      const officeLat = -9.648769;
-      const officeLng = 119.389232;
+    function evaluateAndRenderGps() {
+      const loc = state.userLocation;
+      const office = state.officeLocation;
+      const coordsEl = document.getElementById('geofenceCoordsText');
+      const accEl = document.getElementById('geofenceAccuracyInfo');
 
-      // Default to office station coordinates
-      state.userLocation = { lat: officeLat, lng: officeLng, distMeters: 12, accuracy: 12 };
-      updateGpsUI(12, true);
+      if (!loc) return;
 
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            const accuracy = Math.round(pos.coords.accuracy || 12);
-            const distMeters = Math.round(getDistanceFromLatLonInM(lat, lng, officeLat, officeLng));
-            if (distMeters <= 5000) {
-              const isInside = distMeters <= 250;
-              state.userLocation = { lat, lng, distMeters, accuracy };
-              updateGpsUI(distMeters, isInside);
-            }
-          },
-          () => {},
-          { enableHighAccuracy: true, timeout: 4000 }
-        );
+      if (coordsEl) {
+        coordsEl.textContent = `${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}`;
       }
+
+      if (!office) {
+        if (accEl) {
+          accEl.textContent = loc.accuracy != null ? `Akurasi ±${loc.accuracy}m` : 'GPS Terkunci';
+        }
+        updateGpsUI({ status: 'pending_office', distMeters: null, accuracy: loc.accuracy });
+        return;
+      }
+
+      const distMeters = Math.round(getDistanceFromLatLonInM(loc.lat, loc.lng, office.lat, office.lng));
+      loc.distMeters = distMeters;
+      const radius = office.radius || 250;
+      const isInside = distMeters <= radius;
+
+      if (accEl) {
+        accEl.textContent = loc.accuracy != null
+          ? `Maks. ${radius}m • Akurasi ±${loc.accuracy}m`
+          : `Maks. ${radius}m`;
+      }
+
+      updateGpsUI({
+        status: isInside ? 'inside' : 'outside',
+        distMeters,
+        accuracy: loc.accuracy
+      });
     }
 
-    function updateGpsUI(distMeters, isInside) {
-      const hText = document.getElementById('headerGpsStatusText');
-      const gPill = document.getElementById('geofencePill');
+    function syncRealGPS() {
+      state.userLocation = null;
+      updateGpsUI({ status: 'loading' });
 
-      if (hText) hText.textContent = isInside ? `Kantor BAPPERIDA (~${distMeters}m)` : `Di Luar Radius (${(distMeters/1000).toFixed(1)}km)`;
-      if (gPill) {
-        gPill.textContent = isInside ? `Radius Valid (~${distMeters}m)` : 'Di Luar Radius';
+      if (!navigator.geolocation) {
+        updateGpsUI({ status: 'error', errorMessage: 'GPS Tidak Didukung Browser' });
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const accuracy = pos.coords.accuracy ? Math.round(pos.coords.accuracy) : null;
+          state.userLocation = { lat, lng, distMeters: null, accuracy };
+          evaluateAndRenderGps();
+        },
+        (err) => {
+          state.userLocation = null;
+          let errorMessage = 'GPS Tidak Tersedia';
+          if (err && err.code === 1) errorMessage = 'Izin GPS Ditolak';
+          else if (err && err.code === 3) errorMessage = 'GPS Timeout';
+          updateGpsUI({ status: 'error', errorMessage });
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+
+    function updateGpsUI({ status, distMeters = null, accuracy = null, errorMessage = '' } = {}) {
+      const hPill = document.getElementById('headerGpsPill');
+      const hDot = document.getElementById('headerGpsDot');
+      const hText = document.getElementById('headerGpsStatusText');
+      const gWrap = document.getElementById('geofencePillWrap');
+      const gDot = document.getElementById('geofencePillDot');
+      const gPill = document.getElementById('geofencePill');
+      const accEl = document.getElementById('geofenceAccuracyInfo');
+      const officeName = state.officeLocation?.nama || 'Lokasi Kantor';
+      const accSuffix = accuracy != null ? `, ±${accuracy}m` : '';
+      const distText = distMeters != null
+        ? (distMeters >= 1000 ? `${(distMeters / 1000).toFixed(1)}km` : `${distMeters}m`)
+        : '-';
+
+      if (status === 'loading') {
+        if (hPill) hPill.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer';
+        if (hDot) hDot.className = 'w-2 h-2 rounded-full bg-slate-400 animate-pulse';
+        if (hText) hText.textContent = 'Mencari sinyal GPS...';
+        if (gWrap) gWrap.className = 'px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold flex items-center gap-1 border border-slate-200 dark:border-slate-700';
+        if (gDot) gDot.className = 'w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse';
+        if (gPill) gPill.textContent = 'Menunggu GPS...';
+        return;
+      }
+
+      if (status === 'pending_office') {
+        if (hPill) hPill.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer';
+        if (hDot) hDot.className = 'w-2 h-2 rounded-full bg-blue-600';
+        if (hText) hText.textContent = `GPS Terkunci (${accuracy != null ? '±' + accuracy + 'm' : 'Siap'})`;
+        if (gWrap) gWrap.className = 'px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center gap-1 border border-blue-200 dark:border-blue-800';
+        if (gDot) gDot.className = 'w-1.5 h-1.5 rounded-full bg-blue-600';
+        if (gPill) gPill.textContent = 'Memuat Geofence...';
+        return;
+      }
+
+      if (status === 'error') {
+        const msg = errorMessage || 'GPS Error';
+        if (hPill) hPill.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-error-container text-error text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer';
+        if (hDot) hDot.className = 'w-2 h-2 rounded-full bg-error';
+        if (hText) hText.textContent = msg;
+        if (gWrap) gWrap.className = 'px-2.5 py-0.5 rounded-full bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 text-xs font-bold flex items-center gap-1 border border-red-200 dark:border-red-800';
+        if (gDot) gDot.className = 'w-1.5 h-1.5 rounded-full bg-red-600';
+        if (gPill) gPill.textContent = msg;
+        if (accEl) accEl.textContent = state.officeLocation ? `Maks. ${state.officeLocation.radius}m • ${msg}` : msg;
+        return;
+      }
+
+      if (status === 'inside') {
+        if (hPill) hPill.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary-container text-on-secondary-container text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer';
+        if (hDot) hDot.className = 'w-2 h-2 rounded-full bg-secondary';
+        if (hText) hText.textContent = `${officeName} (~${distText}${accSuffix})`;
+        if (gWrap) gWrap.className = 'px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 border border-emerald-200 dark:border-emerald-800';
+        if (gDot) gDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-600';
+        if (gPill) gPill.textContent = `Radius Valid (~${distText}${accSuffix})`;
+      } else {
+        if (hPill) hPill.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer';
+        if (hDot) hDot.className = 'w-2 h-2 rounded-full bg-amber-600';
+        if (hText) hText.textContent = `Di Luar Radius (${distText}${accSuffix})`;
+        if (gWrap) gWrap.className = 'px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1 border border-amber-200 dark:border-amber-800';
+        if (gDot) gDot.className = 'w-1.5 h-1.5 rounded-full bg-amber-600';
+        if (gPill) gPill.textContent = `Di Luar Radius (${distText})`;
       }
     }
 
@@ -728,27 +850,107 @@
     }
 
     // ── 5. LOAD POSTGRESQL MASTER DATA & USER LOGS ─────────────────────
-    async function loadMasterData() {
+    async function loadBootstrap() {
       try {
-        let activeNip = '';
-        try {
-          activeNip = (localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || '').trim();
-        } catch (_) {}
-        const defaultNip = activeNip || '200206302025061002';
-        await selectDesktopUser(defaultNip);
+        const res = await fetch('/api/stitch/bootstrap');
+        const json = await res.json();
+        if (!json.ok) return;
+
+        if (Array.isArray(json.locations) && json.locations.length > 0) {
+          const loc = json.locations[0];
+          const lat = Number(loc.latitude ?? loc.lat);
+          const lng = Number(loc.longitude ?? loc.lng);
+          const radius = Number(loc.radius) || 250;
+          const nama = loc.nama_lokasi || loc.nama || 'Kantor BAPPERIDA';
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            state.officeLocation = { lat, lng, radius, nama };
+          }
+        }
+
+        if (json.shift) {
+          state.shift = {
+            masuk: json.shift.masuk || '07:30',
+            pulang: json.shift.pulang || '16:00'
+          };
+        }
+
+        updateOfficeAndShiftUI();
       } catch (err) {
         console.error('[Stitch Desktop] Bootstrap error:', err);
       }
     }
 
+    function updateOfficeAndShiftUI() {
+      const office = state.officeLocation;
+      if (office) {
+        const sbGeo = document.getElementById('sidebarGeofenceText');
+        if (sbGeo) sbGeo.textContent = `Geofence Presensi (${office.radius}m)`;
+
+        const officeNameEl = document.getElementById('geofenceOfficeName');
+        if (officeNameEl) officeNameEl.textContent = office.nama;
+
+        const accEl = document.getElementById('geofenceAccuracyInfo');
+        if (accEl && !state.userLocation) {
+          accEl.textContent = `Maks. ${office.radius}m`;
+        }
+
+        const coordsEl = document.getElementById('geofenceCoordsText');
+        if (coordsEl && !state.userLocation) {
+          coordsEl.textContent = `${office.lat.toFixed(6)}, ${office.lng.toFixed(6)}`;
+        }
+      }
+
+      if (state.userLocation) {
+        evaluateAndRenderGps();
+      }
+
+      const sLabel = document.getElementById('shiftStartLabel');
+      const eLabel = document.getElementById('shiftEndLabel');
+      if (sLabel && state.shift?.masuk) sLabel.textContent = state.shift.masuk;
+      if (eLabel && state.shift?.pulang) eLabel.textContent = state.shift.pulang;
+
+      if (state.currentUser) {
+        updateDesktopUI();
+      } else {
+        const clockinSub = document.getElementById('clockinBtnSub');
+        const clockoutSub = document.getElementById('clockoutBtnSub');
+        if (clockinSub && state.shift?.masuk) clockinSub.textContent = `Jadwal Masuk: ${state.shift.masuk} WITA`;
+        if (clockoutSub && state.shift?.pulang) clockoutSub.textContent = `Jadwal: ${state.shift.pulang} WITA`;
+      }
+    }
+
+    async function loadMasterData() {
+      try {
+        let activeNip = '';
+        try {
+          activeNip = (localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || '').trim();
+          if (!activeNip) {
+            const rawProfile = localStorage.getItem('stitch_user_profile');
+            if (rawProfile) {
+              const parsed = JSON.parse(rawProfile);
+              activeNip = String((parsed && parsed.nip) || '').trim();
+            }
+          }
+        } catch (_) {}
+
+        if (!activeNip) {
+          location.replace('login.html');
+          return;
+        }
+        await selectDesktopUser(activeNip);
+      } catch (err) {
+        console.error('[Stitch Desktop] Load master data error:', err);
+      }
+    }
+
     async function selectDesktopUser(nip) {
       try {
-        const res = await fetch(`/api/stitch/user-data?nip=${nip}`);
+        const res = await fetch(`/api/stitch/user-data?nip=${encodeURIComponent(nip)}`);
         const json = await res.json();
         if (json.ok && json.user) {
           state.currentUser = json.user;
           state.userLogs = json.logs || [];
-          state.metrics = json.metrics || { hadir: 10, terlambat: 0, cuti: 1 };
+          state.metrics = json.metrics || { hadir: 0, terlambat: 0, cuti: 0 };
 
           updateDesktopUI();
         }
@@ -761,7 +963,7 @@
       const u = state.currentUser;
       if (!u) return;
 
-      const initials = (u.nama || 'AA').split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+      const initials = (u.nama || '').split(' ').map(p => p[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '--';
 
       const setTxt = (id, val) => {
         const el = document.getElementById(id);
@@ -769,25 +971,27 @@
       };
 
       // Top Bar Elements
-      setTxt('desktopUserName', u.nama);
-      setTxt('desktopUserNip', `NIP. ${u.nip}`);
+      setTxt('desktopUserName', u.nama || '-');
+      setTxt('desktopUserNip', `NIP. ${u.nip || '-'}`);
       setTxt('desktopUserInitials', initials);
 
       // Greeting Banner
-      setTxt('greetingName', `Halo, ${u.nama}`);
-      setTxt('greetingNip', `NIP. ${u.nip}`);
-      setTxt('greetingUserNama', u.jabatan || 'Pranata Komputer Ahli Pertama');
+      setTxt('greetingName', `Halo, ${u.nama || '-'}`);
+      setTxt('greetingNip', `NIP. ${u.nip || '-'}`);
+      setTxt('greetingUserNama', u.jabatan || '-');
 
       // Fallback Avatar Elements
-      setTxt('fallbackName', u.nama);
+      setTxt('fallbackName', u.nama || '-');
       setTxt('fallbackInitials', initials);
-      setTxt('cameraIdentifiedPill', `${u.nama.split(',')[0]} • Terverifikasi`);
+      setTxt('cameraIdentifiedPill', `${(u.nama || '-').split(',')[0]} • Terverifikasi`);
 
       // Metrics (Real PostgreSQL metrics)
-      const mHadir = state.metrics.hadir || 10;
-      const mTelat = state.metrics.terlambat || 0;
-      const mIzin = state.metrics.cuti || 1;
-      const mJam = state.metrics.weekly?.totalHours ? `${state.metrics.weekly.totalHours} Jam` : `${mHadir * 8.5} Jam`;
+      const mHadir = state.metrics.hadir ?? 0;
+      const mTelat = state.metrics.terlambat ?? 0;
+      const mIzin = state.metrics.cuti ?? 0;
+      const mJam = state.metrics.weekly?.totalHours != null
+        ? `${state.metrics.weekly.totalHours} Jam`
+        : '0 Jam';
 
       setTxt('metricHadirCount', mHadir);
       setTxt('metricTelatCount', mTelat);
@@ -799,6 +1003,9 @@
       const todayLogs = state.userLogs.filter(l => l.Tanggal === todayStr);
       const masukLog = todayLogs.find(l => String(l['Jenis Absen'] || '').includes('MASUK') || l['Jenis Absen'] === 'DI LUAR JAM MASUK');
       const pulangLog = todayLogs.find(l => String(l['Jenis Absen'] || '').includes('PULANG'));
+
+      const shiftMasuk = state.shift?.masuk || '07:30';
+      const shiftPulang = state.shift?.pulang || '16:00';
 
       // Status Masuk Card
       const masukJamEl = document.getElementById('todayMasukJam');
@@ -823,7 +1030,7 @@
           masukBadgeEl.textContent = 'Belum Tercatat';
         }
         if (clockinTitle) clockinTitle.textContent = 'Presensi Masuk';
-        if (clockinSub) clockinSub.textContent = 'Toleransi: s/d 08:00 WITA';
+        if (clockinSub) clockinSub.textContent = `Jadwal Masuk: ${shiftMasuk} WITA`;
         if (clockinBtn) clockinBtn.classList.remove('opacity-90');
       }
 
@@ -850,7 +1057,7 @@
           pulangBadgeEl.textContent = masukLog ? 'Menunggu Jam Pulang' : 'Belum Selesai';
         }
         if (clockoutTitle) clockoutTitle.textContent = 'Presensi Pulang';
-        if (clockoutSub) clockoutSub.textContent = 'Jadwal: 14:30 WITA';
+        if (clockoutSub) clockoutSub.textContent = `Jadwal: ${shiftPulang} WITA`;
         if (clockoutBtn) clockoutBtn.classList.remove('bg-blue-50', 'border-blue-200');
       }
 
@@ -942,26 +1149,36 @@
         return;
       }
 
-      tbody.innerHTML = days.map(d => {
+      state.renderedDays = days;
+
+      tbody.innerHTML = days.map((d, idx) => {
         let badgeHtml = '';
-        let lokasiStr = 'Kantor BAPPERIDA Sumba Barat';
+        let statusLabel = '-';
+        let lokasiStr = state.officeLocation?.nama || 'Kantor BAPPERIDA';
 
         if (d.izin) {
-          badgeHtml = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold">${d.izin['Jenis Absen']}</span>`;
+          statusLabel = String(d.izin['Jenis Absen'] || 'KETERANGAN');
+          badgeHtml = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold">${escapeHtml(statusLabel)}</span>`;
           lokasiStr = d.izin.Ket || 'Keterangan izin SIMPEG';
         } else if (d.masuk && d.pulang) {
+          statusLabel = 'Hadir Lengkap';
           badgeHtml = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">Hadir Lengkap</span>`;
-          lokasiStr = d.masuk.Lokasi || 'Kantor BAPPERIDA';
+          lokasiStr = d.masuk.Lokasi || lokasiStr;
         } else if (d.masuk) {
           const isLate = String(d.masuk['Jenis Absen']).includes('DI LUAR JAM MASUK') || String(d.masuk.Ket || '').toLowerCase().includes('terlambat');
+          statusLabel = isLate ? 'Terlambat' : 'Tepat Waktu';
           badgeHtml = isLate
             ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">Terlambat</span>`
             : `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">Tepat Waktu</span>`;
-          lokasiStr = d.masuk.Lokasi || 'Kantor BAPPERIDA';
+          lokasiStr = d.masuk.Lokasi || lokasiStr;
         } else if (d.pulang) {
+          statusLabel = 'Pulang Saja';
           badgeHtml = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold">Pulang Saja</span>`;
           lokasiStr = d.pulang.Lokasi || 'Meja Absen';
         }
+
+        d._statusLabel = statusLabel;
+        d._lokasiStr = lokasiStr;
 
         const jamMasuk = d.masuk ? `${d.masuk.Jam} WITA` : '--:--:--';
         const jamPulang = d.pulang ? `${d.pulang.Jam} WITA` : '--:--:--';
@@ -969,7 +1186,7 @@
         return `
           <tr class="hover:bg-surface-container-low/50 transition-colors">
             <td class="py-3 px-4 font-semibold text-on-surface">
-              <div class="font-bold font-mono">${d.tanggal}</div>
+              <div class="font-bold font-mono">${escapeHtml(d.tanggal)}</div>
             </td>
             <td class="py-3 px-4">
               <div class="flex items-center gap-2">
@@ -979,18 +1196,60 @@
                 <span class="font-medium text-slate-700 dark:text-slate-300">Biometrik Wajah</span>
               </div>
             </td>
-            <td class="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white tabular-nums">${jamMasuk}</td>
-            <td class="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white tabular-nums">${jamPulang}</td>
-            <td class="py-3 px-4 text-on-surface-variant truncate max-w-[200px]" title="${lokasiStr}">${lokasiStr}</td>
+            <td class="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white tabular-nums">${escapeHtml(jamMasuk)}</td>
+            <td class="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white tabular-nums">${escapeHtml(jamPulang)}</td>
+            <td class="py-3 px-4 text-on-surface-variant truncate max-w-[200px]" title="${escapeHtml(lokasiStr)}">${escapeHtml(lokasiStr)}</td>
             <td class="py-3 px-4">${badgeHtml}</td>
             <td class="py-3 px-4 text-right">
-              <button onclick="window.location.href='index.html'" class="px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-bold text-xs transition-colors">
+              <button type="button" onclick="openDesktopLogDetail(${idx})" class="px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-bold text-xs transition-colors cursor-pointer">
                 Detail
               </button>
             </td>
           </tr>
         `;
       }).join('');
+    }
+
+    function openDesktopLogDetail(idx) {
+      const d = state.renderedDays && state.renderedDays[idx];
+      if (!d) return;
+
+      const jamMasuk = d.masuk && d.masuk.Jam ? `${d.masuk.Jam} WITA` : '--:--:--';
+      const jamPulang = d.pulang && d.pulang.Jam ? `${d.pulang.Jam} WITA` : '--:--:--';
+      const status = d._statusLabel || '-';
+      const lokasi = d._lokasiStr || '-';
+
+      Swal.fire({
+        title: 'Detail Log Presensi',
+        html: `
+          <div class="text-left space-y-2.5 mt-2">
+            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-slate-500 dark:text-slate-400 font-medium">Tanggal</span>
+                <span class="font-mono font-bold text-slate-900 dark:text-white tabular-nums">${escapeHtml(d.tanggal)}</span>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-slate-500 dark:text-slate-400 font-medium">Jam Masuk</span>
+                <span class="font-mono font-bold text-slate-900 dark:text-white tabular-nums">${escapeHtml(jamMasuk)}</span>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-slate-500 dark:text-slate-400 font-medium">Jam Pulang</span>
+                <span class="font-mono font-bold text-slate-900 dark:text-white tabular-nums">${escapeHtml(jamPulang)}</span>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-slate-500 dark:text-slate-400 font-medium">Status</span>
+                <span class="font-bold text-blue-600 dark:text-blue-400">${escapeHtml(status)}</span>
+              </div>
+              <div class="flex items-start justify-between gap-3 pt-1.5 border-t border-slate-200 dark:border-slate-700">
+                <span class="text-slate-500 dark:text-slate-400 font-medium shrink-0">Lokasi</span>
+                <span class="font-semibold text-slate-900 dark:text-white text-right break-words">${escapeHtml(lokasi)}</span>
+              </div>
+            </div>
+          </div>
+        `,
+        confirmButtonText: 'Tutup',
+        confirmButtonColor: '#2563eb'
+      });
     }
 
     // ── 7. ATTENDANCE SUBMISSION (REAL POSTGRESQL INSERT) ─────────────
@@ -1000,19 +1259,27 @@
         return;
       }
 
+      if (!state.userLocation || state.userLocation.lat == null || state.userLocation.lng == null) {
+        Swal.fire('Lokasi GPS Belum Siap', 'Aktifkan izin lokasi browser lalu klik tombol sinkronisasi GPS terlebih dahulu.', 'warning');
+        return;
+      }
+
       const btn = jenis === 'MASUK' ? document.getElementById('btn-desktop-clockin') : document.getElementById('btn-desktop-clockout');
       const originalHTML = btn ? btn.innerHTML : '';
+      let succeeded = false;
       if (btn) {
         btn.innerHTML = `<span class="flex items-center gap-2 font-bold"><span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> Mengirim ke PostgreSQL...</span>`;
         btn.disabled = true;
       }
 
       try {
+        const officeName = state.officeLocation?.nama || 'Kantor BAPPERIDA';
         const payload = {
           nip: state.currentUser.nip,
           jenis: jenis,
-          lokasi: 'Kantor BAPPERIDA Sumba Barat (Presensi Desktop)',
+          lokasi: officeName,
           koordinat: `${state.userLocation.lat},${state.userLocation.lng}`,
+          akurasi: state.userLocation && state.userLocation.accuracy ? Math.round(state.userLocation.accuracy) : null,
           ket: `Presensi Desktop Mandiri • ${jenis === 'MASUK' ? 'Jam Masuk Kerja' : 'Jam Selesai Kerja'}`
         };
 
@@ -1024,10 +1291,16 @@
 
         const json = await res.json();
         if (json.ok) {
+          succeeded = true;
+          const waktu = json.witaTime || json.jam || '';
+          if (btn) {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+          }
           Swal.fire({
             icon: 'success',
             title: `Presensi ${jenis} Berhasil!`,
-            text: `Tercatat di server PostgreSQL: ${json.jam} WITA (${payload.lokasi})`,
+            text: `Tercatat di server PostgreSQL${waktu ? ': ' + waktu : ''} (${payload.lokasi})`,
             timer: 3000,
             showConfirmButton: true,
             confirmButtonColor: '#2563eb'
@@ -1036,12 +1309,12 @@
           // Reload fresh data from PostgreSQL
           await selectDesktopUser(state.currentUser.nip);
         } else {
-          Swal.fire('Gagal Mencatat', json.error || 'Server menolak presensi.', 'error');
+          Swal.fire('Gagal Mencatat', json.message || json.error || 'Server menolak presensi.', 'error');
         }
       } catch (err) {
         Swal.fire('Kesalahan Jaringan', 'Gagal menghubungi server database: ' + err.message, 'error');
       } finally {
-        if (btn) {
+        if (!succeeded && btn) {
           btn.innerHTML = originalHTML;
           btn.disabled = false;
         }
@@ -1081,10 +1354,20 @@
     }
 
     async function submitDesktopKeterangan() {
+      if (!state.currentUser || !state.currentUser.nip) {
+        Swal.fire('Perhatian', 'Data pegawai belum termuat.', 'warning');
+        return;
+      }
+
       const tglMulai = document.getElementById('desktopKetTglMulai').value;
       const tglSelesai = document.getElementById('desktopKetTglSelesai').value;
       const alasan = document.getElementById('desktopKetAlasan').value.trim();
       const linkDok = document.getElementById('desktopKetLink').value.trim();
+
+      if (!tglMulai) {
+        Swal.fire('Perhatian', 'Mohon pilih tanggal mulai.', 'warning');
+        return;
+      }
 
       if (!alasan) {
         Swal.fire('Perhatian', 'Mohon tuliskan rincian keperluan atau alasan pengajuan.', 'warning');
@@ -1098,10 +1381,10 @@
           body: JSON.stringify({
             nip: state.currentUser.nip,
             jenis: selectedKetJenis,
-            tglMulai,
-            tglSelesai,
-            alasan,
-            linkDok
+            tgl_mulai: tglMulai,
+            tgl_selesai: tglSelesai || tglMulai,
+            keterangan: alasan,
+            drive_link: linkDok
           })
         });
 
@@ -1110,13 +1393,15 @@
           Swal.fire({
             icon: 'success',
             title: 'Keterangan Berhasil Diajukan!',
-            text: `Pengajuan ${selectedKetJenis} telah tercatat di tabel ket_temp database.`,
+            text: json.message || `Pengajuan ${selectedKetJenis} telah tercatat di tabel ket_temp database.`,
             confirmButtonColor: '#2563eb'
           });
+          document.getElementById('desktopKetAlasan').value = '';
+          document.getElementById('desktopKetLink').value = '';
           closeAjukanKeteranganModal();
           await selectDesktopUser(state.currentUser.nip);
         } else {
-          Swal.fire('Gagal', json.error || 'Terjadi kesalahan pada server.', 'error');
+          Swal.fire('Gagal', json.message || json.error || 'Terjadi kesalahan pada server.', 'error');
         }
       } catch (err) {
         Swal.fire('Error', 'Gagal mengirim keterangan: ' + err.message, 'error');

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <html lang="id"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="js/stitch-auth.js"></script><script src="https://cdn.tailwindcss.com"></script><script src="js/dynamic-island.js"></script><script id="tailwind-config">tailwind.config = {
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="js/lib/sweetalert2.all.min.js"></script><script src="js/stitch-auth.js"></script><script src="https://cdn.tailwindcss.com"></script><script src="js/dynamic-island.js"></script><script id="tailwind-config">tailwind.config = {
   darkMode: "class",
   theme: {
     extend: {
@@ -193,11 +193,11 @@
       </p>
 </div>
 <div class="flex items-center gap-space-sm z-10 shrink-0">
-<button class="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-secondary-container hover:bg-secondary-fixed text-on-secondary-container font-label-lg text-label-lg transition-all shadow-sm" type="button">
+<button onclick="openVerifyTteModal()" class="flex items-center gap-space-xs px-space-md py-space-sm rounded-xl bg-secondary-container hover:bg-secondary-fixed text-on-secondary-container font-label-lg text-label-lg transition-all shadow-sm cursor-pointer" type="button">
 <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">verified_user</span>
 <span>Verifikasi Keabsahan TTE</span>
 </button>
-<button class="flex items-center gap-space-xs px-space-lg py-space-sm rounded-xl bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg shadow-sm hover:shadow transition-all" type="button">
+<button onclick="handleUnggahArsip()" class="flex items-center gap-space-xs px-space-lg py-space-sm rounded-xl bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg shadow-sm hover:shadow transition-all cursor-pointer" type="button">
 <span class="material-symbols-outlined text-[20px]">upload_file</span>
 <span>Unggah Dokumen / SK</span>
 </button>
@@ -210,7 +210,7 @@
 <div class="flex items-start justify-between">
 <div class="flex flex-col">
 <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Total Dokumen Terarsip</span>
-<span id="arsipStatTotal" class="font-time-display text-time-display text-on-surface tabular-nums mt-space-xs">91</span>
+<span id="arsipStatTotal" class="font-time-display text-time-display text-on-surface tabular-nums mt-space-xs">0</span>
 </div>
 <div class="w-10 h-10 rounded-xl bg-primary-fixed/50 flex items-center justify-center text-primary">
 <span class="material-symbols-outlined text-[22px]">folder_copy</span>
@@ -219,10 +219,10 @@
 <div class="mt-space-md pt-space-xs">
 <div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm mb-1.5">
 <span>Kapasitas Terpakai</span>
-<span class="font-mono tabular-nums font-semibold text-on-surface">14.8 GB / 50 GB</span>
+<span id="arsipStatStorageText" class="font-mono tabular-nums font-semibold text-on-surface">Menghitung...</span>
 </div>
 <div class="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
-<div class="h-full bg-primary rounded-full" style="width: 29.6%;"></div>
+<div id="arsipStatStorageBar" class="h-full bg-primary rounded-full transition-all duration-300" style="width: 0%;"></div>
 </div>
 </div>
 </div>
@@ -230,24 +230,24 @@
 <div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(100,116,139,0.05)] flex flex-col justify-between">
 <div class="flex items-start justify-between">
 <div class="flex flex-col">
-<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">SK &amp; Legalitas ASN</span>
-<span id="arsipStatCat1" class="font-time-display text-time-display text-on-surface tabular-nums mt-space-xs">35</span>
+<span id="arsipStatCat1Label" class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">SK &amp; Legalitas ASN</span>
+<span id="arsipStatCat1" class="font-time-display text-time-display text-on-surface tabular-nums mt-space-xs">0</span>
 </div>
 <div class="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-primary-container">
 <span class="material-symbols-outlined text-[22px]">workspace_premium</span>
 </div>
 </div>
 <div class="mt-space-md pt-space-xs flex items-center justify-between font-body-sm text-body-sm text-on-surface-variant">
-<span class="truncate">Kenaikan Pangkat, KGB, Jabatan</span>
-<span class="font-mono tabular-nums text-secondary font-medium ml-1 shrink-0">100% Aktif</span>
+<span id="arsipStatCat1Sub" class="truncate">Kategori Utama Terarsip</span>
+<span class="font-mono tabular-nums text-secondary font-medium ml-1 shrink-0">Aktif</span>
 </div>
 </div>
 <!-- Stat 3 -->
 <div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(100,116,139,0.05)] flex flex-col justify-between">
 <div class="flex items-start justify-between">
 <div class="flex flex-col">
-<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">SPJ &amp; Laporan SPPD</span>
-<span id="arsipStatCat2" class="font-time-display text-time-display text-on-surface tabular-nums mt-space-xs">13</span>
+<span id="arsipStatCat2Label" class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Surat, SPPD &amp; Perencanaan</span>
+<span id="arsipStatCat2" class="font-time-display text-time-display text-on-surface tabular-nums mt-space-xs">0</span>
 </div>
 <div class="w-10 h-10 rounded-xl bg-tertiary-fixed/40 flex items-center justify-center text-tertiary">
 <span class="material-symbols-outlined text-[22px]">commute</span>
@@ -255,47 +255,51 @@
 </div>
 <div class="mt-space-md pt-space-xs flex items-center gap-space-xs font-body-sm text-body-sm text-secondary">
 <span class="material-symbols-outlined text-[16px]">check_circle</span>
-<span class="truncate font-medium">Terverifikasi Inspektorat</span>
+<span id="arsipStatCat2Sub" class="truncate font-medium">Terverifikasi Digital</span>
 </div>
 </div>
 <!-- Stat 4 -->
 <div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(100,116,139,0.05)] flex flex-col justify-between">
 <div class="flex items-start justify-between">
 <div class="flex flex-col">
-<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Validitas TTE BSrE</span>
-<span class="font-time-display text-time-display text-secondary tabular-nums mt-space-xs">99.2%</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Validitas Berkas</span>
+<span id="arsipStatValiditas" class="font-time-display text-time-display text-secondary tabular-nums mt-space-xs">0%</span>
 </div>
 <div class="w-10 h-10 rounded-xl bg-secondary-container/40 flex items-center justify-center text-secondary">
 <span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' 1;">security</span>
 </div>
 </div>
 <div class="mt-space-md pt-space-xs flex items-center justify-between font-body-sm text-body-sm text-on-surface-variant">
-<span>Terkoneksi Root CA</span>
-<span class="font-label-sm text-label-sm bg-surface-container px-2 py-0.5 rounded text-on-surface font-mono font-medium">BSSN GOV</span>
+<span>Terkoneksi Arsip Cloud</span>
+<span class="font-label-sm text-label-sm bg-surface-container px-2 py-0.5 rounded text-on-surface font-mono font-medium">BAPPERIDA</span>
 </div>
 </div>
 </div>
 <!-- Sub-tab Navigation -->
-<div class="flex items-center gap-space-xs overflow-x-auto pb-1">
-<button class="px-space-md py-2.5 rounded-xl bg-primary text-on-primary font-label-lg text-label-lg shadow-sm whitespace-nowrap flex items-center gap-space-xs" type="button">
-<span class="material-symbols-outlined text-[18px]">badge</span>
-<span>1. Dokumen Perorangan Pegawai (Dossier ASN)</span>
+<div id="arsipCategoryTabs" class="flex items-center gap-space-xs overflow-x-auto pb-1">
+<button data-cat="all" onclick="setArsipCategoryFilter('all')" class="arsip-cat-tab px-space-md py-2.5 rounded-xl bg-primary text-on-primary font-label-lg text-label-lg shadow-sm whitespace-nowrap flex items-center gap-space-xs cursor-pointer transition-all" type="button">
+<span class="material-symbols-outlined text-[18px]">folder_copy</span>
+<span>Semua Dokumen</span>
 </button>
-<button class="px-space-md py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg whitespace-nowrap transition-all flex items-center gap-space-xs" type="button">
+<button data-cat="sk" onclick="setArsipCategoryFilter('sk')" class="arsip-cat-tab px-space-md py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg whitespace-nowrap transition-all flex items-center gap-space-xs cursor-pointer" type="button">
 <span class="material-symbols-outlined text-[18px]">gavel</span>
-<span>2. Keputusan Bupati &amp; Kepala Badan (SK)</span>
+<span>SK &amp; Keputusan</span>
 </button>
-<button class="px-space-md py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg whitespace-nowrap transition-all flex items-center gap-space-xs" type="button">
+<button data-cat="surat" onclick="setArsipCategoryFilter('surat')" class="arsip-cat-tab px-space-md py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg whitespace-nowrap transition-all flex items-center gap-space-xs cursor-pointer" type="button">
+<span class="material-symbols-outlined text-[18px]">mail</span>
+<span>Surat &amp; Administrasi</span>
+</button>
+<button data-cat="sppd" onclick="setArsipCategoryFilter('sppd')" class="arsip-cat-tab px-space-md py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg whitespace-nowrap transition-all flex items-center gap-space-xs cursor-pointer" type="button">
 <span class="material-symbols-outlined text-[18px]">airplane_ticket</span>
-<span>3. Arsip SPPD &amp; Surat Tugas (SPT)</span>
+<span>SPPD &amp; Surat Tugas</span>
 </button>
-<button class="px-space-md py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg whitespace-nowrap transition-all flex items-center gap-space-xs" type="button">
+<button data-cat="perencanaan" onclick="setArsipCategoryFilter('perencanaan')" class="arsip-cat-tab px-space-md py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg whitespace-nowrap transition-all flex items-center gap-space-xs cursor-pointer" type="button">
 <span class="material-symbols-outlined text-[18px]">payments</span>
-<span>4. Rekapitulasi TPP &amp; Payroll</span>
+<span>Perencanaan &amp; TPP</span>
 </button>
-<button class="px-space-md py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg whitespace-nowrap transition-all flex items-center gap-space-xs" type="button">
+<button data-cat="bmd" onclick="setArsipCategoryFilter('bmd')" class="arsip-cat-tab px-space-md py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg whitespace-nowrap transition-all flex items-center gap-space-xs cursor-pointer" type="button">
 <span class="material-symbols-outlined text-[18px]">account_balance_wallet</span>
-<span>5. Berkas Lelang &amp; BMD (KIR)</span>
+<span>Berkas Lelang &amp; BMD</span>
 </button>
 </div>
 <!-- Main Content Split Layout -->
@@ -312,72 +316,49 @@
 <span class="font-mono text-label-sm text-label-sm text-on-surface-variant tabular-nums">v4.2</span>
 </div>
 <!-- Tree List -->
-<div class="flex flex-col gap-1 text-on-surface">
-<!-- Parent 1 -->
-<div class="group">
-<div class="flex items-center justify-between p-2 rounded-xl bg-primary-fixed/40 text-primary cursor-pointer font-title-md text-title-md">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-[18px]">folder_open</span>
-<span class="font-semibold text-body-md">Berkas Induk ASN</span>
-</div>
-<span class="text-label-sm font-mono bg-surface-container px-1.5 py-0.5 rounded text-on-surface">52</span>
-</div>
-<!-- Children nodes -->
-<div class="flex flex-col pl-6 mt-1 gap-0.5">
-<a class="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface text-body-sm font-body-sm transition-all" href="#">
-<div class="flex items-center gap-1.5">
-<span class="material-symbols-outlined text-[16px] text-outline">subdirectory_arrow_right</span>
-<span class="truncate">Pejabat Tinggi (Eselon II)</span>
-</div>
-<span class="font-mono text-label-sm tabular-nums text-on-surface-variant">1</span>
-</a>
-<a class="flex items-center justify-between py-1.5 px-2 rounded-lg bg-surface-container text-on-surface font-semibold text-body-sm font-body-sm transition-all" href="#">
-<div class="flex items-center gap-1.5">
-<span class="material-symbols-outlined text-[16px] text-primary">subdirectory_arrow_right</span>
-<span class="truncate">Administrator (Eselon III/IV)</span>
-</div>
-<span class="font-mono text-label-sm tabular-nums bg-surface-container-high px-1.5 rounded">8</span>
-</a>
-<a class="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface text-body-sm font-body-sm transition-all" href="#">
-<div class="flex items-center gap-1.5">
-<span class="material-symbols-outlined text-[16px] text-outline">subdirectory_arrow_right</span>
-<span class="truncate">Fungsional Tertentu (JFT)</span>
-</div>
-<span class="font-mono text-label-sm tabular-nums text-on-surface-variant">24</span>
-</a>
-<a class="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface text-body-sm font-body-sm transition-all" href="#">
-<div class="flex items-center gap-1.5">
-<span class="material-symbols-outlined text-[16px] text-outline">subdirectory_arrow_right</span>
-<span class="truncate">Pelaksana / Umum (JFU)</span>
-</div>
-<span class="font-mono text-label-sm tabular-nums text-on-surface-variant">19</span>
-</a>
-</div>
-</div>
-<!-- Parent 2 -->
-<div class="flex items-center justify-between p-2 rounded-xl hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer text-body-md font-body-md transition-all mt-1">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-[18px]">folder</span>
-<span class="truncate font-medium">Arsip Regulasi &amp; Perbup</span>
-</div>
-<span class="font-mono text-label-sm tabular-nums">48</span>
-</div>
-<!-- Parent 3 -->
-<div class="flex items-center justify-between p-2 rounded-xl hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer text-body-md font-body-md transition-all">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-[18px]">folder</span>
-<span class="truncate font-medium">Arsip SPPD Tahun 2024</span>
-</div>
-<span class="font-mono text-label-sm tabular-nums">186</span>
-</div>
-<!-- Parent 4 -->
-<div class="flex items-center justify-between p-2 rounded-xl hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer text-body-md font-body-md transition-all">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-[18px]">folder</span>
-<span class="truncate font-medium">Arsip Tunjangan Kinerja (TPP)</span>
-</div>
-<span class="font-mono text-label-sm tabular-nums">24</span>
-</div>
+<div id="arsipFolderTree" class="flex flex-col gap-1 text-on-surface">
+  <button type="button" onclick="setArsipCategoryFilter('all')" class="w-full flex items-center justify-between p-2 rounded-xl bg-primary-fixed/40 text-primary cursor-pointer font-title-md text-title-md text-left transition-all">
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="material-symbols-outlined text-[18px]">folder_open</span>
+      <span class="font-semibold text-body-md truncate">Semua Repositori Arsip</span>
+    </div>
+    <span id="arsipTreeAllCount" class="text-label-sm font-mono bg-surface-container px-1.5 py-0.5 rounded text-on-surface tabular-nums">0</span>
+  </button>
+  <button type="button" onclick="setArsipCategoryFilter('sk')" class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer text-body-md font-body-md transition-all text-left">
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="material-symbols-outlined text-[18px]">folder</span>
+      <span class="truncate font-medium">SK &amp; Keputusan</span>
+    </div>
+    <span id="arsipTreeSkCount" class="font-mono text-label-sm tabular-nums">0</span>
+  </button>
+  <button type="button" onclick="setArsipCategoryFilter('surat')" class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer text-body-md font-body-md transition-all text-left">
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="material-symbols-outlined text-[18px]">folder</span>
+      <span class="truncate font-medium">Surat &amp; Administrasi</span>
+    </div>
+    <span id="arsipTreeSuratCount" class="font-mono text-label-sm tabular-nums">0</span>
+  </button>
+  <button type="button" onclick="setArsipCategoryFilter('sppd')" class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer text-body-md font-body-md transition-all text-left">
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="material-symbols-outlined text-[18px]">folder</span>
+      <span class="truncate font-medium">Arsip SPPD &amp; SPT</span>
+    </div>
+    <span id="arsipTreeSppdCount" class="font-mono text-label-sm tabular-nums">0</span>
+  </button>
+  <button type="button" onclick="setArsipCategoryFilter('perencanaan')" class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer text-body-md font-body-md transition-all text-left">
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="material-symbols-outlined text-[18px]">folder</span>
+      <span class="truncate font-medium">Perencanaan &amp; TPP</span>
+    </div>
+    <span id="arsipTreePlanCount" class="font-mono text-label-sm tabular-nums">0</span>
+  </button>
+  <button type="button" onclick="setArsipCategoryFilter('bmd')" class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer text-body-md font-body-md transition-all text-left">
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="material-symbols-outlined text-[18px]">folder</span>
+      <span class="truncate font-medium">Berkas Lelang &amp; BMD</span>
+    </div>
+    <span id="arsipTreeBmdCount" class="font-mono text-label-sm tabular-nums">0</span>
+  </button>
 </div>
 </div>
 <!-- Security / Vault Status Widget -->
@@ -420,21 +401,28 @@
 <div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(100,116,139,0.05)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-space-sm">
 <div class="relative flex-1">
 <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
-<input class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface-container-low text-body-md font-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all" placeholder="Cari no. surat, nama pegawai, NIP, atau jenis berkas..." type="text"/>
+<input id="arsipSearchInput" class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface-container-low text-body-md font-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all" placeholder="Cari no. surat, judul dokumen, pengunggah, NIP, atau kategori..." type="text"/>
 </div>
 <div class="flex items-center gap-space-xs shrink-0 flex-wrap sm:flex-nowrap">
-<div class="flex items-center bg-surface-container-low px-3 py-2 rounded-xl text-body-sm font-body-sm text-on-surface gap-1.5">
-<span class="material-symbols-outlined text-[18px] text-on-surface-variant">calendar_today</span>
-<span class="font-mono tabular-nums font-medium">2024</span>
-<span class="material-symbols-outlined text-[16px] text-on-surface-variant cursor-pointer">arrow_drop_down</span>
+<div class="relative flex items-center bg-surface-container-low rounded-xl text-body-sm font-body-sm text-on-surface">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant absolute left-3 pointer-events-none">calendar_today</span>
+<select id="arsipYearFilter" class="appearance-none bg-transparent pl-9 pr-8 py-2.5 font-mono tabular-nums font-medium text-on-surface focus:outline-none cursor-pointer">
+<option value="">Semua Tahun</option>
+</select>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant absolute right-2.5 pointer-events-none">arrow_drop_down</span>
 </div>
-<div class="flex items-center bg-surface-container-low px-3 py-2 rounded-xl text-body-sm font-body-sm text-on-surface gap-1.5">
-<span class="material-symbols-outlined text-[18px] text-secondary">verified</span>
-<span class="font-medium">TTE Sah Valid</span>
-<span class="material-symbols-outlined text-[16px] text-on-surface-variant cursor-pointer">arrow_drop_down</span>
+<div class="relative flex items-center bg-surface-container-low rounded-xl text-body-sm font-body-sm text-on-surface">
+<span class="material-symbols-outlined text-[18px] text-secondary absolute left-3 pointer-events-none">verified</span>
+<select id="arsipStatusFilter" class="appearance-none bg-transparent pl-9 pr-8 py-2.5 font-medium text-on-surface focus:outline-none cursor-pointer">
+<option value="">Semua Status</option>
+<option value="publik">Publik / Terbuka</option>
+<option value="internal">Internal / Terbatas</option>
+<option value="url">Memiliki Tautan Berkas</option>
+</select>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant absolute right-2.5 pointer-events-none">arrow_drop_down</span>
 </div>
-<button class="w-10 h-10 rounded-xl bg-surface-container-low hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-all" type="button">
-<span class="material-symbols-outlined text-[20px]">tune</span>
+<button id="arsipResetFilterBtn" onclick="resetArsipFilters()" class="w-10 h-10 rounded-xl bg-surface-container-low hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-all cursor-pointer" title="Reset Filter &amp; Pencarian" type="button">
+<span class="material-symbols-outlined text-[20px]">filter_alt_off</span>
 </button>
 </div>
 </div>
@@ -466,55 +454,43 @@
 </table>
 </div>
 <!-- Pagination Bar -->
-<div class="px-space-md py-space-sm bg-surface-container-low/30 flex items-center justify-between font-body-sm text-body-sm text-on-surface-variant">
-<div class="flex items-center gap-1">
+<div class="px-space-md py-space-sm bg-surface-container-low/30 flex flex-col sm:flex-row items-center justify-between gap-2 font-body-sm text-body-sm text-on-surface-variant">
+<div id="arsipPaginationInfo" class="flex items-center gap-1">
 <span>Menampilkan</span>
-<span class="font-mono font-medium text-on-surface tabular-nums">1 - 5</span>
+<span id="arsipShownCount" class="font-mono font-medium text-on-surface tabular-nums">0</span>
 <span>dari</span>
-<span class="font-mono font-medium text-on-surface tabular-nums">1.284</span>
+<span id="arsipTotalFiltered" class="font-mono font-medium text-on-surface tabular-nums">0</span>
 <span>dokumen</span>
 </div>
-<div class="flex items-center gap-1">
-<button class="w-8 h-8 rounded-lg hover:bg-surface-container flex items-center justify-center text-on-surface-variant disabled:opacity-40" disabled="" type="button">
-<span class="material-symbols-outlined text-[18px]">chevron_left</span>
-</button>
-<button class="w-8 h-8 rounded-lg bg-primary text-on-primary font-mono tabular-nums font-medium flex items-center justify-center" type="button">1</button>
-<button class="w-8 h-8 rounded-lg hover:bg-surface-container text-on-surface-variant font-mono tabular-nums font-medium flex items-center justify-center" type="button">2</button>
-<button class="w-8 h-8 rounded-lg hover:bg-surface-container text-on-surface-variant font-mono tabular-nums font-medium flex items-center justify-center" type="button">3</button>
-<span class="px-1 text-outline">...</span>
-<button class="w-8 h-8 rounded-lg hover:bg-surface-container text-on-surface-variant font-mono tabular-nums font-medium flex items-center justify-center" type="button">257</button>
-<button class="w-8 h-8 rounded-lg hover:bg-surface-container flex items-center justify-center text-on-surface-variant" type="button">
-<span class="material-symbols-outlined text-[18px]">chevron_right</span>
-</button>
-</div>
+<div id="arsipPaginationControls" class="flex items-center gap-1"></div>
 </div>
 </div>
 <!-- Quick Preview Drawer / Card at Bottom for Selected Document -->
-<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_4px_20px_-2px_rgba(100,116,139,0.06)] flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-space-md">
+<div id="arsipPreviewDrawer" class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_4px_20px_-2px_rgba(100,116,139,0.06)] flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-space-md">
 <!-- Document Detail & Metadata -->
-<div class="flex flex-col md:flex-row items-start md:items-center gap-space-md flex-1">
+<div class="flex flex-col md:flex-row items-start md:items-center gap-space-md flex-1 min-w-0">
 <div class="w-14 h-14 rounded-2xl bg-secondary-container/40 flex items-center justify-center text-secondary shrink-0">
 <span class="material-symbols-outlined text-[32px]" style="font-variation-settings: 'FILL' 1;">verified</span>
 </div>
 <div class="flex flex-col gap-1 min-w-0">
 <div class="flex items-center gap-2 flex-wrap">
-<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">SK Kenaikan Pangkat Pembina Utama Muda (Gol. IV/c)</span>
-<span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">Tervalidasi BSSN</span>
+<span id="arsipPreviewTitle" class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">Memuat pratinjau dokumen...</span>
+<span id="arsipPreviewBadge" class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">Terarsip</span>
 </div>
 <div class="flex items-center gap-space-sm text-body-sm font-body-sm text-on-surface-variant flex-wrap">
-<span>Penandatangan: <strong class="text-on-surface font-medium">Gubernur NTT &amp; BKN Jakarta</strong></span>
+<span>Pengunggah: <strong id="arsipPreviewUploader" class="text-on-surface font-medium">-</strong></span>
 <span>•</span>
-<span>Naskah ID: <strong class="text-on-surface font-mono tabular-nums">BKN-KP-8829-2024</strong></span>
+<span>Naskah ID: <strong id="arsipPreviewNomor" class="text-on-surface font-mono tabular-nums">-</strong></span>
 <span>•</span>
-<span>Diunduh: <strong class="text-on-surface font-mono tabular-nums">14x oleh Inspektorat &amp; BKD</strong></span>
+<span>Tanggal: <strong id="arsipPreviewDate" class="text-on-surface font-mono tabular-nums">-</strong></span>
 </div>
-<!-- SHA-256 Digest String -->
+<!-- Reference Digest String -->
 <div class="mt-1 flex items-center gap-2 bg-surface-container-low px-2.5 py-1.5 rounded-lg max-w-xl">
 <span class="material-symbols-outlined text-[16px] text-outline">fingerprint</span>
-<span class="font-mono text-label-sm text-label-sm text-on-surface-variant truncate">
-                SHA-256: e8f1b4a92c307da19b380f2d47aa1f86bb90c609513e639849204bf132cba991
+<span id="arsipPreviewHash" class="font-mono text-label-sm text-label-sm text-on-surface-variant truncate">
+                ID Arsip: -
               </span>
-<button class="material-symbols-outlined text-[14px] text-primary hover:text-primary-container shrink-0" title="Salin Digest" type="button">content_copy</button>
+<button id="arsipPreviewCopyBtn" onclick="copyArsipPreviewRef()" class="material-symbols-outlined text-[14px] text-primary hover:text-primary-container shrink-0 cursor-pointer" title="Salin Referensi Arsip" type="button">content_copy</button>
 </div>
 </div>
 </div>
@@ -527,14 +503,14 @@
 </svg>
 </div>
 <div class="flex flex-col gap-1">
-<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">BSrE Seal Checksum</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Integritas Arsip</span>
 <div class="flex items-center gap-1 font-mono text-label-sm text-secondary font-semibold">
 <span class="material-symbols-outlined text-[14px]">shield</span>
-<span>ROOT-BSSN-PASS</span>
+<span id="arsipPreviewChecksum">BAPPERIDA-SYNC</span>
 </div>
-<button class="mt-1 px-3 py-1 bg-primary text-on-primary rounded-lg font-label-md text-label-md flex items-center justify-center gap-1 hover:bg-primary-container transition-all" type="button">
+<button id="arsipPreviewDownloadBtn" onclick="openSelectedArsipFile()" class="mt-1 px-3 py-1 bg-primary text-on-primary rounded-lg font-label-md text-label-md flex items-center justify-center gap-1 hover:bg-primary-container transition-all cursor-pointer" type="button">
 <span class="material-symbols-outlined text-[16px]">file_download</span>
-<span>Unduh Berkas</span>
+<span>Buka Berkas</span>
 </button>
 </div>
 </div>
@@ -559,11 +535,38 @@
 
 <script>
   let _rawArsipList = [];
+  let _filteredArsipList = [];
   let _activeArsipFilter = 'all';
+  let _arsipPage = 1;
+  const ARSIP_PAGE_SIZE = 10;
+  let _selectedArsipDoc = null;
+
+  function escapeArsipHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function matchArsipCategory(doc, cat) {
+    if (!cat || cat === 'all') return true;
+    const text = [doc.type, doc.sector, doc.title, doc.nomorDokumen, doc.desc]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    if (cat === 'sk') return /\b(sk|keputusan|perbup|bupati|jabatan|pangkat|kgb)\b/i.test(text);
+    if (cat === 'surat') return /\b(surat|administrasi|umum|edaran|undangan|naskah)\b/i.test(text);
+    if (cat === 'sppd') return /\b(sppd|spt|tugas|perjalanan|spj)\b/i.test(text);
+    if (cat === 'perencanaan') return /\b(tpp|payroll|rka|rkpd|renja|renstra|perencanaan|keuangan|anggaran)\b/i.test(text);
+    if (cat === 'bmd') return /\b(bmd|aset|kir|lelang|inventaris|simapo|berita acara)\b/i.test(text);
+    return (doc.type || '').toLowerCase().includes(cat.toLowerCase());
+  }
 
   document.addEventListener('DOMContentLoaded', () => {
     loadRealArsipData();
-    setupArsipSearch();
+    setupArsipFilters();
   });
 
   async function loadRealArsipData() {
@@ -572,29 +575,184 @@
       const res = await fetch('/api/stitch/arsip/mobile-data');
       const json = await res.json();
 
-      if (json.ok && json.documents) {
+      if (json.ok && Array.isArray(json.documents)) {
         _rawArsipList = json.documents;
-        
-        // Update stats
-        if (json.stats) {
-          const elTotal = document.getElementById('arsipStatTotal');
-          if (elTotal) elTotal.textContent = json.stats.totalDocs || json.documents.length;
-          
-          if (json.stats.kategoriBreakdown && json.stats.kategoriBreakdown.length >= 2) {
-            const elCat1 = document.getElementById('arsipStatCat1');
-            if (elCat1) elCat1.textContent = json.stats.kategoriBreakdown[0].count;
-            const elCat2 = document.getElementById('arsipStatCat2');
-            if (elCat2) elCat2.textContent = json.stats.kategoriBreakdown[1].count;
-          }
-        }
-
-        renderArsipRows(_rawArsipList);
+        updateArsipKpis(json.stats || {}, _rawArsipList);
+        populateArsipYearOptions(_rawArsipList);
+        applyArsipFilters();
       } else {
+        _rawArsipList = [];
+        updateArsipKpis({}, []);
+        applyArsipFilters();
         if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-on-surface-variant font-medium">Belum ada arsip dokumen yang tersimpan.</td></tr>';
       }
     } catch (err) {
       console.error('loadRealArsipData error:', err);
-      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-error font-medium">Gagal memuat repositori arsip: ${err.message}</td></tr>`;
+      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-error font-medium">Gagal memuat repositori arsip: ${escapeArsipHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  function updateArsipKpis(stats, docs) {
+    const total = stats.totalDocs ?? docs.length;
+    const elTotal = document.getElementById('arsipStatTotal');
+    if (elTotal) elTotal.textContent = total;
+
+    const elStorageText = document.getElementById('arsipStatStorageText');
+    const elStorageBar = document.getElementById('arsipStatStorageBar');
+    if (elStorageText) {
+      elStorageText.textContent = stats.storageDisplay || `${docs.length} Berkas Terindeks`;
+    }
+    if (elStorageBar) {
+      const pct = Number(stats.storagePercent ?? (total > 0 ? Math.min(100, Math.max(5, docs.length * 2)) : 0));
+      elStorageBar.style.width = `${pct}%`;
+    }
+
+    const skCount = docs.filter(d => matchArsipCategory(d, 'sk')).length;
+    const sppdPlanCount = docs.filter(d => matchArsipCategory(d, 'sppd') || matchArsipCategory(d, 'surat')).length;
+    const breakdown = Array.isArray(stats.kategoriBreakdown) ? stats.kategoriBreakdown : [];
+
+    const elCat1 = document.getElementById('arsipStatCat1');
+    const elCat1Label = document.getElementById('arsipStatCat1Label');
+    const elCat2 = document.getElementById('arsipStatCat2');
+    const elCat2Label = document.getElementById('arsipStatCat2Label');
+
+    if (breakdown.length >= 1) {
+      if (elCat1Label) elCat1Label.textContent = `Kategori: ${breakdown[0].kategori}`;
+      if (elCat1) elCat1.textContent = breakdown[0].count;
+    } else {
+      if (elCat1) elCat1.textContent = skCount;
+    }
+
+    if (breakdown.length >= 2) {
+      if (elCat2Label) elCat2Label.textContent = `Kategori: ${breakdown[1].kategori}`;
+      if (elCat2) elCat2.textContent = breakdown[1].count;
+    } else {
+      if (elCat2) elCat2.textContent = sppdPlanCount;
+    }
+
+    const validDocs = docs.filter(d => (d.status || '').toLowerCase() !== 'ditolak').length;
+    const validPct = docs.length > 0 ? ((validDocs / docs.length) * 100).toFixed(1) + '%' : '0%';
+    const elValid = document.getElementById('arsipStatValiditas');
+    if (elValid) elValid.textContent = validPct;
+
+    // Update left folder tree counts
+    const treeCounts = {
+      arsipTreeAllCount: docs.length,
+      arsipTreeSkCount: skCount,
+      arsipTreeSuratCount: docs.filter(d => matchArsipCategory(d, 'surat')).length,
+      arsipTreeSppdCount: docs.filter(d => matchArsipCategory(d, 'sppd')).length,
+      arsipTreePlanCount: docs.filter(d => matchArsipCategory(d, 'perencanaan')).length,
+      arsipTreeBmdCount: docs.filter(d => matchArsipCategory(d, 'bmd')).length
+    };
+    for (const [id, count] of Object.entries(treeCounts)) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = count;
+    }
+  }
+
+  function populateArsipYearOptions(docs) {
+    const sel = document.getElementById('arsipYearFilter');
+    if (!sel) return;
+    const current = sel.value;
+    const years = [...new Set(docs.map(d => String(d.year || '').trim()).filter(Boolean))].sort((a, b) => b.localeCompare(a));
+    sel.innerHTML = '<option value="">Semua Tahun</option>' +
+      years.map(y => `<option value="${escapeArsipHtml(y)}">${escapeArsipHtml(y)}</option>`).join('');
+    if (years.includes(current)) sel.value = current;
+  }
+
+  function setArsipCategoryFilter(cat) {
+    _activeArsipFilter = cat || 'all';
+    _arsipPage = 1;
+
+    document.querySelectorAll('#arsipCategoryTabs .arsip-cat-tab').forEach(btn => {
+      const active = btn.dataset.cat === _activeArsipFilter;
+      btn.className = active
+        ? 'arsip-cat-tab px-space-md py-2.5 rounded-xl bg-primary text-on-primary font-label-lg text-label-lg shadow-sm whitespace-nowrap flex items-center gap-space-xs cursor-pointer transition-all'
+        : 'arsip-cat-tab px-space-md py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-lg text-label-lg whitespace-nowrap transition-all flex items-center gap-space-xs cursor-pointer';
+    });
+
+    const treeButtons = document.querySelectorAll('#arsipFolderTree button');
+    treeButtons.forEach(btn => {
+      const match = (btn.getAttribute('onclick') || '').includes(`'${_activeArsipFilter}'`);
+      btn.className = match
+        ? 'w-full flex items-center justify-between p-2 rounded-xl bg-primary-fixed/40 text-primary cursor-pointer font-title-md text-title-md text-left transition-all'
+        : 'w-full flex items-center justify-between p-2 rounded-xl hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer text-body-md font-body-md transition-all text-left';
+      const iconEl = btn.querySelector('.material-symbols-outlined');
+      if (iconEl) iconEl.textContent = match ? 'folder_open' : 'folder';
+    });
+
+    applyArsipFilters();
+  }
+
+  function setupArsipFilters() {
+    const searchInput = document.getElementById('arsipSearchInput');
+    const yearFilter = document.getElementById('arsipYearFilter');
+    const statusFilter = document.getElementById('arsipStatusFilter');
+
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        _arsipPage = 1;
+        applyArsipFilters();
+      });
+    }
+    if (yearFilter) {
+      yearFilter.addEventListener('change', () => {
+        _arsipPage = 1;
+        applyArsipFilters();
+      });
+    }
+    if (statusFilter) {
+      statusFilter.addEventListener('change', () => {
+        _arsipPage = 1;
+        applyArsipFilters();
+      });
+    }
+  }
+
+  function resetArsipFilters() {
+    const searchInput = document.getElementById('arsipSearchInput');
+    const yearFilter = document.getElementById('arsipYearFilter');
+    const statusFilter = document.getElementById('arsipStatusFilter');
+    if (searchInput) searchInput.value = '';
+    if (yearFilter) yearFilter.value = '';
+    if (statusFilter) statusFilter.value = '';
+    setArsipCategoryFilter('all');
+  }
+
+  function applyArsipFilters() {
+    const q = (document.getElementById('arsipSearchInput')?.value || '').toLowerCase().trim();
+    const year = (document.getElementById('arsipYearFilter')?.value || '').trim();
+    const statusVal = (document.getElementById('arsipStatusFilter')?.value || '').trim();
+
+    _filteredArsipList = _rawArsipList.filter(d => {
+      if (!matchArsipCategory(d, _activeArsipFilter)) return false;
+      if (year && String(d.year || '').trim() !== year) return false;
+      if (statusVal === 'publik' && !d.publik) return false;
+      if (statusVal === 'internal' && d.publik) return false;
+      if (statusVal === 'url' && (!d.url || d.url === '#')) return false;
+      if (q) {
+        const hay = [d.title, d.type, d.sector, d.uploader, d.uploaderId, d.nomorDokumen, d.year, d.desc]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    const totalPages = Math.max(1, Math.ceil(_filteredArsipList.length / ARSIP_PAGE_SIZE));
+    if (_arsipPage > totalPages) _arsipPage = totalPages;
+
+    renderArsipRows(_filteredArsipList);
+    renderArsipPagination();
+
+    if (_filteredArsipList.length > 0) {
+      const stillExists = _selectedArsipDoc && _filteredArsipList.some(d => String(d.id) === String(_selectedArsipDoc.id));
+      if (!stillExists) {
+        updateArsipPreviewDrawer(_filteredArsipList[0]);
+      }
+    } else {
+      updateArsipPreviewDrawer(null);
     }
   }
 
@@ -603,15 +761,19 @@
     if (!tbody) return;
 
     if (docs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-on-surface-variant font-medium">Tidak ada dokumen yang sesuai dengan pencarian.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-on-surface-variant font-medium">Tidak ada dokumen yang sesuai dengan filter atau pencarian.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = docs.map((doc, idx) => {
-      const num = String(idx + 1).padStart(2, '0');
+    const start = (_arsipPage - 1) * ARSIP_PAGE_SIZE;
+    const pageDocs = docs.slice(start, start + ARSIP_PAGE_SIZE);
+
+    tbody.innerHTML = pageDocs.map((doc, localIdx) => {
+      const globalIdx = start + localIdx;
+      const num = String(globalIdx + 1).padStart(2, '0');
       const isPdf = (doc.fileType || '').toLowerCase().includes('pdf') || (doc.title || '').toLowerCase().endsWith('.pdf');
       const isExcel = (doc.fileType || '').toLowerCase().includes('excel') || (doc.fileType || '').toLowerCase().includes('sheet') || (doc.title || '').toLowerCase().endsWith('.xlsx');
-      
+
       let icon = 'description';
       let iconColor = 'text-primary bg-primary/10';
       if (isPdf) {
@@ -626,14 +788,16 @@
       const kategori = doc.type || 'Administrasi Umum';
       const uploader = doc.uploader || 'Aparatur BAPPERIDA';
       const uploaderNip = doc.uploaderId ? `NIP ${doc.uploaderId}` : 'Pegawai Terverifikasi';
-      const tgl = doc.tanggalDokumen || 'Terarsip';
+      const tgl = doc.tanggalDokumen || doc.year || 'Terarsip';
       const size = doc.size || 'Digital File';
 
-      const safeUrl = doc.url ? doc.url.replace(/"/g, '&quot;') : '#';
+      const safeUrl = doc.url ? escapeArsipHtml(doc.url) : '#';
       const hasUrl = Boolean(doc.url && doc.url !== '#');
+      const isSelected = _selectedArsipDoc && String(_selectedArsipDoc.id) === String(doc.id);
+      const rowHighlight = isSelected ? 'bg-primary-fixed/20' : 'hover:bg-surface-container-low/40';
 
       return `
-        <tr class="hover:bg-surface-container-low/40 transition-colors group">
+        <tr onclick="selectArsipRow(${globalIdx})" class="${rowHighlight} transition-colors group cursor-pointer">
           <td class="py-3.5 px-4 text-center font-mono tabular-nums text-on-surface-variant">${num}</td>
           <td class="py-3.5 px-4">
             <div class="flex items-start gap-2.5">
@@ -641,47 +805,47 @@
                 <span class="material-symbols-outlined text-[18px]">${icon}</span>
               </div>
               <div class="flex flex-col min-w-0">
-                <a ${hasUrl ? `href="${safeUrl}" target="_blank" rel="noopener noreferrer"` : 'href="javascript:void(0)"'} class="font-title-md text-title-md font-semibold text-primary truncate hover:underline cursor-pointer" title="${doc.title}">
-                  ${doc.title}
+                <a ${hasUrl ? `href="${safeUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()"` : `href="javascript:void(0)" onclick="event.stopPropagation(); openArsipDetail(${globalIdx})"`} class="font-title-md text-title-md font-semibold text-primary truncate hover:underline cursor-pointer" title="${escapeArsipHtml(doc.title)}">
+                  ${escapeArsipHtml(doc.title)}
                 </a>
-                <span class="font-mono text-label-sm text-on-surface-variant tabular-nums">${kodeArsip}</span>
+                <span class="font-mono text-label-sm text-on-surface-variant tabular-nums">${escapeArsipHtml(kodeArsip)}</span>
               </div>
             </div>
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
             <span class="px-2.5 py-1 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm font-medium">
-              ${kategori}
+              ${escapeArsipHtml(kategori)}
             </span>
           </td>
           <td class="py-3.5 px-4">
             <div class="flex flex-col min-w-0">
-              <span class="font-medium text-on-surface truncate">${uploader}</span>
-              <span class="font-mono text-label-sm text-on-surface-variant tabular-nums">${uploaderNip}</span>
+              <span class="font-medium text-on-surface truncate">${escapeArsipHtml(uploader)}</span>
+              <span class="font-mono text-label-sm text-on-surface-variant tabular-nums">${escapeArsipHtml(uploaderNip)}</span>
             </div>
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
             <div class="flex flex-col">
-              <span class="font-mono tabular-nums text-on-surface">${tgl}</span>
-              <span class="font-mono text-label-sm text-on-surface-variant tabular-nums">${size}</span>
+              <span class="font-mono tabular-nums text-on-surface">${escapeArsipHtml(tgl)}</span>
+              <span class="font-mono text-label-sm text-on-surface-variant tabular-nums">${escapeArsipHtml(size)}</span>
             </div>
           </td>
           <td class="py-3.5 px-4 whitespace-nowrap">
             <div class="flex flex-col gap-0.5">
               <div class="flex items-center gap-1 text-secondary font-medium">
                 <span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;">verified</span>
-                <span class="font-label-sm">BSrE Terverifikasi</span>
+                <span class="font-label-sm">${doc.publik ? 'Publik Terverifikasi' : 'BSrE Terverifikasi'}</span>
               </div>
-              <span class="font-mono text-[11px] text-outline tabular-nums">Google Drive Sync</span>
+              <span class="font-mono text-[11px] text-outline tabular-nums">${hasUrl ? 'Cloud / Drive Sync' : 'Metadata Terarsip'}</span>
             </div>
           </td>
           <td class="py-3.5 px-4 text-right pr-6 whitespace-nowrap">
             <div class="inline-flex items-center gap-1">
               ${hasUrl ? `
-                <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary transition-all inline-flex items-center" title="Buka Dokumen Google Drive">
+                <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary transition-all inline-flex items-center" title="Buka Dokumen">
                   <span class="material-symbols-outlined text-[18px]">open_in_new</span>
                 </a>
               ` : ''}
-              <button onclick="alert('Dokumen: ' + '${doc.title.replace(/'/g, "\\'")}' + '\nPengunggah: ' + '${uploader}' + '\nKategori: ' + '${kategori}')" class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant transition-all cursor-pointer" title="Rincian Dokumen">
+              <button type="button" onclick="event.stopPropagation(); openArsipDetail(${globalIdx})" class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant transition-all cursor-pointer" title="Rincian Dokumen">
                 <span class="material-symbols-outlined text-[18px]">visibility</span>
               </button>
             </div>
@@ -691,25 +855,232 @@
     }).join('');
   }
 
-  function setupArsipSearch() {
-    const searchInput = document.querySelector('input[type="text"][placeholder*="Cari"]');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        const val = e.target.value.toLowerCase().trim();
-        if (!val) {
-          renderArsipRows(_rawArsipList);
-          return;
+  function renderArsipPagination() {
+    const total = _filteredArsipList.length;
+    const shownEl = document.getElementById('arsipShownCount');
+    const totalEl = document.getElementById('arsipTotalFiltered');
+    const controlsEl = document.getElementById('arsipPaginationControls');
+
+    const start = total === 0 ? 0 : (_arsipPage - 1) * ARSIP_PAGE_SIZE + 1;
+    const end = Math.min(total, _arsipPage * ARSIP_PAGE_SIZE);
+
+    if (shownEl) shownEl.textContent = total === 0 ? '0' : `${start} - ${end}`;
+    if (totalEl) totalEl.textContent = String(total);
+
+    if (!controlsEl) return;
+    const totalPages = Math.max(1, Math.ceil(total / ARSIP_PAGE_SIZE));
+    let html = `
+      <button type="button" onclick="goToArsipPage(${_arsipPage - 1})" ${_arsipPage <= 1 ? 'disabled' : ''} class="w-8 h-8 rounded-lg hover:bg-surface-container flex items-center justify-center text-on-surface-variant disabled:opacity-40 cursor-pointer">
+        <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+      </button>
+    `;
+    for (let p = 1; p <= totalPages; p++) {
+      if (totalPages > 6 && p > 2 && p < totalPages - 1 && Math.abs(p - _arsipPage) > 1) {
+        if (p === 3 || p === totalPages - 2) {
+          html += '<span class="px-1 text-outline">...</span>';
         }
-        const filtered = _rawArsipList.filter(d => 
-          (d.title && d.title.toLowerCase().includes(val)) ||
-          (d.type && d.type.toLowerCase().includes(val)) ||
-          (d.uploader && d.uploader.toLowerCase().includes(val)) ||
-          (d.uploaderId && d.uploaderId.toLowerCase().includes(val)) ||
-          (d.nomorDokumen && d.nomorDokumen.toLowerCase().includes(val))
-        );
-        renderArsipRows(filtered);
+        continue;
+      }
+      const cls = p === _arsipPage
+        ? 'w-8 h-8 rounded-lg bg-primary text-on-primary font-mono tabular-nums font-medium flex items-center justify-center cursor-pointer'
+        : 'w-8 h-8 rounded-lg hover:bg-surface-container text-on-surface-variant font-mono tabular-nums font-medium flex items-center justify-center cursor-pointer';
+      html += `<button type="button" onclick="goToArsipPage(${p})" class="${cls}">${p}</button>`;
+    }
+    html += `
+      <button type="button" onclick="goToArsipPage(${_arsipPage + 1})" ${_arsipPage >= totalPages ? 'disabled' : ''} class="w-8 h-8 rounded-lg hover:bg-surface-container flex items-center justify-center text-on-surface-variant disabled:opacity-40 cursor-pointer">
+        <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+      </button>
+    `;
+    controlsEl.innerHTML = html;
+  }
+
+  function goToArsipPage(page) {
+    const totalPages = Math.max(1, Math.ceil(_filteredArsipList.length / ARSIP_PAGE_SIZE));
+    if (page < 1 || page > totalPages) return;
+    _arsipPage = page;
+    renderArsipRows(_filteredArsipList);
+    renderArsipPagination();
+  }
+
+  function selectArsipRow(idx) {
+    const doc = _filteredArsipList[idx];
+    if (!doc) return;
+    updateArsipPreviewDrawer(doc);
+    renderArsipRows(_filteredArsipList);
+  }
+
+  function updateArsipPreviewDrawer(doc) {
+    _selectedArsipDoc = doc;
+    const titleEl = document.getElementById('arsipPreviewTitle');
+    const badgeEl = document.getElementById('arsipPreviewBadge');
+    const uploaderEl = document.getElementById('arsipPreviewUploader');
+    const nomorEl = document.getElementById('arsipPreviewNomor');
+    const dateEl = document.getElementById('arsipPreviewDate');
+    const hashEl = document.getElementById('arsipPreviewHash');
+    const checksumEl = document.getElementById('arsipPreviewChecksum');
+    const dlBtn = document.getElementById('arsipPreviewDownloadBtn');
+
+    if (!doc) {
+      if (titleEl) titleEl.textContent = 'Belum ada dokumen terpilih';
+      if (badgeEl) badgeEl.textContent = 'Kosong';
+      if (uploaderEl) uploaderEl.textContent = '-';
+      if (nomorEl) nomorEl.textContent = '-';
+      if (dateEl) dateEl.textContent = '-';
+      if (hashEl) hashEl.textContent = 'ID Arsip: -';
+      if (checksumEl) checksumEl.textContent = 'STANDBY';
+      if (dlBtn) dlBtn.disabled = true;
+      return;
+    }
+
+    const kodeArsip = doc.nomorDokumen || `BAPPERIDA/ARS/${doc.year || '2026'}/${doc.id}`;
+    const hasUrl = Boolean(doc.url && doc.url !== '#');
+    if (titleEl) titleEl.textContent = doc.title || 'Dokumen Arsip';
+    if (badgeEl) badgeEl.textContent = doc.type || 'Terarsip';
+    if (uploaderEl) uploaderEl.textContent = doc.uploader || 'Aparatur BAPPERIDA';
+    if (nomorEl) nomorEl.textContent = kodeArsip;
+    if (dateEl) dateEl.textContent = `${doc.tanggalDokumen || doc.year || '-'} (${doc.size || 'Digital'})`;
+    if (hashEl) hashEl.textContent = `ID Arsip: DOC-${doc.id} • ${doc.fileType || 'PDF'}${doc.sector ? ' • ' + doc.sector : ''}`;
+    if (checksumEl) checksumEl.textContent = hasUrl ? 'TERTAUT CLOUD' : 'ARSIP LOKAL';
+    if (dlBtn) dlBtn.disabled = false;
+  }
+
+  function copyArsipPreviewRef() {
+    if (!_selectedArsipDoc) return;
+    const refText = `${_selectedArsipDoc.title} | ${_selectedArsipDoc.nomorDokumen || 'DOC-' + _selectedArsipDoc.id}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(refText).then(() => {
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Referensi dokumen disalin', showConfirmButton: false, timer: 2000 });
+      }).catch(() => {});
+    }
+  }
+
+  function openSelectedArsipFile() {
+    if (!_selectedArsipDoc) return;
+    if (_selectedArsipDoc.url && _selectedArsipDoc.url !== '#') {
+      window.open(_selectedArsipDoc.url, '_blank', 'noopener,noreferrer');
+    } else {
+      Swal.fire({
+        icon: 'info',
+        title: 'Tautan Berkas Belum Tersedia',
+        text: 'Dokumen ini tercatat dalam metadata repositori BAPPERIDA tanpa URL unduhan eksternal.',
+        confirmButtonColor: '#2563eb'
       });
     }
+  }
+
+  function openArsipDetail(idx) {
+    const doc = _filteredArsipList[idx];
+    if (!doc) return;
+    updateArsipPreviewDrawer(doc);
+    renderArsipRows(_filteredArsipList);
+
+    const kodeArsip = doc.nomorDokumen || `BAPPERIDA/ARS/${doc.year || '2026'}/${doc.id}`;
+    const hasUrl = Boolean(doc.url && doc.url !== '#');
+    const html = `
+      <div class="text-left space-y-2.5 text-xs">
+        <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+          <div class="text-[11px] uppercase tracking-wider text-slate-400 font-bold mb-1">Judul Dokumen</div>
+          <div class="font-bold text-sm text-slate-900 dark:text-white">${escapeArsipHtml(doc.title)}</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+            <div class="text-[10px] uppercase text-slate-400 font-bold">Nomor / Kode</div>
+            <div class="font-mono font-semibold text-slate-800 dark:text-slate-200 mt-0.5 break-all">${escapeArsipHtml(kodeArsip)}</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+            <div class="text-[10px] uppercase text-slate-400 font-bold">Kategori</div>
+            <div class="font-semibold text-blue-600 dark:text-blue-400 mt-0.5">${escapeArsipHtml(doc.type || 'Administrasi Umum')}</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+            <div class="text-[10px] uppercase text-slate-400 font-bold">Pengunggah</div>
+            <div class="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">${escapeArsipHtml(doc.uploader || 'Aparatur BAPPERIDA')}</div>
+            <div class="font-mono text-[10px] text-slate-400">${escapeArsipHtml(doc.uploaderId ? 'NIP ' + doc.uploaderId : 'Terverifikasi')}</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+            <div class="text-[10px] uppercase text-slate-400 font-bold">Tanggal &amp; Ukuran</div>
+            <div class="font-mono font-semibold text-slate-800 dark:text-slate-200 mt-0.5">${escapeArsipHtml(doc.tanggalDokumen || doc.year || 'Terarsip')}</div>
+            <div class="font-mono text-[10px] text-slate-400">${escapeArsipHtml((doc.fileType || 'PDF') + ' • ' + (doc.size || 'Digital File'))}</div>
+          </div>
+        </div>
+        ${doc.desc ? `<div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300">${escapeArsipHtml(doc.desc)}</div>` : ''}
+      </div>
+    `;
+
+    Swal.fire({
+      title: 'Rincian Arsip Digital',
+      html,
+      showCancelButton: hasUrl,
+      showDenyButton: true,
+      confirmButtonText: hasUrl ? 'Buka Berkas' : 'Tutup',
+      denyButtonText: 'Pratinjau Bawah',
+      cancelButtonText: 'Tutup',
+      confirmButtonColor: '#2563eb',
+      denyButtonColor: '#006c49'
+    }).then((result) => {
+      if (result.isConfirmed && hasUrl) {
+        window.open(doc.url, '_blank', 'noopener,noreferrer');
+      } else if (result.isDenied) {
+        const drawer = document.getElementById('arsipPreviewDrawer');
+        if (drawer) drawer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  }
+
+  function handleUnggahArsip() {
+    Swal.fire({
+      icon: 'info',
+      title: 'Unggah Dokumen / SK',
+      text: 'Pengunggahan dokumen dan penautan berkas arsip dilakukan melalui modul Arsip di Mode Mobile Portal BAPPERIDA.',
+      showCancelButton: true,
+      confirmButtonText: 'Buka Portal Mobile Arsip',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb'
+    }).then((res) => {
+      if (res.isConfirmed) {
+        window.location.href = 'index.html?mode=mobile#arsip';
+      }
+    });
+  }
+
+  function openVerifyTteModal() {
+    Swal.fire({
+      title: 'Verifikasi Keabsahan Arsip',
+      input: 'text',
+      inputLabel: 'Masukkan Nomor Dokumen, Judul, atau ID Arsip',
+      inputPlaceholder: 'Contoh: SK / Nomor Surat / Judul Dokumen',
+      showCancelButton: true,
+      confirmButtonText: 'Periksa Arsip',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb',
+      preConfirm: (val) => {
+        const q = (val || '').trim().toLowerCase();
+        if (!q) {
+          Swal.showValidationMessage('Masukkan kata kunci nomor atau judul dokumen.');
+          return false;
+        }
+        const found = _rawArsipList.find(d =>
+          String(d.id) === q ||
+          (d.nomorDokumen && d.nomorDokumen.toLowerCase().includes(q)) ||
+          (d.title && d.title.toLowerCase().includes(q))
+        );
+        if (!found) {
+          Swal.showValidationMessage('Dokumen tidak ditemukan dalam daftar arsip aktif.');
+          return false;
+        }
+        return found;
+      }
+    }).then((res) => {
+      if (res.isConfirmed && res.value) {
+        const idx = _filteredArsipList.findIndex(d => String(d.id) === String(res.value.id));
+        if (idx >= 0) {
+          openArsipDetail(idx);
+        } else {
+          resetArsipFilters();
+          const newIdx = _filteredArsipList.findIndex(d => String(d.id) === String(res.value.id));
+          if (newIdx >= 0) openArsipDetail(newIdx);
+        }
+      }
+    });
   }
 </script>
 
