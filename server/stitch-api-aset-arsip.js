@@ -321,6 +321,9 @@ export function mountStitchAsetArsipRoutes(router, ctx) {
           TO_CHAR(d.tanggal, 'DD Mon YYYY') AS "tanggalDokumen",
           COALESCE(d.ukuran, '1.2 MB') AS size,
           d.url,
+          d.files,
+          COALESCE(d.bidang, '') AS bidang,
+          COALESCE(d.tags, '') AS tags,
           d.publik
         FROM bapperida_dokumen d
         LEFT JOIN user_list u ON u."NIP" = d.uploader_id
@@ -340,7 +343,7 @@ export function mountStitchAsetArsipRoutes(router, ctx) {
         idx++;
       }
 
-      sql += ` ORDER BY d.id DESC LIMIT 40`;
+      sql += ` ORDER BY d.id DESC LIMIT 200`;
 
       const [{ rows }, countRes, katRes] = await Promise.all([
         query(sql, params),
@@ -355,6 +358,18 @@ export function mountStitchAsetArsipRoutes(router, ctx) {
         `),
       ]);
       const totalDocs = countRes.rows[0]?.total || 0;
+      const parsedDocs = rows.map((row) => {
+        let files = [];
+        if (row.files) {
+          try {
+            const f = typeof row.files === 'string' ? JSON.parse(row.files) : row.files;
+            if (Array.isArray(f)) files = f;
+          } catch (_) {
+            files = [];
+          }
+        }
+        return { ...row, files };
+      });
 
       return res.json({
         ok: true,
@@ -364,7 +379,7 @@ export function mountStitchAsetArsipRoutes(router, ctx) {
           storagePercent: 29.6,
           kategoriBreakdown: katRes.rows
         },
-        documents: rows
+        documents: parsedDocs
       });
     } catch (err) {
       console.error('[stitch-api] arsip/mobile-data error:', err);

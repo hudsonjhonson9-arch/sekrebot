@@ -257,6 +257,7 @@
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) nav a > span:not(.material-symbols-outlined),
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) nav button > span:not(.material-symbols-outlined),
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) #stitchStandaloneAdminSubmenu,
+          body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) #stitchStandaloneArsipSubmenu,
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) > div:last-child,
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) #stitchStandalonePinBtn {
             opacity: 0;
@@ -299,14 +300,8 @@
             pointer-events: none;
             opacity: 0;
           }
-          body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) > div:last-child {
-            opacity: 0;
-            max-height: 0;
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
-            border-top-width: 0 !important;
-            overflow: hidden;
-            pointer-events: none;
+          body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) > div.border-t {
+            display: none !important;
           }
           /* Portal Desktop Polish: header 68px, container terpusat max-w-1440px, padding seragam & tabular-nums */
           body.stitch-standalone-shell header {
@@ -453,6 +448,67 @@
           window.Swal.fire({ title: 'Pemberitahuan', html: bodyHtml, confirmButtonText: 'Tutup', confirmButtonColor: '#2563eb' });
         }
       });
+    }
+
+    // 1a. Submenu Arsip Digital di Sidebar Desktop (Dokumen, Agenda Surat, Agenda SPPD)
+    if (sidebarNav && !document.getElementById('stitchStandaloneArsipSubmenu')) {
+      const arsipLink = sidebarNav.querySelector('a[href="arsip.html"]');
+      if (arsipLink) {
+        const isOnArsip = (location.pathname.split('/').pop() || '').toLowerCase() === 'arsip.html';
+        let arsipSubOpen = isOnArsip;
+
+        const arsipChevron = document.createElement('button');
+        arsipChevron.id = 'stitchArsipSubToggle';
+        arsipChevron.type = 'button';
+        arsipChevron.title = 'Tampilkan/sembunyikan submenu arsip digital';
+        arsipChevron.className = 'ml-auto w-6 h-6 rounded-md flex items-center justify-center text-slate-300/80 hover:text-white hover:bg-white/15 transition-transform cursor-pointer';
+        arsipChevron.innerHTML = '<span class="material-symbols-outlined text-[16px]">expand_more</span>';
+        arsipLink.appendChild(arsipChevron);
+
+        const arsipSubWrap = document.createElement('div');
+        arsipSubWrap.id = 'stitchStandaloneArsipSubmenu';
+        arsipSubWrap.className = 'mt-0.5 ml-3 pl-3 border-l border-slate-700/80 flex flex-col gap-0.5 overflow-hidden transition-all';
+        const arsipSubs = [
+          { hash: '#dokumen', href: 'arsip.html#dokumen', icon: 'description', label: 'Dokumen' },
+          { hash: '#agenda-surat', href: 'arsip.html#agenda-surat', icon: 'mail', label: 'Agenda Surat' },
+          { hash: '#agenda-sppd', href: 'arsip.html#agenda-sppd', icon: 'flight_takeoff', label: 'Agenda SPPD' }
+        ];
+        arsipSubWrap.innerHTML = arsipSubs.map((s) => `
+          <a href="${s.href}" data-arsip-sub="${s.hash}" title="${s.label}" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium">
+            <span class="material-symbols-outlined text-[16px] text-slate-500">${s.icon}</span>
+            <span>${s.label}</span>
+          </a>
+        `).join('');
+        arsipLink.insertAdjacentElement('afterend', arsipSubWrap);
+
+        const syncArsipActive = () => {
+          if (!isOnArsip) return;
+          const cur = (location.hash || '#dokumen').toLowerCase();
+          arsipSubWrap.querySelectorAll('a[data-arsip-sub]').forEach((a) => {
+            const act = a.dataset.arsipSub === cur || (cur === '' && a.dataset.arsipSub === '#dokumen');
+            a.className = act
+              ? 'flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs bg-blue-600/20 text-blue-300 font-bold transition-colors'
+              : 'flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium';
+            const ic = a.querySelector('.material-symbols-outlined');
+            if (ic) ic.className = act ? 'material-symbols-outlined text-[16px] text-blue-400' : 'material-symbols-outlined text-[16px] text-slate-500';
+          });
+        };
+
+        const syncArsipSub = () => {
+          arsipSubWrap.style.display = arsipSubOpen ? 'flex' : 'none';
+          arsipChevron.style.transform = arsipSubOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+          syncArsipActive();
+        };
+
+        arsipChevron.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          arsipSubOpen = !arsipSubOpen;
+          syncArsipSub();
+        });
+        window.addEventListener('hashchange', syncArsipActive);
+        syncArsipSub();
+      }
     }
 
     // 1. Submenu Panel Admin di Sidebar Desktop (collapsible + sembunyikan untuk non-admin)

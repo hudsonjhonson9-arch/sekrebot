@@ -223,11 +223,13 @@
         --stitch-sidebar-w: ${_width}px;
       }
       @media (min-width: 1024px) {
-        body.stitch-desktop-ready main {
+        body.stitch-desktop-ready main,
+        body.stitch-desktop-ready div[id^="drawer"].fixed.inset-0 {
           padding-left: var(--stitch-rail-w);
           transition: padding-left 220ms cubic-bezier(0.22, 1, 0.36, 1);
         }
-        body.stitch-desktop-ready.stitch-sidebar-pinned main {
+        body.stitch-desktop-ready.stitch-sidebar-pinned main,
+        body.stitch-desktop-ready.stitch-sidebar-pinned div[id^="drawer"].fixed.inset-0 {
           padding-left: var(--stitch-sidebar-w);
         }
         body.stitch-desktop-ready.stitch-sidebar-resizing main,

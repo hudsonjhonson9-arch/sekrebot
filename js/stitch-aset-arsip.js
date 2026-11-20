@@ -1006,6 +1006,76 @@
       }).join('');
     }
 
+    let _activeMobileDoc = null;
+    let _activeMobileFileIdx = 0;
+
+    function getMobileDocFiles(doc) {
+      if (!doc) return [];
+      const arr = Array.isArray(doc.files) ? doc.files.filter((f) => f && (f.url || f.fileUrl || f.link)) : [];
+      if (arr.length > 0) {
+        return arr.map((f, i) => ({
+          name: String(f.name || f.filename || f.title || `Berkas ${i + 1}`),
+          url: String(f.url || f.fileUrl || f.link || ''),
+          size: String(f.size || ''),
+        }));
+      }
+      if (doc.url && doc.url !== '#') {
+        return [{ name: String(doc.title || 'Berkas Utama'), url: String(doc.url), size: String(doc.size || '') }];
+      }
+      return [];
+    }
+
+    function renderMobileArsipPreview(doc, fileIdx = 0) {
+      _activeMobileDoc = doc;
+      const files = getMobileDocFiles(doc);
+      const safeIdx = Math.max(0, Math.min(fileIdx, Math.max(0, files.length - 1)));
+      _activeMobileFileIdx = safeIdx;
+      const activeFile = files[safeIdx] || null;
+
+      const barEl = document.getElementById('mdocFilesBar');
+      if (barEl) {
+        if (files.length > 1) {
+          barEl.classList.remove('hidden');
+          barEl.innerHTML = files.map((f, i) => {
+            const act = i === safeIdx;
+            return `<button type="button" onclick="window.selectMobileArsipPreviewFile(${i})" class="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold shrink-0 transition-colors cursor-pointer ${act ? 'bg-[#2563eb] text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">${escapeHtml(f.name.length > 24 ? f.name.slice(0, 22) + '...' : f.name)}</button>`;
+          }).join('');
+        } else {
+          barEl.classList.add('hidden');
+          barEl.innerHTML = '';
+        }
+      }
+
+      const prevEl = document.getElementById('mdocPreviewWrap');
+      if (prevEl) {
+        const url = activeFile ? activeFile.url : (doc.url || '');
+        const fname = activeFile ? activeFile.name : (doc.title || '');
+        if (window.ArsipColumns && typeof window.ArsipColumns.buildUniversalPreviewHtml === 'function') {
+          prevEl.innerHTML = window.ArsipColumns.buildUniversalPreviewHtml(url, fname, 'h-56');
+        } else if (url && url !== '#') {
+          prevEl.innerHTML = `<iframe src="${escapeHtml(url)}" class="w-full h-56 border-0" loading="lazy"></iframe>`;
+        } else {
+          prevEl.innerHTML = '<div class="py-8 text-center text-xs text-slate-400">Pratinjau tidak tersedia untuk berkas ini.</div>';
+        }
+      }
+
+      const linkEl = document.getElementById('mdocLink');
+      const targetUrl = activeFile ? activeFile.url : (doc.url || '#');
+      if (linkEl) {
+        linkEl.href = targetUrl || '#';
+        linkEl.onclick = (e) => {
+          if (!targetUrl || targetUrl === '#') {
+            e.preventDefault();
+            Swal.fire('Tautan Dokumen', 'Berkas fisik terdaftar resmi dalam server arsip digital BAPPERIDA.', 'info');
+          }
+        };
+      }
+    }
+
+    window.selectMobileArsipPreviewFile = (idx) => {
+      if (_activeMobileDoc) renderMobileArsipPreview(_activeMobileDoc, idx);
+    };
+
     function openMobileArsipDetail(docId) {
       const doc = _mobileArsipDocs.find(d => String(d.id) === String(docId));
       if (!doc) return;
@@ -1026,18 +1096,13 @@
       if (uploaderEl) uploaderEl.textContent = doc.uploader || 'Admin BAPPERIDA';
 
       const sizeEl = document.getElementById('mdocSize');
-      if (sizeEl) sizeEl.textContent = `${doc.fileType || 'PDF'} (${doc.size || '1.2 MB'})`;
-
-      const linkEl = document.getElementById('mdocLink');
-      if (linkEl) {
-        linkEl.href = doc.url || '#';
-        linkEl.onclick = (e) => {
-          if (!doc.url || doc.url === '#') {
-            e.preventDefault();
-            Swal.fire('Tautan Dokumen', 'Berkas fisik terdaftar resmi dalam server arsip digital BAPPERIDA.', 'info');
-          }
-        };
+      const files = getMobileDocFiles(doc);
+      if (sizeEl) {
+        const countTag = files.length > 1 ? ` • ${files.length} berkas` : '';
+        sizeEl.textContent = `${doc.fileType || 'PDF'} (${doc.size || '-'})${countTag}`;
       }
+
+      renderMobileArsipPreview(doc, 0);
 
       const drawer = document.getElementById('drawerArsipDetail');
       const backdrop = document.getElementById('drawerArsipDetailBackdrop');

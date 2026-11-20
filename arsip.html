@@ -177,85 +177,214 @@
         </div>
       </div>
     </div>
-  </aside><div class="pl-72"><header class="fixed top-0 left-72 right-0 h-16 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md"><span class="font-medium">Portal BAPPERIDA</span><span class="material-symbols-outlined text-[16px]">chevron_right</span><span class="text-on-surface font-semibold">Arsip Digital</span></div><div class="hidden xl:flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md"><span class="material-symbols-outlined text-primary text-[16px]">schedule</span><span id="arsipLiveClock" class="font-label-md text-label-md text-on-surface font-semibold font-mono tabular-nums">WITA</span></div></div><div class="flex items-center gap-space-md"><a href="index.html" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary font-bold text-xs transition-all shadow-xs border border-primary/20" title="Buka tampilan presensi versi Smartphone (Screen 01)"><span class="material-symbols-outlined text-[17px]">smartphone</span><span>Mode HP (Mobile)</span></a><button aria-label="Pemberitahuan" class="w-9 h-9 rounded-xl bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-all relative" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error"></span></button><div class="flex items-center gap-space-sm pl-space-xs"><div class="flex flex-col text-right hidden sm:flex"><span data-portal-user-name="1" class="font-label-md text-label-md text-on-surface font-bold">Pegawai</span><span data-portal-user-meta="1" class="font-label-sm text-label-sm text-on-surface-variant font-mono">NIP -</span></div><div data-portal-user-avatar="1" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs font-mono">--</div></div></div></header><main class="w-full pt-16 bg-surface min-h-screen px-space-lg py-space-lg">
+  </aside><div class="pl-72"><header class="fixed top-0 left-72 right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-3 min-w-0"><div class="flex items-center gap-1.5 text-on-surface-variant text-xs"><span class="font-medium">Portal BAPPERIDA</span><span class="material-symbols-outlined text-[15px]">chevron_right</span><span id="arsipBreadcrumbTitle" class="text-on-surface font-bold">Arsip Digital &bull; Dokumen</span></div><span class="hidden xl:inline text-outline-variant/60">|</span><div class="hidden xl:flex items-center gap-1.5 text-on-surface-variant text-xs"><span class="material-symbols-outlined text-primary text-[16px]">schedule</span><span id="arsipLiveClock" class="text-on-surface font-semibold font-mono tabular-nums">WITA</span></div></div><div class="flex items-center gap-2.5 shrink-0"><a href="index.html" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary font-bold text-xs transition-all border border-primary/20" title="Buka tampilan presensi versi Smartphone"><span class="material-symbols-outlined text-[17px]">smartphone</span><span>Mode HP</span></a><button aria-label="Pemberitahuan" class="w-9 h-9 rounded-xl bg-surface-container-low hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-all relative cursor-pointer" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error"></span></button><div class="flex items-center gap-2.5 pl-2 border-l border-outline-variant/30"><div class="flex flex-col text-right hidden sm:flex"><span data-portal-user-name="1" class="text-xs text-on-surface font-bold leading-tight">Pegawai</span><span data-portal-user-meta="1" class="text-[10px] text-on-surface-variant font-mono">NIP -</span></div><div data-portal-user-avatar="1" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs font-mono shrink-0">--</div></div></div></header><main class="w-full pt-16 bg-surface min-h-screen px-space-lg py-space-lg">
   <div class="flex flex-col w-full gap-4">
 
-    <!-- Top Compact Toolbar (peta-ekonomi Pustaka Berkas Columns View) -->
-    <div class="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/30 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-      <div class="flex items-center gap-3 min-w-0">
-        <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-          <span class="material-symbols-outlined text-[22px]">folder_special</span>
-        </div>
-        <div class="min-w-0">
-          <div class="flex items-center gap-2">
-            <h1 class="font-headline-sm text-headline-sm text-on-surface font-bold truncate">Pustaka Dokumen &amp; Arsip Digital</h1>
-            <span id="arsipColRoleBadge" class="px-2 py-0.5 rounded-full bg-surface-container text-primary font-mono text-[10px] font-bold shrink-0">Peta Ekonomi</span>
+    <!-- Sub-Menu Arsip Digital: Dokumen | Agenda Surat | Agenda SPPD -->
+    <div class="bg-surface-container-lowest rounded-2xl p-1.5 shadow-sm border border-outline-variant/30 inline-flex items-center gap-1 self-start flex-wrap">
+      <button type="button" data-arsip-tab-btn="dokumen" onclick="window.ArsipAgenda?.switchTab('dokumen')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#2563eb] text-white text-xs font-bold shadow-sm transition-all cursor-pointer">
+        <span class="material-symbols-outlined text-[17px]">description</span>
+        <span>Dokumen</span>
+      </button>
+      <button type="button" data-arsip-tab-btn="agenda-surat" onclick="window.ArsipAgenda?.switchTab('agenda-surat')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface text-xs font-semibold transition-all cursor-pointer">
+        <span class="material-symbols-outlined text-[17px]">mail</span>
+        <span>Agenda Surat</span>
+      </button>
+      <button type="button" data-arsip-tab-btn="agenda-sppd" onclick="window.ArsipAgenda?.switchTab('agenda-sppd')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface text-xs font-semibold transition-all cursor-pointer">
+        <span class="material-symbols-outlined text-[17px]">flight_takeoff</span>
+        <span>Agenda SPPD</span>
+      </button>
+    </div>
+
+    <!-- PANEL 1: DOKUMEN (3-Pane Miller Columns View) -->
+    <div id="arsipPanelDokumen" class="flex flex-col gap-4">
+      <!-- Top Compact Header & Single-Line Filter Bar (peta-ekonomi Columns View) -->
+      <div class="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/30 flex flex-col gap-3">
+        <!-- Baris 1: Judul + Switcher View & Refresh -->
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[20px]">folder_special</span>
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <h1 class="font-headline-sm text-headline-sm text-on-surface font-bold truncate">Pustaka Dokumen &amp; Arsip Digital</h1>
+                <span id="arsipColRoleBadge" class="px-2 py-0.5 rounded-full bg-surface-container text-primary font-mono text-[10px] font-bold shrink-0">Peta Ekonomi</span>
+              </div>
+            </div>
           </div>
-          <p class="text-xs text-on-surface-variant truncate">Tampilan kolom interaktif (Columns View) terhubung langsung ke repositori arsip BAPPERIDA.</p>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <div class="inline-flex items-center p-1 rounded-xl bg-surface-container-low border border-outline-variant/30">
+              <button id="btnArsipViewColumns" type="button" onclick="window.ArsipColumns?.setViewMode('columns')" title="Tampilan Kolom (Columns View)" class="p-1.5 rounded-lg bg-[#2563eb] text-white shadow-xs transition-colors cursor-pointer">
+                <span class="material-symbols-outlined text-[16px] block">view_column</span>
+              </button>
+              <button id="btnArsipViewList" type="button" onclick="window.ArsipColumns?.setViewMode('list')" title="Tampilan Daftar (List View)" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+                <span class="material-symbols-outlined text-[16px] block">view_list</span>
+              </button>
+            </div>
+            <button type="button" onclick="window.ArsipColumns?.reload()" title="Segarkan Data" class="w-9 h-9 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant hover:text-primary flex items-center justify-center transition-colors cursor-pointer">
+              <span class="material-symbols-outlined text-[18px]">refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Baris 2: Filter Bar 1 Baris Rapi (Search flex-1 + Tahun w-44) -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <div class="relative flex-1 min-w-0">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] pointer-events-none">search</span>
+            <input id="arsipColSearch" oninput="window.ArsipColumns?.applyFilters()" type="text" placeholder="Cari judul dokumen, nomor surat, kategori, bidang, atau pengunggah..." class="w-full h-10 pl-9 pr-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary transition-colors">
+          </div>
+          <div class="w-full sm:w-44 shrink-0">
+            <select id="arsipColYearFilter" onchange="window.ArsipColumns?.applyFilters()" aria-label="Filter Tahun" class="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs font-mono font-semibold text-on-surface outline-none focus:border-primary cursor-pointer">
+              <option value="">Semua Tahun</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <div class="flex flex-wrap items-center gap-2">
-        <!-- Search -->
-        <div class="relative flex-1 sm:flex-none sm:w-64">
-          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] pointer-events-none">search</span>
-          <input id="arsipColSearch" oninput="window.ArsipColumns?.applyFilters()" type="text" placeholder="Cari judul, nomor, kategori..." class="w-full min-h-[40px] pl-9 pr-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary transition-colors">
+      <!-- 3-Pane Miller Columns View (Folder -> Daftar Dokumen -> Preview Pane) -->
+      <div id="arsipColumnsShell" class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 flex flex-col lg:flex-row overflow-hidden min-h-[560px] max-h-[calc(100vh-250px)]">
+        <!-- Kolom 1: Folder Kategori / Bidang -->
+        <div id="arsipColFoldersWrap" class="w-full lg:w-[235px] border-b lg:border-b-0 lg:border-r border-slate-200/80 dark:border-slate-800 flex flex-col shrink-0">
+          <div class="px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Folder Kategori</span>
+            <span id="arsipColTotalCount" class="text-[11px] font-mono font-bold text-primary tabular-nums">0 dokumen</span>
+          </div>
+          <div id="arsipColFolders" class="flex-1 overflow-y-auto divide-y divide-slate-100/70 dark:divide-slate-800/50 max-h-48 lg:max-h-none"></div>
         </div>
 
-        <!-- Year Filter -->
-        <select id="arsipColYearFilter" onchange="window.ArsipColumns?.applyFilters()" aria-label="Filter Tahun" class="min-h-[40px] px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs font-mono font-semibold text-on-surface outline-none focus:border-primary cursor-pointer">
-          <option value="">Semua Tahun</option>
-        </select>
-
-        <!-- View Mode Switcher (Columns / List) -->
-        <div class="inline-flex items-center p-1 rounded-xl bg-surface-container-low border border-outline-variant/30">
-          <button id="btnArsipViewColumns" type="button" onclick="window.ArsipColumns?.setViewMode('columns')" title="Tampilan Kolom (Columns View)" class="p-2 rounded-lg bg-[#2563eb] text-white shadow-xs transition-colors cursor-pointer">
-            <span class="material-symbols-outlined text-[16px] block">view_column</span>
-          </button>
-          <button id="btnArsipViewList" type="button" onclick="window.ArsipColumns?.setViewMode('list')" title="Tampilan Daftar (List View)" class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-            <span class="material-symbols-outlined text-[16px] block">view_list</span>
-          </button>
+        <!-- Kolom 2: Daftar Dokumen -->
+        <div class="flex-1 min-w-0 flex flex-col border-b xl:border-b-0 xl:border-r border-slate-200/80 dark:border-slate-800">
+          <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span>Daftar Dokumen (Klik 1x Pratinjau &bull; Klik 2x Buka)</span>
+            <span class="hidden sm:inline">Tanggal &amp; Ukuran</span>
+          </div>
+          <div id="arsipColDocs" class="flex-1 overflow-y-auto"></div>
         </div>
 
-        <!-- Refresh -->
-        <button type="button" onclick="window.ArsipColumns?.reload()" title="Segarkan Data" class="w-10 h-10 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant hover:text-primary flex items-center justify-center transition-colors cursor-pointer">
-          <span class="material-symbols-outlined text-[18px]">refresh</span>
-        </button>
-
-        <!-- Primary CTA: Tambah Dokumen (Pojok Kanan Atas) -->
-        <button id="btnArsipAddDoc" type="button" onclick="window.ArsipColumns?.openUploadModal()" class="min-h-[40px] px-4 py-2 rounded-xl bg-primary hover:opacity-95 text-on-primary text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0">
-          <span class="material-symbols-outlined text-[18px]">add</span>
-          <span>Tambah Dokumen</span>
-        </button>
+        <!-- Kolom 3: Live Preview Pane (Desktop >= xl) -->
+        <div id="arsipColPreviewWrap" class="hidden xl:flex w-[330px] flex-col shrink-0 bg-surface-container-lowest">
+          <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Pratinjau &amp; Metadata
+          </div>
+          <div id="arsipColPreview" class="flex-1 overflow-y-auto"></div>
+        </div>
       </div>
     </div>
 
-    <!-- 3-Pane Miller Columns View (Folder -> Daftar Dokumen -> Preview Pane) -->
-    <div id="arsipColumnsShell" class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 flex flex-col lg:flex-row overflow-hidden min-h-[560px] max-h-[calc(100vh-210px)]">
-      <!-- Kolom 1: Folder Kategori / Bidang -->
-      <div id="arsipColFoldersWrap" class="w-full lg:w-[235px] border-b lg:border-b-0 lg:border-r border-slate-200/80 dark:border-slate-800 flex flex-col shrink-0">
-        <div class="px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-between">
-          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Folder Kategori</span>
-          <span id="arsipColTotalCount" class="text-[11px] font-mono font-bold text-primary tabular-nums">0 dokumen</span>
+    <!-- PANEL 2: AGENDA SURAT (Surat Masuk & Surat Keluar) -->
+    <div id="arsipPanelAgendaSurat" class="hidden flex-col gap-4">
+      <div class="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/30 flex flex-col gap-3">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[20px]">mail</span>
+            </div>
+            <div>
+              <h1 class="font-headline-sm text-headline-sm text-on-surface font-bold">Agenda Surat Masuk &amp; Keluar</h1>
+              <span id="agendaSuratCount" class="text-[11px] font-mono text-on-surface-variant tabular-nums">0 surat</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="inline-flex items-center p-1 rounded-xl bg-surface-container-low border border-outline-variant/30">
+              <button type="button" data-surat-mode-btn="masuk" onclick="window.ArsipAgenda?.setSuratMode('masuk')" class="px-3.5 py-1.5 rounded-lg bg-[#2563eb] text-white text-xs font-bold shadow-xs transition-colors cursor-pointer">Surat Masuk</button>
+              <button type="button" data-surat-mode-btn="keluar" onclick="window.ArsipAgenda?.setSuratMode('keluar')" class="px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition-colors cursor-pointer">Surat Keluar</button>
+            </div>
+            <button type="button" onclick="window.ArsipAgenda?.loadAgendaSurat()" title="Segarkan" class="w-9 h-9 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant hover:text-primary flex items-center justify-center cursor-pointer">
+              <span class="material-symbols-outlined text-[18px]">refresh</span>
+            </button>
+          </div>
         </div>
-        <div id="arsipColFolders" class="flex-1 overflow-y-auto divide-y divide-slate-100/70 dark:divide-slate-800/50 max-h-48 lg:max-h-none"></div>
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <div class="relative flex-1 min-w-0">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] pointer-events-none">search</span>
+            <input id="agendaSuratSearch" oninput="window.ArsipAgenda?.loadAgendaSurat()" type="text" placeholder="Cari nomor agenda, nomor surat, asal/tujuan, atau perihal..." class="w-full h-10 pl-9 pr-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary">
+          </div>
+          <div class="w-full sm:w-40 shrink-0">
+            <select id="agendaSuratYear" onchange="window.ArsipAgenda?.loadAgendaSurat()" aria-label="Tahun Agenda Surat" class="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs font-mono font-semibold text-on-surface outline-none focus:border-primary cursor-pointer">
+              <option value="2026" selected>2026</option>
+              <option value="2025">2025</option>
+              <option value="2024">2024</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <!-- Kolom 2: Daftar Dokumen -->
-      <div class="flex-1 min-w-0 flex flex-col border-b xl:border-b-0 xl:border-r border-slate-200/80 dark:border-slate-800">
-        <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-          <span>Daftar Dokumen (Klik 1x Pratinjau &bull; Klik 2x Buka)</span>
-          <span class="hidden sm:inline">Tanggal &amp; Ukuran</span>
+      <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <th class="px-4 py-3">Nomor Agenda / Surat</th>
+                <th class="px-4 py-3">Tanggal</th>
+                <th id="thSuratAsalTujuan" class="px-4 py-3">Asal Surat</th>
+                <th class="px-4 py-3">Perihal</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="agendaSuratBody"></tbody>
+          </table>
         </div>
-        <div id="arsipColDocs" class="flex-1 overflow-y-auto"></div>
+      </div>
+    </div>
+
+    <!-- PANEL 3: AGENDA SPPD -->
+    <div id="arsipPanelAgendaSppd" class="hidden flex-col gap-4">
+      <div class="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/30 flex flex-col gap-3">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[20px]">flight_takeoff</span>
+            </div>
+            <div>
+              <h1 class="font-headline-sm text-headline-sm text-on-surface font-bold">Register Agenda SPPD &amp; Surat Tugas</h1>
+              <span id="agendaSppdCount" class="text-[11px] font-mono text-on-surface-variant tabular-nums">0 SPPD</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="inline-flex items-center p-1 rounded-xl bg-surface-container-low border border-outline-variant/30">
+              <button type="button" data-sppd-jenis-btn="" onclick="window.ArsipAgenda?.setSppdJenis('')" class="px-3.5 py-1.5 rounded-lg bg-[#2563eb] text-white text-xs font-bold shadow-xs transition-colors cursor-pointer">Semua</button>
+              <button type="button" data-sppd-jenis-btn="DALAM_DAERAH" onclick="window.ArsipAgenda?.setSppdJenis('DALAM_DAERAH')" class="px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition-colors cursor-pointer">Dalam Daerah</button>
+              <button type="button" data-sppd-jenis-btn="LUAR_DAERAH" onclick="window.ArsipAgenda?.setSppdJenis('LUAR_DAERAH')" class="px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition-colors cursor-pointer">Luar Daerah</button>
+            </div>
+            <button type="button" onclick="window.ArsipAgenda?.loadAgendaSppd()" title="Segarkan" class="w-9 h-9 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant hover:text-primary flex items-center justify-center cursor-pointer">
+              <span class="material-symbols-outlined text-[18px]">refresh</span>
+            </button>
+          </div>
+        </div>
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <div class="relative flex-1 min-w-0">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] pointer-events-none">search</span>
+            <input id="agendaSppdSearch" oninput="window.ArsipAgenda?.loadAgendaSppd()" type="text" placeholder="Cari nomor SPT/SPPD, nama pelaksana, tujuan, atau maksud perjalanan..." class="w-full h-10 pl-9 pr-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary">
+          </div>
+          <div class="w-full sm:w-40 shrink-0">
+            <select id="agendaSppdYear" onchange="window.ArsipAgenda?.loadAgendaSppd()" aria-label="Tahun Agenda SPPD" class="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs font-mono font-semibold text-on-surface outline-none focus:border-primary cursor-pointer">
+              <option value="2026" selected>2026</option>
+              <option value="2025">2025</option>
+              <option value="2024">2024</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <!-- Kolom 3: Live Preview Pane (Desktop >= xl) -->
-      <div id="arsipColPreviewWrap" class="hidden xl:flex w-[330px] flex-col shrink-0 bg-surface-container-lowest">
-        <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-          Pratinjau &amp; Metadata
+      <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <th class="px-4 py-3">Nomor SPPD / SPT</th>
+                <th class="px-4 py-3">Pelaksana</th>
+                <th class="px-4 py-3">Tempat Tujuan</th>
+                <th class="px-4 py-3">Jadwal Perjalanan</th>
+                <th class="px-4 py-3">Maksud Perjalanan</th>
+                <th class="px-4 py-3 text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody id="agendaSppdBody"></tbody>
+          </table>
         </div>
-        <div id="arsipColPreview" class="flex-1 overflow-y-auto"></div>
       </div>
     </div>
 
@@ -263,23 +392,23 @@
 </main>
 </div>
 
-<!-- Floating Action Button (+ Tambah Dokumen di pojok kanan bawah) -->
-<button id="fabArsipAddDoc" type="button" onclick="window.ArsipColumns?.openUploadModal()" title="Tambah Dokumen Baru" class="fixed bottom-6 right-6 z-40 h-12 px-5 rounded-2xl bg-[#2563eb] hover:bg-blue-700 text-white font-bold text-xs shadow-xl shadow-blue-600/30 flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
+<!-- Floating Action Button (Adaptif per sub-menu: Tambah Dokumen / Catat Surat / Catat SPPD) -->
+<button id="fabArsipAddDoc" type="button" onclick="window.ArsipAgenda?.handleFabClick()" title="Tambah Data Arsip" class="fixed bottom-6 right-6 z-40 h-12 px-5 rounded-2xl bg-[#2563eb] hover:bg-blue-700 text-white font-bold text-xs shadow-xl shadow-blue-600/30 flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
   <span class="material-symbols-outlined text-[20px]">add</span>
   <span>Tambah Dokumen</span>
 </button>
 
-<!-- Desktop Modal: Tambah Dokumen (peta-ekonomi UploadForm parity) -->
+<!-- Desktop Modal: Unggah Dokumen (100% UMA DATA / peta-ekonomi UploadForm Parity, Lebar max-w-3xl, Custom Stitch Pickers) -->
 <div id="modalArsipUpload" class="hidden fixed inset-0 z-[95] bg-slate-950/60 backdrop-blur-xs items-center justify-center p-4" onclick="if(event.target===this) window.ArsipColumns?.closeUploadModal()">
-  <div class="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+  <div class="w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]">
     <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <span class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] flex items-center justify-center">
           <span class="material-symbols-outlined text-[22px]">upload_file</span>
         </span>
         <div>
-          <h2 class="text-base font-bold text-slate-900 dark:text-white">Tambah Dokumen Arsip</h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400">Unggah berkas ke Google Drive atau tautkan link Peta Ekonomi.</p>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white">Unggah Dokumen</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Tambah dokumen baru ke repositori UMA DATA &amp; Arsip Digital BAPPERIDA.</p>
         </div>
       </div>
       <button type="button" onclick="window.ArsipColumns?.closeUploadModal()" class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer">
@@ -287,73 +416,243 @@
       </button>
     </div>
 
-    <div class="p-6 overflow-y-auto flex flex-col gap-4">
-      <div class="flex gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80">
-        <button type="button" data-arsip-upload-mode="file" onclick="window.ArsipColumns?.setUploadMode('file')" class="flex-1 py-2 rounded-xl bg-[#2563eb] text-white text-xs font-bold cursor-pointer">Upload Berkas</button>
-        <button type="button" data-arsip-upload-mode="gdrive" onclick="window.ArsipColumns?.setUploadMode('gdrive')" class="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold cursor-pointer">Tautan Google Drive</button>
-      </div>
-
-      <div data-arsip-file-pane class="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-5 text-center cursor-pointer hover:border-[#2563eb] transition-colors" onclick="this.querySelector('input[type=file]').click()">
-        <span class="material-symbols-outlined text-3xl text-[#2563eb]">cloud_upload</span>
-        <p data-arsip-file-label class="text-xs text-slate-600 dark:text-slate-300 font-medium mt-1.5">Klik atau seret berkas PDF / Word / Excel ke sini (maks. 10 MB)</p>
-        <input type="file" class="hidden" onchange="window.ArsipColumns?.onFilePicked(this)">
-      </div>
-
-      <div data-arsip-gdrive-pane class="hidden">
-        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">URL Google Drive</label>
-        <input data-arsip-field="url" type="url" placeholder="https://drive.google.com/file/d/..." class="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
-      </div>
-
-      <div>
-        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Judul Dokumen</label>
-        <input data-arsip-field="title" type="text" placeholder="Contoh: Laporan RFK dan B1 Bulan November 2026" class="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Kategori / Jenis</label>
-          <input data-arsip-field="type" type="text" value="Administrasi Umum" class="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+    <div class="p-6 overflow-y-auto flex flex-col gap-6">
+      <!-- Section 1: Informasi Dokumen -->
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+          <span class="w-1 h-4.5 rounded-full bg-[#2563eb]"></span>
+          <span>Informasi Dokumen</span>
         </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tahun Dokumen</label>
-          <input data-arsip-field="year" type="number" value="2026" class="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Judul Dokumen -->
+          <div class="md:col-span-2">
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Judul Dokumen <span class="text-rose-500">*</span></label>
+            <input data-arsip-field="title" type="text" placeholder="Contoh: Kajian Potensi Pembangunan Sumba Barat 2026" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          </div>
+
+          <!-- Jenis Dokumen * -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Jenis Dokumen <span class="text-rose-500">*</span></label>
+            <select data-arsip-field="type" aria-label="Jenis Dokumen" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+              <option value="">— Pilih Jenis Dokumen —</option>
+            </select>
+          </div>
+
+          <!-- Sektor * -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Sektor <span class="text-rose-500">*</span></label>
+            <select data-arsip-field="sector" aria-label="Sektor" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+              <option value="">— Pilih Sektor —</option>
+            </select>
+          </div>
+
+          <!-- Bidang -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Bidang</label>
+            <select data-arsip-field="bidang" aria-label="Bidang" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+              <option value="">— Pilih Bidang —</option>
+            </select>
+          </div>
+
+          <!-- Tahun Dokumen -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tahun Dokumen</label>
+            <select data-arsip-field="year" aria-label="Tahun Dokumen" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+              <option value="2026">2026</option>
+            </select>
+          </div>
+
+          <!-- Tag / Kata Kunci -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tag / Kata Kunci</label>
+            <input data-arsip-field="tags" type="text" placeholder="pertanian, kajian, 2026 (pisah koma)" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+            <p class="text-[11px] text-slate-400 mt-1">Pisahkan dengan koma</p>
+          </div>
+
+          <!-- Nomor Dokumen -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Nomor Dokumen</label>
+            <input data-arsip-field="nomor" type="text" placeholder="005/XXXX/2026" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          </div>
+
+          <!-- Tanggal Dokumen -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tanggal Dokumen</label>
+            <input data-arsip-field="tanggal_dokumen" type="date" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          </div>
+
+          <!-- Deskripsi Dokumen -->
+          <div class="md:col-span-2">
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Deskripsi Dokumen</label>
+            <textarea data-arsip-field="desc" rows="3" placeholder="Ringkasan isi dan tujuan dokumen ini..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]"></textarea>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
+              <input data-arsip-field="publik" type="checkbox" checked class="rounded accent-[#2563eb]">
+              <span>Tampilkan ke seluruh pegawai (Publik Instansi)</span>
+            </label>
+          </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Bidang / Sektor</label>
-          <input data-arsip-field="sector" type="text" value="Umum" class="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      <div class="h-px bg-slate-200/80 dark:bg-slate-800"></div>
+
+      <!-- Section 2: File Dokumen -->
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+          <span class="w-1 h-4.5 rounded-full bg-[#2563eb]"></span>
+          <span>File Dokumen</span>
         </div>
+
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Nomor Dokumen (Opsional)</label>
-          <input data-arsip-field="nomor" type="text" placeholder="Contoh: 800/123/BAPPERIDA" class="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Metode Unggah</label>
+          <div class="flex gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80">
+            <button type="button" data-arsip-upload-mode="file" onclick="window.ArsipColumns?.setUploadMode('file')" class="flex-1 py-2.5 px-3 rounded-xl bg-[#2563eb] text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
+              <span class="material-symbols-outlined text-[16px]">upload</span>
+              <span>Upload File dari Komputer</span>
+            </button>
+            <button type="button" data-arsip-upload-mode="gdrive" onclick="window.ArsipColumns?.setUploadMode('gdrive')" class="flex-1 py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">link</span>
+              <span>Link Google Drive</span>
+            </button>
+          </div>
+        </div>
+
+        <div data-arsip-file-pane ondragover="event.preventDefault(); this.classList.add('border-[#2563eb]','bg-blue-50/50')" ondragleave="this.classList.remove('border-[#2563eb]','bg-blue-50/50')" ondrop="window.ArsipColumns?.onFileDrop(event, this)" class="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center cursor-pointer hover:border-[#2563eb] transition-colors relative" onclick="this.querySelector('input[type=file]').click()">
+          <span class="material-symbols-outlined text-3xl text-[#2563eb]">cloud_upload</span>
+          <p data-arsip-file-label class="text-xs text-slate-600 dark:text-slate-300 font-medium mt-1.5">Klik atau seret berkas PDF / Word / Excel / Gambar ke sini (maks. 10 MB)</p>
+          <p class="text-[11px] text-slate-400 mt-1">Format didukung: PDF, DOCX, XLSX, PPTX, JPG, PNG, WEBP</p>
+          <button type="button" data-arsip-file-clear onclick="event.stopPropagation(); window.ArsipColumns?.clearPickedFile(this)" class="hidden mt-2.5 inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 text-[11px] font-bold cursor-pointer">
+            <span class="material-symbols-outlined text-[14px]">delete</span>
+            <span>Hapus Berkas</span>
+          </button>
+          <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.webp" class="hidden" onchange="window.ArsipColumns?.onFilePicked(this)">
+        </div>
+
+        <div data-arsip-gdrive-pane class="hidden">
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">URL Google Drive <span class="text-rose-500">*</span></label>
+          <input data-arsip-field="url" type="url" placeholder="https://drive.google.com/file/d/xxxxx/view?usp=sharing" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          <p class="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1.5 flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">visibility</span>
+            <span>Dokumen akan dapat dipratinjau langsung di panel kanan (embedded view).</span>
+          </p>
         </div>
       </div>
-
-      <div>
-        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Keterangan (Opsional)</label>
-        <textarea data-arsip-field="desc" rows="2" placeholder="Ringkasan isi dokumen..." class="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]"></textarea>
-      </div>
-
-      <label class="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
-        <input data-arsip-field="publik" type="checkbox" checked class="rounded accent-[#2563eb]">
-        <span>Tampilkan ke seluruh pegawai (Publik Instansi)</span>
-      </label>
     </div>
 
+    <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2.5 bg-slate-50/70 dark:bg-slate-900/60">
+      <button type="button" onclick="window.ArsipColumns?.resetUploadForm()" class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold cursor-pointer">Reset</button>
+      <div class="flex items-center gap-2.5">
+        <button type="button" onclick="window.ArsipColumns?.closeUploadModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Batal</button>
+        <button type="button" onclick="window.ArsipColumns?.submitUpload(this)" class="px-5 py-2.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer">
+          <span class="material-symbols-outlined text-[17px]">upload_file</span>
+          <span>Upload &amp; Simpan Dokumen</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Desktop Modal: Catat Agenda Surat -->
+<div id="modalArsipAgendaSurat" class="hidden fixed inset-0 z-[95] bg-slate-950/60 backdrop-blur-xs items-center justify-center p-4" onclick="if(event.target===this) window.ArsipAgenda?.closeSuratModal()">
+  <div class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+    <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">mail</span></span>
+        <h2 data-surat-modal-title class="text-base font-bold text-slate-900 dark:text-white">Catat Agenda Surat</h2>
+      </div>
+      <button type="button" onclick="window.ArsipAgenda?.closeSuratModal()" class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-[19px]">close</span></button>
+    </div>
+    <div class="p-6 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Nomor Surat</label>
+        <input data-surat-field="nomor" type="text" placeholder="005/123/BAPPERIDA/2026" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tanggal Surat</label>
+        <input data-surat-field="tanggal" type="date" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div class="sm:col-span-2">
+        <label data-surat-pihak-label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Asal Surat *</label>
+        <input data-surat-field="pihak" type="text" placeholder="Instansi / Unit pengirim atau tujuan..." class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Perihal <span class="text-rose-500">*</span></label>
+        <input data-surat-field="perihal" type="text" placeholder="Ringkasan perihal surat..." class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Keterangan / Catatan</label>
+        <textarea data-surat-field="keterangan" rows="2" placeholder="Catatan tambahan (opsional)..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]"></textarea>
+      </div>
+    </div>
     <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5 bg-slate-50/70 dark:bg-slate-900/60">
-      <button type="button" onclick="window.ArsipColumns?.closeUploadModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Batal</button>
-      <button type="button" onclick="window.ArsipColumns?.submitUpload(this)" class="px-5 py-2.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer">
-        <span class="material-symbols-outlined text-[17px]">upload_file</span>
-        <span>Simpan Dokumen</span>
-      </button>
+      <button type="button" onclick="window.ArsipAgenda?.closeSuratModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Batal</button>
+      <button type="button" onclick="window.ArsipAgenda?.submitSurat(this)" class="px-5 py-2.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold shadow-sm cursor-pointer">Simpan Agenda Surat</button>
+    </div>
+  </div>
+</div>
+
+<!-- Desktop Modal: Catat Agenda SPPD -->
+<div id="modalArsipAgendaSppd" class="hidden fixed inset-0 z-[95] bg-slate-950/60 backdrop-blur-xs items-center justify-center p-4" onclick="if(event.target===this) window.ArsipAgenda?.closeSppdModal()">
+  <div class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+    <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">flight_takeoff</span></span>
+        <h2 class="text-base font-bold text-slate-900 dark:text-white">Catat Agenda SPPD</h2>
+      </div>
+      <button type="button" onclick="window.ArsipAgenda?.closeSppdModal()" class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-[19px]">close</span></button>
+    </div>
+    <div class="p-6 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Jenis Perjalanan</label>
+        <select data-sppd-field="jenis" aria-label="Jenis Perjalanan" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          <option value="DALAM_DAERAH">Dalam Daerah</option>
+          <option value="LUAR_DAERAH">Luar Daerah</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Alat Angkutan</label>
+        <select data-sppd-field="angkutan" aria-label="Alat Angkutan" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          <option value="Kendaraan Dinas Roda 4">Kendaraan Dinas Roda 4</option>
+          <option value="Kendaraan Dinas Roda 2">Kendaraan Dinas Roda 2</option>
+          <option value="Angkutan Darat / Travel">Angkutan Darat / Travel</option>
+          <option value="Pesawat Udara (Ekonomi)">Pesawat Udara (Ekonomi)</option>
+          <option value="Kapal Laut / Feri">Kapal Laut / Feri</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Nama Pelaksana <span class="text-rose-500">*</span></label>
+        <input data-sppd-field="pelaksana" type="text" placeholder="Nama lengkap pegawai..." class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tempat Tujuan <span class="text-rose-500">*</span></label>
+        <input data-sppd-field="tujuan" type="text" placeholder="Kota / Kecamatan tujuan..." class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tanggal Berangkat</label>
+        <input data-sppd-field="berangkat" type="date" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tanggal Kembali</label>
+        <input data-sppd-field="kembali" type="date" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Maksud Perjalanan Dinas <span class="text-rose-500">*</span></label>
+        <textarea data-sppd-field="maksud" rows="2" placeholder="Uraian kegiatan perjalanan dinas..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]"></textarea>
+      </div>
+    </div>
+    <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5 bg-slate-50/70 dark:bg-slate-900/60">
+      <button type="button" onclick="window.ArsipAgenda?.closeSppdModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Batal</button>
+      <button type="button" onclick="window.ArsipAgenda?.submitSppd(this)" class="px-5 py-2.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold shadow-sm cursor-pointer">Simpan Agenda SPPD</button>
     </div>
   </div>
 </div>
 
 <script src="js/stitch-pickers.js"></script>
 <script src="js/stitch-arsip-columns.js"></script>
+<script src="js/stitch-arsip-agenda.js"></script>
 <script>
   function updateArsipClock() {
     const el = document.getElementById('arsipLiveClock');

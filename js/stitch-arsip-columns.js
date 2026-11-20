@@ -13,12 +13,173 @@
   let _uploadMode = 'file'; // 'file' | 'gdrive'
   let _selectedFile = null;
   let _isAdminArsip = false;
+  let _masterLoaded = false;
+  let _masterCategories = [];
+  let _masterSectors = [];
+  let _masterBidangs = [];
+
+  const DEFAULT_CATEGORIES = ['Administrasi Umum', 'RKA', 'DPA', 'Renstra', 'Renja', 'RKPD', 'Laporan Evaluasi', 'SK & Keputusan', 'Peraturan & Regulasi', 'Kajian & Riset'];
+  const DEFAULT_SECTORS = ['Umum', 'Administrasi', 'Perencanaan', 'Perekonomian & SDA', 'Pemerintahan & PM', 'Infrastruktur & Kewilayahan', 'Riset & Inovasi'];
+  const DEFAULT_BIDANGS = [
+    'Umum',
+    'Sekretariat',
+    'Bidang Perencanaan Pengendalian dan Evaluasi Pembangunan Daerah',
+    'Bidang Perekonomian dan Sumber Daya Alam',
+    'Bidang Pemerintahan dan Pembangunan Manusia',
+    'Bidang Infrastruktur dan Kewilayahan',
+    'Bidang Riset dan Inovasi Daerah',
+  ];
+
+  function detectFileType(filename) {
+    const ext = String(filename || '').split('.').pop()?.toLowerCase() || '';
+    if (ext === 'pdf') return 'PDF';
+    if (ext === 'doc' || ext === 'docx') return 'Word';
+    if (ext === 'xls' || ext === 'xlsx') return 'Excel';
+    if (ext === 'ppt' || ext === 'pptx') return 'PowerPoint';
+    return 'Lainnya';
+  }
+
+  function populateSelectOptions(sel, items, placeholder, keepValue) {
+    if (!sel || sel.tagName !== 'SELECT') return;
+    const prev = keepValue ? sel.value : '';
+    const unique = Array.from(new Set(items.map((x) => String(x || '').trim()).filter(Boolean)));
+    sel.innerHTML = `<option value="">${esc(placeholder)}</option>` +
+      unique.map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    if (prev && unique.includes(prev)) sel.value = prev;
+    if (w.StitchPicker && typeof w.StitchPicker.enhanceSelect === 'function') {
+      w.StitchPicker.enhanceSelect(sel);
+      if (typeof w.StitchPicker.refresh === 'function') w.StitchPicker.refresh(sel);
+    }
+  }
+
+  async function loadMasterOptions(force = false) {
+    if (_masterLoaded && !force) {
+      applyMasterOptionsToModals();
+      return;
+    }
+    const fetchNames = async (url, fallback) => {
+      try {
+        const r = await fetch(url);
+        if (!r.ok) return fallback;
+        const j = await r.json().catch(() => []);
+        const arr = Array.isArray(j) ? j : (Array.isArray(j?.data) ? j.data : []);
+        const names = arr.map((x) => (typeof x === 'string' ? x : (x?.nama || x?.nama_bidang || x?.name || ''))).filter(Boolean);
+        return names.length ? names : fallback;
+      } catch (_) {
+        return fallback;
+      }
+    };
+    const [cats, secs, bids] = await Promise.all([
+      fetchNames('/api/arsip/p/api/kategori-dokumen', DEFAULT_CATEGORIES),
+      fetchNames('/api/arsip/p/api/sektor', DEFAULT_SECTORS),
+      fetchNames('/api/arsip/p/api/bidang', DEFAULT_BIDANGS),
+    ]);
+    _masterCategories = cats;
+    _masterSectors = secs;
+    _masterBidangs = ['Umum', ...bids.filter((b) => b.toLowerCase() !== 'umum')];
+    _masterLoaded = true;
+    applyMasterOptionsToModals();
+  }
+
+  function applyMasterOptionsToModals() {
+    const curYear = new Date().getFullYear();
+    const years = [];
+    for (let y = curYear + 1; y >= 2019; y--) years.push(String(y));
+
+    ['modalArsipUpload', 'drawerMobileArsipUpload'].forEach((id) => {
+      const m = d.getElementById(id);
+      if (!m) return;
+      populateSelectOptions(m.querySelector('[data-arsip-field="type"]'), _masterCategories.length ? _masterCategories : DEFAULT_CATEGORIES, '— Pilih Jenis Dokumen —', true);
+      populateSelectOptions(m.querySelector('[data-arsip-field="sector"]'), _masterSectors.length ? _masterSectors : DEFAULT_SECTORS, '— Pilih Sektor —', true);
+      populateSelectOptions(m.querySelector('[data-arsip-field="bidang"]'), _masterBidangs.length ? _masterBidangs : DEFAULT_BIDANGS, '— Pilih Bidang —', true);
+      const yrSel = m.querySelector('[data-arsip-field="year"]');
+      if (yrSel && yrSel.tagName === 'SELECT') {
+        const prev = yrSel.value || String(curYear);
+        yrSel.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join('');
+        yrSel.value = years.includes(prev) ? prev : String(curYear);
+        if (w.StitchPicker && typeof w.StitchPicker.enhanceSelect === 'function') {
+          w.StitchPicker.enhanceSelect(yrSel);
+          if (typeof w.StitchPicker.refresh === 'function') w.StitchPicker.refresh(yrSel);
+        }
+      }
+      const dateInp = m.querySelector('[data-arsip-field="tanggal_dokumen"]');
+      if (dateInp && w.StitchPicker && typeof w.StitchPicker.enhanceDate === 'function') {
+        w.StitchPicker.enhanceDate(dateInp);
+      }
+    });
+  }
 
   function extractDriveId(url) {
     const s = String(url || '').trim();
     if (!s) return '';
     const m = s.match(/\/file\/d\/([-\w]{5,200})/) || s.match(/\/d\/([-\w]{5,200})/) || s.match(/[?&]id=([-\w]{5,200})/);
     return m ? m[1] : '';
+  }
+
+  function extractDriveFolderId(url) {
+    const s = String(url || '').trim();
+    if (!s) return '';
+    const m = s.match(/\/folders\/([-\w]{5,200})/);
+    return m ? m[1] : '';
+  }
+
+  function isImageExt(url, name) {
+    const hay = `${String(name || '')} ${String(url || '')}`.toLowerCase();
+    return /\.(jpe?g|png|webp|gif|bmp)(\?|$|\s)/i.test(hay);
+  }
+
+  function isOfficeExt(url, name) {
+    const hay = `${String(name || '')} ${String(url || '')}`.toLowerCase();
+    return /\.(xlsx?|docx?|pptx?)(\?|$|\s)/i.test(hay);
+  }
+
+  function buildUniversalPreviewHtml(url, fileName, heightCls = 'h-48') {
+    const cleanUrl = String(url || '').trim();
+    if (!cleanUrl || cleanUrl === '#') {
+      return `<div class="${heightCls} bg-slate-50 dark:bg-slate-800/60 flex flex-col items-center justify-center gap-1.5 text-slate-400 text-xs"><span class="material-symbols-outlined text-3xl">description</span><span>Berkas belum tertaut</span></div>`;
+    }
+
+    const folderId = extractDriveFolderId(cleanUrl);
+    if (folderId) {
+      return `<iframe src="https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}#list" title="Pratinjau Folder ${esc(fileName)}" class="w-full ${heightCls} bg-white dark:bg-slate-900 border-0" loading="lazy"></iframe>`;
+    }
+
+    const gid = extractDriveId(cleanUrl);
+    if (gid) {
+      if (isImageExt(cleanUrl, fileName)) {
+        const thumb = `https://drive.google.com/thumbnail?id=${encodeURIComponent(gid)}&sz=w1200`;
+        const fallbackIframe = `https://drive.google.com/file/d/${encodeURIComponent(gid)}/preview`;
+        return `<div class="w-full ${heightCls} bg-slate-100 dark:bg-slate-900 flex items-center justify-center overflow-hidden"><img src="${thumb}" alt="${esc(fileName)}" class="w-full h-full object-contain" loading="lazy" onerror="this.parentNode.innerHTML='<iframe src=&quot;${fallbackIframe}&quot; class=&quot;w-full ${heightCls} border-0&quot; loading=&quot;lazy&quot;></iframe>'"></div>`;
+      }
+      return `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(gid)}/preview" title="Pratinjau ${esc(fileName)}" class="w-full ${heightCls} bg-slate-100 dark:bg-slate-800 border-0" allow="autoplay" loading="lazy"></iframe>`;
+    }
+
+    if (isImageExt(cleanUrl, fileName)) {
+      return `<div class="w-full ${heightCls} bg-slate-100 dark:bg-slate-900 flex items-center justify-center overflow-hidden"><img src="${esc(cleanUrl)}" alt="${esc(fileName)}" class="w-full h-full object-contain" loading="lazy"></div>`;
+    }
+
+    if (isOfficeExt(cleanUrl, fileName)) {
+      const gview = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(cleanUrl)}`;
+      return `<iframe src="${gview}" title="Pratinjau ${esc(fileName)}" class="w-full ${heightCls} bg-white dark:bg-slate-900 border-0" loading="lazy"></iframe>`;
+    }
+
+    return `<iframe src="${esc(cleanUrl)}" title="Pratinjau ${esc(fileName)}" class="w-full ${heightCls} bg-white dark:bg-slate-900 border-0" loading="lazy"></iframe>`;
+  }
+
+  function getDocFiles(doc) {
+    if (!doc) return [];
+    const arr = Array.isArray(doc.files) ? doc.files.filter((f) => f && (f.url || f.fileUrl || f.link)) : [];
+    if (arr.length > 0) {
+      return arr.map((f, i) => ({
+        name: String(f.name || f.filename || f.title || `Berkas ${i + 1}`),
+        url: String(f.url || f.fileUrl || f.link || ''),
+        size: String(f.size || ''),
+      }));
+    }
+    if (doc.url && doc.url !== '#') {
+      return [{ name: String(doc.title || 'Berkas Utama'), url: String(doc.url), size: String(doc.size || '') }];
+    }
+    return [];
   }
 
   function fileBadgeInfo(doc) {
@@ -37,6 +198,15 @@
   }
 
   function normalizeDoc(raw, idx) {
+    let files = [];
+    if (Array.isArray(raw.files)) {
+      files = raw.files;
+    } else if (typeof raw.files === 'string' && raw.files.trim()) {
+      try {
+        const parsed = JSON.parse(raw.files);
+        if (Array.isArray(parsed)) files = parsed;
+      } catch (_) {}
+    }
     return {
       id: String(raw.id ?? raw.doc_id ?? (idx + 1)),
       title: String(raw.title || raw.judul || 'Dokumen Tanpa Judul').trim(),
@@ -53,6 +223,7 @@
       status: String(raw.status || (raw.publik ? 'Publik' : 'Terarsip')).trim(),
       publik: raw.publik !== false,
       url: String(raw.url || raw.file_url || raw.link || '').trim(),
+      files,
       desc: String(raw.desc || raw.deskripsi || raw.keterangan || '').trim(),
     };
   }
@@ -231,7 +402,9 @@
     }).join('');
   }
 
-  function renderPreviewPane(doc) {
+  let _previewFileIdx = 0;
+
+  function renderPreviewPane(doc, fileIdx = 0) {
     const pane = d.getElementById('arsipColPreview');
     if (!pane) return;
 
@@ -246,18 +419,29 @@
     }
 
     const fi = fileBadgeInfo(doc);
-    const gid = extractDriveId(doc.url);
-    const hasUrl = Boolean(doc.url && doc.url !== '#');
-    const previewThumb = gid
-      ? `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(gid)}/preview" title="Pratinjau ${esc(doc.title)}" class="w-full h-44 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-800" loading="lazy"></iframe>`
-      : `<div class="h-32 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center gap-1.5 text-slate-400">
-           <span class="w-12 h-12 rounded-2xl ${fi.cls} flex items-center justify-center"><span class="material-symbols-outlined text-[26px]">${fi.icon}</span></span>
-           <span class="text-[11px] font-mono font-bold uppercase">${esc(fi.label)}</span>
-         </div>`;
+    const files = getDocFiles(doc);
+    const safeIdx = Math.max(0, Math.min(fileIdx, Math.max(0, files.length - 1)));
+    _previewFileIdx = safeIdx;
+    const activeFile = files[safeIdx] || null;
+    const activeUrl = activeFile ? activeFile.url : (doc.url || '');
+    const activeName = activeFile ? activeFile.name : doc.title;
+    const hasUrl = Boolean(activeUrl && activeUrl !== '#');
+
+    const previewThumb = `<div class="border-b border-slate-200 dark:border-slate-800 overflow-hidden">${buildUniversalPreviewHtml(activeUrl, activeName, 'h-52')}</div>`;
+
+    const filesBar = files.length > 1
+      ? `<div class="px-4 pt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          ${files.map((f, i) => {
+            const act = i === safeIdx;
+            return `<button type="button" onclick="window.ArsipColumns.selectPreviewFile(${i})" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold shrink-0 transition-colors cursor-pointer ${act ? 'bg-[#2563eb] text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}">${esc(f.name.length > 22 ? f.name.slice(0, 20) + '...' : f.name)}</button>`;
+          }).join('')}
+        </div>`
+      : '';
 
     pane.innerHTML = `
       <div class="flex flex-col h-full">
         ${previewThumb}
+        ${filesBar}
         <div class="p-4 flex flex-col gap-3 flex-1 overflow-y-auto">
           <div>
             <h3 class="text-sm font-bold text-slate-900 dark:text-white leading-snug break-words">${esc(doc.title)}</h3>
@@ -265,6 +449,7 @@
               <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${fi.cls}">${esc(fi.label)}</span>
               <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">${esc(doc.publik ? 'Publik' : 'Internal')}</span>
               <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${esc(doc.year)}</span>
+              ${files.length > 1 ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300">${files.length} berkas</span>` : ''}
             </div>
           </div>
 
@@ -273,7 +458,7 @@
             <div class="py-2 flex justify-between gap-2"><span class="text-slate-400">Bidang / Sektor</span><span class="font-semibold text-slate-800 dark:text-slate-200 text-right">${esc(doc.sector || doc.bidang)}</span></div>
             <div class="py-2 flex justify-between gap-2"><span class="text-slate-400">Pengunggah</span><span class="font-semibold text-slate-800 dark:text-slate-200 text-right truncate max-w-[170px]">${esc(doc.uploader)}</span></div>
             <div class="py-2 flex justify-between gap-2"><span class="text-slate-400">Tanggal</span><span class="font-mono tabular-nums text-slate-800 dark:text-slate-200">${esc(doc.tanggalDokumen || doc.year)}</span></div>
-            <div class="py-2 flex justify-between gap-2"><span class="text-slate-400">Ukuran</span><span class="font-mono tabular-nums text-slate-800 dark:text-slate-200">${esc(doc.size)}</span></div>
+            <div class="py-2 flex justify-between gap-2"><span class="text-slate-400">Ukuran</span><span class="font-mono tabular-nums text-slate-800 dark:text-slate-200">${esc(activeFile?.size || doc.size)}</span></div>
             ${doc.nomorDokumen ? `<div class="py-2 flex justify-between gap-2"><span class="text-slate-400">Nomor</span><span class="font-mono text-slate-800 dark:text-slate-200 text-right break-all">${esc(doc.nomorDokumen)}</span></div>` : ''}
           </div>
 
@@ -281,13 +466,13 @@
 
           <div class="mt-auto pt-2 flex flex-col gap-2">
             ${hasUrl
-              ? `<a href="${esc(doc.url)}" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 px-3 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+              ? `<a href="${esc(activeUrl)}" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 px-3 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm">
                    <span class="material-symbols-outlined text-[16px]">open_in_new</span>
                    <span>Buka / Unduh Berkas</span>
                  </a>`
               : `<button type="button" disabled class="w-full py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 text-xs font-semibold cursor-not-allowed">Berkas belum tertaut</button>`}
             ${hasUrl
-              ? `<button type="button" onclick="window.ArsipColumns.copyUrl('${esc(doc.url).replace(/'/g, "\\'")}')" class="w-full py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
+              ? `<button type="button" onclick="window.ArsipColumns.copyUrl('${esc(activeUrl).replace(/'/g, "\\'")}')" class="w-full py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
                    <span class="material-symbols-outlined text-[15px]">content_copy</span>
                    <span>Salin Tautan</span>
                  </button>`
@@ -318,24 +503,62 @@
     }
   }
 
-  /* ── Upload Modal (Desktop) / Bottom Drawer (Mobile) ─────────────────── */
-  function openUploadModal() {
-    const modal = d.getElementById('modalArsipUpload') || d.getElementById('drawerMobileArsipUpload');
+  /* ── Upload Modal (Desktop) / Bottom Drawer (Mobile) — UMA DATA Parity ── */
+  function resetUploadForm(modalEl) {
+    const modal = modalEl || d.getElementById('modalArsipUpload') || d.getElementById('drawerMobileArsipUpload');
     if (!modal) return;
     _selectedFile = null;
     setUploadMode('file');
-    const titleInp = modal.querySelector('[data-arsip-field="title"]');
-    if (titleInp) titleInp.value = '';
-    const urlInp = modal.querySelector('[data-arsip-field="url"]');
-    if (urlInp) urlInp.value = '';
-    const descInp = modal.querySelector('[data-arsip-field="desc"]');
-    if (descInp) descInp.value = '';
-    const nomorInp = modal.querySelector('[data-arsip-field="nomor"]');
-    if (nomorInp) nomorInp.value = '';
-    const fileLabel = modal.querySelector('[data-arsip-file-label]');
-    if (fileLabel) fileLabel.textContent = 'Klik atau seret berkas PDF / Word / Excel ke sini (maks. 10 MB)';
+    const curYear = String(new Date().getFullYear());
+    const clearFields = ['title', 'url', 'desc', 'nomor', 'tags', 'tanggal_dokumen'];
+    clearFields.forEach((f) => {
+      const el = modal.querySelector(`[data-arsip-field="${f}"]`);
+      if (el) el.value = '';
+    });
+    ['type', 'sector', 'bidang'].forEach((f) => {
+      const el = modal.querySelector(`[data-arsip-field="${f}"]`);
+      if (el) {
+        el.value = '';
+        if (w.StitchPicker && typeof w.StitchPicker.refresh === 'function') w.StitchPicker.refresh(el);
+      }
+    });
+    const yrEl = modal.querySelector('[data-arsip-field="year"]');
+    if (yrEl) {
+      yrEl.value = curYear;
+      if (w.StitchPicker && typeof w.StitchPicker.refresh === 'function') w.StitchPicker.refresh(yrEl);
+    }
+    const pubEl = modal.querySelector('[data-arsip-field="publik"]');
+    if (pubEl) pubEl.checked = true;
+    const fileInp = modal.querySelector('input[type="file"]');
+    if (fileInp) fileInp.value = '';
+    updateFileDropzoneUI(modal, null);
+  }
+
+  function updateFileDropzoneUI(modal, file) {
+    if (!modal) return;
+    const lbl = modal.querySelector('[data-arsip-file-label]');
+    const clearBtn = modal.querySelector('[data-arsip-file-clear]');
+    if (lbl) {
+      if (file) {
+        const sz = file.size > 1048576 ? `${(file.size / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB`;
+        lbl.innerHTML = `<span class="font-bold text-slate-900 dark:text-white">${esc(file.name)}</span> <span class="font-mono text-[11px] text-primary">(${sz})</span>`;
+      } else {
+        lbl.textContent = 'Klik atau seret berkas PDF / Word / Excel / Gambar ke sini (maks. 10 MB)';
+      }
+    }
+    if (clearBtn) clearBtn.classList.toggle('hidden', !file);
+  }
+
+  function openUploadModal() {
+    const modal = d.getElementById('modalArsipUpload') || d.getElementById('drawerMobileArsipUpload');
+    if (!modal) return;
+    loadMasterOptions();
+    resetUploadForm(modal);
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+    setTimeout(() => {
+      applyMasterOptionsToModals();
+    }, 30);
   }
 
   function closeUploadModal() {
@@ -353,8 +576,8 @@
     d.querySelectorAll('[data-arsip-upload-mode]').forEach((btn) => {
       const act = btn.dataset.arsipUploadMode === _uploadMode;
       btn.className = act
-        ? 'flex-1 py-2 rounded-xl bg-[#2563eb] text-white text-xs font-bold transition-colors cursor-pointer'
-        : 'flex-1 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer';
+        ? 'flex-1 py-2.5 px-3 rounded-xl bg-[#2563eb] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs'
+        : 'flex-1 py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center gap-1.5 transition-colors cursor-pointer';
     });
     d.querySelectorAll('[data-arsip-file-pane]').forEach((el) => el.classList.toggle('hidden', _uploadMode !== 'file'));
     d.querySelectorAll('[data-arsip-gdrive-pane]').forEach((el) => el.classList.toggle('hidden', _uploadMode !== 'gdrive'));
@@ -364,14 +587,31 @@
     const f = inputEl?.files?.[0] || null;
     _selectedFile = f;
     const modal = inputEl?.closest('#modalArsipUpload, #drawerMobileArsipUpload');
-    const lbl = modal?.querySelector('[data-arsip-file-label]');
-    if (lbl) {
-      lbl.textContent = f
-        ? `${f.name} (${(f.size / 1024).toFixed(0)} KB)`
-        : 'Klik atau seret berkas PDF / Word / Excel ke sini (maks. 10 MB)';
-    }
+    updateFileDropzoneUI(modal, f);
     const titleInp = modal?.querySelector('[data-arsip-field="title"]');
     if (f && titleInp && !titleInp.value.trim()) {
+      titleInp.value = f.name.replace(/\.[^.]+$/, '');
+    }
+  }
+
+  function clearPickedFile(btnEl) {
+    _selectedFile = null;
+    const modal = btnEl?.closest('#modalArsipUpload, #drawerMobileArsipUpload');
+    const fileInp = modal?.querySelector('input[type="file"]');
+    if (fileInp) fileInp.value = '';
+    updateFileDropzoneUI(modal, null);
+  }
+
+  function onFileDrop(ev, zoneEl) {
+    ev.preventDefault();
+    zoneEl?.classList.remove('border-[#2563eb]', 'bg-blue-50/50', 'dark:bg-blue-950/30');
+    const f = ev.dataTransfer?.files?.[0] || null;
+    if (!f) return;
+    _selectedFile = f;
+    const modal = zoneEl?.closest('#modalArsipUpload, #drawerMobileArsipUpload');
+    updateFileDropzoneUI(modal, f);
+    const titleInp = modal?.querySelector('[data-arsip-field="title"]');
+    if (titleInp && !titleInp.value.trim()) {
       titleInp.value = f.name.replace(/\.[^.]+$/, '');
     }
   }
@@ -397,10 +637,13 @@
 
     const val = (k) => (modal.querySelector(`[data-arsip-field="${k}"]`)?.value || '').trim();
     const title = val('title');
-    const type = val('type') || 'Administrasi Umum';
-    const sector = val('sector') || 'Umum';
+    const type = val('type');
+    const sector = val('sector');
+    const bidang = val('bidang') || 'Umum';
     const year = val('year') || String(new Date().getFullYear());
+    const tags = val('tags');
     const nomor = val('nomor');
+    const tanggalDokumen = val('tanggal_dokumen');
     const desc = val('desc');
     const publik = modal.querySelector('[data-arsip-field="publik"]')?.checked !== false;
 
@@ -408,11 +651,25 @@
       if (w.Swal) w.Swal.fire('Perhatian', 'Judul dokumen wajib diisi.', 'warning');
       return;
     }
+    if (!type) {
+      if (w.Swal) w.Swal.fire('Perhatian', 'Jenis dokumen wajib dipilih.', 'warning');
+      return;
+    }
+    if (!sector) {
+      if (w.Swal) w.Swal.fire('Perhatian', 'Sektor dokumen wajib dipilih.', 'warning');
+      return;
+    }
 
     let finalUrl = val('url');
-    if (_uploadMode === 'gdrive' && !finalUrl) {
-      if (w.Swal) w.Swal.fire('Perhatian', 'Masukkan tautan Google Drive dokumen.', 'warning');
-      return;
+    if (_uploadMode === 'gdrive') {
+      if (!finalUrl) {
+        if (w.Swal) w.Swal.fire('Perhatian', 'Masukkan URL Google Drive dokumen.', 'warning');
+        return;
+      }
+      if (!/drive\.google\.com/i.test(finalUrl)) {
+        if (w.Swal) w.Swal.fire('Perhatian', 'URL harus berasal dari Google Drive (drive.google.com).', 'warning');
+        return;
+      }
     }
     if (_uploadMode === 'file' && !_selectedFile) {
       if (w.Swal) w.Swal.fire('Perhatian', 'Pilih berkas dokumen terlebih dahulu.', 'warning');
@@ -426,7 +683,9 @@
     }
 
     try {
+      let fileType = 'PDF';
       if (_uploadMode === 'file' && _selectedFile) {
+        fileType = detectFileType(_selectedFile.name);
         const dataBase64 = await readFileAsBase64(_selectedFile);
         const upRes = await fetch('/api/arsip/docs/upload-file', {
           method: 'POST',
@@ -454,11 +713,16 @@
           kategori: type,
           sector,
           sektor: sector,
+          bidang,
           year,
           tahun: Number(year) || new Date().getFullYear(),
+          tags,
           nomor_dokumen: nomor,
+          tanggal_dokumen: tanggalDokumen || null,
           desc,
           deskripsi: desc,
+          fileType,
+          file_type: fileType,
           url: finalUrl,
           file_url: finalUrl,
           publik,
@@ -497,10 +761,16 @@
     },
     peekDoc(id) {
       _selectedDocId = id;
+      _previewFileIdx = 0;
       const doc = _filteredDocs.find((x) => x.id === id) || null;
       renderDocList(_filteredDocs);
-      renderPreviewPane(doc);
+      renderPreviewPane(doc, 0);
     },
+    selectPreviewFile(idx) {
+      const doc = _filteredDocs.find((x) => x.id === _selectedDocId) || null;
+      if (doc) renderPreviewPane(doc, idx);
+    },
+    buildUniversalPreviewHtml,
     openDoc(id) {
       const doc = _filteredDocs.find((x) => x.id === id);
       if (doc && doc.url && doc.url !== '#') {
@@ -516,16 +786,22 @@
     setViewMode,
     openUploadModal,
     closeUploadModal,
+    resetUploadForm,
     setUploadMode,
     onFilePicked,
+    clearPickedFile,
+    onFileDrop,
     submitUpload,
+    loadMasterOptions,
   };
 
   if (d.readyState === 'loading') {
     d.addEventListener('DOMContentLoaded', () => {
       if (d.getElementById('arsipColDocs')) loadArsipDocs();
+      if (d.getElementById('modalArsipUpload') || d.getElementById('drawerMobileArsipUpload')) loadMasterOptions();
     });
-  } else if (d.getElementById('arsipColDocs')) {
-    loadArsipDocs();
+  } else {
+    if (d.getElementById('arsipColDocs')) loadArsipDocs();
+    if (d.getElementById('modalArsipUpload') || d.getElementById('drawerMobileArsipUpload')) loadMasterOptions();
   }
 })(window, document);
