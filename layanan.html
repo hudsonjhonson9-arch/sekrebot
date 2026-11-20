@@ -80,7 +80,7 @@
 <button class="tab-button flex items-center gap-space-xs px-space-md py-space-sm rounded-xl font-label-lg text-label-lg transition-all duration-200 bg-primary text-on-primary shadow-sm" id="tab-btn-sppd" onclick="switchMainTab('sppd')" type="button">
 <span class="material-symbols-outlined text-[20px]">flight_takeoff</span>
 <span>1. Penugasan &amp; SPPD</span>
-<span class="ml-1 px-1.5 py-0.5 rounded-full bg-on-primary/20 text-on-primary text-[11px] font-bold">12</span>
+<span class="ml-1 px-1.5 py-0.5 rounded-full bg-on-primary/20 text-on-primary text-[11px] font-bold" id="layananSppdTabBadge">0</span>
 </button>
 <button class="tab-button flex items-center gap-space-xs px-space-md py-space-sm rounded-xl font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all duration-200" id="tab-btn-lembur" onclick="switchMainTab('lembur')" type="button">
 <span class="material-symbols-outlined text-[20px]">more_time</span>
@@ -100,7 +100,7 @@
 <!-- ======================================================== -->
 <section class="tab-section flex flex-col gap-space-lg" id="tab-content-sppd">
 <!-- Top Action Bar & Metrics -->
-<div class="grid grid-cols-1 lg:grid-cols-4 gap-space-md"><!-- Metric 1: Aktif DL --><div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm border border-surface-container-high/40 flex items-center justify-between"><div class="flex flex-col"><span class="font-label-md text-label-md text-on-surface-variant font-medium">Penugasan Berjalan</span><span class="font-display-lg text-display-lg text-primary leading-tight font-extrabold font-mono mt-1">12</span><span class="font-body-sm text-body-sm text-secondary flex items-center gap-1 mt-1 font-medium"><span class="material-symbols-outlined text-[15px]">my_location</span>12 Terpantau Geofence</span></div><div class="w-12 h-12 rounded-xl bg-surface-container-low text-primary flex items-center justify-center"><span class="material-symbols-outlined text-[26px]">commute</span></div></div><!-- Metric 2: SPJ Terkumpul --><div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm border border-surface-container-high/40 flex items-center justify-between"><div class="flex flex-col"><span class="font-label-md text-label-md text-on-surface-variant font-medium">SPJ Masuk</span><div class="flex items-baseline gap-2 mt-1"><span class="font-headline-lg text-headline-lg text-on-surface font-extrabold font-mono">28<span class="text-on-surface-variant text-base font-normal font-sans"> / 34</span></span><span class="font-label-md text-label-md text-secondary font-mono font-bold">82%</span></div><div class="w-32 bg-surface-container-high rounded-full h-1.5 mt-2 overflow-hidden"><div class="bg-secondary h-1.5 rounded-full" style="width: 82%;"></div></div></div><div class="w-12 h-12 rounded-xl bg-surface-container-low text-secondary flex items-center justify-center"><span class="material-symbols-outlined text-[26px]">task_alt</span></div></div><!-- Metric 3: Estimasi Anggaran SPPD --><div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm border border-surface-container-high/40 flex items-center justify-between"><div class="flex flex-col"><span class="font-label-md text-label-md text-on-surface-variant font-medium">Realisasi Anggaran</span><span class="font-headline-md text-headline-md text-on-surface font-extrabold font-mono mt-1">Rp 64.850.000</span><span class="font-body-sm text-body-sm text-on-surface-variant mt-1">DIPA Triwulan IV</span></div><div class="w-12 h-12 rounded-xl bg-surface-container-low text-tertiary flex items-center justify-center"><span class="material-symbols-outlined text-[26px]">account_balance_wallet</span></div></div><!-- Action Card Buttons (Emphasized CTA) --><div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm border border-surface-container-high/40 flex flex-col justify-center gap-space-xs"><button class="w-full flex items-center justify-center gap-space-xs px-space-md py-3 rounded-xl bg-primary text-on-primary font-label-lg text-label-lg font-bold shadow-md hover:bg-primary-container transition-all active:scale-[0.98]" onclick="openSppdModal()" type="button"><span class="material-symbols-outlined text-[20px]">add_circle</span><span>Buat Surat Tugas Baru</span></button><button class="w-full flex items-center justify-center gap-space-xs px-space-md py-2.5 rounded-xl bg-surface-container-low text-primary hover:bg-surface-container-high font-label-lg text-label-lg font-semibold transition-all" onclick="triggerAutoPrintSPT()" type="button"><span class="material-symbols-outlined text-[18px]">print</span><span>Cetak SPT &amp; SPPD Otomatis</span></button></div></div>
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-space-md"><!-- Metric 1: Aktif DL --><div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm border border-surface-container-high/40 flex items-center justify-between"><div class="flex flex-col"><span class="font-label-md text-label-md text-on-surface-variant font-medium">Penugasan Berjalan</span><span class="font-display-lg text-display-lg text-primary leading-tight font-extrabold font-mono mt-1" id="sppdStatAktif">0</span><span class="font-body-sm text-body-sm text-secondary flex items-center gap-1 mt-1 font-medium"><span class="material-symbols-outlined text-[15px]">my_location</span><span id="sppdStatAktifSub">Data live database</span></span></div><div class="w-12 h-12 rounded-xl bg-surface-container-low text-primary flex items-center justify-center"><span class="material-symbols-outlined text-[26px]">commute</span></div></div><!-- Metric 2: SPJ Terkumpul --><div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm border border-surface-container-high/40 flex items-center justify-between"><div class="flex flex-col"><span class="font-label-md text-label-md text-on-surface-variant font-medium">SPJ Selesai</span><div class="flex items-baseline gap-2 mt-1"><span class="font-headline-lg text-headline-lg text-on-surface font-extrabold font-mono" id="sppdStatSpj">0 / 0</span><span class="font-label-md text-label-md text-secondary font-mono font-bold" id="sppdStatSpjPct">0%</span></div><div class="w-32 bg-surface-container-high rounded-full h-1.5 mt-2 overflow-hidden"><div class="bg-secondary h-1.5 rounded-full" id="sppdStatSpjBar" style="width: 0%;"></div></div></div><div class="w-12 h-12 rounded-xl bg-surface-container-low text-secondary flex items-center justify-center"><span class="material-symbols-outlined text-[26px]">task_alt</span></div></div><!-- Metric 3: Total Hari Tugas --><div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm border border-surface-container-high/40 flex items-center justify-between"><div class="flex flex-col"><span class="font-label-md text-label-md text-on-surface-variant font-medium">Total Hari Tugas</span><span class="font-headline-md text-headline-md text-on-surface font-extrabold font-mono mt-1" id="sppdStatHari">0 Hari</span><span class="font-body-sm text-body-sm text-on-surface-variant mt-1">Akumulasi SPT aktif</span></div><div class="w-12 h-12 rounded-xl bg-surface-container-low text-tertiary flex items-center justify-center"><span class="material-symbols-outlined text-[26px]">calendar_month</span></div></div><!-- Action Card Buttons (Emphasized CTA) --><div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm border border-surface-container-high/40 flex flex-col justify-center gap-space-xs"><button class="w-full flex items-center justify-center gap-space-xs px-space-md py-3 rounded-xl bg-primary text-on-primary font-label-lg text-label-lg font-bold shadow-md hover:bg-primary-container transition-all active:scale-[0.98]" onclick="openSppdModal()" type="button"><span class="material-symbols-outlined text-[20px]">add_circle</span><span>Buat Surat Tugas Baru</span></button><button class="w-full flex items-center justify-center gap-space-xs px-space-md py-2.5 rounded-xl bg-surface-container-low text-primary hover:bg-surface-container-high font-label-lg text-label-lg font-semibold transition-all" onclick="triggerAutoPrintSPT()" type="button"><span class="material-symbols-outlined text-[18px]">print</span><span>Cetak SPT &amp; SPPD Otomatis</span></button></div></div>
 <!-- Active SPPD & Live Field Geofence Feed -->
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-space-lg"><!-- Table: SPPD Berjalan & Riwayat (2 Col) --><div class="xl:col-span-2 bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm border border-surface-container-high/40 flex flex-col"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm mb-space-md"><div class="flex items-center gap-space-sm"><div class="w-2.5 h-6 rounded-full bg-primary"></div><h2 class="font-title-md text-title-md text-on-surface font-bold">Daftar Penugasan SPPD Berjalan</h2><span class="px-2 py-0.5 rounded-full bg-surface-container-low font-mono text-[12px] font-bold text-primary">12 Aktif</span></div><div class="flex items-center gap-space-xs"><select class="px-space-sm py-1.5 rounded-lg bg-surface-container-low text-on-surface font-label-sm text-label-sm outline-none border border-surface-container-high/60"><option>Semua Wilayah</option><option>Luar Kota (Provinsi)</option><option>Dalam Wilayah Kabupaten</option><option>Kunjungan Lapangan / Desa</option></select></div></div><!-- Table Responsive Container --><div class="overflow-x-auto w-full"><table class="w-full text-left border-collapse"><thead><tr class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider"><th class="py-space-sm px-space-md rounded-l-lg">Pegawai</th><th class="py-space-sm px-space-sm">No. SPT / SPPD</th><th class="py-space-sm px-space-sm">Tujuan &amp; Geofence</th><th class="py-space-sm px-space-sm">Durasi</th><th class="py-space-sm px-space-sm">Status SPJ</th><th class="py-space-sm px-space-md text-right rounded-r-lg">Aksi</th></tr></thead><tbody id="sppdTableBody" class="divide-y divide-surface-container-high/40 font-body-sm text-body-sm text-on-surface">
   <tr>
@@ -123,30 +123,30 @@
 <!-- Lembur Hero Summary & Stat Cards -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-space-md">
 <div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm flex flex-col">
-<span class="font-label-sm text-label-sm text-on-surface-variant">Total Jam Lembur Minggu Ini</span>
-<span class="font-display-lg text-display-lg text-primary font-bold mt-1">142.5 <span class="text-headline-sm font-normal">Jam</span></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Total Pengajuan Lembur / Keterangan</span>
+<span class="font-display-lg text-display-lg text-primary font-bold mt-1 font-mono" id="lemburStatTotal">0</span>
 <span class="font-body-sm text-body-sm text-secondary mt-1 flex items-center gap-1">
-<span class="material-symbols-outlined text-[16px]">trending_up</span> +12% dibanding pekan lalu
+<span class="material-symbols-outlined text-[16px]">database</span> Data tersinkron database
         </span>
 </div>
 <div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm flex flex-col">
-<span class="font-label-sm text-label-sm text-on-surface-variant">Pegawai Melaksanakan Lembur</span>
-<span class="font-display-lg text-display-lg text-on-surface font-bold mt-1">18 <span class="text-headline-sm font-normal">Org</span></span>
-<span class="font-body-sm text-body-sm text-on-surface-variant mt-1">Termasuk lembur hari Sabtu</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Pegawai Terdata</span>
+<span class="font-display-lg text-display-lg text-on-surface font-bold mt-1 font-mono" id="lemburStatOrg">0 <span class="text-headline-sm font-normal">Org</span></span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1">Unik berdasarkan NIP</span>
 </div>
 <div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm flex flex-col">
-<span class="font-label-sm text-label-sm text-on-surface-variant">Estimasi Uang Lembur Terbit</span>
-<span class="font-display-lg text-display-lg text-tertiary font-bold mt-1">Rp 19.8M</span>
-<span class="font-body-sm text-body-sm text-on-surface-variant mt-1">Sesuai standar SBM 2026</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Disetujui Admin</span>
+<span class="font-display-lg text-display-lg text-tertiary font-bold mt-1 font-mono" id="lemburStatApproved">0</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1">Status terverifikasi</span>
 </div>
 <div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm flex flex-col justify-center gap-space-xs">
-<button class="w-full flex items-center justify-center gap-space-xs px-space-md py-2.5 rounded-xl bg-primary text-on-primary font-label-lg text-label-lg shadow-sm hover:bg-primary-container transition-all" type="button">
+<button class="w-full flex items-center justify-center gap-space-xs px-space-md py-2.5 rounded-xl bg-primary text-on-primary font-label-lg text-label-lg shadow-sm hover:bg-primary-container transition-all" onclick="loadRealLemburData()" type="button">
 <span class="material-symbols-outlined text-[18px]">sync</span>
-<span>Tarik Data Absen Harian</span>
+<span>Segarkan Data Lembur</span>
 </button>
-<button class="w-full flex items-center justify-center gap-space-xs px-space-md py-2 rounded-xl bg-surface-container-low text-primary font-label-md text-label-md hover:bg-surface-container-high transition-all" type="button">
+<button class="w-full flex items-center justify-center gap-space-xs px-space-md py-2 rounded-xl bg-surface-container-low text-primary font-label-md text-label-md hover:bg-surface-container-high transition-all" onclick="exportLemburCsv()" type="button">
 <span class="material-symbols-outlined text-[18px]">download</span>
-<span>Ekspor Rekap SPJ (.xlsx)</span>
+<span>Ekspor Rekap (.csv)</span>
 </button>
 </div>
 </div>
@@ -208,11 +208,11 @@
 </div>
 </div>
 <div class="flex items-center gap-space-xs shrink-0">
-<button class="flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-surface-container-lowest text-primary font-label-lg text-label-lg shadow-sm hover:bg-surface-container-low transition-all" onclick="alert('Membuka Kamera Pemindai QR Label Aset...')" type="button">
+<button class="flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-surface-container-lowest text-primary font-label-lg text-label-lg shadow-sm hover:bg-surface-container-low transition-all" onclick="window.location.href='aset-kir.html'" type="button">
 <span class="material-symbols-outlined text-[20px]">photo_camera</span>
 <span>Scan QR Label Aset</span>
 </button>
-<button class="flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-surface-container-lowest/20 hover:bg-surface-container-lowest/30 text-on-primary font-label-lg text-label-lg transition-all" onclick="alert('Form BAST Terbuka')" type="button">
+<button class="flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-surface-container-lowest/20 hover:bg-surface-container-lowest/30 text-on-primary font-label-lg text-label-lg transition-all" onclick="window.location.href='aset-kir.html'" type="button">
 <span class="material-symbols-outlined text-[20px]">assignment</span>
 <span>Buat BAST Baru</span>
 </button>
@@ -566,17 +566,12 @@
       if (modal) modal.classList.add('hidden');
     }
 
-    function saveNewSPPD() {
-      alert("Surat Perintah Tugas (SPT) dan SPPD berhasil dibuat dan terdaftar di server BAPPERIDA!");
-      closeSppdModal();
-    }
-
     function triggerAutoPrintSPT() {
-      alert("Menyiapkan dokumen SPT dan SPPD berkop resmi Pemerintah Daerah Kabupaten Sumba Barat format Folio / F4...");
+      window.print();
     }
 
-    function printDoc(docId) {
-      alert("Mencetak dokumen SPT & SPPD No. " + docId + " berkop resmi BAPPERIDA Sumba Barat.");
+    function printDoc() {
+      window.print();
     }
 
     // Live WITA Clock
@@ -601,6 +596,49 @@
 
 <script>
   let _rawSppdList = [];
+  let _rawLemburList = [];
+
+  function updateSppdSummaryCards(items) {
+    const list = Array.isArray(items) ? items : [];
+    const total = list.length;
+    const selesai = list.filter(i => /selesai|lunas|disetujui/i.test(String(i.status || ''))).length;
+    const pct = total > 0 ? Math.round((selesai / total) * 100) : 0;
+    const totalHari = list.reduce((acc, i) => acc + (parseInt(i.lama_hari, 10) || 1), 0);
+
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('layananSppdTabBadge', String(total));
+    set('sppdStatAktif', String(total));
+    set('sppdStatAktifSub', `${total} SPT tercatat di database`);
+    set('sppdStatSpj', `${selesai} / ${total}`);
+    set('sppdStatSpjPct', `${pct}%`);
+    const bar = document.getElementById('sppdStatSpjBar');
+    if (bar) bar.style.width = `${pct}%`;
+    set('sppdStatHari', `${totalHari} Hari`);
+  }
+
+  function updateLemburSummaryCards(items) {
+    const list = Array.isArray(items) ? items : [];
+    const uniqOrg = new Set(list.map(i => i.nip || i.nama).filter(Boolean)).size;
+    const approved = list.filter(i => /disetujui|approved|selesai/i.test(String(i.status || ''))).length;
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('lemburStatTotal', String(list.length));
+    set('lemburStatOrg', `${uniqOrg} Org`);
+    set('lemburStatApproved', String(approved));
+  }
+
+  function exportLemburCsv() {
+    if (!_rawLemburList.length) return;
+    let csv = 'No,Nama,NIP,Tanggal,Jam,Keterangan,Status\n';
+    _rawLemburList.forEach((item, idx) => {
+      const esc = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
+      csv += `${idx + 1},${esc(item.nama)},${esc(item.nip)},${esc(item.tanggal)},${esc(item.jam || '-')},${esc(item.keterangan || item.jenis)},${esc(item.status || 'PENDING')}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Rekap_Lembur_Keterangan_BAPPERIDA_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+  }
 
   document.addEventListener('DOMContentLoaded', () => {
     loadRealSppdData();
@@ -614,8 +652,10 @@
       const json = await res.json();
       if (json.ok && Array.isArray(json.data)) {
         _rawSppdList = json.data;
+        updateSppdSummaryCards(_rawSppdList);
         renderSppdRows(_rawSppdList);
       } else {
+        updateSppdSummaryCards([]);
         if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-on-surface-variant font-medium">Belum ada penugasan SPPD terdaftar di database.</td></tr>';
       }
     } catch (err) {
@@ -706,8 +746,12 @@
       const res = await fetch('/api/stitch/keterangan');
       const json = await res.json();
       if (json.ok && Array.isArray(json.data)) {
-        renderLemburRows(json.data);
+        _rawLemburList = json.data;
+        updateLemburSummaryCards(_rawLemburList);
+        renderLemburRows(_rawLemburList);
       } else {
+        _rawLemburList = [];
+        updateLemburSummaryCards([]);
         if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-on-surface-variant font-medium">Tidak ada data lembur aktif.</td></tr>';
       }
     } catch (err) {

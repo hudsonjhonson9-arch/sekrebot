@@ -390,7 +390,7 @@
 <!-- Document Subject Title -->
 <div class="text-center my-space-sm flex flex-col gap-0.5">
 <span class="font-title-md text-title-md uppercase font-extrabold tracking-wide text-on-surface underline">Laporan Rekapitulasi Presensi &amp; Kedisiplinan Kerja Pegawai</span>
-<span class="font-label-md text-label-md text-on-surface-variant">Nomor Dokumen: 800.1.6/342/BAPPERIDA/X/2024 • Periode: 01 s.d 23 Oktober 2024</span>
+<span class="font-label-md text-label-md text-on-surface-variant" id="rekapDocSubtitle">Nomor Dokumen: 800.1.6/BAPPERIDA • Periode: Bulan Berjalan</span>
 </div>
 <!-- Emulated Official Report Table Inside Paper -->
 <div class="mt-space-md w-full overflow-x-auto">
@@ -430,7 +430,7 @@
         Memuat kalkulasi rincian TPP seluruh pegawai dari database daerah...
       </td>
     </tr>
-  </tbody><tfoot><tr class="bg-surface-container-low font-semibold text-on-surface"><td class="py-2.5 px-3 text-center font-mono" colspan="3">TOTAL AKUMULASI (5 DARI 52 PEGAWAI)</td><td class="py-2.5 px-2 text-right font-mono text-title-md">Rp 45.550.000</td><td class="py-2.5 px-2 text-center font-mono text-secondary">Rp 17.884.800</td><td class="py-2.5 px-2 text-center font-mono text-primary">Rp 26.841.300</td><td class="py-2.5 px-2 text-right font-mono text-error">-Rp 335.200</td><td class="py-2.5 px-3 text-right font-mono font-bold text-headline-sm text-secondary">Rp 44.726.100</td></tr></tfoot></table></div><div class="grid grid-cols-1 md:grid-cols-3 gap-space-sm p-space-md rounded-xl bg-surface-container-low"><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface-variant">Total Pagu TPP Terplotting:</span><span class="font-mono font-bold text-headline-sm text-on-surface">Rp 45.550.000</span></div><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface-variant">Total Pemotongan Disiplin:</span><span class="font-mono font-bold text-headline-sm text-error">-Rp 335.200 <span class="font-normal text-label-sm text-on-surface-variant">(0.74%)</span></span></div><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface-variant">Realisasi Bersih Dibayarkan (SP2D):</span><span class="font-mono font-bold text-headline-sm text-secondary">Rp 44.726.100</span></div></div></div><div class="mt-space-xl pt-space-lg flex flex-col md:flex-row items-center justify-between gap-space-lg">
+  </tbody><tfoot><tr class="bg-surface-container-low font-semibold text-on-surface"><td class="py-2.5 px-3 text-center font-mono" colspan="3" id="rekapTppTotalLabel">TOTAL AKUMULASI</td><td class="py-2.5 px-2 text-right font-mono text-title-md" id="rekapTppTotalPagu">Rp 0</td><td class="py-2.5 px-2 text-center font-mono text-secondary" id="rekapTppTotalDisiplin">Rp 0</td><td class="py-2.5 px-2 text-center font-mono text-primary" id="rekapTppTotalKinerja">Rp 0</td><td class="py-2.5 px-2 text-right font-mono text-error" id="rekapTppTotalPotong">-Rp 0</td><td class="py-2.5 px-3 text-right font-mono font-bold text-headline-sm text-secondary" id="rekapTppTotalBersih">Rp 0</td></tr></tfoot></table></div><div class="grid grid-cols-1 md:grid-cols-3 gap-space-sm p-space-md rounded-xl bg-surface-container-low"><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface-variant">Total Pagu TPP Terplotting:</span><span class="font-mono font-bold text-headline-sm text-on-surface" id="rekapTppCardPagu">Rp 0</span></div><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface-variant">Total Pemotongan Disiplin:</span><span class="font-mono font-bold text-headline-sm text-error" id="rekapTppCardPotong">-Rp 0</span></div><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface-variant">Realisasi Bersih Dibayarkan (SP2D):</span><span class="font-mono font-bold text-headline-sm text-secondary" id="rekapTppCardBersih">Rp 0</span></div></div></div><div class="mt-space-xl pt-space-lg flex flex-col md:flex-row items-center justify-between gap-space-lg">
 <!-- Sisi Kiri: Petugas Rekapitulasi -->
 <div class="flex flex-col items-center text-center">
 <span class="font-body-sm text-body-sm text-on-surface">Mengetahui/Mengesahkan,</span>
@@ -513,7 +513,7 @@
 </div>
 <!-- Table Pagination Footer -->
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm pt-space-xs">
-<span class="font-label-sm text-label-sm text-on-surface-variant">Menampilkan 5 dari 52 Pegawai BAPPERIDA Sumba Barat</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant" id="dailyLogCountLabel">Memuat data pegawai BAPPERIDA Sumba Barat...</span>
 <div class="flex items-center gap-space-xs">
 <button aria-label="Halaman Sebelumnya" class="p-2 rounded-xl bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high transition-all" type="button">
 <span class="material-symbols-outlined text-[18px]">chevron_left</span>
@@ -757,7 +757,14 @@
   async function loadRealRekapData() {
     const tbody = document.getElementById('rekapTableBody');
     try {
-      const res = await fetch('/api/stitch/rekap-tpp?bulan=10&tahun=2024');
+      const now = new Date();
+      const bulan = now.getMonth() + 1;
+      const tahun = now.getFullYear();
+      const blnNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      const subEl = document.getElementById('rekapDocSubtitle');
+      if (subEl) subEl.textContent = `Nomor Dokumen: 800.1.6/BAPPERIDA/${tahun} • Periode: ${blnNames[bulan - 1]} ${tahun}`;
+
+      const res = await fetch(`/api/stitch/rekap-tpp?bulan=${bulan}&tahun=${tahun}`);
       const json = await res.json();
 
       if (json.ok && Array.isArray(json.data) && json.data.length > 0) {
@@ -766,6 +773,7 @@
         renderRekapRows(_rawRekapList);
       } else {
         if (tbody) tbody.innerHTML = '<tr><td colspan="12" class="py-8 text-center text-on-surface-variant">Tidak ada data rekap presensi pada periode ini.</td></tr>';
+        renderRekapTppLampiran([]);
       }
     } catch (err) {
       console.error('loadRealRekapData error:', err);
@@ -861,6 +869,7 @@
         </tr>
       `;
     }).join('');
+    renderRekapTppLampiran(filtered);
   }
 
   function setupFilters() {
@@ -924,8 +933,29 @@
 
 <script>
   // Dynamic TPP Lampiran & Daily Log Presensi
+  let _rawDailyMonitoring = [];
   document.addEventListener('DOMContentLoaded', () => {
     loadRealMonitoringToday();
+    const searchInput = document.getElementById('search-pegawai');
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        const q = searchInput.value.trim().toLowerCase();
+        const filtered = q
+          ? _rawDailyMonitoring.filter(p =>
+              String(p.nama || '').toLowerCase().includes(q) ||
+              String(p.nip || '').toLowerCase().includes(q) ||
+              String(p.bidang || '').toLowerCase().includes(q)
+            )
+          : _rawDailyMonitoring;
+        renderDailyMonitoringRows(filtered);
+      });
+    }
+    const btnTg = document.getElementById('btn-telegram-sync');
+    if (btnTg) {
+      btnTg.onclick = () => {
+        window.location.href = 'index.html?view=admin&panel=rekap';
+      };
+    }
   });
 
   async function loadRealMonitoringToday() {
@@ -934,7 +964,8 @@
       const res = await fetch('/api/stitch/admin/monitoring-today');
       const json = await res.json();
       if (json.ok && Array.isArray(json.data)) {
-        renderDailyMonitoringRows(json.data);
+        _rawDailyMonitoring = json.data;
+        renderDailyMonitoringRows(_rawDailyMonitoring);
       }
     } catch (e) {
       console.error('loadRealMonitoringToday error:', e);
@@ -943,14 +974,18 @@
 
   function renderDailyMonitoringRows(items) {
     const tbody = document.getElementById('dailyLogTableBody');
+    const countEl = document.getElementById('dailyLogCountLabel');
+    if (countEl) {
+      countEl.textContent = `Menampilkan ${items.length} dari ${_rawDailyMonitoring.length || items.length} Pegawai BAPPERIDA Sumba Barat`;
+    }
     if (!tbody) return;
 
     if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-on-surface-variant">Tidak ada log presensi untuk hari ini.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-on-surface-variant">Tidak ada log presensi yang sesuai.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = items.map((p, idx) => {
+    tbody.innerHTML = items.map((p) => {
       const initials = (p.nama || 'P')
         .split(' ')
         .filter(w => !w.includes('.'))
@@ -961,7 +996,10 @@
 
       const jamMasuk = p.jamMasuk !== '-' ? p.jamMasuk : '--:--';
       const jamPulang = p.jamPulang !== '-' ? p.jamPulang : '--:--';
-      const isHadir = p.jamMasuk !== '-' || p.statusText.includes('Hadir');
+      const isHadir = p.jamMasuk !== '-' || String(p.statusText || '').includes('Hadir');
+      const safeNama = String(p.nama || '-').replace(/'/g, "\\'");
+      const safeNip = String(p.nip || '-').replace(/'/g, "\\'");
+      const safeLok = String(p.lokasi || 'Kantor BAPPERIDA').replace(/'/g, "\\'");
 
       return `
         <tr class="hover:bg-surface-container-low/50 transition-colors">
@@ -989,13 +1027,10 @@
             <div class="flex items-center gap-space-xs text-secondary font-label-sm">
               <span class="material-symbols-outlined text-[16px]">location_on</span>
               <span>${p.lokasi || 'Kantor BAPPERIDA (Geofence)'}</span>
-              <span class="text-outline-variant">•</span>
-              <span class="material-symbols-outlined text-[16px] text-primary">face</span>
-              <span>AI Match 98%</span>
             </div>
           </td>
           <td class="py-3 px-space-md text-center">
-            <button onclick="alert('Bukti Presensi: ' + '${p.nama}' + '\nWaktu: ' + '${jamMasuk}' + '\nLokasi: ' + '${p.lokasi}')" class="btn-detail px-space-sm py-1.5 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface font-label-sm transition-all cursor-pointer" type="button">
+            <button onclick="showRekapVerification('${safeNama}', '${safeNip}', '${jamMasuk} - ${jamPulang} WITA', '${safeLok}')" class="btn-detail px-space-sm py-1.5 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface font-label-sm transition-all cursor-pointer" type="button">
               Lihat Bukti
             </button>
           </td>
@@ -1004,44 +1039,63 @@
     }).join('');
   }
 
-  // Also hook into renderRekapTable to populate TPP lampiran
-  const _origRenderRekapTable = window.renderRekapTable;
-  window.renderRekapTable = function(data) {
-    if (_origRenderRekapTable) _origRenderRekapTable(data);
-    
+  function renderRekapTppLampiran(data) {
     const tppTbody = document.getElementById('rekapTppLampiranTableBody');
     if (!tppTbody) return;
 
-    if (!data.length) {
+    const list = Array.isArray(data) ? data : [];
+    const fmtRp = (v) => 'Rp ' + Math.round(v).toLocaleString('id-ID');
+
+    if (!list.length) {
       tppTbody.innerHTML = '<tr><td colspan="8" class="py-6 text-center text-on-surface-variant font-medium">Tidak ada data kalkulasi TPP.</td></tr>';
       return;
     }
 
-    tppTbody.innerHTML = data.slice(0, 10).map((row, idx) => {
-      const pagu = 6500000;
-      const skorDisiplin = parseFloat(row.skor_disiplin || 100);
+    let totPagu = 0, totDisiplin = 0, totKinerja = 0, totPotong = 0, totBersih = 0;
+
+    tppTbody.innerHTML = list.map((row, idx) => {
+      const pagu = Number(row.pagu_tpp) || 6500000;
+      const skorDisiplin = parseFloat(row.disiplin || row.skor_disiplin || 100) || 100;
       const disiplinNom = Math.round(pagu * 0.4 * (skorDisiplin / 100));
-      const kinerjaNom = Math.round(pagu * 0.6 * 0.98);
+      const kinerjaNom = Math.round(pagu * 0.6);
       const potong = Math.round(pagu * 0.4 * ((100 - skorDisiplin) / 100));
       const bersih = disiplinNom + kinerjaNom;
+
+      totPagu += pagu;
+      totDisiplin += disiplinNom;
+      totKinerja += kinerjaNom;
+      totPotong += potong;
+      totBersih += bersih;
 
       return `
         <tr class="hover:bg-surface-container-low transition-colors">
           <td class="py-2 px-2 text-center font-mono font-semibold">${idx + 1}</td>
           <td class="py-2 px-3">
             <div class="font-semibold text-on-surface">${row.nama}</div>
-            <div class="font-mono text-[10px] text-on-surface-variant">NIP ${row.nip}</div>
+            <div class="font-mono text-[10px] text-on-surface-variant">NIP ${row.nip || '-'}</div>
           </td>
           <td class="py-2 px-2 text-on-surface">${row.jabatan || 'Aparatur BAPPERIDA'}</td>
           <td class="py-2 px-2 text-right font-mono font-semibold text-on-surface">${pagu.toLocaleString('id-ID')}</td>
           <td class="py-2 px-2 text-center font-mono text-secondary font-semibold">${skorDisiplin}% (${disiplinNom.toLocaleString('id-ID')})</td>
-          <td class="py-2 px-2 text-center font-mono text-primary font-semibold">98.0% (${kinerjaNom.toLocaleString('id-ID')})</td>
+          <td class="py-2 px-2 text-center font-mono text-primary font-semibold">100% (${kinerjaNom.toLocaleString('id-ID')})</td>
           <td class="py-2 px-2 text-right font-mono text-error font-medium">-${potong.toLocaleString('id-ID')}</td>
-          <td class="py-2 px-3 text-right font-mono font-bold text-secondary text-title-md">Rp ${bersih.toLocaleString('id-ID')}</td>
+          <td class="py-2 px-3 text-right font-mono font-bold text-secondary text-title-md">${fmtRp(bersih)}</td>
         </tr>
       `;
     }).join('');
-  };
+
+    const pctPotong = totPagu > 0 ? ((totPotong / totPagu) * 100).toFixed(2) : '0.00';
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('rekapTppTotalLabel', `TOTAL AKUMULASI (${list.length} PEGAWAI)`);
+    set('rekapTppTotalPagu', fmtRp(totPagu));
+    set('rekapTppTotalDisiplin', fmtRp(totDisiplin));
+    set('rekapTppTotalKinerja', fmtRp(totKinerja));
+    set('rekapTppTotalPotong', '-' + fmtRp(totPotong));
+    set('rekapTppTotalBersih', fmtRp(totBersih));
+    set('rekapTppCardPagu', fmtRp(totPagu));
+    set('rekapTppCardPotong', `-${fmtRp(totPotong)} (${pctPotong}%)`);
+    set('rekapTppCardBersih', fmtRp(totBersih));
+  }
 </script>
 
 </body></html>

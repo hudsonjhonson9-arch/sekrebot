@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 
 import {
   SESSION_LOOKUP_SQL,
+  bearerToken,
   requireRole,
   createRequireRole,
   singleSessionRow,
@@ -222,4 +223,33 @@ test('createRequireRole cache menghormati batas maxEntries dan TTL', async () =>
   await new Promise((r) => setTimeout(r, 30));
   await mw({ headers: { authorization: `Bearer ${t1}` } }, fakeRes(), () => {});
   assert.equal(calls, 5);
+});
+
+test('bearerToken menerima ?token= HANYA untuk GET /raw/* dengan format token valid', () => {
+  const validSession = 'c'.repeat(192);
+  const validDevice = 'dv_' + 'd'.repeat(64);
+
+  assert.equal(
+    bearerToken({ method: 'GET', path: '/raw/1AbCdEf', headers: {}, query: { token: validSession } }),
+    validSession
+  );
+  assert.equal(
+    bearerToken({ method: 'GET', path: '/raw/1AbCdEf', headers: {}, query: { token: validDevice } }),
+    validDevice
+  );
+  // Ditolak untuk method selain GET
+  assert.equal(
+    bearerToken({ method: 'POST', path: '/raw/1AbCdEf', headers: {}, query: { token: validSession } }),
+    null
+  );
+  // Ditolak untuk endpoint selain /raw/*
+  assert.equal(
+    bearerToken({ method: 'GET', path: '/rekap-harian', headers: {}, query: { token: validSession } }),
+    null
+  );
+  // Ditolak untuk format token tidak valid
+  assert.equal(
+    bearerToken({ method: 'GET', path: '/raw/1AbCdEf', headers: {}, query: { token: 'invalid-short-token' } }),
+    null
+  );
 });
