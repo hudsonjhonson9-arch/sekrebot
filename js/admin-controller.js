@@ -46,6 +46,66 @@
     }
   }
 
+  const ESC_HTML = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (ch) => ESC_HTML[ch]);
+  }
+
+  function getSessionNip() {
+    try {
+      const uObj = JSON.parse(localStorage.getItem('tg_user_obj_v5') || 'null') || {};
+      return String(
+        localStorage.getItem('MY_NIP')
+        || localStorage.getItem('stitch_active_nip')
+        || localStorage.getItem('_sess_nip')
+        || uObj.NIP
+        || uObj.nip
+        || window._session?.nip
+        || ''
+      ).trim();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function formatDateTimeWita(iso) {
+    if (!iso) return 'Belum pernah digunakan';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    return d.toLocaleString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Makassar'
+    }) + ' WITA';
+  }
+
+  async function copyTextToClipboard(text) {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (_) {}
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch (_) {
+      ok = false;
+    }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
   function computeCutoffTime(jamMasuk, toleranceMins) {
     const m = /^(\d{1,2}):(\d{2})$/.exec(String(jamMasuk || '').trim());
     if (!m) return '';
@@ -76,7 +136,7 @@
     const btnOpenKiosk = $('btnOpenKiosk');
     const userCountEl = $('adminUserCount');
 
-    if (btnOpenKiosk) {
+    if (btnOpenKiosk && btnOpenKiosk.tagName !== 'A') {
       btnOpenKiosk.addEventListener('click', function () {
         window.location.href = 'kiosk.html';
       });
@@ -335,6 +395,339 @@
     }
     if (typeof window.renderDevLogTable === 'function') {
       window.renderDevLogTable();
+    }
+
+    // ── Terminal Meja Absen & Pairing Perangkat (/api/auth/devices) ──────────
+    const deviceNameInput = $('adminDeviceNameInput');
+    const btnIssueDevice = $('btnIssueDeviceToken');
+    const deviceListEl = $('adminDeviceList');
+    const deviceControlsEl = $('adminDevicePairingControls');
+    const devicePermNoteEl = $('adminDevicePermissionNote');
+
+    function getDeviceStatusBadge(row) {
+      const revoked = row.revoked_at || row.is_active === false;
+      if (revoked) {
+        return { label: 'Dicabut', cls: 'bg-rose-100 text-rose-700', active: false };
+      }
+      const expMs = row.expires_at ? Date.parse(row.expires_at) : NaN;
+      if (Number.isFinite(expMs) && expMs <= Date.now()) {
+        return { label: 'Kedaluwarsa', cls: 'bg-amber-100 text-amber-800', active: false };
+      }
+      return { label: 'Aktif', cls: 'bg-emerald-100 text-emerald-700', active: true };
+    }
+
+    async function loadDeviceList() {
+      if (!deviceListEl) return;
+      try {
+        const res = await fetch('/api/auth/devices');
+        if (res.status === 403) {
+          if (deviceControlsEl) deviceControlsEl.classList.add('hidden');
+          if (devicePermNoteEl) devicePermNoteEl.classList.remove('hidden');
+          deviceListEl.innerHTML = '';
+          return;
+        }
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json || json.ok === false) {
+          throw new Error((json && json.message) || `HTTP ${res.status}`);
+        }
+        const rows = Array.isArray(json.data) ? json.data : [];
+        if (!rows.length) {
+          deviceListEl.innerHTML = '<div class="py-5 px-4 rounded-xl bg-surface-container-low text-center text-xs font-medium text-on-surface-variant">Belum ada perangkat terminal meja yang terdaftar.</div>';
+          return;
+        }
+        deviceListEl.innerHTML = rows.map((row) => {
+          const st = getDeviceStatusBadge(row);
+          const label = row.device_label || 'Perangkat Kiosk Tanpa Nama';
+          const lastSeen = row.last_used_at ? formatDateTimeWita(row.last_used_at) : 'Belum pernah digunakan';
+          const expTxt = row.expires_at ? formatDateTimeWita(row.expires_at) : '-';
+          const revokeBtn = st.active
+            ? `<button type="button" data-revoke-device-id="${escapeHtml(row.id)}" data-device-label="${escapeHtml(label)}" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0"><span class="material-symbols-outlined text-[16px]">link_off</span><span>Cabut</span></button>`
+            : '';
+          return `
+            <div class="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-start gap-3 min-w-0">
+                <div class="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                  <span class="material-symbols-outlined text-[18px]">tablet_mac</span>
+                </div>
+                <div class="flex flex-col min-w-0 gap-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-title-md text-title-md text-on-surface font-semibold truncate">${escapeHtml(label)}</span>
+                    <span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${st.cls}">${st.label}</span>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] font-mono tabular-nums text-on-surface-variant">
+                    <span>NIP: ${escapeHtml(row.nip || '-')}</span>
+                    <span>Terakhir aktif: ${escapeHtml(lastSeen)}</span>
+                    <span>Berlaku s/d: ${escapeHtml(expTxt)}</span>
+                  </div>
+                </div>
+              </div>
+              ${revokeBtn}
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        deviceListEl.innerHTML = `<div class="py-3 px-4 rounded-xl bg-rose-50 border border-rose-200 text-xs font-medium text-rose-700">Gagal memuat daftar perangkat: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    async function showIssuedTokenModal(deviceLabel, deviceToken, expiresAt) {
+      if (window.Swal && typeof window.Swal.fire === 'function') {
+        await window.Swal.fire({
+          title: 'Token Pairing Perangkat Terbit',
+          icon: 'success',
+          html: `
+            <div class="flex flex-col gap-3 text-left mt-2">
+              <p class="text-xs text-slate-600">Salin token untuk <strong>${escapeHtml(deviceLabel)}</strong> sekarang. Demi keamanan, token asli tidak dapat ditampilkan ulang setelah dialog ini ditutup.</p>
+              <div class="flex items-center gap-2">
+                <input id="swalIssuedDeviceToken" type="text" readonly value="${escapeHtml(deviceToken)}" class="w-full px-3 py-2 rounded-xl bg-slate-100 border border-slate-300 font-mono text-xs text-slate-900 select-all outline-none" />
+                <button id="btnCopyIssuedToken" type="button" class="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shrink-0 cursor-pointer">Salin</button>
+              </div>
+              <p class="text-[11px] font-mono text-slate-500">Berlaku hingga: ${escapeHtml(formatDateTimeWita(expiresAt))}</p>
+            </div>
+          `,
+          confirmButtonText: 'Selesai',
+          didOpen: () => {
+            const copyBtn = document.getElementById('btnCopyIssuedToken');
+            const tokInput = document.getElementById('swalIssuedDeviceToken');
+            if (tokInput) tokInput.focus();
+            if (copyBtn) {
+              copyBtn.addEventListener('click', async () => {
+                const ok = await copyTextToClipboard(deviceToken);
+                copyBtn.textContent = ok ? 'Tersalin' : 'Gagal';
+                if (ok) {
+                  copyBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                  copyBtn.classList.add('bg-emerald-600');
+                }
+              });
+            }
+          }
+        });
+      } else {
+        await copyTextToClipboard(deviceToken);
+        notifyToast('success', 'Token Pairing Terbit', deviceToken);
+      }
+    }
+
+    if (deviceListEl) {
+      await loadDeviceList();
+      deviceListEl.addEventListener('click', async function (ev) {
+        const revokeBtn = ev.target.closest('[data-revoke-device-id]');
+        if (!revokeBtn) return;
+        const devId = revokeBtn.getAttribute('data-revoke-device-id');
+        const devLabel = revokeBtn.getAttribute('data-device-label') || 'perangkat ini';
+        let confirmed = true;
+        if (window.Swal && typeof window.Swal.fire === 'function') {
+          const r = await window.Swal.fire({
+            title: 'Cabut Akses Perangkat?',
+            text: `Token untuk "${devLabel}" akan dinonaktifkan permanen dan kiosk terkait harus pairing ulang.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Ya, Cabut Token',
+            cancelButtonText: 'Batal'
+          });
+          confirmed = !!r.isConfirmed;
+        }
+        if (!confirmed) return;
+
+        revokeBtn.disabled = true;
+        try {
+          const res = await fetch(`/api/auth/devices/${encodeURIComponent(devId)}`, { method: 'DELETE' });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json || json.ok === false) {
+            throw new Error((json && json.message) || `HTTP ${res.status}`);
+          }
+          notifyToast('success', 'Token Dicabut', `Akses untuk "${devLabel}" telah dinonaktifkan.`);
+          await loadDeviceList();
+        } catch (err) {
+          notifyToast('error', 'Gagal Mencabut Token', err.message);
+          revokeBtn.disabled = false;
+        }
+      });
+    }
+
+    if (btnIssueDevice && deviceNameInput) {
+      btnIssueDevice.addEventListener('click', async function () {
+        const deviceLabel = deviceNameInput.value.trim();
+        if (!deviceLabel) {
+          deviceNameInput.focus();
+          notifyToast('warning', 'Nama Perangkat Wajib', 'Masukkan nama perangkat kiosk terlebih dahulu.');
+          return;
+        }
+        let nip = getSessionNip();
+        if (!nip && window.Swal && typeof window.Swal.fire === 'function') {
+          const promptRes = await window.Swal.fire({
+            title: 'NIP Penanggung Jawab',
+            text: 'Masukkan NIP pegawai/superadmin yang terhubung dengan token perangkat ini.',
+            input: 'text',
+            inputPlaceholder: 'Contoh: 197211022001121001',
+            showCancelButton: true,
+            confirmButtonText: 'Lanjutkan',
+            cancelButtonText: 'Batal'
+          });
+          if (!promptRes.isConfirmed) return;
+          nip = String(promptRes.value || '').trim();
+        }
+        if (!nip) {
+          notifyToast('error', 'NIP Tidak Ditemukan', 'NIP sesi tidak tersedia untuk menerbitkan token perangkat.');
+          return;
+        }
+
+        btnIssueDevice.disabled = true;
+        try {
+          const res = await fetch('/api/auth/devices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nip, device_label: deviceLabel })
+          });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json || json.ok === false || !json.device_token) {
+            throw new Error((json && json.message) || `HTTP ${res.status}`);
+          }
+          deviceNameInput.value = '';
+          await loadDeviceList();
+          await showIssuedTokenModal(deviceLabel, json.device_token, json.expires_at);
+        } catch (err) {
+          notifyToast('error', 'Gagal Menerbitkan Token', err.message);
+        } finally {
+          btnIssueDevice.disabled = false;
+        }
+      });
+    }
+
+    // ── Keamanan Login & Identitas Instansi ──────────────────────────────────
+    const pwdToggle = $('adminRequirePasswordToggle');
+    const pwdStatus = $('adminRequirePasswordStatus');
+    const instansiWrap = $('adminInstansiIdentitasWrap');
+    const instansiBadge = $('adminInstansiCodeBadge');
+    const instansiNamaEl = $('adminInstansiNama');
+    const instansiHeaderEl = $('adminInstansiHeader');
+    const instansiAlamatEl = $('adminInstansiAlamat');
+    const btnSaveInstansi = $('btnSaveInstansi');
+    let activeInstansiId = instId;
+
+    const updatePwdBadge = (enabled, restricted = false) => {
+      if (!pwdStatus) return;
+      if (restricted) {
+        pwdStatus.textContent = 'Terbatas';
+        pwdStatus.className = 'px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[11px] font-bold font-mono';
+        return;
+      }
+      pwdStatus.textContent = enabled ? 'Aktif' : 'Nonaktif';
+      pwdStatus.className = enabled
+        ? 'px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold font-mono'
+        : 'px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[11px] font-bold font-mono';
+    };
+
+    if (pwdToggle) {
+      try {
+        const res = await fetch(`/api/password-toggle?instansi_id=${encodeURIComponent(instId)}`);
+        if (res.status === 403) {
+          pwdToggle.disabled = true;
+          updatePwdBadge(false, true);
+        } else {
+          const json = await res.json().catch(() => null);
+          if (res.ok && json && json.ok !== false) {
+            pwdToggle.checked = !!json.enabled;
+            updatePwdBadge(!!json.enabled);
+          } else {
+            updatePwdBadge(false);
+          }
+        }
+      } catch (err) {
+        console.warn('[admin] gagal memuat password-toggle:', err.message);
+        updatePwdBadge(false);
+      }
+
+      pwdToggle.addEventListener('change', async function () {
+        const nextVal = !!pwdToggle.checked;
+        pwdToggle.disabled = true;
+        try {
+          const res = await fetch('/api/password-toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ instansi_id: activeInstansiId || instId, enabled: nextVal })
+          });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json || json.ok === false) {
+            throw new Error((json && json.message) || `HTTP ${res.status}`);
+          }
+          const saved = !!json.enabled;
+          pwdToggle.checked = saved;
+          updatePwdBadge(saved);
+          notifyToast(
+            'success',
+            'Keamanan Login Diperbarui',
+            saved ? 'Verifikasi kata sandi saat login diaktifkan.' : 'Verifikasi kata sandi saat login dinonaktifkan.'
+          );
+        } catch (err) {
+          pwdToggle.checked = !nextVal;
+          updatePwdBadge(!nextVal);
+          notifyToast('error', 'Gagal Menyimpan Kebijakan Sandi', err.message);
+        } finally {
+          pwdToggle.disabled = false;
+        }
+      });
+    }
+
+    if (instansiWrap) {
+      try {
+        const res = await fetch('/api/instansi-list');
+        if (res.status === 403) {
+          instansiWrap.classList.add('hidden');
+        } else {
+          const json = await res.json().catch(() => null);
+          if (res.ok && json && json.ok !== false) {
+            const list = Array.isArray(json.data) ? json.data : (Array.isArray(json.rows) ? json.rows : []);
+            const current = list.find((r) => String(r.id || '').toLowerCase() === instId.toLowerCase()) || list[0];
+            if (current) {
+              activeInstansiId = String(current.id || instId);
+              if (instansiBadge) instansiBadge.textContent = activeInstansiId.toUpperCase();
+              if (instansiNamaEl) instansiNamaEl.value = current.nama_instansi || '';
+              if (instansiHeaderEl) instansiHeaderEl.value = current.header || '';
+              if (instansiAlamatEl) instansiAlamatEl.value = current.alamat || '';
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[admin] gagal memuat instansi-list:', err.message);
+      }
+    }
+
+    if (btnSaveInstansi && instansiNamaEl && instansiHeaderEl && instansiAlamatEl) {
+      btnSaveInstansi.addEventListener('click', async function () {
+        const namaInstansi = instansiNamaEl.value.trim();
+        const header = instansiHeaderEl.value.trim();
+        const alamat = instansiAlamatEl.value.trim();
+        if (!namaInstansi) {
+          instansiNamaEl.focus();
+          notifyToast('warning', 'Nama Instansi Wajib', 'Isi nama instansi terlebih dahulu.');
+          return;
+        }
+        btnSaveInstansi.disabled = true;
+        try {
+          const res = await fetch('/api/instansi-update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: activeInstansiId || instId,
+              nama_instansi: namaInstansi,
+              alamat,
+              header
+            })
+          });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json || json.ok === false) {
+            throw new Error((json && json.message) || `HTTP ${res.status}`);
+          }
+          notifyToast('success', 'Identitas Instansi Tersimpan', json.message || 'Identitas instansi dan kop surat berhasil diperbarui.');
+        } catch (err) {
+          notifyToast('error', 'Gagal Menyimpan Identitas', err.message);
+        } finally {
+          btnSaveInstansi.disabled = false;
+        }
+      });
     }
 
     if (!core) return;
