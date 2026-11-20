@@ -698,6 +698,259 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
     }
   }
 
+  // 4b. Agenda Master & Write Fallbacks (peta-ekonomi parity)
+  if (pathname === '/api/agenda/pegawai-list' && method === 'GET') {
+    try {
+      const { rows } = await doQuery(`SELECT "NIP" AS nip, username AS nama, COALESCE("Jabatan", '') AS jabatan FROM user_list ORDER BY username ASC`);
+      res.json({ ok: true, items: rows });
+      return true;
+    } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal mengambil daftar pegawai' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/agenda/bidang-list' && method === 'GET') {
+    try {
+      const { rows } = await doQuery(`SELECT id, nama_bidang AS nama FROM bidang_list WHERE instansi_id = 'bapperida' ORDER BY id ASC`);
+      res.json({ ok: true, items: rows });
+      return true;
+    } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal mengambil daftar bidang' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/agenda/surat-masuk' && method === 'POST') {
+    try {
+      const b = req.body || {};
+      const tahun = parseInt(b.tahun, 10) || new Date().getFullYear();
+      const cnt = await doQuery(`SELECT COUNT(*)::int AS c FROM agenda_surat_masuk WHERE tahun = $1`, [tahun]);
+      const urut = (cnt.rows[0]?.c || 0) + 1;
+      const nomorAgenda = b.nomor_agenda || `SM-${String(urut).padStart(3, '0')}/${tahun}`;
+      const actor = req.user?.nip || req.user?.name || 'Admin';
+      const { rows } = await doQuery(
+        `INSERT INTO agenda_surat_masuk
+         (tahun, nomor_agenda, tanggal_terima, nomor_surat_asli, tanggal_surat, asal_surat, perihal, sifat, kode_klasifikasi, file_url, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING *`,
+        [
+          tahun, nomorAgenda, b.tanggal_terima || b.tanggal_surat || new Date().toISOString().slice(0, 10),
+          b.nomor_surat_asli || '', b.tanggal_surat || new Date().toISOString().slice(0, 10),
+          b.asal_surat || '', b.perihal || '', b.sifat || 'Biasa', b.kode_klasifikasi || '050',
+          b.file_url || null, actor,
+        ]
+      );
+      res.status(201).json({ ok: true, item: rows[0] });
+      return true;
+    } catch (err) {
+      console.error('[arsip-db] POST /api/agenda/surat-masuk error:', err);
+      res.status(500).json({ ok: false, message: 'Gagal menyimpan surat masuk: ' + err.message });
+      return true;
+    }
+  }
+
+  const mSmDisp = pathname.match(/^\/api\/agenda\/surat-masuk\/(\d+)\/disposisi$/);
+  if (mSmDisp && method === 'GET') {
+    try {
+      const { rows } = await doQuery(`SELECT * FROM agenda_disposisi WHERE surat_masuk_id = $1 ORDER BY id DESC`, [Number(mSmDisp[1])]);
+      res.json({ ok: true, items: rows });
+      return true;
+    } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal mengambil disposisi' });
+      return true;
+    }
+  }
+
+  if (mSmDisp && method === 'POST') {
+    try {
+      const smId = Number(mSmDisp[1]);
+      const b = req.body || {};
+      const arahanArr = Array.isArray(b.arahan) ? b.arahan : (b.arahan ? [b.arahan] : []);
+      const diteruskanArr = Array.isArray(b.diteruskan_kepada) ? b.diteruskan_kepada : (b.diteruskan_kepada ? [b.diteruskan_kepada] : []);
+      const pemberi = b.pemberi_disposisi || req.user?.name || req.user?.username || 'Pimpinan BAPPERIDA';
+      const { rows } = await doQuery(
+        `INSERT INTO agenda_disposisi
+         (surat_masuk_id, tanggal_disposisi, pemberi_disposisi, arahan, catatan_instruksi, diteruskan_kepada, batas_waktu, status_tindaklanjut)
+         VALUES ($1, $2, $3, $4::jsonb, $5, $6::jsonb, $7, $8)
+         RETURNING *`,
+        [
+          smId, b.tanggal_disposisi || new Date().toISOString().slice(0, 10), pemberi,
+          JSON.stringify(arahanArr), b.catatan_instruksi || '', JSON.stringify(diteruskanArr),
+          b.batas_waktu || null, b.status_tindaklanjut || 'Didisposisi',
+        ]
+      );
+      await doQuery(`UPDATE agenda_surat_masuk SET status = 'Didisposisi', updated_at = NOW() WHERE id = $1`, [smId]).catch(() => {});
+      res.status(201).json({ ok: true, item: rows[0] });
+      return true;
+    } catch (err) {
+      console.error('[arsip-db] POST disposisi error:', err);
+      res.status(500).json({ ok: false, message: 'Gagal menyimpan disposisi: ' + err.message });
+      return true;
+    }
+  }
+
+  const mSmDel = pathname.match(/^\/api\/agenda\/surat-masuk\/(\d+)$/);
+  if (mSmDel && method === 'DELETE') {
+    try {
+      await doQuery(`DELETE FROM agenda_surat_masuk WHERE id = $1`, [Number(mSmDel[1])]);
+      res.json({ ok: true, message: 'Surat masuk dihapus' });
+      return true;
+    } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal menghapus surat masuk' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/agenda/surat-keluar/preview-nomor' && method === 'GET') {
+    try {
+      const tahun = parseInt(query.tahun, 10) || new Date().getFullYear();
+      const kode = String(query.kode || '050').trim();
+      const bulanIdx = Math.max(1, Math.min(12, parseInt(query.bulan, 10) || (new Date().getMonth() + 1)));
+      const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+      const { rows } = await doQuery(`SELECT COALESCE(MAX(nomor_urut), 0)::int AS max_urut FROM agenda_surat_keluar WHERE tahun = $1`, [tahun]);
+      const nextUrut = (rows[0]?.max_urut || 0) + 1;
+      const nomor = `${kode}/${String(nextUrut).padStart(3, '0')}/BAPPERIDA/${ROMAN[bulanIdx]}/${tahun}`;
+      res.json({ ok: true, nomor_urut: nextUrut, nomor_surat: nomor });
+      return true;
+    } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal membuat preview nomor surat' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/agenda/surat-keluar' && method === 'POST') {
+    try {
+      const b = req.body || {};
+      const tahun = parseInt(b.tahun, 10) || new Date().getFullYear();
+      const maxRes = await doQuery(`SELECT COALESCE(MAX(nomor_urut), 0)::int AS max_urut FROM agenda_surat_keluar WHERE tahun = $1`, [tahun]);
+      const urut = (maxRes.rows[0]?.max_urut || 0) + 1;
+      const kode = b.kode_klasifikasi || '050';
+      const nomorSurat = b.nomor_surat || `${kode}/${String(urut).padStart(3, '0')}/BAPPERIDA/${tahun}`;
+      const actor = req.user?.nip || req.user?.name || 'Admin';
+      const { rows } = await doQuery(
+        `INSERT INTO agenda_surat_keluar
+         (tahun, nomor_agenda, nomor_surat, kode_klasifikasi, nomor_urut, tanggal_surat, tujuan_surat, perihal, sifat, bidang_pengonsep, penandatangan, file_final_url, status, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+         RETURNING *`,
+        [
+          tahun, `SK-${String(urut).padStart(3, '0')}/${tahun}`, nomorSurat, kode, urut,
+          b.tanggal_surat || new Date().toISOString().slice(0, 10),
+          b.tujuan_surat || '', b.perihal || '', b.sifat || 'Biasa',
+          b.bidang_pengonsep || 'Sekretariat', b.penandatangan || 'Kepala BAPPERIDA',
+          b.file_final_url || b.file_url || null, b.status || 'Terbit', actor,
+        ]
+      );
+      res.status(201).json({ ok: true, item: rows[0] });
+      return true;
+    } catch (err) {
+      console.error('[arsip-db] POST /api/agenda/surat-keluar error:', err);
+      res.status(500).json({ ok: false, message: 'Gagal menyimpan surat keluar: ' + err.message });
+      return true;
+    }
+  }
+
+  const mSkDel = pathname.match(/^\/api\/agenda\/surat-keluar\/(\d+)$/);
+  if (mSkDel && method === 'DELETE') {
+    try {
+      await doQuery(`DELETE FROM agenda_surat_keluar WHERE id = $1`, [Number(mSkDel[1])]);
+      res.json({ ok: true, message: 'Surat keluar dihapus' });
+      return true;
+    } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal menghapus surat keluar' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/agenda/sppd/preview-nomor' && method === 'GET') {
+    try {
+      const tahun = parseInt(query.tahun, 10) || new Date().getFullYear();
+      const jenis = query.jenis === 'LUAR_DAERAH' ? 'LUAR_DAERAH' : 'DALAM_DAERAH';
+      const { rows } = await doQuery(`SELECT COUNT(*)::int AS c FROM agenda_sppd WHERE tahun = $1 AND jenis_sppd = $2`, [tahun, jenis]);
+      const urut = (rows[0]?.c || 0) + 1;
+      const pad = String(urut).padStart(3, '0');
+      const kode = jenis === 'LUAR_DAERAH' ? '094' : '090';
+      res.json({
+        ok: true,
+        nomor_register: pad,
+        nomor_spt: `${kode}/${pad}/SPT/BAPPERIDA/${tahun}`,
+        nomor_sppd: `${kode}/${pad}/SPPD/BAPPERIDA/${tahun}`,
+      });
+      return true;
+    } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal membuat preview nomor SPPD' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/agenda/sppd' && method === 'POST') {
+    try {
+      const b = req.body || {};
+      const tahun = parseInt(b.tahun, 10) || new Date().getFullYear();
+      const jenis = b.jenis_sppd === 'LUAR_DAERAH' ? 'LUAR_DAERAH' : 'DALAM_DAERAH';
+      const cnt = await doQuery(`SELECT COUNT(*)::int AS c FROM agenda_sppd WHERE tahun = $1 AND jenis_sppd = $2`, [tahun, jenis]);
+      const urut = (cnt.rows[0]?.c || 0) + 1;
+      const pad = String(urut).padStart(3, '0');
+      const kode = jenis === 'LUAR_DAERAH' ? '094' : '090';
+      const { rows } = await doQuery(
+        `INSERT INTO agenda_sppd
+         (jenis_sppd, tahun, nomor_register, nomor_spt, nomor_sppd, tanggal_spt, pejabat_perintah,
+          pelaksana_nip, pelaksana_nama, maksud_perjalanan, tempat_tujuan, provinsi_tujuan,
+          alat_angkutan, tanggal_berangkat, tanggal_kembali, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+         RETURNING *`,
+        [
+          jenis, tahun, pad,
+          b.nomor_spt || `${kode}/${pad}/SPT/BAPPERIDA/${tahun}`,
+          b.nomor_sppd || `${kode}/${pad}/SPPD/BAPPERIDA/${tahun}`,
+          b.tanggal_spt || b.tanggal_berangkat || new Date().toISOString().slice(0, 10),
+          b.pejabat_perintah || 'Kepala BAPPERIDA',
+          b.pelaksana_nip || '', b.pelaksana_nama || '', b.maksud_perjalanan || '',
+          b.tempat_tujuan || '', b.provinsi_tujuan || 'Nusa Tenggara Timur',
+          b.alat_angkutan || 'Kendaraan Dinas Roda 4',
+          b.tanggal_berangkat || new Date().toISOString().slice(0, 10),
+          b.tanggal_kembali || b.tanggal_berangkat || new Date().toISOString().slice(0, 10),
+          b.status || 'Terbit',
+        ]
+      );
+      res.status(201).json({ ok: true, item: rows[0] });
+      return true;
+    } catch (err) {
+      console.error('[arsip-db] POST /api/agenda/sppd error:', err);
+      res.status(500).json({ ok: false, message: 'Gagal menyimpan SPPD: ' + err.message });
+      return true;
+    }
+  }
+
+  const mSppdSpj = pathname.match(/^\/api\/agenda\/sppd\/(\d+)\/spj$/);
+  if (mSppdSpj && (method === 'POST' || method === 'PATCH')) {
+    try {
+      const b = req.body || {};
+      const lhpUrl = b.file_lhp_url || b.url || '';
+      const { rows } = await doQuery(
+        `UPDATE agenda_sppd SET file_lhp_url = COALESCE(NULLIF($1, ''), file_lhp_url), status = 'Laporan Masuk', updated_at = NOW() WHERE id = $2 RETURNING *`,
+        [lhpUrl, Number(mSppdSpj[1])]
+      );
+      res.json({ ok: true, item: rows[0] });
+      return true;
+    } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal menyimpan SPJ/LHP SPPD' });
+      return true;
+    }
+  }
+
+  const mSppdDel = pathname.match(/^\/api\/agenda\/sppd\/(\d+)$/);
+  if (mSppdDel && method === 'DELETE') {
+    try {
+      await doQuery(`DELETE FROM agenda_sppd WHERE id = $1`, [Number(mSppdDel[1])]);
+      res.json({ ok: true, message: 'Agenda SPPD dihapus' });
+      return true;
+    } catch (err) {
+      res.status(500).json({ ok: false, message: 'Gagal menghapus agenda SPPD' });
+      return true;
+    }
+  }
+
   // 5. Master Data
   if (pathname === '/api/kategori-dokumen' && method === 'GET') {
     try {

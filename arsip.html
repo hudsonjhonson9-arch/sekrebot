@@ -567,12 +567,47 @@
     </div>
     <div class="p-6 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
-        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Nomor Surat</label>
-        <input data-surat-field="nomor" type="text" placeholder="005/123/BAPPERIDA/2026" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Kode Klasifikasi</label>
+        <select data-surat-field="kode" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          <option value="050">050 - Perencanaan Pembangunan Daerah</option>
+          <option value="005">005 - Undangan &amp; Rapat Dinas</option>
+          <option value="900">900 - Pengelolaan Keuangan &amp; Anggaran</option>
+          <option value="800">800 - Kepegawaian &amp; SDM Aparatur</option>
+          <option value="020">020 - Peralatan &amp; Perlengkapan Kantor</option>
+          <option value="060">060 - Organisasi &amp; Tata Laksana</option>
+          <option value="045">045 - Hukum, Perjanjian &amp; Regulasi</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Sifat Surat</label>
+        <select data-surat-field="sifat" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          <option value="Biasa">Biasa</option>
+          <option value="Penting">Penting</option>
+          <option value="Segera">Segera</option>
+          <option value="Rahasia">Rahasia</option>
+        </select>
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Nomor Surat</label>
+          <button type="button" data-surat-keluar-only onclick="window.ArsipAgenda?.previewNomorSuratKeluar(this)" class="hidden text-xs font-bold text-[#2563eb] hover:underline cursor-pointer">Auto-Nomor</button>
+        </div>
+        <input data-surat-field="nomor" type="text" placeholder="050/001/BAPPERIDA/2026" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
       </div>
       <div>
         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tanggal Surat</label>
         <input data-surat-field="tanggal" type="date" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div data-surat-keluar-only class="hidden sm:col-span-2">
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Bidang Pengonsep</label>
+        <select data-surat-field="bidang" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          <option value="Sekretariat">Sekretariat</option>
+          <option value="Bidang Perencanaan Pengendalian dan Evaluasi Pembangunan Daerah">Bidang Perencanaan Pengendalian dan Evaluasi Pembangunan Daerah</option>
+          <option value="Bidang Perekonomian dan Sumber Daya Alam">Bidang Perekonomian dan Sumber Daya Alam</option>
+          <option value="Bidang Pemerintahan dan Pembangunan Manusia">Bidang Pemerintahan dan Pembangunan Manusia</option>
+          <option value="Bidang Infrastruktur dan Kewilayahan">Bidang Infrastruktur dan Kewilayahan</option>
+          <option value="Bidang Riset dan Inovasi Daerah">Bidang Riset dan Inovasi Daerah</option>
+        </select>
       </div>
       <div class="sm:col-span-2">
         <label data-surat-pihak-label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Asal Surat *</label>
@@ -581,6 +616,10 @@
       <div class="sm:col-span-2">
         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Perihal <span class="text-rose-500">*</span></label>
         <input data-surat-field="perihal" type="text" placeholder="Ringkasan perihal surat..." class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tautan Lampiran Google Drive (Opsional)</label>
+        <input data-surat-field="file_url" type="url" placeholder="https://drive.google.com/file/d/..." class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
       </div>
       <div class="sm:col-span-2">
         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Keterangan / Catatan</label>
@@ -613,6 +652,31 @@
         </select>
       </div>
       <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Pejabat Pemberi Perintah</label>
+        <select data-sppd-field="pejabat" aria-label="Pejabat Pemberi Perintah" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          <option value="Kepala BAPPERIDA">Kepala BAPPERIDA</option>
+          <option value="Sekretaris Daerah">Sekretaris Daerah</option>
+          <option value="Sekretaris BAPPERIDA">Sekretaris BAPPERIDA</option>
+          <option value="Plt. Kepala BAPPERIDA">Plt. Kepala BAPPERIDA</option>
+        </select>
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Nomor SPT</label>
+          <button type="button" onclick="window.ArsipAgenda?.previewNomorSppd(this)" class="text-xs font-bold text-[#2563eb] hover:underline cursor-pointer">Auto-Nomor</button>
+        </div>
+        <input data-sppd-field="nomor_spt" type="text" placeholder="090/001/SPT/BAPPERIDA/2026" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Nomor SPPD</label>
+        <input data-sppd-field="nomor_sppd" type="text" placeholder="090/001/SPPD/BAPPERIDA/2026" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Nama Pelaksana <span class="text-rose-500">*</span></label>
+        <input data-sppd-field="pelaksana" list="agendaPegawaiDatalist" type="text" placeholder="Ketik / pilih nama pegawai..." class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+        <datalist id="agendaPegawaiDatalist"></datalist>
+      </div>
+      <div>
         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Alat Angkutan</label>
         <select data-sppd-field="angkutan" aria-label="Alat Angkutan" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
           <option value="Kendaraan Dinas Roda 4">Kendaraan Dinas Roda 4</option>
@@ -622,11 +686,7 @@
           <option value="Kapal Laut / Feri">Kapal Laut / Feri</option>
         </select>
       </div>
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Nama Pelaksana <span class="text-rose-500">*</span></label>
-        <input data-sppd-field="pelaksana" type="text" placeholder="Nama lengkap pegawai..." class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
-      </div>
-      <div>
+      <div class="sm:col-span-2">
         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tempat Tujuan <span class="text-rose-500">*</span></label>
         <input data-sppd-field="tujuan" type="text" placeholder="Kota / Kecamatan tujuan..." class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
       </div>

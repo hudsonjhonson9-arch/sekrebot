@@ -504,40 +504,272 @@
           </div>
 
           <!-- TAB 2 MOBILE: AGENDA SURAT -->
-          <div id="mobileArsipTabAgendaSurat" class="hidden flex-col gap-3">
+          <div id="mobileArsipTabAgendaSurat" class="hidden flex-col gap-3.5">
+            <!-- Header Card + KPI -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col gap-3">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-slate-800 flex items-center justify-center text-blue-600 shrink-0">
+                    <span class="material-symbols-outlined text-[19px]">mail</span>
+                  </div>
+                  <div class="min-w-0">
+                    <h3 class="text-xs font-bold text-slate-900 dark:text-white truncate">Agenda Surat Masuk &amp; Keluar</h3>
+                    <p class="text-[10px] text-slate-400">Buku Agenda &amp; Lembar Disposisi</p>
+                  </div>
+                </div>
+                <button type="button" onclick="window.ArsipAgenda?.openSuratModal('drawerMobileAgendaSurat')" class="px-3 py-1.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm shrink-0 cursor-pointer">
+                  <span class="material-symbols-outlined text-[16px]">add</span>
+                  <span>Catat</span>
+                </button>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-center">
+                <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
+                  <span id="mSuratStatTotal" class="font-bold text-blue-600 dark:text-blue-400 text-base block font-mono tabular-nums">0</span>
+                  <span class="text-[10px] text-slate-400">Total Tercatat</span>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
+                  <span id="mSuratStatDisposisi" class="font-bold text-emerald-600 dark:text-emerald-400 text-base block font-mono tabular-nums">0</span>
+                  <span class="text-[10px] text-slate-400">Didisposisi / Terbit</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Switcher Surat Masuk / Keluar + Refresh -->
             <div class="flex items-center gap-2">
               <div class="flex-1 p-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex gap-1">
                 <button type="button" data-m-surat-mode="masuk" onclick="window.ArsipAgenda?.setMobileSuratMode('masuk')" class="flex-1 py-1.5 rounded-lg bg-[#2563eb] text-white text-[11px] font-bold cursor-pointer">Surat Masuk</button>
                 <button type="button" data-m-surat-mode="keluar" onclick="window.ArsipAgenda?.setMobileSuratMode('keluar')" class="flex-1 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 text-[11px] font-semibold cursor-pointer">Surat Keluar</button>
               </div>
-              <button type="button" onclick="window.ArsipAgenda?.loadMobileAgendaSurat()" aria-label="Segarkan Agenda Surat" class="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer">
+              <button type="button" onclick="window.ArsipAgenda?.loadMobileAgendaSurat()" aria-label="Segarkan Agenda Surat" class="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0 cursor-pointer">
                 <span class="material-symbols-outlined text-[18px]">refresh</span>
               </button>
             </div>
-            <div class="relative">
-              <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">search</span>
-              <input id="mobileAgendaSuratSearch" oninput="window.ArsipAgenda?.loadMobileAgendaSurat()" type="text" placeholder="Cari nomor surat, asal/tujuan, atau perihal..." class="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 outline-none focus:border-blue-500">
+
+            <!-- Search + Filter Tahun -->
+            <div class="flex items-center gap-2">
+              <div class="relative flex-1 min-w-0">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">search</span>
+                <input id="mobileAgendaSuratSearch" oninput="window.ArsipAgenda?.loadMobileAgendaSurat()" type="text" placeholder="Cari nomor, asal/tujuan, perihal..." class="w-full h-10 pl-9 pr-3 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 outline-none focus:border-blue-500">
+              </div>
+              <div class="w-24 shrink-0">
+                <select id="mobileAgendaSuratYear" onchange="window.ArsipAgenda?.loadMobileAgendaSurat()" aria-label="Tahun Surat" class="w-full h-10 px-2.5 text-xs font-mono font-bold rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 outline-none focus:border-blue-500">
+                  <option value="2026" selected>2026</option>
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                </select>
+              </div>
             </div>
+
             <div id="mobileAgendaSuratList" class="flex flex-col gap-2.5"></div>
           </div>
 
           <!-- TAB 3 MOBILE: AGENDA SPPD -->
-          <div id="mobileArsipTabAgendaSppd" class="hidden flex-col gap-3">
+          <div id="mobileArsipTabAgendaSppd" class="hidden flex-col gap-3.5">
+            <!-- Header Card + KPI -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col gap-3">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-slate-800 flex items-center justify-center text-blue-600 shrink-0">
+                    <span class="material-symbols-outlined text-[19px]">flight_takeoff</span>
+                  </div>
+                  <div class="min-w-0">
+                    <h3 class="text-xs font-bold text-slate-900 dark:text-white truncate">Register Agenda SPPD &amp; SPT</h3>
+                    <p class="text-[10px] text-slate-400">Perjalanan Dinas Dalam &amp; Luar Daerah</p>
+                  </div>
+                </div>
+                <button type="button" onclick="window.ArsipAgenda?.openSppdModal('drawerMobileAgendaSppd')" class="px-3 py-1.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm shrink-0 cursor-pointer">
+                  <span class="material-symbols-outlined text-[16px]">add</span>
+                  <span>Catat</span>
+                </button>
+              </div>
+              <div class="grid grid-cols-3 gap-2 text-center">
+                <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
+                  <span id="mSppdStatTotal" class="font-bold text-blue-600 dark:text-blue-400 text-base block font-mono tabular-nums">0</span>
+                  <span class="text-[10px] text-slate-400">Total</span>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
+                  <span id="mSppdStatDalam" class="font-bold text-emerald-600 dark:text-emerald-400 text-base block font-mono tabular-nums">0</span>
+                  <span class="text-[10px] text-slate-400">Dalam Daerah</span>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
+                  <span id="mSppdStatLuar" class="font-bold text-indigo-600 dark:text-indigo-400 text-base block font-mono tabular-nums">0</span>
+                  <span class="text-[10px] text-slate-400">Luar Daerah</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Switcher Jenis SPPD + Refresh -->
             <div class="flex items-center gap-2">
               <div class="flex-1 p-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex gap-1">
                 <button type="button" data-m-sppd-jenis="" onclick="window.ArsipAgenda?.setMobileSppdJenis('')" class="flex-1 py-1.5 rounded-lg bg-[#2563eb] text-white text-[11px] font-bold cursor-pointer">Semua</button>
                 <button type="button" data-m-sppd-jenis="DALAM_DAERAH" onclick="window.ArsipAgenda?.setMobileSppdJenis('DALAM_DAERAH')" class="flex-1 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 text-[11px] font-semibold cursor-pointer">Dalam</button>
                 <button type="button" data-m-sppd-jenis="LUAR_DAERAH" onclick="window.ArsipAgenda?.setMobileSppdJenis('LUAR_DAERAH')" class="flex-1 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 text-[11px] font-semibold cursor-pointer">Luar</button>
               </div>
-              <button type="button" onclick="window.ArsipAgenda?.loadMobileAgendaSppd()" aria-label="Segarkan Agenda SPPD" class="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer">
+              <button type="button" onclick="window.ArsipAgenda?.loadMobileAgendaSppd()" aria-label="Segarkan Agenda SPPD" class="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0 cursor-pointer">
                 <span class="material-symbols-outlined text-[18px]">refresh</span>
               </button>
             </div>
-            <div class="relative">
-              <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">search</span>
-              <input id="mobileAgendaSppdSearch" oninput="window.ArsipAgenda?.loadMobileAgendaSppd()" type="text" placeholder="Cari nomor SPPD, pelaksana, atau tujuan..." class="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 outline-none focus:border-blue-500">
+
+            <!-- Search + Filter Tahun -->
+            <div class="flex items-center gap-2">
+              <div class="relative flex-1 min-w-0">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">search</span>
+                <input id="mobileAgendaSppdSearch" oninput="window.ArsipAgenda?.loadMobileAgendaSppd()" type="text" placeholder="Cari nomor SPPD, pelaksana, tujuan..." class="w-full h-10 pl-9 pr-3 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 outline-none focus:border-blue-500">
+              </div>
+              <div class="w-24 shrink-0">
+                <select id="mobileAgendaSppdYear" onchange="window.ArsipAgenda?.loadMobileAgendaSppd()" aria-label="Tahun SPPD" class="w-full h-10 px-2.5 text-xs font-mono font-bold rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 outline-none focus:border-blue-500">
+                  <option value="2026" selected>2026</option>
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                </select>
+              </div>
             </div>
+
             <div id="mobileAgendaSppdList" class="flex flex-col gap-2.5"></div>
+          </div>
+
+          <!-- Mobile Bottom Drawer: Catat Agenda Surat (peta-ekonomi parity) -->
+          <div id="drawerMobileAgendaSurat" class="hidden fixed inset-0 z-[95] bg-slate-950/60 backdrop-blur-xs items-end justify-center" onclick="if(event.target===this) window.ArsipAgenda?.closeSuratModal()">
+            <div class="w-full max-w-[460px] bg-white dark:bg-slate-900 rounded-t-3xl p-5 shadow-2xl border-t border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto flex flex-col gap-3.5">
+              <div class="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto shrink-0"></div>
+              <div class="flex items-center justify-between">
+                <h3 data-surat-modal-title class="text-sm font-bold text-slate-900 dark:text-white">Catat Agenda Surat</h3>
+                <button type="button" onclick="window.ArsipAgenda?.closeSuratModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-[18px]">close</span></button>
+              </div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Kode Klasifikasi</label>
+                  <select data-surat-field="kode" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white">
+                    <option value="050">050 - Perencanaan</option>
+                    <option value="005">005 - Undangan &amp; Rapat</option>
+                    <option value="900">900 - Keuangan</option>
+                    <option value="800">800 - Kepegawaian</option>
+                    <option value="020">020 - Perlengkapan</option>
+                    <option value="060">060 - Organisasi</option>
+                    <option value="045">045 - Hukum &amp; Regulasi</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Sifat Surat</label>
+                  <select data-surat-field="sifat" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white">
+                    <option value="Biasa">Biasa</option>
+                    <option value="Penting">Penting</option>
+                    <option value="Segera">Segera</option>
+                    <option value="Rahasia">Rahasia</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Nomor Surat</label>
+                  <button type="button" data-surat-keluar-only onclick="window.ArsipAgenda?.previewNomorSuratKeluar(this)" class="hidden text-[11px] font-bold text-[#2563eb] hover:underline cursor-pointer">Auto-Nomor</button>
+                </div>
+                <input data-surat-field="nomor" type="text" placeholder="050/001/BAPPERIDA/2026" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+              </div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Tanggal Surat</label>
+                  <input data-surat-field="tanggal" type="date" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white">
+                </div>
+                <div data-surat-keluar-only class="hidden">
+                  <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Bidang Pengonsep</label>
+                  <select data-surat-field="bidang" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white">
+                    <option value="Sekretariat">Sekretariat</option>
+                    <option value="Bidang Perencanaan Pengendalian dan Evaluasi Pembangunan Daerah">Perencanaan &amp; Evaluasi</option>
+                    <option value="Bidang Perekonomian dan Sumber Daya Alam">Perekonomian &amp; SDA</option>
+                    <option value="Bidang Pemerintahan dan Pembangunan Manusia">Pemerintahan &amp; PM</option>
+                    <option value="Bidang Infrastruktur dan Kewilayahan">Infrastruktur &amp; Kewilayahan</option>
+                    <option value="Bidang Riset dan Inovasi Daerah">Riset &amp; Inovasi</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label data-surat-pihak-label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Asal Surat *</label>
+                <input data-surat-field="pihak" type="text" placeholder="Instansi / Unit pengirim atau tujuan..." class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Perihal <span class="text-rose-500">*</span></label>
+                <input data-surat-field="perihal" type="text" placeholder="Ringkasan perihal surat..." class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Tautan Lampiran Drive (Opsional)</label>
+                <input data-surat-field="file_url" type="url" placeholder="https://drive.google.com/file/d/..." class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+              </div>
+              <button type="button" onclick="window.ArsipAgenda?.submitSurat(this)" class="w-full py-3 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold shadow-md cursor-pointer">Simpan Agenda Surat</button>
+            </div>
+          </div>
+
+          <!-- Mobile Bottom Drawer: Catat Agenda SPPD (peta-ekonomi parity) -->
+          <div id="drawerMobileAgendaSppd" class="hidden fixed inset-0 z-[95] bg-slate-950/60 backdrop-blur-xs items-end justify-center" onclick="if(event.target===this) window.ArsipAgenda?.closeSppdModal()">
+            <div class="w-full max-w-[460px] bg-white dark:bg-slate-900 rounded-t-3xl p-5 shadow-2xl border-t border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto flex flex-col gap-3.5">
+              <div class="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto shrink-0"></div>
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white">Catat Agenda SPPD</h3>
+                <button type="button" onclick="window.ArsipAgenda?.closeSppdModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-[18px]">close</span></button>
+              </div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Jenis Perjalanan</label>
+                  <select data-sppd-field="jenis" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white">
+                    <option value="DALAM_DAERAH">Dalam Daerah</option>
+                    <option value="LUAR_DAERAH">Luar Daerah</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Pejabat Perintah</label>
+                  <select data-sppd-field="pejabat" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white">
+                    <option value="Kepala BAPPERIDA">Kepala BAPPERIDA</option>
+                    <option value="Sekretaris Daerah">Sekretaris Daerah</option>
+                    <option value="Sekretaris BAPPERIDA">Sekretaris BAPPERIDA</option>
+                    <option value="Plt. Kepala BAPPERIDA">Plt. Kepala BAPPERIDA</option>
+                  </select>
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Nomor SPT &amp; SPPD</span>
+                <button type="button" onclick="window.ArsipAgenda?.previewNomorSppd(this)" class="text-[11px] font-bold text-[#2563eb] hover:underline cursor-pointer">Auto-Nomor</button>
+              </div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <input data-sppd-field="nomor_spt" type="text" placeholder="No. SPT (otomatis)" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+                <input data-sppd-field="nomor_sppd" type="text" placeholder="No. SPPD (otomatis)" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Nama Pelaksana <span class="text-rose-500">*</span></label>
+                <input data-sppd-field="pelaksana" list="agendaPegawaiDatalist" type="text" placeholder="Ketik / pilih nama ASN..." class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+                <datalist id="agendaPegawaiDatalist"></datalist>
+              </div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Tempat Tujuan <span class="text-rose-500">*</span></label>
+                  <input data-sppd-field="tujuan" type="text" placeholder="Kota / Kecamatan..." class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Alat Angkutan</label>
+                  <select data-sppd-field="angkutan" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white">
+                    <option value="Kendaraan Dinas Roda 4">Roda 4 Dinas</option>
+                    <option value="Kendaraan Dinas Roda 2">Roda 2 Dinas</option>
+                    <option value="Angkutan Darat / Travel">Darat / Travel</option>
+                    <option value="Pesawat Udara (Ekonomi)">Pesawat Udara</option>
+                    <option value="Kapal Laut / Feri">Kapal / Feri</option>
+                  </select>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Tgl Berangkat</label>
+                  <input data-sppd-field="berangkat" type="date" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white">
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Tgl Kembali</label>
+                  <input data-sppd-field="kembali" type="date" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white">
+                </div>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Maksud Perjalanan Dinas <span class="text-rose-500">*</span></label>
+                <textarea data-sppd-field="maksud" rows="2" placeholder="Uraian kegiatan perjalanan dinas..." class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]"></textarea>
+              </div>
+              <button type="button" onclick="window.ArsipAgenda?.submitSppd(this)" class="w-full py-3 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold shadow-md cursor-pointer">Simpan Agenda SPPD</button>
+            </div>
           </div>
 
           <!-- Bottom Link to Desktop Portal -->

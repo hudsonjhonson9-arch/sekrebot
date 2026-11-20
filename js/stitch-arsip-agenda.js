@@ -1,33 +1,52 @@
-/* Stitch Arsip Digital — Sub-menu Controller (Dokumen, Agenda Surat, Agenda SPPD) */
+/* Stitch Arsip Digital — Sub-menu Controller (Dokumen, Agenda Surat, Agenda SPPD — peta-ekonomi parity) */
 (function (w, d) {
   'use strict';
 
   const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
-  let _activeTab = 'dokumen'; // 'dokumen' | 'agenda-surat' | 'agenda-sppd'
-  let _suratMode = 'masuk';   // 'masuk' | 'keluar'
-  let _sppdJenis = '';        // '' | 'DALAM_DAERAH' | 'LUAR_DAERAH'
+  let _activeTab = 'dokumen';
+  let _suratMode = 'masuk';
+  let _sppdJenis = '';
   let _suratItems = [];
   let _sppdItems = [];
+  let _pegawaiList = [];
+  let _mTab = 'dokumen';
+  let _mSuratMode = 'masuk';
+  let _mSppdJenis = '';
+
+  const ARAHAN_OPTIONS = [
+    'Tindak lanjuti sesuai ketentuan',
+    'Hadiri / Wakili rapat dinas',
+    'Pelajari & berikan telaahan / saran',
+    'Siapkan bahan / draf surat balasan',
+    'Koordinasikan dengan bidang terkait',
+    'Untuk diketahui & dipedomani',
+    'Arsipkan & catat dalam agenda',
+  ];
+
+  const DITERUSKAN_OPTIONS = [
+    'Sekretaris BAPPERIDA',
+    'Subbagian Umum & Kepegawaian',
+    'Subbagian Perencanaan & Keuangan',
+    'Bidang Perencanaan Pengendalian dan Evaluasi Pembangunan Daerah',
+    'Bidang Perekonomian dan Sumber Daya Alam',
+    'Bidang Pemerintahan dan Pembangunan Manusia',
+    'Bidang Infrastruktur dan Kewilayahan',
+    'Bidang Riset dan Inovasi Daerah',
+  ];
 
   const TAB_META = {
-    dokumen: {
-      crumb: 'Arsip Digital • Dokumen',
-      fabLabel: 'Tambah Dokumen',
-      fabIcon: 'add',
-    },
-    'agenda-surat': {
-      crumb: 'Arsip Digital • Agenda Surat',
-      fabLabel: 'Catat Surat',
-      fabIcon: 'mail',
-    },
-    'agenda-sppd': {
-      crumb: 'Arsip Digital • Agenda SPPD',
-      fabLabel: 'Catat SPPD',
-      fabIcon: 'flight_takeoff',
-    },
+    dokumen: { crumb: 'Arsip Digital • Dokumen', fabLabel: 'Tambah Dokumen', fabIcon: 'add' },
+    'agenda-surat': { crumb: 'Arsip Digital • Agenda Surat', fabLabel: 'Catat Surat', fabIcon: 'mail' },
+    'agenda-sppd': { crumb: 'Arsip Digital • Agenda SPPD', fabLabel: 'Catat SPPD', fabIcon: 'flight_takeoff' },
   };
+
+  function togglePanel(el, show) {
+    if (!el) return;
+    el.classList.toggle('hidden', !show);
+    el.classList.toggle('flex', show);
+  }
 
   function resolveTabFromHash() {
     const h = String(w.location.hash || '').replace(/^#/, '').toLowerCase();
@@ -36,6 +55,62 @@
     return 'dokumen';
   }
 
+  function fmtDate(val) {
+    if (!val) return '-';
+    const s = String(val);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      const dt = new Date(s.slice(0, 10) + 'T00:00:00');
+      if (!Number.isNaN(dt.getTime())) {
+        return dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+    }
+    return s;
+  }
+
+  function statusPill(st) {
+    const s = String(st || 'Tercatat').toUpperCase();
+    if (s.includes('SELESAI') || s.includes('TERBIT') || s.includes('DIKIRIM') || s.includes('LAPORAN')) {
+      return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">${esc(st)}</span>`;
+    }
+    if (s.includes('DISPOSISI') || s.includes('PROSES') || s.includes('BERJALAN')) {
+      return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300">${esc(st)}</span>`;
+    }
+    if (s.includes('BATAL') || s.includes('TOLAK')) {
+      return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">${esc(st)}</span>`;
+    }
+    return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${esc(st || 'Tercatat')}</span>`;
+  }
+
+  function sifatPill(sifat) {
+    const s = String(sifat || 'Biasa');
+    if (/rahasia/i.test(s)) return `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300">${esc(s)}</span>`;
+    if (/segera|penting/i.test(s)) return `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">${esc(s)}</span>`;
+    return '';
+  }
+
+  function refreshPickersIn(root) {
+    if (!root || !w.StitchPicker) return;
+    root.querySelectorAll('select').forEach((s) => {
+      w.StitchPicker.enhanceSelect?.(s);
+      w.StitchPicker.refresh?.(s);
+    });
+    root.querySelectorAll('input[type="date"]').forEach((i) => w.StitchPicker.enhanceDate?.(i));
+  }
+
+  async function ensurePegawaiLoaded() {
+    if (_pegawaiList.length) return _pegawaiList;
+    try {
+      const r = await fetch('/api/arsip/p/api/agenda/pegawai-list');
+      const j = await r.json().catch(() => ({}));
+      _pegawaiList = Array.isArray(j.items) ? j.items : (Array.isArray(j) ? j : []);
+    } catch (_) {}
+    d.querySelectorAll('datalist#agendaPegawaiDatalist').forEach((dl) => {
+      dl.innerHTML = _pegawaiList.map((p) => `<option value="${esc(p.nama || p.username || '')}">${esc(p.nip ? `${p.nama || p.username} (${p.nip})` : (p.nama || ''))}</option>`).join('');
+    });
+    return _pegawaiList;
+  }
+
+  /* ── DESKTOP TAB ROUTING ──────────────────────────────────────────────── */
   function switchTab(tab, updateHash = true) {
     const next = TAB_META[tab] ? tab : 'dokumen';
     _activeTab = next;
@@ -45,12 +120,9 @@
       w.dispatchEvent(new HashChangeEvent('hashchange'));
     }
 
-    const pDok = d.getElementById('arsipPanelDokumen');
-    const pSur = d.getElementById('arsipPanelAgendaSurat');
-    const pSpp = d.getElementById('arsipPanelAgendaSppd');
-    if (pDok) pDok.classList.toggle('hidden', next !== 'dokumen');
-    if (pSur) pSur.classList.toggle('hidden', next !== 'agenda-surat');
-    if (pSpp) pSpp.classList.toggle('hidden', next !== 'agenda-sppd');
+    togglePanel(d.getElementById('arsipPanelDokumen'), next === 'dokumen');
+    togglePanel(d.getElementById('arsipPanelAgendaSurat'), next === 'agenda-surat');
+    togglePanel(d.getElementById('arsipPanelAgendaSppd'), next === 'agenda-sppd');
 
     d.querySelectorAll('[data-arsip-tab-btn]').forEach((btn) => {
       const act = btn.dataset.arsipTabBtn === next;
@@ -75,44 +147,12 @@
   }
 
   function handleFabClick() {
-    if (_activeTab === 'agenda-surat') {
-      openSuratModal();
-      return;
-    }
-    if (_activeTab === 'agenda-sppd') {
-      openSppdModal();
-      return;
-    }
+    if (_activeTab === 'agenda-surat') { openSuratModal(); return; }
+    if (_activeTab === 'agenda-sppd') { openSppdModal(); return; }
     w.ArsipColumns?.openUploadModal();
   }
 
-  function fmtDate(val) {
-    if (!val) return '-';
-    const s = String(val);
-    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-      const dt = new Date(s.slice(0, 10) + 'T00:00:00');
-      if (!Number.isNaN(dt.getTime())) {
-        return dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-      }
-    }
-    return s;
-  }
-
-  function statusPill(st) {
-    const s = String(st || 'TERCATAT').toUpperCase();
-    if (s.includes('SELESAI') || s.includes('TERBIT') || s.includes('DIKIRIM') || s.includes('DISETUJUI')) {
-      return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">${esc(st)}</span>`;
-    }
-    if (s.includes('DISPOSISI') || s.includes('PROSES') || s.includes('BERJALAN')) {
-      return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300">${esc(st)}</span>`;
-    }
-    if (s.includes('BATAL') || s.includes('TOLAK')) {
-      return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">${esc(st)}</span>`;
-    }
-    return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${esc(st || 'Tercatat')}</span>`;
-  }
-
-  /* ── AGENDA SURAT ──────────────────────────────────────────────────────── */
+  /* ── AGENDA SURAT (DESKTOP + SHARED ACTIONS) ──────────────────────────── */
   function setSuratMode(mode) {
     _suratMode = mode === 'keluar' ? 'keluar' : 'masuk';
     d.querySelectorAll('[data-surat-mode-btn]').forEach((btn) => {
@@ -158,27 +198,27 @@
         const noAgenda = _suratMode === 'masuk'
           ? (item.nomor_agenda || `#${item.id || i + 1}`)
           : (item.nomor_surat || `#${item.nomor_urut || item.id || i + 1}`);
-        const noSub = _suratMode === 'masuk'
-          ? (item.nomor_surat_asli || '-')
-          : (item.bidang_pengonsep || '-');
-        const tgl = _suratMode === 'masuk'
-          ? fmtDate(item.tanggal_terima || item.tanggal_surat)
-          : fmtDate(item.tanggal_surat);
-        const pihak = _suratMode === 'masuk'
-          ? (item.asal_surat || '-')
-          : (item.tujuan_surat || '-');
-        const perihal = item.perihal || '-';
+        const noSub = _suratMode === 'masuk' ? (item.nomor_surat_asli || '-') : (item.bidang_pengonsep || '-');
+        const tgl = _suratMode === 'masuk' ? fmtDate(item.tanggal_terima || item.tanggal_surat) : fmtDate(item.tanggal_surat);
+        const pihak = _suratMode === 'masuk' ? (item.asal_surat || '-') : (item.tujuan_surat || '-');
         const st = item.status_tindaklanjut || item.status || 'Tercatat';
 
         return `
           <tr class="border-b border-slate-100 dark:border-slate-800/80 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer" onclick="window.ArsipAgenda?.showSuratDetail(${i})">
-            <td class="px-4 py-3 font-mono text-xs font-bold text-slate-900 dark:text-white whitespace-nowrap">${esc(noAgenda)}<div class="text-[10px] font-normal text-slate-400 truncate max-w-[180px]">${esc(noSub)}</div></td>
+            <td class="px-4 py-3 font-mono text-xs font-bold text-slate-900 dark:text-white whitespace-nowrap">
+              <div class="flex items-center gap-1.5">${esc(noAgenda)} ${sifatPill(item.sifat)}</div>
+              <div class="text-[10px] font-normal text-slate-400 truncate max-w-[180px]">${esc(noSub)}</div>
+            </td>
             <td class="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">${esc(tgl)}</td>
             <td class="px-4 py-3 text-xs font-semibold text-slate-800 dark:text-slate-200 max-w-[200px] truncate">${esc(pihak)}</td>
-            <td class="px-4 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-[300px] truncate">${esc(perihal)}</td>
+            <td class="px-4 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-[280px] truncate">${esc(item.perihal || '-')}</td>
             <td class="px-4 py-3 whitespace-nowrap">${statusPill(st)}</td>
             <td class="px-4 py-3 text-right whitespace-nowrap">
-              <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.showSuratDetail(${i})" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-slate-700 dark:text-slate-200 hover:text-[#2563eb] text-[11px] font-semibold cursor-pointer">Detail</button>
+              <div class="inline-flex items-center gap-1.5">
+                ${_suratMode === 'masuk' ? `<button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.openDisposisiModal(${item.id})" class="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-[11px] font-bold cursor-pointer">Disposisi</button>` : ''}
+                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.showSuratDetail(${i})" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-semibold cursor-pointer">Detail</button>
+                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.deleteSurat(${item.id})" title="Hapus" class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+              </div>
             </td>
           </tr>
         `;
@@ -193,19 +233,21 @@
     const item = _suratItems[idx];
     if (!item || !w.Swal) return;
     const isMasuk = _suratMode === 'masuk';
+    const diteruskan = Array.isArray(item.diteruskan_kepada) ? item.diteruskan_kepada.join(', ') : (item.diteruskan_kepada || '');
     const rows = [
       ['Nomor Agenda / Surat', isMasuk ? (item.nomor_agenda || '-') : (item.nomor_surat || '-')],
       [isMasuk ? 'Nomor Surat Asli' : 'Bidang Pengonsep', isMasuk ? (item.nomor_surat_asli || '-') : (item.bidang_pengonsep || '-')],
       ['Tanggal Surat', fmtDate(item.tanggal_surat)],
       isMasuk ? ['Tanggal Diterima', fmtDate(item.tanggal_terima)] : null,
+      ['Sifat Surat', item.sifat || 'Biasa'],
       [isMasuk ? 'Asal Surat' : 'Tujuan Surat', isMasuk ? (item.asal_surat || '-') : (item.tujuan_surat || '-')],
       ['Perihal', item.perihal || '-'],
       ['Status', item.status_tindaklanjut || item.status || 'Tercatat'],
-      item.diteruskan_kepada ? ['Disposisi Kepada', item.diteruskan_kepada] : null,
+      diteruskan ? ['Disposisi Kepada', diteruskan] : null,
       item.catatan_instruksi ? ['Catatan Disposisi', item.catatan_instruksi] : null,
     ].filter(Boolean);
 
-    const fileUrl = item.file_url || item.lampiran_url || '';
+    const fileUrl = item.file_url || item.file_final_url || item.drive_url || '';
     const html = `
       <div class="text-left text-xs divide-y divide-slate-100 dark:divide-slate-800">
         ${rows.map(([k, v]) => `<div class="py-2 flex justify-between gap-4"><span class="text-slate-500 shrink-0">${esc(k)}</span><span class="font-semibold text-slate-900 dark:text-white text-right">${esc(v)}</span></div>`).join('')}
@@ -215,47 +257,170 @@
     w.Swal.fire({
       title: isMasuk ? 'Detail Surat Masuk' : 'Detail Surat Keluar',
       html,
-      width: 560,
+      width: 540,
+      showDenyButton: isMasuk,
+      denyButtonText: 'Lembar Disposisi',
+      denyButtonColor: '#0f172a',
       confirmButtonText: 'Tutup',
       confirmButtonColor: '#2563eb',
+    }).then((res) => {
+      if (res.isDenied && isMasuk) openDisposisiModal(item.id);
     });
   }
 
-  function openSuratModal() {
-    const m = d.getElementById('modalArsipAgendaSurat');
+  async function openDisposisiModal(suratId) {
+    if (!w.Swal || !suratId) return;
+    let history = [];
+    try {
+      const r = await fetch(`/api/arsip/p/api/agenda/surat-masuk/${suratId}/disposisi`);
+      const j = await r.json().catch(() => ({}));
+      history = Array.isArray(j.items) ? j.items : (Array.isArray(j) ? j : []);
+    } catch (_) {}
+
+    const histHtml = history.length
+      ? `<div class="mb-3 max-h-32 overflow-y-auto flex flex-col gap-1.5">${history.map((h) => `
+          <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-left text-[11px] border border-slate-200/70 dark:border-slate-700">
+            <div class="font-bold text-slate-900 dark:text-white">${esc(Array.isArray(h.diteruskan_kepada) ? h.diteruskan_kepada.join(', ') : (h.diteruskan_kepada || '-'))}</div>
+            <div class="text-slate-600 dark:text-slate-300">${esc(h.catatan_instruksi || (Array.isArray(h.arahan) ? h.arahan.join('; ') : ''))}</div>
+            <div class="text-[10px] text-slate-400 font-mono mt-0.5">${esc(fmtDate(h.tanggal_disposisi))} • ${esc(h.pemberi_disposisi || '')}</div>
+          </div>`).join('')}</div>`
+      : '';
+
+    const { value: formValues } = await w.Swal.fire({
+      title: 'Lembar Disposisi Surat Masuk',
+      width: 560,
+      html: `
+        ${histHtml}
+        <div class="text-left flex flex-col gap-3 text-xs">
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Diteruskan Kepada *</label>
+            <select id="swalDispTujuan" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+              ${DITERUSKAN_OPTIONS.map((o) => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Arahan Pimpinan *</label>
+            <select id="swalDispArahan" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+              ${ARAHAN_OPTIONS.map((o) => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Batas Waktu (Opsional)</label>
+            <input id="swalDispBatas" type="date" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Catatan / Instruksi Tambahan</label>
+            <textarea id="swalDispCatatan" rows="2" placeholder="Instruksi khusus..." class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"></textarea>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Kirim Disposisi',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb',
+      preConfirm: () => ({
+        diteruskan_kepada: [d.getElementById('swalDispTujuan')?.value || ''],
+        arahan: [d.getElementById('swalDispArahan')?.value || ''],
+        batas_waktu: d.getElementById('swalDispBatas')?.value || null,
+        catatan_instruksi: (d.getElementById('swalDispCatatan')?.value || '').trim(),
+      }),
+    });
+
+    if (!formValues) return;
+    try {
+      const r = await fetch(`/api/arsip/p/api/agenda/surat-masuk/${suratId}/disposisi`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formValues),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) throw new Error(j.message || `HTTP ${r.status}`);
+      w.Swal.fire({ icon: 'success', title: 'Disposisi Tersimpan', text: 'Lembar disposisi berhasil dicatat.' });
+      loadAgendaSurat();
+      loadMobileAgendaSurat();
+    } catch (err) {
+      w.Swal.fire({ icon: 'error', title: 'Gagal', text: err?.message || 'Koneksi terganggu.' });
+    }
+  }
+
+  async function deleteSurat(id) {
+    if (!id || !w.Swal) return;
+    const cf = await w.Swal.fire({
+      icon: 'warning',
+      title: 'Hapus Agenda Surat?',
+      text: 'Data agenda surat yang dipilih akan dihapus permanen.',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Hapus',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#dc2626',
+    });
+    if (!cf.isConfirmed) return;
+    const ep = _suratMode === 'masuk' ? `/api/arsip/p/api/agenda/surat-masuk/${id}` : `/api/arsip/p/api/agenda/surat-keluar/${id}`;
+    try {
+      const r = await fetch(ep, { method: 'DELETE' });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) throw new Error(j.message || `HTTP ${r.status}`);
+      loadAgendaSurat();
+      loadMobileAgendaSurat();
+    } catch (err) {
+      w.Swal.fire({ icon: 'error', title: 'Gagal Menghapus', text: err?.message || 'Koneksi terganggu.' });
+    }
+  }
+
+  async function previewNomorSuratKeluar(btnEl) {
+    const modal = btnEl?.closest('#modalArsipAgendaSurat, #drawerMobileAgendaSurat');
+    if (!modal) return;
+    const kode = modal.querySelector('[data-surat-field="kode"]')?.value || '050';
+    const tgl = modal.querySelector('[data-surat-field="tanggal"]')?.value || new Date().toISOString().slice(0, 10);
+    const tahun = tgl.slice(0, 4);
+    const bulan = Number(tgl.slice(5, 7)) || (new Date().getMonth() + 1);
+    try {
+      const r = await fetch(`/api/arsip/p/api/agenda/surat-keluar/preview-nomor?tahun=${encodeURIComponent(tahun)}&kode=${encodeURIComponent(kode)}&bulan=${bulan}`);
+      const j = await r.json().catch(() => ({}));
+      const nomor = j.nomor_surat || j.nomor || '';
+      const inp = modal.querySelector('[data-surat-field="nomor"]');
+      if (inp && nomor) inp.value = nomor;
+    } catch (_) {}
+  }
+
+  function openSuratModal(targetId) {
+    const m = d.getElementById(targetId || 'modalArsipAgendaSurat') || d.getElementById('drawerMobileAgendaSurat');
     if (!m) return;
     const isMasuk = _suratMode === 'masuk';
     const titleEl = m.querySelector('[data-surat-modal-title]');
     if (titleEl) titleEl.textContent = isMasuk ? 'Catat Agenda Surat Masuk' : 'Catat Agenda Surat Keluar';
     const lblPihak = m.querySelector('[data-surat-pihak-label]');
     if (lblPihak) lblPihak.textContent = isMasuk ? 'Asal Surat *' : 'Tujuan Surat *';
+    m.querySelectorAll('[data-surat-keluar-only]').forEach((el) => el.classList.toggle('hidden', isMasuk));
     m.querySelectorAll('input, textarea').forEach((el) => {
       if (el.type === 'date') el.value = new Date().toISOString().slice(0, 10);
       else el.value = '';
     });
     m.classList.remove('hidden');
     m.classList.add('flex');
-    if (w.StitchPicker) {
-      m.querySelectorAll('select').forEach((s) => { w.StitchPicker.enhanceSelect?.(s); w.StitchPicker.refresh?.(s); });
-      m.querySelectorAll('input[type="date"]').forEach((i) => w.StitchPicker.enhanceDate?.(i));
-    }
+    refreshPickersIn(m);
   }
 
   function closeSuratModal() {
-    const m = d.getElementById('modalArsipAgendaSurat');
-    if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+    ['modalArsipAgendaSurat', 'drawerMobileAgendaSurat'].forEach((id) => {
+      const m = d.getElementById(id);
+      if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+    });
   }
 
   async function submitSurat(btnEl) {
-    const m = d.getElementById('modalArsipAgendaSurat');
+    const m = btnEl?.closest('#modalArsipAgendaSurat, #drawerMobileAgendaSurat') || d.getElementById('modalArsipAgendaSurat');
     if (!m) return;
     const v = (k) => (m.querySelector(`[data-surat-field="${k}"]`)?.value || '').trim();
     const nomor = v('nomor');
+    const kode = v('kode') || '050';
+    const sifat = v('sifat') || 'Biasa';
     const tanggal = v('tanggal') || new Date().toISOString().slice(0, 10);
     const pihak = v('pihak');
     const perihal = v('perihal');
     const bidang = v('bidang') || 'Sekretariat';
     const keterangan = v('keterangan');
+    const fileUrl = v('file_url');
 
     if (!pihak || !perihal) {
       if (w.Swal) w.Swal.fire('Perhatian', 'Asal/Tujuan surat dan Perihal wajib diisi.', 'warning');
@@ -268,8 +433,8 @@
     const isMasuk = _suratMode === 'masuk';
     const ep = isMasuk ? '/api/arsip/p/api/agenda/surat-masuk' : '/api/arsip/p/api/agenda/surat-keluar';
     const body = isMasuk
-      ? { nomor_surat_asli: nomor, tanggal_surat: tanggal, tanggal_terima: tanggal, asal_surat: pihak, perihal, keterangan, tahun: Number(tanggal.slice(0, 4)) }
-      : { nomor_surat: nomor, tanggal_surat: tanggal, tujuan_surat: pihak, perihal, bidang_pengonsep: bidang, keterangan, tahun: Number(tanggal.slice(0, 4)) };
+      ? { nomor_surat_asli: nomor, kode_klasifikasi: kode, sifat, tanggal_surat: tanggal, tanggal_terima: tanggal, asal_surat: pihak, perihal, keterangan, file_url: fileUrl || null, tahun: Number(tanggal.slice(0, 4)) }
+      : { nomor_surat: nomor, kode_klasifikasi: kode, sifat, tanggal_surat: tanggal, tujuan_surat: pihak, perihal, bidang_pengonsep: bidang, keterangan, file_final_url: fileUrl || null, tahun: Number(tanggal.slice(0, 4)) };
 
     try {
       const res = await fetch(ep, {
@@ -282,6 +447,7 @@
       closeSuratModal();
       if (w.Swal) w.Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Agenda surat berhasil dicatat.' });
       loadAgendaSurat();
+      loadMobileAgendaSurat();
     } catch (err) {
       if (w.Swal) w.Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', text: err?.message || 'Koneksi terganggu.' });
     } finally {
@@ -289,7 +455,7 @@
     }
   }
 
-  /* ── AGENDA SPPD ───────────────────────────────────────────────────────── */
+  /* ── AGENDA SPPD (DESKTOP + SHARED ACTIONS) ───────────────────────────── */
   function setSppdJenis(jenis) {
     _sppdJenis = jenis || '';
     d.querySelectorAll('[data-sppd-jenis-btn]').forEach((btn) => {
@@ -333,11 +499,17 @@
         return `
           <tr class="border-b border-slate-100 dark:border-slate-800/80 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer" onclick="window.ArsipAgenda?.showSppdDetail(${i})">
             <td class="px-4 py-3 font-mono text-xs font-bold text-slate-900 dark:text-white whitespace-nowrap">${esc(noSppd)}<div class="text-[10px] font-normal text-slate-400">${esc(noSpt)}</div></td>
-            <td class="px-4 py-3 text-xs font-semibold text-slate-800 dark:text-slate-200 max-w-[190px] truncate">${esc(item.pelaksana_nama || '-')}</td>
-            <td class="px-4 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-[180px] truncate">${esc(item.tempat_tujuan || '-')}</td>
+            <td class="px-4 py-3 text-xs font-semibold text-slate-800 dark:text-slate-200 max-w-[180px] truncate">${esc(item.pelaksana_nama || '-')}</td>
+            <td class="px-4 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-[170px] truncate">${esc(item.tempat_tujuan || '-')}</td>
             <td class="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">${esc(tglRange)}</td>
-            <td class="px-4 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-[260px] truncate">${esc(item.maksud_perjalanan || '-')}</td>
-            <td class="px-4 py-3 whitespace-nowrap text-right">${statusPill(item.status || 'Tercatat')}</td>
+            <td class="px-4 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-[230px] truncate">${esc(item.maksud_perjalanan || '-')}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-right">
+              <div class="inline-flex items-center gap-1.5">
+                ${statusPill(item.status || 'Tercatat')}
+                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.openSppdSpjModal(${item.id})" class="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-[10px] font-bold cursor-pointer">LHP/SPJ</button>
+                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.deleteSppd(${item.id})" title="Hapus" class="p-1 rounded-lg text-slate-400 hover:text-rose-600 cursor-pointer"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+              </div>
+            </td>
           </tr>
         `;
       }).join('');
@@ -354,6 +526,7 @@
       ['Nomor SPPD', item.nomor_sppd || '-'],
       ['Nomor SPT', item.nomor_spt || '-'],
       ['Jenis Perjalanan', item.jenis_sppd === 'LUAR_DAERAH' ? 'Luar Daerah' : 'Dalam Daerah'],
+      ['Pejabat Perintah', item.pejabat_perintah || 'Kepala BAPPERIDA'],
       ['Pelaksana', item.pelaksana_nama || '-'],
       ['Tempat Tujuan', item.tempat_tujuan || '-'],
       ['Tanggal Berangkat', fmtDate(item.tanggal_berangkat)],
@@ -362,32 +535,117 @@
       ['Maksud Perjalanan', item.maksud_perjalanan || '-'],
       ['Status', item.status || 'Tercatat'],
     ];
-    const html = `<div class="text-left text-xs divide-y divide-slate-100 dark:divide-slate-800">${rows.map(([k, v]) => `<div class="py-2 flex justify-between gap-4"><span class="text-slate-500 shrink-0">${esc(k)}</span><span class="font-semibold text-slate-900 dark:text-white text-right">${esc(v)}</span></div>`).join('')}</div>`;
-    w.Swal.fire({ title: 'Detail Agenda SPPD', html, width: 560, confirmButtonText: 'Tutup', confirmButtonColor: '#2563eb' });
+    const lhp = item.file_lhp_url || '';
+    const html = `
+      <div class="text-left text-xs divide-y divide-slate-100 dark:divide-slate-800">
+        ${rows.map(([k, v]) => `<div class="py-2 flex justify-between gap-4"><span class="text-slate-500 shrink-0">${esc(k)}</span><span class="font-semibold text-slate-900 dark:text-white text-right">${esc(v)}</span></div>`).join('')}
+        ${lhp ? `<div class="pt-3"><a href="${esc(lhp)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs">Buka Berkas LHP / SPJ</a></div>` : ''}
+      </div>
+    `;
+    w.Swal.fire({
+      title: 'Detail Agenda SPPD',
+      html,
+      width: 540,
+      showDenyButton: true,
+      denyButtonText: 'Tautkan LHP / SPJ',
+      denyButtonColor: '#0f172a',
+      confirmButtonText: 'Tutup',
+      confirmButtonColor: '#2563eb',
+    }).then((res) => {
+      if (res.isDenied) openSppdSpjModal(item.id);
+    });
   }
 
-  function openSppdModal() {
-    const m = d.getElementById('modalArsipAgendaSppd');
+  async function openSppdSpjModal(id) {
+    if (!w.Swal || !id) return;
+    const { value: url } = await w.Swal.fire({
+      title: 'Tautkan Berkas LHP / SPJ SPPD',
+      input: 'url',
+      inputLabel: 'URL Google Drive Berkas Laporan Hasil Perjalanan / SPJ',
+      inputPlaceholder: 'https://drive.google.com/file/d/...',
+      showCancelButton: true,
+      confirmButtonText: 'Simpan LHP / SPJ',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb',
+    });
+    if (!url) return;
+    try {
+      const r = await fetch(`/api/arsip/p/api/agenda/sppd/${id}/spj`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_lhp_url: url, url }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) throw new Error(j.message || `HTTP ${r.status}`);
+      w.Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Status SPPD diperbarui menjadi Laporan Masuk.' });
+      loadAgendaSppd();
+      loadMobileAgendaSppd();
+    } catch (err) {
+      w.Swal.fire({ icon: 'error', title: 'Gagal', text: err?.message || 'Koneksi terganggu.' });
+    }
+  }
+
+  async function deleteSppd(id) {
+    if (!id || !w.Swal) return;
+    const cf = await w.Swal.fire({
+      icon: 'warning',
+      title: 'Hapus Agenda SPPD?',
+      text: 'Data register SPPD ini akan dihapus permanen.',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Hapus',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#dc2626',
+    });
+    if (!cf.isConfirmed) return;
+    try {
+      const r = await fetch(`/api/arsip/p/api/agenda/sppd/${id}`, { method: 'DELETE' });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) throw new Error(j.message || `HTTP ${r.status}`);
+      loadAgendaSppd();
+      loadMobileAgendaSppd();
+    } catch (err) {
+      w.Swal.fire({ icon: 'error', title: 'Gagal Menghapus', text: err?.message || 'Koneksi terganggu.' });
+    }
+  }
+
+  async function previewNomorSppd(btnEl) {
+    const modal = btnEl?.closest('#modalArsipAgendaSppd, #drawerMobileAgendaSppd');
+    if (!modal) return;
+    const jenis = modal.querySelector('[data-sppd-field="jenis"]')?.value || 'DALAM_DAERAH';
+    const tgl = modal.querySelector('[data-sppd-field="berangkat"]')?.value || new Date().toISOString().slice(0, 10);
+    const tahun = tgl.slice(0, 4);
+    try {
+      const r = await fetch(`/api/arsip/p/api/agenda/sppd/preview-nomor?tahun=${encodeURIComponent(tahun)}&jenis=${encodeURIComponent(jenis)}`);
+      const j = await r.json().catch(() => ({}));
+      const sptInp = modal.querySelector('[data-sppd-field="nomor_spt"]');
+      const sppdInp = modal.querySelector('[data-sppd-field="nomor_sppd"]');
+      if (sptInp && j.nomor_spt) sptInp.value = j.nomor_spt;
+      if (sppdInp && j.nomor_sppd) sppdInp.value = j.nomor_sppd;
+    } catch (_) {}
+  }
+
+  function openSppdModal(targetId) {
+    const m = d.getElementById(targetId || 'modalArsipAgendaSppd') || d.getElementById('drawerMobileAgendaSppd');
     if (!m) return;
+    ensurePegawaiLoaded();
     const today = new Date().toISOString().slice(0, 10);
     m.querySelectorAll('input, textarea').forEach((el) => {
       el.value = el.type === 'date' ? today : '';
     });
     m.classList.remove('hidden');
     m.classList.add('flex');
-    if (w.StitchPicker) {
-      m.querySelectorAll('select').forEach((s) => { w.StitchPicker.enhanceSelect?.(s); w.StitchPicker.refresh?.(s); });
-      m.querySelectorAll('input[type="date"]').forEach((i) => w.StitchPicker.enhanceDate?.(i));
-    }
+    refreshPickersIn(m);
   }
 
   function closeSppdModal() {
-    const m = d.getElementById('modalArsipAgendaSppd');
-    if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+    ['modalArsipAgendaSppd', 'drawerMobileAgendaSppd'].forEach((id) => {
+      const m = d.getElementById(id);
+      if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+    });
   }
 
   async function submitSppd(btnEl) {
-    const m = d.getElementById('modalArsipAgendaSppd');
+    const m = btnEl?.closest('#modalArsipAgendaSppd, #drawerMobileAgendaSppd') || d.getElementById('modalArsipAgendaSppd');
     if (!m) return;
     const v = (k) => (m.querySelector(`[data-sppd-field="${k}"]`)?.value || '').trim();
     const pelaksana_nama = v('pelaksana');
@@ -397,6 +655,9 @@
     const tanggal_berangkat = v('berangkat') || new Date().toISOString().slice(0, 10);
     const tanggal_kembali = v('kembali') || tanggal_berangkat;
     const alat_angkutan = v('angkutan') || 'Kendaraan Dinas Roda 4';
+    const pejabat_perintah = v('pejabat') || 'Kepala BAPPERIDA';
+    const nomor_spt = v('nomor_spt');
+    const nomor_sppd = v('nomor_sppd');
 
     if (!pelaksana_nama || !tempat_tujuan || !maksud_perjalanan) {
       if (w.Swal) w.Swal.fire('Perhatian', 'Nama pelaksana, tempat tujuan, dan maksud perjalanan wajib diisi.', 'warning');
@@ -412,6 +673,9 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jenis_sppd,
+          pejabat_perintah,
+          nomor_spt: nomor_spt || undefined,
+          nomor_sppd: nomor_sppd || undefined,
           pelaksana_nama,
           tempat_tujuan,
           maksud_perjalanan,
@@ -426,6 +690,7 @@
       closeSppdModal();
       if (w.Swal) w.Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Agenda SPPD berhasil dicatat.' });
       loadAgendaSppd();
+      loadMobileAgendaSppd();
     } catch (err) {
       if (w.Swal) w.Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', text: err?.message || 'Koneksi terganggu.' });
     } finally {
@@ -434,18 +699,11 @@
   }
 
   /* ── MOBILE #view-arsip SUB-MENU (Dokumen | Agenda Surat | Agenda SPPD) ── */
-  let _mTab = 'dokumen';
-  let _mSuratMode = 'masuk';
-  let _mSppdJenis = '';
-
   function switchMobileTab(tab) {
     _mTab = (tab === 'agenda-surat' || tab === 'agenda-sppd') ? tab : 'dokumen';
-    const pDok = d.getElementById('mobileArsipTabDokumen');
-    const pSur = d.getElementById('mobileArsipTabAgendaSurat');
-    const pSpp = d.getElementById('mobileArsipTabAgendaSppd');
-    if (pDok) pDok.classList.toggle('hidden', _mTab !== 'dokumen');
-    if (pSur) pSur.classList.toggle('hidden', _mTab !== 'agenda-surat');
-    if (pSpp) pSpp.classList.toggle('hidden', _mTab !== 'agenda-sppd');
+    togglePanel(d.getElementById('mobileArsipTabDokumen'), _mTab === 'dokumen');
+    togglePanel(d.getElementById('mobileArsipTabAgendaSurat'), _mTab === 'agenda-surat');
+    togglePanel(d.getElementById('mobileArsipTabAgendaSppd'), _mTab === 'agenda-sppd');
 
     d.querySelectorAll('[data-m-arsip-tab]').forEach((btn) => {
       const act = btn.dataset.mArsipTab === _mTab;
@@ -454,8 +712,14 @@
         : 'flex-1 py-2 px-2 rounded-xl text-slate-600 dark:text-slate-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1';
     });
 
-    if (_mTab === 'agenda-surat') loadMobileAgendaSurat();
-    if (_mTab === 'agenda-sppd') loadMobileAgendaSppd();
+    if (_mTab === 'agenda-surat') {
+      refreshPickersIn(d.getElementById('mobileArsipTabAgendaSurat'));
+      loadMobileAgendaSurat();
+    }
+    if (_mTab === 'agenda-sppd') {
+      refreshPickersIn(d.getElementById('mobileArsipTabAgendaSppd'));
+      loadMobileAgendaSppd();
+    }
   }
 
   function setMobileSuratMode(mode) {
@@ -474,7 +738,7 @@
     const box = d.getElementById('mobileAgendaSuratList');
     if (!box) return;
     box.innerHTML = '<div class="py-8 text-center text-xs text-slate-400"><span class="material-symbols-outlined text-xl animate-spin text-primary align-middle mr-1">progress_activity</span>Memuat agenda surat...</div>';
-    const tahun = String(new Date().getFullYear());
+    const tahun = d.getElementById('mobileAgendaSuratYear')?.value || String(new Date().getFullYear());
     const q = (d.getElementById('mobileAgendaSuratSearch')?.value || '').trim();
     const params = new URLSearchParams({ tahun, limit: '40' });
     if (q) params.set('q', q);
@@ -486,6 +750,15 @@
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.message || `HTTP ${r.status}`);
       _suratItems = Array.isArray(j.items) ? j.items : (Array.isArray(j) ? j : []);
+
+      const stTotal = d.getElementById('mSuratStatTotal');
+      const stDisp = d.getElementById('mSuratStatDisposisi');
+      if (stTotal) stTotal.textContent = String(_suratItems.length);
+      if (stDisp) {
+        const cnt = _suratItems.filter((x) => /disposisi|terbit|selesai/i.test(String(x.status_tindaklanjut || x.status || ''))).length;
+        stDisp.textContent = String(cnt);
+      }
+
       if (!_suratItems.length) {
         box.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">Belum ada data ${_mSuratMode === 'masuk' ? 'Surat Masuk' : 'Surat Keluar'} tahun ${esc(tahun)}.</div>`;
         return;
@@ -495,17 +768,24 @@
         const pihak = _mSuratMode === 'masuk' ? (item.asal_surat || '-') : (item.tujuan_surat || '-');
         const tgl = fmtDate(_mSuratMode === 'masuk' ? (item.tanggal_terima || item.tanggal_surat) : item.tanggal_surat);
         return `
-          <button type="button" onclick="window.ArsipAgenda?.showSuratDetail(${i})" class="w-full text-left p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xs hover:border-blue-300 transition-colors cursor-pointer">
-            <div class="flex items-center justify-between gap-2 mb-1">
-              <span class="font-mono text-[11px] font-bold text-primary truncate">${esc(no)}</span>
+          <div onclick="window.ArsipAgenda?.showSuratDetail(${i})" class="w-full text-left p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xs hover:border-blue-300 transition-colors cursor-pointer flex flex-col gap-2">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <span class="font-mono text-[11px] font-bold text-primary truncate">${esc(no)}</span>
+                ${sifatPill(item.sifat)}
+              </div>
               ${statusPill(item.status_tindaklanjut || item.status || 'Tercatat')}
             </div>
             <div class="text-xs font-bold text-slate-900 dark:text-white line-clamp-2">${esc(item.perihal || '-')}</div>
-            <div class="mt-1.5 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 gap-2">
+            <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 gap-2">
               <span class="truncate">${esc(pihak)}</span>
               <span class="font-mono shrink-0">${esc(tgl)}</span>
             </div>
-          </button>
+            <div class="pt-1.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-1.5">
+              ${_mSuratMode === 'masuk' ? `<button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.openDisposisiModal(${item.id})" class="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-[11px] font-bold cursor-pointer">Disposisi</button>` : ''}
+              <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.deleteSurat(${item.id})" class="px-2 py-1 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-semibold cursor-pointer">Hapus</button>
+            </div>
+          </div>
         `;
       }).join('');
     } catch (err) {
@@ -529,7 +809,7 @@
     const box = d.getElementById('mobileAgendaSppdList');
     if (!box) return;
     box.innerHTML = '<div class="py-8 text-center text-xs text-slate-400"><span class="material-symbols-outlined text-xl animate-spin text-primary align-middle mr-1">progress_activity</span>Memuat agenda SPPD...</div>';
-    const tahun = String(new Date().getFullYear());
+    const tahun = d.getElementById('mobileAgendaSppdYear')?.value || String(new Date().getFullYear());
     const q = (d.getElementById('mobileAgendaSppdSearch')?.value || '').trim();
     const params = new URLSearchParams({ tahun, limit: '40' });
     if (_mSppdJenis) params.set('jenis', _mSppdJenis);
@@ -539,6 +819,14 @@
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.message || `HTTP ${r.status}`);
       _sppdItems = Array.isArray(j.items) ? j.items : (Array.isArray(j) ? j : []);
+
+      const stTotal = d.getElementById('mSppdStatTotal');
+      const stDalam = d.getElementById('mSppdStatDalam');
+      const stLuar = d.getElementById('mSppdStatLuar');
+      if (stTotal) stTotal.textContent = String(_sppdItems.length);
+      if (stDalam) stDalam.textContent = String(_sppdItems.filter((x) => x.jenis_sppd !== 'LUAR_DAERAH').length);
+      if (stLuar) stLuar.textContent = String(_sppdItems.filter((x) => x.jenis_sppd === 'LUAR_DAERAH').length);
+
       if (!_sppdItems.length) {
         box.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">Belum ada data Agenda SPPD tahun ${esc(tahun)}.</div>`;
         return;
@@ -546,15 +834,21 @@
       box.innerHTML = _sppdItems.map((item, i) => {
         const no = item.nomor_sppd || item.nomor_spt || `#${item.id || i + 1}`;
         return `
-          <button type="button" onclick="window.ArsipAgenda?.showSppdDetail(${i})" class="w-full text-left p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xs hover:border-blue-300 transition-colors cursor-pointer">
-            <div class="flex items-center justify-between gap-2 mb-1">
+          <div onclick="window.ArsipAgenda?.showSppdDetail(${i})" class="w-full text-left p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xs hover:border-blue-300 transition-colors cursor-pointer flex flex-col gap-1.5">
+            <div class="flex items-center justify-between gap-2">
               <span class="font-mono text-[11px] font-bold text-primary truncate">${esc(no)}</span>
               ${statusPill(item.status || 'Tercatat')}
             </div>
             <div class="text-xs font-bold text-slate-900 dark:text-white truncate">${esc(item.pelaksana_nama || '-')} &rarr; ${esc(item.tempat_tujuan || '-')}</div>
-            <div class="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-1 mt-0.5">${esc(item.maksud_perjalanan || '-')}</div>
-            <div class="mt-1.5 font-mono text-[10px] text-slate-400">${esc(fmtDate(item.tanggal_berangkat))} – ${esc(fmtDate(item.tanggal_kembali))}</div>
-          </button>
+            <div class="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-1">${esc(item.maksud_perjalanan || '-')}</div>
+            <div class="flex items-center justify-between pt-1.5 border-t border-slate-100 dark:border-slate-800">
+              <span class="font-mono text-[10px] text-slate-400">${esc(fmtDate(item.tanggal_berangkat))} – ${esc(fmtDate(item.tanggal_kembali))}</span>
+              <div class="flex items-center gap-1.5">
+                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.openSppdSpjModal(${item.id})" class="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-[10px] font-bold cursor-pointer">LHP/SPJ</button>
+                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.deleteSppd(${item.id})" class="px-2 py-1 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[10px] font-semibold cursor-pointer">Hapus</button>
+              </div>
+            </div>
+          </div>
         `;
       }).join('');
     } catch (err) {
@@ -568,12 +862,18 @@
     setSuratMode,
     loadAgendaSurat,
     showSuratDetail,
+    openDisposisiModal,
+    deleteSurat,
+    previewNomorSuratKeluar,
     openSuratModal,
     closeSuratModal,
     submitSurat,
     setSppdJenis,
     loadAgendaSppd,
     showSppdDetail,
+    openSppdSpjModal,
+    deleteSppd,
+    previewNomorSppd,
     openSppdModal,
     closeSppdModal,
     submitSppd,
