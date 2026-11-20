@@ -177,34 +177,41 @@
         </div>
       </div>
     </div>
-  </aside><div class="pl-72"><header class="fixed top-0 left-72 right-0 h-16 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md"><span class="font-medium">Portal BAPPERIDA</span><span class="material-symbols-outlined text-[16px]">chevron_right</span><span class="text-on-surface font-semibold">Inventaris &amp; Aset</span></div><div class="hidden xl:flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md"><span class="material-symbols-outlined text-primary text-[16px]">schedule</span><span id="asetLiveClock" class="font-label-md text-label-md text-on-surface font-semibold font-mono tabular-nums">WITA</span></div></div><div class="flex items-center gap-space-md"><a href="index.html" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary font-bold text-xs transition-all shadow-xs border border-primary/20" title="Buka tampilan presensi versi Smartphone (Screen 01)"><span class="material-symbols-outlined text-[17px]">smartphone</span><span>Mode HP (Mobile)</span></a><button aria-label="Pemberitahuan" class="w-9 h-9 rounded-xl bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-all relative" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error"></span></button><div class="flex items-center gap-space-sm pl-space-xs"><div class="flex flex-col text-right hidden sm:flex"><span data-portal-user-name="1" class="font-label-md text-label-md text-on-surface font-bold">Pegawai</span><span data-portal-user-meta="1" class="font-label-sm text-label-sm text-on-surface-variant font-mono">NIP -</span></div><div data-portal-user-avatar="1" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs font-mono">--</div></div></div></header><main class="w-full pt-16 bg-surface min-h-screen px-space-lg py-space-lg"><div class="flex flex-col w-full gap-space-lg">
-<!-- Top Bar: Header and Core Actions -->
-<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
-<div class="flex flex-col gap-space-xs">
-<div class="flex items-center gap-space-xs">
-<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
-<span class="material-symbols-outlined text-[14px] text-primary">policy</span>
-          Permendagri No. 47 / 2021 • Perbup Sumba Barat
-        </span>
-<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold">
-<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-          Rekonsiliasi BPKAD Aktif
-        </span>
+  </aside><div class="pl-72"><header class="fixed top-0 left-72 right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-3 min-w-0"><div class="flex items-center gap-1.5 text-on-surface-variant text-xs"><span class="font-medium">Portal BAPPERIDA</span><span class="material-symbols-outlined text-[15px]">chevron_right</span><span id="asetBreadcrumbTitle" class="text-on-surface font-bold">Inventaris &amp; Aset &bull; Daftar KIR</span></div><span class="hidden xl:inline text-outline-variant/60">|</span><div class="hidden xl:flex items-center gap-1.5 text-on-surface-variant text-xs"><span class="material-symbols-outlined text-primary text-[16px]">schedule</span><span id="asetLiveClock" class="text-on-surface font-semibold font-mono tabular-nums">WITA</span></div></div><div class="flex items-center gap-2.5 shrink-0"><a href="index.html" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary font-bold text-xs transition-all border border-primary/20" title="Buka tampilan presensi versi Smartphone"><span class="material-symbols-outlined text-[17px]">smartphone</span><span>Mode HP</span></a><button aria-label="Pemberitahuan" class="w-9 h-9 rounded-xl bg-surface-container-low hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-all relative cursor-pointer" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error"></span></button><div class="flex items-center gap-2.5 pl-2 border-l border-outline-variant/30"><div class="flex flex-col text-right hidden sm:flex"><span data-portal-user-name="1" class="text-xs text-on-surface font-bold leading-tight">Pegawai</span><span data-portal-user-meta="1" class="text-[10px] text-on-surface-variant font-mono">NIP -</span></div><div data-portal-user-avatar="1" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs font-mono shrink-0">--</div></div></div></header><main class="w-full pt-16 bg-surface min-h-screen px-space-lg py-space-lg"><div class="flex flex-col w-full gap-space-lg">
+<!-- Sub-Menu Manajemen Aset: Inventaris | Pemeliharaan | Tiket & Pinjam | Pengaturan -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+  <div class="bg-surface-container-lowest rounded-2xl p-1.5 shadow-sm border border-outline-variant/30 inline-flex items-center gap-1 flex-wrap">
+    <button type="button" data-aset-tab-btn="inventaris" onclick="window.AsetSettings?.switchTab('inventaris')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#2563eb] text-white text-xs font-bold shadow-sm transition-all cursor-pointer">
+      <span class="material-symbols-outlined text-[17px]">inventory_2</span>
+      <span>Inventaris &amp; KIR</span>
+    </button>
+    <button type="button" data-aset-tab-btn="pemeliharaan" onclick="window.AsetSettings?.switchTab('pemeliharaan')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface text-xs font-semibold transition-all cursor-pointer">
+      <span class="material-symbols-outlined text-[17px]">build</span>
+      <span>Pemeliharaan</span>
+    </button>
+    <button type="button" data-aset-tab-btn="tiket-pinjam" onclick="window.AsetSettings?.switchTab('tiket-pinjam')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface text-xs font-semibold transition-all cursor-pointer">
+      <span class="material-symbols-outlined text-[17px]">assignment_turned_in</span>
+      <span>Tiket &amp; Peminjaman</span>
+    </button>
+    <button type="button" data-aset-tab-btn="pengaturan" onclick="window.AsetSettings?.switchTab('pengaturan')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface text-xs font-semibold transition-all cursor-pointer">
+      <span class="material-symbols-outlined text-[17px]">tune</span>
+      <span>Pengaturan Aset</span>
+    </button>
+  </div>
+  <div class="flex items-center gap-space-sm flex-wrap sm:flex-nowrap">
+    <button onclick="openAsetScanModal()" class="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-dim text-on-surface font-label-lg text-label-lg transition-all shadow-sm cursor-pointer" type="button">
+      <span class="material-symbols-outlined text-[20px] text-primary">qr_code_scanner</span>
+      <span>Scan Barcode Aset</span>
+    </button>
+    <button onclick="window.AsetSettings?.openTambahAsetModal()" class="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary-container font-label-lg text-label-lg transition-all shadow-md cursor-pointer" type="button">
+      <span class="material-symbols-outlined text-[20px]">add_circle</span>
+      <span>Tambah Aset / KIB Baru</span>
+    </button>
+  </div>
 </div>
-<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Manajemen Aset Daerah &amp; Inventaris Ruangan (KIR)</h1>
-<p class="font-body-md text-body-md text-on-surface-variant">Pengelolaan Barang Milik Daerah (BMD), peminjaman kendaraan dinas operasional, dan barcode audit inventaris fisik.</p>
-</div>
-<div class="flex items-center gap-space-sm flex-wrap sm:flex-nowrap">
-<button onclick="openAsetScanModal()" class="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-dim text-on-surface font-label-lg text-label-lg transition-all shadow-sm cursor-pointer" type="button">
-<span class="material-symbols-outlined text-[20px] text-primary">qr_code_scanner</span>
-<span>Scan Barcode Aset</span>
-</button>
-<button onclick="openTambahAsetInfo()" class="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary-container font-label-lg text-label-lg transition-all shadow-md cursor-pointer" type="button">
-<span class="material-symbols-outlined text-[20px]">add_circle</span>
-<span>Tambah Aset / KIB Baru</span>
-</button>
-</div>
-</div>
+
+<!-- PANEL 1: INVENTARIS & KIR -->
+<div id="asetPanelInventaris" class="flex flex-col gap-space-lg">
 <!-- Metric Summary Cards -->
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
 <!-- Card 1 -->
@@ -426,11 +433,9 @@
 <span id="asetStickerTahun" class="font-mono text-[9px] text-on-surface-variant font-semibold">T.A -</span>
 </div>
 <div class="flex items-center gap-space-md pt-1">
-<!-- Inline SVG QR Simulation -->
-<div class="w-20 h-20 bg-surface-container-lowest rounded-lg p-1.5 flex items-center justify-center shrink-0 shadow-sm">
-<svg class="w-full h-full text-on-surface" fill="currentColor" viewbox="0 0 100 100">
-<path d="M0,0 h30 v30 h-30 z M10,10 h10 v10 h-10 z M70,0 h30 v30 h-30 z M80,10 h10 v10 h-10 z M0,70 h30 v30 h-30 z M10,80 h10 v10 h-10 z M40,10 h10 v20 h-10 z M60,10 h5 v5 h-5 z M40,40 h20 v10 h-20 z M10,40 h20 v10 h-20 z M40,60 h10 v30 h-10 z M60,60 h30 v10 h-30 z M60,80 h10 v20 h-10 z M80,80 h20 v20 h-20 z M70,40 h20 v10 h-20 z"></path>
-</svg>
+<!-- Live QR Code Stiker KIR -->
+<div id="asetStickerQrBox" class="w-20 h-20 bg-white rounded-lg p-1 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
+  <span class="material-symbols-outlined text-slate-400 text-3xl">qr_code_2</span>
 </div>
 <div class="flex flex-col gap-1 min-w-0">
 <div class="flex flex-col">
@@ -458,6 +463,206 @@
 </button>
 </div>
 </div>
+</div>
+</div><!-- /asetPanelInventaris -->
+
+<!-- PANEL 2: PEMELIHARAAN ASET -->
+<div id="asetPanelPemeliharaan" class="hidden flex-col gap-4">
+  <div class="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/30 flex items-center justify-between gap-3 flex-wrap">
+    <div>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Kartu &amp; Riwayat Pemeliharaan Aset (SIMAPO)</h2>
+      <span id="asetPemeliharaanCount" class="text-xs font-mono text-on-surface-variant">0 catatan</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button type="button" onclick="window.AsetSettings?.loadPemeliharaan()" class="w-9 h-9 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center cursor-pointer" title="Segarkan"><span class="material-symbols-outlined text-[18px]">refresh</span></button>
+      <button type="button" onclick="window.AsetSettings?.openCatatPemeliharaanModal()" class="px-4 py-2 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer">
+        <span class="material-symbols-outlined text-[17px]">add</span>
+        <span>Catat Pemeliharaan</span>
+      </button>
+    </div>
+  </div>
+  <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-surface-container-low text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">
+            <th class="px-4 py-3">Tanggal</th>
+            <th class="px-4 py-3">Barang / Aset</th>
+            <th class="px-4 py-3">Jenis Pemeliharaan</th>
+            <th class="px-4 py-3">Penyedia / Kontrak</th>
+            <th class="px-4 py-3 text-right">Biaya</th>
+            <th class="px-4 py-3">Keterangan</th>
+          </tr>
+        </thead>
+        <tbody id="asetPemeliharaanBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL 3: TIKET KERUSAKAN & PEMINJAMAN -->
+<div id="asetPanelTiketPinjam" class="hidden flex-col gap-5">
+  <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden">
+    <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between">
+      <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Daftar Permohonan &amp; Riwayat Peminjaman Unit</h2>
+      <button type="button" onclick="window.AsetSettings?.loadPinjamFullTable()" class="px-3 py-1.5 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-xs font-semibold text-on-surface cursor-pointer">Segarkan</button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-surface-container-low text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">
+            <th class="px-4 py-3">Peminjam</th>
+            <th class="px-4 py-3">Unit Aset</th>
+            <th class="px-4 py-3">Periode Pinjam</th>
+            <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3 text-right">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="asetPinjamFullBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden">
+    <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between">
+      <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Tiket Laporan Kerusakan Aset</h2>
+      <button type="button" onclick="window.AsetSettings?.loadTiketList()" class="px-3 py-1.5 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-xs font-semibold text-on-surface cursor-pointer">Segarkan</button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-surface-container-low text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">
+            <th class="px-4 py-3">No. Tiket</th>
+            <th class="px-4 py-3">Kendala / Kerusakan</th>
+            <th class="px-4 py-3">Pelapor &amp; Lokasi</th>
+            <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3 text-right">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="asetTiketBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL 4: PENGATURAN ASET (RUANGAN KIR, PEJABAT BAST, KATEGORI) -->
+<div id="asetPanelPengaturan" class="hidden flex-col gap-5">
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+    <!-- Pengaturan Ruangan & PJ KIR -->
+    <div class="xl:col-span-7 bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden">
+      <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between gap-2">
+        <div>
+          <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Pengaturan Ruangan &amp; Penanggung Jawab KIR</h2>
+          <p class="text-xs text-on-surface-variant">Kelola daftar ruangan dan penetapan PJ untuk cetak stiker &amp; laporan KIR.</p>
+        </div>
+        <button type="button" onclick="window.AsetSettings?.openRuanganModal(-1)" class="px-3.5 py-2 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm shrink-0 cursor-pointer">
+          <span class="material-symbols-outlined text-[16px]">add</span>
+          <span>Tambah Ruangan</span>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-surface-container-low text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">
+              <th class="px-4 py-2.5">Kode</th>
+              <th class="px-4 py-2.5">Nama Ruangan</th>
+              <th class="px-4 py-2.5">Penanggung Jawab</th>
+              <th class="px-4 py-2.5 text-right">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="asetRuanganBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right: Pejabat Penandatangan BAST & Kategori Barang -->
+    <div class="xl:col-span-5 flex flex-col gap-5">
+      <div class="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-3.5">
+        <div>
+          <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Penandatangan BAST &amp; Laporan BMD</h2>
+          <p class="text-xs text-on-surface-variant">Pejabat mengetahui (Sekda) dan Pihak Pertama untuk dokumen resmi SIMAPO.</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-on-surface-variant mb-1">Nama Sekda / Mengetahui</label>
+            <input data-aset-set-field="sekda_nama" type="text" placeholder="Nama lengkap..." class="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface outline-none focus:border-primary">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-on-surface-variant mb-1">NIP Sekda</label>
+            <input data-aset-set-field="sekda_nip" type="text" placeholder="19xxxxxxxx..." class="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs font-mono text-on-surface outline-none focus:border-primary">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-on-surface-variant mb-1">Jabatan Mengetahui</label>
+            <input data-aset-set-field="sekda_jabatan" type="text" placeholder="Sekretaris Daerah..." class="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface outline-none focus:border-primary">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-on-surface-variant mb-1">Jabatan Pihak Pertama</label>
+            <input data-aset-set-field="p1_jabatan" type="text" placeholder="Kepala BAPPERIDA..." class="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface outline-none focus:border-primary">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-semibold text-on-surface-variant mb-1">Alamat Kantor / Instansi</label>
+            <input data-aset-set-field="p1_alamat" type="text" placeholder="Jl. Weekarou, Waikabubak, Sumba Barat" class="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface outline-none focus:border-primary">
+          </div>
+        </div>
+        <button type="button" onclick="window.AsetSettings?.savePejabatSettings(this)" class="self-end px-4 py-2.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold shadow-sm cursor-pointer">Simpan Pengaturan Pejabat</button>
+      </div>
+
+      <div class="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-3">
+        <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Master Kategori Barang</h2>
+        <div class="flex gap-2">
+          <input id="asetNewKategoriInput" type="text" placeholder="Nama kategori barang baru..." class="flex-1 h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface outline-none focus:border-primary">
+          <button type="button" onclick="window.AsetSettings?.addKategori()" class="px-4 h-10 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold cursor-pointer">Tambah</button>
+        </div>
+        <div id="asetKategoriList" class="flex flex-col gap-2 max-h-56 overflow-y-auto"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Tambah Aset / KIB Baru (REAL POST /api/simapo/bast-import-unit) -->
+<div id="modalTambahAsetUnit" class="hidden fixed inset-0 z-[95] bg-slate-950/60 backdrop-blur-xs items-center justify-center p-4" onclick="if(event.target===this) window.AsetSettings?.closeTambahAsetModal()">
+  <div class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+    <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">add_box</span></span>
+        <div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white">Tambah Unit Aset / KIB Baru</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Simpan langsung ke tabel master barang &amp; unit_aset SIMAPO.</p>
+        </div>
+      </div>
+      <button type="button" onclick="window.AsetSettings?.closeTambahAsetModal()" class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"><span class="material-symbols-outlined text-[19px]">close</span></button>
+    </div>
+    <div class="p-6 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="sm:col-span-2">
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Nama Barang / Aset <span class="text-rose-500">*</span></label>
+        <input data-aset-add-field="nama" type="text" placeholder="Contoh: Laptop ASUS ExpertBook B1" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Kode Barang (KIB) <span class="text-rose-500">*</span></label>
+        <input data-aset-add-field="kodebarang" type="text" placeholder="1.3.2.10.01.02.001" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Nomor Inventaris / Register</label>
+        <input data-aset-add-field="nomorinventaris" type="text" placeholder="INV-2026-001" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tahun Perolehan</label>
+        <input data-aset-add-field="tahunperolehan" type="number" value="2026" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Nilai Perolehan (Rp)</label>
+        <input data-aset-add-field="nilaiperolehan" type="number" placeholder="15000000" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Satuan</label>
+        <input data-aset-add-field="satuan" type="text" value="Unit" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+      </div>
+    </div>
+    <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5 bg-slate-50/70 dark:bg-slate-900/60">
+      <button type="button" onclick="window.AsetSettings?.closeTambahAsetModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Batal</button>
+      <button type="button" onclick="window.AsetSettings?.submitTambahAset(this)" class="px-5 py-2.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold shadow-sm cursor-pointer">Simpan Unit Aset</button>
+    </div>
+  </div>
 </div>
 </div></main></div>
 <script>
@@ -753,6 +958,9 @@
           </td>
           <td class="py-3.5 px-space-md text-right whitespace-nowrap">
             <div class="inline-flex items-center gap-1">
+              <button type="button" onclick="event.stopPropagation(); window.AsetSettings?.openAssignUnitModal(_filteredAsetList[${globalIdx}])" class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface transition-all cursor-pointer" title="Atur Ruangan, Pemegang &amp; Kondisi">
+                <span class="material-symbols-outlined text-[18px]">tune</span>
+              </button>
               <button type="button" onclick="event.stopPropagation(); openAsetBarcode(${globalIdx})" class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary transition-all cursor-pointer" title="Cetak Label Barcode">
                 <span class="material-symbols-outlined text-[18px]">print</span>
               </button>
@@ -849,6 +1057,9 @@
     if (lokasiEl) lokasiEl.textContent = item.nama_ruangan || 'Operasional BAPPERIDA';
     if (namaEl) namaEl.textContent = item.nama_barang || '-';
     if (statusEl) statusEl.textContent = item.kondisi || 'Baik';
+    if (window.AsetSettings && typeof window.AsetSettings.renderStickerQr === 'function') {
+      window.AsetSettings.renderStickerQr(item.qrcode || `SIMAPO-${item.id}`);
+    }
   }
 
   function showAsetBarcodeModal(a) {
@@ -1183,5 +1394,8 @@
     }
   }
 </script>
+<script src="js/lib/qrcode.min.js"></script>
+<script src="js/stitch-pickers.js"></script>
+<script src="js/stitch-aset-settings.js"></script>
 
 </body></html>

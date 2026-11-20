@@ -119,7 +119,7 @@ export function mountStitchAsetArsipRoutes(router, ctx) {
           JOIN "SIMAPO".barang b ON b.id = ua.barangid
           LEFT JOIN "SIMAPO".ruangan r ON r.id = ua.ruangan_id
           ORDER BY b.nama ASC
-          LIMIT 40
+          LIMIT 300
         `),
       ]);
 

@@ -258,6 +258,7 @@
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) nav button > span:not(.material-symbols-outlined),
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) #stitchStandaloneAdminSubmenu,
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) #stitchStandaloneArsipSubmenu,
+          body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) #stitchStandaloneAsetSubmenu,
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) > div:last-child,
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) #stitchStandalonePinBtn {
             opacity: 0;
@@ -448,6 +449,68 @@
           window.Swal.fire({ title: 'Pemberitahuan', html: bodyHtml, confirmButtonText: 'Tutup', confirmButtonColor: '#2563eb' });
         }
       });
+    }
+
+    // 1b. Submenu Manajemen Aset di Sidebar Desktop (Inventaris, Pemeliharaan, Tiket & Pinjam, Pengaturan)
+    if (sidebarNav && !document.getElementById('stitchStandaloneAsetSubmenu')) {
+      const asetLink = sidebarNav.querySelector('a[href="aset-kir.html"]');
+      if (asetLink) {
+        const isOnAset = (location.pathname.split('/').pop() || '').toLowerCase() === 'aset-kir.html';
+        let asetSubOpen = isOnAset;
+
+        const asetChevron = document.createElement('button');
+        asetChevron.id = 'stitchAsetSubToggle';
+        asetChevron.type = 'button';
+        asetChevron.title = 'Tampilkan/sembunyikan submenu manajemen aset';
+        asetChevron.className = 'ml-auto w-6 h-6 rounded-md flex items-center justify-center text-slate-300/80 hover:text-white hover:bg-white/15 transition-transform cursor-pointer';
+        asetChevron.innerHTML = '<span class="material-symbols-outlined text-[16px]">expand_more</span>';
+        asetLink.appendChild(asetChevron);
+
+        const asetSubWrap = document.createElement('div');
+        asetSubWrap.id = 'stitchStandaloneAsetSubmenu';
+        asetSubWrap.className = 'mt-0.5 ml-3 pl-3 border-l border-slate-700/80 flex flex-col gap-0.5 overflow-hidden transition-all';
+        const asetSubs = [
+          { hash: '#inventaris', href: 'aset-kir.html#inventaris', icon: 'inventory_2', label: 'Inventaris & KIR' },
+          { hash: '#pemeliharaan', href: 'aset-kir.html#pemeliharaan', icon: 'build', label: 'Pemeliharaan Aset' },
+          { hash: '#tiket-pinjam', href: 'aset-kir.html#tiket-pinjam', icon: 'assignment_turned_in', label: 'Tiket & Peminjaman' },
+          { hash: '#pengaturan', href: 'aset-kir.html#pengaturan', icon: 'tune', label: 'Pengaturan Aset' }
+        ];
+        asetSubWrap.innerHTML = asetSubs.map((s) => `
+          <a href="${s.href}" data-aset-sub="${s.hash}" title="${s.label}" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium">
+            <span class="material-symbols-outlined text-[16px] text-slate-500">${s.icon}</span>
+            <span>${s.label}</span>
+          </a>
+        `).join('');
+        asetLink.insertAdjacentElement('afterend', asetSubWrap);
+
+        const syncAsetActive = () => {
+          if (!isOnAset) return;
+          const cur = (location.hash || '#inventaris').toLowerCase();
+          asetSubWrap.querySelectorAll('a[data-aset-sub]').forEach((a) => {
+            const act = a.dataset.asetSub === cur || (cur === '' && a.dataset.asetSub === '#inventaris');
+            a.className = act
+              ? 'flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs bg-blue-600/20 text-blue-300 font-bold transition-colors'
+              : 'flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium';
+            const ic = a.querySelector('.material-symbols-outlined');
+            if (ic) ic.className = act ? 'material-symbols-outlined text-[16px] text-blue-400' : 'material-symbols-outlined text-[16px] text-slate-500';
+          });
+        };
+
+        const syncAsetSub = () => {
+          asetSubWrap.style.display = asetSubOpen ? 'flex' : 'none';
+          asetChevron.style.transform = asetSubOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+          syncAsetActive();
+        };
+
+        asetChevron.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          asetSubOpen = !asetSubOpen;
+          syncAsetSub();
+        });
+        window.addEventListener('hashchange', syncAsetActive);
+        syncAsetSub();
+      }
     }
 
     // 1a. Submenu Arsip Digital di Sidebar Desktop (Dokumen, Agenda Surat, Agenda SPPD)
