@@ -149,6 +149,66 @@
       rad.addEventListener('input', showRadius);
     }
 
+    // Peta Leaflet interaktif (Jalan OSM & Satelit Esri) di admin.html
+    const mapBox = $('adminDesktopGeofenceMap');
+    if (mapBox && typeof window.L !== 'undefined') {
+      const initLat = parseFloat(lat?.value) || -9.648769;
+      const initLon = parseFloat(lon?.value) || 119.389232;
+      const initRad = parseFloat(rad?.value) || 50;
+      const map = window.L.map(mapBox, { zoomControl: true }).setView([initLat, initLon], 17);
+      const streetLayer = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
+      const satLayer = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri World Imagery' });
+      streetLayer.addTo(map);
+      const marker = window.L.marker([initLat, initLon], { draggable: true }).addTo(map);
+      const circle = window.L.circle([initLat, initLon], { radius: initRad, color: '#2563eb', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 2 }).addTo(map);
+
+      const syncFromInputs = () => {
+        const la = parseFloat(lat?.value);
+        const lo = parseFloat(lon?.value);
+        const ra = parseFloat(rad?.value) || 50;
+        if (Number.isFinite(la) && Number.isFinite(lo)) {
+          marker.setLatLng([la, lo]);
+          circle.setLatLng([la, lo]);
+          map.panTo([la, lo]);
+        }
+        circle.setRadius(ra);
+      };
+
+      marker.on('dragend', () => {
+        const p = marker.getLatLng();
+        if (lat) lat.value = p.lat.toFixed(6);
+        if (lon) lon.value = p.lng.toFixed(6);
+        circle.setLatLng(p);
+      });
+      map.on('click', (ev) => {
+        if (lat) lat.value = ev.latlng.lat.toFixed(6);
+        if (lon) lon.value = ev.latlng.lng.toFixed(6);
+        marker.setLatLng(ev.latlng);
+        circle.setLatLng(ev.latlng);
+      });
+      if (lat) lat.addEventListener('change', syncFromInputs);
+      if (lon) lon.addEventListener('change', syncFromInputs);
+      if (rad) rad.addEventListener('input', syncFromInputs);
+
+      const btnStreet = $('btnDesktopMapStreet');
+      const btnSat = $('btnDesktopMapSat');
+      const setLayer = (mode) => {
+        const isSat = mode === 'satellite';
+        if (isSat) {
+          if (map.hasLayer(streetLayer)) map.removeLayer(streetLayer);
+          if (!map.hasLayer(satLayer)) satLayer.addTo(map);
+        } else {
+          if (map.hasLayer(satLayer)) map.removeLayer(satLayer);
+          if (!map.hasLayer(streetLayer)) streetLayer.addTo(map);
+        }
+        if (btnStreet) btnStreet.className = isSat ? 'px-2.5 py-1 rounded-lg text-[11px] font-semibold text-on-surface-variant cursor-pointer' : 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-primary text-on-primary shadow-xs cursor-pointer';
+        if (btnSat) btnSat.className = isSat ? 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-primary text-on-primary shadow-xs cursor-pointer' : 'px-2.5 py-1 rounded-lg text-[11px] font-semibold text-on-surface-variant cursor-pointer';
+      };
+      if (btnStreet) btnStreet.addEventListener('click', () => setLayer('street'));
+      if (btnSat) btnSat.addEventListener('click', () => setLayer('satellite'));
+      setTimeout(() => map.invalidateSize(), 150);
+    }
+
     // Muat jumlah pegawai aktif dari /api/stitch/bootstrap
     if (userCountEl) {
       try {
