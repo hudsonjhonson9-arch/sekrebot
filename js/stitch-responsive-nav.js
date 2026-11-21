@@ -339,26 +339,44 @@
           background-color: #0b1120 !important;
         }
         html.dark .bg-surface-container-lowest,
-        html.dark .bg-surface-container-lowest\/90 {
+        html.dark .bg-surface-container-lowest\\/90,
+        html.dark .bg-surface-container-lowest\\/95,
+        html.dark .bg-white,
+        html.dark .bg-white\\/90,
+        html.dark .bg-white\\/95 {
           background-color: #0f172a !important;
           border-color: rgba(51, 65, 85, 0.7) !important;
         }
         html.dark .bg-surface-container-low,
-        html.dark .bg-surface-container {
+        html.dark .bg-surface-container,
+        html.dark .bg-slate-50,
+        html.dark .bg-slate-100 {
           background-color: #1e293b !important;
         }
         html.dark .bg-surface-container-high,
-        html.dark .bg-surface-container-highest {
+        html.dark .bg-surface-container-highest,
+        html.dark .bg-slate-200 {
           background-color: #334155 !important;
         }
         html.dark .text-on-surface,
-        html.dark .text-on-background {
+        html.dark .text-on-background,
+        html.dark .text-slate-900,
+        html.dark .text-slate-800 {
           color: #f1f5f9 !important;
         }
-        html.dark .text-on-surface-variant {
+        html.dark .text-on-surface-variant,
+        html.dark .text-slate-700,
+        html.dark .text-slate-600 {
           color: #94a3b8 !important;
         }
+        html.dark .border-slate-100,
+        html.dark .border-slate-200,
+        html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+        html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+          border-color: rgba(51, 65, 85, 0.7) !important;
+        }
         html.dark header {
+          background-color: rgba(15, 23, 42, 0.92) !important;
           border-bottom-color: rgba(51, 65, 85, 0.75) !important;
         }
         html.dark table thead tr {
@@ -371,6 +389,10 @@
         html.dark input:not([type="checkbox"]):not([type="radio"]),
         html.dark textarea,
         html.dark select {
+          color: #f1f5f9;
+        }
+        html.dark select option {
+          background-color: #0f172a;
           color: #f1f5f9;
         }
       `;
@@ -752,7 +774,6 @@
       { href: 'index.html#presensi', icon: 'fingerprint', label: 'Presensi', match: 'index.html' },
       { href: 'rekap.html', icon: 'bar_chart', label: 'Rekap', match: 'rekap.html' },
       { href: 'admin.html', icon: 'admin_panel_settings', label: 'Admin', match: 'admin.html' },
-      { href: 'layanan.html', icon: 'work_outline', label: 'Layanan', match: 'layanan.html' },
       { href: 'aset-kir.html', icon: 'inventory_2', label: 'Aset', match: 'aset-kir.html' },
       { href: 'arsip.html', icon: 'folder_open', label: 'Arsip', match: 'arsip.html' }
     ];
