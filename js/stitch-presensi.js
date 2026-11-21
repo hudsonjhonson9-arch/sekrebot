@@ -528,10 +528,19 @@
     }
 
     function stepStripMonth(delta) {
-      // Samakan perilaku dengan selectPickerMonth: anchor selalu tgl 1 jam 12,
-      // selected = 1st (atau hari ini jika bulan berjalan) —selected tidak pernah
-      // jatuh di luar minggu yang ditampilkan.
       const anchor = state.calendarStripAnchorDate ? new Date(state.calendarStripAnchorDate) : new Date();
+      if (stripMode === 'week') {
+        // Mode Minggu: geser ±7 hari agar bisa berpindah Minggu ke-1..ke-5 secara akurat
+        const target = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() + (delta * 7), 12, 0, 0);
+        state.calendarStripAnchorDate = target;
+        const y = target.getFullYear();
+        const m = String(target.getMonth() + 1).padStart(2, '0');
+        const dt = String(target.getDate()).padStart(2, '0');
+        selectedStripDate = `${y}-${m}-${dt}`;
+        renderCalendarStrip();
+        return;
+      }
+      // Mode Bulan: geser ±1 bulan
       const target = new Date(anchor.getFullYear(), anchor.getMonth() + delta, 1, 12, 0, 0);
       pickerSelectedYear = target.getFullYear();
       selectPickerMonth(target.getMonth());
@@ -588,16 +597,17 @@
       const sunday = new Date(monday);
       sunday.setDate(monday.getDate() + 6);
 
+      // Gunakan hari Kamis minggu tersebut sebagai acuan bulan & nomor minggu (aturan mayoritas hari)
+      const thursday = new Date(monday);
+      thursday.setDate(monday.getDate() + 3);
+
       const monthHeader = document.getElementById('stripMonthDisplay');
       if (monthHeader) {
-        monthHeader.textContent = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+        monthHeader.textContent = `${monthNames[thursday.getMonth()]} ${thursday.getFullYear()}`;
       }
 
-      // Badge "Minggu ke-N": Senin pertama bulan = minggu ke-1
-      const firstMonday = new Date(now.getFullYear(), now.getMonth(), 1, 12, 0, 0);
-      firstMonday.setDate(1 + ((8 - firstMonday.getDay()) % 7));
-      firstMonday.setHours(0, 0, 0, 0);
-      const weekNo = Math.max(1, Math.floor((monday - firstMonday) / 604800000) + 1);
+      // Badge "Minggu ke-N" akurat (1..5) berdasarkan posisi minggu di bulan acuan
+      const weekNo = Math.ceil(thursday.getDate() / 7);
       const weekBadge = document.getElementById('stripWeekBadge');
       if (weekBadge) {
         weekBadge.textContent = `Minggu ke-${weekNo}`;

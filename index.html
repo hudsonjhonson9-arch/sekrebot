@@ -248,38 +248,37 @@
 
           <!-- Interactive Calendar Week Strip (Stitch Screen Addition: 8840550119914143538) -->
           <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 space-y-3" data-purpose="calendar-week-strip">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <!-- Month/Year Header with Interactive Direct Switcher & Fast Steppers -->
-              <div class="flex items-center gap-0.5">
-                <!-- Previous Month Button -->
-                <button type="button" onclick="stepStripMonth(-1)" class="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer" title="Bulan Sebelumnya">
-                  <span class="material-symbols-outlined text-[19px]">chevron_left</span>
+            <!-- Row 1: Bulan/Tahun + Minggu ke-N di kiri, Kontrol Navigasi terkelompok di kanan -->
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <button type="button" onclick="openMonthYearPicker()" class="inline-flex items-center gap-1 px-2 py-1 -ml-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 min-w-0" title="Klik untuk Ganti Bulan & Tahun Langsung">
+                  <span id="stripMonthDisplay" class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">November 2026</span>
+                  <span class="material-symbols-outlined text-[18px] text-blue-600 dark:text-blue-400 shrink-0">arrow_drop_down</span>
                 </button>
-
-                <!-- Clickable Month & Year Trigger -->
-                <button type="button" onclick="openMonthYearPicker()" class="inline-flex items-center gap-1 px-1.5 py-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer group" title="Klik untuk Ganti Bulan & Tahun Langsung">
-                  <span id="stripMonthDisplay" class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">November 2026</span>
-                  <span class="material-symbols-outlined text-[17px] text-blue-600 dark:text-blue-400 group-hover:translate-y-0.5 transition-transform">arrow_drop_down</span>
-                </button>
-
-                <!-- Next Month Button -->
-                <button type="button" onclick="stepStripMonth(1)" class="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer" title="Bulan Berikutnya">
-                  <span class="material-symbols-outlined text-[19px]">chevron_right</span>
-                </button>
-
-                <!-- Week-of-Month Badge (hanya mode Minggu) -->
-                <span id="stripWeekBadge" class="hidden ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 whitespace-nowrap">Minggu ke-1</span>
+                <span id="stripWeekBadge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 whitespace-nowrap tabular-nums">Minggu ke-3</span>
               </div>
-              
-              <!-- Pill Toggle: Minggu Ini | Bulan Ini -->
-              <div class="inline-flex p-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-xs font-semibold shadow-xs" role="tablist">
-                <button type="button" id="stripBtnWeek" onclick="setStripMode('week')" class="px-3 py-1 rounded-full bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-bold shadow-xs transition-all">
-                  Minggu Ini
+
+              <div class="inline-flex items-center gap-0.5 p-0.5 rounded-xl bg-slate-100/90 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 shrink-0">
+                <button type="button" onclick="stepStripMonth(-1)" aria-label="Sebelumnya" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:bg-white dark:hover:bg-slate-900 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40" title="Minggu / Bulan Sebelumnya">
+                  <span class="material-symbols-outlined text-[18px]">chevron_left</span>
                 </button>
-                <button type="button" id="stripBtnMonth" onclick="setStripMode('month')" class="px-3 py-1 rounded-full text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-all">
-                  Bulan Ini
+                <button type="button" onclick="resetPickerToCurrentMonth()" class="px-2 h-8 rounded-lg text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:bg-white dark:hover:bg-slate-900 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40" title="Kembali ke Hari Ini">
+                  Hari Ini
+                </button>
+                <button type="button" onclick="stepStripMonth(1)" aria-label="Berikutnya" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:bg-white dark:hover:bg-slate-900 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40" title="Minggu / Bulan Berikutnya">
+                  <span class="material-symbols-outlined text-[18px]">chevron_right</span>
                 </button>
               </div>
+            </div>
+
+            <!-- Row 2: Segmented Toggle Full-Width (Minggu Ini | Bulan Ini) -->
+            <div class="grid grid-cols-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 text-xs font-semibold" role="tablist">
+              <button type="button" id="stripBtnWeek" onclick="setStripMode('week')" class="py-1.5 rounded-xl bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-bold shadow-xs transition-all cursor-pointer focus:outline-none">
+                Minggu Ini
+              </button>
+              <button type="button" id="stripBtnMonth" onclick="setStripMode('month')" class="py-1.5 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none">
+                Bulan Ini
+              </button>
             </div>
 
             <!-- 7-Day Date Cards Container -->
