@@ -21,14 +21,14 @@ test('index.html memuat library jsQR dan komponen modal pemindai kamera live QR 
   assert.ok(html.includes('id="scannerFallbackBox"'), 'index.html harus memiliki fallback UI saat kamera belum diizinkan');
 
   // 3. Fungsi JS Pemindai Kamera (di index.html atau js/stitch-aset-arsip.js)
-  assert.ok(src.includes('function openMobileQrScanModal()'), 'harus mendefinisikan openMobileQrScanModal()');
+  assert.ok(src.includes('function openMobileQrScanModal('), 'harus mendefinisikan openMobileQrScanModal(mode)');
   assert.ok(src.includes('function startScannerCamera()'), 'harus mendefinisikan startScannerCamera()');
   assert.ok(src.includes('function stopScannerStream()'), 'harus mendefinisikan stopScannerStream()');
   assert.ok(src.includes('function onCodeDetected('), 'harus mendefinisikan onCodeDetected()');
   assert.ok(src.includes('function handleScannerFilePicked('), 'harus mendefinisikan handleScannerFilePicked()');
 
   // 4. Barcode Hero Card di Aset bisa di-klik untuk scan
-  assert.ok(html.includes('onclick="openMobileQrScanModal()"'), 'Scan Barcode Card harus memanggil openMobileQrScanModal()');
+  assert.ok(html.includes("onclick=\"openMobileQrScanModal('general')\""), "Scan Barcode Card harus memanggil openMobileQrScanModal('general')");
 });
 
 test('Endpoint API /api/stitch/aset/scan memvalidasi parameter dan merespons data aset riil', async (t) => {

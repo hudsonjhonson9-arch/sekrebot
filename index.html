@@ -3635,6 +3635,186 @@
     </div>
   </div>
 
+  <!-- Bridge inputs untuk rekap-pdf.js (parity dengan rekap.html) -->
+  <input type="hidden" id="rekapDari" />
+  <input type="hidden" id="rekapSampai" />
+  <input type="hidden" id="rekapRoleFilter" value="" />
+  <script>
+    if (typeof window.showRekapToast === 'undefined') {
+      window.showRekapToast = function(type, msg) {
+        if (window.Swal) {
+          Swal.fire({ icon: type === 'fail' ? 'error' : 'success', html: msg, timer: 2500, showConfirmButton: false });
+        } else {
+          console[type === 'fail' ? 'error' : 'log']('[RekapToast]', msg);
+        }
+      };
+    }
+  </script>
+
+<!-- PDF Preview Modal (dark two-column: sidebar settings + canvas viewer) -->
+<div id="pdfPreviewModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:999999; background:rgba(11, 15, 25, 0.85); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:20px; box-sizing:border-box;">
+  <div style="background:#0F172A; border:1px solid rgba(255, 255, 255, 0.08); border-radius:20px; width:95%; max-width:1200px; height:90%; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0, 0, 0, 0.5); overflow:hidden; color:#f8fafc; font-family:'Plus Jakarta Sans', sans-serif;">
+    <!-- Modal Header -->
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.01);">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="material-symbols-outlined" style="font-size:20px; color:#3b82f6;">picture_as_pdf</span>
+        <div>
+          <h3 style="margin:0; font-size:16px; font-weight:700; color:#fff;">Pratinjau PDF</h3>
+          <p style="margin:0; font-size:11px; color:#94a3b8;">Pratinjau sebelum diunduh.</p>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="btnTogglePdfSidebar" onclick="document.getElementById('pdfPreviewSidebar').classList.toggle('show-sidebar')" style="display:none; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer; align-items:center;"><span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">settings</span> Pengaturan</button>
+        <button onclick="closePdfPreviewModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; border-radius:10px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; font-size:16px;">&times;</button>
+      </div>
+    </div>
+
+    <!-- Modal Body (Two Column Layout) -->
+    <div id="pdfPreviewFlexContainer" style="display:flex; flex:1; overflow:hidden;">
+      <!-- Left Side: Config Panel -->
+      <div id="pdfPreviewSidebar" style="width:320px; border-right:1px solid rgba(255,255,255,0.08); padding:20px; box-sizing:border-box; overflow-y:auto; background:rgba(255,255,255,0.01); display:flex; flex-direction:column; gap:16px;">
+
+        <div>
+          <label style="display:block; font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Orientasi Halaman</label>
+          <select id="pdfOptOrientation" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:38px; color:#fff; font-size:12px; padding:0 12px; outline:none;">
+            <option value="p" selected>Portrait (Tegak)</option>
+            <option value="l">Landscape (Mendatar)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block; font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Ukuran Kertas</label>
+          <select id="pdfOptSize" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:38px; color:#fff; font-size:12px; padding:0 12px; outline:none;">
+            <option value="f4" selected>F4 / Folio (215x330 mm)</option>
+            <option value="a4">A4 (210x297 mm)</option>
+            <option value="letter">Letter (216x279 mm)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block; font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Margin Kertas (mm)</label>
+          <select id="pdfOptMargin" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:38px; color:#fff; font-size:12px; padding:0 12px; outline:none;">
+            <option value="10" selected>Sempit (10 mm)</option>
+            <option value="15">Sedang (15 mm)</option>
+            <option value="20">Lebar (20 mm)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block; font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Ukuran Font Tabel</label>
+          <select id="pdfOptFontSize" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:38px; color:#fff; font-size:12px; padding:0 12px; outline:none;">
+            <option value="6.5">Sangat Kecil (6.5pt)</option>
+            <option value="7.5" selected>Normal (7.5pt)</option>
+            <option value="8.5">Besar (8.5pt)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block; font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Padding Baris (Tinggi Baris)</label>
+          <select id="pdfOptPadding" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:38px; color:#fff; font-size:12px; padding:0 12px; outline:none;">
+            <option value="1.5">Sangat Rapat (1.5)</option>
+            <option value="2.0" selected>Normal (2.0)</option>
+            <option value="2.8">Longgar (2.8)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block; font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Cegah Baris Terpotong</label>
+          <select id="pdfOptRowBreak" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:38px; color:#fff; font-size:12px; padding:0 12px; outline:none;">
+            <option value="avoid" selected>Ya (Pindahkan ke Halaman Baru)</option>
+            <option value="auto">Tidak (Izinkan Terpotong)</option>
+          </select>
+        </div>
+
+        <!-- Dynamic Letterhead Overrides -->
+        <div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:14px; margin-top:4px;">
+          <span style="font-size:10px; font-weight:800; color:#3b82f6; text-transform:uppercase; display:block; margin-bottom:12px; letter-spacing:0.5px;"><span class="material-symbols-outlined" style="font-size:12px; vertical-align:middle;">edit</span> Ubah Kop Secara Bebas</span>
+
+          <div style="margin-bottom:10px;">
+            <label style="display:block; font-size:9px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Nama Instansi (Judul Kop)</label>
+            <textarea id="pdfOptHeaderName" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:55px; color:#fff; font-size:11px; padding:8px; outline:none; resize:vertical; font-family:inherit; line-height:1.3; box-sizing:border-box;"></textarea>
+          </div>
+
+          <div style="margin-bottom:10px;">
+            <label style="display:block; font-size:9px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Alamat (Bisa Baris Baru)</label>
+            <textarea id="pdfOptHeaderAlamat" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:55px; color:#fff; font-size:11px; padding:8px; outline:none; resize:vertical; font-family:inherit; line-height:1.3; box-sizing:border-box;"></textarea>
+          </div>
+
+          <div style="margin-bottom:10px;">
+            <label style="display:block; font-size:9px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Kontak (Bisa Baris Baru)</label>
+            <textarea id="pdfOptHeaderKontak" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:50px; color:#fff; font-size:11px; padding:8px; outline:none; resize:vertical; font-family:inherit; line-height:1.3; box-sizing:border-box;"></textarea>
+          </div>
+
+          <div style="margin-bottom:10px;">
+            <label style="display:block; font-size:9px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:4px;">URL Logo Kop</label>
+            <input type="url" id="pdfOptHeaderLogo" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:34px; color:#fff; font-size:11px; padding:0 10px; outline:none; box-sizing:border-box;" />
+          </div>
+
+          <div style="display:flex; gap:8px;">
+            <div style="flex:1;">
+              <label style="display:block; font-size:9px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Font Kop</label>
+              <select id="pdfOptHeaderFont" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:34px; color:#fff; font-size:11px; padding:0 8px; outline:none; box-sizing:border-box;">
+                <option value="times">Times</option>
+                <option value="helvetica">Arial</option>
+                <option value="courier">Courier</option>
+              </select>
+            </div>
+            <div style="width:105px;">
+              <label style="display:block; font-size:9px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Ukuran Font</label>
+              <select id="pdfOptHeaderFontSize" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; width:100%; height:34px; color:#fff; font-size:11px; padding:0 8px; outline:none; box-sizing:border-box;">
+                <option value="11">11pt</option>
+                <option value="13">13pt</option>
+                <option value="15">15pt</option>
+                <option value="17">17pt</option>
+                <option value="19">19pt</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="refreshPdfPreview()" style="margin:8px 0 0 0; width:100%; height:40px; background:#2563eb; color:#fff; font-weight:700; font-size:12px; border:none; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;"><span class="material-symbols-outlined" style="font-size:16px;">refresh</span> Terapkan &amp; Segarkan</button>
+
+      </div>
+
+      <!-- Right Side: PDF Canvas Viewer -->
+      <div style="flex:1; background:#1e293b; display:flex; flex-direction:column; justify-content:center; align-items:center; position:relative; overflow:hidden;">
+        <div id="pdfPreviewCanvasContainer" style="display:none; width:100%; height:100%; overflow-y:auto; padding:20px; box-sizing:border-box; background:#1e293b; align-items:center; flex-direction:column;">
+          <div id="pdfCanvasWrapper" style="display:flex; flex-direction:column; align-items:center; transform-origin:top center; transition:transform 0.15s ease-out;"></div>
+        </div>
+
+        <!-- Floating Zoom Toolbar (Mobile) -->
+        <div id="pdfMobileToolbar" style="display:none; position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(15, 23, 42, 0.9); padding:8px 16px; border-radius:30px; gap:16px; align-items:center; box-shadow:0 10px 25px rgba(0,0,0,0.8); z-index:20; border:1px solid rgba(255,255,255,0.1); backdrop-filter:blur(5px);">
+          <button onclick="window.zoomPdf(-0.25)" style="background:rgba(255,255,255,0.1); border:none; color:#fff; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer;"><span class="material-symbols-outlined" style="font-size:18px;">remove</span></button>
+          <span id="pdfZoomIndicator" style="color:#fff; font-size:14px; font-weight:700; min-width:45px; text-align:center; font-family:monospace;">100%</span>
+          <button onclick="window.zoomPdf(0.25)" style="background:rgba(255,255,255,0.1); border:none; color:#fff; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer;"><span class="material-symbols-outlined" style="font-size:18px;">add</span></button>
+        </div>
+
+        <iframe id="pdfPreviewIframe" style="width:100%; height:100%; border:none; display:block;" src="about:blank"></iframe>
+        <div id="pdfPreviewLoader" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(30, 41, 59, 0.8); align-items:center; justify-content:center; flex-direction:column; gap:12px; z-index:10;">
+          <span style="width:40px; height:40px; border:3px solid rgba(255,255,255,0.1); border-top-color:#3b82f6; border-radius:50%; animation:spin_loader 1s linear infinite; display:block;"></span>
+          <div style="font-size:12px; color:#94a3b8; font-weight:600;">Membuat Pratinjau PDF...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Footer Action Buttons -->
+    <div style="display:flex; justify-content:flex-end; align-items:center; gap:12px; padding:16px 24px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.01);">
+      <button onclick="closePdfPreviewModal()" style="margin:0; min-width:100px; height:38px; background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.08); border-radius:8px; font-weight:700; font-size:12px; cursor:pointer; padding:0 16px;">Batal</button>
+      <button id="btnPdfModalSendTelegram" onclick="triggerPdfModalSendTelegram()" style="margin:0; min-width:160px; height:38px; background:#eab308; color:#000; font-weight:700; font-size:12px; border:none; border-radius:8px; cursor:pointer; padding:0 16px; display:flex; align-items:center; justify-content:center; gap:6px;"><span class="material-symbols-outlined" style="font-size:16px;">send</span> Kirim ke Telegram</button>
+      <button onclick="triggerPdfModalDownload()" style="margin:0; min-width:160px; height:38px; background:#22c55e; color:#fff; font-weight:700; font-size:12px; border:none; border-radius:8px; cursor:pointer; padding:0 16px; display:flex; align-items:center; justify-content:center; gap:6px;"><span class="material-symbols-outlined" style="font-size:16px;">download</span> Unduh Laporan</button>
+    </div>
+  </div>
+</div>
+<style>
+  @keyframes spin_loader { to { transform: rotate(360deg); } }
+  #pdfPreviewModal select option { background: #0f172a; color: #f8fafc; }
+  @media (max-width: 768px) {
+    #pdfPreviewSidebar { display: none !important; }
+    #pdfPreviewSidebar.show-sidebar { display: flex !important; position: absolute; left: 0; top: 0; height: 100%; z-index: 10; }
+    #btnTogglePdfSidebar { display: flex !important; }
+  }
+</style>
+
   <!-- MODAL PREVIEW DOKUMEN REKAP KEHADIRAN (F4 + KOP + PARAF/TTD) -->
   <div id="modalAdminRekapPreview" class="hidden fixed inset-0 z-[75] bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4" onclick="if(event.target===this)closeAdminRekapPreview()">
     <div class="w-full max-w-4xl max-h-[92vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden">
@@ -3819,6 +3999,7 @@
   <script src="js/stitch-sppd-generator.js"></script>
   <script src="js/stitch-arsip-agenda.js"></script>
   <script src="js/stitch-admin-mobile.js"></script>
+  <script src="js/rekap-pdf.js"></script>
   <script src="js/stitch-admin-rekap.js"></script>
 </body>
 </html>

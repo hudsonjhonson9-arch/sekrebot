@@ -14,17 +14,15 @@ const desktopPages = [
   { file: 'admin.html', activeHref: 'admin.html', activeText: 'Panel Admin' }
 ];
 
-const standard7Hrefs = [
+const standardHrefs = [
   'desktop.html',
   'rekap.html',
-  'layanan.html',
-  'aset-kir.html',
   'arsip.html',
   'admin.html',
   'kiosk.html'
 ];
 
-test('Seluruh 6 halaman portal desktop memiliki <aside> sidebar tersinkronisasi 7 menu tanpa href="#"', () => {
+test('Seluruh 6 halaman portal desktop memiliki <aside> sidebar tersinkronisasi 5 menu tanpa href="#"', () => {
   for (const page of desktopPages) {
     const html = fs.readFileSync(path.join(ROOT, page.file), 'utf8');
     const asideMatch = html.match(/<aside[\s\S]*?<\/aside>/i);
@@ -33,18 +31,23 @@ test('Seluruh 6 halaman portal desktop memiliki <aside> sidebar tersinkronisasi 
     const aside = asideMatch[0];
     assert.ok(!aside.includes('href="#"'), `${page.file} tidak boleh memiliki href="#" di sidebar`);
 
-    // Periksa bahwa 7 link standar semuanya hadir
-    for (const href of standard7Hrefs) {
+    // Periksa bahwa 5 link standar semuanya hadir (menu Layanan & Aset KIR dihapus dari nav)
+    for (const href of standardHrefs) {
       assert.ok(aside.includes(`href="${href}"`), `${page.file} harus memiliki link href="${href}"`);
     }
 
     // Periksa bahwa aria-current="page" tepat satu dan mengarah ke activeHref
     const activeMatches = [...aside.matchAll(/aria-current="page"/g)];
-    assert.strictEqual(activeMatches.length, 1, `${page.file} harus memiliki tepat satu aria-current="page"`);
-    assert.ok(
-      aside.includes(`aria-current="page"`) && aside.includes(`href="${page.activeHref}"`),
-      `${page.file} harus menandai ${page.activeHref} sebagai aria-current="page"`
-    );
+    if (page.file === 'layanan.html') {
+      // Sidebar layanan.html sengaja tanpa link aktif (menu Layanan & Aset dihapus, commit 4491b6b)
+      assert.strictEqual(activeMatches.length, 0, 'layanan.html sengaja tidak memiliki link aria-current');
+    } else {
+      assert.strictEqual(activeMatches.length, 1, `${page.file} harus memiliki tepat satu aria-current="page"`);
+      assert.ok(
+        aside.includes(`aria-current="page"`) && aside.includes(`href="${page.activeHref}"`),
+        `${page.file} harus menandai ${page.activeHref} sebagai aria-current="page"`
+      );
+    }
   }
 });
 

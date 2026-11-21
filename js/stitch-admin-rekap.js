@@ -1278,154 +1278,50 @@
     if (_mode === 'range' && !_rangePayload) await loadAdminRekapData();
     if (_mode === 'harian' && !_harianPayload) await loadAdminRekapData();
 
-    const modal = d.getElementById('modalAdminRekapPreview');
-    const body = d.getElementById('adminRekapPreviewBody');
-    const titleEl = d.getElementById('adminRekapPreviewTitle');
-    const subEl = d.getElementById('adminRekapPreviewSub');
-    if (!modal || !body) return;
-
-    const rawPayload = _mode === 'harian' ? _harianPayload : _rangePayload;
-    const opts = readPdfPrintOptions(rawPayload);
-    const kp = opts.signer || rawPayload?.kepala;
-    const kpSig = kp ? resolveImg(kp.signature) : '';
-    const tglCetak = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
     const rows = getFilteredRows();
-    const isMagang = opts.isMagang;
-    const idLabel = isMagang ? 'ID' : 'NIP';
-
-    const kopInstansi = (opts.kopOverride?.instansi || 'BADAN PERENCANAAN PEMBANGUNAN RISET DAN INOVASI DAERAH').toUpperCase();
-    const kopAlamat = opts.kopOverride?.alamat || 'Jl. Weekarou, Waikabubak, Sumba Barat, Nusa Tenggara Timur';
-    if (subEl) {
-      subEl.textContent = `Format ${opts.paper.toUpperCase()} (${opts.orientation === 'l' ? 'Landscape' : 'Portrait'}) • Font ${opts.fontSize}pt • TTD ${kp?.nama || 'Kepala Badan'}`;
+    if (!rows || rows.length === 0) {
+      if (w.Swal) w.Swal.fire({ icon: 'warning', title: 'Data Kosong', text: 'Muat rekap terlebih dahulu.' });
+      return;
     }
 
-    const kopHtml = `
-      <div style="display:flex;align-items:center;gap:14px;border-bottom:3px double #0f172a;padding-bottom:10px;margin-bottom:12px;">
-        <img src="Lambang_Kabupaten_Sumba_Barat.png" alt="Logo" style="width:54px;height:62px;object-fit:contain;flex-shrink:0;" onerror="this.style.display='none'">
-        <div style="flex:1;text-align:center;font-family:'Times New Roman',serif;color:#0f172a;">
-          <div style="font-size:12px;font-weight:700;letter-spacing:0.04em;">PEMERINTAH KABUPATEN SUMBA BARAT</div>
-          <div style="font-size:15px;font-weight:800;line-height:1.2;">${esc(kopInstansi)}</div>
-          <div style="font-size:10px;margin-top:3px;">${esc(kopAlamat)}</div>
-        </div>
-      </div>`;
+    const isHarian = (_mode === 'harian');
+    w.lastRekapPegawai = rows.map(r => {
+      const mapped = { ...r };
+      if (isHarian) {
+        const rawKet = String(r.ket || r.logKet || '').trim();
+        const upperKet = rawKet.toUpperCase();
+        mapped.tubel = /\bTUBEL\b/.test(upperKet) ? 1 : 0;
+        mapped.cuti = /\bCUTI\b/.test(upperKet) ? 1 : 0;
+        mapped.sakit = /\bSAKIT\b/.test(upperKet) ? 1 : 0;
+        mapped.izin = /\bIZIN\b/.test(upperKet) ? 1 : 0;
+        mapped.tugas = /\b(TUGAS|DL)\b/.test(upperKet) ? 1 : 0;
+        mapped.lambat = Number(r.menit_terlambat || 0) > 0 ? 1 : 0;
+        mapped.logKet = rawKet.replace(/^(TUBEL|CUTI|SAKIT|IZIN|TUGAS\/DL|TUGAS|DL|TB|HADIR|ALPA|ALPHA|—|-)\s*:?\s*/i, '').trim();
+      } else {
+        mapped.masuk = r.masuk ?? r.hadir ?? 0;
+      }
+      return mapped;
+    });
 
-    const tblFontPx = Math.max(9, Math.round(opts.fontSize * 1.35));
-    let docTitle = '';
-    let docPeriode = '';
-    let tableHtml = '';
+    const dari = isHarian
+      ? (d.getElementById('adminRekapTanggalHarian')?.value || todayWitaIso())
+      : (_rangePayload?.dari || d.getElementById('adminRekapDari')?.value || todayWitaIso());
+    const sampai = isHarian
+      ? dari
+      : (_rangePayload?.sampai || d.getElementById('adminRekapSampai')?.value || dari);
+    const roleVal = d.getElementById('adminRekapRoleFilter')?.value || '';
 
-    if (_mode !== 'harian') {
-      const dari = _rangePayload?.dari || d.getElementById('adminRekapDari')?.value || todayWitaIso();
-      const sampai = _rangePayload?.sampai || d.getElementById('adminRekapSampai')?.value || dari;
-      docTitle = isMagang ? 'REKAPITULASI KEHADIRAN MAGANG / LAINNYA' : 'REKAPITULASI KEHADIRAN PEGAWAI';
-      docPeriode = `Periode: ${fmtIndo(dari)} s/d ${fmtIndo(sampai)} (${_rangePayload?.hariKerja || 0} Hari Kerja)`;
-      if (titleEl) titleEl.textContent = `Preview Rekap Rentang (${dari} s/d ${sampai})`;
-      tableHtml = `
-        <table style="width:100%;border-collapse:collapse;font-size:${tblFontPx}px;font-family:'Times New Roman',serif;color:#0f172a;">
-          <thead>
-            <tr style="background:#f1f5f9;">
-              <th style="border:1px solid #334155;padding:5px;text-align:center;">No</th>
-              <th style="border:1px solid #334155;padding:5px;text-align:left;">Nama / ${idLabel}</th>
-              <th style="border:1px solid #334155;padding:5px;text-align:left;">Jabatan</th>
-              <th style="border:1px solid #334155;padding:5px;text-align:center;">Hadir</th>
-              <th style="border:1px solid #334155;padding:5px;text-align:center;">Lambat (m)</th>
-              <th style="border:1px solid #334155;padding:5px;text-align:center;">Cepat (m)</th>
-              <th style="border:1px solid #334155;padding:5px;text-align:center;">I/S/T/C</th>
-              <th style="border:1px solid #334155;padding:5px;text-align:center;">Alpa</th>
-              <th style="border:1px solid #334155;padding:5px;text-align:center;">Akumulasi</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map((r, i) => {
-              const mLambat = Number(r.menit_terlambat ?? r.menit_terlambat_periode ?? 0);
-              const mCepat = Number(r.menit_lebih_awal ?? r.menit_lebih_awal_periode ?? 0);
-              const mAlpa = (r.alpa || 0) * 450;
-              const ist = (r.izin || 0) + (r.sakit || 0) + (r.tugas || 0) + (r.cuti || 0) + (r.tubel || 0);
-              return `
-                <tr>
-                  <td style="border:1px solid #334155;padding:4px;text-align:center;">${i + 1}</td>
-                  <td style="border:1px solid #334155;padding:4px;"><strong>${esc(r.nama)}</strong><br><span style="font-size:9.5px;">${idLabel}. ${esc(r.nip || '-')}</span></td>
-                  <td style="border:1px solid #334155;padding:4px;">${esc(r.jabatan || '-')}${!isMagang && r.pangkat ? `<br><span style="font-size:9.5px;">(${esc(r.pangkat)})</span>` : ''}</td>
-                  <td style="border:1px solid #334155;padding:4px;text-align:center;">${r.hadir ?? r.masuk ?? 0}</td>
-                  <td style="border:1px solid #334155;padding:4px;text-align:center;">${mLambat} m (${r.lambat_count || 0}x)</td>
-                  <td style="border:1px solid #334155;padding:4px;text-align:center;">${mCepat} m</td>
-                  <td style="border:1px solid #334155;padding:4px;text-align:center;">${ist}</td>
-                  <td style="border:1px solid #334155;padding:4px;text-align:center;">${r.alpa || 0}</td>
-                  <td style="border:1px solid #334155;padding:4px;text-align:center;">${toHHMM(mLambat + mCepat + mAlpa)}</td>
-                </tr>`;
-            }).join('')}
-          </tbody>
-        </table>`;
-    } else {
-      const tanggal = d.getElementById('adminRekapTanggalHarian')?.value || todayWitaIso();
-      docTitle = isMagang ? 'DAFTAR HADIR MAGANG / LAINNYA' : 'DAFTAR HADIR PEGAWAI';
-      docPeriode = `Hari / Tanggal: ${fmtIndoFull(tanggal)}`;
-      if (titleEl) titleEl.textContent = `Preview Daftar Hadir (${tanggal})`;
-      tableHtml = `
-        <table style="width:100%;border-collapse:collapse;font-size:${tblFontPx}px;font-family:'Times New Roman',serif;color:#0f172a;">
-          <thead>
-            <tr style="background:#f1f5f9;">
-              <th style="border:1px solid #334155;padding:5px;text-align:center;">No</th>
-              <th style="border:1px solid #334155;padding:5px;text-align:left;">Nama / ${idLabel}</th>
-              <th style="border:1px solid #334155;padding:5px;text-align:left;">Jabatan / Pangkat</th>
-              <th style="border:1px solid #334155;padding:5px;text-align:center;">Jam Masuk</th>
-              <th style="border:1px solid #334155;padding:5px;text-align:center;width:72px;">Paraf Masuk</th>
-              <th style="border:1px solid #334155;padding:5px;text-align:center;">Jam Pulang</th>
-              <th style="border:1px solid #334155;padding:5px;text-align:center;width:72px;">Paraf Pulang</th>
-              <th style="border:1px solid #334155;padding:5px;text-align:left;">Ket</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map((r, i) => {
-              const sUrl = resolveImg(r.signature);
-              const imgTag = sUrl ? `<img src="${esc(sUrl)}" style="max-height:26px;max-width:64px;object-fit:contain;margin:0 auto;display:block;" onerror="this.style.display='none'">` : '';
-              const hasM = Boolean(r.jamMasuk && r.jamMasuk !== '-' && r.jamMasuk !== '—');
-              const hasP = Boolean(r.jamPulang && r.jamPulang !== '-' && r.jamPulang !== '—');
-              return `
-                <tr>
-                  <td style="border:1px solid #334155;padding:4px;text-align:center;">${i + 1}</td>
-                  <td style="border:1px solid #334155;padding:4px;"><strong>${esc(r.nama)}</strong><br><span style="font-size:9.5px;">${idLabel}. ${esc(r.nip || '-')}</span></td>
-                  <td style="border:1px solid #334155;padding:4px;">${esc(r.jabatan || '-')}${!isMagang && r.pangkat ? `<br><span style="font-size:9.5px;">(${esc(r.pangkat)})</span>` : ''}</td>
-                  <td style="border:1px solid #334155;padding:4px;text-align:center;">${esc(r.jamMasuk || '-')}</td>
-                  <td style="border:1px solid #334155;padding:4px;text-align:center;">${hasM ? imgTag : ''}</td>
-                  <td style="border:1px solid #334155;padding:4px;text-align:center;">${esc(r.jamPulang || '-')}</td>
-                  <td style="border:1px solid #334155;padding:4px;text-align:center;">${hasP ? imgTag : ''}</td>
-                  <td style="border:1px solid #334155;padding:4px;">${esc(r.ket || '-')}</td>
-                </tr>`;
-            }).join('')}
-          </tbody>
-        </table>`;
+    const elDari = d.getElementById('rekapDari');
+    const elSampai = d.getElementById('rekapSampai');
+    const elRole = d.getElementById('rekapRoleFilter');
+    if (elDari) elDari.value = dari;
+    if (elSampai) elSampai.value = sampai;
+    if (elRole) elRole.value = roleVal;
+
+    w.pdfPreviewContext = 'rekap';
+    if (typeof w.openPdfPreviewModal === 'function') {
+      w.openPdfPreviewModal();
     }
-
-    const ttdHtml = `
-      <div style="display:flex;justify-content:flex-end;margin-top:22px;font-family:'Times New Roman',serif;font-size:11px;color:#0f172a;">
-        <div style="text-align:center;min-width:220px;">
-          <div>Waikabubak, ${esc(tglCetak)}</div>
-          <div>Mengetahui,</div>
-          <div style="font-weight:700;">${esc(kp?.jabatan || 'Kepala Badan')}</div>
-          <div style="height:56px;display:flex;align-items:center;justify-content:center;margin:4px 0;">
-            ${kpSig ? `<img src="${esc(kpSig)}" style="max-height:52px;max-width:140px;object-fit:contain;" alt="TTD Kepala" onerror="this.style.display='none'">` : ''}
-          </div>
-          <div style="font-weight:700;text-decoration:underline;">${esc(kp?.nama || '__________________________')}</div>
-          ${kp?.pangkat ? `<div>${esc(kp.pangkat)}</div>` : ''}
-          <div>NIP. ${esc(kp?.nip || '..........................................')}</div>
-        </div>
-      </div>`;
-
-    const sheetMinW = opts.orientation === 'l' ? '820px' : '620px';
-    body.innerHTML = `
-      <div style="background:#ffffff;padding:24px;border-radius:16px;box-shadow:0 6px 24px rgba(15,23,42,0.08);min-width:${sheetMinW};margin:0 auto;">
-        ${kopHtml}
-        <div style="text-align:center;font-family:'Times New Roman',serif;margin-bottom:12px;color:#0f172a;">
-          <div style="font-size:13px;font-weight:700;">${docTitle}</div>
-          <div style="font-size:11px;">${esc(docPeriode)}</div>
-        </div>
-        ${tableHtml}
-        ${ttdHtml}
-      </div>`;
-
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
   }
 
   function closeAdminRekapPreview() {
