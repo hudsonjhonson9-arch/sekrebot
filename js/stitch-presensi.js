@@ -554,9 +554,10 @@
       stripMode = mode;
       const btnWeek = document.getElementById('stripBtnWeek');
       const btnMonth = document.getElementById('stripBtnMonth');
+      const weekSel = document.getElementById('stripWeekSelector');
 
-      const activeClasses = ['bg-white', 'dark:bg-slate-900', 'text-blue-600', 'dark:text-blue-400', 'font-bold', 'shadow-xs'];
-      const inactiveClasses = ['text-slate-500', 'hover:text-slate-800', 'dark:text-slate-400', 'dark:hover:text-slate-200'];
+      const activeClasses = ['font-bold', 'text-blue-600', 'dark:text-blue-400'];
+      const inactiveClasses = ['font-medium', 'text-slate-400', 'hover:text-slate-700', 'dark:hover:text-slate-200'];
 
       if (mode === 'week') {
         if (btnWeek) {
@@ -567,6 +568,7 @@
           btnMonth.classList.remove(...activeClasses);
           btnMonth.classList.add(...inactiveClasses);
         }
+        if (weekSel) weekSel.classList.remove('hidden');
         renderCalendarStrip();
       } else {
         if (btnMonth) {
@@ -577,9 +579,31 @@
           btnWeek.classList.remove(...activeClasses);
           btnWeek.classList.add(...inactiveClasses);
         }
+        if (weekSel) weekSel.classList.add('hidden');
         renderMonthStripView();
       }
     }
+
+    function selectStripWeekOfMonth(weekIdx) {
+      const anchor = state.calendarStripAnchorDate ? new Date(state.calendarStripAnchorDate) : new Date();
+      const dayOfWeek = (anchor.getDay() + 6) % 7;
+      const curMon = new Date(anchor);
+      curMon.setDate(anchor.getDate() - dayOfWeek);
+      const curThu = new Date(curMon);
+      curThu.setDate(curMon.getDate() + 3);
+      const year = curThu.getFullYear();
+      const month = curThu.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const targetDay = Math.min(daysInMonth, Math.max(1, (weekIdx - 1) * 7 + 4));
+      const target = new Date(year, month, targetDay, 12, 0, 0);
+      state.calendarStripAnchorDate = target;
+      const y = target.getFullYear();
+      const m = String(target.getMonth() + 1).padStart(2, '0');
+      const dt = String(target.getDate()).padStart(2, '0');
+      selectedStripDate = `${y}-${m}-${dt}`;
+      renderCalendarStrip();
+    }
+    window.selectStripWeekOfMonth = selectStripWeekOfMonth;
 
     function renderCalendarStrip() {
       const container = document.getElementById('calendarWeekStripCards');
@@ -606,12 +630,20 @@
         monthHeader.textContent = `${monthNames[thursday.getMonth()]} ${thursday.getFullYear()}`;
       }
 
-      // Badge "Minggu ke-N" akurat (1..5) berdasarkan posisi minggu di bulan acuan
-      const weekNo = Math.ceil(thursday.getDate() / 7);
-      const weekBadge = document.getElementById('stripWeekBadge');
-      if (weekBadge) {
-        weekBadge.textContent = `Minggu ke-${weekNo}`;
-        weekBadge.classList.remove('hidden');
+      // Render pemilih minggu langsung (Minggu 1..N) yang bisa diklik, tanpa chips
+      const daysInMonth = new Date(thursday.getFullYear(), thursday.getMonth() + 1, 0).getDate();
+      const totalWeeks = Math.ceil(daysInMonth / 7);
+      const weekNo = Math.min(totalWeeks, Math.ceil(thursday.getDate() / 7));
+      const weekSel = document.getElementById('stripWeekSelector');
+      if (weekSel) {
+        weekSel.classList.remove('hidden');
+        weekSel.style.gridTemplateColumns = `repeat(${totalWeeks}, minmax(0, 1fr))`;
+        let wHtml = '';
+        for (let w = 1; w <= totalWeeks; w++) {
+          const isAct = (w === weekNo);
+          wHtml += `<button type="button" onclick="selectStripWeekOfMonth(${w})" class="py-1.5 text-center transition-colors cursor-pointer focus:outline-none border-b-2 ${isAct ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium'}">M${w}</button>`;
+        }
+        weekSel.innerHTML = wHtml;
       }
 
       const dayLabels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
@@ -627,6 +659,7 @@
         const dateStr = `${y}-${m}-${dt}`;
         const dateNum = d.getDate();
         const isSelected = (dateStr === selectedStripDate);
+        const isOtherMonth = d.getMonth() !== thursday.getMonth();
 
         // Find log for this date in PostgreSQL logs
         const dLogs = userLogs.filter(l => l.Tanggal === dateStr);
@@ -634,36 +667,24 @@
         const izin = dLogs.find(l => l['Jenis Absen'] === 'IZIN' || l['Jenis Absen'] === 'SAKIT' || l['Jenis Absen'] === 'CUTI');
         
         // Status dot color
-        let dotColor = 'bg-slate-300 dark:bg-slate-600'; // Default / Belum Absen
+        let dotColor = 'bg-transparent';
         if (izin) {
-          dotColor = 'bg-blue-500'; // Izin / Sakit
+          dotColor = 'bg-blue-500';
         } else if (masuk && masuk['Jenis Absen'] === 'DI LUAR JAM MASUK') {
-          dotColor = 'bg-amber-500'; // Terlambat
+          dotColor = 'bg-amber-500';
         } else if (masuk) {
-          dotColor = 'bg-emerald-500'; // Hadir tepat waktu
-        } else if (i >= 5) {
-          dotColor = 'bg-slate-300/80'; // Weekend (Sab/Min)
+          dotColor = 'bg-emerald-500';
+        } else if (i < 5) {
+          dotColor = 'bg-slate-200 dark:bg-slate-700';
         }
 
-        if (isSelected) {
-          // Highlighted Active Card (Primary Blue Card #2563eb with white text and cyan dot)
-          html += `
-            <div onclick="selectStripDate('${dateStr}')" class="py-2.5 px-1.5 flex flex-col items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-[1.04] cursor-pointer transition-all">
-              <span class="text-[11px] text-blue-100 font-bold leading-none">${dayLabels[i]}</span>
-              <span class="text-sm font-black text-white font-mono my-1 leading-none">${dateNum}</span>
-              <span class="w-1.5 h-1.5 rounded-full bg-cyan-300 ring-2 ring-blue-600 inline-block"></span>
-            </div>
-          `;
-        } else {
-          // Normal Day Card
-          html += `
-            <div onclick="selectStripDate('${dateStr}')" class="py-2.5 px-1.5 flex flex-col items-center justify-center rounded-2xl bg-slate-50/90 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-100 dark:border-slate-800/80 cursor-pointer transition-all">
-              <span class="text-[11px] text-slate-400 dark:text-slate-400 font-semibold leading-none">${dayLabels[i]}</span>
-              <span class="text-sm font-extrabold text-slate-800 dark:text-slate-200 font-mono my-1 leading-none">${dateNum}</span>
-              <span class="w-1.5 h-1.5 rounded-full ${dotColor} inline-block"></span>
-            </div>
-          `;
-        }
+        html += `
+          <button type="button" onclick="selectStripDate('${dateStr}')" class="py-1.5 flex flex-col items-center justify-center gap-1 rounded-xl cursor-pointer transition-colors focus:outline-none ${isSelected ? '' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'} ${isOtherMonth && !isSelected ? 'opacity-45' : ''}">
+            <span class="text-[11px] font-medium leading-none ${isSelected ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-400 dark:text-slate-500'}">${dayLabels[i]}</span>
+            <span class="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold font-mono tabular-nums leading-none transition-colors ${isSelected ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-800 dark:text-slate-200'}">${dateNum}</span>
+            <span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-blue-600 dark:bg-blue-400' : dotColor} inline-block"></span>
+          </button>
+        `;
       }
 
       container.innerHTML = html;

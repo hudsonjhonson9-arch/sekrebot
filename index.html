@@ -247,47 +247,44 @@
           </section>
 
           <!-- Interactive Calendar Week Strip (Stitch Screen Addition: 8840550119914143538) -->
-          <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 space-y-3" data-purpose="calendar-week-strip">
-            <!-- Row 1: Bulan/Tahun + Minggu ke-N di kiri, Kontrol Navigasi terkelompok di kanan -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200/70 dark:border-slate-800 space-y-3" data-purpose="calendar-week-strip">
+            <!-- Header: Bulan/Tahun di kiri, Mode Minggu/Bulan + Panah di kanan -->
             <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center gap-1.5 min-w-0">
-                <button type="button" onclick="openMonthYearPicker()" class="inline-flex items-center gap-1 px-2 py-1 -ml-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 min-w-0" title="Klik untuk Ganti Bulan & Tahun Langsung">
-                  <span id="stripMonthDisplay" class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">November 2026</span>
-                  <span class="material-symbols-outlined text-[18px] text-blue-600 dark:text-blue-400 shrink-0">arrow_drop_down</span>
-                </button>
-                <span id="stripWeekBadge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 whitespace-nowrap tabular-nums">Minggu ke-3</span>
-              </div>
+              <button type="button" onclick="openMonthYearPicker()" class="inline-flex items-center gap-0.5 py-1 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer group focus:outline-none min-w-0" title="Ganti Bulan & Tahun">
+                <span id="stripMonthDisplay" class="text-[15px] font-extrabold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 tracking-tight truncate">November 2026</span>
+                <span class="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-blue-600 shrink-0">expand_more</span>
+              </button>
 
-              <div class="inline-flex items-center gap-0.5 p-0.5 rounded-xl bg-slate-100/90 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 shrink-0">
-                <button type="button" onclick="stepStripMonth(-1)" aria-label="Sebelumnya" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:bg-white dark:hover:bg-slate-900 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40" title="Minggu / Bulan Sebelumnya">
-                  <span class="material-symbols-outlined text-[18px]">chevron_left</span>
-                </button>
-                <button type="button" onclick="resetPickerToCurrentMonth()" class="px-2 h-8 rounded-lg text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:bg-white dark:hover:bg-slate-900 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40" title="Kembali ke Hari Ini">
-                  Hari Ini
-                </button>
-                <button type="button" onclick="stepStripMonth(1)" aria-label="Berikutnya" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:bg-white dark:hover:bg-slate-900 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40" title="Minggu / Bulan Berikutnya">
-                  <span class="material-symbols-outlined text-[18px]">chevron_right</span>
-                </button>
+              <div class="flex items-center gap-2 shrink-0">
+                <div class="inline-flex items-center gap-2 text-xs border-r border-slate-200 dark:border-slate-700 pr-2.5" role="tablist">
+                  <button type="button" id="stripBtnWeek" onclick="setStripMode('week')" class="font-bold text-blue-600 dark:text-blue-400 transition-colors cursor-pointer focus:outline-none">
+                    Minggu
+                  </button>
+                  <button type="button" id="stripBtnMonth" onclick="setStripMode('month')" class="font-medium text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer focus:outline-none">
+                    Bulan
+                  </button>
+                </div>
+                <div class="inline-flex items-center gap-0.5">
+                  <button type="button" onclick="stepStripMonth(-1)" aria-label="Sebelumnya" class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer focus:outline-none">
+                    <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                  </button>
+                  <button type="button" onclick="stepStripMonth(1)" aria-label="Berikutnya" class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer focus:outline-none">
+                    <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <!-- Row 2: Segmented Toggle Full-Width (Minggu Ini | Bulan Ini) -->
-            <div class="grid grid-cols-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 text-xs font-semibold" role="tablist">
-              <button type="button" id="stripBtnWeek" onclick="setStripMode('week')" class="py-1.5 rounded-xl bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-bold shadow-xs transition-all cursor-pointer focus:outline-none">
-                Minggu Ini
-              </button>
-              <button type="button" id="stripBtnMonth" onclick="setStripMode('month')" class="py-1.5 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none">
-                Bulan Ini
-              </button>
-            </div>
+            <!-- Pemilih Minggu Langsung (M1..M5, tanpa chips, hanya tampil di mode Minggu) -->
+            <div id="stripWeekSelector" class="grid grid-cols-5 border-b border-slate-100 dark:border-slate-800 text-[11px] tabular-nums"></div>
 
-            <!-- 7-Day Date Cards Container -->
-            <div id="calendarWeekStripCards" class="grid grid-cols-7 gap-1.5 pt-1">
+            <!-- 7-Day Date Strip -->
+            <div id="calendarWeekStripCards" class="grid grid-cols-7 gap-1 pt-0.5">
               <!-- Dynamically populated by renderCalendarStrip() -->
             </div>
 
-            <!-- Inline Detail Harian (Stitch Daily Detail Inline Container) -->
-            <div id="calendarDailyDetail" class="pt-2 border-t border-slate-100 dark:border-slate-800">
+            <!-- Inline Detail Harian -->
+            <div id="calendarDailyDetail" class="pt-2.5 border-t border-slate-100 dark:border-slate-800">
               <!-- Dynamically populated by renderCalendarDailyDetail(selectedStripDate) -->
             </div>
           </div>
@@ -4103,7 +4100,7 @@
   <script src="js/stitch-pickers.js"></script>
   <script src="js/stitch-desktop-shell.js"></script>
   <script src="js/stitch-app.js?v=20261121b"></script>
-  <script src="js/stitch-presensi.js"></script>
+  <script src="js/stitch-presensi.js?v=20261121c"></script>
   <script src="js/stitch-rekap.js"></script>
   <script src="js/stitch-layanan.js"></script>
   <script src="js/stitch-aset-arsip.js"></script>
