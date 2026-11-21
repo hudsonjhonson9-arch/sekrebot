@@ -661,11 +661,12 @@
     async function _checkIdentityOnLoad() {
       let isTgLoggedOut = false;
       try { isTgLoggedOut = localStorage.getItem('tg_logged_out') === '1'; } catch (_) {}
-      if (isTgLoggedOut || !window.MY_ID) {
+      const hasTgInitData = !!(window.Telegram?.WebApp?.initData || window.tg?.initData);
+      if (isTgLoggedOut || (!window.MY_ID && !hasTgInitData)) {
         _showAuthOverlay();
         return false;
       }
-      const isTg = !!(window.Telegram?.WebApp?.initData || new URLSearchParams(window.location.search).has('id'));
+      const isTg = !!(hasTgInitData || new URLSearchParams(window.location.search).has('id'));
       const hasNativeOrDevice = !!(
         (typeof _nativeToken !== 'undefined' && _nativeToken) ||
         (typeof _deviceToken !== 'undefined' && _deviceToken)

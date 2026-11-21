@@ -322,7 +322,14 @@
       initClock();
       let isTgLoggedOut = false;
       try { isTgLoggedOut = localStorage.getItem('tg_logged_out') === '1'; } catch (_) {}
-      const hasTgInit = !!(window.Telegram?.WebApp?.initData || window.tg?.initData);
+      const inTgWebView = !!(window.Telegram?.WebApp?.platform && window.Telegram.WebApp.platform !== 'unknown');
+      let tgInitData = window.Telegram?.WebApp?.initData || window.tg?.initData || '';
+      if (!tgInitData && inTgWebView && !isTgLoggedOut) {
+        for (let i = 0; i < 8 && !tgInitData; i++) {
+          await new Promise(r => setTimeout(r, 150));
+          tgInitData = window.Telegram?.WebApp?.initData || window.tg?.initData || '';
+        }
+      }
       const hasLocalToken = !!(
         (typeof getNativeToken === 'function' ? getNativeToken() : null) ||
         localStorage.getItem('_native_token') ||
@@ -331,12 +338,54 @@
       );
       const hasLocalNip = !!(localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || (window._session && window._session.nip));
 
-      // Di Telegram Mini App: bila belum ada sesi lokal dan belum logout eksplisit,
-      // langsung terbitkan sesi asli via /api/auth/session SEBELUM menampilkan modal NIP.
-      if ((!hasLocalToken || !hasLocalNip) && !isTgLoggedOut && hasTgInit && typeof window._checkIdentityOnLoad === 'function') {
+      // Di Telegram Mini App: bila belum ada token ATAU belum ada NIP (mis. sesi lama tanpa NIP)
+      // dan belum logout eksplisit, langsung tukar initData (ID Telegram) ke /api/auth/session
+      // SEBELUM menampilkan modal NIP.
+      if ((!hasLocalToken || !hasLocalNip) && !isTgLoggedOut && tgInitData) {
         try {
-          await window._checkIdentityOnLoad();
-        } catch (_) {}
+          const base = (typeof API_BASE !== 'undefined' && API_BASE) ? API_BASE : '';
+          const r = await fetch(base + '/api/auth/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ init_data: tgInitData })
+          });
+          const d = await r.json().catch(() => ({}));
+          if (r.ok && d && d.session_token && /^[0-9a-f]{192}$/.test(d.session_token)) {
+            const u = d.user || {};
+            const tgCur = window.Telegram?.WebApp?.initDataUnsafe?.user || {};
+            const uid = String(u.id || tgCur.id || '');
+            const nip = String(u.nip || '').trim();
+            const role = String(u.role || 'USER').toUpperCase();
+            const nama = String(u.nama || tgCur.first_name || '').trim();
+            const inst = String(u.instansi_id || '').trim();
+
+            if (uid) window.MY_ID = uid;
+            window.tgUser = { ...tgCur, ...u };
+            if (typeof setNativeToken === 'function') setNativeToken(d.session_token);
+            if (typeof setSession === 'function') {
+              setSession(d.session_token, { nip, role, instansi_id: inst });
+            } else {
+              try {
+                localStorage.setItem('_native_token', d.session_token);
+                localStorage.setItem('_sess_token', d.session_token);
+              } catch (_) {}
+            }
+            try {
+              localStorage.removeItem('tg_logged_out');
+              if (uid) localStorage.setItem('tg_user_id_v5', uid);
+              localStorage.setItem('tg_user_obj_v5', JSON.stringify(window.tgUser));
+              if (nip) {
+                localStorage.setItem('MY_NIP', nip);
+                localStorage.setItem('stitch_active_nip', nip);
+              }
+              if (role) localStorage.setItem('MY_ROLE', role);
+              if (nama) localStorage.setItem('MY_NAME', nama);
+              if (inst) localStorage.setItem('MY_INSTANSI', inst);
+            } catch (_) {}
+          }
+        } catch (err) {
+          console.warn('[Telegram AutoLogin] /api/auth/session gagal:', err.message);
+        }
       }
 
       const isAuthed = checkAuthStatus();
