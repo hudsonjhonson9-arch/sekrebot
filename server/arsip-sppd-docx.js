@@ -19,7 +19,7 @@ const KOP_PRESETS = {
     pemkab: 'PEMERINTAH KABUPATEN SUMBA BARAT',
     instansi1: 'BADAN PERENCANAAN PEMBANGUNAN, ',
     instansi2: 'RISET DAN INOVASI DAERAH',
-    instansiHtml: 'BADAN PERENCANAAN PEMBANGUNAN, RISET DAN INOVASI DAERAH',
+    instansiHtml: 'BADAN PERENCANAAN PEMBANGUNAN,<br/>RISET DAN INOVASI DAERAH',
     alamat: 'Jl. Wee Karou Nomor. – Waikabubak Provinsi Nusa Tenggara Timur',
     kontak: 'Telp (0387) 22203 Fax (0387) 21093, Email : wesumba@yahoo.com',
     kota: 'W A I K A B U B A K',

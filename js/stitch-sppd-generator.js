@@ -217,7 +217,7 @@
     return {
       KopJenis: isSekda ? 'SEKDA' : 'BAPPERIDA',
       KopPemkab: kop.pemkab,
-      KopInstansiHtml: isSekda ? 'SEKRETARIAT DAERAH' : 'BADAN PERENCANAAN PEMBANGUNAN, RISET DAN INOVASI<br/>DAERAH',
+      KopInstansiHtml: isSekda ? 'SEKRETARIAT DAERAH' : 'BADAN PERENCANAAN PEMBANGUNAN,<br/>RISET DAN INOVASI DAERAH',
       KopAlamat: kop.alamat,
       KopKontak: kop.kontak,
       KopKota: kop.kota,
