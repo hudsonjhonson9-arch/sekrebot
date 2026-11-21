@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <html lang="id"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="js/lib/sweetalert2.all.min.js"></script><script src="js/stitch-auth.js"></script><script src="https://cdn.tailwindcss.com"></script><script src="js/dynamic-island.js"></script><script id="tailwind-config">tailwind.config = {
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="js/lib/sweetalert2.all.min.js"></script><script src="js/stitch-auth.js?v=20261121e"></script><script src="https://cdn.tailwindcss.com"></script><script src="js/dynamic-island.js"></script><script id="tailwind-config">tailwind.config = {
   darkMode: "class",
   theme: {
     extend: {
@@ -192,6 +192,10 @@
     <button type="button" data-aset-tab-btn="tiket-pinjam" onclick="window.AsetSettings?.switchTab('tiket-pinjam')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface text-xs font-semibold transition-all cursor-pointer">
       <span class="material-symbols-outlined text-[17px]">assignment_turned_in</span>
       <span>Tiket &amp; Peminjaman</span>
+    </button>
+    <button type="button" data-aset-tab-btn="laporan-permen47" onclick="window.AsetSettings?.switchTab('laporan-permen47')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface text-xs font-semibold transition-all cursor-pointer">
+      <span class="material-symbols-outlined text-[17px]">description</span>
+      <span>Laporan Barang Permen 47</span>
     </button>
     <button type="button" data-aset-tab-btn="pengaturan" onclick="window.AsetSettings?.switchTab('pengaturan')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface text-xs font-semibold transition-all cursor-pointer">
       <span class="material-symbols-outlined text-[17px]">tune</span>
@@ -702,6 +706,96 @@
     </div>
   </div>
 </div>
+<!-- PANEL 5: LAPORAN BARANG PERMEN 47 (FORMAT PERMENDAGRI NO. 47) -->
+<div id="asetPanelLaporanPermen47" class="hidden flex-col gap-5">
+  <div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm border border-outline-variant/30 flex flex-col gap-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-outline-variant/30 pb-3">
+      <div>
+        <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Laporan Pengadaan Barang Pakai Habis (Permendagri No. 47)</h3>
+        <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Rekapitulasi pengadaan BMD berupa aset lancar persediaan sesuai format 21 kolom Permendagri No. 47.</p>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <button type="button" onclick="window.AsetSettings?.loadLaporanPermen47()" class="min-h-[38px] px-3.5 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer hover:opacity-90">
+          <span class="material-symbols-outlined text-[16px]">refresh</span>
+          <span>Pratinjau</span>
+        </button>
+        <button type="button" onclick="window.AsetSettings?.downloadLaporanPermen47Excel()" class="min-h-[38px] px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-xs">
+          <span class="material-symbols-outlined text-[16px]">table_view</span>
+          <span>Unduh Excel (.xlsx)</span>
+        </button>
+        <button type="button" onclick="window.AsetSettings?.toggleFormPermen47()" class="min-h-[38px] px-3.5 py-2 rounded-xl bg-surface-container-low border border-outline-variant/40 text-on-surface text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer hover:bg-surface-container">
+          <span class="material-symbols-outlined text-[16px]">add</span>
+          <span>Catat Pengadaan Baru</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter Periode & Tahun -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30">
+      <div class="flex flex-col gap-1">
+        <label for="permen47Periode" class="font-label-sm text-label-sm text-on-surface-variant font-semibold">Periode Laporan</label>
+        <select id="permen47Periode" onchange="window.AsetSettings?.loadLaporanPermen47()" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-xs font-semibold text-on-surface outline-none focus:border-primary">
+          <option value="TW1">Triwulan I (Jan - Mar)</option>
+          <option value="TW2">Triwulan II (Apr - Jun)</option>
+          <option value="TW3">Triwulan III (Jul - Sep)</option>
+          <option value="TW4">Triwulan IV (Okt - Des)</option>
+          <option value="SM1">Semester I (Jan - Jun)</option>
+          <option value="SM2">Semester II (Jul - Des)</option>
+          <option value="TAHUNAN" selected>Tahunan (Jan - Des)</option>
+        </select>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label for="permen47Tahun" class="font-label-sm text-label-sm text-on-surface-variant font-semibold">Tahun Anggaran</label>
+        <select id="permen47Tahun" onchange="window.AsetSettings?.loadLaporanPermen47()" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-xs font-mono font-bold text-on-surface outline-none focus:border-primary">
+          <option value="2027">2027</option>
+          <option value="2026" selected>2026</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+        </select>
+      </div>
+      <div class="flex flex-col justify-end">
+        <div id="permen47SummaryTotal" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/40 flex items-center justify-between text-xs">
+          <span class="text-on-surface-variant font-medium">Total Nilai Pengadaan</span>
+          <span class="font-mono font-extrabold text-primary tabular-nums">Rp 0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collapsible Form: Catat Pengadaan Barang Pakai Habis -->
+    <div id="permen47FormWrap" class="hidden p-4 rounded-xl bg-surface-container-low border border-outline-variant/40 space-y-3">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-extrabold text-primary uppercase tracking-wider">Form Catat Pengadaan Barang Pakai Habis</span>
+        <button type="button" onclick="window.AsetSettings?.toggleFormPermen47(false)" class="text-xs text-on-surface-variant hover:text-on-surface font-semibold cursor-pointer">Tutup</button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <input id="p47NoNota" type="text" placeholder="No. Nota / Kwitansi (cth: BKU 12/2026)" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-xs text-on-surface outline-none focus:border-primary" />
+        <input id="p47Tgl" type="date" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-xs font-mono text-on-surface outline-none focus:border-primary" />
+        <input id="p47Kontrak" type="text" placeholder="Bentuk Kontrak (Swakelola / Langganan)" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-xs text-on-surface outline-none focus:border-primary" />
+        <input id="p47Penyedia" type="text" placeholder="Nama Penyedia (cth: CV. Sumber Karya)" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-xs text-on-surface outline-none focus:border-primary" />
+        <input id="p47Sp2d" type="text" placeholder="No. SP2D (opsional)" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-xs text-on-surface outline-none focus:border-primary" />
+        <input id="p47SubKeg" type="text" placeholder="Kode & Nama Sub Kegiatan" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-xs text-on-surface outline-none focus:border-primary" />
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center pt-1">
+        <input id="p47ItemNama" type="text" placeholder="Nama Barang..." class="sm:col-span-5 min-h-[38px] px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-xs text-on-surface outline-none focus:border-primary" />
+        <input id="p47ItemJumlah" type="number" min="1" value="1" placeholder="Jml" class="sm:col-span-2 min-h-[38px] px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-xs font-mono text-on-surface outline-none focus:border-primary" />
+        <input id="p47ItemSatuan" type="text" value="Unit" placeholder="Satuan" class="sm:col-span-2 min-h-[38px] px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-xs text-on-surface outline-none focus:border-primary" />
+        <input id="p47ItemHarga" type="number" min="0" placeholder="Harga Satuan (Rp)" class="sm:col-span-2 min-h-[38px] px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-xs font-mono text-on-surface outline-none focus:border-primary" />
+        <button type="button" onclick="window.AsetSettings?.addPermen47Item()" class="sm:col-span-1 min-h-[38px] px-2 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer">+ Item</button>
+      </div>
+      <div id="p47DraftItems" class="space-y-1.5 text-xs text-on-surface-variant">Belum ada item barang ditambahkan.</div>
+      <div class="flex items-center justify-between pt-2 border-t border-outline-variant/30">
+        <span id="p47DraftTotal" class="text-xs font-bold font-mono text-on-surface tabular-nums">Total: Rp 0</span>
+        <button type="button" id="btnSavePermen47Nota" onclick="window.AsetSettings?.savePermen47Nota()" class="min-h-[38px] px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold cursor-pointer hover:opacity-90">Simpan Penerimaan Barang</button>
+      </div>
+    </div>
+
+    <!-- Tabel Pratinjau 21-Kolom Permendagri 47 -->
+    <div id="permen47PreviewContainer" class="overflow-x-auto">
+      <div class="p-8 text-center text-xs text-on-surface-variant">Memuat laporan Permendagri No. 47...</div>
+    </div>
+  </div>
+</div>
+
 </div></main></div>
 <script>
   function updateAsetClock() {
@@ -1434,6 +1528,6 @@
 </script>
 <script src="js/lib/qrcode.min.js"></script>
 <script src="js/stitch-pickers.js"></script>
-<script src="js/stitch-aset-settings.js"></script>
+<script src="js/stitch-aset-settings.js?v=20261121e"></script>
 
 </body></html>

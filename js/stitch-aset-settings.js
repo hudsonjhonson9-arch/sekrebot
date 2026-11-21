@@ -10,11 +10,12 @@
   let _barangList = [];
   let _kategoriList = [];
 
-  const TABS = ['inventaris', 'pemeliharaan', 'tiket-pinjam', 'pengaturan'];
+  const TABS = ['inventaris', 'pemeliharaan', 'tiket-pinjam', 'laporan-permen47', 'pengaturan'];
   const CRUMBS = {
     inventaris: 'Inventaris & Aset • Daftar KIR',
     pemeliharaan: 'Inventaris & Aset • Pemeliharaan',
     'tiket-pinjam': 'Inventaris & Aset • Tiket & Peminjaman',
+    'laporan-permen47': 'Inventaris & Aset • Laporan Barang Permen 47',
     pengaturan: 'Inventaris & Aset • Pengaturan SIMAPO',
   };
 
@@ -50,6 +51,7 @@
     togglePanel('asetPanelInventaris', next === 'inventaris');
     togglePanel('asetPanelPemeliharaan', next === 'pemeliharaan');
     togglePanel('asetPanelTiketPinjam', next === 'tiket-pinjam');
+    togglePanel('asetPanelLaporanPermen47', next === 'laporan-permen47');
     togglePanel('asetPanelPengaturan', next === 'pengaturan');
 
     d.querySelectorAll('[data-aset-tab-btn]').forEach((btn) => {
@@ -64,6 +66,7 @@
 
     if (next === 'pemeliharaan') loadPemeliharaan();
     if (next === 'tiket-pinjam') { loadTiketList(); loadPinjamFullTable(); }
+    if (next === 'laporan-permen47') loadLaporanPermen47();
     if (next === 'pengaturan') loadPengaturanAll();
   }
 
@@ -738,6 +741,258 @@
     }
   }
 
+  /* ── TAB 5: LAPORAN BARANG PERMEN 47 (FORMAT PERMENDAGRI NO. 47) ──────── */
+  let _p47DraftItems = [];
+
+  function toggleFormPermen47(forceState) {
+    const wrap = d.getElementById('permen47FormWrap');
+    if (!wrap) return;
+    const show = typeof forceState === 'boolean' ? forceState : wrap.classList.contains('hidden');
+    wrap.classList.toggle('hidden', !show);
+    if (show) {
+      const tglEl = d.getElementById('p47Tgl');
+      if (tglEl && !tglEl.value) tglEl.value = new Date().toISOString().slice(0, 10);
+    }
+  }
+
+  function renderPermen47DraftItems() {
+    const box = d.getElementById('p47DraftItems');
+    const totEl = d.getElementById('p47DraftTotal');
+    const total = _p47DraftItems.reduce((s, it) => s + (Number(it.volume || 1) * Number(it.harga_satuan || 0)), 0);
+    if (totEl) totEl.textContent = `Total: ${formatRp(total)}`;
+    if (!box) return;
+    if (!_p47DraftItems.length) {
+      box.innerHTML = 'Belum ada item barang ditambahkan.';
+      return;
+    }
+    box.innerHTML = _p47DraftItems.map((it, idx) => `
+      <div class="flex items-center justify-between gap-2 p-2 rounded-lg bg-surface-container-lowest border border-outline-variant/30">
+        <span class="text-xs font-semibold text-on-surface truncate">${esc(it.nama_barang)} — <span class="font-mono">${it.volume} ${esc(it.satuan)} x ${formatRp(it.harga_satuan)}</span></span>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="font-mono font-bold text-primary text-xs tabular-nums">${formatRp(it.volume * it.harga_satuan)}</span>
+          <button type="button" onclick="window.AsetSettings?.removePermen47Item(${idx})" class="text-error font-bold text-xs cursor-pointer">&times;</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function addPermen47Item() {
+    const nama = String(d.getElementById('p47ItemNama')?.value || '').trim();
+    const vol = Math.max(1, parseInt(d.getElementById('p47ItemJumlah')?.value, 10) || 1);
+    const sat = String(d.getElementById('p47ItemSatuan')?.value || 'Unit').trim() || 'Unit';
+    const harga = Math.max(0, parseFloat(d.getElementById('p47ItemHarga')?.value) || 0);
+    if (!nama) return;
+    _p47DraftItems.push({ nama_barang: nama, volume: vol, satuan: sat, harga_satuan: harga });
+    if (d.getElementById('p47ItemNama')) d.getElementById('p47ItemNama').value = '';
+    if (d.getElementById('p47ItemJumlah')) d.getElementById('p47ItemJumlah').value = '1';
+    if (d.getElementById('p47ItemHarga')) d.getElementById('p47ItemHarga').value = '';
+    renderPermen47DraftItems();
+  }
+
+  function removePermen47Item(idx) {
+    _p47DraftItems.splice(idx, 1);
+    renderPermen47DraftItems();
+  }
+
+  async function savePermen47Nota() {
+    if (!_p47DraftItems.length) {
+      if (w.Swal) w.Swal.fire({ icon: 'warning', title: 'Belum Ada Item', text: 'Tambahkan minimal 1 item barang terlebih dahulu.' });
+      return;
+    }
+    const btn = d.getElementById('btnSavePermen47Nota');
+    if (btn) btn.disabled = true;
+    try {
+      const instId = (localStorage.getItem('MY_INSTANSI') || localStorage.getItem('_sess_inst') || 'bapperida').trim() || 'bapperida';
+      const payload = {
+        no_nota: String(d.getElementById('p47NoNota')?.value || '').trim(),
+        tgl_nota: String(d.getElementById('p47Tgl')?.value || new Date().toISOString().slice(0, 10)),
+        bentuk_kontrak: String(d.getElementById('p47Kontrak')?.value || 'Swakelola').trim(),
+        nama_penyedia: String(d.getElementById('p47Penyedia')?.value || '').trim(),
+        no_sp2d: String(d.getElementById('p47Sp2d')?.value || '').trim(),
+        sub_kegiatan: String(d.getElementById('p47SubKeg')?.value || '').trim(),
+        instansi_id: instId,
+        items: _p47DraftItems,
+      };
+      const r = await fetch('/api/simapo/penerimaan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) throw new Error(j.message || `HTTP ${r.status}`);
+      _p47DraftItems = [];
+      renderPermen47DraftItems();
+      toggleFormPermen47(false);
+      if (w.Swal) w.Swal.fire({ icon: 'success', title: 'Tersimpan', text: j.message || 'Penerimaan barang berhasil disimpan.' });
+      await loadLaporanPermen47();
+    } catch (err) {
+      if (w.Swal) w.Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', text: err.message });
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function renderPermen47Preview(rows, meta) {
+    const container = d.getElementById('permen47PreviewContainer');
+    const sumEl = d.getElementById('permen47SummaryTotal');
+    if (!container) return;
+    const pMap = {
+      TW1: 'Triwulan I (Januari - Maret)',
+      TW2: 'Triwulan II (April - Juni)',
+      TW3: 'Triwulan III (Juli - September)',
+      TW4: 'Triwulan IV (Oktober - Desember)',
+      SM1: 'Semester I (Januari - Juni)',
+      SM2: 'Semester II (Juli - Desember)',
+      TAHUNAN: 'Tahunan (Januari - Desember)',
+    };
+    const labelPeriode = pMap[meta.periode] || meta.periode;
+    const fmt = (n) => new Intl.NumberFormat('id-ID').format(Number(n) || 0);
+    const leafTotal = (rows || []).reduce((s, r) => (r.is_header ? s : s + (Number(r.total_nilai) || 0)), 0);
+    const totalKeseluruhan = Number(meta.total_nilai) || leafTotal;
+    if (sumEl) {
+      sumEl.innerHTML = `<span class="text-on-surface-variant font-medium">Total Nilai Pengadaan</span><span class="font-mono font-extrabold text-primary tabular-nums">Rp ${fmt(totalKeseluruhan)}</span>`;
+    }
+
+    if (!rows || !rows.length) {
+      container.innerHTML = `<div class="p-8 text-center text-xs text-on-surface-variant bg-surface-container-low rounded-xl border border-outline-variant/30">Belum ada data pengadaan untuk <strong>${esc(labelPeriode)} Tahun ${esc(meta.tahun)}</strong>.<br>Klik <strong>Catat Pengadaan Baru</strong> di atas untuk menambahkan transaksi pengadaan barang pakai habis.</div>`;
+      return;
+    }
+
+    const kodeParts = (r) => {
+      if (Array.isArray(r.kode_parts)) return Array.from({ length: 7 }, (_, i) => (r.kode_parts[i] == null ? '' : String(r.kode_parts[i])));
+      const parts = String(r.kode_barang || r.kodebarang || '').split('.').filter(Boolean).slice(0, 7);
+      return Array.from({ length: 7 }, (_, i) => parts[i] || '');
+    };
+    const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    const tglIndo = (v) => {
+      const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+      return m ? `${Number(m[3])} ${BULAN[Number(m[2]) - 1]} ${m[1]}` : String(v || '');
+    };
+
+    const th = (inner, attrs = '') => `<th class="p-1.5 border border-outline-variant/50 bg-surface-container-low text-on-surface font-bold text-center text-[10.5px] align-middle" ${attrs}>${inner}</th>`;
+    const td = (inner, cls = '') => `<td class="p-1.5 border border-outline-variant/40 text-[11px] align-middle ${cls}">${inner == null ? '' : inner}</td>`;
+    const tdNum = (v, cls = '') => td(v === '' || v == null ? '' : fmt(v), `text-right font-mono tabular-nums ${cls}`);
+    const kotak = Array.from({ length: 6 }, () => th('')).join('');
+    const rp = '<span class="font-semibold opacity-70">(Rp)</span>';
+
+    const headRow1 = `<tr>${th('No.', 'rowspan="3"')}${th('Penggolongan dan Kodefikasi Barang', 'colspan="8"')}${th('Spesifikasi Nama Barang', 'rowspan="3"')}${th('Merek', 'rowspan="3"')}${th('Jumlah Barang', 'rowspan="3"')}${th('Satuan Barang', 'rowspan="3"')}${th('Harga Satuan<br>' + rp, 'rowspan="2"')}${th('Total Nilai Barang<br>' + rp, 'rowspan="2"')}${th('Total Biaya Atribusi<br>' + rp, 'rowspan="2"')}${th('Nilai Perolehan Barang<br>' + rp, 'rowspan="2"')}${th('Harga Satuan Perolehan<br>' + rp, 'rowspan="2"')}${th('Sub Kegiatan dan Rekening Anggaran Belanja Daerah atas Pengadaan Barang', 'colspan="4"')}${th('Tanggal Perolehan', 'rowspan="3"')}${th('Dokumen Sumber Perolehan', 'colspan="3"')}${th('Ket.', 'rowspan="3"')}</tr>`;
+    const headRow2 = `<tr>${th('Kode Barang', 'rowspan="2"')}${kotak}${th('Nama Barang', 'rowspan="2"')}${th('Sub Kegiatan', 'colspan="2"')}${th('Rekening Belanja Daerah', 'colspan="2"')}${th('Bentuk Kontrak', 'rowspan="2"')}${th('Nama Penyedia', 'rowspan="2"')}${th('No.', 'rowspan="2"')}</tr>`;
+    const headRow3 = `<tr>${kotak}${th(rp)}${th(rp)}${th(rp)}${th(rp)}${th(rp)}${th('Kode Sub Kegiatan')}${th('Nama Sub Kegiatan')}${th('Kode Rekening')}${th('Uraian Belanja')}</tr>`;
+    const headRow4 = `<tr>${th('1')}${th('2', 'colspan="7"')}${['3', '4', '5', '6', '7', '8', '9 = 6 X 8', '10', '11 = 9 + 10', '12 = 11 : 6', '13', '14', '15', '16', '17', '18', '19', '20', '21'].map((v) => th(v)).join('')}</tr>`;
+
+    let noUrut = 0;
+    const trs = rows.map((r) => {
+      if (r.is_header) {
+        const lvl = Number(r.level) || 1;
+        const sub = Number(r.total_nilai) || 0;
+        const nilai = Number(r.nilai_perolehan) || 0;
+        const jml = Number(r.jumlah || r.volume) || 0;
+        const pad = 6 + Math.min(lvl - 1, 4) * 14;
+        const c = [td('')];
+        kodeParts(r).forEach((k) => c.push(td(esc(k), 'text-center font-mono text-[10.5px]')));
+        c.push(`<td class="p-1.5 border border-outline-variant/40 text-[11px] font-extrabold bg-surface-container-low/70 ${lvl <= 3 ? 'text-on-surface' : 'text-primary'}" style="padding-left:${pad}px">${esc(r.nama || '')}</td>`);
+        c.push(td(''));
+        c.push(td(''));
+        c.push(tdNum(jml || '', 'font-bold bg-surface-container-low/70'));
+        c.push(td(''));
+        c.push(td(''));
+        c.push(tdNum(sub || '', 'font-extrabold text-primary bg-surface-container-low/70'));
+        c.push(td(''));
+        c.push(tdNum(nilai || '', 'font-extrabold text-primary bg-surface-container-low/70'));
+        for (let i = 18; i <= 27; i++) c.push(td(''));
+        return `<tr>${c.join('')}</tr>`;
+      }
+      noUrut += 1;
+      const jumlah = Number(r.jumlah || r.volume) || 1;
+      const harga = Number(r.harga_satuan || r.hargasatuan || r.harga) || 0;
+      const total = Number(r.total_nilai || r.total || (jumlah * harga)) || 0;
+      const atribusi = Number(r.biaya_atribusi) || 0;
+      const perolehan = Number(r.nilai_perolehan) || total;
+      const hsp = Number(r.harga_satuan_perolehan) || (jumlah > 0 ? Math.round(perolehan / jumlah) : harga);
+      const c = [td(r.no || noUrut, 'text-center text-on-surface-variant font-mono tabular-nums')];
+      kodeParts(r).forEach((k) => c.push(td(esc(k), 'text-center font-mono text-[10.5px]')));
+      c.push(td(esc(r.nama_barang || r.nama || ''), 'font-bold text-on-surface'));
+      c.push(td(esc(r.spesifikasi || ''), 'text-on-surface-variant'));
+      c.push(td(esc(r.merek || ''), 'text-on-surface-variant'));
+      c.push(tdNum(jumlah));
+      c.push(td(esc(r.satuan || 'Unit'), 'text-center text-on-surface-variant'));
+      c.push(tdNum(harga));
+      c.push(tdNum(total, 'font-bold text-primary'));
+      c.push(tdNum(atribusi));
+      c.push(tdNum(perolehan, 'font-bold'));
+      c.push(tdNum(hsp));
+      c.push(td(esc(r.sub_kegiatan || ''), 'text-center font-mono text-[10.5px]'));
+      c.push(td(esc(r.nama_sub_kegiatan || ''), 'text-on-surface-variant'));
+      c.push(td(esc(r.kode_rekening || ''), 'text-center font-mono text-[10.5px]'));
+      c.push(td(esc(r.uraian_belanja || ''), 'text-on-surface-variant'));
+      c.push(td(esc(tglIndo(r.tgl_nota || r.tanggal || r.tgl)), 'text-center whitespace-nowrap'));
+      c.push(td(esc(r.bentuk_kontrak || r.kontrak || ''), 'text-on-surface-variant'));
+      c.push(td(esc(r.nama_penyedia || r.penyedia || ''), 'text-on-surface-variant'));
+      c.push(td(esc(r.dokumen_sumber || r.no_bukti || r.no_nota || ''), 'text-on-surface-variant'));
+      c.push(td(esc(r.keterangan || r.ket || ''), 'text-on-surface-variant'));
+      return `<tr>${c.join('')}</tr>`;
+    }).join('');
+
+    const foot = `<tr>${td('')}<td colspan="13" class="p-2 border border-outline-variant/50 text-center font-extrabold tracking-widest bg-surface-container-low text-on-surface text-xs">J U M L A H &nbsp;&nbsp; T O T A L</td>${tdNum(totalKeseluruhan, 'font-extrabold text-primary')}${tdNum(0)}${tdNum(totalKeseluruhan, 'font-extrabold text-primary')}${tdNum(0)}${Array.from({ length: 9 }, () => td('')).join('')}</tr>`;
+
+    container.innerHTML = `
+      <div class="rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-4 overflow-x-auto">
+        <div class="text-center pb-3 mb-3 border-b border-outline-variant/30">
+          <div class="text-sm font-extrabold text-on-surface tracking-wide">LAPORAN PENGADAAN BMD BERUPA ASET LANCAR PERSEDIAAN</div>
+          <div class="text-xs font-bold text-primary mt-1">Periode: ${esc(labelPeriode)} Tahun ${esc(meta.tahun)}</div>
+          <div class="text-[11px] text-on-surface-variant mt-0.5">Pemerintah Kabupaten Sumba Barat • Pengguna Barang: BAPPERIDA</div>
+        </div>
+        <table class="w-full border-collapse min-w-[1560px]">
+          <thead>${headRow1}${headRow2}${headRow3}${headRow4}</thead>
+          <tbody>${trs}</tbody>
+          <tfoot>${foot}</tfoot>
+        </table>
+        <div class="text-[11px] text-on-surface-variant mt-2.5 text-right">Format Permendagri No. 47 • Geser tabel ke samping untuk melihat seluruh 21 kolom</div>
+      </div>`;
+  }
+
+  async function loadLaporanPermen47() {
+    const container = d.getElementById('permen47PreviewContainer');
+    if (!container) return;
+    const periode = d.getElementById('permen47Periode')?.value || 'TAHUNAN';
+    const tahun = d.getElementById('permen47Tahun')?.value || String(new Date().getFullYear());
+    const instId = (localStorage.getItem('MY_INSTANSI') || localStorage.getItem('_sess_inst') || 'bapperida').trim() || 'bapperida';
+
+    container.innerHTML = '<div class="p-8 text-center text-xs text-on-surface-variant">Memuat data laporan Permendagri 47...</div>';
+    try {
+      const url = `/api/simapo/laporan-permen47?periode=${encodeURIComponent(periode)}&tahun=${encodeURIComponent(tahun)}&instansi_id=${encodeURIComponent(instId)}`;
+      const res = await fetch(url);
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+      const payload = json.data || json;
+      const rows = Array.isArray(payload) ? payload : (Array.isArray(payload.rows) ? payload.rows : (Array.isArray(payload.items) ? payload.items : []));
+      renderPermen47Preview(rows, Object.assign({ periode, tahun }, typeof payload === 'object' && !Array.isArray(payload) ? payload : {}));
+    } catch (err) {
+      container.innerHTML = `<div class="p-6 text-center text-xs text-error font-semibold">Gagal memuat laporan Permen 47: ${esc(err.message)}</div>`;
+    }
+  }
+
+  async function downloadLaporanPermen47Excel() {
+    const periode = d.getElementById('permen47Periode')?.value || 'TAHUNAN';
+    const tahun = d.getElementById('permen47Tahun')?.value || String(new Date().getFullYear());
+    const instId = (localStorage.getItem('MY_INSTANSI') || localStorage.getItem('_sess_inst') || 'bapperida').trim() || 'bapperida';
+    const url = `/api/simapo/laporan-permen47/xlsx?periode=${encodeURIComponent(periode)}&tahun=${encodeURIComponent(tahun)}&instansi_id=${encodeURIComponent(instId)}`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = d.createElement('a');
+      a.href = blobUrl;
+      a.download = `Laporan_Pengadaan_Pakai_Habis_Permen47_${periode}_${tahun}.xlsx`;
+      d.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
+    } catch (err) {
+      if (w.Swal) w.Swal.fire({ icon: 'error', title: 'Gagal Unduh Excel', text: err.message });
+    }
+  }
+
   w.AsetSettings = {
     switchTab,
     renderStickerQr,
@@ -758,6 +1013,12 @@
     loadBastHistory,
     downloadPermen47Excel,
     downloadKartuPemeliharaanExcel,
+    loadLaporanPermen47,
+    downloadLaporanPermen47Excel,
+    toggleFormPermen47,
+    addPermen47Item,
+    removePermen47Item,
+    savePermen47Nota,
     switchMobileAsetTab,
     loadMobilePemeliharaan,
     loadMobilePengaturan,
