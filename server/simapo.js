@@ -452,21 +452,95 @@ export function createSimapoRouter({ query, withTransaction }) {
     }
   });
 
-  // ── Simpan pemeliharaan ──
+  // ── Simpan pemeliharaan (single item atau batch items[]) ──
   router.post('/pemeliharaan', async (req, res) => {
     const body = req.body || {};
-    if (!S(body.barang_id) || !S(body.jenis_pemeliharaan)) {
+    const barangId = S(body.barang_id);
+    const items = Array.isArray(body.items) && body.items.length
+      ? body.items
+      : [{
+          tgl_pemeliharaan: body.tgl_pemeliharaan,
+          jenis_pemeliharaan: body.jenis_pemeliharaan,
+          biaya: body.biaya,
+          nama_penyedia: body.nama_penyedia,
+          bentuk_kontrak: body.bentuk_kontrak,
+          keterangan: body.keterangan,
+        }];
+    const validItems = items.filter((it) => it && S(it.jenis_pemeliharaan));
+    if (!barangId || !validItems.length) {
       return res.status(400).json({ ok: false, message: 'barang_id dan jenis_pemeliharaan wajib diisi.' });
     }
     try {
       const inst = instansiOtomatis(req, body.instansi_id);
-      const { rows } = await query(INSERT_PEMELIHARAAN_SQL, [
-        inst, S(body.barang_id), S(body.tgl_pemeliharaan), S(body.jenis_pemeliharaan),
-        BIAYA_MIN(body.biaya), S(body.nama_penyedia), S(body.bentuk_kontrak), S(body.keterangan),
-      ]);
-      return res.json({ ok: true, message: 'Pemeliharaan berhasil disimpan.', id: rows[0]?.id ?? null });
+      const ids = [];
+      for (const it of validItems) {
+        const { rows } = await query(INSERT_PEMELIHARAAN_SQL, [
+          inst, barangId, S(it.tgl_pemeliharaan) || new Date().toISOString().slice(0, 10),
+          S(it.jenis_pemeliharaan), BIAYA_MIN(it.biaya),
+          S(it.nama_penyedia), S(it.bentuk_kontrak), S(it.keterangan),
+        ]);
+        if (rows[0]?.id != null) ids.push(rows[0].id);
+      }
+      return res.json({
+        ok: true,
+        message: 'Pemeliharaan berhasil disimpan.',
+        id: ids[0] ?? null,
+        ids,
+      });
     } catch {
       return res.status(500).json({ ok: false, message: 'Gagal menyimpan pemeliharaan.' });
+    }
+  });
+
+  // ── Ubah pemeliharaan ──
+  router.post('/pemeliharaan-update', async (req, res) => {
+    const body = req.body || {};
+    const id = S(body.id);
+    const item = Array.isArray(body.items) && body.items.length ? body.items[0] : body;
+    const barangId = S(body.barang_id || item?.barang_id);
+    const jenis = S(item?.jenis_pemeliharaan);
+    if (!id || !barangId || !jenis) {
+      return res.status(400).json({ ok: false, message: 'id, barang_id, dan jenis_pemeliharaan wajib diisi.' });
+    }
+    try {
+      const inst = instansiOtomatis(req, body.instansi_id);
+      const { rowCount } = await query(
+        `UPDATE "SIMAPO".pemeliharaan
+         SET barang_id = $3,
+             tgl_pemeliharaan = COALESCE(NULLIF($4, '')::date, tgl_pemeliharaan),
+             jenis_pemeliharaan = $5,
+             biaya = $6,
+             nama_penyedia = $7,
+             bentuk_kontrak = $8,
+             keterangan = $9
+         WHERE id::text = $1 AND instansi_id = $2`,
+        [
+          id, inst, barangId, S(item?.tgl_pemeliharaan), jenis,
+          BIAYA_MIN(item?.biaya), S(item?.nama_penyedia), S(item?.bentuk_kontrak), S(item?.keterangan),
+        ]
+      );
+      if (!rowCount) return res.status(404).json({ ok: false, message: 'Data pemeliharaan tidak ditemukan.' });
+      return res.json({ ok: true, message: 'Data pemeliharaan berhasil diubah.' });
+    } catch {
+      return res.status(500).json({ ok: false, message: 'Gagal mengubah data pemeliharaan.' });
+    }
+  });
+
+  // ── Hapus pemeliharaan ──
+  router.post('/pemeliharaan-delete', async (req, res) => {
+    const body = req.body || {};
+    const id = S(body.id);
+    if (!id) return res.status(400).json({ ok: false, message: 'id pemeliharaan wajib diisi.' });
+    try {
+      const inst = instansiOtomatis(req, body.instansi_id);
+      const { rowCount } = await query(
+        'DELETE FROM "SIMAPO".pemeliharaan WHERE id::text = $1 AND instansi_id = $2',
+        [id, inst]
+      );
+      if (!rowCount) return res.status(404).json({ ok: false, message: 'Data pemeliharaan tidak ditemukan.' });
+      return res.json({ ok: true, message: 'Riwayat pemeliharaan dihapus.' });
+    } catch {
+      return res.status(500).json({ ok: false, message: 'Gagal menghapus riwayat pemeliharaan.' });
     }
   });
 

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <html lang="id"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="js/lib/sweetalert2.all.min.js"></script><script src="js/stitch-auth.js?v=20261121f"></script><script src="https://cdn.tailwindcss.com"></script><script src="js/dynamic-island.js"></script><script id="tailwind-config">tailwind.config = {
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="js/lib/sweetalert2.all.min.js"></script><script src="js/stitch-auth.js?v=20261121g"></script><script src="https://cdn.tailwindcss.com"></script><script src="js/dynamic-island.js"></script><script id="tailwind-config">tailwind.config = {
   darkMode: "class",
   theme: {
     extend: {
@@ -135,11 +135,6 @@
             <span class="material-symbols-outlined text-[20px] text-slate-400">bar_chart</span>
             <span>Rekap dan Laporan</span>
           </a>
-          <!-- Manajemen Aset (Active Page) -->
-          <a aria-current="page" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-md shadow-blue-900/50 transition-all" href="aset-kir.html">
-            <span class="material-symbols-outlined text-[20px]">inventory_2</span>
-            <span>Manajemen Aset</span>
-          </a>
           <!-- Arsip Digital -->
           <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all font-semibold text-sm" href="arsip.html">
             <span class="material-symbols-outlined text-[20px] text-slate-400">folder_open</span>
@@ -187,7 +182,7 @@
     </button>
     <button type="button" data-aset-tab-btn="pemeliharaan" onclick="window.AsetSettings?.switchTab('pemeliharaan')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface text-xs font-semibold transition-all cursor-pointer">
       <span class="material-symbols-outlined text-[17px]">build</span>
-      <span>Pemeliharaan</span>
+      <span>Kartu Pemeliharaan</span>
     </button>
     <button type="button" data-aset-tab-btn="tiket-pinjam" onclick="window.AsetSettings?.switchTab('tiket-pinjam')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface text-xs font-semibold transition-all cursor-pointer">
       <span class="material-symbols-outlined text-[17px]">assignment_turned_in</span>
@@ -470,37 +465,118 @@
 </div>
 </div><!-- /asetPanelInventaris -->
 
-<!-- PANEL 2: PEMELIHARAAN ASET -->
+<!-- PANEL 2: KARTU PEMELIHARAAN ASET (PERMENDAGRI NO. 47) -->
 <div id="asetPanelPemeliharaan" class="hidden flex-col gap-4">
-  <div class="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/30 flex items-center justify-between gap-3 flex-wrap">
-    <div>
-      <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Kartu &amp; Riwayat Pemeliharaan Aset (SIMAPO)</h2>
-      <span id="asetPemeliharaanCount" class="text-xs font-mono text-on-surface-variant">0 catatan</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <button type="button" onclick="window.AsetSettings?.loadPemeliharaan()" class="w-9 h-9 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center cursor-pointer" title="Segarkan"><span class="material-symbols-outlined text-[18px]">refresh</span></button>
-      <button type="button" onclick="window.AsetSettings?.openCatatPemeliharaanModal()" class="px-4 py-2 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer">
-        <span class="material-symbols-outlined text-[17px]">add</span>
-        <span>Catat Pemeliharaan</span>
+  <div class="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4">
+    <div class="flex items-start justify-between gap-3 flex-wrap">
+      <div>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Kartu Pemeliharaan Aset</h2>
+        <p class="text-xs text-on-surface-variant mt-0.5">Riwayat pemeliharaan barang milik daerah sesuai template Permendagri No. 47. <span id="asetPemeliharaanCount" class="font-mono font-semibold text-primary ml-1">0 catatan</span></p>
+      </div>
+      <button type="button" onclick="window.AsetSettings?.loadPemeliharaan()" class="w-9 h-9 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center cursor-pointer" title="Segarkan">
+        <span class="material-symbols-outlined text-[18px]">refresh</span>
       </button>
     </div>
-  </div>
-  <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse">
-        <thead>
-          <tr class="bg-surface-container-low text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">
-            <th class="px-4 py-3">Tanggal</th>
-            <th class="px-4 py-3">Barang / Aset</th>
-            <th class="px-4 py-3">Jenis Pemeliharaan</th>
-            <th class="px-4 py-3">Penyedia / Kontrak</th>
-            <th class="px-4 py-3 text-right">Biaya</th>
-            <th class="px-4 py-3">Keterangan</th>
-          </tr>
-        </thead>
-        <tbody id="asetPemeliharaanBody"></tbody>
-      </table>
+
+    <!-- Toolbar Filter & Aksi -->
+    <div class="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-wrap items-end gap-3">
+      <div class="flex flex-col gap-1 flex-1 min-w-[220px]">
+        <label for="kpFilterBarang" class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Pilih Aset / Barang</label>
+        <select id="kpFilterBarang" onchange="window.AsetSettings?.filterKartuPemeliharaan()" class="h-9 px-3 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-xs font-semibold text-on-surface outline-none focus:border-[#2563eb]">
+          <option value="">-- Semua Barang (Cetak Semua Kartu) --</option>
+        </select>
+      </div>
+      <div class="flex flex-col gap-1 w-28">
+        <label for="kpFilterTahun" class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Tahun</label>
+        <select id="kpFilterTahun" onchange="window.AsetSettings?.filterKartuPemeliharaan()" class="h-9 px-3 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-xs font-mono font-semibold text-on-surface outline-none focus:border-[#2563eb]">
+          <option value="" selected>Semua</option>
+          <option value="2027">2027</option>
+          <option value="2026">2026</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+        </select>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <button type="button" onclick="window.AsetSettings?.downloadExcelKartuPemeliharaan()" class="h-9 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm cursor-pointer">
+          <span class="material-symbols-outlined text-[17px]">table_view</span>
+          <span>Unduh Excel (.xlsx)</span>
+        </button>
+        <button type="button" onclick="window.AsetSettings?.cetakKartuPemeliharaan()" class="h-9 px-3.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container-high text-on-surface border border-outline-variant/40 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer">
+          <span class="material-symbols-outlined text-[17px]">print</span>
+          <span>Cetak Kartu</span>
+        </button>
+        <button type="button" id="btnToggleFormPm" onclick="window.AsetSettings?.toggleFormPemeliharaan()" class="h-9 px-3.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm cursor-pointer">
+          <span class="material-symbols-outlined text-[17px]">add</span>
+          <span>Catat Pemeliharaan</span>
+        </button>
+      </div>
     </div>
+
+    <!-- Form Input Collapsible (Tambah Multi-Baris / Ubah) -->
+    <div id="pemeliharaanFormWrap" class="hidden p-4 rounded-xl bg-surface-container-low border border-outline-variant/40 flex-col gap-3">
+      <div id="pemeliharaanFormTitle" class="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[16px]">add_circle</span>
+        <span>Form Catat Riwayat Pemeliharaan</span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="md:col-span-2">
+          <label for="pmBarangId" class="block text-[11px] font-bold text-on-surface-variant mb-1">Pilih Barang *</label>
+          <select id="pmBarangId" onchange="window.AsetSettings?.onPmBarangChange()" class="w-full h-9 px-3 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-xs font-semibold text-on-surface outline-none focus:border-[#2563eb]">
+            <option value="">-- Pilih Aset --</option>
+          </select>
+        </div>
+        <div>
+          <label for="pmPenggunaBarang" class="block text-[11px] font-bold text-on-surface-variant mb-1">Pengguna Barang (Pemegang Aset)</label>
+          <input id="pmPenggunaBarang" type="text" readonly placeholder="Nama Pemegang Aset" class="w-full h-9 px-3 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/30 text-xs text-on-surface-variant">
+        </div>
+        <div>
+          <label for="pmKuasaPengguna" class="block text-[11px] font-bold text-on-surface-variant mb-1">Kuasa Pengguna Barang</label>
+          <input id="pmKuasaPengguna" type="text" readonly value="Kepala Badan/Dinas" class="w-full h-9 px-3 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/30 text-xs text-on-surface-variant">
+        </div>
+        <div>
+          <label for="pmKodeBarang" class="block text-[11px] font-bold text-on-surface-variant mb-1">Kode Barang</label>
+          <input id="pmKodeBarang" type="text" readonly class="w-full h-9 px-3 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/30 text-xs font-mono text-on-surface-variant">
+        </div>
+        <div>
+          <label for="pmNamaBarang" class="block text-[11px] font-bold text-on-surface-variant mb-1">Nama Barang (Nama Aset)</label>
+          <input id="pmNamaBarang" type="text" readonly class="w-full h-9 px-3 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/30 text-xs font-semibold text-on-surface-variant">
+        </div>
+        <div>
+          <label for="pmNibar" class="block text-[11px] font-bold text-on-surface-variant mb-1">NIBAR</label>
+          <input id="pmNibar" type="text" readonly class="w-full h-9 px-3 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/30 text-xs font-mono text-on-surface-variant">
+        </div>
+        <div>
+          <label for="pmSpesifikasi" class="block text-[11px] font-bold text-on-surface-variant mb-1">Spesifikasi Barang</label>
+          <input id="pmSpesifikasi" type="text" readonly class="w-full h-9 px-3 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/30 text-xs text-on-surface-variant">
+        </div>
+      </div>
+
+      <div class="pt-2 border-t border-outline-variant/30 flex flex-col gap-2">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Daftar Pemeliharaan / Perbaikan</span>
+          <button type="button" id="btnAddPmRow" onclick="window.AsetSettings?.addPemeliharaanRow()" class="h-8 px-3 rounded-lg bg-[#2563eb] hover:bg-blue-700 text-white text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer">
+            <span class="material-symbols-outlined text-[15px]">add</span>
+            <span>Tambah Baris Pemeliharaan</span>
+          </button>
+        </div>
+        <div id="pmRowsContainer" class="flex flex-col gap-2"></div>
+        <div class="flex items-center justify-end text-xs font-bold text-on-surface pt-1">
+          <span>Total Biaya:</span>
+          <span class="ml-1.5 font-mono tabular-nums text-primary">Rp <span id="pmTotalBiayaText">0</span></span>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant/30">
+        <button type="button" onclick="window.AsetSettings?.toggleFormPemeliharaan()" class="h-9 px-4 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-xs font-semibold text-on-surface-variant cursor-pointer">Batal</button>
+        <button type="button" id="btnSavePemeliharaan" onclick="window.AsetSettings?.savePemeliharaan()" class="h-9 px-5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm cursor-pointer">
+          <span class="material-symbols-outlined text-[16px]">save</span>
+          <span>Simpan Pemeliharaan</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Daftar Kartu Pemeliharaan Berkelompok per Aset -->
+    <div id="adminPemeliharaanList" class="flex flex-col gap-4"></div>
   </div>
 </div>
 
@@ -1528,6 +1604,6 @@
 </script>
 <script src="js/lib/qrcode.min.js"></script>
 <script src="js/stitch-pickers.js"></script>
-<script src="js/stitch-aset-settings.js?v=20261121e"></script>
+<script src="js/stitch-aset-settings.js?v=20261121g"></script>
 
 </body></html>

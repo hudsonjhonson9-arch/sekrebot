@@ -13,7 +13,7 @@
   const TABS = ['inventaris', 'pemeliharaan', 'tiket-pinjam', 'laporan-permen47', 'pengaturan'];
   const CRUMBS = {
     inventaris: 'Inventaris & Aset • Daftar KIR',
-    pemeliharaan: 'Inventaris & Aset • Pemeliharaan',
+    pemeliharaan: 'Inventaris & Aset • Kartu Pemeliharaan',
     'tiket-pinjam': 'Inventaris & Aset • Tiket & Peminjaman',
     'laporan-permen47': 'Inventaris & Aset • Laporan Barang Permen 47',
     pengaturan: 'Inventaris & Aset • Pengaturan SIMAPO',
@@ -249,113 +249,452 @@
     }
   }
 
-  /* ── TAB 2: PEMELIHARAAN ASET ─────────────────────────────────────────── */
-  async function loadPemeliharaan() {
-    const tbody = d.getElementById('asetPemeliharaanBody');
-    if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="6" class="py-10 text-center text-xs text-slate-400">Memuat riwayat pemeliharaan aset...</td></tr>';
+  /* ── TAB 2: KARTU PEMELIHARAAN ASET (PERMENDAGRI NO. 47) ─────────────── */
+  let _allPemeliharaanData = [];
+  let _pemeliharaanEditId = null;
+
+  async function ensureBarangListForPm() {
+    if (_barangList.length) return _barangList;
     try {
-      const [pmRes, brRes] = await Promise.all([
-        fetch('/api/stitch/aset/pemeliharaan'),
-        _barangList.length ? Promise.resolve(null) : fetch('/api/stitch/aset/barang'),
-      ]);
-      const pmJson = await pmRes.json().catch(() => ({}));
-      if (brRes) {
-        const brJson = await brRes.json().catch(() => ({}));
-        if (brJson.ok && Array.isArray(brJson.data)) _barangList = brJson.data;
+      const r = await fetch('/api/simapo/admin-master-list');
+      const j = await r.json().catch(() => ({}));
+      if (j.ok && Array.isArray(j.data) && j.data.length) {
+        _barangList = j.data;
+        return _barangList;
       }
-      const rows = Array.isArray(pmJson.data) ? pmJson.data : [];
-      const cnt = d.getElementById('asetPemeliharaanCount');
-      if (cnt) cnt.textContent = `${rows.length} catatan`;
-      if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="py-10 text-center text-xs text-slate-400">Belum ada riwayat pemeliharaan aset tercatat.</td></tr>';
-        return;
-      }
-      tbody.innerHTML = rows.map((r) => `
-        <tr class="border-b border-slate-100 dark:border-slate-800/80 hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
-          <td class="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">${esc(String(r.tgl_pemeliharaan || '-').slice(0, 10))}</td>
-          <td class="px-4 py-3 text-xs font-bold text-slate-900 dark:text-white">${esc(r.nama_barang || '-')}<div class="text-[10px] font-mono font-normal text-slate-400">${esc(r.kodebarang || '')}</div></td>
-          <td class="px-4 py-3 text-xs text-slate-700 dark:text-slate-300">${esc(r.jenis_pemeliharaan || '-')}</td>
-          <td class="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">${esc(r.nama_penyedia || '-')}<div class="text-[10px] text-slate-400">${esc(r.bentuk_kontrak || '')}</div></td>
-          <td class="px-4 py-3 font-mono text-xs font-bold text-primary whitespace-nowrap text-right">${esc(formatRp(r.biaya))}</td>
-          <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 max-w-[220px] truncate">${esc(r.keterangan || '-')}</td>
-        </tr>
-      `).join('');
-    } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="6" class="py-10 text-center text-xs text-rose-500">Gagal memuat: ${esc(err?.message)}</td></tr>`;
+    } catch (_) {}
+    try {
+      const r2 = await fetch('/api/stitch/aset/barang');
+      const j2 = await r2.json().catch(() => ({}));
+      if (j2.ok && Array.isArray(j2.data)) _barangList = j2.data;
+    } catch (_) {}
+    return _barangList;
+  }
+
+  function populateKartuPemeliharaanSelects() {
+    const filterSel = d.getElementById('kpFilterBarang');
+    const formSel = d.getElementById('pmBarangId');
+    const items = _barangList || [];
+    const optHtml = items.map((b) => {
+      const nama = b.nama || b.nama_barang || b.namabarang || 'Tanpa Nama';
+      const kode = b.kodebarang || b.kode_barang || '';
+      return `<option value="${esc(b.id)}">${esc(nama)}${kode ? ` (${esc(kode)})` : ''}</option>`;
+    }).join('');
+
+    if (filterSel) {
+      const prev = filterSel.value;
+      filterSel.innerHTML = '<option value="">-- Semua Barang (Cetak Semua Kartu) --</option>' + optHtml;
+      if (prev) filterSel.value = prev;
+    }
+    if (formSel) {
+      const prev2 = formSel.value;
+      formSel.innerHTML = '<option value="">-- Pilih Aset --</option>' + optHtml;
+      if (prev2) formSel.value = prev2;
     }
   }
 
-  async function openCatatPemeliharaanModal() {
-    if (!w.Swal) return;
-    if (!_barangList.length) {
-      try {
-        const r = await fetch('/api/stitch/aset/barang');
-        const j = await r.json().catch(() => ({}));
-        if (j.ok && Array.isArray(j.data)) _barangList = j.data;
-      } catch (_) {}
-    }
-    const opts = _barangList.map((b) => `<option value="${esc(b.id)}">${esc(b.nama_barang)} (${esc(b.kodebarang || '-')})</option>`).join('');
-    const today = new Date().toISOString().slice(0, 10);
-    const { value: fv } = await w.Swal.fire({
-      title: 'Catat Pemeliharaan Aset',
-      width: 560,
-      html: `
-        <div class="text-left grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          <div class="sm:col-span-2">
-            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Barang / Aset *</label>
-            <select id="swPmBarang" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">${opts}</select>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tanggal</label>
-            <input id="swPmTgl" type="date" value="${today}" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Biaya (Rp)</label>
-            <input id="swPmBiaya" type="number" value="0" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Jenis Pemeliharaan</label>
-            <input id="swPmJenis" type="text" value="Servis Berkala" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Penyedia / Bengkel</label>
-            <input id="swPmPenyedia" type="text" placeholder="Nama bengkel / vendor" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
-          </div>
-          <div class="sm:col-span-2">
-            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Keterangan</label>
-            <textarea id="swPmKet" rows="2" placeholder="Uraian pekerjaan..." class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"></textarea>
-          </div>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: 'Simpan Pemeliharaan',
-      cancelButtonText: 'Batal',
-      confirmButtonColor: '#2563eb',
-      didOpen: (el) => refreshPickers(el),
-      preConfirm: () => ({
-        barang_id: d.getElementById('swPmBarang')?.value || '',
-        tgl_pemeliharaan: d.getElementById('swPmTgl')?.value || today,
-        biaya: Number(d.getElementById('swPmBiaya')?.value || 0),
-        jenis_pemeliharaan: (d.getElementById('swPmJenis')?.value || '').trim(),
-        nama_penyedia: (d.getElementById('swPmPenyedia')?.value || '').trim(),
-        keterangan: (d.getElementById('swPmKet')?.value || '').trim(),
-      }),
+  function onPmBarangChange() {
+    const barangId = d.getElementById('pmBarangId')?.value;
+    const b = (_barangList || []).find((item) => String(item.id) === String(barangId)) || {};
+    const setVal = (id, val) => { const el = d.getElementById(id); if (el) el.value = val || ''; };
+    setVal('pmPenggunaBarang', b.nama_pemegang || b.pemegang_nama || b.pemegang || '-');
+    setVal('pmKuasaPengguna', 'Kepala Badan/Dinas');
+    setVal('pmKodeBarang', b.kodebarang || b.kode_barang || '');
+    setVal('pmNamaBarang', b.nama || b.nama_barang || b.namabarang || b.uraian || '');
+    setVal('pmNibar', b.nomorinventaris || b.kodebarang || b.nibar || '-');
+    setVal('pmSpesifikasi', b.spesifikasi || b.merk || '-');
+  }
+
+  function updatePmRowDeleteButtons() {
+    const container = d.getElementById('pmRowsContainer');
+    if (!container) return;
+    const rows = container.querySelectorAll('.pm-maintenance-row');
+    rows.forEach((r) => {
+      const btn = r.querySelector('.pm-row-del');
+      if (btn) btn.style.display = rows.length > 1 ? 'inline-flex' : 'none';
     });
-    if (!fv || !fv.barang_id) return;
+  }
+
+  function updatePmTotalBiaya() {
+    const container = d.getElementById('pmRowsContainer');
+    if (!container) return;
+    let total = 0;
+    container.querySelectorAll('.pm-row-biaya').forEach((inp) => {
+      total += parseFloat(inp.value) || 0;
+    });
+    const el = d.getElementById('pmTotalBiayaText');
+    if (el) el.textContent = total.toLocaleString('id-ID');
+  }
+
+  function addPemeliharaanRow(initialData) {
+    const container = d.getElementById('pmRowsContainer');
+    if (!container) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const data = initialData || {};
+    const tglVal = String(data.tgl_pemeliharaan || data.tanggal || today).slice(0, 10);
+    const row = d.createElement('div');
+    row.className = 'pm-maintenance-row grid grid-cols-1 md:grid-cols-12 gap-2 items-center p-2.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30';
+    row.innerHTML = `
+      <div class="md:col-span-2">
+        <input type="date" class="pm-row-tgl w-full h-9 px-2.5 rounded-lg bg-surface-container-low border border-outline-variant/40 text-xs font-mono text-on-surface" value="${esc(tglVal)}" title="Tanggal Pemeliharaan">
+      </div>
+      <div class="md:col-span-3">
+        <input type="text" class="pm-row-jenis w-full h-9 px-2.5 rounded-lg bg-surface-container-low border border-outline-variant/40 text-xs text-on-surface" value="${esc(data.jenis_pemeliharaan || data.jenis || '')}" placeholder="Servis / Perbaikan..." title="Jenis Pemeliharaan">
+      </div>
+      <div class="md:col-span-2">
+        <input type="number" min="0" class="pm-row-biaya w-full h-9 px-2.5 rounded-lg bg-surface-container-low border border-outline-variant/40 text-xs font-mono tabular-nums text-on-surface" value="${data.biaya !== undefined && data.biaya !== null ? esc(data.biaya) : ''}" placeholder="Biaya (Rp)" oninput="window.AsetSettings?.updatePmTotalBiaya()" title="Biaya Rp">
+      </div>
+      <div class="md:col-span-2">
+        <input type="text" class="pm-row-penyedia w-full h-9 px-2.5 rounded-lg bg-surface-container-low border border-outline-variant/40 text-xs text-on-surface" value="${esc(data.nama_penyedia || data.penyedia || '')}" placeholder="Bengkel / vendor" title="Nama Penyedia">
+      </div>
+      <div class="md:col-span-1">
+        <input type="text" class="pm-row-kontrak w-full h-9 px-2 rounded-lg bg-surface-container-low border border-outline-variant/40 text-xs text-on-surface" value="${esc(data.bentuk_kontrak || data.kontrak || '')}" placeholder="Kontrak" title="Bentuk Kontrak">
+      </div>
+      <div class="md:col-span-2 flex items-center gap-1.5">
+        <input type="text" class="pm-row-ket w-full h-9 px-2.5 rounded-lg bg-surface-container-low border border-outline-variant/40 text-xs text-on-surface" value="${esc(data.keterangan || '')}" placeholder="Ket..." title="Keterangan">
+        <button type="button" class="pm-row-del h-9 w-9 shrink-0 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-500 flex items-center justify-center cursor-pointer" onclick="window.AsetSettings?.removePemeliharaanRow(this)" title="Hapus Baris">
+          <span class="material-symbols-outlined text-[16px]">delete</span>
+        </button>
+      </div>
+    `;
+    container.appendChild(row);
+    updatePmRowDeleteButtons();
+    updatePmTotalBiaya();
+  }
+
+  function removePemeliharaanRow(btn) {
+    const row = btn?.closest?.('.pm-maintenance-row');
+    if (row) {
+      row.remove();
+      updatePmRowDeleteButtons();
+      updatePmTotalBiaya();
+    }
+  }
+
+  function setModePemeliharaan(idBaris) {
+    _pemeliharaanEditId = idBaris || null;
+    const editing = !!_pemeliharaanEditId;
+    const judul = d.getElementById('pemeliharaanFormTitle');
+    const tombol = d.getElementById('btnSavePemeliharaan');
+    if (judul) {
+      judul.innerHTML = `<span class="material-symbols-outlined text-[16px]">${editing ? 'edit' : 'add_circle'}</span><span>${editing ? 'Ubah Riwayat Pemeliharaan' : 'Form Catat Riwayat Pemeliharaan'}</span>`;
+    }
+    if (tombol) {
+      tombol.innerHTML = `<span class="material-symbols-outlined text-[16px]">save</span><span>${editing ? 'Simpan Perubahan' : 'Simpan Pemeliharaan'}</span>`;
+    }
+  }
+
+  async function toggleFormPemeliharaan(forceOpen) {
+    const wrap = d.getElementById('pemeliharaanFormWrap');
+    const btn = d.getElementById('btnToggleFormPm');
+    if (!wrap) return;
+    const willOpen = typeof forceOpen === 'boolean' ? forceOpen : wrap.classList.contains('hidden');
+    wrap.classList.toggle('hidden', !willOpen);
+    wrap.classList.toggle('flex', willOpen);
+    if (btn) {
+      btn.innerHTML = willOpen
+        ? '<span class="material-symbols-outlined text-[17px]">close</span><span>Tutup Form</span>'
+        : '<span class="material-symbols-outlined text-[17px]">add</span><span>Catat Pemeliharaan</span>';
+    }
+    if (!willOpen && _pemeliharaanEditId) setModePemeliharaan(null);
+    if (willOpen) {
+      await ensureBarangListForPm();
+      populateKartuPemeliharaanSelects();
+      const container = d.getElementById('pmRowsContainer');
+      if (container && !_pemeliharaanEditId) {
+        container.innerHTML = '';
+        addPemeliharaanRow();
+      }
+    }
+  }
+
+  async function savePemeliharaan() {
+    const barangId = d.getElementById('pmBarangId')?.value || '';
+    const container = d.getElementById('pmRowsContainer');
+    const rows = [];
+    if (container) {
+      container.querySelectorAll('.pm-maintenance-row').forEach((r) => {
+        const tgl = r.querySelector('.pm-row-tgl')?.value || new Date().toISOString().slice(0, 10);
+        const jenis = (r.querySelector('.pm-row-jenis')?.value || '').trim();
+        const biaya = parseFloat(r.querySelector('.pm-row-biaya')?.value) || 0;
+        const penyedia = (r.querySelector('.pm-row-penyedia')?.value || '').trim();
+        const kontrak = (r.querySelector('.pm-row-kontrak')?.value || '').trim();
+        const ket = (r.querySelector('.pm-row-ket')?.value || '').trim();
+        if (jenis) {
+          rows.push({
+            tgl_pemeliharaan: tgl,
+            jenis_pemeliharaan: jenis,
+            biaya,
+            nama_penyedia: penyedia,
+            bentuk_kontrak: kontrak,
+            keterangan: ket,
+          });
+        }
+      });
+    }
+    if (!barangId) {
+      w.Swal?.fire('Perhatian', 'Pilih barang terlebih dahulu.', 'warning');
+      return;
+    }
+    if (!rows.length) {
+      w.Swal?.fire('Perhatian', 'Isi minimal 1 jenis pemeliharaan.', 'warning');
+      return;
+    }
+    const editing = _pemeliharaanEditId;
+    if (editing && rows.length > 1) {
+      w.Swal?.fire('Perhatian', 'Mode ubah hanya menerima satu baris. Hapus baris tambahan terlebih dahulu.', 'warning');
+      return;
+    }
+
+    const endpoint = editing ? '/api/simapo/pemeliharaan-update' : '/api/simapo/pemeliharaan';
+    const payload = editing ? { id: editing, barang_id: barangId, items: rows } : { barang_id: barangId, items: rows };
     try {
-      const r = await fetch('/api/stitch/aset/pemeliharaan', {
+      const r = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fv),
+        body: JSON.stringify(payload),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) throw new Error(j.message || `HTTP ${r.status}`);
-      w.Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Kartu pemeliharaan berhasil dicatat.' });
+      setModePemeliharaan(null);
+      await toggleFormPemeliharaan(false);
+      w.Swal?.fire({ icon: 'success', title: 'Tersimpan', text: editing ? 'Data pemeliharaan berhasil diubah.' : 'Data pemeliharaan berhasil disimpan.' });
       loadPemeliharaan();
     } catch (err) {
-      w.Swal.fire({ icon: 'error', title: 'Gagal', text: err?.message || 'Koneksi terganggu.' });
+      w.Swal?.fire({ icon: 'error', title: 'Gagal Menyimpan', text: err?.message || 'Koneksi terganggu.' });
     }
+  }
+
+  async function editPemeliharaan(id) {
+    const item = (_allPemeliharaanData || []).find((x) => String(x.id) === String(id));
+    if (!item) {
+      w.Swal?.fire('Tidak Ditemukan', 'Data pemeliharaan tidak ditemukan.', 'warning');
+      return;
+    }
+    setModePemeliharaan(item.id);
+    await toggleFormPemeliharaan(true);
+    const sel = d.getElementById('pmBarangId');
+    if (sel) {
+      sel.value = item.barang_id || item.barangid || '';
+      onPmBarangChange();
+    }
+    const container = d.getElementById('pmRowsContainer');
+    if (container) {
+      container.innerHTML = '';
+      addPemeliharaanRow(item);
+    }
+    d.getElementById('pemeliharaanFormWrap')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  async function deletePemeliharaan(id) {
+    let confirmed = false;
+    if (w.Swal) {
+      const res = await w.Swal.fire({
+        title: 'Hapus Riwayat Pemeliharaan?',
+        text: 'Tindakan ini tidak dapat dibatalkan.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#dc2626',
+      });
+      confirmed = !!res.isConfirmed;
+    } else {
+      confirmed = confirm('Hapus riwayat pemeliharaan ini?');
+    }
+    if (!confirmed) return;
+    try {
+      const r = await fetch('/api/simapo/pemeliharaan-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.message || `HTTP ${r.status}`);
+      if (String(_pemeliharaanEditId) === String(id)) setModePemeliharaan(null);
+      w.Swal?.fire({ icon: 'success', title: 'Dihapus', text: 'Riwayat pemeliharaan berhasil dihapus.' });
+      loadPemeliharaan();
+    } catch (err) {
+      w.Swal?.fire({ icon: 'error', title: 'Gagal Menghapus', text: err?.message || 'Koneksi terganggu.' });
+    }
+  }
+
+  function filterKartuPemeliharaan() {
+    const el = d.getElementById('adminPemeliharaanList');
+    if (!el) return;
+    const data = _allPemeliharaanData || [];
+    const barangId = d.getElementById('kpFilterBarang')?.value || '';
+    const tahun = d.getElementById('kpFilterTahun')?.value || '';
+
+    let filtered = data.slice();
+    if (barangId) {
+      filtered = filtered.filter((item) => String(item.barang_id || item.barangid) === String(barangId));
+    }
+    if (tahun) {
+      filtered = filtered.filter((item) => String(item.tgl_pemeliharaan || item.tanggal || '').includes(tahun));
+    }
+
+    const cnt = d.getElementById('asetPemeliharaanCount');
+    if (cnt) cnt.textContent = `${filtered.length} catatan`;
+
+    if (!filtered.length) {
+      el.innerHTML = `
+        <div class="rounded-2xl border border-outline-variant/30 bg-surface-container-low/50 p-10 text-center text-xs text-on-surface-variant">
+          <div class="mb-2 opacity-40"><span class="material-symbols-outlined text-3xl">build</span></div>
+          Belum ada catatan pemeliharaan${barangId ? ' untuk barang terpilih' : ''}${tahun ? ' pada tahun ' + esc(tahun) : ''}.<br>
+          Klik <strong>Catat Pemeliharaan</strong> di atas untuk menambahkan riwayat perawatan.
+        </div>`;
+      return;
+    }
+
+    // Kelompokkan per barang_id sesuai template Permendagri No. 47 (4. KARTU PEMELIHARAAN)
+    const groups = {};
+    filtered.forEach((item) => {
+      const bId = item.barang_id || item.barangid || 'default';
+      if (!groups[bId]) groups[bId] = [];
+      groups[bId].push(item);
+    });
+
+    el.innerHTML = Object.keys(groups).map((bId) => {
+      const list = groups[bId];
+      const bInfo = (_barangList || []).find((x) => String(x.id) === String(bId)) || {};
+      const namaBarang = bInfo.nama || bInfo.nama_barang || list[0].nama_barang || list[0].namabarang || 'Barang';
+      const kodeBarang = bInfo.kodebarang || list[0].kodebarang || '—';
+      const spesifikasi = bInfo.spesifikasi || bInfo.merk || list[0].spesifikasi || '-';
+      const nibar = bInfo.nomorinventaris || list[0].nomorinventaris || '—';
+      const penggunaBarang = bInfo.nama_pemegang || list[0].nama_pemegang || bInfo.pemegang || '-';
+      const kuasaPenggunaBarang = 'Kepala Badan/Dinas';
+
+      let totalBiaya = 0;
+      const rowsHtml = list.map((item, idx) => {
+        const biaya = Number(item.biaya) || 0;
+        totalBiaya += biaya;
+        const tgl = String(item.tgl_pemeliharaan || item.tanggal || '—').slice(0, 10);
+        return `
+          <tr class="border-b border-outline-variant/25 hover:bg-surface-container-low/60">
+            <td class="px-3 py-2.5 text-center font-mono tabular-nums text-xs text-on-surface-variant">${idx + 1}</td>
+            <td class="px-3 py-2.5 whitespace-nowrap font-mono tabular-nums text-xs text-on-surface">${esc(tgl)}</td>
+            <td class="px-3 py-2.5 text-xs font-bold text-on-surface">${esc(item.jenis_pemeliharaan || item.jenis || '—')}</td>
+            <td class="px-3 py-2.5 text-right font-mono tabular-nums text-xs font-bold text-primary whitespace-nowrap">${esc(formatRp(biaya))}</td>
+            <td class="px-3 py-2.5 text-xs text-on-surface-variant">${esc(item.nama_penyedia || item.penyedia || '—')}</td>
+            <td class="px-3 py-2.5 text-xs text-on-surface-variant">${esc(item.bentuk_kontrak || item.kontrak || '—')}</td>
+            <td class="px-3 py-2.5 text-xs text-on-surface-variant">${esc(item.keterangan || '—')}</td>
+            <td class="px-3 py-2.5 text-right whitespace-nowrap print-hide-col">
+              <button type="button" onclick="window.AsetSettings?.editPemeliharaan('${esc(item.id)}')" title="Ubah riwayat ini" class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface cursor-pointer mr-1">
+                <span class="material-symbols-outlined text-[15px]">edit</span>
+              </button>
+              <button type="button" onclick="window.AsetSettings?.deletePemeliharaan('${esc(item.id)}')" title="Hapus riwayat ini" class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-500 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">delete</span>
+              </button>
+            </td>
+          </tr>`;
+      }).join('');
+
+      return `
+        <div class="kartu-pm-card rounded-2xl border border-outline-variant/40 bg-surface-container-lowest p-5 shadow-sm">
+          <div class="text-center mb-4">
+            <div class="text-sm font-extrabold uppercase tracking-wider text-on-surface">KARTU PEMELIHARAAN</div>
+            <div class="text-[11px] font-mono font-bold text-primary mt-0.5">NIBAR: ${esc(nibar)}</div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 text-xs pb-3 mb-3 border-b border-outline-variant/30">
+            <div class="flex justify-between gap-2"><span class="text-on-surface-variant">Pengguna Barang:</span><span class="font-bold text-on-surface text-right">${esc(penggunaBarang)}</span></div>
+            <div class="flex justify-between gap-2"><span class="text-on-surface-variant">Kuasa Pengguna Barang:</span><span class="font-bold text-on-surface text-right">${esc(kuasaPenggunaBarang)}</span></div>
+            <div class="flex justify-between gap-2"><span class="text-on-surface-variant">Kode Barang:</span><span class="font-mono font-bold text-primary text-right">${esc(kodeBarang)}</span></div>
+            <div class="flex justify-between gap-2"><span class="text-on-surface-variant">Nama Barang:</span><span class="font-extrabold text-on-surface text-right">${esc(namaBarang)}</span></div>
+            <div class="flex justify-between gap-2 md:col-span-2"><span class="text-on-surface-variant">Spesifikasi Barang:</span><span class="font-semibold text-on-surface text-right">${esc(spesifikasi)}</span></div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-left min-w-[700px]">
+              <thead>
+                <tr class="bg-surface-container-low text-on-surface-variant text-[11px] font-bold uppercase tracking-wider border-b border-outline-variant/40">
+                  <th class="px-3 py-2.5 text-center w-10">No.</th>
+                  <th class="px-3 py-2.5 w-32">Tanggal</th>
+                  <th class="px-3 py-2.5">Jenis Pemeliharaan</th>
+                  <th class="px-3 py-2.5 text-right w-36">Biaya (Rp)</th>
+                  <th class="px-3 py-2.5">Nama Penyedia</th>
+                  <th class="px-3 py-2.5">Bentuk Kontrak</th>
+                  <th class="px-3 py-2.5">Ket.</th>
+                  <th class="px-3 py-2.5 text-right w-24 print-hide-col">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>${rowsHtml}</tbody>
+              <tfoot>
+                <tr class="border-t-2 border-outline-variant/40 font-extrabold bg-surface-container-low/40">
+                  <td colspan="3" class="px-3 py-2.5 text-right text-xs text-on-surface">TOTAL BIAYA:</td>
+                  <td class="px-3 py-2.5 text-right font-mono tabular-nums text-xs text-primary whitespace-nowrap">${esc(formatRp(totalBiaya))}</td>
+                  <td colspan="4"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function loadPemeliharaan() {
+    const el = d.getElementById('adminPemeliharaanList');
+    if (el) el.innerHTML = '<div class="py-10 text-center text-xs text-on-surface-variant">Memuat kartu pemeliharaan aset...</div>';
+    try {
+      const [pmRes] = await Promise.all([
+        fetch('/api/simapo/pemeliharaan'),
+        ensureBarangListForPm(),
+      ]);
+      const pmJson = await pmRes.json().catch(() => ({}));
+      _allPemeliharaanData = Array.isArray(pmJson.data) ? pmJson.data : [];
+      populateKartuPemeliharaanSelects();
+      filterKartuPemeliharaan();
+    } catch (err) {
+      if (el) el.innerHTML = `<div class="py-10 text-center text-xs text-rose-500">Gagal memuat kartu pemeliharaan: ${esc(err?.message)}</div>`;
+    }
+  }
+
+  async function downloadExcelKartuPemeliharaan() {
+    const barangId = d.getElementById('kpFilterBarang')?.value || '';
+    const tahun = d.getElementById('kpFilterTahun')?.value || '';
+    const url = `/api/simapo/kartu-pemeliharaan/xlsx?barang_id=${encodeURIComponent(barangId)}&tahun=${encodeURIComponent(tahun)}`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = d.createElement('a');
+      a.href = blobUrl;
+      a.download = `Kartu_Pemeliharaan_${barangId ? 'Barang_' + barangId : 'Semua'}_${tahun || 'Semua'}.xlsx`;
+      d.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
+    } catch (err) {
+      w.Swal?.fire('Gagal Unduh', err?.message || 'Tidak dapat mengunduh Excel Kartu Pemeliharaan.', 'error');
+    }
+  }
+
+  function cetakKartuPemeliharaan() {
+    const el = d.getElementById('adminPemeliharaanList');
+    if (!el || !el.innerHTML.trim() || el.innerHTML.includes('Belum ada catatan')) {
+      w.Swal?.fire('Info', 'Tidak ada kartu pemeliharaan untuk dicetak.', 'info');
+      return;
+    }
+    const popup = w.open('', '_blank');
+    if (!popup) {
+      w.Swal?.fire('Pop-up Diblokir', 'Izinkan pop-up pada browser untuk mencetak Kartu Pemeliharaan.', 'warning');
+      return;
+    }
+    popup.document.write(`<!DOCTYPE html><html><head><title>Kartu Pemeliharaan Barang</title>
+      <style>
+        body{font-family:Arial,sans-serif;color:#000;background:#fff;margin:20px;font-size:12px;}
+        .kartu-pm-card{border:1px solid #000;padding:16px;margin-bottom:24px;page-break-after:always;border-radius:4px;}
+        table{width:100%;border-collapse:collapse;margin-top:12px;font-size:11px;}
+        th,td{border:1px solid #333;padding:6px 8px;text-align:left;}
+        th{background:#eee;}
+        .print-hide-col{display:none!important;}
+        @page{size:A4 portrait;margin:15mm;}
+      </style></head><body>${el.innerHTML}<script>window.onload=function(){window.print();};<\/script></body></html>`);
+    popup.document.close();
+  }
+
+  function openCatatPemeliharaanModal() {
+    toggleFormPemeliharaan(true);
   }
 
   /* ── TAB 3: TIKET KERUSAKAN & PEMINJAMAN ──────────────────────────────── */
@@ -1001,6 +1340,19 @@
     submitTambahAset,
     openAssignUnitModal,
     loadPemeliharaan,
+    openCatatPemeliharaanModal,
+    loadPemeliharaan,
+    filterKartuPemeliharaan,
+    toggleFormPemeliharaan,
+    onPmBarangChange,
+    addPemeliharaanRow,
+    removePemeliharaanRow,
+    updatePmTotalBiaya,
+    savePemeliharaan,
+    editPemeliharaan,
+    deletePemeliharaan,
+    downloadExcelKartuPemeliharaan,
+    cetakKartuPemeliharaan,
     openCatatPemeliharaanModal,
     loadTiketList,
     updateTiketStatus,

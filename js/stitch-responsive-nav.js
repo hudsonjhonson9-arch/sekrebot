@@ -529,7 +529,7 @@
         asetSubWrap.className = 'mt-0.5 ml-3 pl-3 border-l border-slate-700/80 flex flex-col gap-0.5 overflow-hidden transition-all';
         const asetSubs = [
           { hash: '#inventaris', href: 'aset-kir.html#inventaris', icon: 'inventory_2', label: 'Inventaris & KIR' },
-          { hash: '#pemeliharaan', href: 'aset-kir.html#pemeliharaan', icon: 'build', label: 'Pemeliharaan Aset' },
+          { hash: '#pemeliharaan', href: 'aset-kir.html#pemeliharaan', icon: 'build', label: 'Kartu Pemeliharaan' },
           { hash: '#tiket-pinjam', href: 'aset-kir.html#tiket-pinjam', icon: 'assignment_turned_in', label: 'Tiket & Peminjaman' },
           { hash: '#laporan-permen47', href: 'aset-kir.html#laporan-permen47', icon: 'description', label: 'Laporan Barang Permen 47' },
           { hash: '#pengaturan', href: 'aset-kir.html#pengaturan', icon: 'tune', label: 'Pengaturan Aset' }
