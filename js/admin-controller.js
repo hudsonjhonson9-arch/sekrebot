@@ -182,27 +182,166 @@
       });
     }
 
-    // Load lokasi & shift via AdminCore + jumlah pegawai via /api/stitch/bootstrap
+    // Load daftar lokasi & shift (multi-lokasi geofence CRUD)
     let locId = '1';
-    if (core && typeof core.loadLokasi === 'function') {
-      try {
-        const { locations, shift } = await core.loadLokasi();
-        const loc = locations[0];
-        if (loc) {
-          locId = String(loc.id);
-          if (lat) lat.value = loc.latitude;
-          if (lon) lon.value = loc.longitude;
-          if (rad) rad.value = loc.radius || rad.value;
-        }
-        if (shift) {
-          if (jamMasukEl && shift.masuk) jamMasukEl.value = shift.masuk;
-          if (jamPulangEl && shift.pulang) jamPulangEl.value = shift.pulang;
-          showToleransi();
-        }
-      } catch (err) {
-        console.warn('[admin] gagal memuat lokasi/shift dari database:', err.message);
+    let lokasiListCache = [];
+    let mapSyncHelper = null;
+    const lokasiListEl = $('adminLokasiList');
+    const lokasiCountBadge = $('adminLokasiCountBadge');
+    const lokasiNamaEl = $('adminLokasiNama');
+    const lokasiEditorModeEl = $('adminLokasiEditorMode');
+    const lokasiHariWrap = $('adminLokasiHariWrap');
+    const btnNewLokasi = $('btnNewLokasi');
+    const btnDeleteLokasi = $('btnDeleteLokasi');
+    const btnSaveLokasiText = $('btnSaveLokasiText');
+
+    const formatHariLabel = (rawHari) => {
+      const parts = String(rawHari || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+      if (!parts.length || parts.length >= 7) return 'Setiap Hari';
+      const kerja = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
+      if (parts.length === 5 && kerja.every((d) => parts.includes(d))) return 'Senin – Jumat';
+      return parts.map((d) => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(', ');
+    };
+
+    const setHariCheckboxes = (rawHari) => {
+      if (!lokasiHariWrap) return;
+      const parts = String(rawHari || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+      lokasiHariWrap.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+        cb.checked = parts.length ? parts.includes(cb.value.toLowerCase()) : ['senin', 'selasa', 'rabu', 'kamis', 'jumat'].includes(cb.value.toLowerCase());
+      });
+    };
+
+    const readHariCheckboxes = () => {
+      if (!lokasiHariWrap) return 'senin,selasa,rabu,kamis,jumat';
+      return Array.from(lokasiHariWrap.querySelectorAll('input[type="checkbox"]:checked'))
+        .map((cb) => cb.value.toLowerCase())
+        .join(',');
+    };
+
+    const selectLokasiForEdit = (loc) => {
+      if (!loc) return;
+      locId = String(loc.id);
+      if (lokasiNamaEl) lokasiNamaEl.value = loc.nama_lokasi || loc.Nama_Lokasi || '';
+      if (lat) lat.value = loc.latitude ?? '';
+      if (lon) lon.value = loc.longitude ?? '';
+      if (rad) rad.value = parseInt(loc.radius, 10) || 50;
+      setHariCheckboxes(loc.hari);
+      showRadius();
+      if (lokasiEditorModeEl) lokasiEditorModeEl.textContent = `Edit Lokasi #${locId}`;
+      if (btnSaveLokasiText) btnSaveLokasiText.textContent = 'Simpan Perubahan Lokasi';
+      if (btnDeleteLokasi) {
+        btnDeleteLokasi.classList.remove('hidden');
+        btnDeleteLokasi.classList.add('inline-flex');
       }
+      if (typeof mapSyncHelper === 'function') mapSyncHelper();
+      renderLokasiList();
+    };
+
+    const startNewLokasiMode = () => {
+      locId = '';
+      if (lokasiNamaEl) {
+        lokasiNamaEl.value = '';
+        lokasiNamaEl.focus();
+      }
+      if (rad) rad.value = 100;
+      setHariCheckboxes('senin,selasa,rabu,kamis,jumat');
+      showRadius();
+      if (lokasiEditorModeEl) lokasiEditorModeEl.textContent = 'Tambah Lokasi Baru (klik peta untuk pilih titik)';
+      if (btnSaveLokasiText) btnSaveLokasiText.textContent = 'Simpan Lokasi Baru';
+      if (btnDeleteLokasi) {
+        btnDeleteLokasi.classList.add('hidden');
+        btnDeleteLokasi.classList.remove('inline-flex');
+      }
+      renderLokasiList();
+    };
+
+    const renderLokasiList = () => {
+      if (!lokasiListEl) return;
+      if (lokasiCountBadge) lokasiCountBadge.textContent = `${lokasiListCache.length} Lokasi`;
+      if (!lokasiListCache.length) {
+        lokasiListEl.innerHTML = '<div class="p-5 text-center text-xs text-on-surface-variant bg-surface-container-low rounded-xl">Belum ada titik lokasi di database. Klik "Tambah Lokasi" untuk menambahkan.</div>';
+        return;
+      }
+      lokasiListEl.innerHTML = lokasiListCache.map((loc) => {
+        const idStr = String(loc.id);
+        const isSel = locId && idStr === String(locId);
+        const nama = String(loc.nama_lokasi || loc.Nama_Lokasi || `Lokasi #${idStr}`);
+        const radiusVal = parseInt(loc.radius, 10) || 50;
+        const hariTxt = formatHariLabel(loc.hari);
+        const coordsTxt = `${Number(loc.latitude || 0).toFixed(5)}, ${Number(loc.longitude || 0).toFixed(5)}`;
+        return `
+          <button type="button" data-lokasi-pick="${idStr.replace(/"/g, '&quot;')}" class="w-full text-left p-3 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-2.5 ${isSel ? 'bg-primary/5 border-primary shadow-xs' : 'bg-surface-container-low border-outline-variant/30 hover:border-primary/50'}">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full ${isSel ? 'bg-primary' : 'bg-secondary'} shrink-0"></span>
+                <p class="text-xs font-bold text-on-surface truncate">${nama.replace(/</g, '&lt;')}</p>
+              </div>
+              <p class="text-[11px] font-mono text-on-surface-variant mt-1 tabular-nums">${coordsTxt}</p>
+              <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                <span class="px-2 py-0.5 rounded-md bg-surface-container-lowest border border-outline-variant/40 text-[10px] font-semibold text-on-surface-variant">${hariTxt}</span>
+                <span class="px-2 py-0.5 rounded-md bg-secondary-container/70 text-on-secondary-container text-[10px] font-mono font-bold tabular-nums">${radiusVal}m</span>
+              </div>
+            </div>
+            <span class="material-symbols-outlined text-[18px] ${isSel ? 'text-primary' : 'text-on-surface-variant'} shrink-0 mt-0.5">chevron_right</span>
+          </button>`;
+      }).join('');
+    };
+
+    const refreshLokasiList = async (preferredId = null) => {
+      try {
+        const inst = getInstansiId();
+        const res = await fetch(`/api/lokasi-list?instansi_id=${encodeURIComponent(inst)}`);
+        const json = await res.json().catch(() => null);
+        if (res.ok && json && Array.isArray(json.rows || json.data)) {
+          lokasiListCache = json.rows || json.data;
+        }
+      } catch (_) {}
+      if (!lokasiListCache.length && core && typeof core.loadLokasi === 'function') {
+        try {
+          const loaded = await core.loadLokasi();
+          lokasiListCache = loaded.locations || [];
+          if (loaded.shift) {
+            if (jamMasukEl && loaded.shift.masuk) jamMasukEl.value = loaded.shift.masuk;
+            if (jamPulangEl && loaded.shift.pulang) jamPulangEl.value = loaded.shift.pulang;
+            showToleransi();
+          }
+        } catch (err) {
+          console.warn('[admin] gagal memuat lokasi/shift dari database:', err.message);
+        }
+      } else if (core && typeof core.loadLokasi === 'function') {
+        try {
+          const loaded = await core.loadLokasi();
+          if (loaded.shift) {
+            if (jamMasukEl && loaded.shift.masuk) jamMasukEl.value = loaded.shift.masuk;
+            if (jamPulangEl && loaded.shift.pulang) jamPulangEl.value = loaded.shift.pulang;
+            showToleransi();
+          }
+        } catch (_) {}
+      }
+      const target = preferredId
+        ? lokasiListCache.find((x) => String(x.id) === String(preferredId))
+        : (lokasiListCache.find((x) => String(x.id) === String(locId)) || lokasiListCache[0]);
+      if (target) {
+        selectLokasiForEdit(target);
+      } else {
+        renderLokasiList();
+      }
+    };
+
+    if (lokasiListEl) {
+      lokasiListEl.addEventListener('click', (ev) => {
+        const card = ev.target.closest && ev.target.closest('[data-lokasi-pick]');
+        if (!card) return;
+        const pickId = card.getAttribute('data-lokasi-pick');
+        const found = lokasiListCache.find((x) => String(x.id) === String(pickId));
+        if (found) selectLokasiForEdit(found);
+      });
     }
+    if (btnNewLokasi) {
+      btnNewLokasi.addEventListener('click', startNewLokasiMode);
+    }
+
+    await refreshLokasiList();
 
     if (rad) {
       showRadius();
@@ -239,6 +378,7 @@
         }
         circle.setRadius(ra);
       };
+      mapSyncHelper = syncFromInputs;
 
       marker.on('dragend', () => {
         const p = marker.getLatLng();
@@ -1044,11 +1184,105 @@
 
     if (btn && lat && lon && rad) {
       btn.addEventListener('click', async function () {
+        const nama = String(lokasiNamaEl?.value || '').trim();
+        const latNum = parseFloat(lat.value);
+        const lonNum = parseFloat(lon.value);
+        const radNum = parseInt(rad.value, 10) || 50;
+        const hariStr = readHariCheckboxes();
+        if (!nama) {
+          notifyToast('warning', 'Nama Lokasi Wajib', 'Masukkan nama lokasi presensi terlebih dahulu.');
+          if (lokasiNamaEl) lokasiNamaEl.focus();
+          return;
+        }
+        if (!Number.isFinite(latNum) || !Number.isFinite(lonNum)) {
+          notifyToast('warning', 'Koordinat Tidak Valid', 'Masukkan angka latitude dan longitude yang valid.');
+          return;
+        }
+
         btn.disabled = true;
         try {
-          await core.saveLokasi({ id: locId, lat: lat.value, lon: lon.value, radius: rad.value });
+          if (!locId) {
+            const res = await fetch('/api/lokasi-add', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                nama_lokasi: nama,
+                latitude: latNum,
+                longitude: lonNum,
+                radius: radNum,
+                hari: hariStr,
+                instansi_id: getInstansiId()
+              })
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok || !json || json.ok === false) {
+              throw new Error((json && json.message) || `HTTP ${res.status}`);
+            }
+            notifyToast('success', 'Lokasi Ditambahkan', `${nama} (${radNum}m) berhasil ditambahkan.`);
+            await refreshLokasiList(json.data?.id || null);
+          } else {
+            const res = await fetch('/api/lokasi-update', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: locId,
+                nama_lokasi: nama,
+                latitude: latNum,
+                longitude: lonNum,
+                radius: radNum,
+                hari: hariStr
+              })
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok || !json || json.ok === false) {
+              throw new Error((json && json.message) || `HTTP ${res.status}`);
+            }
+            notifyToast('success', 'Lokasi Diperbarui', `${nama} (${radNum}m) berhasil disimpan.`);
+            await refreshLokasiList(locId);
+          }
+        } catch (err) {
+          notifyToast('error', 'Gagal Menyimpan Lokasi', err.message);
         } finally {
           btn.disabled = false;
+        }
+      });
+    }
+
+    if (btnDeleteLokasi) {
+      btnDeleteLokasi.addEventListener('click', async function () {
+        if (!locId) return;
+        const nama = String(lokasiNamaEl?.value || `Lokasi #${locId}`).trim();
+        let confirmed = false;
+        if (window.Swal) {
+          const r = await window.Swal.fire({
+            title: `Hapus ${nama}?`,
+            text: 'Titik lokasi presensi ini akan dihapus permanen dari database.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ba1a1a',
+            confirmButtonText: 'Ya, Hapus',
+            cancelButtonText: 'Batal'
+          });
+          confirmed = Boolean(r && r.isConfirmed);
+        } else {
+          confirmed = confirm(`Hapus lokasi ${nama}?`);
+        }
+        if (!confirmed) return;
+
+        btnDeleteLokasi.disabled = true;
+        try {
+          const res = await fetch(`/api/lokasi-delete?id=${encodeURIComponent(locId)}`, { method: 'DELETE' });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json || json.ok === false) {
+            throw new Error((json && json.message) || `HTTP ${res.status}`);
+          }
+          locId = '';
+          notifyToast('success', 'Lokasi Dihapus', `${nama} berhasil dihapus.`);
+          await refreshLokasiList();
+        } catch (err) {
+          notifyToast('error', 'Gagal Menghapus Lokasi', err.message);
+        } finally {
+          btnDeleteLokasi.disabled = false;
         }
       });
     }

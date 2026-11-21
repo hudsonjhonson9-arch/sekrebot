@@ -38,7 +38,7 @@ export function createStitchApiRouter(deps = {}) {
           ORDER BY "NIP" ASC
         `),
         query(`
-          SELECT id, "Nama_Lokasi" AS nama_lokasi, latitude, longitude, radius, instansi_id
+          SELECT id, "Nama_Lokasi" AS nama_lokasi, latitude, longitude, radius, hari, ip_range, instansi_id
           FROM lokasiabsen
           WHERE instansi_id = 'bapperida' OR instansi_id = 'all'
           ORDER BY id ASC

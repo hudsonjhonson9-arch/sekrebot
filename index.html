@@ -144,17 +144,20 @@
 
         <div class="p-5 flex flex-col gap-4">
           
-          <!-- Geofence & Location Live Status Pill (Real DB Location) -->
-          <div onclick="syncRealGPS()" class="cursor-pointer hover:opacity-95 flex items-center justify-between bg-blue-50 dark:bg-slate-900/80 border border-blue-100 dark:border-slate-800 px-3.5 py-2.5 rounded-full shadow-sm" title="Ketuk untuk sinkronisasi GPS Real-Time">
+          <!-- Geofence & Location Live Status Pill (Bergantian sesuai lokasi aktif hari ini; ketuk untuk lihat daftar) -->
+          <div id="presensiLokasiPill" onclick="openPresensiLokasiModal()" class="cursor-pointer hover:opacity-95 flex items-center justify-between gap-2 bg-blue-50 dark:bg-slate-900/80 border border-blue-100 dark:border-slate-800 px-3.5 py-2.5 rounded-full shadow-sm transition-all" title="Ketuk untuk melihat daftar lokasi presensi hari ini & sinkronkan GPS">
             <div class="flex items-center gap-2 min-w-0">
               <span class="relative flex h-2.5 w-2.5 flex-shrink-0">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
               </span>
               <span class="material-symbols-outlined text-[18px] text-emerald-600 dark:text-emerald-400 flex-shrink-0">my_location</span>
-              <p class="text-xs text-slate-800 dark:text-slate-200 truncate font-medium" id="currentOfficeName">Kantor Bapperida (Titik DB)</p>
+              <p class="text-xs text-slate-800 dark:text-slate-200 truncate font-medium transition-opacity duration-200" id="currentOfficeName">Kantor Bapperida</p>
             </div>
-            <span id="mobileGpsAccuracyPill" class="text-[11px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded-full flex-shrink-0 font-semibold font-mono">Akurat ~ 12m</span>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+              <span id="mobileGpsAccuracyPill" class="text-[11px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded-full font-semibold font-mono tabular-nums">Akurat ~ 12m</span>
+              <span class="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+            </div>
           </div>
 
           <!-- Greeting & User Identity -->
@@ -3665,6 +3668,32 @@
     </div>
   </div>
 
+  <!-- ── MODAL DRAWER: DAFTAR LOKASI PRESENSI AKTIF HARI INI ─────────── -->
+  <div id="modalPresensiLokasi" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="presensiLokasiModalTitle">
+    <div onclick="closePresensiLokasiModal()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"></div>
+    <div class="relative w-full sm:max-w-[460px] bg-white dark:bg-slate-900 rounded-t-[28px] sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[82vh] z-10 overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h3 id="presensiLokasiModalTitle" class="text-sm font-extrabold text-slate-900 dark:text-white">Lokasi Presensi Hari Ini</h3>
+          <p id="presensiLokasiModalSub" class="text-[11px] text-slate-500 dark:text-slate-400">Daftar titik geofence yang aktif untuk absensi hari ini</p>
+        </div>
+        <button type="button" onclick="closePresensiLokasiModal()" aria-label="Tutup" class="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+      <div id="presensiLokasiModalList" class="p-4 overflow-y-auto space-y-2.5 flex-1">
+        <div class="p-5 text-center text-xs text-slate-400">Memuat daftar lokasi...</div>
+      </div>
+      <div class="p-4 bg-slate-50 dark:bg-slate-900/90 border-t border-slate-100 dark:border-slate-800 flex gap-2">
+        <button type="button" onclick="closePresensiLokasiModal()" class="min-h-[42px] px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer">Tutup</button>
+        <button type="button" onclick="syncRealGPS(); renderPresensiLokasiModalList();" class="flex-1 min-h-[42px] px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+          <span class="material-symbols-outlined text-[16px]">my_location</span>
+          <span>Sinkronkan GPS Sekarang</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── MODAL / BOTTOM-SHEET: SPESIMEN TANDA TANGAN / PARAF ────────── -->
   <div id="modalStitchSignature" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="stitchSigModalTitle">
     <div id="modalStitchSignatureBackdrop" onclick="closeStitchSignatureModal()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200 opacity-0"></div>
@@ -4074,7 +4103,7 @@
   <!-- Modular Stitch Controllers -->
   <script src="js/stitch-pickers.js"></script>
   <script src="js/stitch-desktop-shell.js"></script>
-  <script src="js/stitch-app.js?v=20261121"></script>
+  <script src="js/stitch-app.js?v=20261121b"></script>
   <script src="js/stitch-presensi.js"></script>
   <script src="js/stitch-rekap.js"></script>
   <script src="js/stitch-layanan.js"></script>

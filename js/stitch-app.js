@@ -189,9 +189,14 @@
 
     function applyBootstrapSharedUI(recentLogs = null) {
       if (state.locations.length > 0) {
-        state.currentLocation = state.locations[0];
-        const officeNameEl = document.getElementById('currentOfficeName');
-        if (officeNameEl) officeNameEl.textContent = state.currentLocation.nama_lokasi + ' (Titik DB)';
+        const todayLocs = typeof getTodayActiveLocations === 'function' ? getTodayActiveLocations() : state.locations;
+        state.currentLocation = todayLocs[0] || state.locations[0];
+        if (typeof startLocationPillRotator === 'function') {
+          startLocationPillRotator();
+        } else {
+          const officeNameEl = document.getElementById('currentOfficeName');
+          if (officeNameEl) officeNameEl.textContent = state.currentLocation.nama_lokasi;
+        }
 
         const locSelect = document.getElementById('adminLocationSelect');
         if (locSelect) {
@@ -1970,23 +1975,161 @@
       return R * c;
     }
 
-    function syncRealGPS() {
+    const HARI_ID_LIST = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+    let _locRotatorTimer = null;
+    let _locRotatorIndex = 0;
+
+    function getTodayHariWita() {
+      const nowWita = new Date(Date.now() + 8 * 3600000);
+      return HARI_ID_LIST[nowWita.getUTCDay()] || 'senin';
+    }
+
+    function isLocationActiveToday(loc, hariIni = getTodayHariWita()) {
+      const raw = String(loc?.hari || '').trim().toLowerCase();
+      if (!raw) return true;
+      const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
+      if (!parts.length) return true;
+      return parts.includes(hariIni);
+    }
+
+    function getTodayActiveLocations() {
+      const all = Array.isArray(state.locations) ? state.locations : [];
+      if (!all.length) return [];
+      const hariIni = getTodayHariWita();
+      const matched = all.filter((l) => isLocationActiveToday(l, hariIni));
+      return matched.length ? matched : all;
+    }
+
+    function renderLocationPillForIndex(idx) {
+      const locs = getTodayActiveLocations();
+      if (!locs.length) return;
+      const safeIdx = ((idx % locs.length) + locs.length) % locs.length;
+      const loc = locs[safeIdx];
+      const officeNameEl = document.getElementById('currentOfficeName');
       const mobilePill = document.getElementById('mobileGpsAccuracyPill');
-      const officeLat = Number(state.currentLocation?.latitude ?? -9.648769);
-      const officeLng = Number(state.currentLocation?.longitude ?? 119.389232);
-      const officeRadius = Number(state.currentLocation?.radius ?? 250);
-      const officeName = state.currentLocation?.nama_lokasi || 'Kantor Bapperida';
+      const nama = loc.nama_lokasi || loc.Nama_Lokasi || 'Kantor Bapperida';
+      const prefix = locs.length > 1 ? `${safeIdx + 1}/${locs.length} • ` : '';
+
+      if (officeNameEl) {
+        officeNameEl.style.opacity = '0.35';
+        setTimeout(() => {
+          officeNameEl.textContent = `${prefix}${nama}`;
+          officeNameEl.style.opacity = '1';
+        }, 120);
+      }
+
+      if (mobilePill) {
+        const radius = Number(loc.radius || 250);
+        if (state.userLocation && Number.isFinite(state.userLocation.lat) && Number.isFinite(state.userLocation.lng)) {
+          const dM = Math.round(getDistanceFromLatLonInM(state.userLocation.lat, state.userLocation.lng, Number(loc.latitude), Number(loc.longitude)));
+          const inside = dM <= radius;
+          mobilePill.textContent = inside
+            ? `Dalam Radius • ${dM}m`
+            : (dM >= 1000 ? `Jarak ${(dM / 1000).toFixed(1)}km` : `Jarak ${dM}m`);
+          mobilePill.className = inside
+            ? 'text-[11px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded-full font-semibold font-mono tabular-nums'
+            : 'text-[11px] bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 px-2.5 py-0.5 rounded-full font-semibold font-mono tabular-nums';
+        } else {
+          mobilePill.textContent = `Radius ${radius}m`;
+          mobilePill.className = 'text-[11px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded-full font-semibold font-mono tabular-nums';
+        }
+      }
+    }
+
+    function startLocationPillRotator() {
+      if (_locRotatorTimer) {
+        clearInterval(_locRotatorTimer);
+        _locRotatorTimer = null;
+      }
+      _locRotatorIndex = 0;
+      renderLocationPillForIndex(0);
+      const locs = getTodayActiveLocations();
+      if (locs.length > 1) {
+        _locRotatorTimer = setInterval(() => {
+          const curLocs = getTodayActiveLocations();
+          if (curLocs.length <= 1) return;
+          _locRotatorIndex = (_locRotatorIndex + 1) % curLocs.length;
+          renderLocationPillForIndex(_locRotatorIndex);
+        }, 3500);
+      }
+    }
+
+    function renderPresensiLokasiModalList() {
+      const listEl = document.getElementById('presensiLokasiModalList');
+      const subEl = document.getElementById('presensiLokasiModalSub');
+      if (!listEl) return;
+      const hariIni = getTodayHariWita();
+      const hariCap = hariIni.charAt(0).toUpperCase() + hariIni.slice(1);
+      const all = Array.isArray(state.locations) ? state.locations : [];
+      const activeToday = all.filter((l) => isLocationActiveToday(l, hariIni));
+      if (subEl) {
+        subEl.textContent = `${activeToday.length} lokasi aktif untuk hari ${hariCap}`;
+      }
+      if (!all.length) {
+        listEl.innerHTML = '<div class="p-5 text-center text-xs text-slate-400">Belum ada lokasi presensi terdaftar.</div>';
+        return;
+      }
+      const escL = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      const ordered = [...activeToday, ...all.filter((l) => !activeToday.includes(l))];
+      listEl.innerHTML = ordered.map((loc) => {
+        const isToday = isLocationActiveToday(loc, hariIni);
+        const nama = loc.nama_lokasi || loc.Nama_Lokasi || 'Lokasi Presensi';
+        const rad = Number(loc.radius || 250);
+        const hariRaw = String(loc.hari || '').trim();
+        const hariLabel = !hariRaw ? 'Setiap Hari' : hariRaw.split(',').map((h) => {
+          const t = h.trim();
+          return t ? t.charAt(0).toUpperCase() + t.slice(1, 3) : '';
+        }).filter(Boolean).join(', ');
+        let distBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 tabular-nums">Radius ${rad}m</span>`;
+        if (state.userLocation && Number.isFinite(state.userLocation.lat) && Number.isFinite(state.userLocation.lng)) {
+          const dM = Math.round(getDistanceFromLatLonInM(state.userLocation.lat, state.userLocation.lng, Number(loc.latitude), Number(loc.longitude)));
+          const inside = dM <= rad;
+          const dTxt = dM >= 1000 ? `${(dM / 1000).toFixed(1)}km` : `${dM}m`;
+          distBadge = inside
+            ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 tabular-nums">Dalam Radius (${dTxt})</span>`
+            : `<span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 tabular-nums">Jarak ${dTxt} / ${rad}m</span>`;
+        }
+        return `
+          <div class="p-3 rounded-2xl border ${isToday ? 'bg-blue-50/50 dark:bg-slate-800/80 border-blue-200/80 dark:border-slate-700' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/60 dark:border-slate-800 opacity-65'} flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full ${isToday ? 'bg-emerald-500' : 'bg-slate-400'} shrink-0"></span>
+                <p class="text-xs font-bold text-slate-900 dark:text-white truncate">${escL(nama)}</p>
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">${isToday ? 'Aktif hari ini' : 'Tidak aktif hari ini'} • ${escL(hariLabel)}</p>
+            </div>
+            <div class="shrink-0">${distBadge}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function openPresensiLokasiModal() {
+      const modal = document.getElementById('modalPresensiLokasi');
+      if (!modal) {
+        syncRealGPS();
+        return;
+      }
+      renderPresensiLokasiModalList();
+      modal.classList.remove('hidden');
+      syncRealGPS();
+    }
+
+    function closePresensiLokasiModal() {
+      const modal = document.getElementById('modalPresensiLokasi');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    window.openPresensiLokasiModal = openPresensiLokasiModal;
+    window.closePresensiLokasiModal = closePresensiLokasiModal;
+    window.renderPresensiLokasiModalList = renderPresensiLokasiModalList;
+
+    function syncRealGPS() {
+      const activeLocs = getTodayActiveLocations();
+      const fallbackLoc = state.currentLocation || activeLocs[0] || { nama_lokasi: 'Kantor Bapperida', latitude: -9.648769, longitude: 119.389232, radius: 250 };
 
       if (!navigator.geolocation) {
-        if (mobilePill) {
-          mobilePill.textContent = 'Akurat ~ 12m';
-          mobilePill.className = 'text-[11px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded-full flex-shrink-0 font-semibold font-mono';
-        }
-        showDynamicIsland({
-          type: 'info',
-          title: 'Titik Lokasi DB Aktif',
-          message: `Koordinat resmi ${officeName} (${officeLat}, ${officeLng})`
-        });
+        renderLocationPillForIndex(_locRotatorIndex);
+        renderPresensiLokasiModalList();
         return;
       }
 
@@ -1995,35 +2138,35 @@
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
           const accuracy = Math.round(pos.coords.accuracy || 15);
-          
-          const distMeters = Math.round(getDistanceFromLatLonInM(lat, lng, officeLat, officeLng));
-          
-          state.userLocation = { lat, lng, distMeters, accuracy };
-          const isInside = distMeters <= officeRadius;
 
-          if (mobilePill) {
-            mobilePill.textContent = isInside ? `Akurat ~ ${accuracy}m` : `Jarak ~ ${(distMeters/1000).toFixed(1)}km`;
-            mobilePill.className = isInside 
-              ? 'text-[11px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded-full flex-shrink-0 font-semibold font-mono'
-              : 'text-[11px] bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 px-2.5 py-0.5 rounded-full flex-shrink-0 font-semibold font-mono';
-          }
+          // Pilih lokasi aktif hari ini yang paling dekat dengan posisi pegawai
+          const candidates = activeLocs.length ? activeLocs : [fallbackLoc];
+          let nearest = candidates[0];
+          let minDist = Infinity;
+          candidates.forEach((loc) => {
+            const dM = Math.round(getDistanceFromLatLonInM(lat, lng, Number(loc.latitude), Number(loc.longitude)));
+            if (dM < minDist) {
+              minDist = dM;
+              nearest = loc;
+            }
+          });
+
+          state.currentLocation = nearest;
+          state.userLocation = { lat, lng, distMeters: minDist, accuracy };
+          const isInside = minDist <= Number(nearest.radius || 250);
+
+          renderLocationPillForIndex(_locRotatorIndex);
+          renderPresensiLokasiModalList();
 
           showDynamicIsland({
             type: isInside ? 'success' : 'warning',
-            title: isInside ? 'GPS Terverifikasi Valid' : 'Di Luar Radius Kantor',
-            message: `Akurasi ±${accuracy}m • Jarak ${distMeters}m dari ${officeName}`
+            title: isInside ? 'GPS Terverifikasi Valid' : 'Di Luar Radius Lokasi',
+            message: `Akurasi ±${accuracy}m • Terdekat: ${nearest.nama_lokasi} (${minDist}m)`
           });
         },
         (_err) => {
-          if (mobilePill) {
-            mobilePill.textContent = 'Akurat ~ 12m';
-            mobilePill.className = 'text-[11px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded-full flex-shrink-0 font-semibold font-mono';
-          }
-          showDynamicIsland({
-            type: 'info',
-            title: 'GPS Terkoneksi Titik DB',
-            message: `Terverifikasi pada radius perimeter ${officeName}`
-          });
+          renderLocationPillForIndex(_locRotatorIndex);
+          renderPresensiLokasiModalList();
         },
         { enableHighAccuracy: true, timeout: 5000 }
       );

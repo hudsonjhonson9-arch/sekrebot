@@ -131,7 +131,7 @@
     }
   }
 
-  const STITCH_RE = /^(https?:\/\/[^/]+)?\/api\/(stitch|media|dev|auth\/devices|log|rekap-absen|arsip|instansi-list|instansi-update|password-toggle|kontrol-absen|peringatan-akumulasi|kirim-rekap|admin\/roles|absen-roles)(\/|\?|$)/;
+  const STITCH_RE = /^(https?:\/\/[^/]+)?\/api\/(stitch|media|dev|auth\/devices|log|rekap-absen|arsip|instansi-list|instansi-update|password-toggle|kontrol-absen|peringatan-akumulasi|kirim-rekap|admin\/roles|absen-roles|lokasi-list|lokasi-add|lokasi-update|lokasi-delete)(\/|\?|$)/;
   const origFetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
     try {
