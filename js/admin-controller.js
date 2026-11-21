@@ -257,6 +257,7 @@
 
     const renderLokasiList = () => {
       if (!lokasiListEl) return;
+      const prevScroll = lokasiListEl.scrollTop;
       if (lokasiCountBadge) lokasiCountBadge.textContent = `${lokasiListCache.length} Lokasi`;
       if (!lokasiListCache.length) {
         lokasiListEl.innerHTML = '<div class="p-5 text-center text-xs text-on-surface-variant bg-surface-container-low rounded-xl">Belum ada titik lokasi di database. Klik "Tambah Lokasi" untuk menambahkan.</div>';
@@ -285,6 +286,7 @@
             <span class="material-symbols-outlined text-[18px] ${isSel ? 'text-primary' : 'text-on-surface-variant'} shrink-0 mt-0.5">chevron_right</span>
           </button>`;
       }).join('');
+      lokasiListEl.scrollTop = prevScroll;
     };
 
     const refreshLokasiList = async (preferredId = null) => {
@@ -1480,7 +1482,8 @@
             if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
             notifyToast('success', 'OPD Dihapus', `OPD ${selectedOpdId} berhasil dihapus.`);
             selectedOpdId = 'bapperida';
-            await refreshOpdList();
+            window._refreshAdminOpdList = refreshOpdList;
+      await refreshOpdList();
           } catch (err) {
             notifyToast('error', 'Gagal Menghapus OPD', err.message);
           } finally {
@@ -1586,6 +1589,7 @@
         }
       });
 
+      window._refreshAdminOpdList = refreshOpdList;
       await refreshOpdList();
     }
 
@@ -1600,6 +1604,16 @@
           btnJam.disabled = false;
         }
       });
+    }
+    // Seamless auto-sync saat ada perubahan dari tab lain atau kembali ke tab ini
+    if (window.StitchSync && typeof window.StitchSync.on === 'function') {
+      window.StitchSync.on(['lokasi', 'instansi', 'config', 'admin', 'presensi'], (ev) => {
+        if (!ev || !ev.remote) return; // aksi lokal sudah refresh langsung tanpa dobel request
+        if (ev.scope === 'lokasi' || ev.scope === 'visibility') refreshLokasiList(locId || null);
+        if ((ev.scope === 'instansi' || ev.scope === 'visibility') && typeof window._refreshAdminOpdList === 'function') {
+          window._refreshAdminOpdList();
+        }
+      }, 300);
     }
   });
 })();

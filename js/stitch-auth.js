@@ -132,10 +132,96 @@
   }
 
   const STITCH_RE = /^(https?:\/\/[^/]+)?\/api\/(stitch|simapo|media|dev|auth\/devices|log|rekap-absen|arsip|instansi-list|instansi-add|instansi-update|instansi-delete|bidang-list|bidang-add|bidang-update|bidang-delete|password-toggle|kontrol-absen|peringatan-akumulasi|kirim-rekap|admin\/roles|absen-roles|lokasi-list|lokasi-add|lokasi-update|lokasi-delete)(\/|\?|$)/;
+  const API_RE = /^(https?:\/\/[^/]+)?\/api\//;
+
+  // ── Seamless Realtime Data Sync Bus (same-tab + cross-tab + visibilitychange) ──
+  const SYNC_CHANNEL_NAME = 'stitch_data_sync';
+  const SYNC_STORAGE_KEY = 'stitch_data_sync_ping';
+  let syncChannel = null;
+  try {
+    if (typeof BroadcastChannel === 'function') syncChannel = new BroadcastChannel(SYNC_CHANNEL_NAME);
+  } catch (_) {}
+
+  function classifySyncScope(url) {
+    const u = String(url || '').toLowerCase();
+    if (/lokasi/.test(u)) return 'lokasi';
+    if (/instansi|bidang/.test(u)) return 'instansi';
+    if (/simapo|aset/.test(u)) return 'aset';
+    if (/arsip|sppd|surat/.test(u)) return 'arsip';
+    if (/jam-|libur|kontrol-absen|peringatan|face-settings|password-toggle/.test(u)) return 'config';
+    if (/role|pegawai|user|admin/.test(u)) return 'admin';
+    if (/absen|presensi|izin|cuti|rekap/.test(u)) return 'presensi';
+    return 'all';
+  }
+
+  function emitSync(detail) {
+    try {
+      window.dispatchEvent(new CustomEvent('stitch:data-changed', { detail }));
+    } catch (_) {}
+  }
+
+  function broadcastSync(scope, meta) {
+    const detail = Object.assign({ scope: scope || 'all', ts: Date.now() }, meta || {});
+    emitSync(detail);
+    try { if (syncChannel) syncChannel.postMessage(detail); } catch (_) {}
+    try { localStorage.setItem(SYNC_STORAGE_KEY, JSON.stringify(detail)); } catch (_) {}
+  }
+
+  if (syncChannel) {
+    syncChannel.onmessage = function (ev) {
+      if (ev && ev.data && ev.data.scope) emitSync(Object.assign({ remote: true }, ev.data));
+    };
+  }
+  window.addEventListener('storage', function (ev) {
+    if (ev.key !== SYNC_STORAGE_KEY || !ev.newValue) return;
+    try {
+      const parsed = JSON.parse(ev.newValue);
+      if (parsed && parsed.scope) emitSync(Object.assign({ remote: true }, parsed));
+    } catch (_) {}
+  });
+
+  let lastHiddenAt = 0;
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') {
+      lastHiddenAt = Date.now();
+    } else if (document.visibilityState === 'visible' && lastHiddenAt && (Date.now() - lastHiddenAt) > 2000) {
+      emitSync({ scope: 'visibility', ts: Date.now(), remote: true });
+    }
+  });
+
+  window.StitchSync = {
+    emit: broadcastSync,
+    on: function (scopes, fn, debounceMs) {
+      if (typeof fn !== 'function') return function () {};
+      const list = Array.isArray(scopes) ? scopes : [scopes];
+      const wait = Number.isFinite(debounceMs) ? debounceMs : 220;
+      let timer = null;
+      const handler = function (ev) {
+        const d = (ev && ev.detail) || {};
+        const sc = d.scope || 'all';
+        if (sc !== 'visibility' && sc !== 'all' && !list.includes('*') && !list.includes(sc)) return;
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(function () {
+          timer = null;
+          try { fn(d); } catch (_) {}
+        }, wait);
+      };
+      window.addEventListener('stitch:data-changed', handler);
+      return function () { window.removeEventListener('stitch:data-changed', handler); };
+    }
+  };
+
   const origFetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
+    let url = '';
+    let method = 'GET';
     try {
-      const url = typeof input === 'string' ? input : (input && input.url) || '';
+      url = typeof input === 'string' ? input : (input && input.url) || '';
+      method = String((init && init.method) || (typeof input !== 'string' && input && input.method) || 'GET').toUpperCase();
+      if (API_RE.test(url)) {
+        init = Object.assign({}, init);
+        if (method === 'GET' && !init.cache) init.cache = 'no-store';
+      }
       if (STITCH_RE.test(url)) {
         const token = getToken();
         if (token) {
@@ -147,11 +233,15 @@
       }
     } catch (_) { /* jangan pernah memblokir fetch */ }
     let isStitch = false;
-    try { isStitch = STITCH_RE.test(typeof input === 'string' ? input : (input && input.url) || ''); } catch (_) {}
+    try { isStitch = STITCH_RE.test(url); } catch (_) {}
     const hadToken = isStitch && !!getToken();
+    const isMutation = API_RE.test(url) && method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
     return origFetch(input, init).then(function (res) {
       // 401 saat memegang token = sesi habis/dicabut server -> paksa login ulang.
       if (hadToken && res.status === 401) handleExpired();
+      if (isMutation && res && res.ok) {
+        broadcastSync(classifySyncScope(url), { url: url, method: method });
+      }
       return res;
     });
   };

@@ -459,7 +459,7 @@
       setModePemeliharaan(null);
       await toggleFormPemeliharaan(false);
       w.Swal?.fire({ icon: 'success', title: 'Tersimpan', text: editing ? 'Data pemeliharaan berhasil diubah.' : 'Data pemeliharaan berhasil disimpan.' });
-      loadPemeliharaan();
+      loadPemeliharaan(true);
     } catch (err) {
       w.Swal?.fire({ icon: 'error', title: 'Gagal Menyimpan', text: err?.message || 'Koneksi terganggu.' });
     }
@@ -513,7 +513,7 @@
       if (!r.ok || !j.ok) throw new Error(j.message || `HTTP ${r.status}`);
       if (String(_pemeliharaanEditId) === String(id)) setModePemeliharaan(null);
       w.Swal?.fire({ icon: 'success', title: 'Dihapus', text: 'Riwayat pemeliharaan berhasil dihapus.' });
-      loadPemeliharaan();
+      loadPemeliharaan(true);
     } catch (err) {
       w.Swal?.fire({ icon: 'error', title: 'Gagal Menghapus', text: err?.message || 'Koneksi terganggu.' });
     }
@@ -631,9 +631,11 @@
     }).join('');
   }
 
-  async function loadPemeliharaan() {
+  async function loadPemeliharaan(silent = false) {
     const el = d.getElementById('adminPemeliharaanList');
-    if (el) el.innerHTML = '<div class="py-10 text-center text-xs text-on-surface-variant">Memuat kartu pemeliharaan aset...</div>';
+    if (el && !silent && !el.innerHTML.trim()) {
+      el.innerHTML = '<div class="py-10 text-center text-xs text-on-surface-variant">Memuat kartu pemeliharaan aset...</div>';
+    }
     try {
       const [pmRes] = await Promise.all([
         fetch('/api/simapo/pemeliharaan'),
@@ -644,7 +646,7 @@
       populateKartuPemeliharaanSelects();
       filterKartuPemeliharaan();
     } catch (err) {
-      if (el) el.innerHTML = `<div class="py-10 text-center text-xs text-rose-500">Gagal memuat kartu pemeliharaan: ${esc(err?.message)}</div>`;
+      if (el && !silent) el.innerHTML = `<div class="py-10 text-center text-xs text-rose-500">Gagal memuat kartu pemeliharaan: ${esc(err?.message)}</div>`;
     }
   }
 
@@ -698,10 +700,12 @@
   }
 
   /* ── TAB 3: TIKET KERUSAKAN & PEMINJAMAN ──────────────────────────────── */
-  async function loadTiketList() {
+  async function loadTiketList(silent = false) {
     const tbody = d.getElementById('asetTiketBody');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-xs text-slate-400">Memuat tiket kerusakan...</td></tr>';
+    if (!silent && !tbody.innerHTML.trim()) {
+      tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-xs text-slate-400">Memuat tiket kerusakan...</td></tr>';
+    }
     try {
       const r = await fetch('/api/simapo/admin-tiket-list');
       const j = await r.json().catch(() => ({}));
@@ -744,10 +748,12 @@
     }
   }
 
-  async function loadPinjamFullTable() {
+  async function loadPinjamFullTable(silent = false) {
     const tbody = d.getElementById('asetPinjamFullBody');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-xs text-slate-400">Memuat daftar peminjaman unit...</td></tr>';
+    if (!silent && !tbody.innerHTML.trim()) {
+      tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-xs text-slate-400">Memuat daftar peminjaman unit...</td></tr>';
+    }
     try {
       const r = await fetch('/api/simapo/admin-pinjam-list');
       const j = await r.json().catch(() => ({}));
@@ -1383,6 +1389,17 @@
       const t = resolveTab();
       if (t !== _activeTab) switchTab(t, false);
     });
+    // Seamless auto-sync saat ada perubahan data aset (same-tab / cross-tab / kembali ke tab)
+    if (w.StitchSync && typeof w.StitchSync.on === 'function') {
+      w.StitchSync.on(['aset'], (ev) => {
+        if (!ev || !ev.remote) return;
+        if (_activeTab === 'inventaris' && typeof w.loadRealAsetData === 'function') w.loadRealAsetData();
+        else if (_activeTab === 'pemeliharaan') loadPemeliharaan(true);
+        else if (_activeTab === 'tiket-pinjam') { loadTiketList(true); loadPinjamFullTable(true); }
+        else if (_activeTab === 'laporan-permen47') loadLaporanPermen47();
+        else if (_activeTab === 'pengaturan') loadPengaturanAll();
+      }, 280);
+    }
     // Enhance filter selects in aset-kir.html with StitchPicker
     setTimeout(() => refreshPickers(d.getElementById('asetPanelInventaris')), 120);
   }
