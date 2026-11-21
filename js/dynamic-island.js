@@ -564,6 +564,7 @@
           if (btnCancel) {
             btnCancel.onclick = (e) => {
               e.stopPropagation();
+              this.currentResolve = null;
               this.dismiss();
               resolve({ isConfirmed: false, isDismissed: true });
             };
@@ -571,6 +572,7 @@
           if (btnConfirm) {
             btnConfirm.onclick = (e) => {
               e.stopPropagation();
+              this.currentResolve = null;
               this.dismiss();
               resolve({ isConfirmed: true });
             };
