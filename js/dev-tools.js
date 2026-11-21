@@ -322,6 +322,131 @@ export function createDevTracker(options = {}) {
   };
 }
 
+// ── Tracking developer: klik tombol + kegagalan fungsi/API per user ──
+// Pipeline terpisah dari DEV_TRACKER.log() (diagnostik lokal). Event diantre di
+// memori lalu dikirim batch ke POST /api/dev/track; identitas user diambil server
+// dari sesi, bukan dari klien.
+export const TRACK_ENDPOINT = '/api/dev/track';
+export const TRACK_SELECTOR = 'button, [onclick], [role="button"], a[href]';
+export const DEV_PANEL_SELECTOR = '#adminSectionDev, #devHealthCard, #devLogCard, #devTrackCard';
+const TRACK_MAX_QUEUE = 500;
+const TRACK_FLUSH_AT = 20;
+const TRACK_BATCH = 50;
+const TRACK_KEEPALIVE_BYTES = 60000; // batas body fetch keepalive browser = 64KB
+
+// Label tombol: aria-label -> teks -> id -> nama tag.
+export function trackLabelFor(el) {
+  if (!el) return '';
+  const aria = el.getAttribute?.('aria-label');
+  if (aria && String(aria).trim()) return String(aria).trim().slice(0, 80);
+  const text = String(el.innerText ?? el.textContent ?? '').replace(/\s+/g, ' ').trim();
+  if (text) return text.slice(0, 80);
+  if (el.id) return String(el.id).slice(0, 80);
+  return String(el.tagName || '').toLowerCase();
+}
+
+// Buang query/hash: URL bisa membawa token atau NIP.
+export function trackStripQuery(url) {
+  return String(url ?? '').split(/[?#]/)[0].slice(0, 200);
+}
+
+function trackClampDetail(detail) {
+  const out = {};
+  for (const [k, v] of Object.entries(detail && typeof detail === 'object' ? detail : {})) {
+    out[k] = typeof v === 'string' ? v.slice(0, k === 'stack' ? 1500 : 500) : v;
+  }
+  return out;
+}
+
+function trackTakeBatch(queue, maxCount, maxBytes) {
+  const batch = [];
+  let bytes = 0;
+  for (const ev of queue) {
+    if (batch.length >= maxCount) break;
+    bytes += JSON.stringify(ev).length;
+    if (batch.length && bytes > maxBytes) break;
+    batch.push(ev);
+  }
+  return batch;
+}
+
+export function createTrackQueue(options = {}) {
+  const endpoint = options.endpoint || TRACK_ENDPOINT;
+  const maxQueue = options.maxQueue || TRACK_MAX_QUEUE;
+  const flushAt = options.flushAt || TRACK_FLUSH_AT;
+  const batchSize = options.batchSize || TRACK_BATCH;
+  const now = options.now || (() => Date.now());
+  const getPage = options.getPage || (() => '');
+  const send = options.fetchImpl || ((...a) => globalThis.fetch(...a));
+
+  const queue = [];
+  let flushing = false;
+
+  // Gagal jaringan / non-OK: event tetap di antrean, dicoba lagi flush berikutnya.
+  async function flushNow({ keepalive = false } = {}) {
+    if (flushing || !queue.length) return false;
+    flushing = true;
+    try {
+      let sent = false;
+      do {
+        const batch = trackTakeBatch(queue, batchSize, keepalive ? TRACK_KEEPALIVE_BYTES : Infinity);
+        const res = await send(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ events: batch }),
+          keepalive,
+        });
+        // 400 = batch ditolak server karena bentuknya; dibuang agar tidak macet.
+        if (!(res && (res.ok || res.status === 400))) break;
+        queue.splice(0, batch.length);
+        sent = true;
+      } while (queue.length > 0 && !keepalive);
+      return sent;
+    } catch (_) {
+      return false;
+    } finally {
+      flushing = false;
+    }
+  }
+
+  function track(kind, data = {}) {
+    queue.push({
+      kind,
+      ts: now(),
+      page: String(getPage() || '').slice(0, 200),
+      label: String(data.label ?? '').slice(0, 300),
+      detail: trackClampDetail(data.detail),
+    });
+    while (queue.length > maxQueue) queue.shift();
+    if (queue.length >= flushAt) flushNow().catch(() => {});
+  }
+
+  return { track, flushNow, queue };
+}
+
+// Bungkus fetch untuk menangkap kegagalan API. Perilaku app tidak berubah:
+// response dikembalikan apa adanya, error dilempar ulang. Request ke endpoint
+// tracking sendiri dilewati agar tidak berputar (loop guard).
+export function wrapFetchForTracking(origFetch, track) {
+  return async function trackedFetch(input, init) {
+    const url = typeof input === 'string' ? input : (input && input.url) || String(input ?? '');
+    const method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+    const skip = url.includes(TRACK_ENDPOINT);
+    try {
+      const res = await origFetch.call(this, input, init);
+      if (!skip && res && res.status >= 400) {
+        track('api_fail', { label: trackStripQuery(url), detail: { url: trackStripQuery(url), method, status: res.status } });
+      }
+      return res;
+    } catch (e) {
+      if (!skip && !(e && e.name === 'AbortError')) {
+        track('api_fail', { label: trackStripQuery(url), detail: { url: trackStripQuery(url), method, status: 0, message: String(e && e.message || e) } });
+      }
+      throw e;
+    }
+  };
+}
+
 // Inisialisasi global jika di lingkungan browser
 if (typeof window !== 'undefined') {
   window.createDevTracker = createDevTracker;
@@ -337,6 +462,10 @@ if (typeof window !== 'undefined') {
           colno: event.colno,
           stack: event.error?.stack || null,
         });
+        window.__devTrack?.track('error', {
+          label: event.message || 'Uncaught Error',
+          detail: { filename: event.filename, lineno: event.lineno, colno: event.colno, stack: event.error?.stack || null },
+        });
       } catch (_) {}
     });
 
@@ -346,7 +475,38 @@ if (typeof window !== 'undefined') {
         window.DEV_TRACKER.log('ERROR', 'PROMISE', reason?.message || String(reason), {
           stack: reason?.stack || null,
         });
+        window.__devTrack?.track('error', {
+          label: reason?.message || String(reason),
+          detail: { source: 'promise', stack: reason?.stack || null },
+        });
       } catch (_) {}
+    });
+  }
+
+  // Pipeline tracking klik + kegagalan per user (kirim batch ke server).
+  // __devTrack dibuka hanya untuk pengujian; tanpa UI.
+  if (!window.__devTrack) {
+    const tq = createTrackQueue({
+      getPage: () => window.location.pathname,
+      fetchImpl: (...a) => window.fetch(...a),
+    });
+    window.__devTrack = tq;
+
+    window.fetch = wrapFetchForTracking(window.fetch, tq.track);
+
+    document.addEventListener('click', (ev) => {
+      try {
+        const el = ev.target?.closest?.(TRACK_SELECTOR);
+        if (!el || el.closest(DEV_PANEL_SELECTOR)) return;
+        const href = el.tagName === 'A' ? trackStripQuery(el.getAttribute('href')) : undefined;
+        tq.track('click', { label: trackLabelFor(el), detail: { id: el.id || undefined, href } });
+      } catch (_) {}
+    }, true);
+
+    setInterval(() => { tq.flushNow(); }, 15000);
+    window.addEventListener('pagehide', () => { tq.flushNow({ keepalive: true }); });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') tq.flushNow({ keepalive: true });
     });
   }
 
@@ -535,6 +695,192 @@ if (typeof window !== 'undefined') {
     }
 
     container.innerHTML = html;
+  };
+
+  // ── Viewer User Tracking (data terpusat dari /api/dev/track) ──
+  // Kartu dibuat dari JS di bawah #devLogCard (markup HTML tidak disentuh); kelas
+  // dan data-admin-tab disalin dari kartu log agar ikut tab/tema yang sama.
+  const trk = { days: 7, nip: '', kind: '', rows: [], next: null, loadedAt: 0, loading: false };
+  const TRK_KIND_TONE = {
+    click: 'bg-blue-100 dark:bg-blue-950/70 text-[#2563eb] dark:text-blue-300',
+    error: 'bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300',
+    api_fail: 'bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300',
+  };
+  const TRK_NOTE = 'py-6 px-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-dashed border-slate-200 dark:border-slate-700 text-center text-xs text-slate-500 dark:text-slate-400';
+
+  function trkWita(ts) {
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return String(ts ?? '');
+    return d.toLocaleString('id-ID', { timeZone: 'Asia/Makassar', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  async function trkGet(path) {
+    const res = await fetch(path, { headers: getDevBearerHeaders(false) });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 403) { const e = new Error('forbidden'); e.code = 403; throw e; }
+    if (!res.ok || !data.ok) throw new Error(data.message || `HTTP ${res.status}`);
+    return data;
+  }
+
+  function trkEnsureCard() {
+    let card = document.getElementById('devTrackCard');
+    if (card) return card;
+    const anchor = document.getElementById('devLogCard');
+    if (!anchor || !anchor.parentNode) return null;
+    card = document.createElement('div');
+    card.id = 'devTrackCard';
+    card.className = anchor.className;
+    const tab = anchor.getAttribute('data-admin-tab');
+    if (tab) card.setAttribute('data-admin-tab', tab);
+    card.innerHTML = `
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="min-w-0">
+          <h3 class="font-bold text-sm text-slate-900 dark:text-white">User Tracking</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Klik tombol dan kegagalan fungsi/API per user (terpusat).</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <select id="devTrackDays" class="text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-2 py-1">
+            <option value="7">7 hari</option>
+            <option value="30">30 hari</option>
+          </select>
+          <button type="button" id="devTrackRefresh" class="text-xs font-semibold px-3 py-1 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300">Refresh</button>
+        </div>
+      </div>
+      <div id="devTrackSummary"></div>
+      <div id="devTrackFilters" class="flex flex-wrap items-center gap-1.5"></div>
+      <div id="devTrackList" class="flex flex-col gap-2"></div>
+      <button type="button" id="devTrackMore" class="hidden self-center text-xs font-semibold px-4 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">Muat lebih</button>`;
+    anchor.parentNode.insertBefore(card, anchor.nextSibling);
+    card.querySelector('#devTrackDays').addEventListener('change', (e) => {
+      trk.days = Number(e.target.value) || 7;
+      window.renderDevTrackViewer({ force: true });
+    });
+    card.querySelector('#devTrackRefresh').addEventListener('click', () => window.renderDevTrackViewer({ force: true }));
+    card.querySelector('#devTrackMore').addEventListener('click', () => trkLoadEvents(false));
+    card.querySelector('#devTrackSummary').addEventListener('click', (e) => {
+      const row = e.target.closest('[data-nip]');
+      if (!row) return;
+      trk.nip = trk.nip === row.dataset.nip ? '' : row.dataset.nip;
+      trkLoadEvents(true);
+      trkRenderFilters();
+    });
+    card.querySelector('#devTrackFilters').addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-kind]');
+      if (!chip) return;
+      if (chip.dataset.kind === '__nip') trk.nip = '';
+      else trk.kind = chip.dataset.kind;
+      trkLoadEvents(true);
+      trkRenderFilters();
+    });
+    return card;
+  }
+
+  function trkRenderFilters() {
+    const box = document.getElementById('devTrackFilters');
+    if (!box) return;
+    const chip = (kind, label) => {
+      const on = trk.kind === kind;
+      const tone = on ? 'bg-[#2563eb] text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
+      return `<button type="button" data-kind="${kind}" class="text-[11px] font-semibold px-2.5 py-1 rounded-full ${tone}">${label}</button>`;
+    };
+    box.innerHTML = chip('', 'Semua') + chip('click', 'click') + chip('error', 'error') + chip('api_fail', 'api_fail')
+      + (trk.nip ? `<button type="button" data-kind="__nip" class="text-[11px] font-mono font-semibold px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">NIP ${escapeHtml(trk.nip)} &times;</button>` : '');
+  }
+
+  function trkRenderSummary(rows) {
+    const box = document.getElementById('devTrackSummary');
+    if (!box) return;
+    if (!rows.length) { box.innerHTML = `<div class="${TRK_NOTE}">Belum ada data tracking</div>`; return; }
+    box.innerHTML = `<div class="overflow-x-auto"><table class="w-full text-xs">
+      <thead><tr class="text-left text-slate-500 dark:text-slate-400"><th class="py-1 pr-3">User</th><th class="py-1 pr-3 text-right">Klik</th><th class="py-1 pr-3 text-right">Error</th><th class="py-1 pr-3 text-right">API gagal</th><th class="py-1">Terakhir aktif</th></tr></thead>
+      <tbody>${rows.map((r) => `
+        <tr data-nip="${escapeHtml(r.user_nip)}" class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60 ${trk.nip === r.user_nip ? 'bg-blue-50 dark:bg-blue-950/30' : ''}">
+          <td class="py-1.5 pr-3"><span class="font-semibold text-slate-800 dark:text-slate-100">${escapeHtml(r.user_nama || '-')}</span> <span class="font-mono text-[10.5px] text-slate-500 dark:text-slate-400">${escapeHtml(r.user_nip)}</span></td>
+          <td class="py-1.5 pr-3 text-right font-mono tabular-nums">${Number(r.clicks) || 0}</td>
+          <td class="py-1.5 pr-3 text-right font-mono tabular-nums text-rose-600 dark:text-rose-400">${Number(r.errors) || 0}</td>
+          <td class="py-1.5 pr-3 text-right font-mono tabular-nums text-amber-600 dark:text-amber-400">${Number(r.api_fails) || 0}</td>
+          <td class="py-1.5 font-mono text-[10.5px] text-slate-500 dark:text-slate-400">${escapeHtml(trkWita(r.last_seen))}</td>
+        </tr>`).join('')}
+      </tbody></table></div>`;
+  }
+
+  function trkRenderRows() {
+    const list = document.getElementById('devTrackList');
+    const more = document.getElementById('devTrackMore');
+    if (!list) return;
+    if (more) more.classList.toggle('hidden', !trk.next);
+    if (!trk.rows.length) { list.innerHTML = `<div class="${TRK_NOTE}">Belum ada data tracking</div>`; return; }
+    list.innerHTML = trk.rows.map((r) => {
+      const detail = r.detail && Object.keys(r.detail).length ? escapeHtml(JSON.stringify(r.detail, null, 2)) : '';
+      return `
+        <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80 flex flex-col gap-1">
+          <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div class="flex flex-wrap items-center gap-1.5 min-w-0">
+              <span class="px-2 py-0.5 rounded-md font-mono font-bold text-[10px] shrink-0 ${TRK_KIND_TONE[r.kind] || ''}">${escapeHtml(r.kind)}</span>
+              <span class="font-semibold text-slate-800 dark:text-slate-100 break-words">${escapeHtml(r.label || '-')}</span>
+            </div>
+            <span class="font-mono tabular-nums text-[10.5px] text-slate-500 dark:text-slate-400 shrink-0">${escapeHtml(trkWita(r.ts))}</span>
+          </div>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400">${escapeHtml(r.user_nama || '-')} <span class="font-mono">${escapeHtml(r.user_nip)}</span> &bull; <span class="font-mono">${escapeHtml(r.page)}</span></div>
+          ${detail ? `<details><summary class="cursor-pointer text-[11px] font-medium text-slate-500 dark:text-slate-400 select-none">Detail</summary><pre class="mt-1.5 p-2.5 rounded-xl bg-slate-900 text-slate-100 font-mono text-[10.5px] overflow-x-auto leading-relaxed">${detail}</pre></details>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  function trkShowError(e) {
+    const msg = e && e.code === 403 ? 'Fitur ini hanya untuk media/admin' : `Gagal memuat tracking: ${e && e.message ? e.message : e}`;
+    const note = `<div class="${TRK_NOTE}">${escapeHtml(msg)}</div>`;
+    const s = document.getElementById('devTrackSummary');
+    const l = document.getElementById('devTrackList');
+    if (s) s.innerHTML = note;
+    if (l) l.innerHTML = '';
+    const more = document.getElementById('devTrackMore');
+    if (more) more.classList.add('hidden');
+  }
+
+  async function trkLoadEvents(reset) {
+    const params = new URLSearchParams({ limit: '100' });
+    if (trk.nip) params.set('nip', trk.nip);
+    if (trk.kind) params.set('kind', trk.kind);
+    if (!reset && trk.next) params.set('before_id', trk.next);
+    try {
+      const data = await trkGet(`/api/dev/track/events?${params}`);
+      trk.rows = reset ? data.data : trk.rows.concat(data.data);
+      trk.next = data.next_before_id || null;
+      trkRenderRows();
+    } catch (e) { trkShowError(e); }
+  }
+
+  window.renderDevTrackViewer = async function (opts = {}) {
+    const card = trkEnsureCard();
+    if (!card) return;
+    // Dipanggil otomatis bersama renderDevLogTable (tiap ketikan filter log);
+    // muat ulang dari server hanya bila data sudah > 10 dtk atau diminta paksa.
+    if (trk.loading || (!opts.force && Date.now() - trk.loadedAt < 10000)) return;
+    trk.loading = true;
+    try {
+      const l = document.getElementById('devTrackList');
+      if (l && !trk.rows.length) l.innerHTML = `<div class="${TRK_NOTE}">Memuat...</div>`;
+      trkRenderFilters();
+      const sum = await trkGet(`/api/dev/track/summary?days=${trk.days}`);
+      trkRenderSummary(sum.data || []);
+      await trkLoadEvents(true);
+    } catch (e) {
+      trkShowError(e);
+    } finally {
+      // Termasuk saat gagal (mis. 403): jangan menembak ulang server tiap ketikan filter log.
+      trk.loadedAt = Date.now();
+      trk.loading = false;
+    }
+  };
+
+  // Setiap pembukaan panel dev memanggil renderDevLogTable; viewer ikut dimuat
+  // di sana supaya titik panggil di ui.js/stitch-app.js/admin tidak perlu diubah.
+  const baseRenderDevLogTable = window.renderDevLogTable;
+  window.renderDevLogTable = function () {
+    const out = baseRenderDevLogTable.apply(this, arguments);
+    window.renderDevTrackViewer();
+    return out;
   };
 
   window.runDevDiagnostics = async function () {

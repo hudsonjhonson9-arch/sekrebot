@@ -9,6 +9,7 @@ import { createAuthSessionRouter } from './auth-session.js';
 import { pasangArsipCookie, lepasArsipCookie, bersihkanSecret } from './arsip-sso.js';
 import { createAuthDeviceRouter } from './auth-device.js';
 import { createLogRouter } from './log.js';
+import { createDevTrackRouter, startDevTrackRetention } from './dev-track.js';
 import { createSimapoRouter } from './simapo.js';
 import { createSimapoNativeExtraRouter } from './simapo-native-extra.js';
 import { createArsipRouter } from './arsip.js';
@@ -407,6 +408,10 @@ export function createApp() {
   // admin (gate requireMedia di dalam log.js).
   app.use('/api/log', requireRole(ABSEN_ROLES), createLogRouter({ query }));
 
+  // Tracking developer (klik + kegagalan per user). Tulis: seluruh ABSEN_ROLES
+  // (identitas dari sesi); baca summary/events: khusus MEDIA_ROLES di dev-track.js.
+  app.use('/api/dev/track', requireRole(ABSEN_ROLES), createDevTrackRouter({ query }));
+
   // SIMAPO (penerimaan barang, pemeliharaan, BKU). Simapo gate: role SIMAPO_ROLES
   // (media + BENDAHARA BARANG) lalu lintas penuh; role ABSEN_ROLES lain (USER,
   // INSPEKTUR) hanya boleh lewat ke endpoint user-facing (scan QR, pinjam, katalog,
@@ -465,6 +470,8 @@ if (isMain) {
   const app = createApp();
   const server = app.listen(port, () => console.log(`[media] listening on :${port}`));
   initAbsenRolesTable({ query }).catch((e) => console.error('[rbac] initAbsenRolesTable error:', e.message));
+  // Purge tracking > 30 hari, sekali sehari (pengganti pg_cron).
+  const devTrackTimer = startDevTrackRetention({ query });
   // Pengganti cron n8n. Matikan dengan SCHEDULER=off (mis. saat debugging).
   if (process.env.SCHEDULER !== 'off') app.locals.scheduler.start();
   // Auto-watchdog OpenWA tiap 5 menit: otomatis start ulang sesi bila STOPPED/DISCONNECTED.
@@ -475,6 +482,7 @@ if (isMain) {
       // jadi jangan bergantung pada callback itu — drop koneksi, lalu keluar tanpa syarat.
       app.locals.scheduler.stop();
       app.locals.openwaWatchdog.stop();
+      clearInterval(devTrackTimer);
       server.close();
       server.closeAllConnections?.();
       closePool().finally(() => process.exit(0));
