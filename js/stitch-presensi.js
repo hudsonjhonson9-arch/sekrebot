@@ -528,19 +528,13 @@
     }
 
     function stepStripMonth(delta) {
+      // Samakan perilaku dengan selectPickerMonth: anchor selalu tgl 1 jam 12,
+      // selected = 1st (atau hari ini jika bulan berjalan) —selected tidak pernah
+      // jatuh di luar minggu yang ditampilkan.
       const anchor = state.calendarStripAnchorDate ? new Date(state.calendarStripAnchorDate) : new Date();
-      anchor.setMonth(anchor.getMonth() + delta);
-      state.calendarStripAnchorDate = anchor;
-
-      const y = anchor.getFullYear();
-      const m = String(anchor.getMonth() + 1).padStart(2, '0');
-      selectedStripDate = `${y}-${m}-01`;
-
-      if (stripMode === 'week') {
-        renderCalendarStrip();
-      } else {
-        renderMonthStripView();
-      }
+      const target = new Date(anchor.getFullYear(), anchor.getMonth() + delta, 1, 12, 0, 0);
+      pickerSelectedYear = target.getFullYear();
+      selectPickerMonth(target.getMonth());
     }
 
     /* ── 4C. INTERACTIVE CALENDAR WEEK STRIP & DAILY DETAIL ── */
@@ -597,6 +591,17 @@
       const monthHeader = document.getElementById('stripMonthDisplay');
       if (monthHeader) {
         monthHeader.textContent = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+      }
+
+      // Badge "Minggu ke-N": Senin pertama bulan = minggu ke-1
+      const firstMonday = new Date(now.getFullYear(), now.getMonth(), 1, 12, 0, 0);
+      firstMonday.setDate(1 + ((8 - firstMonday.getDay()) % 7));
+      firstMonday.setHours(0, 0, 0, 0);
+      const weekNo = Math.max(1, Math.floor((monday - firstMonday) / 604800000) + 1);
+      const weekBadge = document.getElementById('stripWeekBadge');
+      if (weekBadge) {
+        weekBadge.textContent = `Minggu ke-${weekNo}`;
+        weekBadge.classList.remove('hidden');
       }
 
       const dayLabels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
@@ -801,6 +806,8 @@
       if (monthHeader) {
         monthHeader.textContent = `${monthNames[targetMonth]} ${targetYear}`;
       }
+      const weekBadge = document.getElementById('stripWeekBadge');
+      if (weekBadge) weekBadge.classList.add('hidden');
 
       const currentYearMonth = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
       
