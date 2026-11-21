@@ -320,20 +320,26 @@
       } catch (_) {}
       bindAdminSettingToggles();
       initClock();
-      let isAuthed = checkAuthStatus();
+      let isTgLoggedOut = false;
+      try { isTgLoggedOut = localStorage.getItem('tg_logged_out') === '1'; } catch (_) {}
+      const hasTgInit = !!(window.Telegram?.WebApp?.initData || window.tg?.initData);
+      const hasLocalToken = !!(
+        (typeof getNativeToken === 'function' ? getNativeToken() : null) ||
+        localStorage.getItem('_native_token') ||
+        localStorage.getItem('native_token') ||
+        localStorage.getItem('_sess_token')
+      );
+      const hasLocalNip = !!(localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || (window._session && window._session.nip));
+
       // Di Telegram Mini App: bila belum ada sesi lokal dan belum logout eksplisit,
-      // coba terbitkan sesi asli via /api/auth/session (verifikasi initData HMAC + ID Telegram).
-      if (!isAuthed) {
-        let isTgLoggedOut = false;
-        try { isTgLoggedOut = localStorage.getItem('tg_logged_out') === '1'; } catch (_) {}
-        const hasTgInit = !!(window.Telegram?.WebApp?.initData || window.tg?.initData);
-        if (!isTgLoggedOut && hasTgInit && typeof window._checkIdentityOnLoad === 'function') {
-          try {
-            const tgOk = await window._checkIdentityOnLoad();
-            if (tgOk) isAuthed = checkAuthStatus();
-          } catch (_) {}
-        }
+      // langsung terbitkan sesi asli via /api/auth/session SEBELUM menampilkan modal NIP.
+      if ((!hasLocalToken || !hasLocalNip) && !isTgLoggedOut && hasTgInit && typeof window._checkIdentityOnLoad === 'function') {
+        try {
+          await window._checkIdentityOnLoad();
+        } catch (_) {}
       }
+
+      const isAuthed = checkAuthStatus();
       if (isAuthed) hydrateFromCache();
       bootstrapFromDatabase();
     });
