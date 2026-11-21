@@ -478,10 +478,13 @@
   }
 
   /* ── DATA LOADING ───────────────────────────────────────────────────── */
-  async function loadAdminRekapData() {
+  async function loadAdminRekapData(silent = false) {
     const box = d.getElementById('adminRekapListContainer');
     const sumBar = d.getElementById('adminRekapSummaryBar');
-    if (box) box.innerHTML = '<div class="p-8 text-center text-xs text-slate-400">Memuat data rekap seluruh pegawai...</div>';
+    const prevScrollY = w.scrollY;
+    if (box && !silent && !box.innerHTML.trim()) {
+      box.innerHTML = '<div class="p-8 text-center text-xs text-slate-400">Memuat data rekap seluruh pegawai...</div>';
+    }
     try {
       const instId = getSelectedInstansiId();
       const instQ = instId ? `&instansi_id=${encodeURIComponent(instId)}` : '';
@@ -525,9 +528,16 @@
         applyKopDefaultsFromInstansi();
         renderAdminRekapList();
       }
+      if (silent) {
+        try { w.scrollTo({ top: prevScrollY, behavior: 'instant' }); } catch (_) {}
+      }
+      // Prefetch data pegawai di latar belakang agar form Tambah/Edit Log langsung siap tanpa jeda
+      ensureUsersCache(false).catch(() => {});
     } catch (err) {
-      if (sumBar) sumBar.innerHTML = '';
-      if (box) box.innerHTML = `<div class="p-6 text-center text-xs text-rose-500 font-bold">${esc(err.message)}</div>`;
+      if (!silent) {
+        if (sumBar) sumBar.innerHTML = '';
+        if (box) box.innerHTML = `<div class="p-6 text-center text-xs text-rose-500 font-bold">${esc(err.message)}</div>`;
+      }
     }
   }
 
@@ -1766,44 +1776,79 @@
     });
   }
 
-  async function ensureUsersCache() {
-    if (w.state && Array.isArray(w.state.allUsers) && w.state.allUsers.length) {
-      _usersCache = w.state.allUsers;
+  let _usersCacheInstId = null;
+  let _usersCachePromise = null;
+
+  async function ensureUsersCache(force = false) {
+    const instId = getSelectedInstansiId() || '';
+    if (!force && _usersCache.length && _usersCacheInstId === instId) {
       return _usersCache;
     }
-    if (_usersCache.length) return _usersCache;
-    try {
-      const instId = getSelectedInstansiId();
-      const instQ = instId ? `&instansi_id=${encodeURIComponent(instId)}` : '';
-      const res = await fetch(`/api/user-list?format=full${instQ}`, { headers: authHeaders() });
-      const json = await res.json();
-      if (res.ok && json.ok) {
-        _usersCache = json.data || json.rows || [];
-      }
-    } catch (_) {}
-    if (!_usersCache.length) {
-      const src = (_harianPayload?.data?.length ? _harianPayload.data : _rangePayload?.data) || [];
-      _usersCache = src.filter((u) => u.id || u.ID);
+    if (!force && _usersCachePromise && _usersCacheInstId === instId) {
+      return _usersCachePromise;
     }
-    return _usersCache;
+    if (!force && !instId && w.state && Array.isArray(w.state.allUsers) && w.state.allUsers.length) {
+      _usersCache = w.state.allUsers;
+      _usersCacheInstId = instId;
+      return _usersCache;
+    }
+    _usersCacheInstId = instId;
+    _usersCachePromise = (async () => {
+      try {
+        const instQ = instId ? `&instansi_id=${encodeURIComponent(instId)}` : '';
+        const res = await fetch(`/api/user-list?format=full${instQ}`, { headers: authHeaders() });
+        const json = await res.json();
+        if (res.ok && json.ok) {
+          _usersCache = json.data || json.rows || [];
+        }
+      } catch (_) {}
+      if (!_usersCache.length) {
+        const src = (_harianPayload?.data?.length ? _harianPayload.data : _rangePayload?.data) || [];
+        _usersCache = src.filter((u) => u.id || u.ID);
+      }
+      _usersCachePromise = null;
+      return _usersCache;
+    })();
+    return _usersCachePromise;
   }
 
-  async function populateLogPegawaiOptions() {
+  function renderLogPegawaiOptions(users, preserveVal = null) {
     const sel = d.getElementById('adminLogPegawaiSelect');
     if (!sel) return;
-    const users = await ensureUsersCache();
-    sel.innerHTML = users.map((u) => {
+    const prev = preserveVal !== null ? String(preserveVal) : sel.value;
+    sel.innerHTML = (users || []).map((u) => {
       const uid = u.id || u.ID || '';
       return `<option value="${esc(uid)}">${esc(u.nama || u.username || '-')} (${esc(u.nip || '-')})</option>`;
     }).join('');
+    if (prev && Array.from(sel.options).some((o) => o.value === prev)) {
+      sel.value = prev;
+    }
     if (w.StitchPicker && typeof w.StitchPicker.refreshSelect === 'function') {
       w.StitchPicker.refreshSelect('adminLogPegawaiSelect');
     }
   }
 
+  async function populateLogPegawaiOptions(preserveVal = null) {
+    const instId = getSelectedInstansiId() || '';
+    if (_usersCache.length && _usersCacheInstId === instId) {
+      renderLogPegawaiOptions(_usersCache, preserveVal);
+      // Segarkan diam-diam di latar belakang jika ada perubahan pegawai terbaru
+      ensureUsersCache(true).then((fresh) => {
+        if (fresh && fresh.length) renderLogPegawaiOptions(fresh, d.getElementById('adminLogPegawaiSelect')?.value || preserveVal);
+      }).catch(() => {});
+      return;
+    }
+    // Tampilkan data fallback instan jika tersedia sambil memuat /api/user-list
+    const fallback = (_harianPayload?.data?.length ? _harianPayload.data : _rangePayload?.data) || [];
+    if (fallback.length) renderLogPegawaiOptions(fallback.filter((u) => u.id || u.ID), preserveVal);
+    const users = await ensureUsersCache(true);
+    renderLogPegawaiOptions(users, d.getElementById('adminLogPegawaiSelect')?.value || preserveVal);
+  }
+
   async function openAdminLogFormModal(logRecord = null, prefill = null) {
     ensureLogModalPickers();
-    await populateLogPegawaiOptions();
+    const initialPid = prefill?.id || logRecord?.ID || logRecord?.id || null;
+    await populateLogPegawaiOptions(initialPid);
 
     const modal = d.getElementById('modalAdminLogForm');
     const titleEl = d.getElementById('adminLogModalTitle');
@@ -1970,7 +2015,7 @@
       if (typeof w.showDynamicIsland === 'function') {
         w.showDynamicIsland({ type: 'success', title: editId ? 'Log Diperbarui' : 'Log Ditambahkan', message: json.message || 'Tersimpan di database.' });
       }
-      await loadAdminRekapData();
+      await loadAdminRekapData(true);
     } catch (err) {
       if (w.Swal) w.Swal.fire('Gagal', err.message, 'error');
     } finally {
@@ -2128,4 +2173,21 @@
   w.updateAdminGeofenceMap = updateAdminGeofenceMap;
   w.setAdminMapLayer = setAdminMapLayer;
   w.useMyGpsForAdminMap = useMyGpsForAdminMap;
+  // Seamless auto-sync saat ada perubahan log/pegawai dari tab lain atau setelah mutasi
+  if (w.StitchSync && typeof w.StitchSync.on === 'function') {
+    w.StitchSync.on(['presensi', 'admin', 'instansi'], (ev) => {
+      if (!ev) return;
+      if (ev.scope === 'admin' || ev.scope === 'instansi' || ev.scope === 'visibility') {
+        ensureUsersCache(true).then((fresh) => {
+          const modalOpen = d.getElementById('modalAdminLogForm') && !d.getElementById('modalAdminLogForm').classList.contains('hidden');
+          if (modalOpen && fresh && fresh.length) {
+            renderLogPegawaiOptions(fresh, d.getElementById('adminLogPegawaiSelect')?.value || null);
+          }
+        }).catch(() => {});
+      }
+      if (ev.remote && d.getElementById('adminRekapListContainer')) {
+        loadAdminRekapData(true);
+      }
+    }, 280);
+  }
 })(window, document);
