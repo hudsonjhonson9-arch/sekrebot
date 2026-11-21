@@ -290,7 +290,9 @@
     const refreshLokasiList = async (preferredId = null) => {
       try {
         const inst = getInstansiId();
-        const res = await fetch(`/api/lokasi-list?instansi_id=${encodeURIComponent(inst)}`);
+        const tok = getAuthToken();
+        const hdrs = tok ? { Authorization: `Bearer ${tok}` } : {};
+        const res = await fetch(`/api/lokasi-list?instansi_id=${encodeURIComponent(inst)}`, { headers: hdrs });
         const json = await res.json().catch(() => null);
         if (res.ok && json && Array.isArray(json.rows || json.data)) {
           lokasiListCache = json.rows || json.data;
@@ -1204,7 +1206,7 @@
           if (!locId) {
             const res = await fetch('/api/lokasi-add', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: mediaHeaders({ 'Content-Type': 'application/json' }),
               body: JSON.stringify({
                 nama_lokasi: nama,
                 latitude: latNum,
@@ -1223,7 +1225,7 @@
           } else {
             const res = await fetch('/api/lokasi-update', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: mediaHeaders({ 'Content-Type': 'application/json' }),
               body: JSON.stringify({
                 id: locId,
                 nama_lokasi: nama,
@@ -1271,7 +1273,10 @@
 
         btnDeleteLokasi.disabled = true;
         try {
-          const res = await fetch(`/api/lokasi-delete?id=${encodeURIComponent(locId)}`, { method: 'DELETE' });
+          const res = await fetch(`/api/lokasi-delete?id=${encodeURIComponent(locId)}`, {
+            method: 'DELETE',
+            headers: mediaHeaders()
+          });
           const json = await res.json().catch(() => null);
           if (!res.ok || !json || json.ok === false) {
             throw new Error((json && json.message) || `HTTP ${res.status}`);
@@ -1285,6 +1290,303 @@
           btnDeleteLokasi.disabled = false;
         }
       });
+    }
+
+    // ── Master OPD (Instansi) & Struktur Bidang CRUD ────────────────────────
+    const opdListEl = $('adminOpdList');
+    const opdCountEl = $('adminOpdCountBadge');
+    const opdFormModeEl = $('adminOpdFormMode');
+    const opdIdInput = $('adminOpdIdInput');
+    const opdNamaInput = $('adminOpdNamaInput');
+    const opdHeaderInput = $('adminOpdHeaderInput');
+    const opdAlamatInput = $('adminOpdAlamatInput');
+    const btnNewOpd = $('btnNewOpd');
+    const btnSaveOpd = $('btnSaveOpd');
+    const btnSaveOpdText = $('btnSaveOpdText');
+    const btnDeleteOpd = $('btnDeleteOpd');
+    const bidangListEl = $('adminBidangList');
+    const bidangOpdBadge = $('adminBidangOpdBadge');
+    const newBidangInput = $('adminNewBidangInput');
+    const btnAddBidang = $('btnAddBidang');
+
+    if (opdListEl && bidangListEl) {
+      let opdCache = [];
+      let selectedOpdId = instId || 'bapperida';
+      let isNewOpdMode = false;
+      const escH = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+      const loadBidangForOpd = async (targetOpdId) => {
+        if (bidangOpdBadge) bidangOpdBadge.textContent = String(targetOpdId || '-').toUpperCase();
+        if (!targetOpdId) {
+          bidangListEl.innerHTML = '<div class="p-4 text-center text-xs text-on-surface-variant bg-surface-container-low rounded-xl">Simpan OPD baru terlebih dahulu untuk menambah bidang.</div>';
+          return;
+        }
+        bidangListEl.innerHTML = '<div class="p-4 text-center text-xs text-on-surface-variant bg-surface-container-low rounded-xl">Memuat daftar bidang...</div>';
+        try {
+          const res = await fetch(`/api/bidang-list?instansi_id=${encodeURIComponent(targetOpdId)}`, { headers: mediaHeaders() });
+          const json = await res.json().catch(() => null);
+          const rows = (res.ok && json && Array.isArray(json.rows || json.data)) ? (json.rows || json.data) : [];
+          if (!rows.length) {
+            bidangListEl.innerHTML = '<div class="p-4 text-center text-xs text-on-surface-variant bg-surface-container-low rounded-xl">Belum ada bidang terdaftar di OPD ini.</div>';
+            return;
+          }
+          bidangListEl.innerHTML = rows.map((b) => {
+            const bid = String(b.id);
+            const bnama = String(b.nama_bidang || b.nama || '-');
+            return `
+              <div class="p-2.5 px-3 rounded-xl bg-surface-container-low border border-outline-variant/30 flex items-center justify-between gap-2">
+                <span class="text-xs font-semibold text-on-surface truncate">${escH(bnama)}</span>
+                <div class="flex items-center gap-1 shrink-0">
+                  <button type="button" data-bidang-edit="${escH(bid)}" data-bidang-nama="${escH(bnama)}" class="px-2 py-1 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-[11px] font-semibold text-primary hover:bg-primary hover:text-white transition-colors cursor-pointer">Edit</button>
+                  <button type="button" data-bidang-del="${escH(bid)}" data-bidang-nama="${escH(bnama)}" class="px-2 py-1 rounded-lg bg-error/10 text-error hover:bg-error hover:text-white text-[11px] font-semibold transition-colors cursor-pointer">Hapus</button>
+                </div>
+              </div>`;
+          }).join('');
+        } catch (err) {
+          bidangListEl.innerHTML = `<div class="p-4 text-center text-xs text-error">${escH(err.message)}</div>`;
+        }
+      };
+
+      const renderOpdList = () => {
+        if (opdCountEl) opdCountEl.textContent = `${opdCache.length} OPD`;
+        if (!opdCache.length) {
+          opdListEl.innerHTML = '<div class="p-4 text-center text-xs text-on-surface-variant bg-surface-container-low rounded-xl">Belum ada OPD terdaftar.</div>';
+          return;
+        }
+        opdListEl.innerHTML = opdCache.map((o) => {
+          const oid = String(o.id);
+          const isSel = !isNewOpdMode && oid === selectedOpdId;
+          return `
+            <button type="button" data-opd-pick="${escH(oid)}" class="w-full text-left p-2.5 px-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${isSel ? 'bg-primary/5 border-primary shadow-xs' : 'bg-surface-container-low border-outline-variant/30 hover:border-primary/50'}">
+              <div class="min-w-0">
+                <p class="text-xs font-bold text-on-surface truncate">${escH(o.nama_instansi || oid)}</p>
+                <p class="text-[11px] font-mono text-on-surface-variant truncate">${escH(oid)}</p>
+              </div>
+              <span class="material-symbols-outlined text-[18px] ${isSel ? 'text-primary' : 'text-on-surface-variant'} shrink-0">chevron_right</span>
+            </button>`;
+        }).join('');
+      };
+
+      const selectOpd = (o) => {
+        if (!o) return;
+        isNewOpdMode = false;
+        selectedOpdId = String(o.id);
+        if (opdFormModeEl) opdFormModeEl.textContent = `Edit OPD: ${o.nama_instansi || o.id}`;
+        if (opdIdInput) { opdIdInput.value = selectedOpdId; opdIdInput.disabled = true; }
+        if (opdNamaInput) opdNamaInput.value = o.nama_instansi || '';
+        if (opdHeaderInput) opdHeaderInput.value = o.header || '';
+        if (opdAlamatInput) opdAlamatInput.value = o.alamat || '';
+        if (btnSaveOpdText) btnSaveOpdText.textContent = 'Simpan Perubahan OPD';
+        if (btnDeleteOpd) {
+          const canDel = selectedOpdId !== 'bapperida';
+          btnDeleteOpd.classList.toggle('hidden', !canDel);
+          btnDeleteOpd.classList.toggle('inline-flex', canDel);
+        }
+        renderOpdList();
+        loadBidangForOpd(selectedOpdId);
+      };
+
+      const refreshOpdList = async (pickId = null) => {
+        try {
+          const res = await fetch('/api/instansi-list', { headers: mediaHeaders() });
+          const json = await res.json().catch(() => null);
+          if (res.ok && json && Array.isArray(json.rows || json.data)) {
+            opdCache = json.rows || json.data;
+          }
+        } catch (_) {}
+        const target = pickId
+          ? opdCache.find((x) => String(x.id) === String(pickId))
+          : (opdCache.find((x) => String(x.id) === String(selectedOpdId)) || opdCache[0]);
+        if (target) selectOpd(target);
+        else renderOpdList();
+      };
+
+      opdListEl.addEventListener('click', (ev) => {
+        const b = ev.target.closest && ev.target.closest('[data-opd-pick]');
+        if (!b) return;
+        const found = opdCache.find((x) => String(x.id) === b.getAttribute('data-opd-pick'));
+        if (found) selectOpd(found);
+      });
+
+      if (btnNewOpd) {
+        btnNewOpd.addEventListener('click', () => {
+          isNewOpdMode = true;
+          if (opdFormModeEl) opdFormModeEl.textContent = 'Tambah OPD Baru';
+          if (opdIdInput) { opdIdInput.value = ''; opdIdInput.disabled = false; opdIdInput.focus(); }
+          if (opdNamaInput) opdNamaInput.value = '';
+          if (opdHeaderInput) opdHeaderInput.value = '';
+          if (opdAlamatInput) opdAlamatInput.value = '';
+          if (btnSaveOpdText) btnSaveOpdText.textContent = 'Simpan OPD Baru';
+          if (btnDeleteOpd) { btnDeleteOpd.classList.add('hidden'); btnDeleteOpd.classList.remove('inline-flex'); }
+          renderOpdList();
+          loadBidangForOpd('');
+        });
+      }
+
+      if (btnSaveOpd) {
+        btnSaveOpd.addEventListener('click', async () => {
+          const idVal = String(opdIdInput?.value || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+          const namaVal = String(opdNamaInput?.value || '').trim();
+          const headerVal = String(opdHeaderInput?.value || '').trim();
+          const alamatVal = String(opdAlamatInput?.value || '').trim();
+          if (!idVal || !namaVal) {
+            notifyToast('warning', 'Data Belum Lengkap', 'Kode OPD dan Nama OPD wajib diisi.');
+            return;
+          }
+          btnSaveOpd.disabled = true;
+          try {
+            const url = isNewOpdMode ? '/api/instansi-add' : '/api/instansi-update';
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: mediaHeaders({ 'Content-Type': 'application/json' }),
+              body: JSON.stringify({ id: idVal, nama_instansi: namaVal, header: headerVal, alamat: alamatVal })
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+            notifyToast('success', isNewOpdMode ? 'OPD Ditambahkan' : 'OPD Diperbarui', `${namaVal} (${idVal}) berhasil disimpan.`);
+            await refreshOpdList(idVal);
+          } catch (err) {
+            notifyToast('error', 'Gagal Menyimpan OPD', err.message);
+          } finally {
+            btnSaveOpd.disabled = false;
+          }
+        });
+      }
+
+      if (btnDeleteOpd) {
+        btnDeleteOpd.addEventListener('click', async () => {
+          if (!selectedOpdId || selectedOpdId === 'bapperida') return;
+          let confirmed = false;
+          if (window.Swal) {
+            const r = await window.Swal.fire({
+              title: `Hapus OPD ${selectedOpdId}?`,
+              text: 'Data OPD ini akan dihapus permanen.',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonColor: '#ba1a1a',
+              confirmButtonText: 'Ya, Hapus',
+              cancelButtonText: 'Batal'
+            });
+            confirmed = Boolean(r && r.isConfirmed);
+          } else confirmed = confirm(`Hapus OPD ${selectedOpdId}?`);
+          if (!confirmed) return;
+          btnDeleteOpd.disabled = true;
+          try {
+            const res = await fetch(`/api/instansi-delete?id=${encodeURIComponent(selectedOpdId)}`, {
+              method: 'DELETE',
+              headers: mediaHeaders()
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+            notifyToast('success', 'OPD Dihapus', `OPD ${selectedOpdId} berhasil dihapus.`);
+            selectedOpdId = 'bapperida';
+            await refreshOpdList();
+          } catch (err) {
+            notifyToast('error', 'Gagal Menghapus OPD', err.message);
+          } finally {
+            btnDeleteOpd.disabled = false;
+          }
+        });
+      }
+
+      if (btnAddBidang && newBidangInput) {
+        btnAddBidang.addEventListener('click', async () => {
+          const nama = String(newBidangInput.value || '').trim();
+          if (!selectedOpdId || isNewOpdMode) {
+            notifyToast('warning', 'Pilih OPD', 'Pilih atau simpan OPD terlebih dahulu sebelum menambah bidang.');
+            return;
+          }
+          if (!nama) return;
+          btnAddBidang.disabled = true;
+          try {
+            const res = await fetch('/api/bidang-add', {
+              method: 'POST',
+              headers: mediaHeaders({ 'Content-Type': 'application/json' }),
+              body: JSON.stringify({ instansi_id: selectedOpdId, nama_bidang: nama })
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+            newBidangInput.value = '';
+            notifyToast('success', 'Bidang Ditambahkan', `${nama} ditambahkan ke ${selectedOpdId}.`);
+            await loadBidangForOpd(selectedOpdId);
+          } catch (err) {
+            notifyToast('error', 'Gagal Menambah Bidang', err.message);
+          } finally {
+            btnAddBidang.disabled = false;
+          }
+        });
+      }
+
+      bidangListEl.addEventListener('click', async (ev) => {
+        const editBtn = ev.target.closest && ev.target.closest('[data-bidang-edit]');
+        if (editBtn) {
+          const bid = editBtn.getAttribute('data-bidang-edit');
+          const curNama = editBtn.getAttribute('data-bidang-nama') || '';
+          let nextNama = '';
+          if (window.Swal) {
+            const r = await window.Swal.fire({
+              title: 'Ubah Nama Bidang',
+              input: 'text',
+              inputValue: curNama,
+              showCancelButton: true,
+              confirmButtonText: 'Simpan',
+              cancelButtonText: 'Batal'
+            });
+            if (!r || !r.isConfirmed) return;
+            nextNama = String(r.value || '').trim();
+          } else {
+            nextNama = String(prompt('Ubah nama bidang:', curNama) || '').trim();
+          }
+          if (!nextNama || nextNama === curNama) return;
+          try {
+            const res = await fetch('/api/bidang-update', {
+              method: 'POST',
+              headers: mediaHeaders({ 'Content-Type': 'application/json' }),
+              body: JSON.stringify({ id: bid, nama_bidang: nextNama })
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+            notifyToast('success', 'Bidang Diperbarui', `Nama bidang diubah menjadi ${nextNama}.`);
+            await loadBidangForOpd(selectedOpdId);
+          } catch (err) {
+            notifyToast('error', 'Gagal Mengubah Bidang', err.message);
+          }
+          return;
+        }
+
+        const delBtn = ev.target.closest && ev.target.closest('[data-bidang-del]');
+        if (delBtn) {
+          const bid = delBtn.getAttribute('data-bidang-del');
+          const bnama = delBtn.getAttribute('data-bidang-nama') || '';
+          let confirmed = false;
+          if (window.Swal) {
+            const r = await window.Swal.fire({
+              title: `Hapus bidang "${bnama}"?`,
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonColor: '#ba1a1a',
+              confirmButtonText: 'Ya, Hapus',
+              cancelButtonText: 'Batal'
+            });
+            confirmed = Boolean(r && r.isConfirmed);
+          } else confirmed = confirm(`Hapus bidang ${bnama}?`);
+          if (!confirmed) return;
+          try {
+            const res = await fetch(`/api/bidang-delete?id=${encodeURIComponent(bid)}`, {
+              method: 'DELETE',
+              headers: mediaHeaders()
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+            notifyToast('success', 'Bidang Dihapus', `${bnama} berhasil dihapus.`);
+            await loadBidangForOpd(selectedOpdId);
+          } catch (err) {
+            notifyToast('error', 'Gagal Menghapus Bidang', err.message);
+          }
+        }
+      });
+
+      await refreshOpdList();
     }
 
     // Bind tombol "Simpan Kebijakan Jam Kerja" di admin.html

@@ -57,6 +57,52 @@ export function createCoreAdminRouter({ query, openwaWatchdog = null, sendWhatsA
     } catch (e) { console.error('[instansi-update]', e); return fail(res, 500, 'Gagal memperbarui instansi.'); }
   });
 
+  router.post('/instansi-add', async (req, res) => {
+    if (requireMedia(req, res)) return;
+    if (String(req.user?.role || '').toUpperCase() !== 'SUPERADMIN' && String(req.user?.role || '').toUpperCase() !== 'ADMIN') {
+      return fail(res, 403, 'Hanya Admin/Superadmin yang dapat menambah OPD.');
+    }
+    try {
+      const b = req.body || {};
+      const id = s(b.id).toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      const nama = s(b.nama_instansi);
+      if (!id || id.length < 2) return fail(res, 400, 'Kode OPD minimal 2 karakter (huruf kecil/angka/strip).');
+      if (!nama) return fail(res, 400, 'Nama instansi wajib diisi.');
+      const header = s(b.header || nama.toUpperCase());
+      const alamat = s(b.alamat || '');
+      const logo = s(b.logo_url || '');
+      const r = await query(
+        `INSERT INTO instansi_list (id, nama_instansi, header, alamat, logo_url)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
+        [id, nama, header, alamat, logo]
+      );
+      return res.status(201).json({ ok: true, data: r.rows[0], message: 'OPD berhasil ditambahkan.' });
+    } catch (e) {
+      if (e && e.code === '23505') return fail(res, 409, 'Kode OPD sudah terdaftar.');
+      console.error('[instansi-add]', e);
+      return fail(res, 500, 'Gagal menambah OPD.');
+    }
+  });
+
+  router.delete('/instansi-delete', async (req, res) => {
+    if (requireMedia(req, res)) return;
+    if (String(req.user?.role || '').toUpperCase() !== 'SUPERADMIN') {
+      return fail(res, 403, 'Hanya SUPERADMIN yang dapat menghapus OPD.');
+    }
+    try {
+      const id = s(req.query.id);
+      if (!id) return fail(res, 400, 'id OPD wajib diisi.');
+      if (id === 'bapperida') return fail(res, 400, 'OPD utama tidak dapat dihapus.');
+      const r = await query('DELETE FROM instansi_list WHERE id=$1 RETURNING *', [id]);
+      if (!r.rows.length) return fail(res, 404, 'OPD tidak ditemukan.');
+      return ok(res, { data: r.rows[0] }, 'OPD berhasil dihapus.');
+    } catch (e) {
+      console.error('[instansi-delete]', e);
+      return fail(res, 500, 'Gagal menghapus OPD.');
+    }
+  });
+
   router.get('/bidang-list', async (req, res) => {
     try {
       const sc = scope(req, req.query.instansi_id); if (!sc.ok) return fail(res, 403, 'Forbidden');
@@ -64,6 +110,59 @@ export function createCoreAdminRouter({ query, openwaWatchdog = null, sendWhatsA
       const { rows } = await query('SELECT * FROM bidang_list WHERE instansi_id=$1 ORDER BY id ASC', [sc.id]);
       return ok(res, { data: rows, rows });
     } catch (e) { console.error('[bidang-list]', e); return fail(res, 503, 'Layanan bidang tidak tersedia.'); }
+  });
+
+  router.post('/bidang-add', async (req, res) => {
+    if (requireMedia(req, res)) return;
+    try {
+      const b = req.body || {};
+      const inst = s(b.instansi_id || req.user.instansi_id || 'bapperida');
+      if (!sameInstansi(req.user, inst) && req.user.role !== 'SUPERADMIN') return fail(res, 403, 'Forbidden');
+      const nama = s(b.nama_bidang || b.nama);
+      if (!nama) return fail(res, 400, 'Nama bidang wajib diisi.');
+      const r = await query(
+        `INSERT INTO bidang_list (nama_bidang, instansi_id) VALUES ($1, $2) RETURNING *`,
+        [nama, inst]
+      );
+      return res.status(201).json({ ok: true, data: r.rows[0], message: 'Bidang berhasil ditambahkan.' });
+    } catch (e) {
+      console.error('[bidang-add]', e);
+      return fail(res, 500, 'Gagal menambah bidang.');
+    }
+  });
+
+  router.post('/bidang-update', async (req, res) => {
+    if (requireMedia(req, res)) return;
+    try {
+      const b = req.body || {};
+      const id = s(b.id);
+      const nama = s(b.nama_bidang || b.nama);
+      if (!id || !nama) return fail(res, 400, 'id dan nama_bidang wajib diisi.');
+      const old = (await query('SELECT instansi_id FROM bidang_list WHERE id=$1', [id])).rows[0];
+      if (!old) return fail(res, 404, 'Bidang tidak ditemukan.');
+      if (!sameInstansi(req.user, old.instansi_id) && req.user.role !== 'SUPERADMIN') return fail(res, 403, 'Forbidden');
+      const r = await query('UPDATE bidang_list SET nama_bidang=$1 WHERE id=$2 RETURNING *', [nama, id]);
+      return ok(res, { data: r.rows[0] }, 'Bidang diperbarui.');
+    } catch (e) {
+      console.error('[bidang-update]', e);
+      return fail(res, 500, 'Gagal memperbarui bidang.');
+    }
+  });
+
+  router.delete('/bidang-delete', async (req, res) => {
+    if (requireMedia(req, res)) return;
+    try {
+      const id = s(req.query.id);
+      if (!id) return fail(res, 400, 'id bidang wajib diisi.');
+      const old = (await query('SELECT instansi_id FROM bidang_list WHERE id=$1', [id])).rows[0];
+      if (!old) return fail(res, 404, 'Bidang tidak ditemukan.');
+      if (!sameInstansi(req.user, old.instansi_id) && req.user.role !== 'SUPERADMIN') return fail(res, 403, 'Forbidden');
+      const r = await query('DELETE FROM bidang_list WHERE id=$1 RETURNING *', [id]);
+      return ok(res, { data: r.rows[0] }, 'Bidang dihapus.');
+    } catch (e) {
+      console.error('[bidang-delete]', e);
+      return fail(res, 500, 'Gagal menghapus bidang.');
+    }
   });
 
   // ── Pegawai ────────────────────────────────────────────────────────────────
