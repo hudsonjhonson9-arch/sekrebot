@@ -15,6 +15,9 @@ RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit
 # Runtime server backend Express
 COPY server/ ./server/
 
+# Template SPT/SPPD untuk generator docx sisi server (arsip-sppd-docx.js)
+COPY templates/ ./templates/
+
 # File logika komputasi yang di-import server
 COPY js/face-quality.js ./js/
 

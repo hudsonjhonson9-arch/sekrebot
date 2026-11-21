@@ -35,6 +35,8 @@ graphify-out/
 *.docx
 # sumber resmi generator SPT/SPPD tetap di-commit agar build bisa diulang
 !docs/format-spt-sppd-2026.docx
+!/spt_template.docx
+!/sppd_template.docx
 aset.db
 *.db
 temp_qr*/
