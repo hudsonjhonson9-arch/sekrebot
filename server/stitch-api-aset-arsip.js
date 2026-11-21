@@ -76,7 +76,7 @@ export function mountStitchAsetArsipRoutes(router, ctx) {
       const nip = String(req.query.nip || '').trim();
       const userId = String(req.query.userId || '').trim();
 
-      const [kondisiRes, pRes, opRes, katRes] = await Promise.all([
+      const [kondisiRes, pRes, opRes, katRes, pjmRes] = await Promise.all([
         query(`
           SELECT kondisi, count(*)::int AS count 
           FROM "SIMAPO".unit_aset 
@@ -140,8 +140,6 @@ export function mountStitchAsetArsipRoutes(router, ctx) {
             `, [nip, userId]).catch(() => ({ rows: [] }))
           : Promise.resolve({ rows: [] }),
       ]);
-
-      const [kondisiRes, pRes, opRes, katRes, pjmRes] = [results[0], results[1], results[2], results[3], results[4] || { rows: [] }];
 
       let totalUnit = 0;
       let kondisiBaik = 0;
