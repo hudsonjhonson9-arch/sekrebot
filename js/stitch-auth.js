@@ -96,6 +96,7 @@
       } catch (_) {}
     }
     clearSession();
+    try { localStorage.setItem('tg_logged_out', '1'); } catch (_) {}
     try { if (typeof window.clearNativeToken === 'function') window.clearNativeToken(); } catch (_) {}
     try { if (typeof window.clearSession === 'function') window.clearSession(); } catch (_) {}
 

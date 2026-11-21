@@ -199,7 +199,12 @@ async function ensureNativeSession() {
   return _nativeSessionPromise;
 }
 
-async function _mintNativeSession() {
+async function _mintNativeSession(opts = {}) {
+  try {
+    if (!opts.force && localStorage.getItem('tg_logged_out') === '1') {
+      return null;
+    }
+  } catch (_) {}
   // ponytail: Telegram WebApp kadang baru siap setelah skrip utama jalan. Tunggu
   // sebentar sebelum menyerah — tapi hanya jika benar di dalam Telegram WebView
   // dan sesi belum ditandai kedaluwarsa (hindari delay 2s di browser biasa).
@@ -229,6 +234,7 @@ async function _mintNativeSession() {
       return null;
     }
     _nativeToken = d.session_token || null;
+    window._lastNativeSessionUser = d.user || null;
     if (_nativeToken) {
       try { localStorage.setItem('_native_token', _nativeToken); } catch { /* mode privat: token tetap hidup di memori */ }
       console.log('[Native] Sesi terbit, panjang', _nativeToken.length, 'hex');
@@ -247,6 +253,7 @@ function setSession(token, data) {
   window._session.instansi_id = data.instansi_id || '';
   window._session.isLoggedIn = true;
   _authExpiredShown = false;
+  try { localStorage.removeItem('tg_logged_out'); } catch (_) {}
   if (token && /^[0-9a-f]{192}$/.test(token)) {
     setNativeToken(token);
   }

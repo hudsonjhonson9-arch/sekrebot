@@ -117,11 +117,11 @@ test('pegawai tidak dikenal ditolak 404', async () => {
   assert.equal(out.status, 404);
 });
 
-test('token yang terbit 192 hex huruf kecil', async () => {
+test('token yang terbit 192 hex huruf kecil dan menyertakan ringkasan user', async () => {
   process.env.TELEGRAM_BOT_TOKEN = BOT;
   const { createAuthSessionRouter } = await import('./auth-session.js');
   const query = async (sql) => {
-    if (/user_list/i.test(sql)) return { rows: [{ id: String(TG_ID), nip: '12345', role: 'ADMIN', instansi_id: 'bapperida' }] };
+    if (/user_list/i.test(sql)) return { rows: [{ id: String(TG_ID), nip: '12345', nama: 'Budi', role: 'ADMIN', instansi_id: 'bapperida', status_aktif: true }] };
     if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'b'.repeat(192) }] };
     return { rows: [] };
   };
@@ -129,6 +129,26 @@ test('token yang terbit 192 hex huruf kecil', async () => {
   const out = await drive(r, 'POST', '/api/auth/session', { nip: '12345', init_data: signInitData(TG_ID) });
   assert.equal(out.status, 200);
   assert.match(out.body.session_token, /^[0-9a-f]{192}$/);
+  assert.deepEqual(out.body.user, {
+    id: String(TG_ID),
+    nip: '12345',
+    nama: 'Budi',
+    role: 'ADMIN',
+    instansi_id: 'bapperida',
+  });
+});
+
+test('pegawai nonaktif ditolak 403 di /api/auth/session', async () => {
+  process.env.TELEGRAM_BOT_TOKEN = BOT;
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const query = async (sql) => {
+    if (/user_list/i.test(sql)) return { rows: [{ id: String(TG_ID), nip: '12345', nama: 'Budi', role: 'USER', instansi_id: 'bapperida', status_aktif: false }] };
+    return { rows: [] };
+  };
+  const r = createAuthSessionRouter({ query });
+  const out = await drive(r, 'POST', '/api/auth/session', { init_data: signInitData(TG_ID) });
+  assert.equal(out.status, 403);
+  assert.equal(out.body.ok, false);
 });
 
 test('logout menonaktifkan sesi', async () => {

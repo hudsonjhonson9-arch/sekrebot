@@ -46,6 +46,11 @@
         state.isLoggedIn = false;
         state.currentUser = null;
         if (authOverlayEl) authOverlayEl.style.display = 'flex';
+        const tgBtn = document.getElementById('btnTelegramLogin');
+        if (tgBtn) {
+          const hasTgInit = !!(window.Telegram?.WebApp?.initData || window.tg?.initData);
+          tgBtn.style.display = hasTgInit ? 'flex' : 'none';
+        }
         return false;
       } else {
         state.isLoggedIn = true;
@@ -100,6 +105,7 @@
           'stitch_active_nip', 'stitch_active_view', 'stitch_boot_cache_v1', 'MY_NIP', 'MY_ROLE', 'MY_NAME', 'MY_INSTANSI',
           'tg_user_id_v5', 'tg_user_obj_v5', 'tg_user_id_v4', 'tg_user_obj_v4'
         ].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+        try { localStorage.setItem('tg_logged_out', '1'); } catch (_) {}
 
         window.MY_ID = null;
         window.userProfile = null;
@@ -307,14 +313,27 @@
     }
 
     // Initialize on DOM Ready
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       try {
         const savedTheme = localStorage.getItem('stitch_theme');
         if (savedTheme === 'dark' || savedTheme === 'light') applyThemePreference(savedTheme);
       } catch (_) {}
       bindAdminSettingToggles();
       initClock();
-      const isAuthed = checkAuthStatus();
+      let isAuthed = checkAuthStatus();
+      // Di Telegram Mini App: bila belum ada sesi lokal dan belum logout eksplisit,
+      // coba terbitkan sesi asli via /api/auth/session (verifikasi initData HMAC + ID Telegram).
+      if (!isAuthed) {
+        let isTgLoggedOut = false;
+        try { isTgLoggedOut = localStorage.getItem('tg_logged_out') === '1'; } catch (_) {}
+        const hasTgInit = !!(window.Telegram?.WebApp?.initData || window.tg?.initData);
+        if (!isTgLoggedOut && hasTgInit && typeof window._checkIdentityOnLoad === 'function') {
+          try {
+            const tgOk = await window._checkIdentityOnLoad();
+            if (tgOk) isAuthed = checkAuthStatus();
+          } catch (_) {}
+        }
+      }
       if (isAuthed) hydrateFromCache();
       bootstrapFromDatabase();
     });

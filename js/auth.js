@@ -549,6 +549,7 @@
       try {
         localStorage.removeItem(STORAGE_KEYS.USER_ID);
         localStorage.removeItem(STORAGE_KEYS.USER_OBJ);
+        localStorage.setItem('tg_logged_out', '1');
       } catch (_) {}
       window.MY_ID = null;
 
@@ -556,11 +557,112 @@
       location.replace(location.pathname);
     }
 
+    function _showAuthOverlay() {
+      const ov = $('authOverlay');
+      if (ov) ov.style.display = 'flex';
+      const splash = $('appSplash');
+      if (splash) splash.remove();
+      const tgBtn = $('btnTelegramLogin');
+      if (tgBtn) {
+        const hasTgInit = !!(window.Telegram?.WebApp?.initData || window.tg?.initData);
+        tgBtn.style.display = hasTgInit ? 'flex' : 'none';
+      }
+    }
+
+    function _applyTelegramSessionUser(token, user) {
+      const tgCur = window.Telegram?.WebApp?.initDataUnsafe?.user || window.tg?.initDataUnsafe?.user || {};
+      const uid = String(user?.id || tgCur.id || window.MY_ID || '');
+      const nip = String(user?.nip || '').trim();
+      const role = String(user?.role || 'USER').toUpperCase();
+      const nama = String(user?.nama || tgCur.first_name || '').trim();
+      const inst = String(user?.instansi_id || '').trim();
+
+      if (uid) window.MY_ID = uid;
+      window.tgUser = { ...tgCur, ...(user || {}) };
+      setNativeToken(token);
+      setSession(token, { nip, role, instansi_id: inst });
+      try {
+        localStorage.removeItem('tg_logged_out');
+        if (uid) localStorage.setItem(STORAGE_KEYS.USER_ID, uid);
+        localStorage.setItem(STORAGE_KEYS.USER_OBJ, JSON.stringify(window.tgUser));
+        if (nip) {
+          localStorage.setItem('MY_NIP', nip);
+          localStorage.setItem('stitch_active_nip', nip);
+        }
+        if (role) localStorage.setItem('MY_ROLE', role);
+        if (nama) localStorage.setItem('MY_NAME', nama);
+        if (inst) localStorage.setItem('MY_INSTANSI', inst);
+      } catch (_) {}
+    }
+
+    async function handleTelegramLogin() {
+      const btn = $('btnTelegramLogin');
+      const originalHtml = btn ? btn.innerHTML : '';
+      const initData = window.Telegram?.WebApp?.initData || window.tg?.initData || '';
+      if (!initData) {
+        const msg = 'Data autentikasi Telegram tidak tersedia. Silakan login menggunakan NIP.';
+        if (typeof Swal !== 'undefined' && Swal.fire) {
+          Swal.fire({ icon: 'warning', title: 'Login Telegram', text: msg, confirmButtonColor: '#2563eb' });
+        } else {
+          alert(msg);
+        }
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin-sm"></span> Memverifikasi Telegram...';
+      }
+      try {
+        const res = await fetch(API_BASE + '/api/auth/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ init_data: initData }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.session_token) {
+          const fallback = res.status === 404
+            ? 'ID Telegram Anda belum terhubung dengan akun pegawai. Silakan login menggunakan NIP.'
+            : (data?.message || 'Gagal masuk dengan akun Telegram.');
+          throw new Error(fallback);
+        }
+
+        _applyTelegramSessionUser(data.session_token, data.user || null);
+
+        const overlayEl = $('authOverlay');
+        if (typeof state !== 'undefined' && typeof bootstrapFromDatabase === 'function') {
+          state.currentUser = null;
+          try { await bootstrapFromDatabase({ keepOverlay: true }); } catch (_) {}
+          if (state.currentUser) {
+            state.isLoggedIn = true;
+            if (overlayEl) overlayEl.style.display = 'none';
+            if (typeof showDynamicIsland === 'function') {
+              showDynamicIsland({ type: 'success', title: 'Login Telegram Berhasil', message: `Selamat datang, ${data.user?.nama || state.currentUser.nama || 'Pegawai'}` });
+            }
+            return;
+          }
+        }
+        if (overlayEl) overlayEl.style.display = 'none';
+        location.reload();
+      } catch (err) {
+        if (typeof Swal !== 'undefined' && Swal.fire) {
+          Swal.fire({ icon: 'error', title: 'Login Telegram Gagal', text: err.message || 'Gagal memverifikasi akun Telegram.', confirmButtonColor: '#2563eb' });
+        } else {
+          alert(err.message || 'Gagal memverifikasi akun Telegram.');
+        }
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        }
+      }
+    }
+
     async function _checkIdentityOnLoad() {
-      if (!window.MY_ID) {
-        $('authOverlay').style.display = 'flex';
-        const splash = $('appSplash');
-        if (splash) splash.remove();
+      let isTgLoggedOut = false;
+      try { isTgLoggedOut = localStorage.getItem('tg_logged_out') === '1'; } catch (_) {}
+      if (isTgLoggedOut || !window.MY_ID) {
+        _showAuthOverlay();
         return false;
       }
       const isTg = !!(window.Telegram?.WebApp?.initData || new URLSearchParams(window.location.search).has('id'));
@@ -568,17 +670,19 @@
         (typeof _nativeToken !== 'undefined' && _nativeToken) ||
         (typeof _deviceToken !== 'undefined' && _deviceToken)
       );
-      // MY_ID ada tapi token sesi atau token native tidak ada → auto-login TG atau re-login
+      // MY_ID ada tapi token sesi atau token native tidak ada → terbitkan sesi server via /api/auth/session atau re-login
       if (!window._session.token || (!isTg && !hasNativeOrDevice)) {
-        if (isTg && !window._session.token) {
-          console.log('[Auth] Telegram user without session → auto-login from Telegram ID');
-          // Simple token — tidak perlu server call
-          const token = 'tg_' + window.MY_ID + '_' + Date.now();
-          setSession(token, { nip: '', role: 'USER', instansi_id: '' });
-          console.log('[Auth] Auto-login success:', { targetId: window.MY_ID, hasToken: !!window._session.token });
-          return true;
+        if (isTg && !window._session.token && (window.Telegram?.WebApp?.initData || window.tg?.initData)) {
+          console.log('[Auth] Telegram user without session → meminta sesi asli ke /api/auth/session');
+          const minted = typeof ensureNativeSession === 'function' ? await ensureNativeSession() : null;
+          if (minted && /^[0-9a-f]{192}$/.test(minted)) {
+            _applyTelegramSessionUser(minted, window._lastNativeSessionUser || null);
+            console.log('[Auth] Telegram session login success:', { targetId: window.MY_ID, hasToken: true });
+            return true;
+          }
+          console.warn('[Auth] Sesi Telegram tidak terbit (ID belum terdaftar / initData tidak valid) → tampilkan login');
         }
-        // Non-Telegram tanpa sesi valid: force re-login sebelum memanggil API
+        // Tanpa sesi valid: force re-login sebelum memanggil API
         console.warn('[Auth] No valid session/native token → forcing re-login');
         localStorage.removeItem(STORAGE_KEYS.USER_ID);
         localStorage.removeItem(STORAGE_KEYS.USER_OBJ);
@@ -588,9 +692,7 @@
         window.tgUser = {};
         window.userProfile = null;
         try { clearSession(); } catch (_) {}
-        $('authOverlay').style.display = 'flex';
-        const splash = $('appSplash');
-        if (splash) splash.remove();
+        _showAuthOverlay();
         return false;
       }
       return true;
@@ -599,6 +701,7 @@
     if (typeof window !== 'undefined') {
       window.switchAuthTab = switchAuthTab;
       window.handleAuthAction = handleAuthAction;
+      window.handleTelegramLogin = handleTelegramLogin;
       window.handleLogout = handleLogout;
       window._checkIdentityOnLoad = _checkIdentityOnLoad;
     }

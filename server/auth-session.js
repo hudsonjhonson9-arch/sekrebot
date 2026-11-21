@@ -6,7 +6,7 @@ import { query as realQuery } from './db.js';
 import { singleSessionRow } from './auth.js';
 
 const EMPLOYEE_SQL = `
-  SELECT id::text AS id, "NIP" AS nip, role, instansi_id
+  SELECT id::text AS id, "NIP" AS nip, username AS nama, role, instansi_id, status_aktif
   FROM user_list WHERE id::text = $1 LIMIT 1`;
 
 const INSERT_SESSION_SQL = `
@@ -65,13 +65,26 @@ export function createAuthSessionRouter({ query = realQuery, arsipSso, onLogout,
       // siapa pun yang tahu NIP orang lain bisa meminta sesi atas nama orang itu.
       const employee = (await query(EMPLOYEE_SQL, [String(auth.user.id)])).rows[0];
       if (!employee) return res.status(404).json({ ok: false, message: 'Pegawai tidak dikenal.' });
+      if (employee.status_aktif === false) {
+        return res.status(403).json({ ok: false, message: 'Akun Anda dinonaktifkan. Hubungi administrator.' });
+      }
 
       const token = crypto.randomBytes(96).toString('hex');
       const { rows } = await query(INSERT_SESSION_SQL, [token, employee.nip, employee.id, employee.role, employee.instansi_id]);
       if (!rows.length) return res.status(500).json({ ok: false, message: 'Gagal membuat sesi.' });
 
       setCookieArsip(res, employee.nip);
-      return res.status(200).json({ ok: true, session_token: rows[0].session_token });
+      return res.status(200).json({
+        ok: true,
+        session_token: rows[0].session_token,
+        user: {
+          id: employee.id,
+          nip: employee.nip || '',
+          nama: employee.nama || '',
+          role: employee.role || 'USER',
+          instansi_id: employee.instansi_id || '',
+        },
+      });
     } catch {
       return dbError(res);
     }

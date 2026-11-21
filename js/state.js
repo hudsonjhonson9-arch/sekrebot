@@ -103,23 +103,29 @@ try {
   }
 } catch (e) { }
 
-// Sinkronkan dengan data asli Telegram
+// Sinkronkan dengan data asli Telegram (hormati flag tg_logged_out agar logout menempel)
 if (window.tg) {
   window.tg.ready();
   window.tg.expand();
   window.tg.setHeaderColor('#0a1628');
   window.tg.setBackgroundColor('#0a1628');
-  const cur = window.tg.initDataUnsafe?.user;
-  if (cur?.id) {
-    window.MY_ID = String(cur.id);
-    window.tgUser = cur;
-    console.log('[State] Identity detected from Telegram:', window.MY_ID);
-    try {
-      localStorage.setItem(STORAGE_KEYS.USER_ID, String(window.MY_ID));
-      localStorage.setItem(STORAGE_KEYS.USER_OBJ, JSON.stringify(window.tgUser));
-    } catch (e) { }
+  let isTgLoggedOut = false;
+  try { isTgLoggedOut = localStorage.getItem('tg_logged_out') === '1'; } catch (_) {}
+  if (isTgLoggedOut) {
+    console.log('[State] Telegram logout flag aktif — melewati auto-sync initDataUnsafe');
   } else {
-    console.warn('[State] No user data in tg.initDataUnsafe');
+    const cur = window.tg.initDataUnsafe?.user;
+    if (cur?.id) {
+      window.MY_ID = String(cur.id);
+      window.tgUser = cur;
+      console.log('[State] Identity detected from Telegram:', window.MY_ID);
+      try {
+        localStorage.setItem(STORAGE_KEYS.USER_ID, String(window.MY_ID));
+        localStorage.setItem(STORAGE_KEYS.USER_OBJ, JSON.stringify(window.tgUser));
+      } catch (e) { }
+    } else {
+      console.warn('[State] No user data in tg.initDataUnsafe');
+    }
   }
 }
 
@@ -159,6 +165,9 @@ async function waitForMyId() {
       window.MY_ID = String(profId);
       return window.MY_ID;
     }
+  } catch (_) {}
+  try {
+    if (localStorage.getItem('tg_logged_out') === '1') return null;
   } catch (_) {}
   for (let i = 0; i < 15; i++) {
     const cur = window.Telegram?.WebApp?.initDataUnsafe?.user;
