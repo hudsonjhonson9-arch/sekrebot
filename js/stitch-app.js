@@ -297,7 +297,11 @@
 
     const ADMIN_ROLES = ['ADMIN', 'SUPERADMIN', 'KEPALA', 'SEKRETARIS', 'KABID', 'IRBAN'];
     function isStitchAdminUser(u) {
-      return ADMIN_ROLES.includes(String(u?.role || '').toUpperCase());
+      const role = String(u?.role || '').trim().toUpperCase().replace(/\s+/g, '_');
+      if (ADMIN_ROLES.includes(role)) return true;
+      const perms = Array.isArray(u?.role_permissions) ? u.role_permissions : [];
+      if (perms.includes('*')) return true;
+      return perms.some((p) => String(p || '').startsWith('admin.'));
     }
 
     function applyThemePreference(theme) {

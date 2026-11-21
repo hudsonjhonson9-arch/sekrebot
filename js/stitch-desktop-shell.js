@@ -24,6 +24,7 @@
       items: [
         {
           key: 'admin:adminSectionMonitoring',
+          perms: ['admin.monitoring', 'presensi.view_all'],
           label: 'Monitoring Hari Ini',
           hint: 'Pantau presensi realtime pegawai',
           icon: 'monitoring',
@@ -32,6 +33,7 @@
         },
         {
           key: 'admin:adminSectionIzin',
+          perms: ['admin.izin', 'keterangan.approve'],
           label: 'Konfirmasi Izin',
           hint: 'Persetujuan cuti, izin & sakit',
           icon: 'rule',
@@ -40,6 +42,7 @@
         },
         {
           key: 'izin-drawer',
+          perms: ['admin.izin', 'keterangan.approve', 'presensi.manual_entry'],
           label: 'Input Keterangan',
           hint: 'Catat izin/sakit/cuti pegawai',
           icon: 'assignment_add',
@@ -54,6 +57,7 @@
       items: [
         {
           key: 'admin:adminSectionPegawai',
+          perms: ['admin.users'],
           label: 'Master Pegawai & AI',
           hint: 'Direktori pegawai & biometrik wajah',
           icon: 'face',
@@ -62,6 +66,7 @@
         },
         {
           key: 'admin:adminSectionRoles',
+          perms: ['admin.roles'],
           label: 'Kelola Role & Hak',
           hint: 'Matriks peran & wewenang akses',
           icon: 'manage_accounts',
@@ -76,6 +81,7 @@
       items: [
         {
           key: 'admin:adminSectionGeofence',
+          perms: ['admin.geofence', 'admin.instansi'],
           label: 'Geofencing Lokasi',
           hint: 'Koordinat & radius kantor',
           icon: 'share_location',
@@ -84,6 +90,7 @@
         },
         {
           key: 'admin:adminSectionJamLibur',
+          perms: ['admin.jam_libur', 'admin.instansi'],
           label: 'Jam Kerja & Libur',
           hint: 'Jadwal shift, toleransi & libur',
           icon: 'schedule',
@@ -98,6 +105,7 @@
       items: [
         {
           key: 'admin:adminSectionRekap',
+          perms: ['admin.rekap', 'presensi.view_all'],
           label: 'Rekap Semua Pegawai',
           hint: 'Preview berkop, PDF (F4) & Excel',
           icon: 'analytics',
@@ -106,6 +114,7 @@
         },
         {
           key: 'kiosk',
+          perms: ['admin.kiosk', 'admin.devices'],
           label: 'Terminal Meja Absen',
           hint: 'Scanner wajah AI lobi kantor',
           icon: 'desktop_windows',
@@ -114,6 +123,7 @@
         },
         {
           key: 'tpp',
+          perms: ['admin.rekap', 'presensi.view_all'],
           label: 'Cetak Rekap TPP',
           hint: 'Rekap disiplin & laporan PDF',
           icon: 'receipt_long',
@@ -129,6 +139,7 @@
         {
           key: 'admin:dev',
           panel: 'dev',
+          perms: ['admin.dev'],
           label: 'Developer & Diagnostik',
           hint: 'Kesehatan 8 subsistem & log error',
           icon: 'terminal',
@@ -191,7 +202,28 @@
     }
   }
 
+  function getUserPerms() {
+    const u = w.state && w.state.currentUser;
+    if (u && Array.isArray(u.role_permissions) && u.role_permissions.length > 0) {
+      return u.role_permissions;
+    }
+    return null;
+  }
+
+  function canAccessAdminItem(item) {
+    const role = String((w.state && w.state.currentUser && w.state.currentUser.role) || localStorage.getItem('MY_ROLE') || localStorage.getItem('_sess_role') || '').trim().toUpperCase().replace(/\s+/g, '_');
+    if (role === 'SUPERADMIN') return true;
+    const perms = getUserPerms();
+    if (perms) {
+      if (perms.includes('*')) return true;
+      if (!Array.isArray(item.perms) || !item.perms.length) return true;
+      return item.perms.some((p) => perms.includes(p));
+    }
+    return ['ADMIN', 'SUPERADMIN', 'KEPALA', 'SEKRETARIS', 'KABID', 'IRBAN'].includes(role);
+  }
+
   function isAdmin() {
+    if (ADMIN_ITEMS.some((item) => canAccessAdminItem(item))) return true;
     if (typeof w.isStitchAdminUser === 'function' && w.state && w.state.currentUser) {
       return Boolean(w.isStitchAdminUser(w.state.currentUser));
     }
@@ -525,7 +557,7 @@
     if (d.getElementById('mobileAdminMenuDrawer')) return;
 
     const groupsHtml = ADMIN_GROUPS.map((grp) => `
-      <div class="space-y-1.5">
+      <div data-mobile-admin-group="${grp.id}" class="space-y-1.5">
         <p class="px-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">${grp.title}</p>
         <div class="space-y-1.5">
           ${grp.items.map((item) => `
@@ -611,6 +643,7 @@
       return;
     }
     buildMobileAdminDrawer();
+    syncRole();
     syncActive(_activeView, _activeSection);
 
     const drawer = d.getElementById('mobileAdminMenuDrawer');
@@ -656,7 +689,28 @@
   function syncRole() {
     const admin = isAdmin();
     const group = d.getElementById('stitchSidebarAdminGroup');
-    if (group) group.classList.toggle('hidden', !admin);
+    if (group) {
+      group.classList.toggle('hidden', !admin);
+      group.querySelectorAll('[data-stitch-admin]').forEach((btn) => {
+        const item = ADMIN_ITEMS.find((n) => n.key === btn.dataset.stitchAdmin);
+        const allowed = item ? canAccessAdminItem(item) : admin;
+        btn.classList.toggle('hidden', !allowed);
+      });
+    }
+    const mobileDrawer = d.getElementById('mobileAdminMenuDrawer');
+    if (mobileDrawer) {
+      ADMIN_GROUPS.forEach((grp) => {
+        let visibleInGroup = 0;
+        grp.items.forEach((item) => {
+          const btn = mobileDrawer.querySelector(`[data-mobile-admin="${item.key}"]`);
+          const allowed = canAccessAdminItem(item);
+          if (btn) btn.classList.toggle('hidden', !allowed);
+          if (allowed) visibleInGroup++;
+        });
+        const grpEl = mobileDrawer.querySelector(`[data-mobile-admin-group="${grp.id}"]`);
+        if (grpEl) grpEl.classList.toggle('hidden', visibleInGroup === 0);
+      });
+    }
   }
 
   function syncTheme() {

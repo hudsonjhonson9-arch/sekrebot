@@ -114,6 +114,17 @@ export function createStitchApiRouter(deps = {}) {
         return res.status(404).json({ ok: false, message: 'Pegawai tidak ditemukan.' });
       }
       const user = userRes.rows[0];
+      let rolePermissions = [];
+      try {
+        const normRoleId = String(user.role || 'USER').trim().toUpperCase().replace(/\s+/g, '_');
+        const rpRes = await query('SELECT permissions FROM absen_roles WHERE id = $1 LIMIT 1', [normRoleId]);
+        const rawPerms = rpRes?.rows?.[0]?.permissions;
+        if (Array.isArray(rawPerms)) rolePermissions = rawPerms;
+        else if (typeof rawPerms === 'string') rolePermissions = JSON.parse(rawPerms) || [];
+      } catch (_) {
+        rolePermissions = [];
+      }
+      user.role_permissions = rolePermissions;
 
       // Calculate monthly metrics (Current month)
       const now = new Date();
