@@ -338,12 +338,12 @@
         html.dark .bg-surface-bright {
           background-color: #0b1120 !important;
         }
-        html.dark .bg-surface-container-lowest,
-        html.dark .bg-surface-container-lowest\\/90,
-        html.dark .bg-surface-container-lowest\\/95,
-        html.dark .bg-white,
-        html.dark .bg-white\\/90,
-        html.dark .bg-white\\/95 {
+        html.dark [class*="bg-surface-container-lowest"],
+        html.dark [class*="bg-white/"] {
+          background-color: #0f172a !important;
+          border-color: rgba(51, 65, 85, 0.7) !important;
+        }
+        html.dark .bg-white:not(aside .bg-white) {
           background-color: #0f172a !important;
           border-color: rgba(51, 65, 85, 0.7) !important;
         }
@@ -371,6 +371,7 @@
         }
         html.dark .border-slate-100,
         html.dark .border-slate-200,
+        html.dark [class*="border-outline-variant"],
         html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
         html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
           border-color: rgba(51, 65, 85, 0.7) !important;
