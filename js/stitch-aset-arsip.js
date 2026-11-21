@@ -3,6 +3,9 @@
     /* 11. MOBILE REAL ASET & ARSIP DATA (POSTGRESQL & SIMAPO)          */
     /* ───────────────────────────────────────────────────────────────── */
     let _mobilePersonalAssets = [];
+    let _mobileBorrowedAssets = [];
+    let _activeAsetListFilter = 'dipegang';
+    let _scannerMode = 'general';
     let _mobileKatalogAssets = [];
     let _selectedAsetId = null;
     let _mobileArsipDocs = [];
@@ -49,10 +52,16 @@
           if (elKondisi) elKondisi.textContent = st.persenBaik || '90.3%';
 
           _mobilePersonalAssets = json.personalAssets || [];
+          _mobileBorrowedAssets = json.borrowedAssets || [];
           _mobileKatalogAssets = json.katalogAssets || [];
 
+          const countHeld = document.getElementById('mCountAsetDipegang');
+          if (countHeld) countHeld.textContent = _mobilePersonalAssets.length;
+          const countPjm = document.getElementById('mCountAsetDipinjam');
+          if (countPjm) countPjm.textContent = _mobileBorrowedAssets.length;
+
           populateAsetSelectDropdowns();
-          renderMobilePersonalAssets();
+          renderCurrentAsetList();
         } else {
           const safeMsg = String(json.message || 'Gagal memuat data').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
           listContainer.innerHTML = `<div class="p-4 text-center text-xs text-rose-500">Gagal memuat inventaris: ${safeMsg}</div>`;
@@ -133,6 +142,86 @@
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
               <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${badgeColor}">${item.kondisi || 'Baik'}</span>
+              <button onclick="event.stopPropagation(); openMobileAsetDetail('${item.id}')" class="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 text-slate-600 hover:text-blue-600 flex items-center justify-center transition-colors">
+                <span class="material-symbols-outlined text-[18px]">info</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function setMobileAsetListFilter(filter) {
+      _activeAsetListFilter = filter;
+      const btnHeld = document.getElementById('btnFilterAsetDipegang');
+      const btnPjm = document.getElementById('btnFilterAsetDipinjam');
+      if (btnHeld && btnPjm) {
+        if (filter === 'dipegang') {
+          btnHeld.className = 'flex-1 py-1.5 px-3 rounded-lg text-xs font-bold bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs transition-all cursor-pointer';
+          btnPjm.className = 'flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all cursor-pointer';
+        } else {
+          btnPjm.className = 'flex-1 py-1.5 px-3 rounded-lg text-xs font-bold bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs transition-all cursor-pointer';
+          btnHeld.className = 'flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all cursor-pointer';
+        }
+      }
+      renderCurrentAsetList();
+    }
+    window.setMobileAsetListFilter = setMobileAsetListFilter;
+
+    function renderCurrentAsetList() {
+      if (_activeAsetListFilter === 'dipinjam') {
+        renderMobileBorrowedAssets();
+      } else {
+        renderMobilePersonalAssets();
+      }
+    }
+
+    function renderMobileBorrowedAssets() {
+      const container = document.getElementById('mobilePersonalAssetsList');
+      if (!container) return;
+
+      if (!_mobileBorrowedAssets.length) {
+        container.innerHTML = `
+          <div class="p-6 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+            <span class="material-symbols-outlined text-[32px] text-slate-300 dark:text-slate-600 mb-1 block">handshake</span>
+            <p class="font-bold text-slate-700 dark:text-slate-300">Tidak Ada Aset Dipinjam</p>
+            <p class="text-[11px] text-slate-400 mt-0.5">Anda belum memiliki peminjaman aktif. Scan barcode aset atau gunakan tombol pinjam untuk meminjam barang.</p>
+            <button onclick="openMobileQrScanModal('pinjam')" class="mt-3 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-xs hover:bg-blue-700 transition-all cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">qr_code_scanner</span>
+              <span>Scan Pinjam Aset</span>
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = _mobileBorrowedAssets.map(item => {
+        const icon = getAssetIcon(item.nama_barang, item.no_polisi);
+        const stLower = (item.status_pinjam || 'Dipinjam').toLowerCase();
+        let badgeColor = 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300';
+        if (stLower.includes('menunggu')) badgeColor = 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300';
+        else if (stLower.includes('selesai') || stLower.includes('kembali')) badgeColor = 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300';
+
+        const subIdentifier = item.no_polisi ? item.no_polisi : (item.nomorinventaris || item.kodebarang || item.nomorpeminjaman || '-');
+        const rentang = item.tanggalmulai ? `${item.tanggalmulai} s.d. ${item.tanggalselesai || '-'}` : 'Peminjaman Aktif';
+
+        return `
+          <div onclick="openMobileAsetDetail('${item.id}')" class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between hover:border-blue-400 transition-all cursor-pointer group">
+            <div class="flex items-center gap-3 min-w-0 pr-2">
+              <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-slate-800 flex items-center justify-center text-indigo-600 shrink-0 group-hover:scale-105 transition-transform">
+                <span class="material-symbols-outlined text-[20px]">${icon}</span>
+              </div>
+              <div class="min-w-0">
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white truncate">${item.nama_barang} ${item.merk_type ? '(' + item.merk_type + ')' : ''}</h4>
+                <div class="flex items-center gap-2 mt-0.5 text-[10px] font-mono">
+                  <span class="text-slate-400 font-semibold truncate">${subIdentifier}</span>
+                  <span class="text-slate-300 dark:text-slate-600">•</span>
+                  <span class="font-bold text-indigo-600 dark:text-indigo-400 truncate">${rentang}</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${badgeColor}">${item.status_pinjam || 'Dipinjam'}</span>
               <button onclick="event.stopPropagation(); openMobileAsetDetail('${item.id}')" class="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 text-slate-600 hover:text-blue-600 flex items-center justify-center transition-colors">
                 <span class="material-symbols-outlined text-[18px]">info</span>
               </button>
@@ -486,7 +575,8 @@
       }
     }
 
-    async function openMobileQrScanModal() {
+    async function openMobileQrScanModal(mode = 'general') {
+      _scannerMode = mode;
       const modal = document.getElementById('modalQrScanner');
       if (!modal) return;
 
@@ -506,7 +596,11 @@
         successRing.classList.remove('opacity-100', 'scale-100');
       }
       const statusText = document.getElementById('scannerStatusText');
-      if (statusText) statusText.textContent = 'Menghubungkan kamera...';
+      if (statusText) {
+        statusText.textContent = _scannerMode === 'pinjam'
+          ? 'Arahkan kamera ke barcode/QR aset untuk langsung meminjam...'
+          : 'Menghubungkan kamera...';
+      }
 
       await startScannerCamera();
     }
@@ -824,6 +918,15 @@
         );
 
         if (found) {
+          if (_scannerMode === 'pinjam') {
+            showDynamicIsland({
+              type: 'success',
+              title: 'Aset Siap Dipinjam!',
+              message: `${found.nama_barang || found.kode_aset}`
+            });
+            openMobileAsetPinjamModal(found.id);
+            return;
+          }
           showDynamicIsland({
             type: 'success',
             title: 'Aset Ditemukan!',
@@ -839,6 +942,15 @@
           const json = await res.json();
           if (json.ok && json.asset) {
             _mobileKatalogAssets.push(json.asset);
+            if (_scannerMode === 'pinjam') {
+              showDynamicIsland({
+                type: 'success',
+                title: 'Aset Siap Dipinjam!',
+                message: `${json.asset.nama_barang || json.asset.kode_aset}`
+              });
+              openMobileAsetPinjamModal(json.asset.id);
+              return;
+            }
             showDynamicIsland({
               type: 'success',
               title: 'Aset Teridentifikasi!',

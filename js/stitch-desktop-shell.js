@@ -14,7 +14,6 @@
     { key: 'riwayat-full', label: 'Riwayat', icon: 'history', action: () => callSwitch('riwayat') },
     { key: 'arsip', label: 'Arsip', icon: 'folder_shared', action: () => callSwitch('arsip') },
     { key: 'aset', label: 'Aset', icon: 'inventory_2', action: () => callSwitch('aset') },
-    { key: 'sppd', label: 'SPPD & KIR', icon: 'flight_takeoff', action: () => callSwitch('sppd') },
     { key: 'profil', label: 'Profil', icon: 'person', action: () => callSwitch('profil') }
   ];
 

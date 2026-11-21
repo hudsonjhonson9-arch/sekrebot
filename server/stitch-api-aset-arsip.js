@@ -121,7 +121,27 @@ export function mountStitchAsetArsipRoutes(router, ctx) {
           ORDER BY b.nama ASC
           LIMIT 300
         `),
+        (nip || userId)
+          ? query(`
+              SELECT p.id AS pinjam_id, p.nomorpeminjaman, p.tujuanpeminjaman,
+                     TO_CHAR(p.tanggalmulai, 'YYYY-MM-DD') AS tanggalmulai,
+                     TO_CHAR(p.tanggalselesai, 'YYYY-MM-DD') AS tanggalselesai,
+                     p.status AS status_pinjam, p.kondisiawal,
+                     ua.id, ua.nomorinventaris, ua.kondisi, ua.merk_type, ua.no_polisi, ua.kib, ua.kode_aset,
+                     b.nama AS nama_barang, b.kodebarang, b.spesifikasi,
+                     r.nama AS nama_ruangan,
+                     'Dipinjam' AS status_pemegang
+              FROM "SIMAPO".peminjaman p
+              JOIN "SIMAPO".unit_aset ua ON ua.id = p.unitasetid
+              JOIN "SIMAPO".barang b ON b.id = ua.barangid
+              LEFT JOIN "SIMAPO".ruangan r ON r.id = ua.ruangan_id
+              WHERE p.userid = $1 OR p.userid = $2
+              ORDER BY p.createdat DESC
+            `, [nip, userId]).catch(() => ({ rows: [] }))
+          : Promise.resolve({ rows: [] }),
       ]);
+
+      const [kondisiRes, pRes, opRes, katRes, pjmRes] = [results[0], results[1], results[2], results[3], results[4] || { rows: [] }];
 
       let totalUnit = 0;
       let kondisiBaik = 0;
@@ -160,9 +180,11 @@ export function mountStitchAsetArsipRoutes(router, ctx) {
           kondisiKurang,
           kondisiRusak,
           persenBaik,
-          userHeldCount: personalAssets.filter(a => a.status_pemegang === 'Dipegang Pribadi').length || personalAssets.length
+          userHeldCount: personalAssets.filter(a => a.status_pemegang === 'Dipegang Pribadi').length || personalAssets.length,
+          borrowedCount: (pjmRes.rows || []).length
         },
         personalAssets,
+        borrowedAssets: pjmRes.rows || [],
         katalogAssets: katRes.rows
       });
     } catch (err) {

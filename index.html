@@ -299,6 +299,12 @@
                 </div>
                 <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">Agenda</span>
               </button>
+              <button onclick="switchMobileTab('aset')" class="flex flex-col items-center text-center p-2.5 rounded-2xl bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 hover:border-blue-500 transition-all group cursor-pointer" title="Manajemen Aset Daerah & Scan KIR">
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-slate-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors mb-1.5">
+                  <span class="material-symbols-outlined text-[20px]">inventory_2</span>
+                </div>
+                <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">Aset KIR</span>
+              </button>
               <button onclick="switchMobileTab('arsip')" class="flex flex-col items-center text-center p-2.5 rounded-2xl bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 hover:border-blue-500 transition-all group cursor-pointer" title="Buka Bank Arsip Digital Kepegawaian">
                 <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-slate-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors mb-1.5">
                   <span class="material-symbols-outlined text-[20px]">folder_shared</span>
@@ -987,16 +993,28 @@
 
           <!-- TAB 1 MOBILE: ASET SAYA & OPERASIONAL -->
           <div id="mobileAsetTabUtama" class="flex flex-col gap-4">
-          <!-- Scan Barcode Hero Card -->
-          <div onclick="openMobileQrScanModal()" class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-4 text-white shadow-md flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all" title="Buka Kamera Pemindai QR & Barcode BMD">
-            <div class="flex flex-col gap-1 max-w-[240px]">
-              <span class="text-[10px] uppercase tracking-wider font-semibold text-blue-200 font-mono">Inventaris Fisik Ruangan</span>
-              <h3 class="text-sm font-bold leading-tight">Scan Barcode / QR Label BMD</h3>
-              <p class="text-[11px] text-blue-100 mt-0.5">Pindai label fisik untuk cek status pemegang, KIB, dan kondisi barang.</p>
+          <!-- Scan Barcode Hero Card with Scan Pinjam Button -->
+          <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-4 text-white shadow-md flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <div class="flex flex-col gap-1 max-w-[240px]">
+                <span class="text-[10px] uppercase tracking-wider font-semibold text-blue-200 font-mono">Inventaris Fisik Ruangan</span>
+                <h3 class="text-sm font-bold leading-tight">Scan Barcode / QR Label BMD</h3>
+                <p class="text-[11px] text-blue-100 mt-0.5">Pindai label fisik untuk cek status pemegang, KIB, dan kondisi barang.</p>
+              </div>
+              <button type="button" onclick="openMobileQrScanModal('general')" aria-label="Scan QR Code" class="w-12 h-12 rounded-2xl bg-white/20 hover:bg-white/30 backdrop-blur-md flex items-center justify-center text-white shadow-inner transition-all shrink-0 cursor-pointer" title="Scan QR Code">
+                <span class="material-symbols-outlined text-[26px]">qr_code_scanner</span>
+              </button>
             </div>
-            <button type="button" aria-label="Scan QR Code" class="w-12 h-12 rounded-2xl bg-white/20 hover:bg-white/30 backdrop-blur-md flex items-center justify-center text-white shadow-inner transition-all shrink-0 cursor-pointer" title="Scan QR Code">
-              <span class="material-symbols-outlined text-[26px]">qr_code_scanner</span>
-            </button>
+            <div class="pt-2 border-t border-white/15 flex items-center gap-2">
+              <button type="button" onclick="openMobileQrScanModal('pinjam')" class="flex-1 py-2 px-3 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer">
+                <span class="material-symbols-outlined text-[17px]">handshake</span>
+                <span>Scan Pinjam Aset</span>
+              </button>
+              <button type="button" onclick="openMobileAsetPinjamModal()" class="py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs flex items-center justify-center gap-1 transition-all cursor-pointer">
+                <span class="material-symbols-outlined text-[16px]">add</span>
+                <span>Pinjam Manual</span>
+              </button>
+            </div>
           </div>
 
           <!-- Mini Metrics -->
@@ -1006,7 +1024,7 @@
               <span class="text-[10px] text-slate-400">Total Unit BMD</span>
             </div>
             <div class="bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-              <span id="mobileAsetStatHeld" class="font-bold text-emerald-600 dark:text-emerald-400 text-base block font-mono">1 Unit</span>
+              <span id="mobileAsetStatHeld" class="font-bold text-emerald-600 dark:text-emerald-400 text-base block font-mono">0 Unit</span>
               <span class="text-[10px] text-slate-400">Dipegang Anda</span>
             </div>
             <div class="bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -1015,9 +1033,21 @@
             </div>
           </div>
 
+          <!-- Filter Tabs: Aset Dipegang vs Aset Dipinjam -->
+          <div class="p-1 rounded-xl bg-slate-100 dark:bg-slate-850 border border-slate-200/60 dark:border-slate-800 flex items-center gap-1">
+            <button type="button" id="btnFilterAsetDipegang" onclick="setMobileAsetListFilter('dipegang')" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-bold bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5">
+              <span>Aset Dipegang</span>
+              <span id="mCountAsetDipegang" class="px-1.5 py-0.2 rounded-full bg-blue-100 dark:bg-blue-900/60 text-[10px] font-mono">0</span>
+            </button>
+            <button type="button" id="btnFilterAsetDipinjam" onclick="setMobileAsetListFilter('dipinjam')" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all cursor-pointer flex items-center justify-center gap-1.5">
+              <span>Aset Dipinjam</span>
+              <span id="mCountAsetDipinjam" class="px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-600 text-[10px] font-mono">0</span>
+            </button>
+          </div>
+
           <!-- Section Title & Filter -->
           <div class="flex items-center justify-between pt-1">
-            <h3 class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Aset Tanggung Jawab &amp; Operasional</h3>
+            <h3 id="mobileAsetSectionTitle" class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Aset Tanggung Jawab &amp; Operasional</h3>
             <span class="text-[10px] text-blue-600 dark:text-blue-400 font-mono font-bold">KIR &amp; KIB</span>
           </div>
 
@@ -2244,6 +2274,12 @@
                 <span class="material-symbols-outlined text-[28px]">fingerprint</span>
               </div>
               <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 mt-1">Presensi</span>
+            </button>
+
+            <!-- 4. Aset -->
+            <button onclick="switchMobileTab('aset')" id="mTab-aset" class="mobile-tab flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-medium transition-all cursor-pointer">
+              <span class="material-symbols-outlined text-[22px]">inventory_2</span>
+              <span class="text-[10px] mt-0.5">Aset</span>
             </button>
 
             <!-- 5. Profil -->
