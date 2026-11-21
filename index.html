@@ -1352,6 +1352,30 @@
               </div>
               <input id="adminGpsStrictToggle" type="checkbox" checked class="w-5 h-5 accent-blue-600 rounded" />
             </div>
+
+            <div class="flex justify-between items-center p-3 rounded-2xl bg-slate-50 dark:bg-slate-800">
+              <div>
+                <p class="font-bold text-slate-900 dark:text-white">Wajib Password Saat Login</p>
+                <p class="text-[11px] text-slate-400">Pegawai wajib memasukkan kata sandi saat login</p>
+              </div>
+              <input id="mobRequirePasswordToggle" type="checkbox" onchange="saveMobileRequirePassword()" class="w-5 h-5 accent-blue-600 rounded cursor-pointer" />
+            </div>
+
+            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 space-y-2.5">
+              <div>
+                <p class="font-bold text-slate-900 dark:text-white">Pegawai Wajib Scan Wajah saat Login</p>
+                <p class="text-[11px] text-slate-400">Pegawai yang dipilih wajib verifikasi wajah meskipun toggle umum nonaktif</p>
+              </div>
+              <div class="flex gap-2">
+                <select id="mobMandatoryFaceSelect" class="flex-1 min-h-[38px] px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-blue-500">
+                  <option value="">-- Pilih pegawai untuk ditambahkan --</option>
+                </select>
+                <button type="button" onclick="addMobileMandatoryFaceNip()" class="min-h-[38px] px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shrink-0 cursor-pointer">+ Tambah</button>
+              </div>
+              <div id="mobMandatoryFaceChips" class="flex flex-wrap gap-1.5">
+                <span class="text-[11px] text-slate-400">Belum ada pegawai wajib scan wajah.</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1716,6 +1740,10 @@
           </div>
           <div class="flex flex-wrap items-center gap-2 shrink-0">
             <span id="adminRolesCountBadge" class="px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold tabular-nums">0 Role</span>
+            <button type="button" onclick="openRoleEditorSheet()" class="min-h-[40px] px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs">
+              <span class="material-symbols-outlined text-[16px]">add</span>
+              <span>Buat Role</span>
+            </button>
             <button type="button" onclick="loadAdminRolesMobile(true)" class="min-h-[40px] px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer">
               <span class="material-symbols-outlined text-[16px]">refresh</span>
               <span>Segarkan</span>
@@ -3575,11 +3603,62 @@
       <div id="roleDetailUsersList" class="p-4 overflow-y-auto space-y-2 flex-1">
         <div class="p-4 text-center text-xs text-slate-400">Memuat daftar pegawai...</div>
       </div>
-      <div class="p-4 bg-slate-50 dark:bg-slate-900/90 border-t border-slate-100 dark:border-slate-800 flex gap-2">
-        <button type="button" onclick="closeRoleDetailSheet()" class="min-h-[44px] py-2.5 px-4 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer">Tutup</button>
+      <div class="p-4 bg-slate-50 dark:bg-slate-900/90 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-2">
+        <button type="button" onclick="closeRoleDetailSheet()" class="min-h-[44px] py-2.5 px-3.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer">Tutup</button>
+        <button type="button" id="btnRoleDetailEdit" onclick="openRoleEditorSheet(window._activeRoleDetailId)" class="min-h-[44px] py-2.5 px-3.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center justify-center gap-1 cursor-pointer">
+          <span class="material-symbols-outlined text-[16px]">edit</span>
+          <span>Edit Role</span>
+        </button>
+        <button type="button" id="btnRoleDetailDelete" onclick="deleteRoleFromDetail()" class="hidden min-h-[44px] py-2.5 px-3.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs items-center justify-center gap-1 cursor-pointer">
+          <span class="material-symbols-outlined text-[16px]">delete</span>
+          <span>Hapus</span>
+        </button>
         <button type="button" onclick="applyRoleFilterToPegawai()" class="flex-1 min-h-[44px] py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer">
           <span class="material-symbols-outlined text-[18px]">filter_list</span>
-          <span>Filter di Master Pegawai</span>
+          <span>Filter Pegawai</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL DRAWER: BUAT / EDIT ROLE & HAK AKSES ──────────────────── -->
+  <div id="drawerRoleEditor" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
+    <div id="drawerRoleEditorBackdrop" onclick="closeRoleEditorSheet()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"></div>
+    <div class="relative w-full sm:max-w-[520px] bg-white dark:bg-slate-900 rounded-t-[28px] sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[88vh] z-10 overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h3 id="roleEditorTitle" class="text-sm font-extrabold text-slate-900 dark:text-white">Buat Role Baru</h3>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400">Atur identitas dan izin akses modul role</p>
+        </div>
+        <button type="button" onclick="closeRoleEditorSheet()" aria-label="Tutup" class="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+      <div class="p-5 overflow-y-auto space-y-3.5 flex-1">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">ID Role (huruf kapital/underscore)</label>
+          <input id="roleEditorIdInput" type="text" placeholder="Contoh: OPERATOR_OPD" class="w-full min-h-[42px] px-3 py-2 text-xs font-mono uppercase rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Nama Tampilan</label>
+          <input id="roleEditorNamaInput" type="text" placeholder="Contoh: Operator OPD" class="w-full min-h-[42px] px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Deskripsi</label>
+          <input id="roleEditorDescInput" type="text" placeholder="Keterangan singkat wewenang role" class="w-full min-h-[42px] px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5">Hak Akses (Permissions)</label>
+          <div id="roleEditorPermsBox" class="space-y-2.5 max-h-60 overflow-y-auto p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs">
+            <div class="text-slate-400 text-center py-4">Memuat daftar perizinan...</div>
+          </div>
+        </div>
+      </div>
+      <div class="p-4 bg-slate-50 dark:bg-slate-900/90 border-t border-slate-100 dark:border-slate-800 flex gap-2">
+        <button type="button" onclick="closeRoleEditorSheet()" class="min-h-[44px] py-2.5 px-4 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer">Batal</button>
+        <button type="button" id="btnSubmitRoleEditor" onclick="submitRoleEditorSheet()" class="flex-1 min-h-[44px] py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+          <span class="material-symbols-outlined text-[18px]">save</span>
+          <span>Simpan Role</span>
         </button>
       </div>
     </div>

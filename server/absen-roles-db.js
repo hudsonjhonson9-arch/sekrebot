@@ -399,7 +399,7 @@ export async function assignUserRole(pool, { userId, nip, roleId } = {}) {
   const userRes = await exec(
     `SELECT id::text AS id, username AS nama, "NIP" AS nip, role, is_admin, app_permissions
      FROM user_list
-     WHERE (id = $1::bigint AND $1 IS NOT NULL)
+     WHERE (id::text = $1 AND $1 IS NOT NULL)
         OR ("NIP" = $2 AND $2 IS NOT NULL)`,
     [uId, uNip]
   );
@@ -423,7 +423,7 @@ export async function assignUserRole(pool, { userId, nip, roleId } = {}) {
           true
         ),
         is_admin = CASE WHEN $2::boolean = true THEN true ELSE is_admin END
-    WHERE id = $3::bigint
+    WHERE id::text = $3
     RETURNING id::text AS id, username AS nama, "NIP" AS nip, role, is_admin, app_permissions
   `;
   const { rows } = await exec(updateSql, [cleanRoleId, shouldBeAdmin, targetUser.id]);

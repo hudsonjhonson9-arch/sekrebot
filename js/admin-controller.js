@@ -310,7 +310,50 @@
       }
     };
 
-    if (livenessToggle || thresholdSlider) {
+    const mandatoryFaceSelect = $('adminMandatoryFaceSelect');
+    const btnAddMandatoryFace = $('btnAddAdminMandatoryFace');
+    const mandatoryFaceChips = $('adminMandatoryFaceChips');
+    let mandatoryNipsList = [];
+    let mandatoryUsersMap = {};
+
+    const renderMandatoryFaceChips = () => {
+      if (!mandatoryFaceChips) return;
+      if (!mandatoryNipsList.length) {
+        mandatoryFaceChips.innerHTML = '<span class="text-xs text-on-surface-variant">Belum ada pegawai wajib scan wajah.</span>';
+        return;
+      }
+      mandatoryFaceChips.innerHTML = mandatoryNipsList.map((nip) => {
+        const label = mandatoryUsersMap[nip] ? `${mandatoryUsersMap[nip]} (${nip})` : nip;
+        return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-semibold">
+          <span>${label.replace(/</g, '&lt;')}</span>
+          <button type="button" data-rm-mandatory-nip="${nip.replace(/"/g, '&quot;')}" class="hover:text-error font-bold cursor-pointer" aria-label="Hapus">&times;</button>
+        </span>`;
+      }).join('');
+    };
+
+    const populateMandatoryFaceUsers = async () => {
+      if (!mandatoryFaceSelect) return;
+      try {
+        const res = await fetch('/api/stitch/bootstrap', { headers: mediaHeaders() });
+        if (!res.ok) return;
+        const json = await res.json().catch(() => null);
+        const users = Array.isArray(json?.users) ? json.users : [];
+        mandatoryUsersMap = {};
+        const opts = ['<option value="">-- Pilih pegawai untuk ditambahkan --</option>'];
+        users.forEach((u) => {
+          const nip = String(u.nip || '').trim();
+          const nama = String(u.nama || u.username || nip).trim();
+          if (nip) {
+            mandatoryUsersMap[nip] = nama;
+            opts.push(`<option value="${nip.replace(/"/g, '&quot;')}">${nama.replace(/</g, '&lt;')} — ${nip}</option>`);
+          }
+        });
+        mandatoryFaceSelect.innerHTML = opts.join('');
+        renderMandatoryFaceChips();
+      } catch (_) {}
+    };
+
+    if (livenessToggle || thresholdSlider || mandatoryFaceChips) {
       try {
         const fsRes = await fetch(`/api/media/face-settings?instansi_id=${encodeURIComponent(instId)}`, {
           headers: mediaHeaders()
@@ -329,11 +372,16 @@
               thresholdSlider.value = val.toFixed(2);
             }
           }
+          if (Array.isArray(settings.mandatory_nips)) {
+            mandatoryNipsList = settings.mandatory_nips.map((s) => String(s || '').trim()).filter(Boolean);
+          }
         }
       } catch (err) {
         console.warn('[admin] gagal memuat face-settings:', err.message);
       }
       showThreshold();
+      renderMandatoryFaceChips();
+      populateMandatoryFaceUsers();
     }
 
     if (thresholdSlider) {
@@ -351,6 +399,7 @@
         };
         if (livenessToggle) payload.settings.liveness_enabled = !!livenessToggle.checked;
         if (thresholdSlider) payload.settings.face_threshold = parseFloat(thresholdSlider.value);
+        if (mandatoryFaceChips) payload.settings.mandatory_nips = mandatoryNipsList;
 
         const res = await fetch('/api/media/face-settings', {
           method: 'POST',
@@ -363,13 +412,36 @@
         }
         const liveTxt = livenessToggle ? (livenessToggle.checked ? 'Aktif' : 'Nonaktif') : '-';
         const thrTxt = thresholdSlider ? Number(thresholdSlider.value).toFixed(2) : '-';
-        notifyToast('success', 'Pengaturan Face AI Tersimpan', `Liveness: ${liveTxt} • Threshold: ${thrTxt}`);
+        notifyToast('success', 'Pengaturan Face AI Tersimpan', `Liveness: ${liveTxt} • Threshold: ${thrTxt} • Wajib Wajah: ${mandatoryNipsList.length} pegawai`);
       } catch (err) {
         notifyToast('error', 'Gagal Menyimpan Face AI', err.message);
       } finally {
         savingFaceSettings = false;
       }
     };
+
+    if (btnAddMandatoryFace && mandatoryFaceSelect) {
+      btnAddMandatoryFace.addEventListener('click', () => {
+        const nip = String(mandatoryFaceSelect.value || '').trim();
+        if (!nip) return;
+        if (!mandatoryNipsList.includes(nip)) {
+          mandatoryNipsList.push(nip);
+          renderMandatoryFaceChips();
+          saveFaceSettings();
+        }
+        mandatoryFaceSelect.value = '';
+      });
+    }
+    if (mandatoryFaceChips) {
+      mandatoryFaceChips.addEventListener('click', (ev) => {
+        const rmBtn = ev.target.closest && ev.target.closest('[data-rm-mandatory-nip]');
+        if (!rmBtn) return;
+        const nip = rmBtn.getAttribute('data-rm-mandatory-nip');
+        mandatoryNipsList = mandatoryNipsList.filter((x) => x !== nip);
+        renderMandatoryFaceChips();
+        saveFaceSettings();
+      });
+    }
 
     if (livenessToggle) {
       livenessToggle.addEventListener('change', saveFaceSettings);

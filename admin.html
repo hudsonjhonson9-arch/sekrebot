@@ -363,6 +363,21 @@
 <span class="font-body-sm text-body-sm text-on-surface-variant">Bypass kendala optik</span>
 </div>
 </div>
+<div class="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col gap-2.5">
+<div class="flex flex-col gap-0.5">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Pegawai Wajib Scan Wajah saat Login</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Pegawai terpilih tetap diwajibkan verifikasi wajah saat login meskipun kebijakan umum nonaktif.</span>
+</div>
+<div class="flex flex-col sm:flex-row gap-2">
+<select id="adminMandatoryFaceSelect" aria-label="Pilih pegawai wajib scan wajah" class="flex-1 min-h-[40px] px-3 py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-xs text-on-surface outline-none focus:border-primary">
+<option value="">-- Pilih pegawai untuk ditambahkan --</option>
+</select>
+<button id="btnAddAdminMandatoryFace" type="button" class="min-h-[40px] px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-semibold hover:opacity-90 transition-all cursor-pointer shrink-0">+ Tambah Pegawai</button>
+</div>
+<div id="adminMandatoryFaceChips" class="flex flex-wrap gap-1.5">
+<span class="text-xs text-on-surface-variant">Belum ada pegawai wajib scan wajah.</span>
+</div>
+</div>
 </div>
 </div>
 </div>

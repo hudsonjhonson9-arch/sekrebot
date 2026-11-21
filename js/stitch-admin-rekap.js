@@ -1274,16 +1274,7 @@
     };
   }
 
-  async function openAdminRekapPreview() {
-    if (_mode === 'range' && !_rangePayload) await loadAdminRekapData();
-    if (_mode === 'harian' && !_harianPayload) await loadAdminRekapData();
-
-    const rows = getFilteredRows();
-    if (!rows || rows.length === 0) {
-      if (w.Swal) w.Swal.fire({ icon: 'warning', title: 'Data Kosong', text: 'Muat rekap terlebih dahulu.' });
-      return;
-    }
-
+  function _prepareRekapPdfBridge(rows, rawPayload) {
     const isHarian = (_mode === 'harian');
     w.lastRekapPegawai = rows.map(r => {
       const mapped = { ...r };
@@ -1318,9 +1309,81 @@
     if (elSampai) elSampai.value = sampai;
     if (elRole) elRole.value = roleVal;
 
-    w.pdfPreviewContext = 'rekap';
-    if (typeof w.openPdfPreviewModal === 'function') {
-      w.openPdfPreviewModal();
+    const opts = readPdfPrintOptions(rawPayload);
+    return { isHarian, dari, sampai, opts };
+  }
+
+  let _previewPdfBlobUrl = null;
+
+  async function openAdminRekapPreview() {
+    if (_mode === 'range' && !_rangePayload) await loadAdminRekapData();
+    if (_mode === 'harian' && !_harianPayload) await loadAdminRekapData();
+
+    const modal = d.getElementById('modalAdminRekapPreview');
+    const body = d.getElementById('adminRekapPreviewBody');
+    const titleEl = d.getElementById('adminRekapPreviewTitle');
+    const subEl = d.getElementById('adminRekapPreviewSub');
+    if (!modal || !body) return;
+
+    const rows = getFilteredRows();
+    if (!rows || rows.length === 0) {
+      if (w.Swal) w.Swal.fire({ icon: 'warning', title: 'Data Kosong', text: 'Muat rekap terlebih dahulu.' });
+      return;
+    }
+
+    const rawPayload = _mode === 'harian' ? _harianPayload : _rangePayload;
+    const { isHarian, dari, sampai, opts } = _prepareRekapPdfBridge(rows, rawPayload);
+    const kp = opts.signer || rawPayload?.kepala;
+
+    if (titleEl) {
+      titleEl.textContent = isHarian
+        ? `Preview Daftar Hadir (${dari})`
+        : `Preview Rekap Rentang (${dari} s/d ${sampai})`;
+    }
+    if (subEl) {
+      subEl.textContent = `Format ${opts.paper.toUpperCase()} (${opts.orientation === 'l' ? 'Landscape' : 'Portrait'}) • Font ${opts.fontSize}pt • TTD ${kp?.nama || 'Kepala Badan'}`;
+    }
+
+    body.innerHTML = `
+      <div class="w-full h-[65vh] flex flex-col items-center justify-center gap-3 text-slate-500">
+        <span class="material-symbols-outlined text-[32px] text-blue-600 animate-spin">progress_activity</span>
+        <span class="text-xs font-semibold">Menyiapkan pratinjau dokumen PDF...</span>
+      </div>`;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    if (typeof w.generateRekapPDF === 'function') {
+      try {
+        const logoDefault = 'Lambang_Kabupaten_Sumba_Barat.png';
+        if (typeof w.preloadPdfImage === 'function') {
+          await w.preloadPdfImage(logoDefault).catch(() => {});
+        }
+        await w.generateRekapPDF({
+          previewOnly: true,
+          orientation: opts.orientation || 'p',
+          size: opts.paper || 'f4',
+          margin: 10,
+          fontSize: Number(opts.fontSize) || 7.5,
+          padding: 2.0,
+          rowPageBreak: 'avoid',
+          headerName: opts.kopOverride?.instansi || undefined,
+          headerAlamat: opts.kopOverride?.alamat || undefined,
+          headerLogo: logoDefault
+        });
+
+        if (w.lastGeneratedDoc) {
+          if (_previewPdfBlobUrl) {
+            try { URL.revokeObjectURL(_previewPdfBlobUrl); } catch (_) {}
+          }
+          const blob = w.lastGeneratedDoc.output('blob');
+          _previewPdfBlobUrl = URL.createObjectURL(blob);
+          body.innerHTML = `<iframe id="adminRekapPdfIframe" src="${_previewPdfBlobUrl}" class="w-full h-[68vh] rounded-xl border border-slate-200 dark:border-slate-700 bg-white shadow-sm"></iframe>`;
+          return;
+        }
+      } catch (err) {
+        console.warn('[rekap-preview] fallback error:', err);
+        body.innerHTML = `<div class="p-6 text-center text-xs text-rose-600 font-semibold">Gagal membuat pratinjau PDF: ${esc(err.message || 'Error')}</div>`;
+      }
     }
   }
 
@@ -1374,6 +1437,40 @@
   }
 
   async function exportAdminRekapPDF() {
+    if (_mode === 'range' && !_rangePayload) await loadAdminRekapData();
+    if (_mode === 'harian' && !_harianPayload) await loadAdminRekapData();
+    const rows = getFilteredRows();
+    if (rows && rows.length > 0 && typeof w.generateRekapPDF === 'function') {
+      const rawPayload = _mode === 'harian' ? _harianPayload : _rangePayload;
+      const { opts } = _prepareRekapPdfBridge(rows, rawPayload);
+      const logoDefault = 'Lambang_Kabupaten_Sumba_Barat.png';
+      if (typeof w.preloadPdfImage === 'function') {
+        await w.preloadPdfImage(logoDefault).catch(() => {});
+      }
+      await w.generateRekapPDF({
+        previewOnly: true,
+        orientation: opts.orientation || 'p',
+        size: opts.paper || 'f4',
+        margin: 10,
+        fontSize: Number(opts.fontSize) || 7.5,
+        padding: 2.0,
+        rowPageBreak: 'avoid',
+        headerName: opts.kopOverride?.instansi || undefined,
+        headerAlamat: opts.kopOverride?.alamat || undefined,
+        headerLogo: logoDefault
+      });
+      if (w.lastGeneratedDoc) {
+        const blob = w.lastGeneratedDoc.output('blob');
+        const url = URL.createObjectURL(blob);
+        const a = d.createElement('a');
+        a.href = url;
+        a.download = w.lastGeneratedFileName || 'Rekap_HADIR.pdf';
+        d.body.appendChild(a);
+        a.click();
+        setTimeout(() => { d.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+        return w.lastGeneratedDoc;
+      }
+    }
     const { kind, payload, opts } = await buildPdfPayloadAndOpts(false);
     if (kind === 'harian') {
       if (typeof w.exportHarianPDF === 'function') return w.exportHarianPDF(payload, opts);

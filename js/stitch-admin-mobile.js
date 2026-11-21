@@ -677,6 +677,17 @@
     if (!role) return;
 
     roleDetailState.roleId = cleanRoleId;
+    w._activeRoleDetailId = cleanRoleId;
+    const delBtn = el('btnRoleDetailDelete');
+    if (delBtn) {
+      if (role.is_system) {
+        delBtn.classList.add('hidden');
+        delBtn.classList.remove('flex');
+      } else {
+        delBtn.classList.remove('hidden');
+        delBtn.classList.add('flex');
+      }
+    }
     const titleEl = el('roleDetailTitle');
     const idBadgeEl = el('roleDetailIdBadge');
     const descEl = el('roleDetailDesc');
@@ -928,6 +939,258 @@
     }
   }
 
+  /* ── Role Editor (Buat / Edit / Hapus Role & Permissions) ──────────── */
+  let permissionsCatalogCache = null;
+  let roleEditorEditId = '';
+
+  async function ensurePermissionsCatalog() {
+    if (Array.isArray(permissionsCatalogCache) && permissionsCatalogCache.length) return permissionsCatalogCache;
+    const json = await requestJson('/api/admin/roles/permissions-list');
+    permissionsCatalogCache = Array.isArray(json.data) ? json.data : [];
+    return permissionsCatalogCache;
+  }
+
+  async function openRoleEditorSheet(editRoleId = '') {
+    const cleanEditId = editRoleId ? normRole(editRoleId) : '';
+    roleEditorEditId = cleanEditId;
+    const existing = cleanEditId ? rolesCache.find((r) => normRole(r.id) === cleanEditId) : null;
+
+    const modal = el('drawerRoleEditor');
+    const titleEl = el('roleEditorTitle');
+    const idInput = el('roleEditorIdInput');
+    const namaInput = el('roleEditorNamaInput');
+    const descInput = el('roleEditorDescInput');
+    const permsBox = el('roleEditorPermsBox');
+    if (!modal) return;
+
+    closeRoleDetailSheet();
+    if (titleEl) titleEl.textContent = existing ? `Edit Role: ${existing.nama || cleanEditId}` : 'Buat Role Baru';
+    if (idInput) {
+      idInput.value = existing ? cleanEditId : '';
+      idInput.disabled = Boolean(existing);
+    }
+    if (namaInput) namaInput.value = existing ? (existing.nama || '') : '';
+    if (descInput) descInput.value = existing ? (existing.deskripsi || '') : '';
+
+    modal.classList.remove('hidden');
+    if (permsBox) permsBox.innerHTML = '<div class="text-slate-400 text-center py-4">Memuat daftar perizinan...</div>';
+
+    try {
+      const catalog = await ensurePermissionsCatalog();
+      const currentPerms = new Set(Array.isArray(existing?.permissions) ? existing.permissions : []);
+      const isWildcard = currentPerms.has('*');
+      if (permsBox) {
+        permsBox.innerHTML = catalog.map((grp) => `
+          <div class="pb-2 border-b border-slate-200/70 dark:border-slate-700/70 last:border-b-0">
+            <div class="font-bold text-[11px] text-indigo-600 dark:text-indigo-400 uppercase mb-1.5">${esc(grp.name || grp.module)}</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              ${(grp.permissions || []).map((p) => {
+                const checked = isWildcard || currentPerms.has(p.id) ? 'checked' : '';
+                return `<label class="flex items-start gap-2 p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-800 cursor-pointer">
+                  <input type="checkbox" data-role-perm="${esc(p.id)}" ${checked} ${isWildcard ? 'disabled' : ''} class="mt-0.5 w-4 h-4 accent-blue-600 rounded" />
+                  <span class="min-w-0">
+                    <span class="block font-semibold text-[11px] text-slate-800 dark:text-slate-100 leading-tight">${esc(p.name)}</span>
+                    <span class="block text-[10px] text-slate-400 leading-tight">${esc(p.description || '')}</span>
+                  </span>
+                </label>`;
+              }).join('')}
+            </div>
+          </div>
+        `).join('');
+      }
+    } catch (err) {
+      if (permsBox) permsBox.innerHTML = `<div class="text-rose-500 text-center py-4 font-semibold">${esc(err.message)}</div>`;
+    }
+  }
+
+  function closeRoleEditorSheet() {
+    const modal = el('drawerRoleEditor');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async function submitRoleEditorSheet() {
+    const btn = el('btnSubmitRoleEditor');
+    const idVal = normRole(el('roleEditorIdInput')?.value || '');
+    const namaVal = String(el('roleEditorNamaInput')?.value || '').trim();
+    const descVal = String(el('roleEditorDescInput')?.value || '').trim();
+    if (!roleEditorEditId && (!idVal || idVal.length < 2)) {
+      notify('warning', 'ID Role Wajib', 'Masukkan ID role minimal 2 karakter (huruf/angka/underscore).');
+      return;
+    }
+    if (!namaVal) {
+      notify('warning', 'Nama Role Wajib', 'Masukkan nama tampilan role.');
+      return;
+    }
+
+    const existing = roleEditorEditId ? rolesCache.find((r) => normRole(r.id) === roleEditorEditId) : null;
+    const isWildcard = Array.isArray(existing?.permissions) && existing.permissions.includes('*');
+    const perms = isWildcard
+      ? ['*']
+      : Array.from(document.querySelectorAll('#roleEditorPermsBox input[data-role-perm]:checked'))
+          .map((cb) => cb.getAttribute('data-role-perm'))
+          .filter(Boolean);
+
+    if (btn) btn.disabled = true;
+    try {
+      if (roleEditorEditId) {
+        await requestJson(`/api/admin/roles/${encodeURIComponent(roleEditorEditId)}`, {
+          method: 'PUT',
+          body: JSON.stringify({ nama: namaVal, deskripsi: descVal, permissions: perms }),
+        });
+        notify('success', 'Role Diperbarui', `Role ${namaVal} berhasil disimpan.`);
+      } else {
+        await requestJson('/api/admin/roles', {
+          method: 'POST',
+          body: JSON.stringify({ id: idVal, nama: namaVal, deskripsi: descVal, permissions: perms }),
+        });
+        notify('success', 'Role Dibuat', `Role baru ${namaVal} (${idVal}) berhasil ditambahkan.`);
+      }
+      closeRoleEditorSheet();
+      await loadAdminRolesMobile(true);
+    } catch (err) {
+      notify('error', 'Gagal Menyimpan Role', err.message);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function deleteRoleFromDetail() {
+    const targetId = normRole(roleDetailState.roleId);
+    if (!targetId) return;
+    const ok = await confirmDialog({
+      title: `Hapus Role ${targetId}?`,
+      text: 'Role custom yang tidak digunakan pegawai akan dihapus permanen.',
+      confirmText: 'Ya, Hapus Role',
+      confirmColor: '#e11d48',
+    });
+    if (!ok) return;
+    try {
+      await requestJson(`/api/admin/roles/${encodeURIComponent(targetId)}`, { method: 'DELETE' });
+      closeRoleDetailSheet();
+      await loadAdminRolesMobile(true);
+      notify('success', 'Role Dihapus', `Role ${targetId} berhasil dihapus.`);
+    } catch (err) {
+      notify('error', 'Gagal Menghapus Role', err.message);
+    }
+  }
+
+  /* ── Keamanan Login (Wajib Password & Pegawai Wajib Scan Wajah) ────── */
+  let mobMandatoryFaceNips = [];
+
+  function renderMobileMandatoryFaceChips() {
+    const chipsEl = el('mobMandatoryFaceChips');
+    if (!chipsEl) return;
+    if (!mobMandatoryFaceNips.length) {
+      chipsEl.innerHTML = '<span class="text-[11px] text-slate-400">Belum ada pegawai wajib scan wajah.</span>';
+      return;
+    }
+    const users = getSharedUsers();
+    const map = {};
+    users.forEach((u) => {
+      const n = String(u.nip || '').trim();
+      if (n) map[n] = u.nama || u.username || n;
+    });
+    chipsEl.innerHTML = mobMandatoryFaceNips.map((nip) => {
+      const label = map[nip] ? `${map[nip]} (${nip})` : nip;
+      return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 text-[11px] font-semibold">
+        <span>${esc(label)}</span>
+        <button type="button" onclick="removeMobileMandatoryFaceNip('${esc(nip)}')" class="hover:text-rose-500 font-bold cursor-pointer" aria-label="Hapus">&times;</button>
+      </span>`;
+    }).join('');
+  }
+
+  function populateMobileMandatoryFaceSelect() {
+    const sel = el('mobMandatoryFaceSelect');
+    if (!sel) return;
+    const users = getSharedUsers();
+    const opts = ['<option value="">-- Pilih pegawai untuk ditambahkan --</option>'];
+    users.forEach((u) => {
+      const nip = String(u.nip || '').trim();
+      const nama = String(u.nama || u.username || nip).trim();
+      if (nip) opts.push(`<option value="${esc(nip)}">${esc(nama)} — ${esc(nip)}</option>`);
+    });
+    sel.innerHTML = opts.join('');
+  }
+
+  async function loadMobileSecuritySettings() {
+    const instId = getMobInstansiId();
+    const pwdEl = el('mobRequirePasswordToggle');
+    const chipsEl = el('mobMandatoryFaceChips');
+    if (!pwdEl && !chipsEl) return;
+
+    populateMobileMandatoryFaceSelect();
+    const tasks = [];
+    if (pwdEl) {
+      tasks.push(
+        requestJson(`/api/password-toggle?instansi_id=${encodeURIComponent(instId)}`)
+          .then((json) => { pwdEl.checked = !!json.enabled; })
+          .catch(() => {})
+      );
+    }
+    if (chipsEl) {
+      tasks.push(
+        requestJson(`/api/media/face-settings?instansi_id=${encodeURIComponent(instId)}`)
+          .then((json) => {
+            const s = json.settings || json.data?.settings || {};
+            mobMandatoryFaceNips = Array.isArray(s.mandatory_nips)
+              ? s.mandatory_nips.map((x) => String(x || '').trim()).filter(Boolean)
+              : [];
+            renderMobileMandatoryFaceChips();
+          })
+          .catch(() => {})
+      );
+    }
+    await Promise.all(tasks);
+  }
+
+  async function saveMobileRequirePassword() {
+    const pwdEl = el('mobRequirePasswordToggle');
+    if (!pwdEl) return;
+    const enabled = !!pwdEl.checked;
+    try {
+      await requestJson('/api/password-toggle', {
+        method: 'POST',
+        body: JSON.stringify({ enabled, instansi_id: getMobInstansiId() }),
+      });
+      notify('success', 'Keamanan Login Diperbarui', `Wajib password saat login ${enabled ? 'diaktifkan' : 'dinonaktifkan'}.`);
+    } catch (err) {
+      pwdEl.checked = !enabled;
+      notify('error', 'Gagal Menyimpan', err.message);
+    }
+  }
+
+  async function persistMobileMandatoryFaceNips() {
+    try {
+      await requestJson('/api/media/face-settings', {
+        method: 'POST',
+        body: JSON.stringify({ instansi_id: getMobInstansiId(), settings: { mandatory_nips: mobMandatoryFaceNips } }),
+      });
+      notify('success', 'Wajib Scan Wajah Disimpan', `${mobMandatoryFaceNips.length} pegawai wajib scan wajah saat login.`);
+    } catch (err) {
+      notify('error', 'Gagal Menyimpan Wajib Wajah', err.message);
+    }
+  }
+
+  function addMobileMandatoryFaceNip() {
+    const sel = el('mobMandatoryFaceSelect');
+    if (!sel) return;
+    const nip = String(sel.value || '').trim();
+    if (!nip) return;
+    if (!mobMandatoryFaceNips.includes(nip)) {
+      mobMandatoryFaceNips.push(nip);
+      renderMobileMandatoryFaceChips();
+      persistMobileMandatoryFaceNips();
+    }
+    sel.value = '';
+  }
+
+  function removeMobileMandatoryFaceNip(nip) {
+    const clean = String(nip || '').trim();
+    mobMandatoryFaceNips = mobMandatoryFaceNips.filter((x) => x !== clean);
+    renderMobileMandatoryFaceChips();
+    persistMobileMandatoryFaceNips();
+  }
+
   w.loadAdminPegawaiMobile = loadAdminPegawaiMobile;
   w.filterAdminPegawaiMobile = filterAdminPegawaiMobile;
   w.setAdminPegawaiFilter = setAdminPegawaiFilter;
@@ -945,6 +1208,14 @@
   w.setRoleDetailMode = setRoleDetailMode;
   w.renderRoleDetailUsers = renderRoleDetailUsers;
   w.applyRoleFilterToPegawai = applyRoleFilterToPegawai;
+  w.openRoleEditorSheet = openRoleEditorSheet;
+  w.closeRoleEditorSheet = closeRoleEditorSheet;
+  w.submitRoleEditorSheet = submitRoleEditorSheet;
+  w.deleteRoleFromDetail = deleteRoleFromDetail;
+  w.loadMobileSecuritySettings = loadMobileSecuritySettings;
+  w.saveMobileRequirePassword = saveMobileRequirePassword;
+  w.addMobileMandatoryFaceNip = addMobileMandatoryFaceNip;
+  w.removeMobileMandatoryFaceNip = removeMobileMandatoryFaceNip;
   w.loadMobileKontrolAkumulasi = loadMobileKontrolAkumulasi;
   w.saveMobileKontrolAbsen = saveMobileKontrolAbsen;
   w.saveMobilePeringatanAkumulasi = saveMobilePeringatanAkumulasi;

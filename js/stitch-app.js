@@ -1750,6 +1750,9 @@
         window.STITCH_GPS_STRICT = gpsStrict;
         gpsEl.checked = gpsStrict;
       }
+      if (typeof window.loadMobileSecuritySettings === 'function') {
+        window.loadMobileSecuritySettings();
+      }
     }
 
     async function saveAdminFaceAndGpsSettings(showToast = false) {

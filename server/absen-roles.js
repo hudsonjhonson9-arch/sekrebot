@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   PERMISSIONS_CATALOG,
+  initAbsenRolesTable as defaultInitAbsenRolesTable,
   getRoles as defaultGetRoles,
   getRoleById as defaultGetRoleById,
   createRole as defaultCreateRole,
@@ -49,6 +50,15 @@ export function createAbsenRolesRouter(deps = {}) {
       const roles = await getRoles(pool);
       return ok(res, { data: roles, rows: roles });
     } catch (e) {
+      if (e && e.code === '42P01') {
+        try {
+          await defaultInitAbsenRolesTable(pool);
+          const roles = await getRoles(pool);
+          return ok(res, { data: roles, rows: roles });
+        } catch (retryErr) {
+          console.error('[absen-roles] auto-init getRoles error:', retryErr);
+        }
+      }
       console.error('[absen-roles] getRoles error:', e);
       return fail(res, 500, 'Gagal mengambil daftar role.');
     }

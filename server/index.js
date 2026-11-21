@@ -435,6 +435,9 @@ export function createApp() {
 
   // Role Management Absensi (terisolasi dari peta-ekonomi / sd_roles)
   const absenRolesRouter = createAbsenRolesRouter({ query });
+  if (process.env.DATABASE_URL) {
+    initAbsenRolesTable({ query }).catch((e) => console.warn('[absen-roles] init table:', e.message));
+  }
   app.use('/api/admin/roles', requireRole(ABSEN_ROLES), absenRolesRouter);
   app.use('/api/absen-roles', requireRole(ABSEN_ROLES), absenRolesRouter);
 
