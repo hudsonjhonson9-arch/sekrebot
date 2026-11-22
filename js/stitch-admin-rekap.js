@@ -1796,7 +1796,7 @@
     _usersCachePromise = (async () => {
       try {
         const instQ = instId ? `&instansi_id=${encodeURIComponent(instId)}` : '';
-        const res = await fetch(`/api/user-list?format=full${instQ}`, { headers: authHeaders() });
+        const res = await fetch(`/api/user-list?format=compact${instQ}`, { headers: authHeaders() });
         const json = await res.json();
         if (res.ok && json.ok) {
           _usersCache = json.data || json.rows || [];
