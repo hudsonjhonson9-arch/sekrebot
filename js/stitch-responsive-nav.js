@@ -655,13 +655,13 @@
           subWrap.id = 'stitchStandaloneAdminSubmenu';
           subWrap.className = 'mt-0.5 ml-3 pl-3 border-l border-slate-700/80 flex flex-col gap-0.5 overflow-hidden transition-all';
           const adminSubs = [
-            { hash: '#tab-ops', href: 'admin.html#tab-ops', icon: 'monitoring', label: 'Operasional & Izin' },
+            { hash: '#tab-ops', href: 'admin.html#tab-ops', icon: 'how_to_reg', label: 'Operasional & Izin' },
             { hash: '#tab-pepegawaian', href: 'admin.html#tab-pepegawaian', icon: 'domain', label: 'OPD, Bidang & Perangkat' },
-            { hash: '#tab-config', href: 'admin.html#tab-config', icon: 'share_location', label: 'Geofence & Jam Kerja' },
+            { hash: '#tab-config', href: 'admin.html#tab-config', icon: 'tune', label: 'Geofence, Jam & Biometrik' },
             { hash: '#tab-diagnostics', href: 'admin.html#tab-diagnostics', icon: 'terminal', label: 'Developer & OpenWA' },
-            { hash: '', href: 'cetak-tpp.html', icon: 'receipt_long', label: 'Cetak Rekap TPP' },
             { hash: '', href: 'index.html#admin:adminSectionPegawai', icon: 'face', label: 'Master Pegawai & AI' },
-            { hash: '', href: 'index.html#admin:adminSectionRoles', icon: 'manage_accounts', label: 'Kelola Role & Hak' }
+            { hash: '', href: 'index.html#admin:adminSectionRoles', icon: 'manage_accounts', label: 'Kelola Role & Hak' },
+            { hash: '', href: 'cetak-tpp.html', icon: 'receipt_long', label: 'Cetak Rekap TPP' }
           ];
           subWrap.innerHTML = adminSubs.map((s) => `
             <a href="${s.href}" data-admin-sub="${s.hash}" title="${s.label}" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium">
