@@ -913,3 +913,36 @@ test('GET /kartu-pemeliharaan/xlsx menghasilkan file excel dengan header kartu y
   assert.equal(body[0], 0x50);
   assert.equal(body[1], 0x4b);
 });
+
+test('POST /pemeliharaan multi-item atomik + pemeliharaan-update & pemeliharaan-delete', async () => {
+  const tx = stub({
+    rows: (sql) => {
+      if (/INSERT INTO "SIMAPO"\.pemeliharaan/i.test(sql)) return [{ id: 101 }, { id: 102 }];
+      return [{ id: 101 }];
+    },
+  });
+  const a = app(tx, ADMIN);
+
+  const rMulti = await call(a, 'POST', '/api/simapo/pemeliharaan', {
+    barang_id: 'b-1',
+    items: [
+      { tgl_pemeliharaan: '2026-11-01', jenis_pemeliharaan: 'Ganti Oli', biaya: 250000 },
+      { tgl_pemeliharaan: '2026-11-02', jenis_pemeliharaan: 'Servis Rem', biaya: 150000 },
+    ],
+  });
+  assert.equal(rMulti.status, 200);
+  assert.equal(tx.calls.length, 1, 'multi-item harus 1 INSERT atomik');
+  assert.deepEqual(rMulti.body.ids, [101, 102]);
+
+  const rUpd = await call(a, 'POST', '/api/simapo/pemeliharaan-update', {
+    id: '101',
+    barang_id: 'b-1',
+    items: [{ tgl_pemeliharaan: '2026-11-03', jenis_pemeliharaan: 'Ganti Oli + Filter', biaya: 300000 }],
+  });
+  assert.equal(rUpd.status, 200);
+  assert.equal(rUpd.body.ok, true);
+
+  const rDel = await call(a, 'POST', '/api/simapo/pemeliharaan-delete', { id: '101' });
+  assert.equal(rDel.status, 200);
+  assert.equal(rDel.body.ok, true);
+});

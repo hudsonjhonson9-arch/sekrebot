@@ -38,14 +38,6 @@ describe('Desktop Real Database Integration', () => {
     assert.ok(!/<tbody[^>]*>\s*<!-- Row 1 -->\s*<tr[^>]*>[\s\S]*?Charles Hermana Weru/i.test(html), 'Found static demo rows in arsip.html');
   });
 
-  test('layanan.html contains dynamic tbodies and real SPPD / Lembur calls', () => {
-    const html = fs.readFileSync(path.join(rootDir, 'layanan.html'), 'utf8');
-    assert.ok(html.includes('id="sppdTableBody"'), 'Missing id="sppdTableBody" in layanan.html');
-    assert.ok(html.includes('id="lemburTableBody"'), 'Missing id="lemburTableBody" in layanan.html');
-    assert.ok(html.includes('/api/stitch/sppd'), 'Missing /api/stitch/sppd in layanan.html');
-    assert.ok(html.includes('/api/stitch/keterangan'), 'Missing /api/stitch/keterangan in layanan.html');
-  });
-
   test('admin.html memakai AdminCore bersama (keterangan, monitoring, lokasi) dan tanpa data statis', () => {
     const html = fs.readFileSync(path.join(rootDir, 'admin.html'), 'utf8');
     const core = fs.readFileSync(path.join(rootDir, 'js', 'admin-core.js'), 'utf8');

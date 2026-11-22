@@ -479,3 +479,42 @@ test('GET /dev/health: bila DB gagal, db.ok bernilai false', async () => {
   assert.equal(res.body.db.ok, false);
   assert.equal(typeof res.body.db.latencyMs, 'number');
 });
+
+test('OPD & Bidang CRUD: instansi-add, instansi-delete (tolak jika masih ada pegawai), bidang CRUD', async () => {
+  let deletedBidang = false;
+  const q = async (text, params) => {
+    if (/INSERT INTO instansi_list/i.test(text)) return { rows: [{ id: params[0], nama_instansi: params[1] }] };
+    if (/SELECT 1 FROM user_list WHERE instansi_id/i.test(text)) {
+      return { rows: params[0] === 'opd_aktif' ? [{ '?column?': 1 }] : [] };
+    }
+    if (/DELETE FROM bidang_list WHERE instansi_id/i.test(text)) { deletedBidang = true; return { rows: [] }; }
+    if (/DELETE FROM instansi_list WHERE id/i.test(text)) return { rows: [{ id: params[0] }] };
+    if (/INSERT INTO bidang_list/i.test(text)) return { rows: [{ id: '9', nama_bidang: params[0], instansi_id: params[1] }] };
+    if (/SELECT instansi_id FROM bidang_list WHERE id/i.test(text)) return { rows: [{ instansi_id: 'bapperida' }] };
+    if (/UPDATE bidang_list SET nama_bidang/i.test(text)) return { rows: [{ id: params[1], nama_bidang: params[0] }] };
+    if (/DELETE FROM bidang_list WHERE id/i.test(text)) return { rows: [{ id: params[0] }] };
+    return { rows: [] };
+  };
+  const hSuper = harness({ session: { ...ADMIN, role: 'SUPERADMIN' }, query: q });
+  const hAdmin = harness({ session: ADMIN, query: q });
+
+  const rAdd = await req(hAdmin, 'POST', '/api/instansi-add', { id: 'opd_baru', nama_instansi: 'Dinas Baru' });
+  assert.equal(rAdd.status, 201);
+
+  const rDelNonSuper = await req(hAdmin, 'DELETE', '/api/instansi-delete?id=opd_baru');
+  assert.equal(rDelNonSuper.status, 403);
+
+  const rDelUsed = await req(hSuper, 'DELETE', '/api/instansi-delete?id=opd_aktif');
+  assert.equal(rDelUsed.status, 400);
+
+  const rDelOk = await req(hSuper, 'DELETE', '/api/instansi-delete?id=opd_baru');
+  assert.equal(rDelOk.status, 200);
+  assert.equal(deletedBidang, true, 'bidang_list milik OPD harus ikut dibersihkan');
+
+  const rBidAdd = await req(hAdmin, 'POST', '/api/bidang-add', { instansi_id: 'bapperida', nama_bidang: 'Sekretariat' });
+  assert.equal(rBidAdd.status, 201);
+  const rBidUpd = await req(hAdmin, 'POST', '/api/bidang-update', { id: '9', nama_bidang: 'Sekretariat Umum' });
+  assert.equal(rBidUpd.status, 200);
+  const rBidDel = await req(hAdmin, 'DELETE', '/api/bidang-delete?id=9');
+  assert.equal(rBidDel.status, 200);
+});

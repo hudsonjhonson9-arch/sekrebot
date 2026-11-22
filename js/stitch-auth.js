@@ -317,7 +317,6 @@
     'admin.html': 'index.html#admin',
     'aset-kir.html': 'index.html#aset',
     'arsip.html': 'index.html#arsip',
-    'layanan.html': 'index.html#sppd',
     'rekap.html': 'index.html#tpp',
     'cetak-tpp.html': 'index.html#tpp',
     'kiosk.html': 'index.html#kiosk'

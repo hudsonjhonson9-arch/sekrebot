@@ -8,7 +8,6 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const desktopPages = [
   { file: 'desktop.html', activeHref: 'desktop.html', activeText: 'Meja admin' },
   { file: 'rekap.html', activeHref: 'rekap.html', activeText: 'Rekap dan Laporan' },
-  { file: 'layanan.html', activeHref: 'layanan.html', activeText: 'Layanan Kedinasan' },
   { file: 'aset-kir.html', activeHref: 'aset-kir.html', activeText: 'Manajemen Aset' },
   { file: 'arsip.html', activeHref: 'arsip.html', activeText: 'Arsip Digital' },
   { file: 'admin.html', activeHref: 'admin.html', activeText: 'Panel Admin' }

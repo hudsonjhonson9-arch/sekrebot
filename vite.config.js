@@ -40,7 +40,6 @@ export default defineConfig({
         login: resolve(import.meta.dirname, 'login.html'),
         desktop: resolve(import.meta.dirname, 'desktop.html'),
         rekap: resolve(import.meta.dirname, 'rekap.html'),
-        layanan: resolve(import.meta.dirname, 'layanan.html'),
         asetkir: resolve(import.meta.dirname, 'aset-kir.html'),
         arsip: resolve(import.meta.dirname, 'arsip.html'),
         admin: resolve(import.meta.dirname, 'admin.html'),

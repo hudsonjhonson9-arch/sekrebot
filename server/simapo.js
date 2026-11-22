@@ -452,7 +452,7 @@ export function createSimapoRouter({ query, withTransaction }) {
     }
   });
 
-  // ── Simpan pemeliharaan (single item atau batch items[]) ──
+  // ── Simpan pemeliharaan (single item atau batch items[] secara atomik dalam 1 INSERT) ──
   router.post('/pemeliharaan', async (req, res) => {
     const body = req.body || {};
     const barangId = S(body.barang_id);
@@ -472,15 +472,34 @@ export function createSimapoRouter({ query, withTransaction }) {
     }
     try {
       const inst = instansiOtomatis(req, body.instansi_id);
-      const ids = [];
-      for (const it of validItems) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (validItems.length === 1) {
+        const it = validItems[0];
         const { rows } = await query(INSERT_PEMELIHARAAN_SQL, [
-          inst, barangId, S(it.tgl_pemeliharaan) || new Date().toISOString().slice(0, 10),
+          inst, barangId, S(it.tgl_pemeliharaan) || today,
           S(it.jenis_pemeliharaan), BIAYA_MIN(it.biaya),
           S(it.nama_penyedia), S(it.bentuk_kontrak), S(it.keterangan),
         ]);
-        if (rows[0]?.id != null) ids.push(rows[0].id);
+        const id = rows[0]?.id ?? null;
+        return res.json({ ok: true, message: 'Pemeliharaan berhasil disimpan.', id, ids: id != null ? [id] : [] });
       }
+      // Multi-row single INSERT bersifat atomik di PostgreSQL (all-or-nothing, 1 roundtrip).
+      const params = [];
+      const tuples = validItems.map((it) => {
+        const base = params.length;
+        params.push(
+          inst, barangId, S(it.tgl_pemeliharaan) || today,
+          S(it.jenis_pemeliharaan), BIAYA_MIN(it.biaya),
+          S(it.nama_penyedia), S(it.bentuk_kontrak), S(it.keterangan),
+        );
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8})`;
+      });
+      const multiSql = `INSERT INTO "SIMAPO".pemeliharaan
+        (instansi_id, barang_id, tgl_pemeliharaan, jenis_pemeliharaan, biaya, nama_penyedia, bentuk_kontrak, keterangan)
+        VALUES ${tuples.join(', ')}
+        RETURNING id`;
+      const { rows } = await query(multiSql, params);
+      const ids = (rows || []).map((r) => r.id).filter((v) => v != null);
       return res.json({
         ok: true,
         message: 'Pemeliharaan berhasil disimpan.',
@@ -504,7 +523,7 @@ export function createSimapoRouter({ query, withTransaction }) {
     }
     try {
       const inst = instansiOtomatis(req, body.instansi_id);
-      const { rowCount } = await query(
+      const { rowCount, rows } = await query(
         `UPDATE "SIMAPO".pemeliharaan
          SET barang_id = $3,
              tgl_pemeliharaan = COALESCE(NULLIF($4, '')::date, tgl_pemeliharaan),
@@ -513,13 +532,14 @@ export function createSimapoRouter({ query, withTransaction }) {
              nama_penyedia = $7,
              bentuk_kontrak = $8,
              keterangan = $9
-         WHERE id::text = $1 AND instansi_id = $2`,
+         WHERE id::text = $1 AND instansi_id = $2
+         RETURNING id`,
         [
           id, inst, barangId, S(item?.tgl_pemeliharaan), jenis,
           BIAYA_MIN(item?.biaya), S(item?.nama_penyedia), S(item?.bentuk_kontrak), S(item?.keterangan),
         ]
       );
-      if (!rowCount) return res.status(404).json({ ok: false, message: 'Data pemeliharaan tidak ditemukan.' });
+      if (!rowCount && !rows?.length) return res.status(404).json({ ok: false, message: 'Data pemeliharaan tidak ditemukan.' });
       return res.json({ ok: true, message: 'Data pemeliharaan berhasil diubah.' });
     } catch {
       return res.status(500).json({ ok: false, message: 'Gagal mengubah data pemeliharaan.' });
@@ -533,11 +553,11 @@ export function createSimapoRouter({ query, withTransaction }) {
     if (!id) return res.status(400).json({ ok: false, message: 'id pemeliharaan wajib diisi.' });
     try {
       const inst = instansiOtomatis(req, body.instansi_id);
-      const { rowCount } = await query(
-        'DELETE FROM "SIMAPO".pemeliharaan WHERE id::text = $1 AND instansi_id = $2',
+      const { rowCount, rows } = await query(
+        'DELETE FROM "SIMAPO".pemeliharaan WHERE id::text = $1 AND instansi_id = $2 RETURNING id',
         [id, inst]
       );
-      if (!rowCount) return res.status(404).json({ ok: false, message: 'Data pemeliharaan tidak ditemukan.' });
+      if (!rowCount && !rows?.length) return res.status(404).json({ ok: false, message: 'Data pemeliharaan tidak ditemukan.' });
       return res.json({ ok: true, message: 'Riwayat pemeliharaan dihapus.' });
     } catch {
       return res.status(500).json({ ok: false, message: 'Gagal menghapus riwayat pemeliharaan.' });
