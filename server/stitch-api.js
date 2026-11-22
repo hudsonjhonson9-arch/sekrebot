@@ -265,14 +265,46 @@ export function createStitchApiRouter(deps = {}) {
       if (!userRes.rows.length) return res.status(404).json({ ok: false, message: 'NIP tidak terdaftar.' });
       const u = userRes.rows[0];
 
-      // WITA Time calculation
-      const nowWita = new Date(Date.now() + 8 * 3600000);
+      // WITA Time calculation (dukung offline_at tervalidasi untuk sinkronisasi offline native)
+      const nowMs = Date.now();
+      let effectiveMs = nowMs;
+      let isOfflineSync = false;
+      if (b.offline_at) {
+        const parsedMs = Date.parse(String(b.offline_at));
+        const maxFutureMs = 5 * 60 * 1000;
+        const maxPastMs = 7 * 24 * 3600 * 1000;
+        if (!Number.isFinite(parsedMs) || parsedMs > nowMs + maxFutureMs || parsedMs < nowMs - maxPastMs) {
+          return res.status(400).json({ ok: false, message: 'Waktu offline tidak valid atau kedaluwarsa.' });
+        }
+        effectiveMs = parsedMs;
+        isOfflineSync = true;
+      }
+      const nowWita = new Date(effectiveMs + 8 * 3600000);
       const tanggal = nowWita.toISOString().slice(0, 10);
       const jam = `${String(nowWita.getUTCHours()).padStart(2, '0')}:${String(nowWita.getUTCMinutes()).padStart(2, '0')}`;
-      
+
       const instansiId = u.instansi_id || 'bapperida';
 
       if (!['MASUK', 'PULANG', 'PULANG LUAR'].includes(jenis)) return res.status(400).json({ ok: false, message: 'Jenis presensi tidak valid.' });
+
+      const rawReqId = String(b.request_id || '').trim();
+      const clientRequestId = /^[a-zA-Z0-9._:-]{8,120}$/.test(rawReqId) ? rawReqId : '';
+      if (clientRequestId) {
+        const dupRes = await query(
+          'SELECT * FROM "Log_Absen" WHERE request_id = $1 AND "NIP" = $2 LIMIT 1',
+          [clientRequestId, u.NIP]
+        );
+        if (dupRes.rows.length) {
+          const prev = dupRes.rows[0];
+          return res.json({
+            ok: true,
+            deduplicated: true,
+            message: 'Presensi sudah tercatat sebelumnya.',
+            record: prev,
+            witaTime: (prev.Jam || jam) + ' WITA'
+          });
+        }
+      }
 
       // Cek apakah hari ini ada keterangan (IZIN / SAKIT / CUTI / DL / TUGAS / TUBEL) yang disetujui
       const ketToday = (await query(`
@@ -310,11 +342,15 @@ export function createStitchApiRouter(deps = {}) {
           if (hit.nama) matchedLoc = hit.nama;
         }
       }
-      const requestId = `absen_${nip}_${tanggal}_${jenis.toLowerCase()}_${Date.now()}`;
+      const requestId = clientRequestId || `absen_${nip}_${tanggal}_${jenis.toLowerCase()}_${Date.now()}`;
+      const finalKet = isOfflineSync && !ket.includes('[Offline Sync]')
+        ? (ket ? `${ket} [Offline Sync]` : '[Offline Sync]')
+        : ket;
 
       const insertSql = `
         INSERT INTO "Log_Absen" ("ID", "Nama", "NIP", "Tanggal", "Jam", "Jenis Absen", "Lokasi", "Ket", "koordinat", "request_id", "instansi_id")
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT ("request_id") DO NOTHING
         RETURNING *
       `;
 
@@ -326,11 +362,21 @@ export function createStitchApiRouter(deps = {}) {
         jam,
         jenis,
         matchedLoc,
-        ket,
+        finalKet,
         koordinat,
         requestId,
         instansiId
       ]);
+
+      if (!result.rows.length) {
+        return res.json({
+          ok: true,
+          deduplicated: true,
+          message: 'Presensi sudah tercatat sebelumnya.',
+          record: null,
+          witaTime: jam + ' WITA'
+        });
+      }
 
       return res.json({
         ok: true,
