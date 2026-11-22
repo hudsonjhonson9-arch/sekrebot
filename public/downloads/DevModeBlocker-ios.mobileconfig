@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadContent</key>
+  <array>
+    <dict>
+      <key>PayloadDescription</key>
+      <string>Memblokir dan menyembunyikan Developer Mode pada perangkat iOS/iPadOS Supervised (iOS 16+).</string>
+      <key>PayloadDisplayName</key>
+      <string>Restrictions — Blokir Developer Mode</string>
+      <key>PayloadIdentifier</key>
+      <string>id.mindcloud.devmodeblocker.restrictions</string>
+      <key>PayloadOrganization</key>
+      <string>BAPPERIDA Sumba Barat</string>
+      <key>PayloadType</key>
+      <string>com.apple.applicationaccess</string>
+      <key>PayloadUUID</key>
+      <string>7F4A9C21-6E3B-4B18-9D24-8C1F5A2E9012</string>
+      <key>PayloadVersion</key>
+      <integer>1</integer>
+      <key>allowDeveloperMode</key>
+      <false/>
+    </dict>
+  </array>
+  <key>PayloadDescription</key>
+  <string>Profil MDM untuk mematikan dan mengunci Developer Mode pada iPhone/iPad Supervised.</string>
+  <key>PayloadDisplayName</key>
+  <string>DevMode Blocker (iOS MDM)</string>
+  <key>PayloadIdentifier</key>
+  <string>id.mindcloud.devmodeblocker.profile</string>
+  <key>PayloadOrganization</key>
+  <string>BAPPERIDA Sumba Barat</string>
+  <key>PayloadRemovalDisallowed</key>
+  <true/>
+  <key>PayloadScope</key>
+  <string>System</string>
+  <key>PayloadType</key>
+  <string>Configuration</string>
+  <key>PayloadUUID</key>
+  <string>3A8E1D04-2B79-4E55-A610-4D9C7E3B1108</string>
+  <key>PayloadVersion</key>
+  <integer>1</integer>
+</dict>
+</plist>
