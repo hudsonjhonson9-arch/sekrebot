@@ -96,8 +96,8 @@ export function createArsipRouter(deps = {}) {
       const { kind = 'sppd', item = {}, person = null } = req.body || {};
       const buf = renderSppdDocxBuffer(kind, item, person);
       const isSpt = String(kind).toLowerCase() === 'spt';
-      const cleanNo = String(isSpt ? (item.nomor_spt || 'SPT') : (item.nomor_sppd || 'SPPD')).replace(/[/\\?%*:|"<>]/g, '_');
-      const nama = String(person?.nama || item.pelaksana_nama || 'Pelaksana').replace(/[^a-zA-Z0-9_-]+/g, '_');
+      const cleanNo = String(isSpt ? (item.nomor_spt || 'SPT') : (item.nomor_sppd || 'SPPD')).replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 80) || 'DOK';
+      const nama = String(person?.nama || item.pelaksana_nama || 'Pelaksana').replace(/[^a-zA-Z0-9_-]+/g, '_').slice(0, 60) || 'Pelaksana';
       const filename = isSpt ? `Surat_Tugas_${cleanNo}.docx` : `SPPD_${cleanNo}_${nama}.docx`;
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -113,7 +113,7 @@ export function createArsipRouter(deps = {}) {
     try {
       const { item = {} } = req.body || {};
       const buf = renderSppdBundleZipBuffer(item);
-      const cleanNo = String(item.nomor_sppd || item.nomor_spt || 'SPPD').replace(/[/\\?%*:|"<>]/g, '_');
+      const cleanNo = String(item.nomor_sppd || item.nomor_spt || 'SPPD').replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 80) || 'SPPD';
       const filename = `Paket_SPPD_${cleanNo}.zip`;
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

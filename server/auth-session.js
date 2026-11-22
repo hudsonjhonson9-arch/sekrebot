@@ -36,9 +36,38 @@ function dbError(res) {
 // login lagi. Default no-op supaya test/router lama tetap jalan tanpa secret/env.
 const NOOP_SSO = { pasangArsipCookie() {}, lepasArsipCookie() {} };
 
-export function createAuthSessionRouter({ query = realQuery, arsipSso, onLogout, sessionCache } = {}) {
+// shortcut: in-memory Map per proses (dibatasi 5000 key), pindah ke Redis jika multi-replica.
+function createAuthRateLimiter({ max = 20, windowMs = 5 * 60 * 1000 } = {}) {
+  const hits = new Map();
+  return function checkRateLimit(req, res, next) {
+    let ip = 'unknown';
+    try { ip = String((req.socket ? req.ip : req.headers?.['x-real-ip']) || req.socket?.remoteAddress || 'unknown'); } catch (_) {}
+    const now = Date.now();
+    const rec = hits.get(ip);
+    if (!rec || now >= rec.resetAt) {
+      if (hits.size > 5000) hits.clear();
+      hits.set(ip, { count: 1, resetAt: now + windowMs });
+      return next();
+    }
+    rec.count += 1;
+    if (rec.count > max) {
+      const retrySec = Math.max(1, Math.ceil((rec.resetAt - now) / 1000));
+      if (typeof res.setHeader === 'function') res.setHeader('Retry-After', String(retrySec));
+      return res.status(429).json({
+        ok: false,
+        message: 'Terlalu banyak percobaan login. Silakan tunggu beberapa menit.',
+      });
+    }
+    return next();
+  };
+}
+
+export function createAuthSessionRouter({ query = realQuery, arsipSso, onLogout, sessionCache, rateLimit } = {}) {
   const router = express.Router();
   const arsip = arsipSso || NOOP_SSO;
+  const authRateLimit = rateLimit === false
+    ? (_req, _res, next) => next()
+    : createAuthRateLimiter(typeof rateLimit === 'object' ? rateLimit : {});
 
   // Fail-open: kegagalan set/clear cookie arsip TIDAK boleh menjatuhkan login/logout
   // absensi sendiri. Bila secret belum diatur, util balik `false` tanpa efek samping.
@@ -51,7 +80,7 @@ export function createAuthSessionRouter({ query = realQuery, arsipSso, onLogout,
     catch (e) { console.warn('[arsip-sso] gagal clear cookie:', e.message); }
   };
 
-  router.post('/api/auth/session', async (req, res) => {
+  router.post('/api/auth/session', authRateLimit, async (req, res) => {
     try {
       const auth = verifyInitData(req.body?.init_data, process.env.TELEGRAM_BOT_TOKEN, { maxAgeSeconds: 86400 });
       if (!auth.ok) {
@@ -96,7 +125,7 @@ export function createAuthSessionRouter({ query = realQuery, arsipSso, onLogout,
   // berjalan: face-verify sesuai toggle instansi di sisi klien, otorisasi tetap
   // dari sesi, NIP ambigu ditolak. Upgrade path kalau perlu lebih: rate-limit,
   // wajib face-verify untuk web, atau PIN/OTP per pegawai.
-  router.post('/api/auth/login', async (req, res) => {
+  router.post('/api/auth/login', authRateLimit, async (req, res) => {
     try {
       const nip = String(req.body?.nip || '').trim();
       if (!nip) return res.status(400).json({ ok: false, message: 'NIP wajib diisi.' });

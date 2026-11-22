@@ -646,3 +646,18 @@ test('POST /api/auth/register mendaftarkan pegawai baru dengan role USER dan men
   assert.ok(insSession.params.includes('USER'), 'sesi hasil register wajib role USER');
 });
 
+test('rate limit login membalas 429 saat percobaan melebihi batas', async () => {
+  const { createAuthSessionRouter } = await import('./auth-session.js');
+  const r = createAuthSessionRouter({
+    query: async () => ({ rows: [] }),
+    rateLimit: { max: 2, windowMs: 60000 },
+  });
+  const a = await drive(r, 'POST', '/api/auth/login', { nip: '00001' });
+  const b = await drive(r, 'POST', '/api/auth/login', { nip: '00002' });
+  const c = await drive(r, 'POST', '/api/auth/login', { nip: '00003' });
+  assert.equal(a.status, 404);
+  assert.equal(b.status, 404);
+  assert.equal(c.status, 429);
+  assert.match(c.body.message, /terlalu banyak/i);
+});
+
