@@ -2,14 +2,25 @@
 
     // ── AUTH LOGIC (LOGIN & REGISTRATION) ──
     function switchAuthTab(mode) {
-      if (mode === 'login') {
-        $('tabLogin').classList.add('active');
-        $('tabRegister').classList.remove('active');
+      const loginTab = $('tabLogin');
+      const regTab = $('tabRegister');
+      const slider = $('authTabSlider');
+      const isLogin = mode === 'login';
+      if (loginTab) {
+        loginTab.classList.toggle('active', isLogin);
+        loginTab.classList.remove('bg-blue-600', 'text-white');
+      }
+      if (regTab) {
+        regTab.classList.toggle('active', !isLogin);
+        regTab.classList.remove('bg-blue-600', 'text-white');
+      }
+      if (slider) {
+        slider.style.transform = isLogin ? 'translateX(0%)' : 'translateX(100%)';
+      }
+      if (isLogin) {
         $('formLogin').style.display = 'block';
         $('formRegister').style.display = 'none';
       } else {
-        $('tabLogin').classList.remove('active');
-        $('tabRegister').classList.add('active');
         $('formLogin').style.display = 'none';
         $('formRegister').style.display = 'block';
         // Populate & Toggle Telegram ID visibility

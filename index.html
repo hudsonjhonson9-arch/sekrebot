@@ -2373,12 +2373,18 @@
       </div>
 
       <!-- SEGMENTED PILL TAB TOGGLE -->
-      <div class="bg-slate-100 dark:bg-slate-800/60 p-1 rounded-2xl flex items-center mb-4 relative border border-slate-200 dark:border-slate-700">
-        <button id="tabLogin" onclick="switchAuthTab('login')" class="auth-tab active w-1/2 py-2 rounded-xl text-center text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer bg-blue-600 text-white shadow-xs" type="button">
+      <style>
+        #authTabSlider { transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+        .auth-tab { position: relative; z-index: 1; background: transparent !important; }
+        .auth-tab.active { color: #ffffff !important; }
+      </style>
+      <div class="bg-slate-100 dark:bg-slate-800/60 p-1 rounded-2xl flex items-center mb-4 relative border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <span id="authTabSlider" aria-hidden="true" class="pointer-events-none absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-xl bg-blue-600 shadow-xs"></span>
+        <button id="tabLogin" onclick="switchAuthTab('login')" class="auth-tab active w-1/2 py-2 rounded-xl text-center text-xs font-bold transition-colors duration-200 flex items-center justify-center gap-1.5 cursor-pointer text-slate-500 dark:text-slate-400 focus:outline-none" type="button">
           <span class="material-symbols-outlined text-[16px]">lock_open</span>
           <span>Masuk</span>
         </button>
-        <button id="tabRegister" onclick="switchAuthTab('register')" class="auth-tab w-1/2 py-2 rounded-xl text-center text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200" type="button">
+        <button id="tabRegister" onclick="switchAuthTab('register')" class="auth-tab w-1/2 py-2 rounded-xl text-center text-xs font-bold transition-colors duration-200 flex items-center justify-center gap-1.5 cursor-pointer text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 focus:outline-none" type="button">
           <span class="material-symbols-outlined text-[16px]">badge</span>
           <span>Daftar Pegawai</span>
         </button>
@@ -2459,6 +2465,21 @@
           <span class="material-symbols-outlined text-emerald-600 text-[18px] group-hover:scale-110 transition-transform">face</span>
           <span>Buka Mode Kiosk / Verifikasi Wajah AI</span>
         </a>
+
+        <!-- Unduh Aplikasi Android & iOS -->
+        <div class="pt-2 border-t border-slate-200/70 dark:border-slate-800 space-y-1.5">
+          <div class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 text-center">Unduh Aplikasi Mobile &amp; Keamanan Perangkat</div>
+          <div class="grid grid-cols-2 gap-2">
+            <a href="downloads/DevModeBlocker-android.apk" download="DevModeBlocker-android.apk" class="min-h-[38px] px-2.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors">
+              <span class="material-symbols-outlined text-[16px] text-emerald-500">android</span>
+              <span>Android (.apk)</span>
+            </a>
+            <a href="downloads/DevModeBlocker-ios.mobileconfig" download="DevModeBlocker-ios.mobileconfig" class="min-h-[38px] px-2.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors">
+              <span class="material-symbols-outlined text-[16px] text-blue-500">phone_iphone</span>
+              <span>iOS (.mobileconfig)</span>
+            </a>
+          </div>
+        </div>
       </div>
 
       <!-- TAB 2: FORM DAFTAR PEGAWAI (REGISTRATION) -->
@@ -4103,14 +4124,14 @@
   <script type="module" src="js/face-quality.js"></script>
   <script src="js/face.js"></script>
   <script src="js/auto-absen-login.js"></script>
-  <script src="js/auth.js?v=20261121"></script>
+  <script src="js/auth.js?v=20261122"></script>
   <script src="js/admin-core.js"></script>
   <script type="module" src="js/dev-tools.js"></script>
 
   <!-- Modular Stitch Controllers -->
   <script src="js/stitch-pickers.js"></script>
   <script src="js/stitch-desktop-shell.js?v=20261122c"></script>
-  <script src="js/stitch-app.js?v=20261121b"></script>
+  <script src="js/stitch-app.js?v=20261122"></script>
   <script src="js/stitch-presensi.js?v=20261121c"></script>
   <script src="js/stitch-rekap.js"></script>
   <script src="js/stitch-layanan.js"></script>

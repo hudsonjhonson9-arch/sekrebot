@@ -68,13 +68,18 @@
       box-shadow: 0px 12px 28px -4px rgba(37, 99, 235, 0.22), 0px 4px 10px -2px rgba(15, 23, 42, 0.06);
     }
     /* Tab active styles */
+    #authTabSlider {
+      transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .auth-tab {
+      position: relative;
+      z-index: 1;
+      background-color: transparent !important;
+    }
     .auth-tab.active {
-      background-color: #2563eb !important;
       color: #ffffff !important;
-      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
     }
     .auth-tab:not(.active) {
-      background-color: transparent !important;
       color: #434655 !important;
     }
     .spin-sm {
@@ -147,12 +152,13 @@
     <div class="bg-surface-container-lowest border border-surface-container-high card-elevation rounded-3xl p-5 w-full transition-all">
       
       <!-- SEGMENTED PILL TAB TOGGLE -->
-      <div class="bg-surface-container-low p-1 rounded-2xl flex items-center mb-6 relative border border-outline-variant/40">
-        <button id="tabLogin" onclick="switchAuthTab('login')" class="auth-tab active w-1/2 py-2.5 rounded-xl text-center text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 tap-press cursor-pointer" type="button">
+      <div class="bg-surface-container-low p-1 rounded-2xl flex items-center mb-6 relative border border-outline-variant/40 overflow-hidden">
+        <span id="authTabSlider" aria-hidden="true" class="pointer-events-none absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-xl bg-primary shadow-xs"></span>
+        <button id="tabLogin" onclick="switchAuthTab('login')" class="auth-tab active w-1/2 py-2.5 rounded-xl text-center text-sm font-semibold transition-colors duration-200 flex items-center justify-center gap-1.5 tap-press cursor-pointer focus:outline-none" type="button">
           <span class="material-symbols-outlined text-[18px]">lock_open</span>
           <span>Masuk</span>
         </button>
-        <button id="tabRegister" onclick="switchAuthTab('register')" class="auth-tab w-1/2 py-2.5 rounded-xl text-center text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 tap-press cursor-pointer" type="button">
+        <button id="tabRegister" onclick="switchAuthTab('register')" class="auth-tab w-1/2 py-2.5 rounded-xl text-center text-sm font-semibold transition-colors duration-200 flex items-center justify-center gap-1.5 tap-press cursor-pointer focus:outline-none" type="button">
           <span class="material-symbols-outlined text-[18px]">badge</span>
           <span>Daftar Pegawai</span>
         </button>
@@ -395,7 +401,7 @@
   <script type="module" src="js/face-quality.js"></script>
   <script src="js/face.js"></script>
   <script src="js/auto-absen-login.js"></script>
-  <script src="js/auth.js"></script>
+  <script src="js/auth.js?v=20261122"></script>
 
   <script>
     // DOM helper fallback

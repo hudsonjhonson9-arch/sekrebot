@@ -17,19 +17,23 @@
     window.switchAuthTab = window.switchAuthTab || function(mode) {
       const loginTab = document.getElementById('tabLogin');
       const regTab = document.getElementById('tabRegister');
+      const slider = document.getElementById('authTabSlider');
       const formL = document.getElementById('formLogin');
       const formR = document.getElementById('formRegister');
-      if (mode === 'login') {
-        loginTab?.classList.add('active', 'bg-blue-600', 'text-white');
-        regTab?.classList.remove('active', 'bg-blue-600', 'text-white');
-        if (formL) formL.style.display = 'block';
-        if (formR) formR.style.display = 'none';
-      } else {
-        loginTab?.classList.remove('active', 'bg-blue-600', 'text-white');
-        regTab?.classList.add('active', 'bg-blue-600', 'text-white');
-        if (formL) formL.style.display = 'none';
-        if (formR) formR.style.display = 'block';
+      const isLogin = mode === 'login';
+      if (loginTab) {
+        loginTab.classList.toggle('active', isLogin);
+        loginTab.classList.remove('bg-blue-600', 'text-white');
       }
+      if (regTab) {
+        regTab.classList.toggle('active', !isLogin);
+        regTab.classList.remove('bg-blue-600', 'text-white');
+      }
+      if (slider) {
+        slider.style.transform = isLogin ? 'translateX(0%)' : 'translateX(100%)';
+      }
+      if (formL) formL.style.display = isLogin ? 'block' : 'none';
+      if (formR) formR.style.display = isLogin ? 'none' : 'block';
     };
 
     // Fast synchronous session check
