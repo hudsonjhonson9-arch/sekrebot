@@ -655,27 +655,42 @@
           subWrap.id = 'stitchStandaloneAdminSubmenu';
           subWrap.className = 'mt-0.5 ml-3 pl-3 border-l border-slate-700/80 flex flex-col gap-0.5 overflow-hidden transition-all';
           const adminSubs = [
-            { href: 'admin.html#tab-ops', icon: 'monitoring', label: 'Operasional & Izin' },
-            { href: 'admin.html#tab-pepegawaian', icon: 'shield_person', label: 'Keamanan & Perangkat' },
-            { href: 'admin.html#tab-config', icon: 'share_location', label: 'Geofence & Jam Kerja' },
-            { href: 'admin.html#tab-diagnostics', icon: 'terminal', label: 'Developer & OpenWA' },
-            { href: 'rekap.html', icon: 'analytics', label: 'Rekap Semua Pegawai' },
-            { href: 'cetak-tpp.html', icon: 'receipt_long', label: 'Cetak Rekap TPP' },
-            { href: 'index.html#admin:adminSectionPegawai', icon: 'face', label: 'Master Pegawai & AI' },
-            { href: 'index.html#admin:adminSectionRoles', icon: 'manage_accounts', label: 'Kelola Role & Hak' }
+            { hash: '#tab-ops', href: 'admin.html#tab-ops', icon: 'monitoring', label: 'Operasional & Izin' },
+            { hash: '#tab-pepegawaian', href: 'admin.html#tab-pepegawaian', icon: 'domain', label: 'OPD, Bidang & Perangkat' },
+            { hash: '#tab-config', href: 'admin.html#tab-config', icon: 'share_location', label: 'Geofence & Jam Kerja' },
+            { hash: '#tab-diagnostics', href: 'admin.html#tab-diagnostics', icon: 'terminal', label: 'Developer & OpenWA' },
+            { hash: '', href: 'cetak-tpp.html', icon: 'receipt_long', label: 'Cetak Rekap TPP' },
+            { hash: '', href: 'index.html#admin:adminSectionPegawai', icon: 'face', label: 'Master Pegawai & AI' },
+            { hash: '', href: 'index.html#admin:adminSectionRoles', icon: 'manage_accounts', label: 'Kelola Role & Hak' }
           ];
           subWrap.innerHTML = adminSubs.map((s) => `
-            <a href="${s.href}" title="${s.label}" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium">
+            <a href="${s.href}" data-admin-sub="${s.hash}" title="${s.label}" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium">
               <span class="material-symbols-outlined text-[16px] text-slate-500">${s.icon}</span>
               <span>${s.label}</span>
             </a>
           `).join('');
           adminLink.insertAdjacentElement('afterend', subWrap);
 
+          const syncAdminActive = () => {
+            if (!isOnAdmin) return;
+            const cur = (location.hash || '#tab-ops').toLowerCase();
+            subWrap.querySelectorAll('a[data-admin-sub]').forEach((a) => {
+              const target = a.dataset.adminSub || '';
+              const act = target && (target === cur || (cur === '' && target === '#tab-ops'));
+              a.className = act
+                ? 'flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs bg-blue-600/20 text-blue-300 font-bold transition-colors'
+                : 'flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium';
+              const ic = a.querySelector('.material-symbols-outlined');
+              if (ic) ic.className = act ? 'material-symbols-outlined text-[16px] text-blue-400' : 'material-symbols-outlined text-[16px] text-slate-500';
+            });
+          };
+
           const syncSub = () => {
             subWrap.style.display = subOpen ? 'flex' : 'none';
             chevron.style.transform = subOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+            syncAdminActive();
           };
+          window.addEventListener('hashchange', syncAdminActive);
           chevron.addEventListener('click', (ev) => {
             ev.preventDefault();
             ev.stopPropagation();
@@ -773,11 +788,11 @@
     if (document.getElementById('stitchStandaloneBottomNav')) return;
     const path = (location.pathname.split('/').pop() || '').toLowerCase();
     const tabs = [
-      { href: 'index.html#presensi', icon: 'fingerprint', label: 'Presensi', match: 'index.html' },
       { href: 'rekap.html', icon: 'bar_chart', label: 'Rekap', match: 'rekap.html' },
-      { href: 'admin.html', icon: 'admin_panel_settings', label: 'Admin', match: 'admin.html' },
+      { href: 'arsip.html', icon: 'folder_open', label: 'Arsip', match: 'arsip.html' },
+      { href: 'index.html?mode=mobile#presensi', icon: 'fingerprint', label: 'Presensi', match: 'index.html' },
       { href: 'aset-kir.html', icon: 'inventory_2', label: 'Aset', match: 'aset-kir.html' },
-      { href: 'arsip.html', icon: 'folder_open', label: 'Arsip', match: 'arsip.html' }
+      { href: 'admin.html', icon: 'admin_panel_settings', label: 'Admin', match: 'admin.html' }
     ];
 
     const nav = document.createElement('nav');

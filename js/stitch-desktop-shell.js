@@ -96,6 +96,15 @@
           icon: 'schedule',
           tone: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60',
           action: () => callSwitch('admin', true, 'adminSectionJamLibur')
+        },
+        {
+          key: 'admin:opd-bidang',
+          perms: ['admin.instansi', 'admin.devices'],
+          label: 'OPD, Bidang & Perangkat',
+          hint: 'Kelola master OPD, bidang & keamanan',
+          icon: 'domain',
+          tone: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60',
+          action: () => { w.location.href = 'admin.html#tab-pepegawaian'; }
         }
       ]
     },
@@ -111,6 +120,24 @@
           icon: 'analytics',
           tone: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60',
           action: () => callSwitch('admin', true, 'adminSectionRekap')
+        },
+        {
+          key: 'aset:laporan-permen47',
+          perms: ['aset.view', 'aset.manage', 'admin.rekap'],
+          label: 'Laporan Aset Permen 47',
+          hint: 'Pengadaan barang pakai habis & Excel',
+          icon: 'description',
+          tone: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60',
+          action: () => { w.location.href = 'aset-kir.html#laporan-permen47'; }
+        },
+        {
+          key: 'aset:kartu-pemeliharaan',
+          perms: ['aset.view', 'aset.manage', 'admin.rekap'],
+          label: 'Kartu Pemeliharaan Aset',
+          hint: 'Riwayat servis BMD & cetak kartu',
+          icon: 'build',
+          tone: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60',
+          action: () => { w.location.href = 'aset-kir.html#pemeliharaan'; }
         },
         {
           key: 'kiosk',
