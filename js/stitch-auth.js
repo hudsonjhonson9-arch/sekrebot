@@ -319,7 +319,8 @@
     'arsip.html': 'index.html#arsip',
     'rekap.html': 'index.html#tpp',
     'cetak-tpp.html': 'index.html#tpp',
-    'kiosk.html': 'index.html#kiosk'
+    'kiosk.html': 'index.html#kiosk',
+    'profil.html': 'index.html#profil'
   };
 
   if (MOBILE_EQUIVALENT[pageName] && getPref() === 'mobile') {
@@ -330,7 +331,7 @@
   // Halaman portal desktop/admin tidak punya modal login: wajib punya sesi.
   const page = (location.pathname.split('/').pop() || '').toLowerCase();
   const needsLogin = ['desktop.html', 'admin.html', 'rekap.html', 'layanan.html',
-    'aset-kir.html', 'arsip.html'].includes(page);
+    'aset-kir.html', 'arsip.html', 'profil.html'].includes(page);
   if (needsLogin && !getToken()) {
     location.replace('login.html');
     return;
@@ -339,7 +340,7 @@
   // Muat bottom-nav responsif untuk halaman desktop bersidebar di layar kecil (<1024px)
   if (needsLogin) {
     const s = document.createElement('script');
-    s.src = 'js/stitch-responsive-nav.js?v=20261122c';
+    s.src = 'js/stitch-responsive-nav.js?v=20261123b';
     s.defer = true;
     (document.head || document.documentElement).appendChild(s);
   }

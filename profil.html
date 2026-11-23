@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="shell-type" content="web_standard" />
+  <title>Sistem HADIR - Profil &amp; Biometrik Pegawai</title>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/stitch-swal.css" />
+  <style>
+    @layer base {
+      html, body { margin: 0; padding: 0; font-family: "Plus Jakarta Sans", system-ui, sans-serif; }
+      body { overscroll-behavior: none; }
+    }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    #profilSigCanvas { touch-action: none; }
+  </style>
+  <script src="js/lib/sweetalert2.all.min.js"></script>
+  <script src="js/stitch-auth.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/dynamic-island.js"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#2563eb",
+            "primary-fixed": "#dbe1ff",
+            secondary: "#006c49",
+            "secondary-container": "#6cf8bb",
+            "on-secondary-container": "#00714d",
+            surface: "#f8f9ff",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#eff4ff",
+            "surface-container": "#e5eeff",
+            "surface-container-high": "#dce9ff",
+            "on-surface": "#0b1c30",
+            "on-surface-variant": "#434655",
+            "outline-variant": "#c3c6d7"
+          },
+          fontFamily: { sans: ["Plus Jakarta Sans", "system-ui", "sans-serif"] }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-surface text-on-surface min-h-screen flex flex-col antialiased">
+
+  <aside class="fixed left-0 top-0 h-full w-72 bg-slate-900 z-50 flex flex-col justify-between shadow-2xl border-r border-slate-800 text-slate-100">
+    <div class="flex flex-col">
+      <div class="h-20 px-5 flex items-center gap-3 border-b border-slate-800 bg-slate-950/70">
+        <div class="w-11 h-11 rounded-xl bg-white p-1 flex items-center justify-center shadow-sm shrink-0 border border-slate-700">
+          <img src="Lambang_Kabupaten_Sumba_Barat.png" alt="Lambang Kabupaten Sumba Barat" class="w-full h-full object-contain" />
+        </div>
+        <div class="flex flex-col min-w-0">
+          <span class="font-extrabold text-[12.5px] text-white tracking-tight leading-tight uppercase truncate">PEMKAB SUMBA BARAT</span>
+          <span class="text-[11px] text-slate-400 font-medium truncate">Hadir &amp; SIMAPO</span>
+        </div>
+      </div>
+      <div class="px-4 pt-4">
+        <div class="px-3 py-1 mb-2 text-[10.5px] font-bold text-slate-400 uppercase tracking-widest font-mono">Navigasi Portal</div>
+        <nav class="flex flex-col gap-1.5">
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all font-semibold text-sm" href="desktop.html"><span class="material-symbols-outlined text-[20px] text-slate-400">desktop_windows</span><span>Meja admin</span></a>
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all font-semibold text-sm" href="rekap.html"><span class="material-symbols-outlined text-[20px] text-slate-400">bar_chart</span><span>Rekap dan Laporan</span></a>
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all font-semibold text-sm" href="arsip.html"><span class="material-symbols-outlined text-[20px] text-slate-400">folder_open</span><span>Arsip Digital</span></a>
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all font-semibold text-sm" href="aset-kir.html"><span class="material-symbols-outlined text-[20px] text-slate-400">inventory_2</span><span>Manajemen Aset</span></a>
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all font-semibold text-sm" href="admin.html"><span class="material-symbols-outlined text-[20px] text-slate-400">admin_panel_settings</span><span>Panel Admin</span></a>
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all font-semibold text-sm" href="kiosk.html"><span class="material-symbols-outlined text-[20px] text-slate-400">tv_gen</span><span>Mode Kiosk Lobi</span></a>
+          <a aria-current="page" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-md shadow-blue-900/50 transition-all" href="profil.html"><span class="material-symbols-outlined text-[20px]">account_circle</span><span>Profil &amp; Biometrik</span></a>
+        </nav>
+      </div>
+    </div>
+    <div class="p-4 border-t border-slate-800 bg-slate-950/60">
+      <div class="p-3 rounded-xl bg-slate-800/80 flex flex-col gap-1 border border-slate-700/60">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-semibold text-slate-400">Portal Pegawai</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">Aktif</span>
+        </div>
+        <div class="flex items-center gap-1.5 text-slate-200 text-xs font-semibold">
+          <span class="material-symbols-outlined text-[15px] text-emerald-400">verified_user</span>
+          <span>Human.js Face AI</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <header class="fixed top-0 left-72 right-0 z-40 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800">
+    <div class="h-20 w-full px-6 md:px-8 flex items-center justify-between gap-4">
+      <div class="flex flex-col min-w-0">
+        <h1 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">Profil &amp; Biometrik Pegawai</h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Identitas kepegawaian, pendaftaran Wajah AI, spesimen tanda tangan, dan jadwal kerja</p>
+      </div>
+      <div class="flex items-center gap-3 shrink-0">
+        <a href="e-slip.html" class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors">
+          <span class="material-symbols-outlined text-[16px]">receipt</span>
+          <span>E-Slip Kehadiran</span>
+        </a>
+        <button type="button" onclick="logoutDesktopProfil()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-900/60 text-xs font-bold transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-[16px]">logout</span>
+          <span>Keluar</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="w-full pl-72 pt-20 flex-1 bg-surface dark:bg-slate-950">
+    <div class="max-w-[1440px] mx-auto px-6 md:px-8 py-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- Kolom Kiri: Kartu Identitas & Ringkasan Bulan Ini -->
+        <div class="lg:col-span-4 flex flex-col gap-5">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col items-center text-center">
+            <div id="dpAvatarWrap" class="w-24 h-24 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white font-extrabold text-3xl shadow-md ring-4 ring-blue-500/15 mb-4 overflow-hidden">
+              <span id="dpInitials">ASN</span>
+            </div>
+            <h2 id="dpName" class="text-lg font-bold text-slate-900 dark:text-white leading-snug">Memuat profil...</h2>
+            <p id="dpNip" class="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 mt-1 tabular-nums">NIP. -</p>
+            <p id="dpJabatan" class="text-xs text-slate-500 dark:text-slate-400 mt-1.5">-</p>
+
+            <div class="mt-3 flex flex-wrap items-center justify-center gap-2">
+              <span id="dpPangkat" class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-semibold">-</span>
+              <span id="dpRole" class="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-[11px] font-bold uppercase font-mono">USER</span>
+            </div>
+
+            <div class="w-full mt-6 pt-5 border-t border-slate-100 dark:border-slate-800 grid grid-cols-3 gap-2 text-center">
+              <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+                <p id="dpStatHadir" class="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">0</p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">Hadir</p>
+              </div>
+              <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+                <p id="dpStatTelat" class="text-xl font-extrabold text-amber-600 dark:text-amber-400 font-mono tabular-nums">0</p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">Terlambat</p>
+              </div>
+              <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+                <p id="dpStatCuti" class="text-xl font-extrabold text-blue-600 dark:text-blue-400 font-mono tabular-nums">0</p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">Izin/Cuti</p>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-2">Rekap kehadiran bulan berjalan</p>
+          </div>
+        </div>
+
+        <!-- Kolom Kanan: Biometrik Wajah, TTD Digital & Jadwal Kerja -->
+        <div class="lg:col-span-8 flex flex-col gap-5">
+
+          <!-- Biometrik Wajah AI & Tanda Tangan -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+            <div class="flex items-center justify-between pb-4 mb-5 border-b border-slate-100 dark:border-slate-800">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                  <span class="material-symbols-outlined text-[22px]">fingerprint</span>
+                </div>
+                <div>
+                  <h3 class="text-base font-bold text-slate-900 dark:text-white">Biometrik Wajah &amp; Spesimen Tanda Tangan</h3>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">Digunakan untuk verifikasi presensi kamera AI dan dokumen daftar hadir resmi</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Kartu Wajah AI -->
+              <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/70 flex flex-col justify-between gap-4">
+                <div class="flex items-center gap-3.5">
+                  <div class="w-16 h-16 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
+                    <img id="dpFaceImg" class="w-full h-full object-cover hidden" alt="Foto Wajah AI" />
+                    <span id="dpFaceIcon" class="material-symbols-outlined text-[28px]">face</span>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-bold text-slate-900 dark:text-white">Wajah AI (Human.js)</p>
+                    <p id="dpFaceStatus" class="text-xs font-semibold text-slate-500 mt-0.5">Memeriksa status...</p>
+                    <p id="dpFaceSavedAt" class="text-[11px] text-slate-400 mt-0.5 truncate">-</p>
+                  </div>
+                </div>
+                <button type="button" onclick="enrollDesktopFace()" class="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer">
+                  <span class="material-symbols-outlined text-[18px]">photo_camera</span>
+                  <span id="dpBtnFaceLabel">Daftarkan Wajah AI</span>
+                </button>
+              </div>
+
+              <!-- Kartu Tanda Tangan -->
+              <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/70 flex flex-col justify-between gap-4">
+                <div class="flex items-center gap-3.5">
+                  <div class="w-16 h-16 rounded-xl bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 flex items-center justify-center overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 p-1">
+                    <img id="dpSigImg" class="w-full h-full object-contain hidden" alt="Spesimen Tanda Tangan" />
+                    <span id="dpSigIcon" class="material-symbols-outlined text-[28px]">draw</span>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-bold text-slate-900 dark:text-white">Spesimen Paraf / TTD</p>
+                    <p id="dpSigStatus" class="text-xs font-semibold text-slate-500 mt-0.5">Memeriksa status...</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5 truncate">Tampil otomatis di PDF rekap &amp; E-Slip</p>
+                  </div>
+                </div>
+                <button type="button" onclick="openDesktopSigModal()" class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer">
+                  <span class="material-symbols-outlined text-[18px]">ink_pen</span>
+                  <span id="dpBtnSigLabel">Buat Tanda Tangan</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Jadwal Shift & Hari Libur -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-4 border-b border-slate-100 dark:border-slate-800">
+              <div class="flex items-center gap-2.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <h3 class="text-base font-bold text-slate-900 dark:text-white">Jadwal Jam Kerja &amp; Hari Libur</h3>
+              </div>
+              <span class="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold font-mono">Senin - Jumat • WITA</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+              <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Jam Masuk – Pulang</p>
+                <p id="dpShiftHours" class="text-lg font-extrabold text-slate-900 dark:text-white font-mono tabular-nums mt-1">07:15 - 14:30</p>
+              </div>
+              <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Batas Toleransi Masuk</p>
+                <p id="dpShiftToleransi" class="text-lg font-extrabold text-slate-900 dark:text-white font-mono tabular-nums mt-1">08:00 WITA</p>
+              </div>
+              <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Hari Libur Terdaftar</p>
+                <p id="dpHolidayCount" class="text-lg font-extrabold text-rose-600 dark:text-rose-400 font-mono tabular-nums mt-1">0 Hari</p>
+              </div>
+            </div>
+
+            <div class="space-y-2 max-h-60 overflow-y-auto pr-1" id="dpHolidaysList">
+              <div class="p-3 text-center text-xs text-slate-400">Memuat kalender libur...</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Tanda Tangan Digital -->
+  <div id="modalProfilSig" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
+    <div class="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-bold text-slate-900 dark:text-white">Buat Spesimen Tanda Tangan</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Goreskan tanda tangan Anda pada kotak di bawah</p>
+        </div>
+        <button type="button" onclick="closeDesktopSigModal()" class="w-9 h-9 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 flex items-center justify-center cursor-pointer">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+      <div class="p-5">
+        <div class="relative rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white overflow-hidden">
+          <canvas id="profilSigCanvas" class="w-full h-52 block cursor-crosshair"></canvas>
+        </div>
+        <p id="dpSigError" class="hidden text-xs text-rose-600 font-semibold mt-2">Silakan goreskan tanda tangan terlebih dahulu.</p>
+      </div>
+      <div class="px-5 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex items-center justify-between gap-3">
+        <button type="button" onclick="clearDesktopSig()" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+          Bersihkan
+        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="closeDesktopSigModal()" class="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+            Batal
+          </button>
+          <button id="dpBtnSaveSig" type="button" onclick="saveDesktopSig()" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer">
+            Simpan TTD
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/constants.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/helpers.js"></script>
+  <script src="js/face-mount.js"></script>
+  <script src="js/face.js?v=20261123"></script>
+  <script src="js/profil-controller.js?v=20261123"></script>
+</body>
+</html>
