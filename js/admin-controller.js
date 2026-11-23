@@ -1880,6 +1880,141 @@
       }
     });
 
+    // ── CRUD Hari Libur & Cuti Bersama (Desktop + Filter Tahun Custom) ──
+    let desktopHolidaysCache = [];
+
+    function populateDesktopHolidayYearSelect(rows) {
+      const sel = $('desktopLiburYearFilter');
+      if (!sel) return String(new Date().getFullYear());
+      const curYear = String(new Date().getFullYear());
+      const prevVal = sel.value;
+      const years = new Set([String(Number(curYear) - 1), curYear, String(Number(curYear) + 1)]);
+      (rows || []).forEach((h) => {
+        const y = String(h.tanggal || '').slice(0, 4);
+        if (/^\d{4}$/.test(y)) years.add(y);
+      });
+      const sorted = Array.from(years).sort((a, b) => Number(b) - Number(a));
+      const targetVal = prevVal && (prevVal === 'ALL' || sorted.includes(prevVal)) ? prevVal : curYear;
+      sel.innerHTML = sorted.map((y) => `<option value="${y}">Tahun ${y}</option>`).join('') + '<option value="ALL">Semua Tahun</option>';
+      sel.value = targetVal;
+      if (window.StitchPicker && typeof window.StitchPicker.refreshSelect === 'function') {
+        window.StitchPicker.refreshSelect('desktopLiburYearFilter');
+      } else if (window.StitchPicker && typeof window.StitchPicker.enhanceSelect === 'function') {
+        window.StitchPicker.enhanceSelect(sel);
+      }
+      return targetVal;
+    }
+
+    function renderDesktopHolidays() {
+      const listEl = $('desktopHolidaysList');
+      const badgeEl = $('desktopLiburCountBadge');
+      if (!listEl) return;
+      const selectedYear = populateDesktopHolidayYearSelect(desktopHolidaysCache);
+      const filtered = (selectedYear && selectedYear !== 'ALL')
+        ? desktopHolidaysCache.filter((h) => String(h.tanggal || '').startsWith(selectedYear))
+        : desktopHolidaysCache;
+      if (badgeEl) badgeEl.textContent = `${filtered.length} Hari`;
+      if (!filtered.length) {
+        listEl.innerHTML = `<div class="col-span-full py-6 text-center text-xs text-on-surface-variant">Belum ada hari libur untuk tahun ${selectedYear === 'ALL' ? 'terpilih' : escapeHtml(selectedYear)}.</div>`;
+        return;
+      }
+      listEl.innerHTML = filtered.map((h) => `
+        <div class="flex items-center justify-between gap-2 p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs">
+          <div class="min-w-0 flex-1">
+            <p class="font-bold text-on-surface truncate">${escapeHtml(h.nama || 'Hari Libur')}</p>
+            <p class="text-[11px] font-mono tabular-nums text-on-surface-variant mt-0.5">${escapeHtml(String(h.tanggal || '').slice(0, 10))}</p>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button type="button" data-desk-edit-libur="${escapeHtml(String(h.tanggal || '').slice(0, 10))}" data-desk-edit-nama="${escapeHtml(h.nama || '')}" class="px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 font-bold text-[11px] cursor-pointer">Edit</button>
+            <button type="button" data-desk-del-libur="${escapeHtml(String(h.tanggal || '').slice(0, 10))}" class="px-2.5 py-1.5 rounded-lg bg-rose-500/15 text-rose-700 hover:bg-rose-500/25 font-bold text-[11px] cursor-pointer">Hapus</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function loadDesktopHolidays() {
+      const listEl = $('desktopHolidaysList');
+      if (!listEl) return;
+      try {
+        const res = await fetch('/api/libur-list');
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json) throw new Error('Gagal memuat daftar hari libur.');
+        desktopHolidaysCache = Array.isArray(json.data) ? json.data : (Array.isArray(json.rows) ? json.rows : []);
+        renderDesktopHolidays();
+      } catch (err) {
+        listEl.innerHTML = `<div class="col-span-full py-6 text-center text-xs text-rose-600">${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    $('desktopLiburYearFilter')?.addEventListener('change', renderDesktopHolidays);
+
+    $('btnCancelDesktopLibur')?.addEventListener('click', () => {
+      if ($('desktopLiburDate')) $('desktopLiburDate').value = '';
+      if ($('desktopLiburName')) $('desktopLiburName').value = '';
+      $('btnCancelDesktopLibur')?.classList.add('hidden');
+    });
+
+    $('btnSaveDesktopLibur')?.addEventListener('click', async () => {
+      const tanggal = ($('desktopLiburDate')?.value || '').trim();
+      const nama = ($('desktopLiburName')?.value || '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal) || !nama) {
+        notifyToast('warning', 'Data Belum Lengkap', 'Isi tanggal dan nama hari libur terlebih dahulu.');
+        return;
+      }
+      try {
+        const res = await fetch('/api/libur-add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tanggal, nama })
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+        notifyToast('success', 'Hari Libur Disimpan', `${tanggal} — ${nama}`);
+        if ($('desktopLiburName')) $('desktopLiburName').value = '';
+        $('btnCancelDesktopLibur')?.classList.add('hidden');
+        const yearOfSaved = tanggal.slice(0, 4);
+        if ($('desktopLiburYearFilter')) $('desktopLiburYearFilter').value = yearOfSaved;
+        await loadDesktopHolidays();
+      } catch (err) {
+        notifyToast('error', 'Gagal Menyimpan Libur', err.message);
+      }
+    });
+
+    $('desktopHolidaysList')?.addEventListener('click', async (ev) => {
+      const editBtn = ev.target.closest('[data-desk-edit-libur]');
+      if (editBtn) {
+        const tgl = editBtn.getAttribute('data-desk-edit-libur') || '';
+        const nama = editBtn.getAttribute('data-desk-edit-nama') || '';
+        if ($('desktopLiburDate')) $('desktopLiburDate').value = tgl;
+        if ($('desktopLiburName')) {
+          $('desktopLiburName').value = nama;
+          $('desktopLiburName').focus();
+        }
+        $('btnCancelDesktopLibur')?.classList.remove('hidden');
+        return;
+      }
+      const delBtn = ev.target.closest('[data-desk-del-libur]');
+      if (delBtn) {
+        const tgl = delBtn.getAttribute('data-desk-del-libur') || '';
+        if (!tgl || !confirm(`Hapus hari libur tanggal ${tgl}?`)) return;
+        try {
+          const res = await fetch('/api/libur-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tanggal: tgl })
+          });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+          notifyToast('success', 'Hari Libur Dihapus', `Tanggal ${tgl} telah dihapus.`);
+          await loadDesktopHolidays();
+        } catch (err) {
+          notifyToast('error', 'Gagal Menghapus Libur', err.message);
+        }
+      }
+    });
+
+    loadDesktopHolidays();
+
     // Seamless auto-sync saat ada perubahan dari tab lain atau kembali ke tab ini
     if (window.StitchSync && typeof window.StitchSync.on === 'function') {
       window.StitchSync.on(['lokasi', 'instansi', 'config', 'admin', 'presensi'], (ev) => {

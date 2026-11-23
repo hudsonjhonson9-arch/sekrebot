@@ -540,6 +540,40 @@
     </div>
   </div>
 </div>
+<!-- SECTION 2.6: Kelola Hari Libur & Cuti Bersama (CRUD + Filter Tahun) -->
+<div id="adminHolidaysCard" data-admin-tab="tab-config" data-req-perms="admin.jam_libur" class="hidden bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-space-md">
+      <div class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-[22px]">event_busy</span>
+      </div>
+      <div>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Kelola Hari Libur &amp; Cuti Bersama</h2>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">Tambah, ubah, dan hapus kalender hari libur nasional/daerah per tahun.</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <select id="desktopLiburYearFilter" aria-label="Pilih Tahun Hari Libur" class="min-h-[38px] px-3 py-1.5 rounded-xl bg-surface-container-low border border-outline-variant/40 text-xs font-mono font-bold text-on-surface outline-none focus:border-primary"></select>
+      <span id="desktopLiburCountBadge" class="px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 text-[11px] font-bold font-mono tabular-nums">0 Hari</span>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30">
+    <input type="date" id="desktopLiburDate" class="md:col-span-4 min-h-[42px] px-3 py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-xs font-mono text-on-surface outline-none focus:border-primary" />
+    <input type="text" id="desktopLiburName" placeholder="Nama hari libur atau cuti bersama..." class="md:col-span-5 min-h-[42px] px-3 py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-xs text-on-surface outline-none focus:border-primary" />
+    <div class="md:col-span-3 flex items-center gap-2">
+      <button id="btnSaveDesktopLibur" type="button" class="flex-1 min-h-[42px] px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold hover:opacity-90 transition-all cursor-pointer flex items-center justify-center gap-1.5">
+        <span class="material-symbols-outlined text-[18px]">save</span>
+        <span>Simpan Libur</span>
+      </button>
+      <button id="btnCancelDesktopLibur" type="button" class="hidden min-h-[42px] px-3 py-2 rounded-xl bg-surface-container text-on-surface-variant text-xs font-semibold hover:bg-surface-container-high transition-all cursor-pointer">Batal</button>
+    </div>
+  </div>
+
+  <div id="desktopHolidaysList" class="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-80 overflow-y-auto pr-1">
+    <div class="col-span-full py-6 text-center text-xs text-on-surface-variant">Memuat kalender hari libur...</div>
+  </div>
+</div>
 <!-- SECTION 2A: Keamanan Login & Identitas Instansi -->
 <div id="adminSecurityInstansiCard" data-admin-tab="tab-pepegawaian" class="hidden bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">

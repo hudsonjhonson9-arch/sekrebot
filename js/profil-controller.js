@@ -166,16 +166,48 @@
     }
   }
 
+  let allHolidaysCache = [];
+
+  function populateProfilYearSelect(rows) {
+    const sel = document.getElementById('dpHolidayYear');
+    if (!sel) return String(new Date().getFullYear());
+    const curYear = String(new Date().getFullYear());
+    const prevVal = sel.value;
+    const years = new Set([String(Number(curYear) - 1), curYear, String(Number(curYear) + 1)]);
+    (rows || []).forEach((h) => {
+      const y = String(h.tanggal || h.Tanggal || '').slice(0, 4);
+      if (/^\d{4}$/.test(y)) years.add(y);
+    });
+    const sorted = Array.from(years).sort((a, b) => Number(b) - Number(a));
+    const targetVal = prevVal && (prevVal === 'ALL' || sorted.includes(prevVal)) ? prevVal : curYear;
+    sel.innerHTML = sorted.map((y) => `<option value="${y}">Tahun ${y}</option>`).join('') + '<option value="ALL">Semua Tahun</option>';
+    sel.value = targetVal;
+    if (window.StitchPicker && typeof window.StitchPicker.refreshSelect === 'function') {
+      window.StitchPicker.refreshSelect('dpHolidayYear');
+    } else if (window.StitchPicker && typeof window.StitchPicker.enhanceSelect === 'function') {
+      window.StitchPicker.enhanceSelect(sel);
+    }
+    if (!sel._bound) {
+      sel._bound = true;
+      sel.addEventListener('change', () => renderHolidays(allHolidaysCache));
+    }
+    return targetVal;
+  }
+
   function renderHolidays(rows) {
+    allHolidaysCache = Array.isArray(rows) ? rows : [];
     const listEl = document.getElementById('dpHolidaysList');
-    const list = Array.isArray(rows) ? rows : [];
+    const selectedYear = populateProfilYearSelect(allHolidaysCache);
+    const list = (selectedYear && selectedYear !== 'ALL')
+      ? allHolidaysCache.filter((h) => String(h.tanggal || h.Tanggal || '').startsWith(selectedYear))
+      : allHolidaysCache;
     setText('dpHolidayCount', `${list.length} Hari`);
     if (!listEl) return;
     if (!list.length) {
-      listEl.innerHTML = '<div class="p-3 text-center text-xs text-slate-400">Belum ada jadwal hari libur terdaftar.</div>';
+      listEl.innerHTML = `<div class="p-3 text-center text-xs text-slate-400">Belum ada jadwal hari libur untuk tahun ${selectedYear === 'ALL' ? 'terpilih' : selectedYear}.</div>`;
       return;
     }
-    listEl.innerHTML = list.slice(0, 30).map((h) => {
+    listEl.innerHTML = list.slice(0, 50).map((h) => {
       const tgl = h.tanggal || h.Tanggal || '-';
       const ket = h.keterangan || h.Keterangan || h.nama || 'Hari Libur';
       return `

@@ -515,19 +515,46 @@
       }
     }
 
+    function populateHolidayYearSelect(selectId, holidays) {
+      const sel = document.getElementById(selectId);
+      if (!sel) return '';
+      const curYear = String(new Date().getFullYear());
+      const prevVal = sel.value;
+      const years = new Set([String(Number(curYear) - 1), curYear, String(Number(curYear) + 1)]);
+      (holidays || []).forEach(h => {
+        const y = String(h.tanggal || '').slice(0, 4);
+        if (/^\d{4}$/.test(y)) years.add(y);
+      });
+      const sorted = Array.from(years).sort((a, b) => Number(b) - Number(a));
+      const targetVal = prevVal && (prevVal === 'ALL' || sorted.includes(prevVal)) ? prevVal : curYear;
+      sel.innerHTML = sorted.map(y => `<option value="${y}">Tahun ${y}</option>`).join('') + '<option value="ALL">Semua Tahun</option>';
+      sel.value = targetVal;
+      if (window.StitchPicker && typeof window.StitchPicker.refreshSelect === 'function') {
+        window.StitchPicker.refreshSelect(selectId);
+      } else if (window.StitchPicker && typeof window.StitchPicker.enhanceSelect === 'function') {
+        window.StitchPicker.enhanceSelect(sel);
+      }
+      return targetVal;
+    }
+
     function renderJadwalHolidays(holidays) {
       const profilListEl = document.getElementById('profilHolidaysList');
       const profilCountBadge = document.getElementById('profilHolidayBadge');
+      const all = Array.isArray(holidays) ? holidays : [];
+      const selectedYear = populateHolidayYearSelect('profilLiburYearFilter', all);
+      const filtered = (selectedYear && selectedYear !== 'ALL')
+        ? all.filter(h => String(h.tanggal || '').startsWith(selectedYear))
+        : all;
 
-      if (profilCountBadge) profilCountBadge.textContent = `${holidays.length} Hari Libur`;
+      if (profilCountBadge) profilCountBadge.textContent = `${filtered.length} Hari`;
 
-      const emptyHtml = `<div class="p-3 text-center text-xs text-slate-400">Tidak ada kalender libur di database.</div>`;
-      if (!holidays.length) {
+      const emptyHtml = `<div class="p-3 text-center text-xs text-slate-400">Tidak ada hari libur untuk tahun ${selectedYear === 'ALL' ? 'ini' : selectedYear}.</div>`;
+      if (!filtered.length) {
         if (profilListEl) profilListEl.innerHTML = emptyHtml;
         return;
       }
 
-      const holidayHtml = holidays.map(h => {
+      const holidayHtml = filtered.map(h => {
         const title = h.nama || h.nama_libur || 'Hari Libur Resmi';
         const isCuti = (h.jenis && h.jenis === 'Cuti Bersama') || title.toLowerCase().includes('cuti');
         const badgeColor = isCuti ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300' : 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300';
@@ -1965,11 +1992,16 @@
     function renderAdminHolidaysList(holidays) {
       const box = document.getElementById('adminHolidaysList');
       if (!box) return;
-      if (!holidays || !holidays.length) {
-        box.innerHTML = `<div class="p-3 text-center text-xs text-slate-400">Belum ada hari libur terdaftar.</div>`;
+      const all = Array.isArray(holidays) ? holidays : [];
+      const selectedYear = populateHolidayYearSelect('adminLiburYearFilter', all);
+      const filtered = (selectedYear && selectedYear !== 'ALL')
+        ? all.filter(h => String(h.tanggal || '').startsWith(selectedYear))
+        : all;
+      if (!filtered.length) {
+        box.innerHTML = `<div class="p-3 text-center text-xs text-slate-400">Belum ada hari libur untuk tahun ${selectedYear === 'ALL' ? 'terpilih' : selectedYear}.</div>`;
         return;
       }
-      box.innerHTML = holidays.map(h => `
+      box.innerHTML = filtered.map(h => `
         <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/70 text-xs">
           <div class="min-w-0 flex-1 pr-2">
             <p class="font-bold text-slate-800 dark:text-slate-100 truncate">${escHtml(h.nama || 'Hari Libur')}</p>
