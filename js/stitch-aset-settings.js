@@ -1237,7 +1237,9 @@
       const payload = {
         no_nota: String(d.getElementById('p47NoNota')?.value || '').trim(),
         tgl_nota: String(d.getElementById('p47Tgl')?.value || new Date().toISOString().slice(0, 10)),
+        kontrak: String(d.getElementById('p47Kontrak')?.value || 'Swakelola').trim(),
         bentuk_kontrak: String(d.getElementById('p47Kontrak')?.value || 'Swakelola').trim(),
+        penyedia: String(d.getElementById('p47Penyedia')?.value || '').trim(),
         nama_penyedia: String(d.getElementById('p47Penyedia')?.value || '').trim(),
         no_sp2d: String(d.getElementById('p47Sp2d')?.value || '').trim(),
         sub_kegiatan: String(d.getElementById('p47SubKeg')?.value || '').trim(),
@@ -1263,7 +1265,33 @@
     }
   }
 
+  let _p47LastRows = [];
+  let _p47LastMeta = {};
+  let _p47ActiveSection = 'ALL';
+
+  function resolvePermen47Section(r) {
+    const rawCat = String(r.uraian_belanja || r.nama_kategori || '').trim();
+    if (rawCat && !/^barang pakai habis lainnya$/i.test(rawCat)) return rawCat;
+    const nm = String(r.nama_barang || r.nama || '').toLowerCase();
+    if (/\b(kertas|hvs|amplop|map|stopmap|buku|notes|post-it|cover|jilid)\b/.test(nm)) return 'Kertas dan Cover';
+    if (/\b(tinta|toner|cartridge|flashdisk|mouse|keyboard|kabel|printer|komputer|laptop|usb)\b/.test(nm)) return 'Bahan Komputer';
+    if (/\b(cetak|spanduk|banner|baliho|fotokopi|foto copy|stiker|brosur|undangan)\b/.test(nm)) return 'Bahan Cetak';
+    if (/\b(pulpen|bolpoin|pensil|spidol|klip|staples|isi staples|gunting|cutter|cuter|lem|lakban|penggaris|penghapus|binder|ordner|bantex|tip-ex|stabilo|atk)\b/.test(nm)) return 'Alat Tulis Kantor (ATK)';
+    if (/\b(sabun|sapu|pel|tisu|tissue|pembersih|pewangi|detergen|sikat|lap|kanebo|sampah)\b/.test(nm)) return 'Alat / Bahan Kebersihan';
+    if (/\b(lampu|baterai|saklar|stop kontak|listrik|colokan|mc[b])\b/.test(nm)) return 'Alat Listrik';
+    if (/\b(makan|minum|snack|kopi|teh|gula|air mineral|aqua|kue|nasi)\b/.test(nm)) return 'Makanan dan Minuman';
+    if (/\b(cat|paku|semen|kuas|thinner|kayu|pipa|kunci)\b/.test(nm)) return 'Bahan Bangunan';
+    return rawCat || 'Barang Pakai Habis Lainnya';
+  }
+
+  function setPermen47Section(sec) {
+    _p47ActiveSection = sec || 'ALL';
+    renderPermen47Preview(_p47LastRows, _p47LastMeta);
+  }
+
   function renderPermen47Preview(rows, meta) {
+    _p47LastRows = rows || [];
+    _p47LastMeta = meta || {};
     const container = d.getElementById('permen47PreviewContainer');
     const sumEl = d.getElementById('permen47SummaryTotal');
     if (!container) return;
@@ -1278,13 +1306,29 @@
     };
     const labelPeriode = pMap[meta.periode] || meta.periode;
     const fmt = (n) => new Intl.NumberFormat('id-ID').format(Number(n) || 0);
-    const leafTotal = (rows || []).reduce((s, r) => (r.is_header ? s : s + (Number(r.total_nilai) || 0)), 0);
-    const totalKeseluruhan = Number(meta.total_nilai) || leafTotal;
+    const leafRowsAll = (rows || []).filter((r) => !r.is_header);
+    const sectionMap = new Map();
+    leafRowsAll.forEach((r) => {
+      const sec = resolvePermen47Section(r);
+      if (!sectionMap.has(sec)) sectionMap.set(sec, { name: sec, items: [], qty: 0, total: 0 });
+      const grp = sectionMap.get(sec);
+      const jml = Number(r.jumlah || r.volume) || 1;
+      const tot = Number(r.total_nilai || r.total || (jml * (Number(r.harga_satuan || r.hargasatuan || r.harga) || 0))) || 0;
+      grp.items.push(r);
+      grp.qty += jml;
+      grp.total += tot;
+    });
+    const sections = Array.from(sectionMap.values());
+    if (_p47ActiveSection !== 'ALL' && !sectionMap.has(_p47ActiveSection)) {
+      _p47ActiveSection = 'ALL';
+    }
+    const visibleSections = _p47ActiveSection === 'ALL' ? sections : sections.filter((s) => s.name === _p47ActiveSection);
+    const totalKeseluruhan = visibleSections.reduce((a, s) => a + s.total, 0);
     if (sumEl) {
-      sumEl.innerHTML = `<span class="text-on-surface-variant font-medium">Total Nilai Pengadaan</span><span class="font-mono font-extrabold text-primary tabular-nums">Rp ${fmt(totalKeseluruhan)}</span>`;
+      sumEl.innerHTML = `<span class="text-on-surface-variant font-medium">Total Nilai ${_p47ActiveSection === 'ALL' ? 'Pengadaan' : esc(_p47ActiveSection)}</span><span class="font-mono font-extrabold text-primary tabular-nums">Rp ${fmt(totalKeseluruhan)}</span>`;
     }
 
-    if (!rows || !rows.length) {
+    if (!leafRowsAll.length) {
       container.innerHTML = `<div class="p-8 text-center text-xs text-on-surface-variant bg-surface-container-low rounded-xl border border-outline-variant/30">Belum ada data pengadaan untuk <strong>${esc(labelPeriode)} Tahun ${esc(meta.tahun)}</strong>.<br>Klik <strong>Catat Pengadaan Baru</strong> di atas untuk menambahkan transaksi pengadaan barang pakai habis.</div>`;
       return;
     }
@@ -1306,80 +1350,187 @@
     const kotak = Array.from({ length: 6 }, () => th('')).join('');
     const rp = '<span class="font-semibold opacity-70">(Rp)</span>';
 
-    const headRow1 = `<tr>${th('No.', 'rowspan="3"')}${th('Penggolongan dan Kodefikasi Barang', 'colspan="8"')}${th('Spesifikasi Nama Barang', 'rowspan="3"')}${th('Merek', 'rowspan="3"')}${th('Jumlah Barang', 'rowspan="3"')}${th('Satuan Barang', 'rowspan="3"')}${th('Harga Satuan<br>' + rp, 'rowspan="2"')}${th('Total Nilai Barang<br>' + rp, 'rowspan="2"')}${th('Total Biaya Atribusi<br>' + rp, 'rowspan="2"')}${th('Nilai Perolehan Barang<br>' + rp, 'rowspan="2"')}${th('Harga Satuan Perolehan<br>' + rp, 'rowspan="2"')}${th('Sub Kegiatan dan Rekening Anggaran Belanja Daerah atas Pengadaan Barang', 'colspan="4"')}${th('Tanggal Perolehan', 'rowspan="3"')}${th('Dokumen Sumber Perolehan', 'colspan="3"')}${th('Ket.', 'rowspan="3"')}</tr>`;
+    const headRow1 = `<tr>${th('No.', 'rowspan="3"')}${th('Penggolongan dan Kodefikasi Barang', 'colspan="8"')}${th('Spesifikasi Nama Barang', 'rowspan="3"')}${th('Merek', 'rowspan="3"')}${th('Jumlah Barang', 'rowspan="3"')}${th('Satuan Barang', 'rowspan="3"')}${th('Harga Satuan<br>' + rp, 'rowspan="2"')}${th('Total Nilai Barang<br>' + rp, 'rowspan="2"')}${th('Total Biaya Atribusi<br>' + rp, 'rowspan="2"')}${th('Nilai Perolehan Barang<br>' + rp, 'rowspan="2"')}${th('Harga Satuan Perolehan<br>' + rp, 'rowspan="2"')}${th('Sub Kegiatan dan Rekening Anggaran Belanja Daerah atas Pengadaan Barang', 'colspan="4"')}${th('Tanggal Perolehan', 'rowspan="3"')}${th('Dokumen Sumber Perolehan', 'colspan="3"')}${th('Ket.', 'rowspan="3"')}${th('Aksi', 'rowspan="3" style="position:sticky;right:0;z-index:2;box-shadow:-4px 0 8px rgba(15,23,42,0.06);"')}</tr>`;
     const headRow2 = `<tr>${th('Kode Barang', 'rowspan="2"')}${kotak}${th('Nama Barang', 'rowspan="2"')}${th('Sub Kegiatan', 'colspan="2"')}${th('Rekening Belanja Daerah', 'colspan="2"')}${th('Bentuk Kontrak', 'rowspan="2"')}${th('Nama Penyedia', 'rowspan="2"')}${th('No.', 'rowspan="2"')}</tr>`;
     const headRow3 = `<tr>${kotak}${th(rp)}${th(rp)}${th(rp)}${th(rp)}${th(rp)}${th('Kode Sub Kegiatan')}${th('Nama Sub Kegiatan')}${th('Kode Rekening')}${th('Uraian Belanja')}</tr>`;
-    const headRow4 = `<tr>${th('1')}${th('2', 'colspan="7"')}${['3', '4', '5', '6', '7', '8', '9 = 6 X 8', '10', '11 = 9 + 10', '12 = 11 : 6', '13', '14', '15', '16', '17', '18', '19', '20', '21'].map((v) => th(v)).join('')}</tr>`;
+    const headRow4 = `<tr>${th('1')}${th('2', 'colspan="7"')}${['3', '4', '5', '6', '7', '8', '9 = 6 X 8', '10', '11 = 9 + 10', '12 = 11 : 6', '13', '14', '15', '16', '17', '18', '19', '20', '21'].map((v) => th(v)).join('')}${th('', 'style="position:sticky;right:0;z-index:2;"')}</tr>`;
 
+    w._p47LastLeafRows = [];
     let noUrut = 0;
-    const trs = rows.map((r) => {
-      if (r.is_header) {
-        const lvl = Number(r.level) || 1;
-        const sub = Number(r.total_nilai) || 0;
-        const nilai = Number(r.nilai_perolehan) || 0;
-        const jml = Number(r.jumlah || r.volume) || 0;
-        const pad = 6 + Math.min(lvl - 1, 4) * 14;
-        const c = [td('')];
+    const trs = visibleSections.map((sec, secIdx) => {
+      const secHeader = `
+        <tr class="bg-blue-50/70 dark:bg-blue-950/40">
+          ${td(String.fromCharCode(65 + (secIdx % 26)), 'text-center font-extrabold text-primary font-mono')}
+          <td colspan="10" class="p-2 border border-outline-variant/40 text-xs font-extrabold text-primary uppercase tracking-wide">${esc(sec.name)} <span class="font-normal text-[10.5px] text-on-surface-variant ml-1">(${sec.items.length} item)</span></td>
+          ${tdNum(sec.qty, 'font-extrabold text-on-surface')}
+          ${td('')}
+          ${td('')}
+          ${tdNum(sec.total, 'font-extrabold text-primary')}
+          ${td('')}
+          ${tdNum(sec.total, 'font-extrabold text-primary')}
+          ${Array.from({ length: 10 }, () => td('')).join('')}
+          <td class="p-1 border border-outline-variant/40 bg-blue-50/70 dark:bg-blue-950/40" style="position:sticky;right:0;"></td>
+        </tr>`;
+
+      const itemRows = sec.items.map((r) => {
+        noUrut += 1;
+        const leafIdx = w._p47LastLeafRows.length;
+        w._p47LastLeafRows.push(r);
+        const jumlah = Number(r.jumlah || r.volume) || 1;
+        const harga = Number(r.harga_satuan || r.hargasatuan || r.harga) || 0;
+        const total = Number(r.total_nilai || r.total || (jumlah * harga)) || 0;
+        const atribusi = Number(r.biaya_atribusi) || 0;
+        const perolehan = Number(r.nilai_perolehan) || total;
+        const hsp = Number(r.harga_satuan_perolehan) || (jumlah > 0 ? Math.round(perolehan / jumlah) : harga);
+        const c = [td(noUrut, 'text-center text-on-surface-variant font-mono tabular-nums')];
         kodeParts(r).forEach((k) => c.push(td(esc(k), 'text-center font-mono text-[10.5px]')));
-        c.push(`<td class="p-1.5 border border-outline-variant/40 text-[11px] font-extrabold bg-surface-container-low/70 ${lvl <= 3 ? 'text-on-surface' : 'text-primary'}" style="padding-left:${pad}px">${esc(r.nama || '')}</td>`);
-        c.push(td(''));
-        c.push(td(''));
-        c.push(tdNum(jml || '', 'font-bold bg-surface-container-low/70'));
-        c.push(td(''));
-        c.push(td(''));
-        c.push(tdNum(sub || '', 'font-extrabold text-primary bg-surface-container-low/70'));
-        c.push(td(''));
-        c.push(tdNum(nilai || '', 'font-extrabold text-primary bg-surface-container-low/70'));
-        for (let i = 18; i <= 27; i++) c.push(td(''));
+        c.push(td(esc(r.nama_barang || r.nama || ''), 'font-bold text-on-surface'));
+        c.push(td(esc(r.spesifikasi || ''), 'text-on-surface-variant'));
+        c.push(td(esc(r.merek || ''), 'text-on-surface-variant'));
+        c.push(tdNum(jumlah));
+        c.push(td(esc(r.satuan || 'Unit'), 'text-center text-on-surface-variant'));
+        c.push(tdNum(harga));
+        c.push(tdNum(total, 'font-bold text-primary'));
+        c.push(tdNum(atribusi));
+        c.push(tdNum(perolehan, 'font-bold'));
+        c.push(tdNum(hsp));
+        c.push(td(esc(r.sub_kegiatan || ''), 'text-center font-mono text-[10.5px]'));
+        c.push(td(esc(r.nama_sub_kegiatan || ''), 'text-on-surface-variant'));
+        c.push(td(esc(r.kode_rekening || ''), 'text-center font-mono text-[10.5px]'));
+        c.push(td(esc(r.uraian_belanja || sec.name), 'text-on-surface-variant'));
+        c.push(td(esc(tglIndo(r.tgl_nota || r.tanggal || r.tgl)), 'text-center whitespace-nowrap'));
+        c.push(td(esc(r.bentuk_kontrak || r.kontrak || ''), 'text-on-surface-variant'));
+        c.push(td(esc(r.nama_penyedia || r.penyedia || ''), 'text-on-surface-variant'));
+        c.push(td(esc(r.dokumen_sumber || r.no_bukti || r.no_nota || ''), 'text-on-surface-variant'));
+        c.push(td(esc(r.keterangan || r.ket || ''), 'text-on-surface-variant'));
+        const aksiHtml = r.detail_id
+          ? `<div class="inline-flex items-center gap-1"><button type="button" onclick="window.AsetSettings?.openEditPermen47Row(${leafIdx})" class="px-2 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-[10.5px] font-bold cursor-pointer">Edit</button><button type="button" onclick="window.AsetSettings?.deletePermen47Row(${leafIdx})" class="px-2 py-1 rounded-lg bg-rose-500/15 text-rose-700 hover:bg-rose-500/25 text-[10.5px] font-bold cursor-pointer">Hapus</button></div>`
+          : '<span class="text-[10px] text-on-surface-variant">-</span>';
+        c.push(`<td class="p-1.5 border border-outline-variant/40 bg-surface-container-lowest text-center whitespace-nowrap" style="position:sticky;right:0;z-index:1;box-shadow:-4px 0 8px rgba(15,23,42,0.06);">${aksiHtml}</td>`);
         return `<tr>${c.join('')}</tr>`;
-      }
-      noUrut += 1;
-      const jumlah = Number(r.jumlah || r.volume) || 1;
-      const harga = Number(r.harga_satuan || r.hargasatuan || r.harga) || 0;
-      const total = Number(r.total_nilai || r.total || (jumlah * harga)) || 0;
-      const atribusi = Number(r.biaya_atribusi) || 0;
-      const perolehan = Number(r.nilai_perolehan) || total;
-      const hsp = Number(r.harga_satuan_perolehan) || (jumlah > 0 ? Math.round(perolehan / jumlah) : harga);
-      const c = [td(r.no || noUrut, 'text-center text-on-surface-variant font-mono tabular-nums')];
-      kodeParts(r).forEach((k) => c.push(td(esc(k), 'text-center font-mono text-[10.5px]')));
-      c.push(td(esc(r.nama_barang || r.nama || ''), 'font-bold text-on-surface'));
-      c.push(td(esc(r.spesifikasi || ''), 'text-on-surface-variant'));
-      c.push(td(esc(r.merek || ''), 'text-on-surface-variant'));
-      c.push(tdNum(jumlah));
-      c.push(td(esc(r.satuan || 'Unit'), 'text-center text-on-surface-variant'));
-      c.push(tdNum(harga));
-      c.push(tdNum(total, 'font-bold text-primary'));
-      c.push(tdNum(atribusi));
-      c.push(tdNum(perolehan, 'font-bold'));
-      c.push(tdNum(hsp));
-      c.push(td(esc(r.sub_kegiatan || ''), 'text-center font-mono text-[10.5px]'));
-      c.push(td(esc(r.nama_sub_kegiatan || ''), 'text-on-surface-variant'));
-      c.push(td(esc(r.kode_rekening || ''), 'text-center font-mono text-[10.5px]'));
-      c.push(td(esc(r.uraian_belanja || ''), 'text-on-surface-variant'));
-      c.push(td(esc(tglIndo(r.tgl_nota || r.tanggal || r.tgl)), 'text-center whitespace-nowrap'));
-      c.push(td(esc(r.bentuk_kontrak || r.kontrak || ''), 'text-on-surface-variant'));
-      c.push(td(esc(r.nama_penyedia || r.penyedia || ''), 'text-on-surface-variant'));
-      c.push(td(esc(r.dokumen_sumber || r.no_bukti || r.no_nota || ''), 'text-on-surface-variant'));
-      c.push(td(esc(r.keterangan || r.ket || ''), 'text-on-surface-variant'));
-      return `<tr>${c.join('')}</tr>`;
+      }).join('');
+
+      return secHeader + itemRows;
     }).join('');
 
-    const foot = `<tr>${td('')}<td colspan="13" class="p-2 border border-outline-variant/50 text-center font-extrabold tracking-widest bg-surface-container-low text-on-surface text-xs">J U M L A H &nbsp;&nbsp; T O T A L</td>${tdNum(totalKeseluruhan, 'font-extrabold text-primary')}${tdNum(0)}${tdNum(totalKeseluruhan, 'font-extrabold text-primary')}${tdNum(0)}${Array.from({ length: 9 }, () => td('')).join('')}</tr>`;
+    const sectionPills = [
+      `<button type="button" onclick="window.AsetSettings?.setPermen47Section('ALL')" class="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${_p47ActiveSection === 'ALL' ? 'bg-primary text-on-primary shadow-xs' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'}">Semua Akun (${leafRowsAll.length})</button>`,
+      ...sections.map((s) => {
+        const act = _p47ActiveSection === s.name;
+        const safeName = esc(s.name).replace(/'/g, '&#39;');
+        return `<button type="button" onclick="window.AsetSettings?.setPermen47Section('${safeName}')" class="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${act ? 'bg-primary text-on-primary shadow-xs' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'}">${esc(s.name)} <span class="opacity-75 font-mono">(${s.items.length})</span></button>`;
+      }),
+    ].join('');
+
+    const foot = `<tr>${td('')}<td colspan="13" class="p-2 border border-outline-variant/50 text-center font-extrabold tracking-widest bg-surface-container-low text-on-surface text-xs">J U M L A H &nbsp;&nbsp; T O T A L</td>${tdNum(totalKeseluruhan, 'font-extrabold text-primary')}${tdNum(0)}${tdNum(totalKeseluruhan, 'font-extrabold text-primary')}${tdNum(0)}${Array.from({ length: 10 }, () => td('')).join('')}</tr>`;
 
     container.innerHTML = `
-      <div class="rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-4 overflow-x-auto">
-        <div class="text-center pb-3 mb-3 border-b border-outline-variant/30">
-          <div class="text-sm font-extrabold text-on-surface tracking-wide">LAPORAN PENGADAAN BMD BERUPA ASET LANCAR PERSEDIAAN</div>
-          <div class="text-xs font-bold text-primary mt-1">Periode: ${esc(labelPeriode)} Tahun ${esc(meta.tahun)}</div>
-          <div class="text-[11px] text-on-surface-variant mt-0.5">Pemerintah Kabupaten Sumba Barat • Pengguna Barang: BAPPERIDA</div>
+      <div class="rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-outline-variant/30">
+          <div class="flex-1 text-center">
+            <div class="text-sm font-extrabold text-on-surface tracking-wide">LAPORAN PENGADAAN BMD BERUPA ASET LANCAR PERSEDIAAN</div>
+            <div class="text-xs font-bold text-primary mt-1">Periode: ${esc(labelPeriode)} Tahun ${esc(meta.tahun)}</div>
+            <div class="text-[11px] text-on-surface-variant mt-0.5">Pemerintah Kabupaten Sumba Barat • Pengguna Barang: BAPPERIDA</div>
+          </div>
         </div>
-        <table class="w-full border-collapse min-w-[1560px]">
-          <thead>${headRow1}${headRow2}${headRow3}${headRow4}</thead>
-          <tbody>${trs}</tbody>
-          <tfoot>${foot}</tfoot>
-        </table>
-        <div class="text-[11px] text-on-surface-variant mt-2.5 text-right">Format Permendagri No. 47 • Geser tabel ke samping untuk melihat seluruh 21 kolom</div>
+        <div class="flex flex-wrap items-center gap-1.5 pb-3 mb-3 border-b border-outline-variant/20">
+          ${sectionPills}
+        </div>
+        <div class="flex items-center justify-between gap-2 mb-2 text-[11px] text-on-surface-variant">
+          <span>Format 21 Kolom Permendagri No. 47 — dikelompokkan per akun belanja, kolom <strong>Aksi</strong> tetap menempel di kanan</span>
+          <div class="inline-flex items-center gap-1.5 shrink-0">
+            <button type="button" onclick="document.getElementById('permen47ScrollBox')?.scrollBy({left:-420,behavior:'smooth'})" class="px-2.5 py-1 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-bold cursor-pointer">← Geser Kiri</button>
+            <button type="button" onclick="document.getElementById('permen47ScrollBox')?.scrollBy({left:420,behavior:'smooth'})" class="px-2.5 py-1 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-bold cursor-pointer">Geser Kanan →</button>
+          </div>
+        </div>
+        <div id="permen47ScrollBox" class="permen47-scroll overflow-x-auto pb-2">
+          <table class="w-full border-collapse min-w-[1680px]">
+            <thead>${headRow1}${headRow2}${headRow3}${headRow4}</thead>
+            <tbody>${trs}</tbody>
+            <tfoot>${foot}</tfoot>
+          </table>
+        </div>
       </div>`;
+  }
+
+  async function openEditPermen47Row(idx) {
+    const row = (w._p47LastLeafRows || [])[idx];
+    if (!row || !row.detail_id || !w.Swal) return;
+    const { value: formVal } = await w.Swal.fire({
+      title: `Edit: ${row.nama_barang || 'Item Pengadaan'}`,
+      html: `
+        <div class="text-left space-y-2.5 text-xs">
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="font-bold text-slate-600 block mb-1">Jumlah (${esc(row.satuan || 'Unit')})</label><input id="ep47Vol" type="number" min="1" value="${Number(row.jumlah || 1)}" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono" /></div>
+            <div><label class="font-bold text-slate-600 block mb-1">Harga Satuan (Rp)</label><input id="ep47Harga" type="number" min="0" value="${Number(row.harga_satuan || 0)}" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono" /></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="font-bold text-slate-600 block mb-1">Tanggal Perolehan</label><input id="ep47Tgl" type="date" value="${esc(String(row.tgl_nota || '').slice(0, 10))}" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono" /></div>
+            <div><label class="font-bold text-slate-600 block mb-1">Bentuk Kontrak</label><input id="ep47Kontrak" type="text" value="${esc(row.bentuk_kontrak || '')}" class="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
+          </div>
+          <div><label class="font-bold text-slate-600 block mb-1">Nama Penyedia</label><input id="ep47Penyedia" type="text" value="${esc(row.nama_penyedia || '')}" class="w-full px-3 py-2 rounded-xl border border-slate-200" /></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="font-bold text-slate-600 block mb-1">Kode Sub Kegiatan</label><input id="ep47SubKeg" type="text" value="${esc(row.sub_kegiatan || '')}" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono" /></div>
+            <div><label class="font-bold text-slate-600 block mb-1">No. Dokumen / SP2D</label><input id="ep47Dok" type="text" value="${esc(row.dokumen_sumber || '')}" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono" /></div>
+          </div>
+        </div>`,
+      showCancelButton: true,
+      confirmButtonText: 'Simpan Perubahan',
+      cancelButtonText: 'Batal',
+      preConfirm: () => ({
+        detail_id: row.detail_id,
+        penerimaan_id: row.penerimaan_id || '',
+        jumlah: Number(d.getElementById('ep47Vol')?.value || 1),
+        harga_satuan: Number(d.getElementById('ep47Harga')?.value || 0),
+        tgl_nota: d.getElementById('ep47Tgl')?.value || '',
+        bentuk_kontrak: d.getElementById('ep47Kontrak')?.value || '',
+        nama_penyedia: d.getElementById('ep47Penyedia')?.value || '',
+        sub_kegiatan: d.getElementById('ep47SubKeg')?.value || '',
+        dokumen_sumber: d.getElementById('ep47Dok')?.value || '',
+      }),
+    });
+    if (!formVal) return;
+    try {
+      const r = await fetch('/api/simapo/penerimaan-item-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formVal),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) throw new Error(j.message || `HTTP ${r.status}`);
+      w.Swal.fire({ icon: 'success', title: 'Diperbarui', text: 'Item pengadaan berhasil disimpan.', timer: 1800, showConfirmButton: false });
+      await loadLaporanPermen47();
+    } catch (err) {
+      w.Swal.fire({ icon: 'error', title: 'Gagal Memperbarui', text: err.message });
+    }
+  }
+
+  async function deletePermen47Row(idx) {
+    const row = (w._p47LastLeafRows || [])[idx];
+    if (!row || !row.detail_id || !w.Swal) return;
+    const res = await w.Swal.fire({
+      title: 'Hapus Item Pengadaan?',
+      text: `${row.nama_barang || 'Item'} (${row.jumlah || 1} ${row.satuan || 'Unit'}) akan dihapus dari laporan.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e11d48',
+      confirmButtonText: 'Ya, Hapus',
+      cancelButtonText: 'Batal',
+    });
+    if (!res.isConfirmed) return;
+    try {
+      const r = await fetch('/api/simapo/penerimaan-item-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ detail_id: row.detail_id }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) throw new Error(j.message || `HTTP ${r.status}`);
+      w.Swal.fire({ icon: 'success', title: 'Dihapus', text: 'Item pengadaan telah dihapus.', timer: 1600, showConfirmButton: false });
+      await loadLaporanPermen47();
+    } catch (err) {
+      w.Swal.fire({ icon: 'error', title: 'Gagal Menghapus', text: err.message });
+    }
   }
 
   async function loadLaporanPermen47() {
@@ -1460,6 +1611,9 @@
     downloadKartuPemeliharaanExcel,
     loadLaporanPermen47,
     downloadLaporanPermen47Excel,
+    setPermen47Section,
+    openEditPermen47Row,
+    deletePermen47Row,
     toggleFormPermen47,
     addPermen47Item,
     removePermen47Item,

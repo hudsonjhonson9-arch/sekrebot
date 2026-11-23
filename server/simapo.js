@@ -70,7 +70,8 @@ export const KARTU_PEMELIHARAAN_BARANG_SQL =
    ORDER BY b.nama ASC`;
 
 export const LAPORAN_PERMEN47_PENERIMAAN_SQL =
-  `SELECT b.id AS barang_id, COALESCE(b.kodebarang, '') AS kodebarang, b.nama AS nama_barang,
+  `SELECT dp.id::text AS detail_id, pb.id::text AS penerimaan_id,
+          b.id AS barang_id, COALESCE(b.kodebarang, '') AS kodebarang, b.nama AS nama_barang,
           COALESCE(b.spesifikasi, '') AS spesifikasi, COALESCE(b.satuan, 'Unit') AS satuan,
           dp.volume AS jumlah, dp.harga_satuan, dp.total_harga AS total_nilai,
           COALESCE(pb.sub_kegiatan, b.koderekening, '') AS sub_kegiatan,
@@ -328,7 +329,7 @@ export function createSimapoRouter({ query, withTransaction }) {
     const body = req.body || {};
     const noNota = S(body.no_nota);
     const tglNota = S(body.tgl_nota);
-    const penyedia = S(body.penyedia);
+    const penyedia = S(body.penyedia || body.nama_penyedia);
     const items = Array.isArray(body.items) ? body.items : [];
 
     if (!noNota || !tglNota || !penyedia || !items.length) {
@@ -369,6 +370,81 @@ export function createSimapoRouter({ query, withTransaction }) {
     } catch {
       // ROLLBACK sudah dilakukan withTransaction, jadi tidak ada nota yatim.
       return res.status(500).json({ ok: false, message: 'Gagal menyimpan penerimaan.' });
+    }
+  });
+
+  // ── Update & Hapus Item Penerimaan / Pengadaan Permen 47 ──
+  router.post('/penerimaan-item-update', async (req, res) => {
+    const b = req.body || {};
+    const detailId = S(b.detail_id);
+    const penerimaanId = S(b.penerimaan_id);
+    const inst = instansiOtomatis(req, b.instansi_id);
+    if (!detailId && !penerimaanId) {
+      return res.status(400).json({ ok: false, message: 'detail_id wajib disertakan.' });
+    }
+    const vol = N(b.jumlah ?? b.volume);
+    const harga = N(b.harga_satuan);
+    const totalHarga = Math.max(0, vol * harga);
+    try {
+      await withTransaction(async (client) => {
+        if (detailId) {
+          const upd = await client.query(
+            `UPDATE "SIMAPO".detail_penerimaan dp
+             SET volume = $1, harga_satuan = $2, total_harga = $3
+             FROM "SIMAPO".penerimaan_barang pb
+             WHERE dp.id::text = $4 AND dp.penerimaan_id = pb.id AND pb.instansi_id = $5
+             RETURNING dp.penerimaan_id::text AS pid`,
+            [vol, harga, totalHarga, detailId, inst]
+          );
+          if (!upd.rows.length) throw new Error('NOT_FOUND');
+          const pid = upd.rows[0].pid;
+          await client.query(
+            `UPDATE "SIMAPO".penerimaan_barang
+             SET tgl_nota = COALESCE(NULLIF($1,'')::date, tgl_nota),
+                 penyedia = COALESCE(NULLIF($2,''), penyedia),
+                 kontrak = COALESCE(NULLIF($3,''), kontrak),
+                 sub_kegiatan = COALESCE(NULLIF($4,''), sub_kegiatan),
+                 no_sp2d = COALESCE(NULLIF($5,''), no_sp2d),
+                 total_nilai = COALESCE((SELECT SUM(total_harga) FROM "SIMAPO".detail_penerimaan WHERE penerimaan_id::text = $6), 0)
+             WHERE id::text = $6 AND instansi_id = $7`,
+            [S(b.tgl_nota), S(b.nama_penyedia || b.penyedia), S(b.bentuk_kontrak || b.kontrak), S(b.sub_kegiatan), S(b.dokumen_sumber || b.no_sp2d), pid, inst]
+          );
+        }
+      });
+      return res.json({ ok: true, message: 'Data pengadaan berhasil diperbarui.' });
+    } catch (e) {
+      if (e.message === 'NOT_FOUND') return res.status(404).json({ ok: false, message: 'Item pengadaan tidak ditemukan.' });
+      return res.status(500).json({ ok: false, message: 'Gagal memperbarui data pengadaan.' });
+    }
+  });
+
+  router.post('/penerimaan-item-delete', async (req, res) => {
+    const b = req.body || {};
+    const detailId = S(b.detail_id);
+    const inst = instansiOtomatis(req, b.instansi_id);
+    if (!detailId) return res.status(400).json({ ok: false, message: 'detail_id wajib disertakan.' });
+    try {
+      await withTransaction(async (client) => {
+        const del = await client.query(
+          `DELETE FROM "SIMAPO".detail_penerimaan dp
+           USING "SIMAPO".penerimaan_barang pb
+           WHERE dp.id::text = $1 AND dp.penerimaan_id = pb.id AND pb.instansi_id = $2
+           RETURNING dp.penerimaan_id::text AS pid`,
+          [detailId, inst]
+        );
+        if (!del.rows.length) throw new Error('NOT_FOUND');
+        const pid = del.rows[0].pid;
+        const rem = await client.query(`SELECT COUNT(*)::int AS cnt, COALESCE(SUM(total_harga),0) AS tot FROM "SIMAPO".detail_penerimaan WHERE penerimaan_id::text = $1`, [pid]);
+        if ((rem.rows[0]?.cnt || 0) === 0) {
+          await client.query(`DELETE FROM "SIMAPO".penerimaan_barang WHERE id::text = $1 AND instansi_id = $2`, [pid, inst]);
+        } else {
+          await client.query(`UPDATE "SIMAPO".penerimaan_barang SET total_nilai = $1 WHERE id::text = $2 AND instansi_id = $3`, [rem.rows[0].tot, pid, inst]);
+        }
+      });
+      return res.json({ ok: true, message: 'Item pengadaan dihapus.' });
+    } catch (e) {
+      if (e.message === 'NOT_FOUND') return res.status(404).json({ ok: false, message: 'Item pengadaan tidak ditemukan.' });
+      return res.status(500).json({ ok: false, message: 'Gagal menghapus item pengadaan.' });
     }
   });
 
