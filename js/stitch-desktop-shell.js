@@ -137,7 +137,10 @@
           hint: 'Riwayat servis BMD & cetak kartu',
           icon: 'build',
           tone: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60',
-          action: () => { w.location.href = 'aset-kir.html#pemeliharaan'; }
+          action: () => {
+            callSwitch('aset');
+            setTimeout(() => { w.AsetSettings?.switchMobileAsetTab?.('pemeliharaan'); }, 60);
+          }
         },
         {
           key: 'kiosk',
