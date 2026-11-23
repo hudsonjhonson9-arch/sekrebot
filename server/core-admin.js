@@ -30,6 +30,21 @@ function fail(res, status, message) { return res.status(status).json({ ok: false
 export function createCoreAdminRouter({ query, openwaWatchdog = null, sendWhatsApp = null, getSchedulerActive = null } = {}) {
   const router = express.Router();
 
+  async function isValidRole(roleStr) {
+    const r = s(roleStr).toUpperCase();
+    if (!r) return false;
+    if (ROLES.includes(r) || ROLES.includes(r.replace(/_/g, ' ')) || ROLES.includes(r.replace(/\s+/g, '_'))) {
+      return true;
+    }
+    try {
+      const norm = r.replace(/\s+/g, '_');
+      const chk = await query('SELECT id FROM absen_roles WHERE id = $1 LIMIT 1', [norm]);
+      return Boolean(chk?.rows?.length);
+    } catch {
+      return false;
+    }
+  }
+
   // ── Master instansi & bidang ──────────────────────────────────────────────
   router.get('/instansi-list', async (req, res) => {
     if (requireMedia(req, res)) return;
@@ -221,7 +236,7 @@ export function createCoreAdminRouter({ query, openwaWatchdog = null, sendWhatsA
       const b = req.body || {}; const id = s(b.id), inst = s(b.instansi_id || req.user.instansi_id);
       if (!id || !s(b.nama) || !s(b.nip)) return fail(res, 400, 'id, nama, dan NIP wajib diisi.');
       if (!sameInstansi(req.user, inst)) return fail(res, 403, 'Forbidden');
-      const role = s(b.role || 'USER').toUpperCase(); if (!ROLES.includes(role)) return fail(res,400,'Role tidak valid.');
+      const role = s(b.role || 'USER').toUpperCase(); if (!(await isValidRole(role))) return fail(res,400,'Role tidak valid.');
       const sql = `INSERT INTO user_list (id,username,"NIP","Jabatan",bidang,"Status","no",pangkat,nomorhp,role,instansi_id,jam_masuk,jam_pulang,is_admin)
         VALUES ($1::bigint,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id::text AS id, username AS nama,"NIP" AS nip,role,instansi_id`;
       const r = await query(sql,[id,s(b.nama),s(b.nip),s(b.jabatan),s(b.bidang),s(b.status||'AKTIF'),b.no===''?null:b.no,s(b.pangkat),s(b.nomorhp),role,inst,s(b.jam_masuk)||null,s(b.jam_pulang)||null,MEDIA.has(role)]);
@@ -238,7 +253,7 @@ export function createCoreAdminRouter({ query, openwaWatchdog = null, sendWhatsA
       const vals=[]; const sets=[];
       const fields=[['username',b.nama],['NIP',b.nip],['no',b.no],['Jabatan',b.jabatan],['bidang',b.bidang],['Status',b.status],['pangkat',b.pangkat],['nomorhp',b.nomorhp],['role',b.role],['instansi_id',b.instansi_id],['jam_masuk',b.jam_masuk],['jam_pulang',b.jam_pulang]];
       for(const [col,v] of fields){if(v!==undefined){vals.push(v===''?null:v);sets.push(`"${col}"=$${vals.length}`);}}
-      if(b.role!==undefined){const r=s(b.role).toUpperCase();if(!ROLES.includes(r))return fail(res,400,'Role tidak valid.');vals.push(MEDIA.has(r));sets.push(`is_admin=$${vals.length}`);}
+      if(b.role!==undefined){const r=s(b.role).toUpperCase();if(!(await isValidRole(r)))return fail(res,400,'Role tidak valid.');vals.push(MEDIA.has(r));sets.push(`is_admin=$${vals.length}`);}
       if(!sets.length)return fail(res,400,'Tidak ada perubahan.');
       if(b.instansi_id!==undefined && !sameInstansi(req.user,s(b.instansi_id))) return fail(res,403,'Forbidden');
       vals.push(id);const r=await query(`UPDATE user_list SET ${sets.join(', ')} WHERE id=$${vals.length}::bigint RETURNING id::text AS id,username AS nama,"NIP" AS nip,role,instansi_id`,vals);

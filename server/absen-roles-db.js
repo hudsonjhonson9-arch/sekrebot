@@ -436,19 +436,28 @@ export async function assignUserRole(pool, { userId, nip, roleId } = {}) {
   const MEDIA_ROLE_IDS = new Set(['SUPERADMIN', 'ADMIN', 'KEPALA', 'SEKRETARIS', 'KABID', 'IRBAN']);
   const shouldBeAdmin = MEDIA_ROLE_IDS.has(cleanRoleId);
 
+  let basePerms = {};
+  if (targetUser.app_permissions && typeof targetUser.app_permissions === 'object' && !Array.isArray(targetUser.app_permissions)) {
+    basePerms = { ...targetUser.app_permissions };
+  } else if (typeof targetUser.app_permissions === 'string') {
+    try {
+      const parsed = JSON.parse(targetUser.app_permissions);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) basePerms = parsed;
+    } catch {}
+  }
+  const prevAbsensi = (basePerms.absensi && typeof basePerms.absensi === 'object' && !Array.isArray(basePerms.absensi))
+    ? basePerms.absensi
+    : { enabled: true };
+  basePerms.absensi = { ...prevAbsensi, enabled: prevAbsensi.enabled !== false, role: cleanRoleId };
+
   const updateSql = `
     UPDATE user_list
     SET role = $1,
-        app_permissions = jsonb_set(
-          COALESCE(app_permissions, '{"absensi":{"enabled":true}}'::jsonb),
-          '{absensi,role}',
-          to_jsonb($1::text),
-          true
-        ),
-        is_admin = CASE WHEN $2::boolean = true THEN true ELSE is_admin END
-    WHERE id::text = $3
+        app_permissions = $2::jsonb,
+        is_admin = $3::boolean
+    WHERE id::text = $4
     RETURNING id::text AS id, username AS nama, "NIP" AS nip, role, is_admin, app_permissions
   `;
-  const { rows } = await exec(updateSql, [cleanRoleId, shouldBeAdmin, targetUser.id]);
+  const { rows } = await exec(updateSql, [cleanRoleId, JSON.stringify(basePerms), shouldBeAdmin, targetUser.id]);
   return rows[0];
 }

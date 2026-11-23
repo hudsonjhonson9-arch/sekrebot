@@ -29,9 +29,10 @@ export function createAbsenRolesRouter(deps = {}) {
   const deleteRole = deps.deleteRole || ((p, id) => defaultDeleteRole(p || pool, id));
   const assignUserRole = deps.assignUserRole || ((p, a) => defaultAssignUserRole(p || pool, a));
 
+  const ADMIN_ROLE_SET = new Set(['SUPERADMIN', 'ADMIN', 'KEPALA', 'SEKRETARIS', 'KABID', 'IRBAN']);
   function requireAdmin(req, res) {
     const role = String(req.user?.role || '').trim().toUpperCase();
-    const isAdmin = role === 'SUPERADMIN' || role === 'ADMIN' || req.user?.is_admin === true;
+    const isAdmin = ADMIN_ROLE_SET.has(role) || req.user?.is_admin === true;
     if (!isAdmin) {
       fail(res, 403, 'Forbidden: Hanya admin yang dapat mengelola role.');
       return false;
@@ -167,6 +168,9 @@ export function createAbsenRolesRouter(deps = {}) {
       }
 
       const updatedUser = await assignUserRole(pool, { userId, nip, roleId });
+      if (typeof deps.onRoleChanged === 'function') {
+        try { deps.onRoleChanged(updatedUser); } catch {}
+      }
       return ok(res, { data: updatedUser }, 'Role pegawai berhasil diperbarui.');
     } catch (e) {
       if (e.code === 'NOT_FOUND') {

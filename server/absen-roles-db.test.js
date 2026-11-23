@@ -347,8 +347,8 @@ test('assignUserRole memperbarui role dan app_permissions pegawai', async () => 
               nama: 'Ahmad Pegawai',
               nip: '198501012010011001',
               role: params[0],
-              is_admin: params[1],
-              app_permissions: { absensi: { enabled: true, role: params[0] } },
+              is_admin: params[2],
+              app_permissions: JSON.parse(params[1]),
             },
           ],
         };
@@ -361,6 +361,30 @@ test('assignUserRole memperbarui role dan app_permissions pegawai', async () => 
   assert.equal(assigned.role, 'ADMIN');
   assert.equal(assigned.is_admin, true);
   assert.equal(updateParams[0], 'ADMIN');
-  assert.equal(updateParams[1], true); // ADMIN -> media role -> is_admin = true
-  assert.equal(updateParams[2], '42');
+  assert.deepEqual(JSON.parse(updateParams[1]), { absensi: { enabled: true, role: 'ADMIN' } });
+  assert.equal(updateParams[2], true); // ADMIN -> media role -> is_admin = true
+  assert.equal(updateParams[3], '42');
+});
+
+test('assignUserRole aman saat app_permissions kosong {} dan menurunkan is_admin saat downgrade ke USER', async () => {
+  let updateParams = null;
+  const mockPool = {
+    query: async (text, params) => {
+      if (text.includes('SELECT id') && text.includes('absen_roles')) return { rows: [{ id: 'USER' }] };
+      if (text.includes('SELECT id') && text.includes('user_list')) {
+        return { rows: [{ id: '42', nama: 'Ahmad', nip: '19850101', role: 'ADMIN', is_admin: true, app_permissions: {} }] };
+      }
+      if (text.includes('UPDATE user_list')) {
+        updateParams = params;
+        return { rows: [{ id: '42', role: params[0], is_admin: params[2], app_permissions: JSON.parse(params[1]) }] };
+      }
+      return { rows: [] };
+    },
+  };
+
+  const assigned = await assignUserRole(mockPool, { userId: '42', roleId: 'USER' });
+  assert.equal(assigned.role, 'USER');
+  assert.equal(assigned.is_admin, false);
+  assert.deepEqual(JSON.parse(updateParams[1]), { absensi: { enabled: true, role: 'USER' } });
+  assert.equal(updateParams[2], false);
 });

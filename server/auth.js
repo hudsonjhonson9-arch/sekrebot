@@ -190,7 +190,8 @@ export function createRequireRole(defaultDeps = {}) {
         let allowed = roles.has(role) || roles.has(role.replace(/_/g, ' ')) || roles.has(role.replace(/\s+/g, '_'));
         if (!allowed && roles === ABSEN_ROLES && (deps.query || defaultDeps.query || process.env.DATABASE_URL)) {
           try {
-            const roleCheck = await doQuery('SELECT id FROM absen_roles WHERE id = $1', [role]);
+            const normRole = role.replace(/\s+/g, '_');
+            const roleCheck = await doQuery('SELECT id FROM absen_roles WHERE id = $1 OR id = $2 LIMIT 1', [role, normRole]);
             if (roleCheck?.rows?.length > 0) allowed = true;
           } catch {}
         }
