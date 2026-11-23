@@ -57,6 +57,12 @@
       applyMasterOptionsToModals();
       return;
     }
+    const tok = (typeof w.getStitchToken === 'function' ? w.getStitchToken() : '') ||
+      localStorage.getItem('_native_token') || localStorage.getItem('native_token') || localStorage.getItem('_sess_token') || '';
+    if (!tok) {
+      applyMasterOptionsToModals();
+      return;
+    }
     const fetchNames = async (url, fallback) => {
       try {
         const r = await fetch(url);

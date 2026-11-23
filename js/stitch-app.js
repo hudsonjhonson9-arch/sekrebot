@@ -415,6 +415,7 @@
         localStorage.getItem('_native_token') ||
         localStorage.getItem('native_token') ||
         localStorage.getItem('_sess_token') || '';
+      if (!tok) return Promise.resolve();
 
       const faceSettingsTask = (typeof loadFaceSettingsGlobal === 'function')
         ? loadFaceSettingsGlobal().catch(() => {})
@@ -444,15 +445,13 @@
       try {
         console.log('[Stitch DB] Fetching bootstrap data from PostgreSQL...');
         const isAuthed = checkAuthStatus(opts);
-        const activeNip = isAuthed
-          ? (localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || (window._session && window._session.nip))
-          : null;
+        if (!isAuthed) return;
+        const activeNip =
+          localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || (window._session && window._session.nip);
 
         const parallelTasks = [fetch('/api/stitch/bootstrap')];
-        if (isAuthed) {
-          if (activeNip) parallelTasks.push(selectUserByNip(activeNip, { skipSecondaryLoads: true }));
-          parallelTasks.push(loadStitchFaceConfig());
-        }
+        if (activeNip) parallelTasks.push(selectUserByNip(activeNip, { skipSecondaryLoads: true }));
+        parallelTasks.push(loadStitchFaceConfig());
 
         const [res] = await Promise.all(parallelTasks);
         if (!res.ok) {
@@ -1839,6 +1838,7 @@
         localStorage.getItem('_native_token') ||
         localStorage.getItem('native_token') ||
         localStorage.getItem('_sess_token') || '';
+      if (!tok) return Promise.resolve();
       const headers = { 'Content-Type': 'application/json' };
       if (tok) headers['Authorization'] = 'Bearer ' + tok;
 

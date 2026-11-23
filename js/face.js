@@ -43,6 +43,10 @@
 
     // ponytail: load admin face settings — called from initApp(), NOT at parse time
     async function loadFaceSettingsGlobal() {
+      const tok = (typeof getStitchToken === 'function' ? getStitchToken() : '') ||
+        (typeof getNativeToken === 'function' ? getNativeToken() : '') ||
+        localStorage.getItem('_native_token') || localStorage.getItem('native_token') || localStorage.getItem('_sess_token') || '';
+      if (!tok) return;
       try {
         const res = await apiGet(P.faceSettings);
         if (res.ok) {

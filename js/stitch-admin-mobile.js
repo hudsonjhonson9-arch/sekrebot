@@ -1120,6 +1120,7 @@
   }
 
   async function loadMobileSecuritySettings() {
+    if (!getAuthToken()) return;
     const instId = getMobInstansiId();
     const pwdEl = el('mobRequirePasswordToggle');
     const chipsEl = el('mobMandatoryFaceChips');
