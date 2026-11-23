@@ -747,10 +747,11 @@
             if (sub && !allowed) sub.style.display = 'none';
           }
         };
-        toggleLink('arsip.html', 'stitchStandaloneArsipSubmenu', hasAny(['arsip.view', 'arsip.upload']));
+        toggleLink('arsip.html', 'stitchStandaloneArsipSubmenu', hasAny(['arsip.view', 'arsip.upload', 'arsip.agenda_surat']));
         toggleLink('aset-kir.html', 'stitchStandaloneAsetSubmenu', hasAny(['aset.view', 'aset.pinjam', 'aset.laporan', 'aset.tiket', 'aset.pemeliharaan', 'aset.pengaturan', 'aset.manage', 'aset.approve']));
         toggleLink('kiosk.html', null, hasAny(['admin.kiosk', 'admin.devices']));
         toggleLink('admin.html', 'stitchStandaloneAdminSubmenu', perms.some((p) => String(p || '').startsWith('admin.')));
+        toggleLink('e-slip.html', null, hasAny(['presensi.eslip', 'presensi.view_own', 'presensi.view_all', 'admin.rekap']));
         // Filter tab Aset di halaman aset-kir.html sesuai izin granular
         const asetTabPermMap = {
           'pemeliharaan': ['aset.pemeliharaan'],
@@ -762,11 +763,19 @@
           const req = asetTabPermMap[btn.getAttribute('data-aset-tab-btn')];
           if (req) btn.style.display = hasAny(req) ? '' : 'none';
         });
+        document.querySelectorAll('[data-arsip-tab-btn][data-req-perms]').forEach((btn) => {
+          const req = String(btn.getAttribute('data-req-perms') || '').split(',').map((s) => s.trim()).filter(Boolean);
+          if (req.length) btn.style.display = hasAny(req) ? '' : 'none';
+        });
         // Filter setiap submenu di bawah Panel Admin & Agenda SPPD sesuai izin spesifik
         sidebarNav.querySelectorAll('[data-req-perms]').forEach((el) => {
           const req = String(el.getAttribute('data-req-perms') || '').split(',').map((s) => s.trim()).filter(Boolean);
           if (req.length) el.style.display = hasAny(req) ? '' : 'none';
         });
+        const suratSub = sidebarNav.querySelector('a[href="arsip.html#agenda-surat"]');
+        if (suratSub) {
+          suratSub.style.display = hasAny(['arsip.agenda_surat', 'arsip.upload']) ? '' : 'none';
+        }
         const sppdSub = sidebarNav.querySelector('a[href="arsip.html#agenda-sppd"]');
         if (sppdSub) {
           sppdSub.style.display = hasAny(['perjadin.view', 'perjadin.create', 'perjadin.approve']) ? '' : 'none';
