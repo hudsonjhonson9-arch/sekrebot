@@ -1,6 +1,21 @@
 /* Stitch Presensi: 1-Tombol Masuk/Pulang/Lapangan, Anti-Spoofing GPS v3, Kalender & E-Slip */
     /* ── 4. CLOCK IN / OUT WITH REAL POSTGRESQL INSERTION ────────────── */
     let _lastStitchAbsenClick = 0;
+    let _isClockActionInFlight = false;
+    let _lastClockInSuccessAt = 0;
+
+    function setClockBtnLoading(loading, label) {
+      const inBtn = document.getElementById('clockInBtn');
+      const inTitle = document.getElementById('clockInBtnTitle');
+      if (inBtn) {
+        inBtn.disabled = Boolean(loading);
+        inBtn.classList.toggle('opacity-75', Boolean(loading));
+        inBtn.classList.toggle('pointer-events-none', Boolean(loading));
+      }
+      if (loading && inTitle && label) {
+        inTitle.textContent = label;
+      }
+    }
 
     function getStitchFaceContext() {
       if (state.currentUser && !window.MY_ID) window.MY_ID = String(state.currentUser.id || '');
@@ -29,6 +44,7 @@
     }
 
     function startClockInFlow() {
+      if (_isClockActionInFlight) return;
       const now = Date.now();
       if (now - _lastStitchAbsenClick < 2500) return;
       _lastStitchAbsenClick = now;
@@ -38,6 +54,7 @@
         return;
       }
       if (state.attendance.status === 'SUDAH_MASUK') {
+        if (now - _lastClockInSuccessAt < 5000) return; // cegah tap ganda saat baru selesai masuk
         startClockOutFlow(); // satu tombol: sudah masuk -> presensi pulang
         return;
       }
@@ -212,6 +229,9 @@
     }
 
     async function captureAndVerifySelfie(camResult) {
+      if (_isClockActionInFlight) return;
+      _isClockActionInFlight = true;
+      setClockBtnLoading(true, 'Memproses Presensi Masuk...');
       const btn = document.getElementById('btnCapturePhoto');
       if (btn) {
         btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>Mengirim Presensi...</span>`;
@@ -256,6 +276,7 @@
         const json = await res.json();
 
         if (json.ok) {
+          _lastClockInSuccessAt = Date.now();
           state.attendance.status = 'SUDAH_MASUK';
           state.attendance.clockInTime = json.witaTime;
           state.metrics.hadir += 1;
@@ -297,6 +318,10 @@
           btn.innerHTML = `<span class="material-symbols-outlined text-[20px]">camera</span><span>Ambil Foto & Kirim</span>`;
           btn.disabled = false;
         }
+      } finally {
+        _isClockActionInFlight = false;
+        setClockBtnLoading(false);
+        updateAttendanceUI();
       }
     }
 
@@ -308,44 +333,54 @@
     }
 
     async function submitClockOutRequest(isLapangan, ketLapangan, camResult) {
-      const faceNote = await verifyFaceCapture(camResult);
-      const gps = await getRealPosition();
-      const coords = gps.koordinat;
-      const locName = isLapangan
-        ? `Lapangan: ${ketLapangan.slice(0, 60)}`
-        : (state.currentLocation ? state.currentLocation.nama_lokasi : 'Kantor Bapperida');
+      if (_isClockActionInFlight) return;
+      _isClockActionInFlight = true;
+      setClockBtnLoading(true, 'Memproses Presensi Pulang...');
+      try {
+        const faceNote = await verifyFaceCapture(camResult);
+        const gps = await getRealPosition();
+        const coords = gps.koordinat;
+        const locName = isLapangan
+          ? `Lapangan: ${ketLapangan.slice(0, 60)}`
+          : (state.currentLocation ? state.currentLocation.nama_lokasi : 'Kantor Bapperida');
 
-      const res = await fetch('/api/stitch/absen', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nip: state.currentUser.nip,
-          jenis: isLapangan ? 'PULANG LUAR' : 'PULANG',
-          lokasi: locName,
-          koordinat: coords,
-          akurasi: gps.akurasi,
-          ket: (isLapangan ? `Pulang dari Lapangan: ${ketLapangan}` : 'Pulang Kerja (Stitch UI)') + faceNote
-        })
-      });
-      const json = await res.json();
-
-      if (json.ok) {
-        state.attendance.status = 'SELESAI';
-        state.attendance.clockOutTime = json.witaTime;
-        updateAttendanceUI();
-        await selectUserByNip(state.currentUser.nip);
-        showDynamicIsland({
-          type: 'success',
-          title: isLapangan ? 'Pulang Lapangan Tersimpan' : 'Presensi Pulang Tersimpan',
-          message: `Tercatat di PostgreSQL pukul ${json.witaTime}${faceNote}. Selamat beristirahat!`
+        const res = await fetch('/api/stitch/absen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nip: state.currentUser.nip,
+            jenis: isLapangan ? 'PULANG LUAR' : 'PULANG',
+            lokasi: locName,
+            koordinat: coords,
+            akurasi: gps.akurasi,
+            ket: (isLapangan ? `Pulang dari Lapangan: ${ketLapangan}` : 'Pulang Kerja (Stitch UI)') + faceNote
+          })
         });
-      } else {
-        Swal.fire('Gagal', json.message || 'Gagal menyimpan presensi pulang.', 'error');
+        const json = await res.json();
+
+        if (json.ok) {
+          state.attendance.status = 'SELESAI';
+          state.attendance.clockOutTime = json.witaTime;
+          updateAttendanceUI();
+          await selectUserByNip(state.currentUser.nip);
+          showDynamicIsland({
+            type: 'success',
+            title: isLapangan ? 'Pulang Lapangan Tersimpan' : 'Presensi Pulang Tersimpan',
+            message: `Tercatat di PostgreSQL pukul ${json.witaTime}${faceNote}. Selamat beristirahat!`
+          });
+        } else {
+          Swal.fire('Gagal', json.message || 'Gagal menyimpan presensi pulang.', 'error');
+        }
+      } finally {
+        _isClockActionInFlight = false;
+        setClockBtnLoading(false);
+        updateAttendanceUI();
       }
     }
 
     async function startClockOutFlow() {
-      if (state.attendance.status !== 'SUDAH_MASUK') return;
+      if (_isClockActionInFlight || state.attendance.status !== 'SUDAH_MASUK') return;
+      if (Date.now() - _lastClockInSuccessAt < 5000) return;
 
       Swal.fire({
         title: 'Presensi Pulang',
@@ -361,7 +396,7 @@
         showDenyButton: true,
         confirmButtonColor: '#e11d48',
         denyButtonColor: '#d97706',
-        confirmButtonText: 'Pulang di Kantor',
+        confirmButtonText: 'Pulang dari Kantor',
         denyButtonText: 'Pulang dari Lapangan',
         cancelButtonText: 'Batal',
         preDeny: () => {
