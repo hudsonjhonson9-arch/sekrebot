@@ -289,7 +289,7 @@
       if (params.get('view') === 'admin') return false;
     } catch (_) {}
     const h = (location.hash || '').toLowerCase();
-    if (h.startsWith('#admin') || h.startsWith('#kiosk')) return false;
+    if (h.startsWith('#admin') || h.startsWith('#kiosk') || h.startsWith('#profil')) return false;
     return true;
   }
 

@@ -244,11 +244,27 @@
       if (user.face_photo) {
         const img = document.getElementById('eslip-avatar-img');
         const fallback = document.getElementById('eslip-avatar-fallback');
-        if (img) {
-          img.src = user.face_photo;
-          img.classList.remove('hidden');
+        const rawPhoto = String(user.face_photo || '').trim();
+        const tok = (typeof window.getStitchToken === 'function' ? window.getStitchToken() : '') ||
+          localStorage.getItem('_native_token') || localStorage.getItem('native_token') || localStorage.getItem('_sess_token') || '';
+        let resolvedSrc = rawPhoto;
+        if (rawPhoto && !rawPhoto.startsWith('data:image/')) {
+          const driveMatch = rawPhoto.match(/(?:\/d\/|[?&]id=|\/api\/media\/raw\/)([a-zA-Z0-9_-]{10,})/);
+          if (driveMatch && tok) {
+            resolvedSrc = `/api/media/raw/${encodeURIComponent(driveMatch[1])}?token=${encodeURIComponent(tok)}`;
+          }
         }
-        if (fallback) fallback.classList.add('hidden');
+        if (img && resolvedSrc) {
+          img.onerror = function () {
+            img.classList.add('hidden');
+            if (fallback) fallback.classList.remove('hidden');
+          };
+          img.onload = function () {
+            img.classList.remove('hidden');
+            if (fallback) fallback.classList.add('hidden');
+          };
+          img.src = resolvedSrc;
+        }
       }
 
       // 2. Log Presensi Terakhir (Tanggal / Waktu / Status / Lokasi)
