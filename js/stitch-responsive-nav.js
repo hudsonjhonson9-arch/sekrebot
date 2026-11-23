@@ -239,10 +239,21 @@
             padding-left: 12px !important;
             padding-right: 12px !important;
           }
+          body.stitch-standalone-shell aside.w-72 > div,
+          body.stitch-standalone-shell aside.w-72 nav {
+            overflow-x: hidden !important;
+          }
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) nav a,
           body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) nav button {
-            padding-left: 14px !important;
-            padding-right: 14px !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            gap: 0 !important;
+            justify-content: center !important;
+          }
+          body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) #stitchAdminSubToggle,
+          body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) #stitchArsipSubToggle,
+          body.stitch-standalone-shell:not(.stitch-sb-pinned):not(.stitch-sb-resizing) aside.w-72:not(:hover) #stitchAsetSubToggle {
+            display: none !important;
           }
           body.stitch-standalone-shell aside.w-72 > div > div:first-child > div.min-w-0,
           body.stitch-standalone-shell aside.w-72 > div > div:nth-child(2) > div:first-child,
