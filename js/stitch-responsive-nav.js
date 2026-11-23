@@ -863,7 +863,8 @@
       }
     }
 
-    if (sidebarNav && !document.getElementById('stitchSidebarLogoutBtn')) {
+    const _inTgMiniApp = Boolean((window.Telegram?.WebApp?.initData || window.tg?.initData) || (window.Telegram?.WebApp?.platform && window.Telegram.WebApp.platform !== 'unknown'));
+    if (sidebarNav && !_inTgMiniApp && !document.getElementById('stitchSidebarLogoutBtn')) {
       const btn = document.createElement('button');
       btn.id = 'stitchSidebarLogoutBtn';
       btn.type = 'button';

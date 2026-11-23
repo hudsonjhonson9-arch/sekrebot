@@ -333,16 +333,27 @@
       } catch (_) {}
       bindAdminSettingToggles();
       initClock();
-      let isTgLoggedOut = false;
-      try { isTgLoggedOut = localStorage.getItem('tg_logged_out') === '1'; } catch (_) {}
       const inTgWebView = !!(window.Telegram?.WebApp?.platform && window.Telegram.WebApp.platform !== 'unknown');
       let tgInitData = window.Telegram?.WebApp?.initData || window.tg?.initData || '';
-      if (!tgInitData && inTgWebView && !isTgLoggedOut) {
+      if (!tgInitData && inTgWebView) {
         for (let i = 0; i < 8 && !tgInitData; i++) {
           await new Promise(r => setTimeout(r, 150));
           tgInitData = window.Telegram?.WebApp?.initData || window.tg?.initData || '';
         }
       }
+      const isTgMiniApp = Boolean(inTgWebView || tgInitData);
+      if (isTgMiniApp) {
+        try { localStorage.removeItem('tg_logged_out'); } catch (_) {}
+        const hideTgLogoutButtons = () => {
+          document.querySelectorAll('button[onclick*="logoutUser"], #stitchSidebarLogoutBtn, button[title="Keluar Akun"]').forEach((b) => {
+            b.style.display = 'none';
+          });
+        };
+        hideTgLogoutButtons();
+        setTimeout(hideTgLogoutButtons, 400);
+      }
+      let isTgLoggedOut = false;
+      try { isTgLoggedOut = !isTgMiniApp && localStorage.getItem('tg_logged_out') === '1'; } catch (_) {}
       const hasLocalToken = !!(
         (typeof getNativeToken === 'function' ? getNativeToken() : null) ||
         localStorage.getItem('_native_token') ||
