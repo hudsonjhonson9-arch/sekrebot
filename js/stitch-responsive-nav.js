@@ -767,8 +767,8 @@
           const req = String(btn.getAttribute('data-req-perms') || '').split(',').map((s) => s.trim()).filter(Boolean);
           if (req.length) btn.style.display = hasAny(req) ? '' : 'none';
         });
-        // Filter setiap submenu di bawah Panel Admin & Agenda SPPD sesuai izin spesifik
-        sidebarNav.querySelectorAll('[data-req-perms]').forEach((el) => {
+        // Filter setiap submenu & kartu/tombol granular bertanda data-req-perms di seluruh halaman desktop
+        document.querySelectorAll('[data-req-perms]').forEach((el) => {
           const req = String(el.getAttribute('data-req-perms') || '').split(',').map((s) => s.trim()).filter(Boolean);
           if (req.length) el.style.display = hasAny(req) ? '' : 'none';
         });

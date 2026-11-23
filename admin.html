@@ -504,7 +504,7 @@
   </div>
 
   <!-- Peringatan Akumulasi Keterlambatan -->
-  <div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col justify-between gap-space-md border border-outline-variant/30">
+  <div data-req-perms="admin.broadcast,admin.jam_libur" class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col justify-between gap-space-md border border-outline-variant/30">
     <div class="flex flex-col gap-space-md">
       <div class="flex items-start justify-between gap-space-sm">
         <div class="flex items-center gap-space-md">
@@ -610,7 +610,7 @@
 </div>
 </div>
 <!-- SECTION 2A-2: Master OPD (Instansi) & Daftar Bidang -->
-<div id="adminOpdBidangCard" data-admin-tab="tab-pepegawaian" class="hidden bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
+<div id="adminOpdBidangCard" data-admin-tab="tab-pepegawaian" data-req-perms="admin.opd_bidang,admin.instansi" class="hidden bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm border-b border-outline-variant/30 pb-3">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">

@@ -99,7 +99,7 @@
         },
         {
           key: 'admin:adminSectionOpdBidang',
-          perms: ['admin.instansi', 'admin.devices'],
+          perms: ['admin.opd_bidang', 'admin.instansi'],
           label: 'OPD & Bidang',
           hint: 'Kelola master OPD dan daftar bidang',
           icon: 'domain',
