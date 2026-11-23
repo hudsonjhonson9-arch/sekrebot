@@ -319,10 +319,23 @@
       setText('eslip-metric-terlambat', `${terlambat} Hari`);
       setText('eslip-metric-cuti', `${cuti} Hari`);
 
-      // 5. Fingerprint Validasi
+      // 5. Fingerprint Validasi & QR Code Asli
       const seed = `${empNip}|${refDate}|${logTime}|${docRef}`;
       const fingerprint = await computeValidationFingerprint(seed);
       setText('eslip-hash-display', fingerprint);
+
+      const qrBox = document.getElementById('eslip-qr-box');
+      if (qrBox && typeof window.QRCode === 'function') {
+        qrBox.innerHTML = '';
+        new window.QRCode(qrBox, {
+          text: `HADIR-ESLIP|${docRef}|${empNip}|${refDate}|${logTime}|${fingerprint}`,
+          width: 64,
+          height: 64,
+          colorDark: '#0b1c30',
+          colorLight: '#ffffff',
+          correctLevel: window.QRCode.CorrectLevel ? window.QRCode.CorrectLevel.M : 0
+        });
+      }
     } catch (err) {
       setText('eslip-emp-name', 'Gagal Memuat Data E-Slip');
       setText('eslip-status-text', 'GAGAL MEMUAT');
