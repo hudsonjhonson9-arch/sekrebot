@@ -111,3 +111,86 @@ describe('POST /api/stitch/absen offline sync', () => {
     assert.equal(rOld.status, 400);
   });
 });
+
+
+describe('Notifikasi Telegram & WA di stitch-api (/absen, /keterangan, /keterangan/approve)', () => {
+  it('mengirim notifikasi Telegram ke pegawai saat POST /api/stitch/absen berhasil', async () => {
+    const sentTg = [];
+    const app = express();
+    app.use(express.json());
+    app.use((req, _res, next) => {
+      req.user = { id: '555001', nip: '19900101', role: 'USER', instansi_id: 'bapperida' };
+      next();
+    });
+    app.use('/api/stitch', createStitchApiRouter({
+      sendTelegram: async (msg) => { sentTg.push(msg); },
+      query: async (sql, params) => {
+        if (sql.includes('FROM user_list')) return { rows: [{ id: '555001', username: 'Budi', NIP: '19900101', instansi_id: 'bapperida' }] };
+        if (sql.includes('FROM lokasiabsen')) return { rows: [{ nama: 'Kantor', latitude: -9.648769, longitude: 119.389232, radius: 250 }] };
+        if (sql.includes('FROM jam_absen')) return { rows: [{ masuk: '07:15', pulang: '14:30' }] };
+        if (sql.includes('INSERT INTO "Log_Absen"')) return { rows: [{ ID_Log: 1, Jam: params[4], 'Jenis Absen': params[5] }] };
+        return { rows: [] };
+      },
+    }));
+
+    const server = await new Promise((r) => { const s = app.listen(0, '127.0.0.1', () => r(s)); });
+    try {
+      const res = await fetch(`http://127.0.0.1:${server.address().port}/api/stitch/absen`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nip: '19900101', jenis: 'MASUK', koordinat: '-9.648769,119.389232', akurasi: 10 }),
+      });
+      assert.equal(res.status, 200);
+      await new Promise((r) => setTimeout(r, 30));
+      assert.equal(sentTg.length, 1);
+      assert.equal(sentTg[0].chatId, '555001');
+      assert.match(sentTg[0].text, /KONFIRMASI ABSENSI BERHASIL/);
+    } finally {
+      server.close();
+    }
+  });
+
+  it('memanggil notifyKeterangan (WA + Telegram) pada /keterangan & /keterangan/approve', async () => {
+    const notified = [];
+    const app = express();
+    app.use(express.json());
+    app.use((req, _res, next) => {
+      req.user = { id: '555001', nip: '19900101', role: 'ADMIN', is_admin: true, instansi_id: 'bapperida' };
+      next();
+    });
+    app.use('/api/stitch', createStitchApiRouter({
+      notifyKeterangan: async (arg) => { notified.push(arg); },
+      query: async (sql, params) => {
+        if (sql.includes('FROM user_list')) return { rows: [{ id: '555001', username: 'Budi', NIP: '19900101', Jabatan: 'Staf', instansi_id: 'bapperida' }] };
+        if (sql.includes('INSERT INTO ket_temp')) return { rows: [{ ID_Ket: params[0], Status: params[7] }] };
+        if (sql.includes('UPDATE ket_temp')) return { rows: [{ ID_Ket: 'IZN1', 'Jenis Absen': 'IZIN', Nama: 'Budi', NIP: '19900101', Ket: 'Urusan keluarga', tgl_mulai: '2026-11-23', tgl_selesai: '2026-11-23', instansi_id: 'bapperida' }] };
+        return { rows: [] };
+      },
+    }));
+
+    const server = await new Promise((r) => { const s = app.listen(0, '127.0.0.1', () => r(s)); });
+    try {
+      const port = server.address().port;
+      const r1 = await fetch(`http://127.0.0.1:${port}/api/stitch/keterangan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nip: '19900101', jenis: 'SAKIT', tgl_mulai: '2026-11-23', tgl_selesai: '2026-11-23', keterangan: 'Demam' }),
+      });
+      assert.equal(r1.status, 200);
+      const r2 = await fetch(`http://127.0.0.1:${port}/api/stitch/keterangan/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_ket: 'IZN1', status: 'DISETUJUI' }),
+      });
+      assert.equal(r2.status, 200);
+      await new Promise((r) => setTimeout(r, 30));
+      assert.equal(notified.length, 2);
+      assert.equal(notified[0].kind, 'auto');
+      assert.equal(notified[0].jenis, 'SAKIT');
+      assert.equal(notified[1].kind, 'approve');
+      assert.equal(notified[1].action, 'APPROVE');
+    } finally {
+      server.close();
+    }
+  });
+});

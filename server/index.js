@@ -307,8 +307,6 @@ export function createApp() {
   // Dedicated Stitch UI Real Database Engine
   // Seluruh /api/stitch wajib sesi (Bearer). Pembatasan per-endpoint (admin,
   // kepemilikan NIP) ada di stitch-api.js.
-  app.use('/api/stitch', requireRole(ABSEN_ROLES), createStitchApiRouter());
-
   // Router dan query di-inject, bukan di-import di dalam media.js: media.js tidak
   // pernah menyentuh pool atau Apps Script secara global, jadi test bisa instantiate
   // createMediaRouter({ query, gasUpsert }) dengan stub tanpa DB dan tanpa jaringan.
@@ -349,6 +347,11 @@ export function createApp() {
     sendTelegram,
     sendWA,
   });
+  app.use('/api/stitch', requireRole(ABSEN_ROLES), createStitchApiRouter({
+    query,
+    sendTelegram,
+    notifyKeterangan,
+  }));
   // Jadwal cron pengganti workflow n8n "Notif Absensi". Hanya di-start saat server
   // jadi entrypoint (blok isMain), tidak saat test meng-import createApp. Reminder
   // absen lewat Telegram; peringatan akumulasi lewat Telegram PM + WA pribadi

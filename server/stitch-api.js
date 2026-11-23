@@ -4,6 +4,7 @@ import path from 'path';
 import { query as defaultQuery } from './db.js';
 import { gasUpsert } from './gas.js';
 import { MEDIA_ROLES } from './auth.js';
+import { formatAbsenMessage } from './absen.js';
 import { mountStitchRekapRoutes } from './stitch-api-rekap.js';
 import { mountStitchAsetArsipRoutes } from './stitch-api-aset-arsip.js';
 
@@ -11,6 +12,8 @@ import { mountStitchAsetArsipRoutes } from './stitch-api-aset-arsip.js';
 // simapo.js). Tanpa argumen tetap memakai pool asli — caller produksi tidak berubah.
 export function createStitchApiRouter(deps = {}) {
   const query = deps.query || defaultQuery;
+  const sendTelegram = deps.sendTelegram || null;
+  const notifyKeterangan = deps.notifyKeterangan || null;
   const router = express.Router();
 
   // req.user diisi requireRole di index.js. Admin = role MEDIA_ROLES atau is_admin.
@@ -378,6 +381,33 @@ export function createStitchApiRouter(deps = {}) {
         });
       }
 
+      // Fire-and-forget: kirim konfirmasi absen ke Telegram pribadi pegawai (pola server/absen.js)
+      if (sendTelegram && u.id) {
+        Promise.resolve().then(async () => {
+          let jamMasuk = '07:15';
+          let jamPulang = '14:30';
+          try {
+            const sRes = await query(
+              `SELECT masuk, pulang FROM jam_absen WHERE instansi_id = $1 OR instansi_id IS NULL ORDER BY CASE WHEN instansi_id = $1 THEN 0 ELSE 1 END LIMIT 1`,
+              [instansiId]
+            );
+            if (sRes?.rows?.[0]?.masuk) jamMasuk = sRes.rows[0].masuk;
+            if (sRes?.rows?.[0]?.pulang) jamPulang = sRes.rows[0].pulang;
+          } catch {}
+          const text = formatAbsenMessage({
+            nama: u.username,
+            nip: u.NIP,
+            jenisAbsen: jenis,
+            namaLokasi: matchedLoc,
+            tanggal,
+            jam,
+            jamMasuk,
+            jamPulang,
+          });
+          await sendTelegram({ chatId: String(u.id), text });
+        }).catch((e) => console.warn('[stitch-api] notif Telegram absen dilewati:', e?.message || e));
+      }
+
       return res.json({
         ok: true,
         message: `Presensi ${jenis} berhasil dicatat ke database.`,
@@ -562,7 +592,7 @@ export function createStitchApiRouter(deps = {}) {
       const idKet = `${jenis.slice(0,3)}${tanggal.replace(/-/g, '')}_${nip}_${Date.now().toString().slice(-4)}`;
       const requestId = `stitch_ket_${nip}_${Date.now()}`;
       const isAdminActor = Boolean(MEDIA_ROLES.has(req.user?.role) || req.user?.is_admin);
-      const statusVal = (isAdminActor && b.auto_approve === true) ? 'DISETUJUI' : 'PENDING';
+      const statusVal = (jenis === 'IZIN' && !(isAdminActor && b.auto_approve === true)) ? 'PENDING' : 'DISETUJUI';
 
       const insertSql = `
         INSERT INTO ket_temp ("ID_Ket", "ID_Pegawai", "Nama", "NIP", "Tanggal", "Jam", "Jenis Absen", "Status", "Ket", "tgl_mulai", "tgl_selesai", "drive_link", instansi_id, request_id)
@@ -586,38 +616,35 @@ export function createStitchApiRouter(deps = {}) {
         requestId
       ]);
 
-      // Broadcast notification to Telegram dinas group (fail-soft)
-      try {
-        const tgToken = process.env.TELEGRAM_BOT_TOKEN;
-        const tgChatId = process.env.TELEGRAM_CHAT_ID;
-        const rangeText = (tglMulai === tglSelesai) ? tglMulai : `${tglMulai} s/d ${tglSelesai}`;
-        const tgMessage = `📢 *PENGAJUAN KETERANGAN PEGAWAI*\n━━━━━━━━━━━━━━━━━━\n`
-          + `👤 *${u.username}*\n🪪 NIP: \`${u.NIP}\`\n🏢 BAPPERIDA Kab. Sumba Barat\n\n`
-          + `📌 *Jenis* : *${jenis}*\n📅 *Tanggal* : ${rangeText}\n📝 *Keterangan* :\n_${keterangan}_\n`
-          + (driveLink ? `\n📎 *Bukti Dokumen* : [Lihat Berkas Google Drive](${driveLink.startsWith('http') ? driveLink : 'http://localhost:3000' + driveLink})\n` : '')
-          + `━━━━━━━━━━━━━━━━━━\n_Sistem Absensi BAPPERIDA_`;
-
-        if (tgToken && tgChatId) {
-          fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: tgChatId,
-              text: tgMessage,
-              parse_mode: 'Markdown',
-              disable_web_page_preview: false
-            })
-          }).catch(e => console.warn('[stitch-api] Telegram send warn:', e.message));
-        } else {
-          console.log('[stitch-api] Telegram dinas group broadcast logged:', { nip: u.NIP, jenis, rangeText, driveLink });
-        }
-      } catch (tgErr) {
-        console.warn('[stitch-api] Telegram broadcast error (non-fatal):', tgErr.message);
+      // Kirim notifikasi ke WhatsApp grup + Telegram (pola D:\Code\absensi server/keterangan-notify.js)
+      if (notifyKeterangan) {
+        const startD = new Date(`${tglMulai}T00:00:00Z`);
+        const endD = new Date(`${tglSelesai}T00:00:00Z`);
+        const durasi = (!Number.isNaN(startD.getTime()) && !Number.isNaN(endD.getTime()) && endD >= startD)
+          ? Math.round((endD - startD) / 86400000) + 1
+          : 1;
+        const tglRange = (tglMulai === tglSelesai) ? tglMulai : `${tglMulai} s.d. ${tglSelesai}`;
+        const buktiMime = String(b.bukti_mime || 'image/jpeg');
+        const media = b.bukti_base64 ? { base64: String(b.bukti_base64), mime: buktiMime, filename: `bukti-${nip}-${tglMulai}.jpg` } : null;
+        const empObj = { id: u.id, username: u.username, nip: u.NIP, jabatan: u.Jabatan || '', instansi_id: u.instansi_id || 'bapperida' };
+        notifyKeterangan({
+          kind: statusVal === 'DISETUJUI' ? 'auto' : 'admin_pending',
+          jenis,
+          emp: empObj,
+          ket: keterangan,
+          tglRange,
+          durasi,
+          driveLink,
+          media,
+          instansi_id: empObj.instansi_id,
+        }).catch((e) => console.warn('[stitch-api] notif keterangan dilewati:', e?.message || e));
       }
 
       return res.json({
         ok: true,
-        message: `Pengajuan ${jenis} berhasil dikirim ke database, Google Drive, dan grup dinas.`,
+        message: statusVal === 'PENDING'
+          ? `Pengajuan ${jenis} berhasil dikirim dan menunggu persetujuan admin.`
+          : `Keterangan ${jenis} berhasil dicatat dan dikirim ke grup WA & Telegram.`,
         drive_link: driveLink,
         data: result.rows[0]
       });
@@ -634,7 +661,23 @@ export function createStitchApiRouter(deps = {}) {
       const status = String(b.status || 'DISETUJUI').toUpperCase(); // DISETUJUI or DITOLAK
       if (!idKet) return res.status(400).json({ ok: false, message: 'ID_Ket wajib disertakan.' });
 
-      await query(`UPDATE ket_temp SET "Status" = $1 WHERE "ID_Ket" = $2`, [status, idKet]);
+      const upd = await query(`UPDATE ket_temp SET "Status" = $1 WHERE "ID_Ket" = $2 RETURNING *`, [status, idKet]);
+      const row = upd?.rows?.[0];
+      if (notifyKeterangan && row) {
+        const tglRange = row.tgl_mulai && row.tgl_selesai && row.tgl_mulai !== row.tgl_selesai
+          ? `${row.tgl_mulai} s.d. ${row.tgl_selesai}`
+          : (row.tgl_mulai || row.Tanggal || '-');
+        notifyKeterangan({
+          kind: 'approve',
+          action: status === 'DISETUJUI' ? 'APPROVE' : 'REJECT',
+          jenis: String(row['Jenis Absen'] || 'IZIN').toUpperCase(),
+          nama: row.Nama || '-',
+          nip: row.NIP || '',
+          ket: row.Ket || '',
+          tglRange,
+          instansi_id: row.instansi_id || 'bapperida',
+        }).catch((e) => console.warn('[stitch-api] notif approve keterangan dilewati:', e?.message || e));
+      }
       return res.json({ ok: true, message: `Status pengajuan berhasil diubah menjadi ${status}.` });
     } catch (err) {
       console.error('[stitch-api] keterangan approve error:', err);
