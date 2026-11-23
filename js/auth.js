@@ -274,7 +274,7 @@
                        }
                        
                        try {
-                          const faceOk = await syncFaceToServer(targetId, camResult.dataUrl, camResult.descriptor, user.nama, new Date().toISOString());
+                          const faceOk = await syncFaceToServer(targetId, camResult.dataUrl, camResult.descriptor, user.nama, new Date().toISOString(), userNip);
                           if (!faceOk) throw new Error('Gagal menyimpan data wajah ke server. Hubungi Admin.');
                           alert('Wajah berhasil didaftarkan! Selamat datang.');
                           await maybeAutoAbsenAfterFace();
@@ -466,14 +466,17 @@
                 window.MY_ID = registeredId;
                 window.tgUser = { first_name: payload.nama, username: payload.nip };
                 
-                const faceOk = await syncFaceToServer(registeredId, camResult.dataUrl, camResult.descriptor, payload.nama, new Date().toISOString());
+                const faceOk = await syncFaceToServer(registeredId, camResult.dataUrl, camResult.descriptor, payload.nama, new Date().toISOString(), payload.nip);
                 if (!faceOk) throw new Error('Gagal menyimpan data wajah ke server. Hubungi Admin.');
 
                 // 3. Simpan sesi ke state lokal
                 setNativeToken(regToken);
                 setSession(regToken, { nip: payload.nip, role: 'USER', instansi_id: payload.instansi_id || '' });
                 localStorage.setItem(STORAGE_KEYS.USER_ID, String(window.MY_ID));
+                localStorage.setItem('stitch_active_nip', String(payload.nip));
                 localStorage.setItem('MY_NIP', String(payload.nip));
+                localStorage.setItem('_native_token', regToken);
+                localStorage.setItem('native_token', regToken);
                 localStorage.setItem('MY_ROLE', 'USER');
                 localStorage.setItem('MY_NAME', String(payload.nama));
                 localStorage.setItem(STORAGE_KEYS.USER_OBJ, JSON.stringify(d.user || payload));

@@ -805,6 +805,7 @@
             if (!json.ok) throw new Error(json.message || 'Gagal menyimpan wajah.');
             state.currentUser.face_photo = cap.dataUrl;
             state.currentUser.face_histogram = JSON.stringify(cap.descriptor ? Array.from(cap.descriptor) : []);
+            window._faceRefCache = window._faceRefCache || {};
             window._faceRefCache[window.MY_ID] = {
               dataUrl: cap.dataUrl,
               descriptor: cap.descriptor ? Array.from(cap.descriptor) : null,
