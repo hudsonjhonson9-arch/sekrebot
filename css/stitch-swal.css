@@ -109,6 +109,7 @@ body:not(.swal2-toast-shown):not(.swal2-no-backdrop) .swal2-container {
   margin: 20px 0 0 !important;
   padding: 0 !important;
   flex-wrap: nowrap !important;
+  align-items: stretch !important;
 }
 
 .swal2-popup:not(.swal2-toast) .swal2-actions:has(> .swal2-deny:not([style*="display: none"])) {
@@ -134,7 +135,10 @@ body:not(.swal2-toast-shown):not(.swal2-no-backdrop) .swal2-container {
 .swal2-popup:not(.swal2-toast) .swal2-actions:has(> .swal2-deny:not([style*="display: none"])) .swal2-confirm,
 .swal2-popup:not(.swal2-toast) .swal2-actions:has(> .swal2-deny:not([style*="display: none"])) .swal2-deny {
   flex: 1 1 calc(50% - 5px) !important;
-  min-width: 136px !important;
+  min-width: 0 !important;
+  padding: 10px 12px !important;
+  line-height: 1.25 !important;
+  text-align: center !important;
 }
 
 .swal2-popup:not(.swal2-toast) .swal2-actions:has(> .swal2-deny:not([style*="display: none"])) .swal2-cancel {
