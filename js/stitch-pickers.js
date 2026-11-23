@@ -392,6 +392,7 @@
     injectStyles();
     const sel = resolveElement(target);
     if (!sel || sel.tagName !== 'SELECT') return null;
+    if (sel.classList.contains('swal2-select') || sel.style.display === 'none') return null;
 
     const options = Object.assign({ placeholder: '', searchable: undefined }, opts || {});
 

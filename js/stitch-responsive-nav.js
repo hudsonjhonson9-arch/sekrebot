@@ -844,7 +844,8 @@
     if (document.querySelector('select:not(.hidden), input[type="date"]')) {
       const enhanceDesktopControls = () => {
         if (!window.StitchPicker) return;
-        document.querySelectorAll('select:not(.hidden)').forEach((sel, idx) => {
+        document.querySelectorAll('select:not(.hidden):not(.swal2-select)').forEach((sel, idx) => {
+          if (sel.style.display === 'none') return;
           if (!sel.id) sel.id = 'stitchDesktopSel_' + idx;
           window.StitchPicker.enhanceSelect(sel.id, { searchable: sel.options.length > 6 });
         });
