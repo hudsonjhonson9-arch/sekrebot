@@ -666,16 +666,16 @@
           subWrap.id = 'stitchStandaloneAdminSubmenu';
           subWrap.className = 'mt-0.5 ml-3 pl-3 border-l border-slate-700/80 flex flex-col gap-0.5 overflow-hidden transition-all';
           const adminSubs = [
-            { hash: '#tab-ops', href: 'admin.html#tab-ops', icon: 'how_to_reg', label: 'Operasional & Izin' },
-            { hash: '#tab-pepegawaian', href: 'admin.html#tab-pepegawaian', icon: 'domain', label: 'OPD, Bidang & Perangkat' },
-            { hash: '#tab-config', href: 'admin.html#tab-config', icon: 'tune', label: 'Geofence, Jam & Biometrik' },
-            { hash: '#tab-pegawai', href: 'admin.html#tab-pegawai', icon: 'face', label: 'Master Pegawai & AI' },
-            { hash: '#tab-roles', href: 'admin.html#tab-roles', icon: 'manage_accounts', label: 'Kelola Role & Hak' },
-            { hash: '#tab-diagnostics', href: 'admin.html#tab-diagnostics', icon: 'terminal', label: 'Developer & OpenWA' },
-            { hash: '', href: 'cetak-tpp.html', icon: 'receipt_long', label: 'Cetak Rekap TPP' }
+            { hash: '#tab-ops', href: 'admin.html#tab-ops', icon: 'how_to_reg', label: 'Operasional & Izin', perms: ['admin.monitoring', 'admin.izin', 'keterangan.approve'] },
+            { hash: '#tab-pepegawaian', href: 'admin.html#tab-pepegawaian', icon: 'domain', label: 'OPD, Bidang & Perangkat', perms: ['admin.instansi', 'admin.devices'] },
+            { hash: '#tab-config', href: 'admin.html#tab-config', icon: 'tune', label: 'Geofence, Jam & Biometrik', perms: ['admin.geofence', 'admin.jam_libur'] },
+            { hash: '#tab-pegawai', href: 'admin.html#tab-pegawai', icon: 'face', label: 'Master Pegawai & AI', perms: ['admin.users'] },
+            { hash: '#tab-roles', href: 'admin.html#tab-roles', icon: 'manage_accounts', label: 'Kelola Role & Hak', perms: ['admin.roles'] },
+            { hash: '#tab-diagnostics', href: 'admin.html#tab-diagnostics', icon: 'terminal', label: 'Developer & OpenWA', perms: ['admin.dev'] },
+            { hash: '', href: 'cetak-tpp.html', icon: 'receipt_long', label: 'Cetak Rekap TPP', perms: ['admin.rekap', 'presensi.view_all'] }
           ];
           subWrap.innerHTML = adminSubs.map((s) => `
-            <a href="${s.href}" data-admin-sub="${s.hash}" title="${s.label}" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium">
+            <a href="${s.href}" data-admin-sub="${s.hash}" data-req-perms="${(s.perms || []).join(',')}" title="${s.label}" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium">
               <span class="material-symbols-outlined text-[16px] text-slate-500">${s.icon}</span>
               <span>${s.label}</span>
             </a>
@@ -751,26 +751,32 @@
         toggleLink('aset-kir.html', 'stitchStandaloneAsetSubmenu', hasAny(['aset.view', 'aset.pinjam', 'aset.manage', 'aset.approve']));
         toggleLink('kiosk.html', null, hasAny(['admin.kiosk', 'admin.devices']));
         toggleLink('admin.html', 'stitchStandaloneAdminSubmenu', perms.some((p) => String(p || '').startsWith('admin.')));
+        // Filter setiap submenu di bawah Panel Admin & Agenda SPPD sesuai izin spesifik
+        sidebarNav.querySelectorAll('[data-req-perms]').forEach((el) => {
+          const req = String(el.getAttribute('data-req-perms') || '').split(',').map((s) => s.trim()).filter(Boolean);
+          if (req.length) el.style.display = hasAny(req) ? '' : 'none';
+        });
+        const sppdSub = sidebarNav.querySelector('a[href="arsip.html#agenda-sppd"]');
+        if (sppdSub) {
+          sppdSub.style.display = hasAny(['perjadin.view', 'perjadin.create', 'perjadin.approve']) ? '' : 'none';
+        }
       };
       try {
         const rawP = localStorage.getItem('MY_PERMS');
-        if (rawP) {
-          applyDesktopNavPerms(JSON.parse(rawP));
-        } else {
-          const nip = (localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || '').trim();
-          const tok = localStorage.getItem('_native_token') || localStorage.getItem('native_token') || localStorage.getItem('_sess_token') || '';
-          if (nip && tok) {
-            fetch(`/api/stitch/user-data?nip=${encodeURIComponent(nip)}`)
-              .then((r) => r.ok ? r.json() : null)
-              .then((j) => {
-                const p = j?.user?.role_permissions;
-                if (Array.isArray(p)) {
-                  try { localStorage.setItem('MY_PERMS', JSON.stringify(p)); } catch (_) {}
-                  applyDesktopNavPerms(p);
-                }
-              })
-              .catch(() => {});
-          }
+        if (rawP) applyDesktopNavPerms(JSON.parse(rawP));
+        const nip = (localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || '').trim();
+        const tok = localStorage.getItem('_native_token') || localStorage.getItem('native_token') || localStorage.getItem('_sess_token') || '';
+        if (nip && tok) {
+          fetch(`/api/stitch/user-data?nip=${encodeURIComponent(nip)}`)
+            .then((r) => r.ok ? r.json() : null)
+            .then((j) => {
+              const p = j?.user?.role_permissions;
+              if (Array.isArray(p)) {
+                try { localStorage.setItem('MY_PERMS', JSON.stringify(p)); } catch (_) {}
+                applyDesktopNavPerms(p);
+              }
+            })
+            .catch(() => {});
         }
       } catch (_) {}
     }

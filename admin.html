@@ -851,8 +851,37 @@
     if (h.startsWith('tab-')) setAdminDesktopTab(h, false);
   });
 
+  const TAB_PERMS = {
+    'tab-ops': ['admin.monitoring', 'admin.izin', 'keterangan.approve'],
+    'tab-pepegawaian': ['admin.instansi', 'admin.devices'],
+    'tab-config': ['admin.geofence', 'admin.jam_libur'],
+    'tab-pegawai': ['admin.users'],
+    'tab-roles': ['admin.roles'],
+    'tab-diagnostics': ['admin.dev']
+  };
+  function filterAdminTabsByPerms() {
+    try {
+      const role = String(localStorage.getItem('MY_ROLE') || localStorage.getItem('_sess_role') || '').trim().toUpperCase().replace(/\s+/g, '_');
+      if (role === 'SUPERADMIN') return;
+      const raw = localStorage.getItem('MY_PERMS');
+      if (!raw) return;
+      const perms = JSON.parse(raw);
+      if (!Array.isArray(perms) || perms.includes('*')) return;
+      document.querySelectorAll('.tab-btn').forEach((b) => {
+        const req = TAB_PERMS[b.dataset.tab] || [];
+        const ok = !req.length || req.some((p) => perms.includes(p));
+        b.classList.toggle('hidden', !ok);
+      });
+    } catch (_) {}
+  }
+  filterAdminTabsByPerms();
+
   const initHash = (location.hash || '').replace(/^#/, '');
-  setAdminDesktopTab(initHash.startsWith('tab-') ? initHash : 'tab-ops', false);
+  const firstVisibleTab = (document.querySelector('.tab-btn:not(.hidden)')?.dataset?.tab) || 'tab-ops';
+  const chosenTab = initHash.startsWith('tab-') && !document.querySelector(`.tab-btn[data-tab="${initHash}"]`)?.classList.contains('hidden')
+    ? initHash
+    : firstVisibleTab;
+  setAdminDesktopTab(chosenTab, false);
 
   // Live WITA Clock
   function updateAdminClock() {

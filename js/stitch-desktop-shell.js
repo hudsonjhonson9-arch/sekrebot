@@ -751,6 +751,13 @@
     });
 
     const admin = isAdmin();
+    const profilAdminSec = d.getElementById('profilAdminSection');
+    if (profilAdminSec) profilAdminSec.classList.toggle('hidden', !admin);
+    const quickTpp = d.getElementById('btnQuickCetakTpp');
+    if (quickTpp) {
+      const canTpp = canAccessAdminItem({ perms: ['admin.rekap', 'presensi.view_all'] });
+      quickTpp.classList.toggle('hidden', !canTpp);
+    }
     const group = d.getElementById('stitchSidebarAdminGroup');
     if (group) {
       group.classList.toggle('hidden', !admin);
