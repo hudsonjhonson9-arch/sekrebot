@@ -45,15 +45,19 @@
         Swal.fire('Selesai', 'Anda sudah menyelesaikan absensi masuk dan pulang hari ini di database.', 'info');
         return;
       }
-      // Verifikasi wajah AI (Human.js) dengan tampilan kamera asli absensi-STICH (Screen 19).
+      // Verifikasi wajah AI (Human.js) hanya jika toggle global aktif atau NIP masuk daftar wajib wajah.
       try {
         const { faceOn, hasRef } = getStitchFaceContext();
-        if (typeof openCamOverlay === 'function') {
-          if (faceOn && !hasRef) {
+        if (faceOn && typeof openCamOverlay === 'function') {
+          if (!hasRef) {
             promptEnrollFaceFirst();
             return;
           }
           openCamOverlay(async (cam) => { await captureAndVerifySelfie(cam); });
+          return;
+        }
+        if (!faceOn) {
+          captureAndVerifySelfie(null);
           return;
         }
       } catch (e) { console.warn('[Face] fallback ke kamera sederhana:', e); }

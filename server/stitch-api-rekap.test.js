@@ -210,3 +210,45 @@ test('js/stitch-auth.js STITCH_RE mencocokkan /api/log* dan /api/rekap-absen', (
   assert.equal(re.test('/api/auth/login'), false);
   assert.equal(re.test('/api/login'), false);
 });
+
+
+test('Role non-admin dengan izin admin.rekap / presensi.view_all di absen_roles bisa melihat seluruh pegawai di rekap', async () => {
+  const users = [
+    { id: '1', nama: 'Budi Staf', nip: '199001011990011001', jabatan: 'Staf', pangkat: 'III/a', bidang: 'Litbang', instansi_id: 'bapperida', signature: null },
+    { id: '2', nama: 'Citra Staf', nip: '199101011991011001', jabatan: 'Staf', pangkat: 'III/b', bidang: 'Sekretariat', instansi_id: 'bapperida', signature: null },
+    { id: '3', nama: 'Hendra Kepala', nip: '197501011975011001', jabatan: 'Kepala Badan', pangkat: 'IV/c', bidang: 'Pimpinan', instansi_id: 'bapperida', signature: null }
+  ];
+
+  const makeQuery = (perms) => async (sql) => {
+    if (sql.includes('FROM absen_roles')) return { rows: perms ? [{ permissions: perms }] : [] };
+    if (sql.includes('FROM user_list')) return { rows: users };
+    if (sql.includes('FROM "Log_Absen"')) return { rows: [] };
+    if (sql.includes('FROM ket_temp')) return { rows: [] };
+    if (sql.includes('FROM jam_absen')) return { rows: [{ masuk: '07:15', pulang: '14:30' }] };
+    if (sql.includes('FROM libur_nasional')) return { rows: [] };
+    return { rows: [] };
+  };
+
+  // User biasa dengan role USER yang diberi izin admin.rekap -> dapat semua 3 pegawai
+  const appAllowed = makeApp(USER, makeQuery(['admin.rekap']));
+  const rRange = await getJson(appAllowed, '/api/stitch/rekap-range?dari=2026-10-05&sampai=2026-10-05');
+  assert.equal(rRange.status, 200);
+  assert.equal(rRange.body.rows.length, 3);
+
+  const rHarian = await getJson(appAllowed, '/api/stitch/rekap-harian?tanggal=2026-10-05');
+  assert.equal(rHarian.status, 200);
+  assert.equal(rHarian.body.rows.length, 3);
+
+  const rTpp = await getJson(appAllowed, '/api/stitch/rekap-tpp?periode=2026-10');
+  assert.equal(rTpp.status, 200);
+  assert.equal(rTpp.body.data.length, 3);
+
+  // User biasa tanpa izin rekap -> hanya melihat dirinya sendiri (1 pegawai) & 403 di rekap-tpp
+  const appSelf = makeApp({ ...USER, nip: '199001011990011001' }, makeQuery(['presensi.self']));
+  const rRangeSelf = await getJson(appSelf, '/api/stitch/rekap-range?dari=2026-10-05&sampai=2026-10-05');
+  assert.equal(rRangeSelf.status, 200);
+  assert.equal(rRangeSelf.body.rows.length, 1);
+
+  const rTppSelf = await getJson(appSelf, '/api/stitch/rekap-tpp?periode=2026-10');
+  assert.equal(rTppSelf.status, 403);
+});

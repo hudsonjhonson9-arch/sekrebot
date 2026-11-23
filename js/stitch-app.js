@@ -424,7 +424,7 @@
       }).then(async (res) => {
         if (!res.ok) return;
         const data = await res.json().catch(() => null);
-        const enabled = data?.enabled !== false;
+        const enabled = data?.enabled === true;
         window.FACE_RECOGNITION_ENABLED = enabled;
         if (typeof FACE_RECOGNITION_ENABLED !== 'undefined') FACE_RECOGNITION_ENABLED = enabled;
       }).catch(() => {});
@@ -1807,7 +1807,7 @@
       if (faceEl) {
         const faceEnabled = typeof window.FACE_RECOGNITION_ENABLED === 'boolean'
           ? window.FACE_RECOGNITION_ENABLED
-          : (typeof FACE_RECOGNITION_ENABLED === 'boolean' ? FACE_RECOGNITION_ENABLED : true);
+          : (typeof FACE_RECOGNITION_ENABLED === 'boolean' ? FACE_RECOGNITION_ENABLED : false);
         const livenessEnabled = window.FS_LIVENESS_MOBILE !== false;
         faceEl.checked = Boolean(faceEnabled && livenessEnabled);
       }

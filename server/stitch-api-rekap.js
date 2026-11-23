@@ -206,15 +206,32 @@ const USER_SELECT_SQL = `
   ORDER BY u.username ASC
 `;
 
+async function canViewAllRekap(req, query, MEDIA_ROLES) {
+  if (MEDIA_ROLES.has(req.user?.role) || req.user?.is_admin) return true;
+  const roleId = String(req.user?.role || 'USER').trim().toUpperCase().replace(/\s+/g, '_');
+  if (!roleId) return false;
+  try {
+    const res = await query('SELECT permissions FROM absen_roles WHERE id = $1 LIMIT 1', [roleId]);
+    const perms = res?.rows?.[0]?.permissions;
+    if (!Array.isArray(perms)) return false;
+    return perms.includes('*') || perms.includes('admin.rekap') || perms.includes('presensi.view_all');
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Mounts Stitch rekap routes (`/rekap-tpp`, `/rekap-range`, `/rekap-harian`) on the given router.
  */
 export function mountStitchRekapRoutes(router, ctx) {
-  const { query, requireAdmin, MEDIA_ROLES } = ctx;
+  const { query, MEDIA_ROLES } = ctx;
 
   // 4. REKAP TPP: Calculate discipline and attendance percentage from PostgreSQL
-  router.get('/rekap-tpp', requireAdmin, async (req, res) => {
+  router.get('/rekap-tpp', async (req, res) => {
     try {
+      if (!(await canViewAllRekap(req, query, MEDIA_ROLES))) {
+        return res.status(403).json({ ok: false, message: 'Forbidden' });
+      }
       const now = new Date(Date.now() + 8 * 3600000);
       const currentYearMonth = String(req.query.periode || `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`).slice(0, 7);
       const [yNum, mNum] = currentYearMonth.split('-').map(Number);
@@ -326,8 +343,8 @@ export function mountStitchRekapRoutes(router, ctx) {
       const signers = pickSigners(scopedUsers);
       const bidangList = getBidangList(scopedUsers);
 
-      const admin = !!(MEDIA_ROLES.has(req.user?.role) || req.user?.is_admin);
-      const targetUsers = (admin ? scopedUsers : scopedUsers.filter(u => u.nip === String(req.user?.nip || '')))
+      const canViewAll = await canViewAllRekap(req, query, MEDIA_ROLES);
+      const targetUsers = (canViewAll ? scopedUsers : scopedUsers.filter(u => u.nip === String(req.user?.nip || '')))
         .slice()
         .sort(sortPegawaiHierarchy);
 
@@ -527,10 +544,10 @@ export function mountStitchRekapRoutes(router, ctx) {
       const k = pickKepala(scopedUsers);
       const signers = pickSigners(scopedUsers);
       const bidangList = getBidangList(scopedUsers);
-      const admin = !!(MEDIA_ROLES.has(req.user?.role) || req.user?.is_admin);
+      const canViewAll = await canViewAllRekap(req, query, MEDIA_ROLES);
       const me = String(req.user?.nip || '');
 
-      const visibleUsers = (admin ? scopedUsers : scopedUsers.filter(u => u.nip === me))
+      const visibleUsers = (canViewAll ? scopedUsers : scopedUsers.filter(u => u.nip === me))
         .slice()
         .sort(sortPegawaiHierarchy);
 

@@ -415,7 +415,7 @@ export function createMediaRouter({ query, gasUpsert }) {
       const inst = req.query.instansi_id || req.user?.instansi_id || 'bapperida';
       if (!sameInstansi(req.user, inst)) return fail(res, 403, 'Forbidden');
       const row = (await query(`SELECT value FROM pengaturan WHERE key='face_recognition' AND instansi_id=$1 LIMIT 1`, [inst])).rows[0];
-      return ok(res, { enabled: row ? !['0','false','off'].includes(String(row.value).toLowerCase()) : true });
+      return ok(res, { enabled: row ? !['0','false','off'].includes(String(row.value).toLowerCase()) : false });
     } catch (e) { console.error('[media/face-toggle/get]', e); return fail(res, 503, 'Layanan tidak tersedia'); }
   });
 
