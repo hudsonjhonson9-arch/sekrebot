@@ -539,14 +539,14 @@
         asetSubWrap.id = 'stitchStandaloneAsetSubmenu';
         asetSubWrap.className = 'mt-0.5 ml-3 pl-3 border-l border-slate-700/80 flex flex-col gap-0.5 overflow-hidden transition-all';
         const asetSubs = [
-          { hash: '#inventaris', href: 'aset-kir.html#inventaris', icon: 'inventory_2', label: 'Inventaris & KIR' },
-          { hash: '#pemeliharaan', href: 'aset-kir.html#pemeliharaan', icon: 'build', label: 'Kartu Pemeliharaan' },
-          { hash: '#tiket-pinjam', href: 'aset-kir.html#tiket-pinjam', icon: 'assignment_turned_in', label: 'Tiket & Peminjaman' },
-          { hash: '#laporan-permen47', href: 'aset-kir.html#laporan-permen47', icon: 'description', label: 'Laporan Barang Permen 47' },
-          { hash: '#pengaturan', href: 'aset-kir.html#pengaturan', icon: 'tune', label: 'Pengaturan Aset' }
+          { hash: '#inventaris', href: 'aset-kir.html#inventaris', icon: 'inventory_2', label: 'Inventaris & KIR', perms: ['aset.view', 'aset.manage'] },
+          { hash: '#pemeliharaan', href: 'aset-kir.html#pemeliharaan', icon: 'build', label: 'Kartu Pemeliharaan', perms: ['aset.pemeliharaan'] },
+          { hash: '#tiket-pinjam', href: 'aset-kir.html#tiket-pinjam', icon: 'assignment_turned_in', label: 'Tiket & Peminjaman', perms: ['aset.tiket'] },
+          { hash: '#laporan-permen47', href: 'aset-kir.html#laporan-permen47', icon: 'description', label: 'Laporan Barang Permen 47', perms: ['aset.laporan'] },
+          { hash: '#pengaturan', href: 'aset-kir.html#pengaturan', icon: 'tune', label: 'Pengaturan Aset', perms: ['aset.pengaturan'] }
         ];
         asetSubWrap.innerHTML = asetSubs.map((s) => `
-          <a href="${s.href}" data-aset-sub="${s.hash}" title="${s.label}" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium">
+          <a href="${s.href}" data-aset-sub="${s.hash}" data-req-perms="${(s.perms || []).join(',')}" title="${s.label}" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors font-medium">
             <span class="material-symbols-outlined text-[16px] text-slate-500">${s.icon}</span>
             <span>${s.label}</span>
           </a>
@@ -748,9 +748,20 @@
           }
         };
         toggleLink('arsip.html', 'stitchStandaloneArsipSubmenu', hasAny(['arsip.view', 'arsip.upload']));
-        toggleLink('aset-kir.html', 'stitchStandaloneAsetSubmenu', hasAny(['aset.view', 'aset.pinjam', 'aset.manage', 'aset.approve']));
+        toggleLink('aset-kir.html', 'stitchStandaloneAsetSubmenu', hasAny(['aset.view', 'aset.pinjam', 'aset.laporan', 'aset.tiket', 'aset.pemeliharaan', 'aset.pengaturan', 'aset.manage', 'aset.approve']));
         toggleLink('kiosk.html', null, hasAny(['admin.kiosk', 'admin.devices']));
         toggleLink('admin.html', 'stitchStandaloneAdminSubmenu', perms.some((p) => String(p || '').startsWith('admin.')));
+        // Filter tab Aset di halaman aset-kir.html sesuai izin granular
+        const asetTabPermMap = {
+          'pemeliharaan': ['aset.pemeliharaan'],
+          'tiket-pinjam': ['aset.tiket'],
+          'laporan-permen47': ['aset.laporan'],
+          'pengaturan': ['aset.pengaturan']
+        };
+        document.querySelectorAll('[data-aset-tab-btn]').forEach((btn) => {
+          const req = asetTabPermMap[btn.getAttribute('data-aset-tab-btn')];
+          if (req) btn.style.display = hasAny(req) ? '' : 'none';
+        });
         // Filter setiap submenu di bawah Panel Admin & Agenda SPPD sesuai izin spesifik
         sidebarNav.querySelectorAll('[data-req-perms]').forEach((el) => {
           const req = String(el.getAttribute('data-req-perms') || '').split(',').map((s) => s.trim()).filter(Boolean);

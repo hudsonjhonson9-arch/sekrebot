@@ -984,22 +984,22 @@
               <span class="material-symbols-outlined text-[15px]">inventory_2</span>
               <span>Aset Saya</span>
             </button>
-            <button type="button" data-m-aset-tab="pemeliharaan" onclick="window.AsetSettings?.switchMobileAsetTab('pemeliharaan')" class="flex-1 py-2 px-2 rounded-xl text-slate-600 dark:text-slate-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1">
+            <button type="button" data-m-aset-tab="pemeliharaan" data-req-perms="aset.pemeliharaan" onclick="window.AsetSettings?.switchMobileAsetTab('pemeliharaan')" class="flex-1 py-2 px-2 rounded-xl text-slate-600 dark:text-slate-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1">
               <span class="material-symbols-outlined text-[15px]">build</span>
               <span>Kartu Pemeliharaan</span>
             </button>
-            <button type="button" data-m-aset-tab="pengaturan" onclick="window.AsetSettings?.switchMobileAsetTab('pengaturan')" class="flex-1 py-2 px-2 rounded-xl text-slate-600 dark:text-slate-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1">
+            <button type="button" data-m-aset-tab="pengaturan" data-req-perms="aset.pengaturan" onclick="window.AsetSettings?.switchMobileAsetTab('pengaturan')" class="flex-1 py-2 px-2 rounded-xl text-slate-600 dark:text-slate-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1">
               <span class="material-symbols-outlined text-[15px]">tune</span>
               <span>Pengaturan</span>
             </button>
           </div>
           <!-- Akses Cepat Menu Aset Lengkap (Sinkron dengan Portal Desktop) -->
           <div class="grid grid-cols-2 gap-2">
-            <a href="aset-kir.html#laporan-permen47" class="py-2 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:border-blue-500 text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors">
+            <a href="aset-kir.html#laporan-permen47" data-req-perms="aset.laporan" class="py-2 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:border-blue-500 text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors">
               <span class="material-symbols-outlined text-[16px] text-emerald-600">description</span>
               <span>Laporan Permen 47</span>
             </a>
-            <a href="aset-kir.html#tiket-pinjam" class="py-2 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:border-blue-500 text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors">
+            <a href="aset-kir.html#tiket-pinjam" data-req-perms="aset.tiket" class="py-2 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:border-blue-500 text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors">
               <span class="material-symbols-outlined text-[16px] text-blue-600">assignment_turned_in</span>
               <span>Tiket &amp; Peminjaman</span>
             </a>
@@ -4239,7 +4239,7 @@
 
   <!-- Modular Stitch Controllers -->
   <script src="js/stitch-pickers.js"></script>
-  <script src="js/stitch-desktop-shell.js?v=20261123b"></script>
+  <script src="js/stitch-desktop-shell.js?v=20261123c"></script>
   <script src="js/stitch-app.js?v=20261123e"></script>
   <script src="js/stitch-presensi.js?v=20261123b"></script>
   <script src="js/stitch-rekap.js"></script>

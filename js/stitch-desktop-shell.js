@@ -13,7 +13,7 @@
     { key: 'presensi', label: 'Presensi', icon: 'fingerprint', action: () => callSwitch('presensi') },
     { key: 'riwayat-full', label: 'Riwayat', icon: 'history', action: () => callSwitch('riwayat') },
     { key: 'arsip', label: 'Arsip', icon: 'folder_shared', perms: ['arsip.view', 'arsip.upload'], mobileTabId: 'mTab-arsip', action: () => callSwitch('arsip') },
-    { key: 'aset', label: 'Aset', icon: 'inventory_2', perms: ['aset.view', 'aset.pinjam', 'aset.manage', 'aset.approve'], mobileTabId: 'mTab-aset', action: () => callSwitch('aset') },
+    { key: 'aset', label: 'Aset', icon: 'inventory_2', perms: ['aset.view', 'aset.pinjam', 'aset.laporan', 'aset.tiket', 'aset.pemeliharaan', 'aset.pengaturan', 'aset.manage', 'aset.approve'], mobileTabId: 'mTab-aset', action: () => callSwitch('aset') },
     { key: 'profil', label: 'Profil', icon: 'person', action: () => callSwitch('profil') }
   ];
 
@@ -123,7 +123,7 @@
         },
         {
           key: 'aset:laporan-permen47',
-          perms: ['aset.view', 'aset.manage', 'admin.rekap'],
+          perms: ['aset.laporan'],
           label: 'Laporan Aset Permen 47',
           hint: 'Pengadaan barang pakai habis & Excel',
           icon: 'description',
@@ -132,7 +132,7 @@
         },
         {
           key: 'aset:kartu-pemeliharaan',
-          perms: ['aset.view', 'aset.manage', 'admin.rekap'],
+          perms: ['aset.pemeliharaan'],
           label: 'Kartu Pemeliharaan Aset',
           hint: 'Riwayat servis BMD & cetak kartu',
           icon: 'build',
@@ -758,6 +758,13 @@
       const canTpp = canAccessAdminItem({ perms: ['admin.rekap', 'presensi.view_all'] });
       quickTpp.classList.toggle('hidden', !canTpp);
     }
+    // Filter tombol/tab granular bertanda data-req-perms di halaman mobile (mis. sub-fitur Aset)
+    d.querySelectorAll('[data-req-perms]').forEach((el) => {
+      const req = String(el.getAttribute('data-req-perms') || '').split(',').map((s) => s.trim()).filter(Boolean);
+      if (!req.length) return;
+      const allowed = canAccessPrimaryItem({ perms: req });
+      el.classList.toggle('hidden', !allowed);
+    });
     const group = d.getElementById('stitchSidebarAdminGroup');
     if (group) {
       group.classList.toggle('hidden', !admin);
