@@ -343,10 +343,16 @@
             </button>
             <h2 class="text-base font-bold text-slate-900 dark:text-white">Riwayat Kehadiran</h2>
           </div>
-          <button onclick="exportRiwayatPDF()" class="flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900 hover:bg-blue-100 transition-colors cursor-pointer" title="Unduh Laporan PDF">
-            <span class="material-symbols-outlined text-[14px]">picture_as_pdf</span>
-            <span>Unduh PDF</span>
-          </button>
+          <div class="flex items-center gap-1.5">
+            <a href="e-slip.html" class="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-900 hover:bg-emerald-100 transition-colors" title="Buka E-Slip Bukti Presensi">
+              <span class="material-symbols-outlined text-[14px]">receipt</span>
+              <span>E-Slip</span>
+            </a>
+            <button onclick="exportRiwayatPDF()" class="flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900 hover:bg-blue-100 transition-colors cursor-pointer" title="Unduh Laporan PDF">
+              <span class="material-symbols-outlined text-[14px]">picture_as_pdf</span>
+              <span>Unduh PDF</span>
+            </button>
+          </div>
         </div>
 
         <div class="p-5 flex flex-col gap-4 overflow-y-auto">
@@ -2198,10 +2204,16 @@
           <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Cetak Rekapitulasi TPP Pegawai BAPPERIDA</h1>
           <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Laporan resmi persentase kehadiran dan potongan keterlambatan yang dikalkulasi otomatis dari seluruh log presensi.</p>
         </div>
-        <button onclick="downloadTppPdf()" class="min-h-[42px] px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer">
-          <span class="material-symbols-outlined text-[18px]">download</span>
-          <span>Unduh Laporan TPP (PDF)</span>
-        </button>
+        <div class="flex flex-wrap items-center gap-2">
+          <a href="cetak-tpp.html" class="min-h-[42px] px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">print</span>
+            <span>Pratinjau Cetak</span>
+          </a>
+          <button onclick="downloadTppPdf()" class="min-h-[42px] px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">download</span>
+            <span>Unduh Laporan TPP (PDF)</span>
+          </button>
+        </div>
       </div>
 
       <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-hidden md:overflow-x-auto">
@@ -2261,6 +2273,10 @@
             <p class="text-xs font-mono text-blue-600 dark:text-blue-400 font-bold mt-0.5" id="profilViewNip">NIP. -</p>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1" id="profilViewJabatan">Aparatur BAPPERIDA</p>
             <span class="mt-2 px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full text-[10px] font-bold" id="profilViewPangkat">Golongan Ruang</span>
+            <a href="e-slip.html" class="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-200/70 dark:border-blue-800/70 text-xs font-bold transition-colors">
+              <span class="material-symbols-outlined text-[16px]">receipt</span>
+              <span>Buka E-Slip Kehadiran</span>
+            </a>
           </div>
 
           <!-- Biometrik Wajah & Spesimen Tanda Tangan (Fitur dari D:\Code\absensi) -->

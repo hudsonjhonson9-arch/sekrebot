@@ -493,7 +493,8 @@
                 <p class="text-xs text-on-surface-variant">Catatan waktu kehadiran sah terverifikasi radius koordinat BAPPERIDA</p>
               </div>
             </div>
-            <div class="flex items-center gap-1.5">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <input type="month" id="desktopLogMonth" onchange="renderDesktopLogsTable(state.userLogs)" class="px-2.5 py-1 rounded-xl border border-outline-variant/40 bg-surface-container-low text-xs font-mono text-on-surface focus:outline-none focus:border-blue-500" title="Filter berdasarkan bulan" />
               <button onclick="filterDesktopLogs('all')" id="tabLogAll" class="px-3 py-1 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-xs transition-all cursor-pointer">Semua</button>
               <button onclick="filterDesktopLogs('hadir')" id="tabLogHadir" class="px-3 py-1 rounded-xl text-on-surface-variant hover:bg-surface-container font-semibold text-xs transition-all cursor-pointer">Hadir</button>
               <button onclick="filterDesktopLogs('izin')" id="tabLogIzin" class="px-3 py-1 rounded-xl text-on-surface-variant hover:bg-surface-container font-semibold text-xs transition-all cursor-pointer">Izin / Sakit</button>
@@ -1135,6 +1136,10 @@
       let days = Array.from(dateMap.values()).sort((a, b) => (b.tanggal || '').localeCompare(a.tanggal || ''));
 
       // Apply Filter
+      const selectedMonth = (document.getElementById('desktopLogMonth')?.value || '').trim();
+      if (selectedMonth) {
+        days = days.filter(d => String(d.tanggal || '').startsWith(selectedMonth));
+      }
       if (state.currentFilter === 'hadir') {
         days = days.filter(d => d.masuk || d.pulang);
       } else if (state.currentFilter === 'izin') {
