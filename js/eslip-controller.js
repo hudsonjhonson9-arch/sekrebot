@@ -325,16 +325,28 @@
       setText('eslip-hash-display', fingerprint);
 
       const qrBox = document.getElementById('eslip-qr-box');
-      if (qrBox && typeof window.QRCode === 'function') {
+      if (qrBox) {
+        const qrPayload = `HADIR-ESLIP|${docRef}|${empNip}|${refDate}|${logTime}|${fingerprint}`;
         qrBox.innerHTML = '';
-        new window.QRCode(qrBox, {
-          text: `HADIR-ESLIP|${docRef}|${empNip}|${refDate}|${logTime}|${fingerprint}`,
-          width: 64,
-          height: 64,
-          colorDark: '#0b1c30',
-          colorLight: '#ffffff',
-          correctLevel: window.QRCode.CorrectLevel ? window.QRCode.CorrectLevel.M : 0
-        });
+        if (typeof window.qrcode === 'function') {
+          const qr = window.qrcode(0, 'M');
+          qr.addData(qrPayload);
+          qr.make();
+          qrBox.innerHTML = qr.createSvgTag({ scalable: true, margin: 1 });
+          const svg = qrBox.querySelector('svg');
+          if (svg) {
+            svg.setAttribute('class', 'w-full h-full');
+          }
+        } else if (typeof window.QRCode === 'function') {
+          new window.QRCode(qrBox, {
+            text: qrPayload,
+            width: 64,
+            height: 64,
+            colorDark: '#0b1c30',
+            colorLight: '#ffffff',
+            correctLevel: window.QRCode.CorrectLevel ? window.QRCode.CorrectLevel.M : 0
+          });
+        }
       }
     } catch (err) {
       setText('eslip-emp-name', 'Gagal Memuat Data E-Slip');

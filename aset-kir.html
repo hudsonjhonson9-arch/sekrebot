@@ -1272,6 +1272,14 @@
             <div class="font-mono font-semibold text-slate-800 dark:text-slate-200 mt-0.5">${escapeAsetHtml(a.no_polisi || '-')}</div>
           </div>
         </div>
+        <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 flex items-center gap-3">
+          <div id="detailAsetQrBox" class="w-20 h-20 p-1 bg-white rounded-lg border border-slate-200 shrink-0 flex items-center justify-center overflow-hidden"></div>
+          <div class="min-w-0 flex-1">
+            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">QR Label Inventaris KIR</div>
+            <div class="font-mono text-xs font-bold text-slate-900 dark:text-white mt-0.5 break-all">${escapeAsetHtml(a.qrcode || a.nomorinventaris || a.kodebarang || '-')}</div>
+            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Pindai QR ini langsung untuk verifikasi &amp; peminjaman barang.</div>
+          </div>
+        </div>
       </div>
     `;
 
@@ -1279,9 +1287,22 @@
       title: 'Detail Unit Aset BMD',
       html,
       showCancelButton: true,
-      confirmButtonText: 'Lihat Barcode KIR',
+      showDenyButton: false,
+      confirmButtonText: 'Cetak Label QR',
       cancelButtonText: 'Tutup',
-      confirmButtonColor: '#2563eb'
+      confirmButtonColor: '#2563eb',
+      didOpen: () => {
+        const box = document.getElementById('detailAsetQrBox');
+        const qrText = String(a.qrcode || a.nomorinventaris || a.kodebarang || a.id || '').trim();
+        if (box && qrText && typeof window.qrcode === 'function') {
+          const qr = window.qrcode(0, 'M');
+          qr.addData(qrText);
+          qr.make();
+          box.innerHTML = qr.createSvgTag({ scalable: true, margin: 1 });
+          const svg = box.querySelector('svg');
+          if (svg) svg.setAttribute('class', 'w-full h-full');
+        }
+      }
     }).then((res) => {
       if (res.isConfirmed) {
         showAsetBarcodeModal(a);

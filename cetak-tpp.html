@@ -371,16 +371,26 @@
     const qrValidCode = `VALID_BKPSDM_SBX_${_periodMeta.tahun}_TPP`;
     setText('tppQrValidCode', qrValidCode);
     const tppQrBox = document.getElementById('tpp-qr-box');
-    if (tppQrBox && typeof window.QRCode === 'function') {
+    if (tppQrBox) {
+      const qrPayload = `HADIR-TPP|${qrValidCode}|${_periodMeta.bulan}_${_periodMeta.tahun}|${refBase}`;
       tppQrBox.innerHTML = '';
-      new window.QRCode(tppQrBox, {
-        text: `HADIR-TPP|${qrValidCode}|${_periodMeta.bulan}_${_periodMeta.tahun}|${refBase}`,
-        width: 80,
-        height: 80,
-        colorDark: '#0b1c30',
-        colorLight: '#ffffff',
-        correctLevel: window.QRCode.CorrectLevel ? window.QRCode.CorrectLevel.M : 0
-      });
+      if (typeof window.qrcode === 'function') {
+        const qr = window.qrcode(0, 'M');
+        qr.addData(qrPayload);
+        qr.make();
+        tppQrBox.innerHTML = qr.createSvgTag({ scalable: true, margin: 1 });
+        const svg = tppQrBox.querySelector('svg');
+        if (svg) svg.setAttribute('class', 'w-full h-full');
+      } else if (typeof window.QRCode === 'function') {
+        new window.QRCode(tppQrBox, {
+          text: qrPayload,
+          width: 80,
+          height: 80,
+          colorDark: '#0b1c30',
+          colorLight: '#ffffff',
+          correctLevel: window.QRCode.CorrectLevel ? window.QRCode.CorrectLevel.M : 0
+        });
+      }
     }
     setText('tppTteKasubag', `Ref: ${refBase}-PPK`);
     setText('tppTteKepala', `Ref: ${refBase}-PA`);

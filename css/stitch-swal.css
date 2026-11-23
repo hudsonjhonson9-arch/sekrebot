@@ -127,9 +127,13 @@ body:not(.swal2-toast-shown):not(.swal2-no-backdrop) .swal2-container {
   transition: transform 0.15s ease, background-color 0.15s ease, filter 0.15s ease !important;
   margin: 0 !important;
   flex: 1 !important;
-  display: inline-flex !important;
+  display: inline-flex;
   align-items: center !important;
   justify-content: center !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-styled[style*="display: none"] {
+  display: none !important;
 }
 
 .swal2-popup:not(.swal2-toast) .swal2-actions:has(> .swal2-deny:not([style*="display: none"])) .swal2-confirm,
