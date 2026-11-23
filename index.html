@@ -1403,6 +1403,28 @@
                 <span class="text-[11px] text-slate-400">Belum ada pegawai wajib scan wajah.</span>
               </div>
             </div>
+
+            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 space-y-2.5">
+              <div>
+                <p class="font-bold text-slate-900 dark:text-white">Threshold Kemiripan &amp; Liveness Face AI</p>
+                <p class="text-[11px] text-slate-400">Atur ambang skor biometrik mobile, meja absen, dan liveness (0.10 – 0.95)</p>
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="text-[10px] font-semibold text-slate-500">Mobile</label>
+                  <input id="mobFaceThreshold" type="number" step="0.05" min="0.1" max="0.95" value="0.55" class="mt-0.5 w-full min-h-[36px] px-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white" />
+                </div>
+                <div>
+                  <label class="text-[10px] font-semibold text-slate-500">Meja/Kiosk</label>
+                  <input id="mobMejaThreshold" type="number" step="0.05" min="0.1" max="0.95" value="0.55" class="mt-0.5 w-full min-h-[36px] px-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white" />
+                </div>
+                <div>
+                  <label class="text-[10px] font-semibold text-slate-500">Liveness</label>
+                  <input id="mobLivenessScore" type="number" step="0.05" min="0.1" max="0.95" value="0.40" class="mt-0.5 w-full min-h-[36px] px-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white" />
+                </div>
+              </div>
+              <button type="button" onclick="saveMobileFaceThresholds()" class="w-full min-h-[36px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer">Simpan Threshold Face AI</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1565,6 +1587,35 @@
           </div>
           <div id="mobBidangList" class="space-y-2 text-xs">
             <div class="p-3 text-center text-slate-400">Memuat daftar bidang...</div>
+          </div>
+        </div>
+
+        <!-- Card 3: Edit Identitas & Kop Surat Instansi -->
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+          <div class="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
+            <span class="material-symbols-outlined text-blue-600 text-[20px]">badge</span>
+            <span>Identitas &amp; Kop Surat Instansi</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+            <input id="mobInstNama" type="text" placeholder="Nama lengkap instansi" class="min-h-[40px] px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+            <input id="mobInstHeader" type="text" placeholder="Header kop surat (mis. PEMKAB SUMBA BARAT)" class="min-h-[40px] px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+            <input id="mobInstAlamat" type="text" placeholder="Alamat kantor instansi" class="sm:col-span-2 min-h-[40px] px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-blue-500" />
+          </div>
+          <button type="button" onclick="saveMobileInstansiProfile()" class="min-h-[40px] px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer">Simpan Identitas Instansi</button>
+        </div>
+
+        <!-- Card 4: Pairing Perangkat Terminal Meja Absen -->
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+          <div class="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
+            <span class="material-symbols-outlined text-purple-600 text-[20px]">devices</span>
+            <span>Pairing Perangkat Meja Absen</span>
+          </div>
+          <div class="flex gap-2">
+            <input id="mobDeviceLabelInput" type="text" maxlength="80" placeholder="Nama tablet/kiosk (mis. Tablet Lobi)" class="flex-1 min-h-[40px] px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-purple-500" />
+            <button type="button" onclick="issueMobileDeviceToken()" class="min-h-[40px] px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shrink-0 cursor-pointer">+ Terbitkan Token</button>
+          </div>
+          <div id="mobDeviceList" class="space-y-2 text-xs">
+            <div class="p-3 text-center text-slate-400">Memuat daftar perangkat...</div>
           </div>
         </div>
       </div>
@@ -4198,7 +4249,7 @@
   <script src="js/stitch-arsip-columns.js"></script>
   <script src="js/stitch-sppd-generator.js"></script>
   <script src="js/stitch-arsip-agenda.js"></script>
-  <script src="js/stitch-admin-mobile.js?v=20261123"></script>
+  <script src="js/stitch-admin-mobile.js?v=20261123b"></script>
   <script src="js/rekap-pdf.js"></script>
   <script src="js/stitch-admin-rekap.js?v=20261122a"></script>
 </body>

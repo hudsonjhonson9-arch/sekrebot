@@ -658,9 +658,9 @@
             { hash: '#tab-ops', href: 'admin.html#tab-ops', icon: 'how_to_reg', label: 'Operasional & Izin' },
             { hash: '#tab-pepegawaian', href: 'admin.html#tab-pepegawaian', icon: 'domain', label: 'OPD, Bidang & Perangkat' },
             { hash: '#tab-config', href: 'admin.html#tab-config', icon: 'tune', label: 'Geofence, Jam & Biometrik' },
+            { hash: '#tab-pegawai', href: 'admin.html#tab-pegawai', icon: 'face', label: 'Master Pegawai & AI' },
+            { hash: '#tab-roles', href: 'admin.html#tab-roles', icon: 'manage_accounts', label: 'Kelola Role & Hak' },
             { hash: '#tab-diagnostics', href: 'admin.html#tab-diagnostics', icon: 'terminal', label: 'Developer & OpenWA' },
-            { hash: '', href: 'index.html#admin:adminSectionPegawai', icon: 'face', label: 'Master Pegawai & AI' },
-            { hash: '', href: 'index.html#admin:adminSectionRoles', icon: 'manage_accounts', label: 'Kelola Role & Hak' },
             { hash: '', href: 'cetak-tpp.html', icon: 'receipt_long', label: 'Cetak Rekap TPP' }
           ];
           subWrap.innerHTML = adminSubs.map((s) => `
@@ -700,6 +700,25 @@
           syncSub();
         }
       }
+    }
+
+    // 1b. Tambahkan tautan E-Slip Kehadiran & Profil di sidebar desktop jika belum ada
+    if (sidebarNav && !sidebarNav.querySelector('a[href="e-slip.html"]')) {
+      const rekapLink = sidebarNav.querySelector('a[href="rekap.html"]');
+      if (rekapLink) {
+        const eslipA = document.createElement('a');
+        eslipA.href = 'e-slip.html';
+        eslipA.className = 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors font-medium text-sm';
+        eslipA.innerHTML = '<span class="material-symbols-outlined text-[20px]">receipt</span><span>E-Slip Kehadiran</span>';
+        rekapLink.insertAdjacentElement('afterend', eslipA);
+      }
+    }
+    if (sidebarNav && !sidebarNav.querySelector('a[href="index.html#profil"]')) {
+      const profilA = document.createElement('a');
+      profilA.href = 'index.html#profil';
+      profilA.className = 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors font-medium text-sm';
+      profilA.innerHTML = '<span class="material-symbols-outlined text-[20px]">account_circle</span><span>Profil &amp; Biometrik</span>';
+      sidebarNav.appendChild(profilA);
     }
 
     // 2. Sinkronisasi profil & foto avatar user login asli pada top header halaman desktop

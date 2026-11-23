@@ -111,15 +111,14 @@
 <span class="material-symbols-outlined text-[18px]">terminal</span>
 <span>Developer &amp; OpenWA</span>
 </button>
-<span class="w-px h-6 bg-outline-variant/30 mx-1 shrink-0"></span>
-<a href="index.html#admin:adminSectionPegawai" class="flex items-center gap-space-xs px-space-md py-2 rounded-xl font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all shrink-0">
+<button class="tab-btn flex items-center gap-space-xs px-space-md py-2 rounded-xl font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer shrink-0" data-tab="tab-pegawai" type="button">
 <span class="material-symbols-outlined text-[18px]">face</span>
 <span>Master Pegawai &amp; AI</span>
-</a>
-<a href="index.html#admin:adminSectionRoles" class="flex items-center gap-space-xs px-space-md py-2 rounded-xl font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all shrink-0">
+</button>
+<button class="tab-btn flex items-center gap-space-xs px-space-md py-2 rounded-xl font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer shrink-0" data-tab="tab-roles" type="button">
 <span class="material-symbols-outlined text-[18px]">manage_accounts</span>
 <span>Kelola Role &amp; Hak</span>
-</a></div>
+</button></div>
 </div>
 <!-- SECTION 1: Health Matrix Live (Developer & Diagnostik Live Card) -->
 <div id="devHealthCard" data-admin-tab="tab-diagnostics" class="hidden bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
@@ -568,6 +567,21 @@
 <div class="w-10 h-5 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
 </label>
 </div>
+<div class="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-2.5">
+<div class="flex flex-col gap-0.5">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Pegawai Wajib Kata Sandi (NIP Terpilih)</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Default nonaktif; hanya NIP di daftar ini yang wajib sandi saat toggle global OFF.</span>
+</div>
+<div class="flex flex-col sm:flex-row gap-2">
+<select id="adminMandatoryPwdSelect" class="flex-1 min-h-[40px] bg-surface-container-lowest border border-outline-variant/40 rounded-xl px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary">
+<option value="">-- Pilih pegawai untuk ditambahkan --</option>
+</select>
+<button id="btnAddMandatoryPwdNip" type="button" class="min-h-[40px] px-4 py-1.5 rounded-xl bg-primary text-on-primary text-xs font-bold shrink-0 cursor-pointer">+ Tambah</button>
+</div>
+<div id="adminMandatoryPwdChips" class="flex flex-wrap gap-1.5">
+<span class="text-xs text-on-surface-variant">Belum ada pegawai wajib kata sandi.</span>
+</div>
+</div>
 <div id="adminInstansiIdentitasWrap" class="flex flex-col gap-space-md pt-1 border-t border-outline-variant/30">
 <div class="flex items-center justify-between">
 <span class="font-title-md text-title-md text-on-surface font-semibold">Identitas Instansi (Kop Surat)</span>
@@ -760,10 +774,41 @@
 </div>
 </div>
 </div>
+<!-- SECTION: Master Pegawai & Biometrik AI (Desktop Native) -->
+<div id="adminPegawaiCard" data-admin-tab="tab-pegawai" class="hidden bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-outline-variant/30 pb-3">
+    <div>
+      <h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Master Pegawai &amp; Biometrik AI</h3>
+      <p class="font-body-sm text-body-sm text-on-surface-variant">Kelola peran (role), reset kata sandi default, dan reset data wajah pegawai.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <input id="desktopPegawaiSearch" type="text" placeholder="Cari nama, NIP, bidang..." class="min-h-[40px] bg-surface-container-low border border-outline-variant/40 rounded-xl px-3 py-1.5 text-xs text-on-surface outline-none focus:border-primary w-56" />
+      <button id="btnReloadDesktopPegawai" type="button" class="min-h-[40px] px-3 py-1.5 rounded-xl bg-surface-container-high text-on-surface text-xs font-bold cursor-pointer">Muat Ulang</button>
+    </div>
+  </div>
+  <div id="desktopPegawaiList" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 text-xs">
+    <div class="col-span-full py-6 text-center text-on-surface-variant">Memuat direktori pegawai...</div>
+  </div>
+</div>
+
+<!-- SECTION: Kelola Role & Hak Akses (Desktop Native) -->
+<div id="adminRolesCard" data-admin-tab="tab-roles" class="hidden bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md border border-outline-variant/30">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-outline-variant/30 pb-3">
+    <div>
+      <h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Kelola Role &amp; Hak Akses</h3>
+      <p class="font-body-sm text-body-sm text-on-surface-variant">Atur role sistem, buat role custom baru, dan centang hak akses modul per role.</p>
+    </div>
+    <button id="btnNewDesktopRole" type="button" class="min-h-[40px] px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold cursor-pointer">+ Buat Role Baru</button>
+  </div>
+  <div id="desktopRolesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+    <div class="col-span-full py-6 text-center text-on-surface-variant">Memuat daftar role...</div>
+  </div>
+</div>
+
 <script>
-  // Real Tab Switcher untuk Panel Admin Desktop (mendukung hash #tab-ops | #tab-pepegawaian | #tab-config | #tab-diagnostics)
+  // Real Tab Switcher untuk Panel Admin Desktop (mendukung hash #tab-ops | #tab-pepegawaian | #tab-config | #tab-diagnostics | #tab-pegawai | #tab-roles)
   function setAdminDesktopTab(tabId, updateHash) {
-    const valid = ['tab-ops', 'tab-pepegawaian', 'tab-config', 'tab-diagnostics'];
+    const valid = ['tab-ops', 'tab-pepegawaian', 'tab-config', 'tab-diagnostics', 'tab-pegawai', 'tab-roles'];
     const target = valid.includes(tabId) ? tabId : 'tab-ops';
 
     document.querySelectorAll('.tab-btn').forEach((b) => {
@@ -788,6 +833,12 @@
     if (target === 'tab-diagnostics') {
       if (typeof window.runDevDiagnostics === 'function') window.runDevDiagnostics();
       if (typeof window.renderDevLogTable === 'function') window.renderDevLogTable();
+    }
+    if (target === 'tab-pegawai' && typeof window.loadDesktopPegawaiTab === 'function') {
+      window.loadDesktopPegawaiTab();
+    }
+    if (target === 'tab-roles' && typeof window.loadDesktopRolesTab === 'function') {
+      window.loadDesktopRolesTab();
     }
   }
 

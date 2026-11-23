@@ -845,6 +845,72 @@
         : 'px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[11px] font-bold font-mono';
     };
 
+    const pwdMandSelect = $('adminMandatoryPwdSelect');
+    const btnAddPwdMand = $('btnAddMandatoryPwdNip');
+    const pwdMandChips = $('adminMandatoryPwdChips');
+    let desktopMandatoryPwdNips = [];
+
+    const renderDesktopPwdChips = () => {
+      if (!pwdMandChips) return;
+      if (!desktopMandatoryPwdNips.length) {
+        pwdMandChips.innerHTML = '<span class="text-xs text-on-surface-variant">Belum ada pegawai wajib kata sandi.</span>';
+        return;
+      }
+      pwdMandChips.innerHTML = desktopMandatoryPwdNips.map((nip) => `
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+          <span>${escapeHtml(nip)}</span>
+          <button type="button" data-rm-pwd-nip="${escapeHtml(nip)}" class="hover:text-rose-600 font-bold cursor-pointer" aria-label="Hapus">&times;</button>
+        </span>
+      `).join('');
+    };
+
+    const persistDesktopPwdNips = async () => {
+      try {
+        const res = await fetch('/api/password-toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ instansi_id: activeInstansiId || instId, mandatory_nips: desktopMandatoryPwdNips })
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+        notifyToast('success', 'Wajib Sandi Disimpan', `${desktopMandatoryPwdNips.length} NIP wajib kata sandi.`);
+      } catch (err) {
+        notifyToast('error', 'Gagal Menyimpan Wajib Sandi', err.message);
+      }
+    };
+
+    if (pwdMandSelect) {
+      fetch('/api/user-list?format=compact').then((r) => r.json()).then((j) => {
+        const rows = j?.rows || j?.data || [];
+        pwdMandSelect.innerHTML = '<option value="">-- Pilih pegawai untuk ditambahkan --</option>' +
+          rows.filter((u) => u.nip).map((u) => `<option value="${escapeHtml(u.nip)}">${escapeHtml(u.nama || u.username || u.nip)} — ${escapeHtml(u.nip)}</option>`).join('');
+      }).catch(() => {});
+    }
+
+    if (btnAddPwdMand && pwdMandSelect) {
+      btnAddPwdMand.addEventListener('click', () => {
+        const nip = String(pwdMandSelect.value || '').trim();
+        if (!nip) return;
+        if (!desktopMandatoryPwdNips.includes(nip)) {
+          desktopMandatoryPwdNips.push(nip);
+          renderDesktopPwdChips();
+          persistDesktopPwdNips();
+        }
+        pwdMandSelect.value = '';
+      });
+    }
+
+    if (pwdMandChips) {
+      pwdMandChips.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('[data-rm-pwd-nip]');
+        if (!btn) return;
+        const nip = btn.getAttribute('data-rm-pwd-nip');
+        desktopMandatoryPwdNips = desktopMandatoryPwdNips.filter((x) => x !== nip);
+        renderDesktopPwdChips();
+        persistDesktopPwdNips();
+      });
+    }
+
     if (pwdToggle) {
       try {
         const res = await fetch(`/api/password-toggle?instansi_id=${encodeURIComponent(instId)}`);
@@ -856,6 +922,8 @@
           if (res.ok && json && json.ok !== false) {
             pwdToggle.checked = !!json.enabled;
             updatePwdBadge(!!json.enabled);
+            desktopMandatoryPwdNips = Array.isArray(json.mandatory_nips) ? json.mandatory_nips : [];
+            renderDesktopPwdChips();
           } else {
             updatePwdBadge(false);
           }
@@ -1605,6 +1673,213 @@
         }
       });
     }
+    // ── Desktop Native Tabs: Master Pegawai & Kelola Role ──────────────────
+    let desktopPegawaiCache = [];
+    let desktopRolesCache = [];
+    let desktopPermCatalog = [];
+
+    const renderDesktopPegawaiList = () => {
+      const listEl = $('desktopPegawaiList');
+      if (!listEl) return;
+      const q = String($('desktopPegawaiSearch')?.value || '').trim().toLowerCase();
+      const filtered = desktopPegawaiCache.filter((u) => {
+        if (!q) return true;
+        return [u.nama, u.username, u.nip, u.bidang, u.jabatan, u.role].join(' ').toLowerCase().includes(q);
+      });
+      if (!filtered.length) {
+        listEl.innerHTML = '<div class="col-span-full py-6 text-center text-on-surface-variant">Tidak ada pegawai cocok dengan pencarian.</div>';
+        return;
+      }
+      const roleOpts = desktopRolesCache.length
+        ? desktopRolesCache.map((r) => String(r.id || '').toUpperCase())
+        : ['USER', 'ADMIN', 'SUPERADMIN', 'KEPALA', 'SEKRETARIS', 'KABID', 'IRBAN', 'BENDAHARA_BARANG'];
+
+      listEl.innerHTML = filtered.map((u) => {
+        const curRole = String(u.role || 'USER').trim().toUpperCase().replace(/\s+/g, '_');
+        const opts = [...new Set([curRole, ...roleOpts])].map((r) => `<option value="${escapeHtml(r)}"${r === curRole ? ' selected' : ''}>${escapeHtml(r)}</option>`).join('');
+        return `<div class="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col gap-2.5">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <p class="font-bold text-on-surface truncate">${escapeHtml(u.nama || u.username || '-')}</p>
+              <p class="text-[11px] font-mono text-on-surface-variant">${escapeHtml(u.nip || '-')}</p>
+              <p class="text-[11px] text-on-surface-variant truncate">${escapeHtml(u.jabatan || u.bidang || '-')}</p>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold shrink-0">${escapeHtml(curRole)}</span>
+          </div>
+          <div class="flex items-center gap-1.5 pt-1 border-t border-outline-variant/20">
+            <select data-desk-role-uid="${escapeHtml(u.id)}" data-desk-role-nip="${escapeHtml(u.nip || '')}" class="flex-1 min-h-[34px] px-2 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-[11px] text-on-surface">${opts}</select>
+            <button type="button" data-desk-reset-pwd="${escapeHtml(u.id)}" data-desk-nama="${escapeHtml(u.nama || u.username || '')}" class="min-h-[34px] px-2.5 rounded-lg bg-amber-500/15 text-amber-700 font-bold text-[11px] cursor-pointer" title="Reset Password">Sandi</button>
+            <button type="button" data-desk-reset-face="${escapeHtml(u.nip || '')}" data-desk-nama="${escapeHtml(u.nama || u.username || '')}" class="min-h-[34px] px-2.5 rounded-lg bg-rose-500/15 text-rose-700 font-bold text-[11px] cursor-pointer" title="Reset Wajah AI">Wajah</button>
+          </div>
+        </div>`;
+      }).join('');
+    };
+
+    window.loadDesktopPegawaiTab = async function () {
+      const listEl = $('desktopPegawaiList');
+      if (!listEl) return;
+      try {
+        const [uRes, rRes] = await Promise.all([
+          fetch('/api/user-list?format=compact'),
+          fetch('/api/admin/roles')
+        ]);
+        const uJson = await uRes.json().catch(() => ({}));
+        const rJson = await rRes.json().catch(() => ({}));
+        desktopPegawaiCache = uJson.rows || uJson.data || [];
+        desktopRolesCache = rJson.rows || rJson.data || [];
+        renderDesktopPegawaiList();
+      } catch (err) {
+        listEl.innerHTML = `<div class="col-span-full py-6 text-center text-rose-600">${escapeHtml(err.message)}</div>`;
+      }
+    };
+
+    $('desktopPegawaiSearch')?.addEventListener('input', renderDesktopPegawaiList);
+    $('btnReloadDesktopPegawai')?.addEventListener('click', () => window.loadDesktopPegawaiTab());
+    $('desktopPegawaiList')?.addEventListener('change', async (ev) => {
+      const sel = ev.target.closest('[data-desk-role-uid]');
+      if (!sel) return;
+      const userId = sel.getAttribute('data-desk-role-uid');
+      const nip = sel.getAttribute('data-desk-role-nip');
+      const roleId = sel.value;
+      try {
+        const res = await fetch('/api/admin/roles/assign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, nip, roleId })
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+        notifyToast('success', 'Role Diperbarui', `Role diubah menjadi ${roleId}.`);
+        await window.loadDesktopPegawaiTab();
+      } catch (err) {
+        notifyToast('error', 'Gagal Ubah Role', err.message);
+      }
+    });
+    $('desktopPegawaiList')?.addEventListener('click', async (ev) => {
+      const pwdBtn = ev.target.closest('[data-desk-reset-pwd]');
+      if (pwdBtn) {
+        const id = pwdBtn.getAttribute('data-desk-reset-pwd');
+        const nama = pwdBtn.getAttribute('data-desk-nama') || 'pegawai';
+        if (!confirm(`Reset password ${nama} ke default (BapperidaSB2026)?`)) return;
+        const res = await fetch('/api/user-reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+        const json = await res.json().catch(() => null);
+        notifyToast(res.ok ? 'success' : 'error', res.ok ? 'Password Direset' : 'Gagal', (json && json.message) || `HTTP ${res.status}`);
+        return;
+      }
+      const faceBtn = ev.target.closest('[data-desk-reset-face]');
+      if (faceBtn) {
+        const nip = faceBtn.getAttribute('data-desk-reset-face');
+        const nama = faceBtn.getAttribute('data-desk-nama') || 'pegawai';
+        if (!confirm(`Hapus data wajah AI milik ${nama}?`)) return;
+        const res = await fetch('/api/media/face-reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nip }) });
+        const json = await res.json().catch(() => null);
+        notifyToast(res.ok ? 'success' : 'error', res.ok ? 'Wajah Direset' : 'Gagal', (json && json.message) || `HTTP ${res.status}`);
+      }
+    });
+
+    window.loadDesktopRolesTab = async function () {
+      const gridEl = $('desktopRolesGrid');
+      if (!gridEl) return;
+      try {
+        const [rRes, pRes] = await Promise.all([
+          fetch('/api/admin/roles'),
+          fetch('/api/admin/roles/permissions-list')
+        ]);
+        const rJson = await rRes.json().catch(() => ({}));
+        const pJson = await pRes.json().catch(() => ({}));
+        desktopRolesCache = rJson.rows || rJson.data || [];
+        desktopPermCatalog = pJson.data || [];
+        if (!desktopRolesCache.length) {
+          gridEl.innerHTML = '<div class="col-span-full py-6 text-center text-on-surface-variant">Belum ada role.</div>';
+          return;
+        }
+        const allPermIds = desktopPermCatalog.flatMap((m) => (m.permissions || []).map((p) => p));
+        gridEl.innerHTML = desktopRolesCache.map((role) => {
+          const perms = Array.isArray(role.permissions) ? role.permissions : [];
+          const isWild = perms.includes('*');
+          const checks = allPermIds.map((p) => {
+            const checked = isWild || perms.includes(p.id);
+            return `<label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-surface-container-lowest border border-outline-variant/30 text-[11px] cursor-pointer">
+              <input type="checkbox" data-desk-rperm="${escapeHtml(role.id)}" value="${escapeHtml(p.id)}" ${checked ? 'checked' : ''} ${isWild ? 'disabled' : ''} class="accent-primary" />
+              <span>${escapeHtml(p.name || p.id)}</span>
+            </label>`;
+          }).join('');
+          const delBtn = !role.is_system
+            ? `<button type="button" data-desk-del-role="${escapeHtml(role.id)}" class="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-700 font-bold text-[11px] cursor-pointer">Hapus</button>`
+            : '<span class="text-[10px] text-on-surface-variant font-mono">SYSTEM</span>';
+          return `<div class="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col gap-3">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <h4 class="font-bold text-on-surface text-sm">${escapeHtml(role.nama || role.id)} <span class="text-[11px] font-mono text-primary">(${escapeHtml(role.id)})</span></h4>
+                <p class="text-[11px] text-on-surface-variant">${escapeHtml(role.deskripsi || '')} • ${Number(role.user_count || 0)} pegawai</p>
+              </div>
+              <div class="flex items-center gap-1.5">
+                ${!isWild ? `<button type="button" data-desk-save-role="${escapeHtml(role.id)}" class="px-2.5 py-1 rounded-lg bg-primary text-on-primary font-bold text-[11px] cursor-pointer">Simpan Izin</button>` : ''}
+                ${delBtn}
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto">${checks}</div>
+          </div>`;
+        }).join('');
+      } catch (err) {
+        gridEl.innerHTML = `<div class="col-span-full py-6 text-center text-rose-600">${escapeHtml(err.message)}</div>`;
+      }
+    };
+
+    $('btnNewDesktopRole')?.addEventListener('click', async () => {
+      const id = prompt('Kode Role baru (huruf besar, mis: OPERATOR_REKAP):');
+      if (!id) return;
+      const nama = prompt('Nama tampilan role:', id) || id;
+      try {
+        const res = await fetch('/api/admin/roles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: id.trim().toUpperCase().replace(/\s+/g, '_'), nama: nama.trim(), permissions: ['presensi.self'] })
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+        notifyToast('success', 'Role Dibuat', `${nama} berhasil ditambahkan.`);
+        await window.loadDesktopRolesTab();
+      } catch (err) {
+        notifyToast('error', 'Gagal Membuat Role', err.message);
+      }
+    });
+
+    $('desktopRolesGrid')?.addEventListener('click', async (ev) => {
+      const saveBtn = ev.target.closest('[data-desk-save-role]');
+      if (saveBtn) {
+        const roleId = saveBtn.getAttribute('data-desk-save-role');
+        const perms = Array.from(document.querySelectorAll(`input[data-desk-rperm="${CSS.escape(roleId)}"]:checked`)).map((c) => c.value);
+        try {
+          const res = await fetch(`/api/admin/roles/${encodeURIComponent(roleId)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ permissions: perms })
+          });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+          notifyToast('success', 'Izin Role Disimpan', `${roleId} (${perms.length} izin) diperbarui.`);
+        } catch (err) {
+          notifyToast('error', 'Gagal Menyimpan Role', err.message);
+        }
+        return;
+      }
+      const delBtn = ev.target.closest('[data-desk-del-role]');
+      if (delBtn) {
+        const roleId = delBtn.getAttribute('data-desk-del-role');
+        if (!confirm(`Hapus custom role ${roleId}?`)) return;
+        try {
+          const res = await fetch(`/api/admin/roles/${encodeURIComponent(roleId)}`, { method: 'DELETE' });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+          notifyToast('success', 'Role Dihapus', `${roleId} telah dihapus.`);
+          await window.loadDesktopRolesTab();
+        } catch (err) {
+          notifyToast('error', 'Gagal Menghapus Role', err.message);
+        }
+      }
+    });
+
     // Seamless auto-sync saat ada perubahan dari tab lain atau kembali ke tab ini
     if (window.StitchSync && typeof window.StitchSync.on === 'function') {
       window.StitchSync.on(['lokasi', 'instansi', 'config', 'admin', 'presensi'], (ev) => {

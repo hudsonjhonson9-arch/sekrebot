@@ -1151,6 +1151,12 @@
               ? s.mandatory_nips.map((x) => String(x || '').trim()).filter(Boolean)
               : [];
             renderMobileMandatoryFaceChips();
+            const ft = el('mobFaceThreshold');
+            const mt = el('mobMejaThreshold');
+            const ls = el('mobLivenessScore');
+            if (ft && s.face_threshold != null) ft.value = Number(s.face_threshold).toFixed(2);
+            if (mt && s.meja_threshold != null) mt.value = Number(s.meja_threshold).toFixed(2);
+            if (ls && s.liveness_score != null) ls.value = Number(s.liveness_score).toFixed(2);
           })
           .catch(() => {})
       );
@@ -1267,8 +1273,17 @@
         const prev = opdSelEl.value || getMobInstansiId();
         opdSelEl.innerHTML = rows.map((o) => `<option value="${esc(o.id)}">${esc(o.nama_instansi || o.id)}</option>`).join('');
         opdSelEl.value = rows.some((o) => o.id === prev) ? prev : rows[0].id;
+        const activeOpd = rows.find((o) => o.id === opdSelEl.value) || rows[0];
+        if (activeOpd) {
+          if (el('mobInstNama')) el('mobInstNama').value = activeOpd.nama_instansi || '';
+          if (el('mobInstHeader')) el('mobInstHeader').value = activeOpd.header || '';
+          if (el('mobInstAlamat')) el('mobInstAlamat').value = activeOpd.alamat || '';
+        }
       }
-      await loadMobileBidang(opdSelEl ? opdSelEl.value : getMobInstansiId());
+      await Promise.all([
+        loadMobileBidang(opdSelEl ? opdSelEl.value : getMobInstansiId()),
+        loadMobileDevices(),
+      ]);
     } catch (err) {
       opdListEl.innerHTML = `<div class="p-3 text-center text-rose-500">${esc(err.message)}</div>`;
     }
@@ -1377,6 +1392,121 @@
     }
   }
 
+  async function saveMobileFaceThresholds() {
+    const face_threshold = parseFloat(el('mobFaceThreshold')?.value || '0.55');
+    const meja_threshold = parseFloat(el('mobMejaThreshold')?.value || '0.55');
+    const liveness_score = parseFloat(el('mobLivenessScore')?.value || '0.40');
+    try {
+      await requestJson('/api/media/face-settings', {
+        method: 'POST',
+        body: JSON.stringify({
+          instansi_id: getMobInstansiId(),
+          settings: { face_threshold, meja_threshold, liveness_score },
+        }),
+      });
+      notify('success', 'Threshold Face AI Disimpan', `Mobile ${face_threshold} • Meja ${meja_threshold} • Liveness ${liveness_score}`);
+    } catch (err) {
+      notify('error', 'Gagal Menyimpan Threshold', err.message);
+    }
+  }
+
+  async function saveMobileInstansiProfile() {
+    const sel = el('mobBidangOpdSelect');
+    const id = String(sel?.value || getMobInstansiId()).trim();
+    const nama_instansi = String(el('mobInstNama')?.value || '').trim();
+    const header = String(el('mobInstHeader')?.value || '').trim();
+    const alamat = String(el('mobInstAlamat')?.value || '').trim();
+    if (!nama_instansi) {
+      notify('warning', 'Nama Instansi Kosong', 'Isi nama instansi terlebih dahulu.');
+      return;
+    }
+    try {
+      await requestJson('/api/instansi-update', {
+        method: 'POST',
+        body: JSON.stringify({ id, nama_instansi, header, alamat }),
+      });
+      notify('success', 'Identitas Instansi Disimpan', `${nama_instansi} diperbarui.`);
+      await loadMobileOpdBidang();
+    } catch (err) {
+      notify('error', 'Gagal Menyimpan Identitas', err.message);
+    }
+  }
+
+  async function loadMobileDevices() {
+    const listEl = el('mobDeviceList');
+    if (!listEl) return;
+    try {
+      const json = await requestJson('/api/auth/devices');
+      const rows = json.devices || json.rows || json.data || [];
+      if (!rows.length) {
+        listEl.innerHTML = '<div class="p-3 text-center text-slate-400">Belum ada perangkat meja absen terdaftar.</div>';
+        return;
+      }
+      listEl.innerHTML = rows.map((d) => {
+        const active = d.is_active && !d.revoked_at;
+        const btn = active
+          ? `<button type="button" onclick="revokeMobileDevice('${esc(d.id)}')" class="px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 font-bold text-[11px] shrink-0 cursor-pointer">Cabut</button>`
+          : '<span class="text-[10px] text-slate-400 font-semibold">Dicabut</span>';
+        return `<div class="flex items-center justify-between gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700">
+          <div class="min-w-0">
+            <p class="font-bold text-slate-900 dark:text-white truncate">${esc(d.device_label || 'Perangkat Kiosk')}</p>
+            <p class="text-[11px] font-mono text-slate-400">${active ? 'Aktif' : 'Nonaktif'}</p>
+          </div>
+          ${btn}
+        </div>`;
+      }).join('');
+    } catch (err) {
+      listEl.innerHTML = `<div class="p-3 text-center text-slate-400">${esc(err.message)}</div>`;
+    }
+  }
+
+  async function issueMobileDeviceToken() {
+    const inp = el('mobDeviceLabelInput');
+    const label = String(inp?.value || '').trim();
+    if (!label) {
+      notify('warning', 'Nama Perangkat Kosong', 'Isi nama perangkat terlebih dahulu.');
+      return;
+    }
+    const nip = String(w.state?.currentUser?.nip || localStorage.getItem('MY_NIP') || '').trim();
+    try {
+      const json = await requestJson('/api/auth/devices', {
+        method: 'POST',
+        body: JSON.stringify({ nip, device_label: label }),
+      });
+      if (inp) inp.value = '';
+      if (json.device_token && w.Swal) {
+        w.Swal.fire({ title: 'Token Pairing Terbit', html: `<p class="text-xs mb-2">Salin token ini untuk perangkat <b>${esc(label)}</b>:</p><input readonly value="${esc(json.device_token)}" class="w-full p-2 text-xs font-mono border rounded-lg" onclick="this.select()" />`, icon: 'success' });
+      } else {
+        notify('success', 'Token Pairing Terbit', json.device_token || 'Token berhasil dibuat.');
+      }
+      await loadMobileDevices();
+    } catch (err) {
+      notify('error', 'Gagal Menerbitkan Token', err.message);
+    }
+  }
+
+  async function revokeMobileDevice(id) {
+    const ok = await confirmDialog({
+      title: 'Cabut Token Perangkat?',
+      text: 'Perangkat meja absen ini tidak akan bisa dipakai lagi sampai dipairing ulang.',
+      confirmText: 'Ya, Cabut',
+      confirmColor: '#dc2626',
+    });
+    if (!ok) return;
+    try {
+      await requestJson(`/api/auth/devices/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      notify('success', 'Token Dicabut', 'Perangkat telah dinonaktifkan.');
+      await loadMobileDevices();
+    } catch (err) {
+      notify('error', 'Gagal Mencabut Token', err.message);
+    }
+  }
+
+  w.saveMobileFaceThresholds = saveMobileFaceThresholds;
+  w.saveMobileInstansiProfile = saveMobileInstansiProfile;
+  w.loadMobileDevices = loadMobileDevices;
+  w.issueMobileDeviceToken = issueMobileDeviceToken;
+  w.revokeMobileDevice = revokeMobileDevice;
   w.loadAdminPegawaiMobile = loadAdminPegawaiMobile;
   w.filterAdminPegawaiMobile = filterAdminPegawaiMobile;
   w.setAdminPegawaiFilter = setAdminPegawaiFilter;
