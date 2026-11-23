@@ -840,20 +840,107 @@
   let _mAsetTab = 'aset';
 
   function switchMobileAsetTab(tab) {
-    _mAsetTab = (tab === 'pemeliharaan' || tab === 'pengaturan') ? tab : 'aset';
+    const valid = ['aset', 'pemeliharaan', 'pengaturan', 'laporan', 'tiket'];
+    _mAsetTab = valid.includes(tab) ? tab : 'aset';
     togglePanel('mobileAsetTabUtama', _mAsetTab === 'aset');
     togglePanel('mobileAsetTabPemeliharaan', _mAsetTab === 'pemeliharaan');
     togglePanel('mobileAsetTabPengaturan', _mAsetTab === 'pengaturan');
+    togglePanel('mobileAsetTabLaporan', _mAsetTab === 'laporan');
+    togglePanel('mobileAsetTabTiket', _mAsetTab === 'tiket');
 
     d.querySelectorAll('[data-m-aset-tab]').forEach((btn) => {
-      const act = btn.dataset.mAsetTab === _mAsetTab;
-      btn.className = act
-        ? 'flex-1 py-2 px-2 rounded-xl bg-[#2563eb] text-white text-[11px] font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1'
-        : 'flex-1 py-2 px-2 rounded-xl text-slate-600 dark:text-slate-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1';
+      const t = btn.dataset.mAsetTab;
+      const act = t === _mAsetTab;
+      if (t === 'laporan' || t === 'tiket') {
+        btn.className = act
+          ? 'py-2 px-3 rounded-xl bg-[#2563eb] text-white border border-[#2563eb] text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer'
+          : 'py-2 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:border-blue-500 text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer';
+      } else {
+        btn.className = act
+          ? 'flex-1 py-2 px-2 rounded-xl bg-[#2563eb] text-white text-[11px] font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1'
+          : 'flex-1 py-2 px-2 rounded-xl text-slate-600 dark:text-slate-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1';
+      }
     });
 
     if (_mAsetTab === 'pemeliharaan') loadMobilePemeliharaan();
     if (_mAsetTab === 'pengaturan') loadMobilePengaturan();
+    if (_mAsetTab === 'laporan') loadMobileLaporan();
+    if (_mAsetTab === 'tiket') loadMobileTiket();
+  }
+
+  async function loadMobileLaporan() {
+    const box = d.getElementById('mobileAsetLaporanSummary');
+    if (!box) return;
+    box.innerHTML = '<div class="py-6 text-center text-xs text-slate-400">Memuat ringkasan Permen 47...</div>';
+    try {
+      const tahun = new Date().getFullYear();
+      const r = await fetch(`/api/simapo/laporan-permen47?periode=tahunan&tahun=${tahun}`);
+      const j = await r.json().catch(() => ({}));
+      const summary = j.summary || j.ringkasan || {};
+      const rows = Array.isArray(j.data) ? j.data : (Array.isArray(j.items) ? j.items : []);
+      const totalUnit = summary.total_unit ?? summary.totalUnit ?? rows.length;
+      const totalNilai = summary.total_nilai ?? summary.totalNilai ?? rows.reduce((a, b) => a + Number(b.harga || b.nilai || 0), 0);
+      box.innerHTML = `
+        <div class="grid grid-cols-2 gap-2">
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70">
+            <div class="text-[10px] text-slate-400 font-semibold">Total Barang (${tahun})</div>
+            <div class="text-base font-extrabold font-mono text-slate-900 dark:text-white mt-0.5">${esc(String(totalUnit))}</div>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70">
+            <div class="text-[10px] text-slate-400 font-semibold">Total Nilai BMD</div>
+            <div class="text-sm font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">${esc(formatRp(totalNilai))}</div>
+          </div>
+        </div>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400">Tekan tombol <strong>Excel</strong> di atas untuk mengunduh format lengkap Permendagri 47/2021.</p>
+      `;
+    } catch (err) {
+      box.innerHTML = `<div class="py-5 text-center text-xs text-rose-500">Gagal memuat laporan: ${esc(err?.message)}</div>`;
+    }
+  }
+
+  async function loadMobileTiket() {
+    const tBox = d.getElementById('mobileAsetTiketList');
+    const pBox = d.getElementById('mobileAsetPinjamList');
+    if (tBox) tBox.innerHTML = '<div class="py-5 text-center text-xs text-slate-400">Memuat tiket kerusakan...</div>';
+    if (pBox) pBox.innerHTML = '<div class="py-5 text-center text-xs text-slate-400">Memuat daftar peminjaman...</div>';
+    try {
+      const [tRes, pRes] = await Promise.allSettled([
+        fetch('/api/simapo/admin-tiket-list').then((r) => r.json()),
+        fetch('/api/simapo/admin-pinjam-list').then((r) => r.json())
+      ]);
+      if (tBox) {
+        const items = (tRes.status === 'fulfilled' && Array.isArray(tRes.value?.data)) ? tRes.value.data : [];
+        tBox.innerHTML = items.length ? items.slice(0, 20).map((t) => `
+          <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xs space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-bold text-slate-900 dark:text-white truncate">${esc(t.judul || t.nomortiket || '-')}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 shrink-0">${esc(t.status || 'MENUNGGU')}</span>
+            </div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">${esc(t.nama_pelapor || t.userid || '-')} • ${esc(t.deskripsi || '')}</p>
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="window.AsetSettings?.updateTiketStatus('${esc(t.id)}','DIPROSES').then(()=>window.AsetSettings?.loadMobileTiket())" class="px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 text-[11px] font-bold cursor-pointer">Proses</button>
+              <button type="button" onclick="window.AsetSettings?.updateTiketStatus('${esc(t.id)}','SELESAI').then(()=>window.AsetSettings?.loadMobileTiket())" class="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold cursor-pointer">Selesai</button>
+            </div>
+          </div>
+        `).join('') : '<div class="p-5 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">Tidak ada tiket kerusakan aset saat ini.</div>';
+      }
+      if (pBox) {
+        const rows = (pRes.status === 'fulfilled' && Array.isArray(pRes.value?.data)) ? pRes.value.data : [];
+        pBox.innerHTML = rows.length ? rows.slice(0, 20).map((p) => {
+          const st = String(p.status || 'MENUNGGU').toUpperCase();
+          return `
+            <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xs space-y-1.5">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-bold text-slate-900 dark:text-white truncate">${esc(p.nama_barang || '-')}</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 shrink-0">${esc(st)}</span>
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">${esc(p.nama_peminjam || p.userid || '-')} • <span class="font-mono">${esc(p.tanggalmulai || '-')} s/d ${esc(p.tanggalselesai || '-')}</span></p>
+              ${st === 'MENUNGGU' ? `<div class="flex items-center gap-1.5 pt-1"><button type="button" onclick="window.handleAdminPinjamAction?.('${esc(p.id)}','DIPINJAM').then(()=>window.AsetSettings?.loadMobileTiket())" class="px-2.5 py-1 rounded-lg bg-[#2563eb] text-white text-[11px] font-bold cursor-pointer">Setujui</button><button type="button" onclick="window.handleAdminPinjamAction?.('${esc(p.id)}','DITOLAK').then(()=>window.AsetSettings?.loadMobileTiket())" class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 text-[11px] font-bold cursor-pointer">Tolak</button></div>` : ''}
+            </div>
+          `;
+        }).join('') : '<div class="p-5 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">Belum ada riwayat peminjaman unit.</div>';
+      }
+    } catch (_) {}
   }
 
   async function loadMobilePemeliharaan() {
@@ -1380,6 +1467,8 @@
     switchMobileAsetTab,
     loadMobilePemeliharaan,
     loadMobilePengaturan,
+    loadMobileLaporan,
+    loadMobileTiket,
   };
 
   function boot() {

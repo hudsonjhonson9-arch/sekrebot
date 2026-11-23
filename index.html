@@ -1001,14 +1001,14 @@
           </div>
           <!-- Akses Cepat Menu Aset Lengkap (Sinkron dengan Portal Desktop) -->
           <div class="grid grid-cols-2 gap-2">
-            <a href="aset-kir.html#laporan-permen47" data-req-perms="aset.laporan" class="py-2 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:border-blue-500 text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors">
+            <button type="button" data-m-aset-tab="laporan" data-req-perms="aset.laporan" onclick="window.AsetSettings?.switchMobileAsetTab('laporan')" class="py-2 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:border-blue-500 text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer">
               <span class="material-symbols-outlined text-[16px] text-emerald-600">description</span>
               <span>Laporan Permen 47</span>
-            </a>
-            <a href="aset-kir.html#tiket-pinjam" data-req-perms="aset.tiket" class="py-2 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:border-blue-500 text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors">
+            </button>
+            <button type="button" data-m-aset-tab="tiket" data-req-perms="aset.tiket" onclick="window.AsetSettings?.switchMobileAsetTab('tiket')" class="py-2 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:border-blue-500 text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer">
               <span class="material-symbols-outlined text-[16px] text-blue-600">assignment_turned_in</span>
               <span>Tiket &amp; Peminjaman</span>
-            </a>
+            </button>
           </div>
 
           <!-- TAB 1 MOBILE: ASET SAYA & OPERASIONAL -->
@@ -1127,6 +1127,41 @@
           <!-- Bottom Link to Desktop Portal -->
           <div class="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
             <p class="text-[11px] text-slate-600 dark:text-slate-400">Kelola master buku inventaris &amp; rekonsiliasi BPKAD?</p>
+          <!-- TAB 4 MOBILE: LAPORAN PERMEN 47 -->
+          <div id="mobileAsetTabLaporan" class="hidden flex-col gap-3">
+            <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xs space-y-3">
+              <div class="flex items-center justify-between gap-2">
+                <div>
+                  <h3 class="text-xs font-bold text-slate-900 dark:text-white">Laporan BMD Permendagri 47/2021</h3>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400">Ringkasan inventaris &amp; ekspor Excel resmi</p>
+                </div>
+                <button type="button" onclick="window.AsetSettings?.downloadPermen47Excel()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold flex items-center gap-1 shrink-0 cursor-pointer">
+                  <span class="material-symbols-outlined text-[15px]">download</span>
+                  <span>Excel</span>
+                </button>
+              </div>
+              <div id="mobileAsetLaporanSummary" class="space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                <div class="py-6 text-center text-xs text-slate-400">Memuat ringkasan Permen 47...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 5 MOBILE: TIKET & PEMINJAMAN -->
+          <div id="mobileAsetTabTiket" class="hidden flex-col gap-3">
+            <div class="space-y-2">
+              <h3 class="text-xs font-bold text-slate-900 dark:text-white px-1">Tiket Laporan Kerusakan</h3>
+              <div id="mobileAsetTiketList" class="space-y-2">
+                <div class="py-6 text-center text-xs text-slate-400">Memuat daftar tiket...</div>
+              </div>
+            </div>
+            <div class="space-y-2 pt-1">
+              <h3 class="text-xs font-bold text-slate-900 dark:text-white px-1">Daftar Peminjaman Unit</h3>
+              <div id="mobileAsetPinjamList" class="space-y-2">
+                <div class="py-6 text-center text-xs text-slate-400">Memuat daftar peminjaman...</div>
+              </div>
+            </div>
+          </div>
+
             <a href="aset-kir.html" class="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline mt-1">
               <span>Buka Portal Web Aset Desktop</span>
               <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
@@ -4261,7 +4296,7 @@
   <script src="js/stitch-rekap.js"></script>
   <script src="js/stitch-layanan.js"></script>
   <script src="js/stitch-aset-arsip.js"></script>
-  <script src="js/stitch-aset-settings.js"></script>
+  <script src="js/stitch-aset-settings.js?v=20261123"></script>
   <script src="js/stitch-arsip-columns.js?v=20261123"></script>
   <script src="js/stitch-sppd-generator.js"></script>
   <script src="js/stitch-arsip-agenda.js"></script>
