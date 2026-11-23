@@ -213,7 +213,7 @@ const SIMAPO_ADMIN_PERMS = new Set([
 async function simapoGate(req, res, next) {
   const role = req.user?.role;
   if (SIMAPO_ROLES.has(role)) return next();
-  if (ABSEN_ROLES.has(role) && SIMAPO_USER_PATHS.has(req.path)) return next();
+  if (role && SIMAPO_USER_PATHS.has(req.path)) return next();
   if (role) {
     try {
       const normId = String(role).trim().toUpperCase().replace(/\s+/g, '_');
