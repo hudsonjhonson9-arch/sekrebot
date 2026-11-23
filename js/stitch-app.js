@@ -1297,6 +1297,11 @@
             sub: 'Konfigurasi jadwal masuk/pulang, toleransi keterlambatan, dan hari libur.',
             saveBtn: true
           },
+          adminSectionOpdBidang: {
+            title: 'Master OPD & Bidang',
+            sub: 'Tambah atau kelola daftar instansi (OPD) dan struktur bidang.',
+            saveBtn: false
+          },
           dev: {
             title: 'Developer & Diagnostik',
             sub: 'Pemantauan kesehatan 8 subsistem aplikasi, uji diagnostik, dan log aktivitas sistem.',
@@ -1347,6 +1352,8 @@
           }
         } else if (effectiveSection === 'adminSectionJamLibur') {
           window.loadMobileKontrolAkumulasi?.();
+        } else if (effectiveSection === 'adminSectionOpdBidang') {
+          window.loadMobileOpdBidang?.();
         } else if (effectiveSection === 'dev') {
           window.renderDevHealthMatrix?.();
           window.renderDevLogTable?.();

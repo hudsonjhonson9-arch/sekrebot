@@ -374,15 +374,27 @@ router.post('/lokasi-update', async(req,res)=>{if(requireMedia(req,res))return;t
   router.get('/peringatan-akumulasi', async(req,res)=>{try{const sc=scope(req,req.query.instansi_id);if(!sc.ok)return fail(res,403,'Forbidden');const r=await query(`SELECT value FROM pengaturan WHERE key='peringatan_akumulasi' AND instansi_id=$1 LIMIT 1`,[sc.id||'bapperida']);let config={enabled:false,ambang_menit:435};if(r.rows[0]?.value){try{config={...config,...JSON.parse(r.rows[0].value)};}catch{ /* invalid legacy JSON -> defaults */ }}config.enabled=config.enabled===true;config.ambang_menit=Number.parseInt(config.ambang_menit,10)||435;return ok(res,{data:{config}});}catch{return fail(res,503,'Layanan peringatan akumulasi tidak tersedia.');}});
   router.post('/peringatan-akumulasi', async(req,res)=>{if(requireMedia(req,res))return;try{const b=req.body||{},id=s(b.instansi_id||req.user.instansi_id||'bapperida');if(!sameInstansi(req.user,id))return fail(res,403,'Forbidden');const ambang=Math.min(Math.max(Number.parseInt(b.ambang_menit,10)||435,30),1440);const value=JSON.stringify({enabled:bool(b.enabled),ambang_menit:ambang});const r=await query(`INSERT INTO pengaturan (key,value,instansi_id) VALUES ('peringatan_akumulasi',$1,$2) ON CONFLICT (key,instansi_id) DO UPDATE SET value=EXCLUDED.value RETURNING key,value,instansi_id`,[value,id]);return ok(res,{data:r.rows[0]},'Peringatan akumulasi disimpan.');}catch{return fail(res,500,'Gagal menyimpan peringatan akumulasi.');}});
 
-  // ── Password Toggle ────────────────────────────────────────────────────────
+  // ── Password Toggle & Wajib Sandi per NIP ─────────────────────────────────
   router.get('/password-toggle', async (req, res) => {
     try {
       const sc = scope(req, req.query.instansi_id);
       if (!sc.ok) return fail(res, 403, 'Forbidden');
       const inst = sc.id || 'bapperida';
-      const row = (await query(`SELECT value FROM pengaturan WHERE key='require_password' AND (instansi_id=$1 OR instansi_id='all') ORDER BY CASE WHEN instansi_id=$1 THEN 0 ELSE 1 END LIMIT 1`, [inst])).rows[0];
-      const enabled = row ? ['1', 'true', 'on'].includes(String(row.value).toLowerCase()) : false;
-      return ok(res, { enabled, value: enabled ? '1' : '0' });
+      const rows = (await query(
+        `SELECT key, value FROM pengaturan WHERE key IN ('require_password', 'password_mandatory_nips') AND (instansi_id=$1 OR instansi_id='all') ORDER BY CASE WHEN instansi_id=$1 THEN 0 ELSE 1 END`,
+        [inst]
+      )).rows || [];
+      const reqRow = rows.find((r) => !r.key || r.key === 'require_password');
+      const enabled = reqRow ? ['1', 'true', 'on'].includes(String(reqRow.value).toLowerCase()) : false;
+      const mandRow = rows.find((r) => r.key === 'password_mandatory_nips');
+      let mandatory_nips = [];
+      if (mandRow?.value) {
+        try {
+          const parsed = Array.isArray(mandRow.value) ? mandRow.value : JSON.parse(String(mandRow.value));
+          if (Array.isArray(parsed)) mandatory_nips = parsed.map((x) => String(x).trim()).filter(Boolean);
+        } catch {}
+      }
+      return ok(res, { enabled, value: enabled ? '1' : '0', mandatory_nips });
     } catch (e) {
       console.error('[password-toggle/get]', e);
       return fail(res, 503, 'Layanan tidak tersedia.');
@@ -394,10 +406,20 @@ router.post('/lokasi-update', async(req,res)=>{if(requireMedia(req,res))return;t
     try {
       const b = req.body || {}, inst = s(b.instansi_id || req.user.instansi_id || 'bapperida');
       if (!sameInstansi(req.user, inst)) return fail(res, 403, 'Forbidden');
-      const enabled = b.enabled === true || String(b.enabled).toLowerCase() === 'true' || b.enabled === '1' || b.enabled === 1;
-      const value = enabled ? '1' : '0';
-      await query(`INSERT INTO pengaturan (key, value, instansi_id) VALUES ('require_password', $1, $2) ON CONFLICT (key, instansi_id) DO UPDATE SET value=EXCLUDED.value`, [value, inst]);
-      return ok(res, { enabled, value });
+      let enabled;
+      if (b.enabled !== undefined) {
+        enabled = b.enabled === true || String(b.enabled).toLowerCase() === 'true' || b.enabled === '1' || b.enabled === 1;
+        await query(`INSERT INTO pengaturan (key, value, instansi_id) VALUES ('require_password', $1, $2) ON CONFLICT (key, instansi_id) DO UPDATE SET value=EXCLUDED.value`, [enabled ? '1' : '0', inst]);
+      }
+      let mandatory_nips;
+      if (Array.isArray(b.mandatory_nips)) {
+        mandatory_nips = [...new Set(b.mandatory_nips.map((x) => String(x || '').trim()).filter(Boolean))];
+        await query(`INSERT INTO pengaturan (key, value, instansi_id) VALUES ('password_mandatory_nips', $1, $2) ON CONFLICT (key, instansi_id) DO UPDATE SET value=EXCLUDED.value`, [JSON.stringify(mandatory_nips), inst]);
+      }
+      return ok(res, {
+        ...(enabled !== undefined ? { enabled, value: enabled ? '1' : '0' } : {}),
+        ...(mandatory_nips !== undefined ? { mandatory_nips } : {}),
+      });
     } catch (e) {
       console.error('[password-toggle/post]', e);
       return fail(res, 500, 'Gagal menyimpan pengaturan verifikasi sandi.');

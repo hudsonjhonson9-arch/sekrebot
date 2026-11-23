@@ -1076,35 +1076,42 @@
 
   /* ── Keamanan Login (Wajib Password & Pegawai Wajib Scan Wajah) ────── */
   let mobMandatoryFaceNips = [];
+  let mobMandatoryPwdNips = [];
 
-  function renderMobileMandatoryFaceChips() {
-    const chipsEl = el('mobMandatoryFaceChips');
+  function renderNipChips(chipsElId, list, emptyText, removeFnName) {
+    const chipsEl = el(chipsElId);
     if (!chipsEl) return;
-    if (!mobMandatoryFaceNips.length) {
-      chipsEl.innerHTML = '<span class="text-[11px] text-slate-400">Belum ada pegawai wajib scan wajah.</span>';
+    if (!list.length) {
+      chipsEl.innerHTML = `<span class="text-[11px] text-slate-400">${emptyText}</span>`;
       return;
     }
-    const users = getSharedUsers();
     const map = {};
-    users.forEach((u) => {
+    getSharedUsers().forEach((u) => {
       const n = String(u.nip || '').trim();
       if (n) map[n] = u.nama || u.username || n;
     });
-    chipsEl.innerHTML = mobMandatoryFaceNips.map((nip) => {
+    chipsEl.innerHTML = list.map((nip) => {
       const label = map[nip] ? `${map[nip]} (${nip})` : nip;
       return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 text-[11px] font-semibold">
         <span>${esc(label)}</span>
-        <button type="button" onclick="removeMobileMandatoryFaceNip('${esc(nip)}')" class="hover:text-rose-500 font-bold cursor-pointer" aria-label="Hapus">&times;</button>
+        <button type="button" onclick="${removeFnName}('${esc(nip)}')" class="hover:text-rose-500 font-bold cursor-pointer" aria-label="Hapus">&times;</button>
       </span>`;
     }).join('');
   }
 
-  function populateMobileMandatoryFaceSelect() {
-    const sel = el('mobMandatoryFaceSelect');
+  function renderMobileMandatoryFaceChips() {
+    renderNipChips('mobMandatoryFaceChips', mobMandatoryFaceNips, 'Belum ada pegawai wajib scan wajah.', 'removeMobileMandatoryFaceNip');
+  }
+
+  function renderMobileMandatoryPwdChips() {
+    renderNipChips('mobMandatoryPwdChips', mobMandatoryPwdNips, 'Belum ada pegawai wajib kata sandi.', 'removeMobileMandatoryPwdNip');
+  }
+
+  function populateMobileMandatorySelect(selectId) {
+    const sel = el(selectId);
     if (!sel) return;
-    const users = getSharedUsers();
     const opts = ['<option value="">-- Pilih pegawai untuk ditambahkan --</option>'];
-    users.forEach((u) => {
+    getSharedUsers().forEach((u) => {
       const nip = String(u.nip || '').trim();
       const nama = String(u.nama || u.username || nip).trim();
       if (nip) opts.push(`<option value="${esc(nip)}">${esc(nama)} — ${esc(nip)}</option>`);
@@ -1116,14 +1123,22 @@
     const instId = getMobInstansiId();
     const pwdEl = el('mobRequirePasswordToggle');
     const chipsEl = el('mobMandatoryFaceChips');
-    if (!pwdEl && !chipsEl) return;
+    const pwdChipsEl = el('mobMandatoryPwdChips');
+    if (!pwdEl && !chipsEl && !pwdChipsEl) return;
 
-    populateMobileMandatoryFaceSelect();
+    populateMobileMandatorySelect('mobMandatoryFaceSelect');
+    populateMobileMandatorySelect('mobMandatoryPwdSelect');
     const tasks = [];
-    if (pwdEl) {
+    if (pwdEl || pwdChipsEl) {
       tasks.push(
         requestJson(`/api/password-toggle?instansi_id=${encodeURIComponent(instId)}`)
-          .then((json) => { pwdEl.checked = !!json.enabled; })
+          .then((json) => {
+            if (pwdEl) pwdEl.checked = !!json.enabled;
+            mobMandatoryPwdNips = Array.isArray(json.mandatory_nips)
+              ? json.mandatory_nips.map((x) => String(x || '').trim()).filter(Boolean)
+              : [];
+            renderMobileMandatoryPwdChips();
+          })
           .catch(() => {})
       );
     }
@@ -1159,6 +1174,38 @@
     }
   }
 
+  async function persistMobileMandatoryPwdNips() {
+    try {
+      await requestJson('/api/password-toggle', {
+        method: 'POST',
+        body: JSON.stringify({ mandatory_nips: mobMandatoryPwdNips, instansi_id: getMobInstansiId() }),
+      });
+      notify('success', 'Wajib Kata Sandi Disimpan', `${mobMandatoryPwdNips.length} pegawai wajib kata sandi saat login.`);
+    } catch (err) {
+      notify('error', 'Gagal Menyimpan Wajib Sandi', err.message);
+    }
+  }
+
+  function addMobileMandatoryPwdNip() {
+    const sel = el('mobMandatoryPwdSelect');
+    if (!sel) return;
+    const nip = String(sel.value || '').trim();
+    if (!nip) return;
+    if (!mobMandatoryPwdNips.includes(nip)) {
+      mobMandatoryPwdNips.push(nip);
+      renderMobileMandatoryPwdChips();
+      persistMobileMandatoryPwdNips();
+    }
+    sel.value = '';
+  }
+
+  function removeMobileMandatoryPwdNip(nip) {
+    const clean = String(nip || '').trim();
+    mobMandatoryPwdNips = mobMandatoryPwdNips.filter((x) => x !== clean);
+    renderMobileMandatoryPwdChips();
+    persistMobileMandatoryPwdNips();
+  }
+
   async function persistMobileMandatoryFaceNips() {
     try {
       await requestJson('/api/media/face-settings', {
@@ -1191,6 +1238,145 @@
     persistMobileMandatoryFaceNips();
   }
 
+  /* ── Master OPD & Bidang (Mobile Panel Admin) ──────────────────────── */
+  async function loadMobileOpdBidang() {
+    const opdListEl = el('mobOpdList');
+    const opdSelEl = el('mobBidangOpdSelect');
+    if (!opdListEl) return;
+    try {
+      const json = await requestJson('/api/instansi-list');
+      const rows = json.rows || json.data || [];
+      if (!rows.length) {
+        opdListEl.innerHTML = '<div class="p-3 text-center text-slate-400">Belum ada OPD terdaftar.</div>';
+      } else {
+        opdListEl.innerHTML = rows.map((o) => {
+          const oid = String(o.id || '');
+          const delBtn = oid !== 'bapperida'
+            ? `<button type="button" onclick="deleteMobileOpd('${esc(oid)}')" class="px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 font-bold text-[11px] cursor-pointer">Hapus</button>`
+            : '<span class="text-[10px] text-slate-400 font-semibold">Utama</span>';
+          return `<div class="flex items-center justify-between gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700">
+            <div class="min-w-0">
+              <p class="font-bold text-slate-900 dark:text-white truncate">${esc(o.nama_instansi || oid)}</p>
+              <p class="text-[11px] font-mono text-slate-400">${esc(oid)}</p>
+            </div>
+            ${delBtn}
+          </div>`;
+        }).join('');
+      }
+      if (opdSelEl && rows.length) {
+        const prev = opdSelEl.value || getMobInstansiId();
+        opdSelEl.innerHTML = rows.map((o) => `<option value="${esc(o.id)}">${esc(o.nama_instansi || o.id)}</option>`).join('');
+        opdSelEl.value = rows.some((o) => o.id === prev) ? prev : rows[0].id;
+      }
+      await loadMobileBidang(opdSelEl ? opdSelEl.value : getMobInstansiId());
+    } catch (err) {
+      opdListEl.innerHTML = `<div class="p-3 text-center text-rose-500">${esc(err.message)}</div>`;
+    }
+  }
+
+  async function addMobileOpd() {
+    const kodeEl = el('mobOpdKodeInput');
+    const namaEl = el('mobOpdNamaInput');
+    const id = String(kodeEl?.value || '').trim().toLowerCase();
+    const nama = String(namaEl?.value || '').trim();
+    if (!id || !nama) {
+      notify('warning', 'Data Belum Lengkap', 'Kode OPD dan Nama Instansi wajib diisi.');
+      return;
+    }
+    try {
+      await requestJson('/api/instansi-add', {
+        method: 'POST',
+        body: JSON.stringify({ id, nama_instansi: nama }),
+      });
+      if (kodeEl) kodeEl.value = '';
+      if (namaEl) namaEl.value = '';
+      notify('success', 'OPD Ditambahkan', `${nama} berhasil disimpan.`);
+      await loadMobileOpdBidang();
+    } catch (err) {
+      notify('error', 'Gagal Menambah OPD', err.message);
+    }
+  }
+
+  async function deleteMobileOpd(id) {
+    const ok = await confirmDialog({
+      title: 'Hapus OPD?',
+      text: `OPD "${id}" dan daftar bidangnya akan dihapus permanen.`,
+      confirmText: 'Ya, Hapus',
+      confirmColor: '#dc2626',
+    });
+    if (!ok) return;
+    try {
+      await requestJson(`/api/instansi-delete?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      notify('success', 'OPD Dihapus', `OPD ${id} telah dihapus.`);
+      await loadMobileOpdBidang();
+    } catch (err) {
+      notify('error', 'Gagal Menghapus OPD', err.message);
+    }
+  }
+
+  async function loadMobileBidang(instansiId) {
+    const listEl = el('mobBidangList');
+    if (!listEl) return;
+    const inst = String(instansiId || getMobInstansiId()).trim();
+    try {
+      const json = await requestJson(`/api/bidang-list?instansi_id=${encodeURIComponent(inst)}`);
+      const rows = json.rows || json.data || [];
+      if (!rows.length) {
+        listEl.innerHTML = '<div class="p-3 text-center text-slate-400">Belum ada bidang di OPD ini.</div>';
+        return;
+      }
+      listEl.innerHTML = rows.map((b) => `
+        <div class="flex items-center justify-between gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700">
+          <span class="font-semibold text-slate-900 dark:text-white truncate">${esc(b.nama_bidang || b.nama || '')}</span>
+          <button type="button" onclick="deleteMobileBidang('${esc(b.id)}')" class="px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 font-bold text-[11px] shrink-0 cursor-pointer">Hapus</button>
+        </div>
+      `).join('');
+    } catch (err) {
+      listEl.innerHTML = `<div class="p-3 text-center text-rose-500">${esc(err.message)}</div>`;
+    }
+  }
+
+  async function addMobileBidang() {
+    const inp = el('mobBidangNamaInput');
+    const sel = el('mobBidangOpdSelect');
+    const nama = String(inp?.value || '').trim();
+    const inst = String(sel?.value || getMobInstansiId()).trim();
+    if (!nama) {
+      notify('warning', 'Nama Bidang Kosong', 'Tuliskan nama bidang terlebih dahulu.');
+      return;
+    }
+    try {
+      await requestJson('/api/bidang-add', {
+        method: 'POST',
+        body: JSON.stringify({ nama_bidang: nama, instansi_id: inst }),
+      });
+      if (inp) inp.value = '';
+      notify('success', 'Bidang Ditambahkan', `${nama} berhasil disimpan.`);
+      await loadMobileBidang(inst);
+    } catch (err) {
+      notify('error', 'Gagal Menambah Bidang', err.message);
+    }
+  }
+
+  async function deleteMobileBidang(id) {
+    const ok = await confirmDialog({
+      title: 'Hapus Bidang?',
+      text: 'Bidang ini akan dihapus dari daftar OPD.',
+      confirmText: 'Ya, Hapus',
+      confirmColor: '#dc2626',
+    });
+    if (!ok) return;
+    const sel = el('mobBidangOpdSelect');
+    const inst = String(sel?.value || getMobInstansiId()).trim();
+    try {
+      await requestJson(`/api/bidang-delete?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      notify('success', 'Bidang Dihapus', 'Bidang telah dihapus.');
+      await loadMobileBidang(inst);
+    } catch (err) {
+      notify('error', 'Gagal Menghapus Bidang', err.message);
+    }
+  }
+
   w.loadAdminPegawaiMobile = loadAdminPegawaiMobile;
   w.filterAdminPegawaiMobile = filterAdminPegawaiMobile;
   w.setAdminPegawaiFilter = setAdminPegawaiFilter;
@@ -1214,8 +1400,16 @@
   w.deleteRoleFromDetail = deleteRoleFromDetail;
   w.loadMobileSecuritySettings = loadMobileSecuritySettings;
   w.saveMobileRequirePassword = saveMobileRequirePassword;
+  w.addMobileMandatoryPwdNip = addMobileMandatoryPwdNip;
+  w.removeMobileMandatoryPwdNip = removeMobileMandatoryPwdNip;
   w.addMobileMandatoryFaceNip = addMobileMandatoryFaceNip;
   w.removeMobileMandatoryFaceNip = removeMobileMandatoryFaceNip;
+  w.loadMobileOpdBidang = loadMobileOpdBidang;
+  w.addMobileOpd = addMobileOpd;
+  w.deleteMobileOpd = deleteMobileOpd;
+  w.loadMobileBidang = loadMobileBidang;
+  w.addMobileBidang = addMobileBidang;
+  w.deleteMobileBidang = deleteMobileBidang;
   w.loadMobileKontrolAkumulasi = loadMobileKontrolAkumulasi;
   w.saveMobileKontrolAbsen = saveMobileKontrolAbsen;
   w.saveMobilePeringatanAkumulasi = saveMobilePeringatanAkumulasi;

@@ -146,14 +146,31 @@ export function createAuthSessionRouter({ query = realQuery, arsipSso, onLogout,
         });
       }
 
-      // Cek apakah instansi mewajibkan verifikasi kata sandi atau akun berprivilese sudah memiliki password_hash
+      // Cek apakah instansi mewajibkan verifikasi kata sandi (toggle global) atau NIP masuk daftar wajib sandi
+      const inst = user.instansi_id || 'bapperida';
       const pwdSetting = await query(
-        `SELECT value FROM pengaturan WHERE key='require_password' AND (instansi_id=$1 OR instansi_id='all') ORDER BY CASE WHEN instansi_id=$1 THEN 0 ELSE 1 END LIMIT 1`,
-        [user.instansi_id || 'bapperida']
+        `SELECT key, value, instansi_id FROM pengaturan WHERE key IN ('require_password', 'password_mandatory_nips') AND (instansi_id=$1 OR instansi_id='all') ORDER BY CASE WHEN instansi_id=$1 THEN 0 ELSE 1 END`,
+        [inst]
       );
-      const isToggleOn = pwdSetting?.rows?.[0] ? ['1', 'true', 'on'].includes(String(pwdSetting.rows[0].value).toLowerCase()) : false;
-      const isPrivilegedWithHash = Boolean(user.password_hash) && String(user.role || 'USER').toUpperCase() !== 'USER';
-      const isPasswordRequired = isToggleOn || isPrivilegedWithHash;
+      const pwdRows = pwdSetting?.rows || [];
+      const reqPwdRow = pwdRows.find((r) => !r.key || r.key === 'require_password');
+      const isToggleOn = reqPwdRow ? ['1', 'true', 'on'].includes(String(reqPwdRow.value).toLowerCase()) : false;
+      const mandPwdRow = pwdRows.find((r) => r.key === 'password_mandatory_nips');
+      let isMandatoryPwdNip = false;
+      if (mandPwdRow?.value) {
+        let list = [];
+        if (Array.isArray(mandPwdRow.value)) list = mandPwdRow.value;
+        else if (typeof mandPwdRow.value === 'string') {
+          try {
+            const parsed = JSON.parse(mandPwdRow.value);
+            list = Array.isArray(parsed) ? parsed : [parsed];
+          } catch {
+            list = mandPwdRow.value.split(',').map((s) => s.trim());
+          }
+        }
+        isMandatoryPwdNip = list.map((s) => String(s).trim()).includes(String(user.nip).trim());
+      }
+      const isPasswordRequired = isToggleOn || isMandatoryPwdNip;
 
       if (isPasswordRequired) {
         const password = String(req.body?.password || '');
@@ -188,7 +205,6 @@ export function createAuthSessionRouter({ query = realQuery, arsipSso, onLogout,
       delete user.pin_hash;
 
       // Cek apakah NIP ini terdaftar wajib face recognition
-      const inst = user.instansi_id || 'bapperida';
       let isMandatoryFace = false;
       try {
         const mandRes = await query(

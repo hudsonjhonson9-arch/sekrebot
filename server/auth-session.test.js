@@ -580,25 +580,41 @@ test('login NIP menyertakan is_mandatory_face=false saat NIP tidak ada di face_m
   assert.equal(out.body.user.is_mandatory_face, false);
 });
 
-test('login akun ADMIN yang sudah punya password_hash wajib verifikasi password walau require_password off', async () => {
+test('login akun ADMIN default tanpa sandi saat require_password off, kecuali NIP masuk password_mandatory_nips', async () => {
   const { createAuthSessionRouter } = await import('./auth-session.js');
-  const r = createAuthSessionRouter({
+  const adminRow = {
+    id: '77',
+    NIP: '198001012005011001',
+    username: 'Admin Utama',
+    role: 'ADMIN',
+    instansi_id: 'bapperida',
+    status_aktif: true,
+    password_hash: '$2a$10$qyVxAODHUx6WLLF0Tm/I7u/T1b.m0hZW2FD2ivm/6U7K.SRiIgjwq',
+  };
+
+  // 1. Toggle OFF & tidak ada di password_mandatory_nips -> lolos tanpa password
+  const rOff = createAuthSessionRouter({
     query: async (sql) => {
-      if (/FROM user_list/i.test(sql)) {
-        return userListRows(sql, {
-          id: '77',
-          NIP: '198001012005011001',
-          username: 'Admin Utama',
-          role: 'ADMIN',
-          instansi_id: 'bapperida',
-          status_aktif: true,
-          password_hash: '$2a$10$qyVxAODHUx6WLLF0Tm/I7u/T1b.m0hZW2FD2ivm/6U7K.SRiIgjwq',
-        });
+      if (/FROM user_list/i.test(sql)) return userListRows(sql, adminRow);
+      if (/INSERT INTO auth_sessions/i.test(sql)) return { rows: [{ session_token: 'c'.repeat(192) }] };
+      return { rows: [] };
+    },
+  });
+  const okRes = await drive(rOff, 'POST', '/api/auth/login', { nip: '198001012005011001' });
+  assert.equal(okRes.status, 200);
+  assert.equal(okRes.body.ok, true);
+
+  // 2. Toggle OFF tapi NIP terdaftar di password_mandatory_nips -> wajib password
+  const rMand = createAuthSessionRouter({
+    query: async (sql) => {
+      if (/FROM user_list/i.test(sql)) return userListRows(sql, adminRow);
+      if (/FROM pengaturan/i.test(sql) && /password_mandatory_nips/i.test(sql)) {
+        return { rows: [{ key: 'password_mandatory_nips', value: JSON.stringify(['198001012005011001']) }] };
       }
       return { rows: [] };
     },
   });
-  const noPwd = await drive(r, 'POST', '/api/auth/login', { nip: '198001012005011001' });
+  const noPwd = await drive(rMand, 'POST', '/api/auth/login', { nip: '198001012005011001' });
   assert.equal(noPwd.status, 401);
   assert.equal(noPwd.body.require_password, true);
 });

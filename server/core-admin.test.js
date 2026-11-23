@@ -385,8 +385,8 @@ test('user-reset-password: admin bisa mereset password ke default BapperidaSB202
 
 test('GET /password-toggle: membaca status dari pengaturan', async () => {
   const q = async (text) => {
-    if (/FROM pengaturan WHERE key='require_password'/i.test(text)) {
-      return { rows: [{ value: '1' }] };
+    if (/FROM pengaturan WHERE.*require_password/i.test(text)) {
+      return { rows: [{ key: 'require_password', value: '1' }] };
     }
     return { rows: [] };
   };

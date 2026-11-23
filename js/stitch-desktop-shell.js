@@ -98,13 +98,13 @@
           action: () => callSwitch('admin', true, 'adminSectionJamLibur')
         },
         {
-          key: 'admin:opd-bidang',
+          key: 'admin:adminSectionOpdBidang',
           perms: ['admin.instansi', 'admin.devices'],
-          label: 'OPD, Bidang & Perangkat',
-          hint: 'Kelola master OPD, bidang & keamanan',
+          label: 'OPD & Bidang',
+          hint: 'Kelola master OPD dan daftar bidang',
           icon: 'domain',
           tone: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60',
-          action: () => { w.location.href = 'admin.html#tab-pepegawaian'; }
+          action: () => callSwitch('admin', true, 'adminSectionOpdBidang')
         }
       ]
     },
