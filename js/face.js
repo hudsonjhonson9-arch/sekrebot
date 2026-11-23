@@ -114,6 +114,81 @@
       }
     }
 
+    // ── Extract descriptor + metrik kualitas wajah (skor deteksi, liveness, pose kepala) ──
+    async function getFaceSnapshotQuality(input) {
+      let waitStart = Date.now();
+      while (_isDetecting && (Date.now() - waitStart < 3000)) {
+        await new Promise(r => setTimeout(r, 50));
+      }
+      const prevDetectState = _isDetecting;
+      _isDetecting = true;
+      try {
+        if (!HumanInstance) return null;
+        const res = await _detectWithTimeout(input, 8000);
+        const f = res && res.face && res.face.length > 0 ? res.face[0] : null;
+        if (!f || !f.embedding) return null;
+        const ang = f.rotation && f.rotation.angle ? f.rotation.angle : {};
+        return {
+          desc: f.embedding,
+          score: Number(f.score || f.boxScore || 0.7),
+          real: f.real != null ? Number(f.real) : 1,
+          yaw: Math.abs(Number(ang.yaw || 0)),
+          pitch: Math.abs(Number(ang.pitch || 0)),
+          roll: Math.abs(Number(ang.roll || 0)),
+          box: Array.isArray(f.box) ? f.box : null
+        };
+      } catch (e) {
+        if (e.message === 'AI_TIMEOUT') setCamStatus('warn', '<span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle">warning</span>', 'AI Terlalu Lambat', '...');
+        return null;
+      } finally {
+        _isDetecting = prevDetectState;
+      }
+    }
+
+    // ── Estimasi ketajaman (anti-blur) pada crop wajah menggunakan gradien Laplacian cepat ──
+    function _sampleSharpness(cnv, box) {
+      try {
+        const sw = cnv.width || 0;
+        const sh = cnv.height || 0;
+        if (sw < 32 || sh < 32) return 0;
+        const sx = box ? Math.max(0, Math.floor(box[0])) : Math.floor(sw * 0.2);
+        const sy = box ? Math.max(0, Math.floor(box[1])) : Math.floor(sh * 0.2);
+        const cw = box ? Math.min(sw - sx, Math.max(32, Math.floor(box[2]))) : Math.floor(sw * 0.6);
+        const ch = box ? Math.min(sh - sy, Math.max(32, Math.floor(box[3]))) : Math.floor(sh * 0.6);
+        const tmp = document.createElement('canvas');
+        const S = 80;
+        tmp.width = S; tmp.height = S;
+        const tctx = tmp.getContext('2d', { willReadFrequently: true });
+        tctx.drawImage(cnv, sx, sy, cw, ch, 0, 0, S, S);
+        const d = tctx.getImageData(0, 0, S, S).data;
+        const gray = new Float32Array(S * S);
+        for (let i = 0, p = 0; i < gray.length; i++, p += 4) {
+          gray[i] = 0.299 * d[p] + 0.587 * d[p + 1] + 0.114 * d[p + 2];
+        }
+        let sum = 0, cnt = 0;
+        for (let y = 1; y < S - 1; y++) {
+          const row = y * S;
+          for (let x = 1; x < S - 1; x++) {
+            const idx = row + x;
+            const lap = Math.abs(4 * gray[idx] - gray[idx - 1] - gray[idx + 1] - gray[idx - S] - gray[idx + S]);
+            sum += lap;
+            cnt++;
+          }
+        }
+        return cnt ? (sum / cnt) : 0;
+      } catch (_) {
+        return 0;
+      }
+    }
+
+    function _scoreFaceShot(snap, bright, sharp) {
+      const sharpPts = Math.min(40, sharp * 1.4);
+      const posePts = Math.max(0, 25 - (snap.yaw + snap.pitch + snap.roll) * 35);
+      const aiPts = (Math.min(1, snap.score) * 12) + (Math.min(1, snap.real) * 8);
+      const brightPts = Math.max(0, 15 - (Math.abs(bright - 128) / 128) * 15);
+      return sharpPts + posePts + aiPts + brightPts;
+    }
+
     // ── Extract descriptor from dataUrl (dengan retry 3x) ──
     async function getDescriptorFromDataUrl(dataUrl) {
       if (!dataUrl) return null;
@@ -1570,20 +1645,26 @@
         const deadline = Date.now() + 3000;
         for (let i = 1; i <= 3; i++) {
           if (Date.now() > deadline) break;
-          setCamStatus('ok', '<span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle">photo_camera</span>', `Menangkap ${i}/3...`, 'Diam sejenak');
+          setCamStatus('ok', '<span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle">photo_camera</span>', `Memindai ${i}/3...`, 'Hadapkan wajah lurus ke kamera');
           drawFrame();
           const dataUrl = await compress();
           if (dataUrl.length < 5000) { if (i < 3) await new Promise(r => setTimeout(r, 700)); continue; }
-          const desc = await getFaceDescriptor(cnv);
-          if (desc) shots.push({ dataUrl, desc, bright: _sampleBrightness(cnv) });
+          const snap = await getFaceSnapshotQuality(cnv);
+          if (snap && snap.desc) {
+            const bright = _sampleBrightness(cnv);
+            const sharp = _sampleSharpness(cnv, snap.box);
+            const quality = _scoreFaceShot(snap, bright, sharp);
+            shots.push({ dataUrl, desc: snap.desc, bright, sharp, quality });
+          }
           if (i < 3) await new Promise(r => setTimeout(r, 700));
         }
 
         let dataUrl, descriptor;
         if (shots.length) {
-          // frame terbaik: brightness paling dekat 128 (spec), bukan yang terbuka/tergelap
-          shots.sort((a, b) => Math.abs(a.bright - 128) - Math.abs(b.bright - 128));
+          // Pilih otomatis frame kualitas terbaik (ketajaman + pose lurus + skor AI + kecerahan ideal)
+          shots.sort((a, b) => b.quality - a.quality);
           dataUrl = shots[0].dataUrl;
+          console.log('[AI] Best face frame picked:', { quality: shots[0].quality.toFixed(1), sharp: shots[0].sharp.toFixed(1), bright: Math.round(shots[0].bright), totalShots: shots.length });
           descriptor = (window.FaceQuality && shots.length > 1)
             ? window.FaceQuality.mergeDescriptors(shots.map(s => s.desc))
             : shots[0].desc;
