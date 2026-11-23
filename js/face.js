@@ -994,7 +994,7 @@
         const vid = $('camVideo');
         vid.srcObject = _camStream;
         if (vid.readyState < 1) await new Promise(r => { vid.onloadedmetadata = r; });
-        await vid.play();
+        await vid.play().catch(() => {});
         
         // STABILITY FIX: Baru set _mejaStartTime & _isStreamStable SETELAH video play
         _mejaStartTime = Date.now();
@@ -1147,7 +1147,7 @@
         const vid = $('buktiVideo');
         vid.srcObject = _camStream;
         if (vid.readyState < 1) await new Promise(r => { vid.onloadedmetadata = r; });
-        await vid.play();
+        await vid.play().catch(() => {});
         if (btnCap) btnCap.disabled = false;
       } catch (e) {
         // Fallback non-constraint
@@ -1156,7 +1156,7 @@
           const vid = $('buktiVideo');
           vid.srcObject = _camStream;
           await new Promise(r => { vid.onloadedmetadata = r; });
-          await vid.play();
+          await vid.play().catch(() => {});
           if (btnCap) btnCap.disabled = false;
         } catch (e2) {
           alert('Gagal mengakses kamera: Pastikan izin kamera aktif.');

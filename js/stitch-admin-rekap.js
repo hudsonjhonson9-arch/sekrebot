@@ -482,6 +482,7 @@
     const box = d.getElementById('adminRekapListContainer');
     const sumBar = d.getElementById('adminRekapSummaryBar');
     const prevScrollY = w.scrollY;
+    if (!getToken()) return;
     if (box && !silent && !box.innerHTML.trim()) {
       box.innerHTML = '<div class="p-8 text-center text-xs text-slate-400">Memuat data rekap seluruh pegawai...</div>';
     }
@@ -1792,6 +1793,7 @@
       _usersCacheInstId = instId;
       return _usersCache;
     }
+    if (!getToken()) return [];
     _usersCacheInstId = instId;
     _usersCachePromise = (async () => {
       try {

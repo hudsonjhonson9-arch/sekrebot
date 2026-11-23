@@ -467,7 +467,7 @@ window.scanQRAset = function() {
       });
       _qrOverlayStream = stream;
       video.srcObject = stream;
-      await video.play();
+      await video.play().catch(() => {});
       status.textContent = 'Arahkan QR ke tengah bingkai';
       _qrOverlayActive = true;
       const c = document.createElement('canvas');

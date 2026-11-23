@@ -632,7 +632,7 @@
 
         if (video) {
           video.srcObject = stream;
-          await video.play();
+          await video.play().catch(() => {});
         }
 
         if (statusText) statusText.textContent = 'Arahkan kamera ke stiker QR atau Barcode BMD';

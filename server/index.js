@@ -200,10 +200,29 @@ const SIMAPO_USER_PATHS = new Set([
   '/qr-pinjam',
 ]);
 
-function simapoGate(req, res, next) {
+const SIMAPO_ADMIN_PERMS = new Set([
+  '*',
+  'aset.manage',
+  'aset.approve',
+  'aset.laporan',
+  'aset.tiket',
+  'aset.pemeliharaan',
+  'aset.pengaturan',
+]);
+
+async function simapoGate(req, res, next) {
   const role = req.user?.role;
   if (SIMAPO_ROLES.has(role)) return next();
   if (ABSEN_ROLES.has(role) && SIMAPO_USER_PATHS.has(req.path)) return next();
+  if (role) {
+    try {
+      const normId = String(role).trim().toUpperCase().replace(/\s+/g, '_');
+      const rp = await query('SELECT permissions FROM absen_roles WHERE id = $1 LIMIT 1', [normId]);
+      const raw = rp?.rows?.[0]?.permissions;
+      const perms = Array.isArray(raw) ? raw : (typeof raw === 'string' ? JSON.parse(raw) : []);
+      if (Array.isArray(perms) && perms.some((p) => SIMAPO_ADMIN_PERMS.has(p))) return next();
+    } catch (_) {}
+  }
   return res.status(403).json({ ok: false, message: 'Forbidden' });
 }
 
