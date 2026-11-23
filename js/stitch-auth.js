@@ -22,7 +22,7 @@
   /* ── Sesi: pembersihan terpusat + penanganan sesi kedaluwarsa (401) ── */
   const SESSION_KEYS = [
     '_native_token', 'native_token', '_sess_token', '_sess_nip', '_sess_role', '_sess_inst',
-    'stitch_active_nip', 'stitch_active_view', 'MY_NIP', 'MY_ROLE', 'MY_NAME', 'MY_INSTANSI',
+    'stitch_active_nip', 'stitch_active_view', 'MY_NIP', 'MY_ROLE', 'MY_NAME', 'MY_INSTANSI', 'MY_PERMS',
     'tg_user_id_v5', 'tg_user_obj_v5', 'tg_user_id_v4', 'tg_user_obj_v4'
   ];
   function clearAllClientCookies() {

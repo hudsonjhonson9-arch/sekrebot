@@ -550,6 +550,9 @@
 
           localStorage.setItem('stitch_active_nip', nip);
           localStorage.setItem('MY_NIP', nip);
+          if (Array.isArray(data.user.role_permissions)) {
+            try { localStorage.setItem('MY_PERMS', JSON.stringify(data.user.role_permissions)); } catch (_) {}
+          }
 
           // Sinkronkan identitas & cache biometrik ke modul D:\Code\absensi (face.js / absen.js)
           window.MY_ID = String(data.user.id || '');

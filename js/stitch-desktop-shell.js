@@ -12,8 +12,8 @@
   const PRIMARY_NAV = [
     { key: 'presensi', label: 'Presensi', icon: 'fingerprint', action: () => callSwitch('presensi') },
     { key: 'riwayat-full', label: 'Riwayat', icon: 'history', action: () => callSwitch('riwayat') },
-    { key: 'arsip', label: 'Arsip', icon: 'folder_shared', action: () => callSwitch('arsip') },
-    { key: 'aset', label: 'Aset', icon: 'inventory_2', action: () => callSwitch('aset') },
+    { key: 'arsip', label: 'Arsip', icon: 'folder_shared', perms: ['arsip.view', 'arsip.upload'], mobileTabId: 'mTab-arsip', action: () => callSwitch('arsip') },
+    { key: 'aset', label: 'Aset', icon: 'inventory_2', perms: ['aset.view', 'aset.pinjam', 'aset.manage', 'aset.approve'], mobileTabId: 'mTab-aset', action: () => callSwitch('aset') },
     { key: 'profil', label: 'Profil', icon: 'person', action: () => callSwitch('profil') }
   ];
 
@@ -234,10 +234,29 @@
 
   function getUserPerms() {
     const u = w.state && w.state.currentUser;
-    if (u && Array.isArray(u.role_permissions) && u.role_permissions.length > 0) {
+    if (u && Array.isArray(u.role_permissions)) {
       return u.role_permissions;
     }
+    try {
+      const raw = localStorage.getItem('MY_PERMS');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (_) {}
     return null;
+  }
+
+  function canAccessPrimaryItem(item) {
+    if (!Array.isArray(item.perms) || !item.perms.length) return true;
+    const role = String((w.state && w.state.currentUser && w.state.currentUser.role) || localStorage.getItem('MY_ROLE') || localStorage.getItem('_sess_role') || '').trim().toUpperCase().replace(/\s+/g, '_');
+    if (role === 'SUPERADMIN') return true;
+    const perms = getUserPerms();
+    if (Array.isArray(perms)) {
+      if (perms.includes('*')) return true;
+      return item.perms.some((p) => perms.includes(p));
+    }
+    return true;
   }
 
   function canAccessAdminItem(item) {
@@ -717,6 +736,20 @@
   }
 
   function syncRole() {
+    // Sembunyikan/tampilkan menu utama (Arsip, Aset) di sidebar desktop & bottom nav mobile sesuai hak akses role
+    const aside = d.getElementById('stitchDesktopSidebar');
+    PRIMARY_NAV.forEach((item) => {
+      const allowed = canAccessPrimaryItem(item);
+      if (aside) {
+        const btn = aside.querySelector(`[data-stitch-nav="${item.key}"]`);
+        if (btn) btn.classList.toggle('hidden', !allowed);
+      }
+      if (item.mobileTabId) {
+        const mBtn = d.getElementById(item.mobileTabId);
+        if (mBtn) mBtn.classList.toggle('hidden', !allowed);
+      }
+    });
+
     const admin = isAdmin();
     const group = d.getElementById('stitchSidebarAdminGroup');
     if (group) {

@@ -732,6 +732,49 @@
       sidebarNav.appendChild(profilA);
     }
 
+    // 1c. Sembunyikan menu sidebar desktop (Arsip, Aset, Kiosk, Admin) bila role tidak memiliki hak akses
+    if (sidebarNav) {
+      const applyDesktopNavPerms = (perms) => {
+        if (!Array.isArray(perms)) return;
+        const role = String(localStorage.getItem('MY_ROLE') || localStorage.getItem('_sess_role') || '').trim().toUpperCase().replace(/\s+/g, '_');
+        if (role === 'SUPERADMIN' || perms.includes('*')) return;
+        const hasAny = (list) => list.some((p) => perms.includes(p));
+        const toggleLink = (href, submenuId, allowed) => {
+          const a = sidebarNav.querySelector(`a[href="${href}"]`);
+          if (a) a.style.display = allowed ? '' : 'none';
+          if (submenuId) {
+            const sub = document.getElementById(submenuId);
+            if (sub && !allowed) sub.style.display = 'none';
+          }
+        };
+        toggleLink('arsip.html', 'stitchStandaloneArsipSubmenu', hasAny(['arsip.view', 'arsip.upload']));
+        toggleLink('aset-kir.html', 'stitchStandaloneAsetSubmenu', hasAny(['aset.view', 'aset.pinjam', 'aset.manage', 'aset.approve']));
+        toggleLink('kiosk.html', null, hasAny(['admin.kiosk', 'admin.devices']));
+        toggleLink('admin.html', 'stitchStandaloneAdminSubmenu', perms.some((p) => String(p || '').startsWith('admin.')));
+      };
+      try {
+        const rawP = localStorage.getItem('MY_PERMS');
+        if (rawP) {
+          applyDesktopNavPerms(JSON.parse(rawP));
+        } else {
+          const nip = (localStorage.getItem('stitch_active_nip') || localStorage.getItem('MY_NIP') || '').trim();
+          const tok = localStorage.getItem('_native_token') || localStorage.getItem('native_token') || localStorage.getItem('_sess_token') || '';
+          if (nip && tok) {
+            fetch(`/api/stitch/user-data?nip=${encodeURIComponent(nip)}`)
+              .then((r) => r.ok ? r.json() : null)
+              .then((j) => {
+                const p = j?.user?.role_permissions;
+                if (Array.isArray(p)) {
+                  try { localStorage.setItem('MY_PERMS', JSON.stringify(p)); } catch (_) {}
+                  applyDesktopNavPerms(p);
+                }
+              })
+              .catch(() => {});
+          }
+        }
+      } catch (_) {}
+    }
+
     // 2. Sinkronisasi profil & foto avatar user login asli pada top header halaman desktop
     try {
       const uObj = JSON.parse(localStorage.getItem('tg_user_obj_v5') || 'null') || {};
