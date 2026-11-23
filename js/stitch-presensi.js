@@ -371,6 +371,9 @@
         } else {
           Swal.fire('Gagal', json.message || 'Gagal menyimpan presensi pulang.', 'error');
         }
+      } catch (err) {
+        console.error('[ClockOut]', err);
+        Swal.fire('Gagal', err?.message || 'Gagal memproses presensi pulang.', 'error');
       } finally {
         _isClockActionInFlight = false;
         setClockBtnLoading(false);
@@ -438,6 +441,7 @@
     function updateAttendanceUI() {
       const inBtn = document.getElementById('clockInBtn');
       const inTitle = document.getElementById('clockInBtnTitle');
+      const inIcon = document.getElementById('clockInBtnIcon');
 
       // Analog Hero Check In/Out Displays
       const heroCheckin = document.getElementById('display-checkin');
@@ -446,7 +450,7 @@
       const heroCheckoutLoc = document.getElementById('display-checkout-loc');
 
       if (heroCheckin) heroCheckin.textContent = state.attendance.clockInTime || '-:-:-';
-      if (heroCheckinLoc) heroCheckinLoc.textContent = state.attendance.clockInTime ? 'BAPPERIDA Office' : 'Belum Absen';
+      if (heroCheckinLoc) heroCheckinLoc.textContent = state.attendance.clockInTime ? 'Tercatat Masuk' : 'Belum Absen';
       if (heroCheckout) heroCheckout.textContent = state.attendance.clockOutTime || '-:-:-';
       if (heroCheckoutLoc) heroCheckoutLoc.textContent = state.attendance.clockOutTime ? 'Tercatat Pulang' : 'Belum Tercatat';
 
@@ -454,22 +458,26 @@
         if (inBtn) {
           inBtn.className = "tap-effect w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white font-extrabold text-sm shadow-[0_6px_20px_rgba(225,29,72,0.28)] border border-rose-500 transition-all cursor-pointer";
         }
+        if (inIcon) inIcon.textContent = 'logout';
         if (inTitle) inTitle.textContent = 'PRESENSI PULANG';
       } else if (state.attendance.status === 'SELESAI') {
         if (inBtn) {
-          inBtn.className = "tap-effect w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-sm shadow-xs border border-slate-200 dark:border-slate-700 transition-all cursor-pointer";
+          inBtn.className = "tap-effect w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-extrabold text-sm shadow-xs border border-emerald-200 dark:border-emerald-800 transition-all cursor-pointer";
         }
+        if (inIcon) inIcon.textContent = 'check_circle';
         if (inTitle) inTitle.textContent = 'PRESENSI SELESAI';
       } else if (state.attendance.status === 'KETERANGAN') {
         if (inBtn) {
-          inBtn.className = "tap-effect w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 font-extrabold text-sm shadow-xs border border-amber-300 dark:border-amber-800 transition-all cursor-not-allowed";
+          inBtn.className = "tap-effect w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 font-extrabold text-sm shadow-xs border border-amber-300 dark:border-amber-800 transition-all cursor-pointer";
         }
+        if (inIcon) inIcon.textContent = 'event_busy';
         if (inTitle) inTitle.textContent = `STATUS: ${state.attendance.keterangan || 'IZIN / CUTI'}`;
       } else {
         if (inBtn) {
           inBtn.className = "tap-effect w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-extrabold text-sm shadow-[0_6px_20px_rgba(37,99,235,0.28)] border border-blue-500 transition-all cursor-pointer";
         }
-        if (inTitle) inTitle.textContent = 'PRESENSI';
+        if (inIcon) inIcon.textContent = 'login';
+        if (inTitle) inTitle.textContent = 'PRESENSI MASUK';
       }
     }
 

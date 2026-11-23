@@ -283,34 +283,19 @@
                 </div>
               </div>
 
-              <!-- Action Punch Buttons: Presensi Masuk & Presensi Pulang -->
-              <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <!-- Button Masuk -->
-                <button id="btn-desktop-clockin" onclick="doDesktopAttendance('MASUK')" type="button" class="group relative h-16 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center justify-between px-5 shadow-sm active:scale-[0.99] cursor-pointer">
-                  <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-                      <span class="material-symbols-outlined text-[24px]">login</span>
+              <!-- Single Smart Attendance Button (Masuk -> Pulang -> Selesai) -->
+              <div class="mt-5">
+                <button id="btn-desktop-presensi" onclick="handleDesktopSinglePresensi()" type="button" class="group relative w-full h-16 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center justify-between px-5 shadow-md active:scale-[0.99] cursor-pointer">
+                  <div class="flex items-center gap-3.5">
+                    <div id="desktopPresensiIconWrap" class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                      <span id="desktopPresensiIcon" class="material-symbols-outlined text-[24px]">login</span>
                     </div>
                     <div class="flex flex-col text-left">
-                      <span class="text-sm font-extrabold leading-tight" id="clockinBtnTitle">Presensi Masuk</span>
-                      <span class="text-[11px] font-mono text-blue-100" id="clockinBtnSub">Toleransi: s/d 08:00 WITA</span>
+                      <span class="text-sm font-extrabold leading-tight" id="desktopPresensiTitle">Presensi Masuk</span>
+                      <span class="text-[11px] font-mono text-blue-100" id="desktopPresensiSub">Jadwal Masuk: 07:15 WITA</span>
                     </div>
                   </div>
-                  <span class="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                </button>
-
-                <!-- Button Pulang -->
-                <button id="btn-desktop-clockout" onclick="doDesktopAttendance('PULANG')" type="button" class="group relative h-16 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface transition-all flex items-center justify-between px-5 border border-outline-variant/40 active:scale-[0.99] cursor-pointer">
-                  <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-blue-600">
-                      <span class="material-symbols-outlined text-[24px]">logout</span>
-                    </div>
-                    <div class="flex flex-col text-left">
-                      <span class="text-sm font-bold leading-tight" id="clockoutBtnTitle">Presensi Pulang</span>
-                      <span class="text-[11px] font-mono text-on-surface-variant" id="clockoutBtnSub">Jadwal: 14:30 WITA</span>
-                    </div>
-                  </div>
-                  <span class="material-symbols-outlined text-[20px] text-on-surface-variant group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                  <span id="desktopPresensiArrow" class="material-symbols-outlined text-[22px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
                 </button>
               </div>
 
@@ -1012,55 +997,87 @@
       // Status Masuk Card
       const masukJamEl = document.getElementById('todayMasukJam');
       const masukBadgeEl = document.getElementById('todayMasukBadge');
-      const clockinBtn = document.getElementById('btn-desktop-clockin');
-      const clockinTitle = document.getElementById('clockinBtnTitle');
-      const clockinSub = document.getElementById('clockinBtnSub');
-
       if (masukLog) {
         if (masukJamEl) masukJamEl.textContent = masukLog.Jam || '--:--:--';
         if (masukBadgeEl) {
           masukBadgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold';
           masukBadgeEl.textContent = masukLog['Jenis Absen'] === 'DI LUAR JAM MASUK' ? 'Terlambat' : 'Tepat Waktu';
         }
-        if (clockinTitle) clockinTitle.textContent = 'Sudah Absen Masuk';
-        if (clockinSub) clockinSub.textContent = `Tercatat: ${masukLog.Jam} WITA`;
-        if (clockinBtn) clockinBtn.classList.add('opacity-90');
       } else {
         if (masukJamEl) masukJamEl.textContent = '--:--:--';
         if (masukBadgeEl) {
           masukBadgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold';
           masukBadgeEl.textContent = 'Belum Tercatat';
         }
-        if (clockinTitle) clockinTitle.textContent = 'Presensi Masuk';
-        if (clockinSub) clockinSub.textContent = `Jadwal Masuk: ${shiftMasuk} WITA`;
-        if (clockinBtn) clockinBtn.classList.remove('opacity-90');
       }
 
       // Status Pulang Card
       const pulangJamEl = document.getElementById('todayPulangJam');
       const pulangBadgeEl = document.getElementById('todayPulangBadge');
-      const clockoutBtn = document.getElementById('btn-desktop-clockout');
-      const clockoutTitle = document.getElementById('clockoutBtnTitle');
-      const clockoutSub = document.getElementById('clockoutBtnSub');
-
       if (pulangLog) {
         if (pulangJamEl) pulangJamEl.textContent = pulangLog.Jam || '--:--:--';
         if (pulangBadgeEl) {
           pulangBadgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold';
           pulangBadgeEl.textContent = 'Tercatat Selesai';
         }
-        if (clockoutTitle) clockoutTitle.textContent = 'Sudah Absen Pulang';
-        if (clockoutSub) clockoutSub.textContent = `Tercatat: ${pulangLog.Jam} WITA`;
-        if (clockoutBtn) clockoutBtn.classList.add('bg-blue-50', 'border-blue-200');
       } else {
         if (pulangJamEl) pulangJamEl.textContent = '--:--:--';
         if (pulangBadgeEl) {
           pulangBadgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold';
           pulangBadgeEl.textContent = masukLog ? 'Menunggu Jam Pulang' : 'Belum Selesai';
         }
-        if (clockoutTitle) clockoutTitle.textContent = 'Presensi Pulang';
-        if (clockoutSub) clockoutSub.textContent = `Jadwal: ${shiftPulang} WITA`;
-        if (clockoutBtn) clockoutBtn.classList.remove('bg-blue-50', 'border-blue-200');
+      }
+
+      // Single Smart Button State (Masuk -> Pulang -> Selesai)
+      const singleBtn = document.getElementById('btn-desktop-presensi');
+      const singleIconWrap = document.getElementById('desktopPresensiIconWrap');
+      const singleIcon = document.getElementById('desktopPresensiIcon');
+      const singleTitle = document.getElementById('desktopPresensiTitle');
+      const singleSub = document.getElementById('desktopPresensiSub');
+      const singleArrow = document.getElementById('desktopPresensiArrow');
+
+      if (masukLog && pulangLog) {
+        state.desktopNextAction = 'SELESAI';
+        if (singleBtn) {
+          singleBtn.className = 'group relative w-full h-16 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200 transition-all flex items-center justify-between px-5 shadow-xs cursor-default';
+          singleBtn.disabled = false;
+        }
+        if (singleIconWrap) singleIconWrap.className = 'w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0';
+        if (singleIcon) singleIcon.textContent = 'check_circle';
+        if (singleTitle) singleTitle.textContent = 'Presensi Hari Ini Selesai';
+        if (singleSub) {
+          singleSub.className = 'text-[11px] font-mono text-emerald-700';
+          singleSub.textContent = `Masuk ${masukLog.Jam} • Pulang ${pulangLog.Jam} WITA`;
+        }
+        if (singleArrow) singleArrow.classList.add('hidden');
+      } else if (masukLog) {
+        state.desktopNextAction = 'PULANG';
+        if (singleBtn) {
+          singleBtn.className = 'group relative w-full h-16 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white transition-all flex items-center justify-between px-5 shadow-md active:scale-[0.99] cursor-pointer';
+          singleBtn.disabled = false;
+        }
+        if (singleIconWrap) singleIconWrap.className = 'w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0';
+        if (singleIcon) singleIcon.textContent = 'logout';
+        if (singleTitle) singleTitle.textContent = 'Presensi Pulang';
+        if (singleSub) {
+          singleSub.className = 'text-[11px] font-mono text-rose-100';
+          singleSub.textContent = `Masuk ${masukLog.Jam} • Jadwal Pulang: ${shiftPulang} WITA`;
+        }
+        if (singleArrow) singleArrow.classList.remove('hidden');
+      } else {
+        state.desktopNextAction = 'MASUK';
+        if (singleBtn) {
+          singleBtn.className = 'group relative w-full h-16 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center justify-between px-5 shadow-md active:scale-[0.99] cursor-pointer';
+          singleBtn.disabled = false;
+        }
+        if (singleIconWrap) singleIconWrap.className = 'w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0';
+        if (singleIcon) singleIcon.textContent = 'login';
+        if (singleTitle) singleTitle.textContent = 'Presensi Masuk';
+        if (singleSub) {
+          singleSub.className = 'text-[11px] font-mono text-blue-100';
+          singleSub.textContent = `Jadwal Masuk: ${shiftMasuk} WITA`;
+        }
+        if (singleArrow) singleArrow.classList.remove('hidden');
       }
 
       renderDesktopLogsTable(state.userLogs);
@@ -1259,7 +1276,19 @@
     }
 
     // ── 7. ATTENDANCE SUBMISSION (REAL POSTGRESQL INSERT) ─────────────
+    let _desktopAbsenInFlight = false;
+    function handleDesktopSinglePresensi() {
+      if (_desktopAbsenInFlight) return;
+      const next = state.desktopNextAction || 'MASUK';
+      if (next === 'SELESAI') {
+        Swal.fire('Selesai', 'Anda sudah menyelesaikan presensi masuk dan pulang hari ini.', 'info');
+        return;
+      }
+      doDesktopAttendance(next);
+    }
+
     async function doDesktopAttendance(jenis) {
+      if (_desktopAbsenInFlight) return;
       if (!state.currentUser) {
         Swal.fire('Peringatan', 'Silakan pilih pegawai terlebih dahulu.', 'warning');
         return;
@@ -1270,11 +1299,12 @@
         return;
       }
 
-      const btn = jenis === 'MASUK' ? document.getElementById('btn-desktop-clockin') : document.getElementById('btn-desktop-clockout');
+      _desktopAbsenInFlight = true;
+      const btn = document.getElementById('btn-desktop-presensi');
       const originalHTML = btn ? btn.innerHTML : '';
       let succeeded = false;
       if (btn) {
-        btn.innerHTML = `<span class="flex items-center gap-2 font-bold"><span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> Mengirim ke PostgreSQL...</span>`;
+        btn.innerHTML = `<span class="flex items-center gap-2 font-bold"><span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> Mengirim Presensi ${jenis}...</span>`;
         btn.disabled = true;
       }
 
@@ -1320,6 +1350,7 @@
       } catch (err) {
         Swal.fire('Kesalahan Jaringan', 'Gagal menghubungi server database: ' + err.message, 'error');
       } finally {
+        _desktopAbsenInFlight = false;
         if (!succeeded && btn) {
           btn.innerHTML = originalHTML;
           btn.disabled = false;
