@@ -1771,7 +1771,7 @@
         const nip = faceBtn.getAttribute('data-desk-reset-face');
         const nama = faceBtn.getAttribute('data-desk-nama') || 'pegawai';
         if (!confirm(`Hapus data wajah AI milik ${nama}?`)) return;
-        const res = await fetch('/api/media/face-reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nip }) });
+        const res = await fetch('/api/stitch/admin/face-reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nip }) });
         const json = await res.json().catch(() => null);
         notifyToast(res.ok ? 'success' : 'error', res.ok ? 'Wajah Direset' : 'Gagal', (json && json.message) || `HTTP ${res.status}`);
       }

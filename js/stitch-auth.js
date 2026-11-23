@@ -131,7 +131,7 @@
     }
   }
 
-  const STITCH_RE = /^(https?:\/\/[^/]+)?\/api\/(stitch|simapo|media|dev|auth\/devices|log|rekap-absen|arsip|instansi-list|instansi-add|instansi-update|instansi-delete|bidang-list|bidang-add|bidang-update|bidang-delete|password-toggle|kontrol-absen|peringatan-akumulasi|kirim-rekap|admin\/roles|absen-roles|lokasi-list|lokasi-add|lokasi-update|lokasi-delete)(\/|\?|$)/;
+  const STITCH_RE = /^(https?:\/\/[^/]+)?\/api\/(stitch|simapo|media|dev|auth\/devices|log|rekap-absen|arsip|instansi-list|instansi-add|instansi-update|instansi-delete|bidang-list|bidang-add|bidang-update|bidang-delete|password-toggle|kontrol-absen|peringatan-akumulasi|kirim-rekap|admin\/roles|absen-roles|lokasi-list|lokasi-add|lokasi-update|lokasi-delete|user-list|user-add|user-edit|user-delete|user-permissions|user-reset-password|jam-absen|jam-periode-list|jam-periode-add|jam-periode-delete|libur-list|libur-add|libur-delete|keterangan|dokumen|lembur|penugasan|absen|admin-list|admin-add|admin-delete)(\/|\?|$)/;
   const API_RE = /^(https?:\/\/[^/]+)?\/api\//;
 
   // ── Seamless Realtime Data Sync Bus (same-tab + cross-tab + visibilitychange) ──
