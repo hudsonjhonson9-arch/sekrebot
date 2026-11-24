@@ -700,10 +700,45 @@
     }
   }
 
+  function onPengesahPicked(inputEl) {
+    const rawVal = (inputEl?.value || '').trim();
+    if (!rawVal) return;
+    const val = rawVal.toLowerCase();
+    const pg = _pegawaiList.find((x) => {
+      const nm = (x.nama || x.username || '').trim().toLowerCase();
+      const np = String(x.nip || '').trim().toLowerCase();
+      return nm === val || np === val || val.startsWith(nm) || (np && val.includes(np));
+    });
+    if (!pg) return;
+    if (rawVal.includes('(') && (pg.nama || pg.username)) inputEl.value = pg.nama || pg.username;
+    const container = inputEl.closest('[data-sppd-pengikut-row]') || inputEl.closest('#modalArsipAgendaSppd, #drawerMobileAgendaSppd');
+    if (!container) return;
+    if (container.hasAttribute('data-sppd-pengikut-row')) {
+      const nip = container.querySelector('[data-pk="pptk_nip"]');
+      const jab = container.querySelector('[data-pk="pptk_jabatan"]');
+      if (nip) nip.value = pg.nip || '';
+      if (jab && pg.jabatan) jab.value = pg.jabatan;
+    } else {
+      const nip = container.querySelector('[data-sppd-field="pelaksana_pptk_nip"]');
+      const jab = container.querySelector('[data-sppd-field="pelaksana_pptk_jabatan"]');
+      if (nip) nip.value = pg.nip || '';
+      if (jab && pg.jabatan) jab.value = pg.jabatan;
+    }
+  }
+
+  function renumberPengikutRows(wrap) {
+    if (!wrap) return;
+    wrap.querySelectorAll('[data-sppd-pengikut-row]').forEach((row, i) => {
+      const lbl = row.querySelector('[data-pk-pengesah-label]');
+      if (lbl) lbl.textContent = `Pejabat Pengesah Berangkat (Romawi I - Personil ${i + 2}):`;
+    });
+  }
+
   function addPengikutRow(btnEl) {
     const modal = btnEl?.closest('#modalArsipAgendaSppd, #drawerMobileAgendaSppd');
     const wrap = modal?.querySelector('[data-sppd-pengikut-list]');
     if (!wrap) return;
+    const personNum = wrap.querySelectorAll('[data-sppd-pengikut-row]').length + 2;
     const row = d.createElement('div');
     row.setAttribute('data-sppd-pengikut-row', '1');
     row.className = 'p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-2 gap-2 relative';
@@ -713,15 +748,21 @@
       <input data-pk="pangkat" type="text" placeholder="Pangkat / Golongan" class="h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
       <div class="flex gap-1.5">
         <input data-pk="jabatan" type="text" placeholder="Jabatan" class="flex-1 h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
-        <button type="button" onclick="this.closest('[data-sppd-pengikut-row]').remove()" class="px-2.5 h-9 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 text-xs font-bold cursor-pointer" title="Hapus Pengikut">Hapus</button>
+        <button type="button" onclick="const w=this.closest('[data-sppd-pengikut-list]');this.closest('[data-sppd-pengikut-row]').remove();window.ArsipAgenda?.renumberPengikutRows?.(w);" class="px-2.5 h-9 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 text-xs font-bold cursor-pointer" title="Hapus Pengikut">Hapus</button>
+      </div>
+      <div class="sm:col-span-2 pt-2 mt-0.5 border-t border-dashed border-slate-200 dark:border-slate-700">
+        <div data-pk-pengesah-label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5">Pejabat Pengesah Berangkat (Romawi I - Personil ${personNum}):</div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <input data-pk="pptk_nama" list="agendaPegawaiDatalist" oninput="window.ArsipAgenda?.onPengesahPicked(this)" onchange="window.ArsipAgenda?.onPengesahPicked(this)" type="text" placeholder="Nama Pejabat Pengesah (Cari / Ketik)" class="h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          <input data-pk="pptk_jabatan" type="text" placeholder="Jabatan Pengesah (Romawi I)" class="h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          <input data-pk="pptk_nip" type="text" placeholder="NIP Pejabat Pengesah" class="h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+        </div>
       </div>
       <details class="sm:col-span-2 text-[11px] text-slate-500">
-        <summary class="cursor-pointer font-semibold text-[#2563eb] hover:underline select-none">Pengaturan Per-Personil (Nomor SPPD, Tingkat Biaya, PPTK Romawi I)</summary>
+        <summary class="cursor-pointer font-semibold text-[#2563eb] hover:underline select-none">Pengaturan Tambahan (Nomor SPPD &amp; Tingkat Biaya)</summary>
         <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
           <input data-pk="nomor_sppd" type="text" placeholder="Nomor SPPD khusus (opsional)" class="h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-mono text-slate-900 dark:text-white">
           <input data-pk="tingkat_biaya" type="text" placeholder="Tingkat Biaya (mis. Tingkat C)" class="h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-900 dark:text-white">
-          <input data-pk="pptk_nama" list="agendaPegawaiDatalist" type="text" placeholder="Nama PPTK / Pengesah Visum I (opsional)" class="h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-900 dark:text-white">
-          <input data-pk="pptk_nip" type="text" placeholder="NIP PPTK (opsional)" class="h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-mono text-slate-900 dark:text-white">
         </div>
       </details>
     `;
@@ -743,6 +784,7 @@
         nomor_sppd: g('nomor_sppd') || undefined,
         tingkat_biaya: g('tingkat_biaya') || undefined,
         pptk_nama: g('pptk_nama') || undefined,
+        pptk_jabatan: g('pptk_jabatan') || undefined,
         pptk_nip: g('pptk_nip') || undefined,
       });
     });
@@ -1979,6 +2021,12 @@
     set('pelaksana_nip', item.pelaksana_nip || '');
     set('pelaksana_pangkat', item.pelaksana_pangkat || '');
     set('pelaksana_jabatan', item.pelaksana_jabatan || '');
+    let parsedWewenang = {};
+    try { parsedWewenang = typeof item.wewenang === 'object' && item.wewenang ? item.wewenang : JSON.parse(item.wewenang || '{}'); } catch { parsedWewenang = {}; }
+    const p1Pptk = parsedWewenang.pelaksana_pptk || {};
+    set('pelaksana_pptk_nama', item.pelaksana_pptk_nama || p1Pptk.nama || '');
+    set('pelaksana_pptk_jabatan', item.pelaksana_pptk_jabatan || p1Pptk.jabatan || '');
+    set('pelaksana_pptk_nip', item.pelaksana_pptk_nip || p1Pptk.nip || '');
     set('tempat_berangkat', item.tempat_berangkat || 'Waikabubak');
     set('tujuan', item.tempat_tujuan || '');
     set('provinsi_tujuan', item.provinsi_tujuan || 'Nusa Tenggara Timur');
@@ -2006,6 +2054,7 @@
         s('nomor_sppd', p.nomor_sppd);
         s('tingkat_biaya', p.tingkat_biaya);
         s('pptk_nama', p.pptk_nama);
+        s('pptk_jabatan', p.pptk_jabatan);
         s('pptk_nip', p.pptk_nip);
       });
     }
@@ -2033,6 +2082,9 @@
     const pelaksana_nip = v('pelaksana_nip');
     const pelaksana_pangkat = v('pelaksana_pangkat');
     const pelaksana_jabatan = v('pelaksana_jabatan');
+    const pelaksana_pptk_nama = v('pelaksana_pptk_nama');
+    const pelaksana_pptk_jabatan = v('pelaksana_pptk_jabatan');
+    const pelaksana_pptk_nip = v('pelaksana_pptk_nip');
     const tempat_berangkat = v('tempat_berangkat') || 'Waikabubak';
     const tempat_tujuan = v('tujuan');
     const provinsi_tujuan = v('provinsi_tujuan') || 'Nusa Tenggara Timur';
@@ -2076,6 +2128,12 @@
       pelaksana_nip,
       pelaksana_pangkat,
       pelaksana_jabatan,
+      pelaksana_pptk_nama: pelaksana_pptk_nama || undefined,
+      pelaksana_pptk_jabatan: pelaksana_pptk_jabatan || undefined,
+      pelaksana_pptk_nip: pelaksana_pptk_nip || undefined,
+      wewenang: (pelaksana_pptk_nama || pelaksana_pptk_jabatan || pelaksana_pptk_nip)
+        ? { pelaksana_pptk: { nama: pelaksana_pptk_nama, jabatan: pelaksana_pptk_jabatan, nip: pelaksana_pptk_nip } }
+        : undefined,
       pengikut,
       tempat_berangkat,
       tempat_tujuan,
@@ -2318,6 +2376,8 @@
     uploadSuratFile,
     openSuratCameraScan,
     onPelaksanaPicked,
+    onPengesahPicked,
+    renumberPengikutRows,
     addPengikutRow,
     openSuratPopover,
     openSppdPopover,
