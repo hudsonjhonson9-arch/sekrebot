@@ -66,9 +66,10 @@ export function hashDeviceToken(token) {
 // menunggu token kedaluwarsa. revoked_at IS NULL writable di luar is_active supaya
 // token yang dicabut tidak bisa dihidupkan lagi dengan sekadar menggeser flag.
 export const DEVICE_LOOKUP_SQL =
-  'SELECT u.id::text AS id, u."NIP" AS nip, u.role, u.is_admin, u.instansi_id ' +
+  'SELECT u.id::text AS id, u."NIP" AS nip, u.role, u.is_admin, u.instansi_id, ar.permissions AS role_permissions ' +
   'FROM device_sessions d ' +
   'JOIN user_list u ON u.id::text = d.user_id ' +
+  'LEFT JOIN absen_roles ar ON ar.id = UPPER(REPLACE(TRIM(COALESCE(u.role, \'\')), \' \', \'_\')) ' +
   'WHERE d.token_hash = $1 AND d.is_active AND d.revoked_at IS NULL ' +
   'AND (d.expires_at IS NULL OR d.expires_at > now())';
 
@@ -89,9 +90,10 @@ export const DEVICE_LOOKUP_SQL =
 // ponytail: hash scan 47 baris per session, tidak masalah; kalau user_list jadi
 // ratusan ribu, pakai u.id = s.user_id::bigint plus index.
 export const SESSION_LOOKUP_SQL =
-  'SELECT u.id::text AS id, u."NIP" AS nip, u.role, u.is_admin, u.instansi_id ' +
+  'SELECT u.id::text AS id, u."NIP" AS nip, u.role, u.is_admin, u.instansi_id, ar.permissions AS role_permissions ' +
   'FROM auth_sessions s ' +
   'JOIN user_list u ON u.id::text = s.user_id ' +
+  'LEFT JOIN absen_roles ar ON ar.id = UPPER(REPLACE(TRIM(COALESCE(u.role, \'\')), \' \', \'_\')) ' +
   'WHERE s.session_token = $1 AND s.is_active AND s.expires_at > now()';
 
 // Nol baris = sesi tak dikenal/kedaluwarsa. Lebih dari satu = user_list berubah
@@ -207,6 +209,16 @@ export function createRequireRole(defaultDeps = {}) {
       // jangan pernah `req.user.id === <number>`.
       // is_admin: boolean user_list — satu-satunya sumber izin tambah/edit log
       // (bukan role). Fail-closed: selain true dianggap false.
+      let rolePerms = [];
+      if (role === 'SUPERADMIN') {
+        rolePerms = ['*'];
+      } else if (row.role_permissions) {
+        try {
+          rolePerms = Array.isArray(row.role_permissions)
+            ? row.role_permissions
+            : (typeof row.role_permissions === 'string' ? JSON.parse(row.role_permissions) || [] : []);
+        } catch {}
+      }
       req.user = {
         id: row.id,
         nip: row.nip,
@@ -214,6 +226,11 @@ export function createRequireRole(defaultDeps = {}) {
         instansi_id: row.instansi_id,
         is_admin: row.is_admin === true || row.is_admin === 'true',
       };
+      Object.defineProperty(req.user, 'permissions', {
+        value: rolePerms,
+        enumerable: false,
+        configurable: true,
+      });
       req.authKind = kind;
       next();
     };
@@ -257,6 +274,14 @@ export function hasPermission(userPermissions, requiredPermission) {
   const [mod] = String(requiredPermission || '').split('.');
   if (mod && userPermissions.includes(`${mod}.*`)) return true;
   return false;
+}
+
+export function hasAnyPerm(user, requiredList) {
+  if (!user) return false;
+  if (String(user.role || '').toUpperCase() === 'SUPERADMIN') return true;
+  const perms = user.permissions;
+  if (!Array.isArray(perms) || !perms.length) return false;
+  return (requiredList || []).some((p) => hasPermission(perms, p));
 }
 
 export function requirePermission(permission, deps = {}) {

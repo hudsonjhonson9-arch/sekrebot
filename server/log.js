@@ -1,5 +1,5 @@
 import express from 'express';
-import { MEDIA_ROLES, sameInstansi } from './auth.js';
+import { MEDIA_ROLES, sameInstansi, hasAnyPerm } from './auth.js';
 
 // ── SQL ──
 // Canonical n8n ("Supabase Log-Insert" / "Log-Update") menyisipkan nilai client
@@ -90,7 +90,7 @@ export function createLogRouter({ query }) {
     try {
       const q = req.query || {};
       let params = []; const where = [];
-      const media = MEDIA_ROLES.has(String(req.user?.role || '').toUpperCase());
+      const media = MEDIA_ROLES.has(String(req.user?.role || '').toUpperCase()) || hasAnyPerm(req.user, ['presensi.view_all', 'admin.monitoring', 'admin.rekap']);
       if (media) {
         const subject = String(q.user_id || q.id || '').trim();
         if (subject) { params.push(subject); where.push(`"ID"::text=$${params.length}`); }

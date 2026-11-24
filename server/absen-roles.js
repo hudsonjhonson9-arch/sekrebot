@@ -1,4 +1,5 @@
 import express from 'express';
+import { hasAnyPerm } from './auth.js';
 import {
   PERMISSIONS_CATALOG,
   initAbsenRolesTable as defaultInitAbsenRolesTable,
@@ -32,7 +33,7 @@ export function createAbsenRolesRouter(deps = {}) {
   const ADMIN_ROLE_SET = new Set(['SUPERADMIN', 'ADMIN', 'KEPALA', 'SEKRETARIS', 'KABID', 'IRBAN']);
   function requireAdmin(req, res) {
     const role = String(req.user?.role || '').trim().toUpperCase();
-    const isAdmin = ADMIN_ROLE_SET.has(role) || req.user?.is_admin === true;
+    const isAdmin = ADMIN_ROLE_SET.has(role) || req.user?.is_admin === true || hasAnyPerm(req.user, ['admin.roles']);
     if (!isAdmin) {
       fail(res, 403, 'Forbidden: Hanya admin yang dapat mengelola role.');
       return false;

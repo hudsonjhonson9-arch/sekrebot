@@ -1,11 +1,11 @@
 import express from 'express';
-import { sameInstansi } from './auth.js';
+import { sameInstansi, hasAnyPerm } from './auth.js';
 
 const ADMIN_ROLES = new Set(['ADMIN','SUPERADMIN','KEPALA','SEKRETARIS','KABID','IRBAN']);
 
 const ok = (res, data = {}) => res.status(200).json({ ok: true, ...data });
 const fail = (res, status, message) => res.status(status).json({ ok: false, message });
-const roleIsAdmin = req => ADMIN_ROLES.has(String(req.user?.role || '').toUpperCase());
+const roleIsAdmin = req => ADMIN_ROLES.has(String(req.user?.role || '').toUpperCase()) || hasAnyPerm(req.user, ['keterangan.approve', 'admin.izin']);
 const instScope = (req, requested) => {
   const inst = requested == null || requested === '' ? req.user?.instansi_id : requested;
   return { inst, allowed: sameInstansi(req.user, inst) };

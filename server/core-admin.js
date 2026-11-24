@@ -1,6 +1,6 @@
 import express from 'express';
 import crypto from 'node:crypto';
-import { sameInstansi } from './auth.js';
+import { sameInstansi, hasAnyPerm } from './auth.js';
 import { waChatId } from './keterangan-notify.js';
 
 const MEDIA = new Set(['ADMIN','SUPERADMIN','KEPALA','SEKRETARIS','KABID','IRBAN']);
@@ -15,6 +15,7 @@ const bool = (v) => v === true || v === 'true' || v === 1 || v === '1';
 // macam pemanggil.
 const requireMedia = (req, res) => {
   if (MEDIA.has(String(req.user?.role || '').toUpperCase())) return false;
+  if (hasAnyPerm(req.user, ['admin.users', 'admin.geofence', 'admin.jam_libur', 'admin.instansi', 'admin.opd_bidang', 'admin.monitoring', 'admin.izin', 'admin.rekap'])) return false;
   res.status(403).json({ ok: false, message: 'Forbidden' });
   return true;
 };

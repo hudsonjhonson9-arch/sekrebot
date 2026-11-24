@@ -65,7 +65,15 @@ export function createArsipRouter(deps = {}) {
   // aksi massal). Dipisah dari window.IS_ADMIN absensi karena sumbernya beda.
   router.get('/me', async (req, res) => {
     const role = await roleArsip(doQuery, req.user?.nip);
-    res.json({ ok: true, role, isAdmin: role === R_ADMIN });
+    const perms = await getUserRolePerms(req);
+    const isAdmin = role === R_ADMIN || perms.includes('*') || perms.includes('arsip.upload');
+    res.json({
+      ok: true,
+      role,
+      isAdmin,
+      canCreateSppd: isAdmin || perms.includes('perjadin.create') || perms.includes('perjadin.approve'),
+      canAgendaSurat: isAdmin || perms.includes('arsip.agenda_surat'),
+    });
   });
 
   async function forward(req, res, target) {
