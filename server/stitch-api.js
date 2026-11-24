@@ -5,6 +5,7 @@ import { query as defaultQuery } from './db.js';
 import { gasUpsert } from './gas.js';
 import { MEDIA_ROLES } from './auth.js';
 import { formatAbsenMessage } from './absen.js';
+import { analisisRiwayatLokasi } from './absen-validate.js';
 import { mountStitchRekapRoutes } from './stitch-api-rekap.js';
 import { mountStitchAsetArsipRoutes } from './stitch-api-aset-arsip.js';
 
@@ -328,6 +329,15 @@ export function createStitchApiRouter(deps = {}) {
       if (jenis.startsWith('PULANG') && !hasMasuk) return res.status(409).json({ ok: false, message: 'Presensi masuk belum tercatat.' });
       if (jenis.startsWith('PULANG') && hasPulang) return res.status(409).json({ ok: false, message: 'Anda sudah presensi pulang hari ini.' });
       if (jenis === 'PULANG LUAR' && !ket) return res.status(400).json({ ok: false, message: 'Tuliskan lokasi/kegiatan lapangan sebelum presensi pulang dari lapangan.' });
+      if (jenis === 'PULANG LUAR' && process.env.ABSEN_PULANG_LUAR_WAJIB_PENUGASAN !== 'false') {
+        const pgRes = await query(
+          `SELECT 1 FROM penugasan WHERE nip = $1 AND tanggal = $2 AND (instansi_id = $3 OR instansi_id IS NULL OR instansi_id = '') LIMIT 1`,
+          [u.NIP, tanggal, instansiId]
+        );
+        if (!pgRes?.rows?.length) {
+          return res.status(403).json({ ok: false, message: 'Pulang dari lapangan membutuhkan penugasan/SPT aktif hari ini.' });
+        }
+      }
 
       // Geofence: koordinat asli perangkat harus dalam radius salah satu lokasi kantor (kecuali PULANG LUAR)
       const m = koordinat.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
@@ -335,6 +345,38 @@ export function createStitchApiRouter(deps = {}) {
       const [lat, lon] = [parseFloat(m[1]), parseFloat(m[3])];
       const acc = Number(b.akurasi) || 0;
       if (acc > 100) return res.status(400).json({ ok: false, message: `Akurasi GPS rendah (${Math.round(acc)} m). Coba di area terbuka.` });
+
+      // Deteksi teleport GPS berdasarkan riwayat 2 hari terakhir di Log_Absen (default tolak >= 200 km/jam)
+      const teleportBlokKmh = process.env.ABSEN_TELEPORT_BLOK_KMH !== undefined
+        ? Number(process.env.ABSEN_TELEPORT_BLOK_KMH)
+        : 200;
+      if (teleportBlokKmh > 0) {
+        try {
+          const batas = new Date(Date.parse(`${tanggal}T00:00:00Z`) - 2 * 86400000).toISOString().slice(0, 10);
+          const rwRes = await query(
+            `SELECT "Tanggal", "Jam", koordinat FROM "Log_Absen"
+             WHERE "NIP" = $1 AND "Tanggal" >= $2 AND koordinat IS NOT NULL AND koordinat <> '' AND koordinat <> '-'
+             ORDER BY "Tanggal" DESC, "Jam" DESC LIMIT 5`,
+            [u.NIP, batas]
+          );
+          const analisis = analisisRiwayatLokasi({
+            lat,
+            lng: lon,
+            serverTime: { tanggal, jam },
+            riwayat: rwRes?.rows || [],
+            blokKmh: teleportBlokKmh,
+          });
+          if (analisis.blok) {
+            return res.status(403).json({
+              ok: false,
+              kode_tolak: 'GPS_TELEPORT',
+              message: 'Perpindahan lokasi dari absen sebelumnya tidak masuk akal (terdeteksi teleport GPS). Hubungi admin bila ini benar.',
+            });
+          }
+        } catch (e) {
+          console.warn('[stitch-api] analisis riwayat lokasi dilewati:', e?.message || e);
+        }
+      }
       let matchedLoc = lokasi;
       if (jenis !== 'PULANG LUAR') {
         const locs = (await query(`SELECT "Nama_Lokasi" AS nama, latitude, longitude, radius FROM lokasiabsen WHERE instansi_id = $1 OR instansi_id = 'all'`, [instansiId])).rows;
@@ -707,17 +749,43 @@ export function createStitchApiRouter(deps = {}) {
   router.post('/sppd', async (req, res) => {
     try {
       const b = req.body || {};
-      const pelaksanaNip = String(b.nip || '').trim();
+      const pelaksanaNip = String(b.nip || req.user?.nip || '').trim();
       const maksud = String(b.maksud || '').trim();
-      const tujuan = String(b.tujuan || 'Kupang').trim();
-      const lamaHari = parseInt(b.lama_hari || '3', 10);
-      const tglBerangkat = b.tgl_berangkat || new Date().toISOString().slice(0, 10);
-      const tglKembali = b.tgl_kembali || new Date(Date.now() + (lamaHari - 1) * 86400000).toISOString().slice(0, 10);
+      const tujuan = String(b.tujuan || '').trim();
+      if (!maksud) return res.status(400).json({ ok: false, message: 'Maksud perjalanan dinas wajib diisi.' });
+      if (!tujuan) return res.status(400).json({ ok: false, message: 'Tempat tujuan wajib diisi.' });
 
-      const userRes = await query('SELECT username, "NIP", "Jabatan", pangkat FROM user_list WHERE "NIP" = $1 LIMIT 1', [pelaksanaNip]);
-      const u = userRes.rows[0] || { username: 'Pegawai BAPPERIDA', NIP: pelaksanaNip, Jabatan: 'Staf', pangkat: 'Penata' };
+      const lamaHari = Math.max(1, parseInt(b.lama_hari || '1', 10) || 1);
+      const tglBerangkat = String(b.tgl_berangkat || new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)).trim();
+      const tglKembali = String(b.tgl_kembali || new Date(Date.parse(`${tglBerangkat}T00:00:00Z`) + (lamaHari - 1) * 86400000).toISOString().slice(0, 10)).trim();
+      const tahun = parseInt(tglBerangkat.slice(0, 4), 10) || new Date(Date.now() + 8 * 3600000).getUTCFullYear();
+      const jenisSppd = String(b.jenis_sppd || 'LUAR_DAERAH').trim().toUpperCase() === 'DALAM_DAERAH' ? 'DALAM_DAERAH' : 'LUAR_DAERAH';
+      const jenisKode = jenisSppd === 'DALAM_DAERAH' ? 'DD' : 'LD';
 
-      const regNum = `00${Math.floor(Math.random() * 900) + 100}/SPPD-LD/2026`;
+      const userRes = await query('SELECT username, "NIP", "Jabatan", pangkat, instansi_id FROM user_list WHERE "NIP" = $1 LIMIT 1', [pelaksanaNip]);
+      const u = userRes.rows[0] || { username: req.user?.nama || 'Pegawai', NIP: pelaksanaNip, Jabatan: 'Staf', pangkat: '-', instansi_id: req.user?.instansi_id || '' };
+
+      let pejabatPerintah = String(b.pejabat_perintah || '').trim();
+      if (!pejabatPerintah && u.instansi_id) {
+        const instRes = await query('SELECT nama FROM instansi_list WHERE id = $1 LIMIT 1', [u.instansi_id]).catch(() => ({ rows: [] }));
+        const instNama = String(instRes?.rows?.[0]?.nama || '').trim();
+        if (instNama) pejabatPerintah = `Kepala ${instNama}`;
+      }
+      if (!pejabatPerintah) pejabatPerintah = 'Kepala Perangkat Daerah';
+
+      const tempatBerangkat = String(b.tempat_berangkat || 'Waikabubak').trim();
+      const provinsiTujuan = String(b.provinsi_tujuan || 'Nusa Tenggara Timur').trim();
+      const alatAngkutan = String(b.alat_angkutan || 'Kendaraan Dinas / Umum').trim();
+      const createdBy = String(req.user?.nama || req.user?.username || u.username || 'Staf').trim();
+
+      const seqRes = await query(
+        `SELECT COALESCE(MAX(NULLIF(regexp_replace(split_part(nomor_register, '/', 1), '\\D', '', 'g'), '')::int), 0) AS max_seq
+         FROM agenda_sppd WHERE tahun = $1`,
+        [tahun]
+      );
+      const nextSeq = Number(seqRes?.rows?.[0]?.max_seq || 0) + 1;
+      const regNum = `${String(nextSeq).padStart(4, '0')}/SPPD-${jenisKode}/${tahun}`;
+
       const insertRes = await query(`
         INSERT INTO agenda_sppd (
           jenis_sppd, tahun, nomor_register, nomor_spt, nomor_sppd, tanggal_spt,
@@ -725,12 +793,17 @@ export function createStitchApiRouter(deps = {}) {
           maksud_perjalanan, tempat_berangkat, tempat_tujuan, provinsi_tujuan, alat_angkutan,
           tanggal_berangkat, tanggal_kembali, lama_hari, status, created_by, created_at, updated_at
         ) VALUES (
-          'LUAR_DAERAH', 2026, $1, $1, $1, CURRENT_DATE,
-          'Kepala BAPPERIDA', $2, $3, $4, $5,
-          $6, 'Waikabubak', $7, 'Nusa Tenggara Timur', 'Pesawat Udara (Ekonomi)',
-          $8, $9, $10, 'Pengajuan', 'Staf', NOW(), NOW()
+          $1, $2, $3, $3, $3, CURRENT_DATE,
+          $4, $5, $6, $7, $8,
+          $9, $10, $11, $12, $13,
+          $14, $15, $16, 'Pengajuan', $17, NOW(), NOW()
         ) RETURNING id, nomor_sppd, pelaksana_nama, maksud_perjalanan, tempat_tujuan, status
-      `, [regNum, u.NIP, u.username, u.pangkat || 'Penata Muda', u.Jabatan || 'Staf', maksud, tujuan, tglBerangkat, tglKembali, lamaHari]);
+      `, [
+        jenisSppd, tahun, regNum,
+        pejabatPerintah, u.NIP, u.username, u.pangkat || '-', u.Jabatan || 'Staf',
+        maksud, tempatBerangkat, tujuan, provinsiTujuan, alatAngkutan,
+        tglBerangkat, tglKembali, lamaHari, createdBy
+      ]);
 
       return res.json({ ok: true, message: 'SPPD berhasil dibuat dan disimpan di database.', data: insertRes.rows[0] });
     } catch (err) {

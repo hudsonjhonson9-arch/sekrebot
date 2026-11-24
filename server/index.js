@@ -472,6 +472,12 @@ export function createApp() {
     next();
   });
 
+  // Layanan berkas unggahan lokal (bukti izin/sakit/cuti bila Google Drive tidak aktif)
+  app.use('/uploads', express.static(path.resolve(process.cwd(), 'public', 'uploads'), {
+    maxAge: '7d',
+    dotfiles: 'deny',
+  }));
+
   // Layanan berkas statis antarmuka Stitch (index.html, login.html, js, css)
   const publicDir = path.resolve(import.meta.dirname, '..');
   app.use(express.static(publicDir, {

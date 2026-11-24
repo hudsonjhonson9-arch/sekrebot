@@ -337,3 +337,91 @@ test('POST /admin/face-reset mengembalikan 404 saat pegawai tidak ditemukan', as
   assert.equal(r.status, 404);
   assert.equal(r.body.ok, false);
 });
+
+// ── Nomor urut SPPD, Tiket, Peminjaman & validasi SPPD tanpa nilai tetap ──
+
+test('POST /sppd menolak jika tujuan kosong dan memakai nomor urut + tahun/pejabat dinamis', async () => {
+  const calls = [];
+  const q = async (sql, params) => {
+    calls.push({ sql: String(sql), params });
+    if (/FROM user_list/i.test(sql)) {
+      return { rows: [{ username: 'Budi', NIP: USER.nip, Jabatan: 'Analis', pangkat: 'III/a', instansi_id: 'dinkes' }] };
+    }
+    if (/FROM instansi_list/i.test(sql)) {
+      return { rows: [{ nama: 'Dinas Kesehatan' }] };
+    }
+    if (/AS max_seq\s+FROM agenda_sppd/i.test(sql)) {
+      return { rows: [{ max_seq: 5 }] };
+    }
+    if (/INSERT INTO agenda_sppd/i.test(sql)) {
+      return { rows: [{ id: 10, nomor_sppd: params[2], pelaksana_nama: params[5], maksud_perjalanan: params[8], tempat_tujuan: params[10], status: 'Pengajuan' }] };
+    }
+    return { rows: [] };
+  };
+
+  const bad = await call(app(USER, q), 'POST', '/api/stitch/sppd', { nip: USER.nip, maksud: 'Rapat' });
+  assert.equal(bad.status, 400);
+
+  const ok = await call(app(USER, q), 'POST', '/api/stitch/sppd', {
+    nip: USER.nip,
+    maksud: 'Koordinasi Program',
+    tujuan: 'Waingapu',
+    tgl_berangkat: '2027-03-10',
+    lama_hari: 2,
+  });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.body.data.nomor_sppd, '0006/SPPD-LD/2027');
+  const ins = calls.find((c) => /INSERT INTO agenda_sppd/i.test(c.sql));
+  assert.equal(ins.params[1], 2027);
+  assert.equal(ins.params[3], 'Kepala Dinas Kesehatan');
+  assert.equal(ins.params[10], 'Waingapu');
+});
+
+test('POST /aset/tiket dan /aset/pinjam menghasilkan nomor urut berurutan bukan acak', async () => {
+  const year = new Date(Date.now() + 8 * 3600000).getUTCFullYear();
+  const q = async (sql) => {
+    if (/FROM "SIMAPO"\.tiket_kerusakan/i.test(sql)) return { rows: [{ max_seq: 3 }] };
+    if (/FROM "SIMAPO"\.peminjaman/i.test(sql)) return { rows: [{ max_seq: 2 }] };
+    return { rows: [] };
+  };
+  const rTkt = await call(app(USER, q), 'POST', '/api/stitch/aset/tiket', { deskripsi: 'AC tidak dingin' });
+  assert.equal(rTkt.status, 200);
+  assert.equal(rTkt.body.nomortiket, `TKT/${year}/0004`);
+
+  const rPjm = await call(app(USER, q), 'POST', '/api/stitch/aset/pinjam', { unitasetid: 'u1', keperluan: 'Rapat luar' });
+  assert.equal(rPjm.status, 200);
+  assert.equal(rPjm.body.nomorpeminjaman, `PJM/${year}/0003`);
+});
+
+test('POST /absen menolak PULANG LUAR tanpa penugasan dan menolak GPS teleport', async () => {
+  const nowWita = new Date(Date.now() + 8 * 3600000);
+  const today = nowWita.toISOString().slice(0, 10);
+  const tenMinAgo = new Date(nowWita.getTime() - 10 * 60000);
+  const jamLalu = `${String(tenMinAgo.getUTCHours()).padStart(2, '0')}:${String(tenMinAgo.getUTCMinutes()).padStart(2, '0')}`;
+
+  // 1. PULANG LUAR tanpa penugasan -> 403
+  const qPl = async (sql) => {
+    if (/FROM user_list/i.test(sql)) return { rows: [{ id: '9', username: 'Budi', NIP: USER.nip, instansi_id: 'bapperida' }] };
+    if (/FROM "Log_Absen"/i.test(sql)) return { rows: [{ 'Jenis Absen': 'MASUK' }] };
+    if (/FROM penugasan/i.test(sql)) return { rows: [] };
+    return { rows: [] };
+  };
+  const rPl = await call(app(USER, qPl), 'POST', '/api/stitch/absen', {
+    nip: USER.nip, jenis: 'PULANG LUAR', koordinat: '-9.648769,119.389232', ket: 'Survei lapangan',
+  });
+  assert.equal(rPl.status, 403);
+  assert.match(rPl.body.message, /penugasan/i);
+
+  // 2. GPS Teleport (~111 km dalam 10 menit) -> 403 GPS_TELEPORT
+  const qTp = async (sql) => {
+    if (/FROM user_list/i.test(sql)) return { rows: [{ id: '9', username: 'Budi', NIP: USER.nip, instansi_id: 'bapperida' }] };
+    if (/koordinat IS NOT NULL/i.test(sql)) return { rows: [{ Tanggal: today, Jam: jamLalu, koordinat: '-8.648769,119.389232' }] };
+    if (/FROM lokasiabsen/i.test(sql)) return { rows: [{ nama: 'Kantor', latitude: -9.648769, longitude: 119.389232, radius: 250 }] };
+    return { rows: [] };
+  };
+  const rTp = await call(app(USER, qTp), 'POST', '/api/stitch/absen', {
+    nip: USER.nip, jenis: 'MASUK', koordinat: '-9.648769,119.389232',
+  });
+  assert.equal(rTp.status, 403);
+  assert.equal(rTp.body.kode_tolak, 'GPS_TELEPORT');
+});

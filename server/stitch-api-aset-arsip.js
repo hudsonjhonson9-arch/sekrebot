@@ -264,15 +264,24 @@ export function mountStitchAsetArsipRoutes(router, ctx) {
         return res.status(400).json({ ok: false, message: 'Deskripsi kendala wajib diisi.' });
       }
 
-      const id = 'TKT-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(Math.random() * 1000);
-      const nomortiket = 'TKT/' + new Date().getFullYear() + '/' + Math.floor(1000 + Math.random() * 9000);
+      const year = new Date(Date.now() + 8 * 3600000).getUTCFullYear();
+      const instansiId = String(req.user?.instansi_id || b.instansi_id || 'bapperida').trim() || 'bapperida';
+      const seqRes = await query(
+        `SELECT COALESCE(MAX(NULLIF(regexp_replace(split_part(nomortiket, '/', 3), '\\D', '', 'g'), '')::int), 0) AS max_seq
+         FROM "SIMAPO".tiket_kerusakan WHERE nomortiket LIKE $1`,
+        [`TKT/${year}/%`]
+      );
+      const nextSeq = Number(seqRes?.rows?.[0]?.max_seq || 0) + 1;
+      const seqStr = String(nextSeq).padStart(4, '0');
+      const id = `TKT-${year}-${seqStr}-${Date.now().toString(36).slice(-4).toUpperCase()}`;
+      const nomortiket = `TKT/${year}/${seqStr}`;
 
       await query(`
         INSERT INTO "SIMAPO".tiket_kerusakan
           (id, nomortiket, userid, judul, deskripsi, prioritas, lokasi, status, instansi_id, createdat, updatedat)
         VALUES
-          ($1, $2, $3, $4, $5, $6, $7, 'Menunggu Penanganan', 'bapperida', NOW(), NOW())
-      `, [id, nomortiket, userid, judul, deskripsi, prioritas, lokasi]);
+          ($1, $2, $3, $4, $5, $6, $7, 'Menunggu Penanganan', $8, NOW(), NOW())
+      `, [id, nomortiket, userid, judul, deskripsi, prioritas, lokasi, instansiId]);
 
       return res.json({
         ok: true,
@@ -298,15 +307,24 @@ export function mountStitchAsetArsipRoutes(router, ctx) {
       if (!unitasetid) return res.status(400).json({ ok: false, message: 'Unit aset wajib dipilih.' });
       if (!keperluan) return res.status(400).json({ ok: false, message: 'Keperluan peminjaman wajib diisi.' });
 
-      const id = 'PJM-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(Math.random() * 1000);
-      const nomorpeminjaman = 'PJM/' + new Date().getFullYear() + '/' + Math.floor(1000 + Math.random() * 9000);
+      const year = new Date(Date.now() + 8 * 3600000).getUTCFullYear();
+      const instansiId = String(req.user?.instansi_id || b.instansi_id || 'bapperida').trim() || 'bapperida';
+      const seqRes = await query(
+        `SELECT COALESCE(MAX(NULLIF(regexp_replace(split_part(nomorpeminjaman, '/', 3), '\\D', '', 'g'), '')::int), 0) AS max_seq
+         FROM "SIMAPO".peminjaman WHERE nomorpeminjaman LIKE $1`,
+        [`PJM/${year}/%`]
+      );
+      const nextSeq = Number(seqRes?.rows?.[0]?.max_seq || 0) + 1;
+      const seqStr = String(nextSeq).padStart(4, '0');
+      const id = `PJM-${year}-${seqStr}-${Date.now().toString(36).slice(-4).toUpperCase()}`;
+      const nomorpeminjaman = `PJM/${year}/${seqStr}`;
 
       await query(`
         INSERT INTO "SIMAPO".peminjaman
           (id, nomorpeminjaman, userid, unitasetid, tujuanpeminjaman, tanggalmulai, tanggalselesai, status, kondisiawal, instansi_id, createdat, updatedat)
         VALUES
-          ($1, $2, $3, $4, $5, $6::timestamp, $7::timestamp, 'Menunggu Persetujuan', 'Baik', 'bapperida', NOW(), NOW())
-      `, [id, nomorpeminjaman, userid, unitasetid, keperluan, tglMulai + ' 08:00:00', tglSelesai + ' 17:00:00']);
+          ($1, $2, $3, $4, $5, $6::timestamp, $7::timestamp, 'Menunggu Persetujuan', 'Baik', $8, NOW(), NOW())
+      `, [id, nomorpeminjaman, userid, unitasetid, keperluan, tglMulai + ' 08:00:00', tglSelesai + ' 17:00:00', instansiId]);
 
       return res.json({
         ok: true,

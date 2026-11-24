@@ -156,18 +156,14 @@ async function sendTelegramMessage({ botToken, chatId, text }) {
 }
 
 // teleportBlokKmh: ambang tolak kecepatan perpindahan (km/jam) dari absen sebelumnya.
-// 0 = hanya menandai di log [absen-curiga]. Aktifkan lewat ABSEN_TELEPORT_BLOK_KMH
-// setelah log beberapa minggu menunjukkan tidak ada false positive (mis. dinas
-// naik pesawat).
+// Default 200 km/jam (tolak otomatis). Set ABSEN_TELEPORT_BLOK_KMH=0 untuk mode tandai saja.
 //
-// pulangLuarWajibPenugasan: true = PULANG LUAR ditolak tanpa baris penugasan hari
-// ini (ABSEN_PULANG_LUAR_WAJIB_PENUGASAN=true). Default false ("tandai"): tetap
-// diterima tapi dicatat [absen-curiga] PULANG_LUAR_TANPA_PENUGASAN, untuk instansi
-// yang belum memakai menu Penugasan/SPT. Ubah ke true setelah penugasan rutin diinput.
+// pulangLuarWajibPenugasan: default true (PULANG LUAR ditolak tanpa baris penugasan hari ini).
+// Set ABSEN_PULANG_LUAR_WAJIB_PENUGASAN=false untuk mode tandai saja.
 export function createAbsenRouter({
   query, verifyInitData, botToken, notifyAbsen, now = () => new Date(),
-  teleportBlokKmh = Number(process.env.ABSEN_TELEPORT_BLOK_KMH) || 0,
-  pulangLuarWajibPenugasan = process.env.ABSEN_PULANG_LUAR_WAJIB_PENUGASAN === 'true',
+  teleportBlokKmh = process.env.ABSEN_TELEPORT_BLOK_KMH !== undefined ? Number(process.env.ABSEN_TELEPORT_BLOK_KMH) : 200,
+  pulangLuarWajibPenugasan = process.env.ABSEN_PULANG_LUAR_WAJIB_PENUGASAN !== 'false',
 }) {
   const router = express.Router();
   // notifyAbsen bisa di-inject (test memakai spy, bukan jaringan). Default: kirim
