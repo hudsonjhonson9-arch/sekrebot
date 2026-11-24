@@ -340,7 +340,7 @@
   // Muat bottom-nav responsif untuk halaman desktop bersidebar di layar kecil (<1024px)
   if (needsLogin) {
     const s = document.createElement('script');
-    s.src = 'js/stitch-responsive-nav.js?v=20261123b';
+    s.src = 'js/stitch-responsive-nav.js?v=20261124c';
     s.defer = true;
     (document.head || document.documentElement).appendChild(s);
   }
