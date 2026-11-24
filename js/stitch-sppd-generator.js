@@ -210,9 +210,11 @@
       return s;
     };
     const targetTingkat = formatTingkat(person?.tingkat_biaya || it.pelaksana_tingkat_biaya || it.tingkat_biaya || (it.jenis_sppd === 'LUAR_DAERAH' ? 'Tingkat B' : 'Tingkat C'));
-    const pptkNama = person?.pptk_nama || bid.nama || 'BERLIAN MAGU WERU,S.Sos';
-    const pptkNip = person?.pptk_nip || bid.nip || '19690619 200503 1 001';
-    const pptkJabatan = person?.pptk_jabatan || bid.jabatan || 'KEPALA BIDANG PPE';
+    const pelaksanaPptk = wew.pelaksana_pptk || {};
+    const isMainPerson = !person;
+    const pptkNama = person?.pptk_nama || (isMainPerson ? (it.pelaksana_pptk_nama || pelaksanaPptk.nama) : '') || bid.nama || 'BERLIAN MAGU WERU,S.Sos';
+    const pptkNip = person?.pptk_nip || (isMainPerson ? (it.pelaksana_pptk_nip || pelaksanaPptk.nip) : '') || bid.nip || '19690619 200503 1 001';
+    const pptkJabatan = person?.pptk_jabatan || (isMainPerson ? (it.pelaksana_pptk_jabatan || pelaksanaPptk.jabatan) : '') || bid.jabatan || 'KEPALA BIDANG PPE';
 
     return {
       KopJenis: isSekda ? 'SEKDA' : 'BAPPERIDA',
@@ -647,13 +649,6 @@
               <td style="border: 1px solid #000; vertical-align: top; padding: 4px 6px;">
                 <div style="text-align: justify; line-height: 1.3; font-size: 8.5pt;">
                   Telah diperiksa, dengan keterangan bahwa perjalanan tersebut diatas benar dilakukan atas perintahnya dan semata-mata untuk kepentingan jabatan dalam waktu yang sesingkat-singkatnya.
-                </div>
-                <div style="text-align: center; margin-top: 10px;">
-                  <div style="font-weight: bold; line-height: 1.2;">PENGGUNA ANGGARAN,</div>
-                  <div style="height: 34px;"></div>
-                  <div style="font-weight: bold; text-decoration: underline;">${esc(t.KpaNama)}</div>
-                  <div>${esc(t.KepalaPangkat)}</div>
-                  <div style="font-weight: bold;">NIP. ${esc(t.KepalaNIP)}</div>
                 </div>
               </td>
             </tr>
@@ -1122,8 +1117,9 @@
         }
         const pptkInfo = wrap.querySelector('#pvPptkInfo');
         if (pptkInfo) {
-          const pptkJab = curPerson?.pptk_jabatan || wew.bidang?.jabatan || 'Kepala Bidang PPE';
-          const pptkNm = curPerson?.pptk_nama || wew.bidang?.nama || 'BERLIAN MAGU WERU, S.Sos';
+          const p1Pptk = wew.pelaksana_pptk || {};
+          const pptkJab = curPerson?.pptk_jabatan || (curPersonIdx === 0 ? (item.pelaksana_pptk_jabatan || p1Pptk.jabatan) : '') || wew.bidang?.jabatan || 'Kepala Bidang PPE';
+          const pptkNm = curPerson?.pptk_nama || (curPersonIdx === 0 ? (item.pelaksana_pptk_nama || p1Pptk.nama) : '') || wew.bidang?.nama || 'BERLIAN MAGU WERU, S.Sos';
           pptkInfo.innerHTML = `Pengesah Romawi I: <strong class="text-slate-800 dark:text-slate-200">${esc(pptkJab)}</strong> (${esc(pptkNm)})`;
         }
       }
