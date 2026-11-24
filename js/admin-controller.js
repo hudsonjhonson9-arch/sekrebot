@@ -25,8 +25,27 @@
     }
   }
 
+  function isSuperadminSession() {
+    try {
+      const r = String(localStorage.getItem('MY_ROLE') || localStorage.getItem('_sess_role') || '').trim().toUpperCase().replace(/\s+/g, '_');
+      return r === 'SUPERADMIN';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function getSelectedAgencyRaw() {
+    const sel = document.getElementById('agencySelect');
+    const v = sel ? String(sel.value || '').trim() : '';
+    return v;
+  }
+
   function getInstansiId() {
     try {
+      if (isSuperadminSession()) {
+        const picked = getSelectedAgencyRaw();
+        if (picked && picked !== 'ALL') return picked;
+      }
       return (localStorage.getItem('_sess_inst')
         || localStorage.getItem('MY_INSTANSI')
         || document.getElementById('agencySelect')?.value
@@ -1718,20 +1737,84 @@
     window.loadDesktopPegawaiTab = async function () {
       const listEl = $('desktopPegawaiList');
       if (!listEl) return;
+      listEl.innerHTML = '<div class="col-span-full py-6 text-center text-on-surface-variant">Memuat daftar pegawai...</div>';
       try {
+        const pickedOpd = isSuperadminSession() ? getSelectedAgencyRaw() : getInstansiId();
+        const instQ = (pickedOpd && pickedOpd !== 'ALL') ? `&instansi_id=${encodeURIComponent(pickedOpd)}` : '';
         const [uRes, rRes] = await Promise.all([
-          fetch('/api/user-list?format=compact'),
+          fetch(`/api/user-list?format=compact${instQ}`),
           fetch('/api/admin/roles')
         ]);
         const uJson = await uRes.json().catch(() => ({}));
         const rJson = await rRes.json().catch(() => ({}));
-        desktopPegawaiCache = uJson.rows || uJson.data || [];
-        desktopRolesCache = rJson.rows || rJson.data || [];
+        if (!uRes.ok) {
+          throw new Error(uJson.message || `Gagal memuat pegawai (HTTP ${uRes.status})`);
+        }
+        desktopPegawaiCache = Array.isArray(uJson.data) ? uJson.data : (Array.isArray(uJson.rows) ? uJson.rows : []);
+        desktopRolesCache = Array.isArray(rJson.rows) ? rJson.rows : (Array.isArray(rJson.data) ? rJson.data : []);
+        if (!desktopPegawaiCache.length) {
+          listEl.innerHTML = '<div class="col-span-full py-6 text-center text-on-surface-variant">Belum ada pegawai pada OPD terpilih.</div>';
+          return;
+        }
         renderDesktopPegawaiList();
       } catch (err) {
         listEl.innerHTML = `<div class="col-span-full py-6 text-center text-rose-600">${escapeHtml(err.message)}</div>`;
       }
     };
+
+    // Sinkronkan dropdown OPD (#agencySelect) di header admin untuk SUPERADMIN lintas OPD
+    async function initDesktopAgencySelector() {
+      const sel = $('agencySelect');
+      if (!sel) return;
+      const isSA = isSuperadminSession();
+      const myInst = (localStorage.getItem('_sess_inst') || localStorage.getItem('MY_INSTANSI') || 'bapperida').trim() || 'bapperida';
+      try {
+        const res = await fetch('/api/instansi-list');
+        const json = await res.json().catch(() => ({}));
+        const rows = Array.isArray(json.data) ? json.data : (Array.isArray(json.rows) ? json.rows : []);
+        if (rows.length) {
+          const opts = [];
+          if (isSA) opts.push('<option value="ALL">Semua OPD (Lintas Instansi)</option>');
+          rows.forEach((opd) => {
+            const oid = String(opd.id || opd.kode || '').trim();
+            if (!oid) return;
+            if (!isSA && oid !== myInst) return;
+            const label = opd.nama || opd.nama_pendek || oid.toUpperCase();
+            opts.push(`<option value="${escapeHtml(oid)}">${escapeHtml(label)}</option>`);
+          });
+          if (opts.length) sel.innerHTML = opts.join('');
+        }
+      } catch (_) {}
+
+      const savedOpd = isSA ? (sessionStorage.getItem('admin_selected_opd') || myInst) : myInst;
+      if (Array.from(sel.options).some((o) => o.value === savedOpd)) {
+        sel.value = savedOpd;
+      } else if (isSA && Array.from(sel.options).some((o) => o.value === 'ALL')) {
+        sel.value = 'ALL';
+      }
+      sel.disabled = !isSA;
+      if (window.StitchPicker && typeof window.StitchPicker.refreshSelect === 'function') {
+        window.StitchPicker.refreshSelect('agencySelect');
+      }
+
+      if (!sel._boundOpdChange) {
+        sel._boundOpdChange = true;
+        sel.addEventListener('change', () => {
+          try { sessionStorage.setItem('admin_selected_opd', sel.value); } catch (_) {}
+          if (!$('adminPegawaiCard')?.classList.contains('hidden')) {
+            window.loadDesktopPegawaiTab();
+          }
+          if (typeof refreshLokasiList === 'function') refreshLokasiList(null);
+          if (window.AdminCore && typeof window.AdminCore.refresh === 'function') {
+            window.AdminCore.refresh();
+          }
+        });
+      }
+    }
+    initDesktopAgencySelector().then(() => {
+      if (!$('adminPegawaiCard')?.classList.contains('hidden')) window.loadDesktopPegawaiTab();
+      if (!$('adminRolesCard')?.classList.contains('hidden')) window.loadDesktopRolesTab();
+    });
 
     $('desktopPegawaiSearch')?.addEventListener('input', renderDesktopPegawaiList);
     $('btnReloadDesktopPegawai')?.addEventListener('click', () => window.loadDesktopPegawaiTab());

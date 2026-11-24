@@ -242,17 +242,64 @@
     }).join('');
   }
 
+  let _mobOpdLoaded = false;
+  function isMobSuperadmin() {
+    try {
+      const r = String(localStorage.getItem('MY_ROLE') || localStorage.getItem('_sess_role') || '').trim().toUpperCase().replace(/\s+/g, '_');
+      return r === 'SUPERADMIN';
+    } catch (_) { return false; }
+  }
+
+  async function ensureMobPegawaiOpdSelect() {
+    const sel = el('adminPegawaiOpdSelect');
+    if (!sel) return;
+    if (!isMobSuperadmin()) {
+      sel.classList.add('hidden');
+      return;
+    }
+    sel.classList.remove('hidden');
+    if (_mobOpdLoaded && sel.options.length > 0) return;
+    _mobOpdLoaded = true;
+    try {
+      const json = await requestJson('/api/instansi-list');
+      const rows = Array.isArray(json.data) ? json.data : (Array.isArray(json.rows) ? json.rows : []);
+      const curInst = getMobInstansiId();
+      sel.innerHTML = '<option value="ALL">Semua OPD</option>' + rows.map((o) => {
+        const oid = String(o.id || o.kode || '').trim();
+        const nm = o.nama_pendek || o.nama || oid.toUpperCase();
+        return `<option value="${esc(oid)}">${esc(nm)}</option>`;
+      }).join('');
+      if (Array.from(sel.options).some((o) => o.value === curInst)) sel.value = curInst;
+      else sel.value = 'ALL';
+      if (w.StitchPicker && typeof w.StitchPicker.refreshSelect === 'function') {
+        w.StitchPicker.refreshSelect('adminPegawaiOpdSelect');
+      }
+    } catch (_) {}
+  }
+
   async function loadAdminPegawaiMobile(forceRefresh = false) {
     const container = el('adminPegawaiList');
-    if (!forceRefresh && getSharedUsers().length > 0) {
+    await ensureMobPegawaiOpdSelect();
+    const selOpd = el('adminPegawaiOpdSelect');
+    const pickedOpd = (isMobSuperadmin() && selOpd && selOpd.value) ? selOpd.value : '';
+    if (!forceRefresh && !pickedOpd && getSharedUsers().length > 0) {
       updatePegawaiFilterChipsUI();
       renderPegawaiList();
       return getSharedUsers();
     }
-    if (container && !pegawaiCache.length) {
+    if (container) {
       container.innerHTML = '<div class="col-span-full p-6 text-center text-xs text-slate-400">Memuat daftar pegawai...</div>';
     }
     try {
+      if (isMobSuperadmin()) {
+        const instQ = (pickedOpd && pickedOpd !== 'ALL') ? `&instansi_id=${encodeURIComponent(pickedOpd)}` : '';
+        const json = await requestJson(`/api/user-list?format=compact${instQ}`);
+        const rows = Array.isArray(json.data) ? json.data : (Array.isArray(json.rows) ? json.rows : []);
+        pegawaiCache = rows;
+        updatePegawaiFilterChipsUI();
+        renderPegawaiList();
+        return pegawaiCache;
+      }
       const json = await requestJson('/api/stitch/bootstrap');
       syncSharedUsers(json.users || []);
       updatePegawaiFilterChipsUI();

@@ -1862,6 +1862,7 @@
             <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">Master Pegawai &amp; Biometrik AI</h3>
           </div>
           <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <select id="adminPegawaiOpdSelect" onchange="loadAdminPegawaiMobile(true)" aria-label="Pilih OPD (Superadmin)" class="hidden min-h-[40px] px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:border-blue-500"></select>
             <span id="adminPegawaiCountBadge" class="px-3 py-1.5 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 text-xs font-bold tabular-nums">0 Pegawai</span>
             <button type="button" onclick="loadAdminPegawaiMobile(true)" class="min-h-[40px] px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer">
               <span class="material-symbols-outlined text-[16px]">refresh</span>
@@ -4303,7 +4304,7 @@
   <script src="js/stitch-arsip-columns.js?v=20261123"></script>
   <script src="js/stitch-sppd-generator.js"></script>
   <script src="js/stitch-arsip-agenda.js"></script>
-  <script src="js/stitch-admin-mobile.js?v=20261123c"></script>
+  <script src="js/stitch-admin-mobile.js?v=20261124"></script>
   <script src="js/rekap-pdf.js"></script>
   <script src="js/stitch-admin-rekap.js?v=20261122a"></script>
 </body>
