@@ -22,7 +22,7 @@ COPY templates/ ./templates/
 COPY js/face-quality.js ./js/
 
 # File statis untuk disajikan oleh Nginx
-COPY index.html login.html admin.html arsip.html aset-kir.html cetak-tpp.html desktop.html e-slip.html kiosk.html rekap.html /usr/share/nginx/html/
+COPY index.html login.html admin.html arsip.html aset-kir.html cetak-tpp.html desktop.html e-slip.html kiosk.html profil.html rekap.html /usr/share/nginx/html/
 COPY Lambang_Kabupaten_Sumba_Barat.png bast_template.docx spt_template.docx sppd_template.docx /usr/share/nginx/html/
 COPY public/ /usr/share/nginx/html/
 COPY js/ /usr/share/nginx/html/js/
