@@ -592,19 +592,41 @@
       tugas: 0,
       tubel: 0,
       cuti: 0,
-      alpa: 0
+      alpa: 0,
+      lambatMnt: 0,
+      pulangCepat: 0,
+      pulangCepatMnt: 0
+    };
+    const toMnt = (t) => {
+      if (!t || t === '-' || t === '—') return null;
+      const p = String(t).replace(/\s*WITA\s*/i, '').trim().split(':').map(Number);
+      return Number.isFinite(p[0]) ? p[0] * 60 + (p[1] || 0) : null;
     };
     if (_mode === 'range') {
+      const shiftPulang = (_rangePayload?.shift?.pulang) || '14:30';
+      const batasPulang = toMnt(shiftPulang) ?? (14 * 60 + 30);
       rows.forEach((r) => {
         const m = Number(r.masuk ?? r.hadir ?? 0);
         let p = r.pulang !== undefined ? Number(r.pulang || 0) : 0;
-        if (r.pulang === undefined && r.logByDate) {
-          p = Object.values(r.logByDate).filter((v) => v && v.pulang !== undefined).length;
+        let pcCount = Number(r.pulang_cepat_count ?? r.di_luar_pulang ?? 0);
+        let pcMnt = Number(r.menit_lebih_awal ?? r.menit_lebih_awal_periode ?? 0);
+        if (r.logByDate) {
+          const vals = Object.values(r.logByDate);
+          if (r.pulang === undefined) p = vals.filter((v) => v && v.pulang !== undefined).length;
+          if (!pcCount && !pcMnt) {
+            vals.forEach((v) => {
+              const mp = toMnt(v && (v.pulang || v.jamPulang));
+              if (mp !== null && mp < batasPulang) { pcCount++; pcMnt += (batasPulang - mp); }
+            });
+          }
         }
         s.masuk += m;
         s.pulang += p;
         s.lapangan += Number(r.lapangan ?? r.pulang_luar ?? 0);
         s.lambat += Number(r.lambat_count || 0);
+        s.lambatMnt += Number(r.menit_terlambat ?? r.menit_terlambat_periode ?? 0);
+        s.pulangCepat += pcCount;
+        s.pulangCepatMnt += pcMnt;
         s.izin += Number(r.izin || 0);
         s.sakit += Number(r.sakit || 0);
         s.tugas += Number(r.tugas || 0);
@@ -617,6 +639,9 @@
 
     if (_mode === 'harian') {
       const shiftMasuk = (_harianPayload?.shift?.masuk) || (_rangePayload?.shift?.masuk) || '07:15';
+      const shiftPulang = (_harianPayload?.shift?.pulang) || (_rangePayload?.shift?.pulang) || '14:30';
+      const batasMasuk = toMnt(shiftMasuk) ?? (7 * 60 + 15);
+      const batasPulang = toMnt(shiftPulang) ?? (14 * 60 + 30);
       rows.forEach((r) => {
         const hasMasuk = Boolean(r.jamMasuk && r.jamMasuk !== '-' && r.jamMasuk !== '—') || Number(r.masuk || 0) > 0;
         const hasPulang = Boolean(r.jamPulang && r.jamPulang !== '-' && r.jamPulang !== '—') || Number(r.pulang || 0) > 0;
@@ -632,12 +657,25 @@
         const pJenis = String(r.raw_pulang_log?.Jenis_Absen || r.jenisPulang || '').toUpperCase();
         const mJenis = String(r.raw_masuk_log?.Jenis_Absen || r.jenisMasuk || '').toUpperCase();
         if (Number(r.lapangan ?? r.pulang_luar ?? 0) > 0 || pJenis.includes('PULANG LUAR')) s.lapangan++;
+        const mM = toMnt(r.jamMasuk);
+        const mP = toMnt(r.jamPulang);
         const isLate = Number(r.lambat_count || 0) > 0
           || Number(r.menit_terlambat || 0) > 0
           || mJenis.includes('DI LUAR JAM MASUK')
           || mJenis === 'TERLAMBAT'
-          || (hasMasuk && String(r.jamMasuk).slice(0, 5) > shiftMasuk);
-        if (isLate) s.lambat++;
+          || (mM !== null && mM > batasMasuk);
+        if (isLate) {
+          s.lambat++;
+          s.lambatMnt += Number(r.menit_terlambat || 0) || (mM !== null && mM > batasMasuk ? (mM - batasMasuk) : 0);
+        }
+        const isEarly = Number(r.pulang_cepat_count || 0) > 0
+          || Number(r.menit_lebih_awal || 0) > 0
+          || pJenis.includes('DI LUAR JAM PULANG')
+          || (mP !== null && mP < batasPulang);
+        if (isEarly) {
+          s.pulangCepat++;
+          s.pulangCepatMnt += Number(r.menit_lebih_awal || 0) || (mP !== null && mP < batasPulang ? (batasPulang - mP) : 0);
+        }
 
         if (isIzin) s.izin++;
         else if (isSakit) s.sakit++;
@@ -655,7 +693,8 @@
       if (j === 'MASUK') s.masuk++;
       else if (j === 'PULANG') s.pulang++;
       else if (j === 'PULANG LUAR') s.lapangan++;
-      else if (j === 'DI LUAR JAM MASUK' || j === 'DI LUAR JAM PULANG' || j === 'TERLAMBAT') s.lambat++;
+      else if (j === 'DI LUAR JAM MASUK' || j === 'TERLAMBAT') s.lambat++;
+      else if (j === 'DI LUAR JAM PULANG') s.pulangCepat++;
       else if (j === 'IZIN') s.izin++;
       else if (j === 'SAKIT') s.sakit++;
       else if (j === 'TUGAS' || j === 'DL') s.tugas++;
@@ -669,11 +708,13 @@
   function renderSummaryCards(sumBar, rows) {
     if (!sumBar) return;
     const st = computeSummaryStats(rows);
+    const fmtM = (mm) => (!mm || mm <= 0) ? '0m' : (Math.floor(mm / 60) > 0 ? `${Math.floor(mm / 60)}j ${mm % 60}m` : `${mm}m`);
     const cards = [
       { label: 'Masuk', val: st.masuk, icon: 'login', tone: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-200/60 dark:border-emerald-800/50' },
       { label: 'Pulang', val: st.pulang, icon: 'logout', tone: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-200/60 dark:border-blue-800/50' },
       { label: 'Lapangan', val: st.lapangan, icon: 'directions_run', tone: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-50/80 dark:bg-cyan-950/40 border-cyan-200/60 dark:border-cyan-800/50' },
-      { label: 'Lambat', val: st.lambat, icon: 'schedule', tone: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/50' },
+      { label: 'Terlambat', val: st.lambat, sub: st.lambatMnt > 0 ? `+${fmtM(st.lambatMnt)}` : '0m', icon: 'schedule', tone: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/50' },
+      { label: 'Pulang Duluan', val: st.pulangCepat, sub: st.pulangCepatMnt > 0 ? `-${fmtM(st.pulangCepatMnt)}` : '0m', icon: 'running_with_errors', tone: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50/80 dark:bg-orange-950/40 border-orange-200/60 dark:border-orange-800/50' },
       { label: 'Izin', val: st.izin, icon: 'assignment', tone: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50/80 dark:bg-sky-950/40 border-sky-200/60 dark:border-sky-800/50' },
       { label: 'Sakit', val: st.sakit, icon: 'healing', tone: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50/80 dark:bg-rose-950/40 border-rose-200/60 dark:border-rose-800/50' },
       { label: 'Tugas/DL', val: st.tugas, icon: 'work_outline', tone: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50/80 dark:bg-violet-950/40 border-violet-200/60 dark:border-violet-800/50' },
@@ -697,14 +738,17 @@
           </span>
           ${_mode === 'range' ? '<span class="text-[11px] text-slate-400">Klik baris pegawai untuk melihat Kalender Kehadiran</span>' : ''}
         </div>
-        <div class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2 w-full">
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-11 gap-2 w-full">
           ${cards.map((c) => `
             <div class="rounded-2xl border ${c.bg} px-2.5 py-2 flex flex-col justify-between">
               <div class="flex items-center justify-between gap-1">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">${c.label}</span>
                 <span class="material-symbols-outlined text-[15px] ${c.tone}">${c.icon}</span>
               </div>
-              <div class="text-lg font-extrabold ${c.tone} tabular-nums mt-0.5 leading-tight">${c.val}</div>
+              <div class="flex items-baseline gap-1 mt-0.5 leading-tight">
+                <span class="text-lg font-extrabold ${c.tone} tabular-nums">${c.val}</span>
+                ${c.sub ? `<span class="text-[10px] font-mono font-bold ${c.tone} opacity-80 tabular-nums">${c.sub}</span>` : ''}
+              </div>
             </div>
           `).join('')}
         </div>
@@ -742,8 +786,9 @@
                 </div>
                 <span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold shrink-0 tabular-nums">Hadir ${hadir}</span>
               </div>
-              <div class="grid grid-cols-4 gap-1.5 text-center text-[10px] tabular-nums">
+              <div class="grid grid-cols-5 gap-1.5 text-center text-[10px] tabular-nums">
                 <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900"><span class="font-bold text-amber-600 block">${r.lambat_count || 0}</span>Telat</div>
+                <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900"><span class="font-bold text-orange-600 block">${r.pulang_cepat_count ?? r.di_luar_pulang ?? 0}</span>Cepat</div>
                 <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900"><span class="font-bold text-blue-600 block">${(r.izin || 0) + (r.sakit || 0)}</span>I/S</div>
                 <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900"><span class="font-bold text-indigo-600 block">${(r.tugas || 0) + (r.cuti || 0)}</span>DL/C</div>
                 <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900"><span class="font-bold text-rose-600 block">${r.alpa || 0}</span>Alpa</div>
@@ -766,6 +811,7 @@
                 <th class="p-2.5 text-center">TB</th>
                 <th class="p-2.5 text-center">Alpa</th>
                 <th class="p-2.5 text-center">Telat (Mnt)</th>
+                <th class="p-2.5 text-center">Pulang Duluan</th>
                 <th class="p-2.5 text-center rounded-r-xl">Kalender</th>
               </tr>
             </thead>
@@ -785,7 +831,8 @@
                     <td class="p-2.5 text-center tabular-nums">${r.cuti || 0}</td>
                     <td class="p-2.5 text-center tabular-nums">${r.tubel || 0}</td>
                     <td class="p-2.5 text-center font-bold text-rose-600 tabular-nums">${r.alpa || 0}</td>
-                    <td class="p-2.5 text-center font-mono tabular-nums">${r.lambat_count || 0} (${r.menit_terlambat || 0}m)</td>
+                    <td class="p-2.5 text-center font-mono tabular-nums text-amber-700 dark:text-amber-400">${r.lambat_count || 0} (${r.menit_terlambat ?? r.menit_terlambat_periode ?? 0}m)</td>
+                    <td class="p-2.5 text-center font-mono tabular-nums text-orange-700 dark:text-orange-400">${r.pulang_cepat_count ?? r.di_luar_pulang ?? 0} (${r.menit_lebih_awal ?? r.menit_lebih_awal_periode ?? 0}m)</td>
                     <td class="p-2.5 text-center">
                       <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
                         <span class="material-symbols-outlined text-[17px]">calendar_month</span>
