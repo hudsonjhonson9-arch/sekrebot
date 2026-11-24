@@ -1956,6 +1956,95 @@
       if (okLoc || okJam || okFace) await bootstrapFromDatabase();
     }
 
+    // ── CRUD Pengaturan Shift Kerja (Mobile) ──
+    let _mobShiftsCache = [];
+    async function loadMobileShifts() {
+      const box = document.getElementById('mobShiftList');
+      if (!box) return;
+      try {
+        const inst = state.currentUser?.instansi_id || localStorage.getItem('MY_INSTANSI') || 'bapperida';
+        const res = await fetch(`/api/shift-list?instansi_id=${encodeURIComponent(inst)}`);
+        const json = await res.json().catch(() => ({}));
+        _mobShiftsCache = Array.isArray(json.data) ? json.data : (Array.isArray(json.rows) ? json.rows : []);
+        if (!_mobShiftsCache.length) {
+          box.innerHTML = '<div class="p-3 text-center text-xs text-slate-400">Belum ada shift khusus terdaftar.</div>';
+          return;
+        }
+        box.innerHTML = _mobShiftsCache.map(sh => `
+          <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/70 text-xs">
+            <div class="min-w-0 flex-1">
+              <p class="font-bold text-slate-800 dark:text-slate-100 truncate">${escHtml(sh.nama)} ${sh.lintas_hari ? '<span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">(Lintas Hari)</span>' : ''}</p>
+              <p class="text-[10px] font-mono text-slate-400">${escHtml(sh.jam_masuk)} - ${escHtml(sh.jam_pulang)} WITA • Tol ${Number(sh.toleransi_menit || 0)}m</p>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button type="button" onclick="editMobileShift(${sh.id})" class="min-h-[36px] px-2.5 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 text-[11px] font-bold cursor-pointer">Edit</button>
+              <button type="button" onclick="deleteMobileShift(${sh.id})" class="min-h-[36px] px-2.5 rounded-lg bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400 text-[11px] font-bold cursor-pointer">Hapus</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        box.innerHTML = `<div class="p-3 text-center text-xs text-rose-500">${escHtml(e.message)}</div>`;
+      }
+    }
+    window.loadMobileShifts = loadMobileShifts;
+
+    window.editMobileShift = function (id) {
+      const sh = _mobShiftsCache.find(x => String(x.id) === String(id));
+      if (!sh) return;
+      if (document.getElementById('mobShiftEditId')) document.getElementById('mobShiftEditId').value = String(sh.id);
+      if (document.getElementById('mobShiftNama')) document.getElementById('mobShiftNama').value = sh.nama || '';
+      if (document.getElementById('mobShiftMasuk')) document.getElementById('mobShiftMasuk').value = String(sh.jam_masuk || '07:15').slice(0, 5);
+      if (document.getElementById('mobShiftPulang')) document.getElementById('mobShiftPulang').value = String(sh.jam_pulang || '14:30').slice(0, 5);
+      if (document.getElementById('mobShiftTol')) document.getElementById('mobShiftTol').value = String(sh.toleransi_menit ?? 15);
+      if (document.getElementById('mobShiftLintasHari')) document.getElementById('mobShiftLintasHari').checked = Boolean(sh.lintas_hari);
+      if (document.getElementById('btnSaveMobShiftLabel')) document.getElementById('btnSaveMobShiftLabel').textContent = 'Update Shift';
+    };
+
+    window.saveMobileShift = async function () {
+      const nama = (document.getElementById('mobShiftNama')?.value || '').trim();
+      const jam_masuk = (document.getElementById('mobShiftMasuk')?.value || '').trim();
+      const jam_pulang = (document.getElementById('mobShiftPulang')?.value || '').trim();
+      const toleransi_menit = Number(document.getElementById('mobShiftTol')?.value || 15);
+      const lintas_hari = Boolean(document.getElementById('mobShiftLintasHari')?.checked);
+      const id = Number(document.getElementById('mobShiftEditId')?.value || 0) || undefined;
+      if (!nama || !jam_masuk || !jam_pulang) {
+        Swal.fire('Data Belum Lengkap', 'Isi nama shift, jam masuk, dan jam pulang.', 'warning');
+        return;
+      }
+      try {
+        const inst = state.currentUser?.instansi_id || localStorage.getItem('MY_INSTANSI') || 'bapperida';
+        const res = await fetch('/api/shift-save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, instansi_id: inst, nama, jam_masuk, jam_pulang, toleransi_menit, lintas_hari })
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) throw new Error(json.message || `HTTP ${res.status}`);
+        if (document.getElementById('mobShiftEditId')) document.getElementById('mobShiftEditId').value = '';
+        if (document.getElementById('mobShiftNama')) document.getElementById('mobShiftNama').value = '';
+        if (document.getElementById('mobShiftLintasHari')) document.getElementById('mobShiftLintasHari').checked = false;
+        if (document.getElementById('btnSaveMobShiftLabel')) document.getElementById('btnSaveMobShiftLabel').textContent = 'Simpan Shift';
+        showDynamicIsland({ type: 'success', title: 'Shift Disimpan', message: `${nama} (${jam_masuk} - ${jam_pulang} WITA)` });
+        await loadMobileShifts();
+      } catch (e) {
+        Swal.fire('Gagal', e.message, 'error');
+      }
+    };
+
+    window.deleteMobileShift = async function (id) {
+      const r = await Swal.fire({ title: 'Hapus Shift?', text: 'Jadwal shift ini akan dihapus.', icon: 'warning', showCancelButton: true, confirmButtonColor: '#e11d48', confirmButtonText: 'Ya, Hapus', cancelButtonText: 'Batal' });
+      if (!r.isConfirmed) return;
+      try {
+        const inst = state.currentUser?.instansi_id || localStorage.getItem('MY_INSTANSI') || 'bapperida';
+        const res = await fetch('/api/shift-delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, instansi_id: inst }) });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) throw new Error(json.message || `HTTP ${res.status}`);
+        await loadMobileShifts();
+      } catch (e) {
+        Swal.fire('Gagal', e.message, 'error');
+      }
+    };
+
     async function addAdminHolidayStitch() {
       const tgl = document.getElementById('adminLiburDate')?.value;
       const nama = document.getElementById('adminLiburName')?.value;
@@ -1990,6 +2079,7 @@
     }
 
     function renderAdminHolidaysList(holidays) {
+      if (typeof loadMobileShifts === 'function') loadMobileShifts();
       const box = document.getElementById('adminHolidaysList');
       if (!box) return;
       const all = Array.isArray(holidays) ? holidays : [];

@@ -355,6 +355,104 @@ export function createCoreAdminRouter({ query, openwaWatchdog = null, sendWhatsA
   });
   router.post('/jam-periode-delete', async(req,res)=>{if(requireMedia(req,res))return;try{const id=s(req.body?.id);const r=await query(`DELETE FROM jam_periode WHERE id=$1 AND (instansi_id=$2 OR instansi_id IS NULL OR instansi_id='') RETURNING *`,[id,req.user.instansi_id]);if(!r.rows.length)return fail(res,404,'Periode tidak ditemukan.');return ok(res,{data:r.rows[0]},'Periode dihapus.');}catch{return fail(res,500,'Gagal menghapus periode.');}});
 
+  // ── Pengaturan Shift Kerja (Multi-Shift per OPD) ──────────────────────────
+  let _shiftTableReady = false;
+  async function ensureShiftTable() {
+    if (_shiftTableReady) return;
+    await query(`
+      CREATE TABLE IF NOT EXISTS shift_kerja (
+        id SERIAL PRIMARY KEY,
+        instansi_id TEXT NOT NULL DEFAULT 'bapperida',
+        nama TEXT NOT NULL,
+        jam_masuk TEXT NOT NULL,
+        jam_pulang TEXT NOT NULL,
+        toleransi_menit INTEGER NOT NULL DEFAULT 15,
+        lintas_hari BOOLEAN NOT NULL DEFAULT FALSE,
+        aktif BOOLEAN NOT NULL DEFAULT TRUE,
+        updated_at TIMESTAMPTZ DEFAULT now()
+      )
+    `);
+    _shiftTableReady = true;
+  }
+
+  router.get('/shift-list', async (req, res) => {
+    try {
+      const sc = scope(req, req.query.instansi_id);
+      if (!sc.ok) return fail(res, 403, 'Forbidden');
+      await ensureShiftTable();
+      const inst = sc.id || 'bapperida';
+      const r = await query(
+        `SELECT id, instansi_id, nama, jam_masuk, jam_pulang, toleransi_menit, lintas_hari, aktif, updated_at
+         FROM shift_kerja WHERE instansi_id = $1 ORDER BY jam_masuk ASC, id ASC`,
+        [inst]
+      );
+      return ok(res, { data: r.rows, rows: r.rows });
+    } catch (e) {
+      console.error('[shift-list]', e);
+      return fail(res, 503, 'Layanan pengaturan shift tidak tersedia.');
+    }
+  });
+
+  router.post('/shift-save', async (req, res) => {
+    if (requireMedia(req, res)) return;
+    try {
+      const b = req.body || {};
+      const inst = s(b.instansi_id || req.user.instansi_id || 'bapperida');
+      if (!sameInstansi(req.user, inst)) return fail(res, 403, 'Forbidden');
+      const nama = s(b.nama);
+      const jamMasuk = s(b.jam_masuk);
+      const jamPulang = s(b.jam_pulang);
+      const toleransi = Math.max(0, Math.min(180, Number(b.toleransi_menit ?? 15) || 0));
+      const lintasHari = Boolean(b.lintas_hari);
+      const aktif = b.aktif !== false;
+      if (!nama || !/^\d{2}:\d{2}/.test(jamMasuk) || !/^\d{2}:\d{2}/.test(jamPulang)) {
+        return fail(res, 400, 'Nama shift, jam masuk (HH:MM), dan jam pulang (HH:MM) wajib diisi.');
+      }
+      await ensureShiftTable();
+      const shiftId = Number(b.id) || 0;
+      let r;
+      if (shiftId > 0) {
+        r = await query(
+          `UPDATE shift_kerja
+           SET nama = $1, jam_masuk = $2, jam_pulang = $3, toleransi_menit = $4, lintas_hari = $5, aktif = $6, updated_at = now()
+           WHERE id = $7 AND instansi_id = $8
+           RETURNING *`,
+          [nama, jamMasuk.slice(0, 5), jamPulang.slice(0, 5), toleransi, lintasHari, aktif, shiftId, inst]
+        );
+        if (!r.rows.length) return fail(res, 404, 'Shift tidak ditemukan.');
+      } else {
+        r = await query(
+          `INSERT INTO shift_kerja (instansi_id, nama, jam_masuk, jam_pulang, toleransi_menit, lintas_hari, aktif)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING *`,
+          [inst, nama, jamMasuk.slice(0, 5), jamPulang.slice(0, 5), toleransi, lintasHari, aktif]
+        );
+      }
+      return ok(res, { data: r.rows[0] }, 'Shift kerja disimpan.');
+    } catch (e) {
+      console.error('[shift-save]', e);
+      return fail(res, 500, 'Gagal menyimpan shift kerja.');
+    }
+  });
+
+  router.post('/shift-delete', async (req, res) => {
+    if (requireMedia(req, res)) return;
+    try {
+      const b = req.body || {};
+      const shiftId = Number(b.id) || 0;
+      const inst = s(b.instansi_id || req.user.instansi_id || 'bapperida');
+      if (!sameInstansi(req.user, inst)) return fail(res, 403, 'Forbidden');
+      if (!shiftId) return fail(res, 400, 'ID shift wajib disertakan.');
+      await ensureShiftTable();
+      const r = await query(`DELETE FROM shift_kerja WHERE id = $1 AND instansi_id = $2 RETURNING *`, [shiftId, inst]);
+      if (!r.rows.length) return fail(res, 404, 'Shift tidak ditemukan.');
+      return ok(res, { data: r.rows[0] }, 'Shift kerja dihapus.');
+    } catch (e) {
+      console.error('[shift-delete]', e);
+      return fail(res, 500, 'Gagal menghapus shift kerja.');
+    }
+  });
+
   // ── Lokasi ─────────────────────────────────────────────────────────────────
 router.get('/lokasi-list', async(req,res)=>{try{const sc=scope(req,req.query.instansi_id);if(!sc.ok)return fail(res,403,'Forbidden');const vals=[];let sql='SELECT *, "Nama_Lokasi" AS nama_lokasi FROM lokasiabsen WHERE instansi_id=$1 OR instansi_id=\'all\'';vals.push(sc.id||'bapperida');const r=await query(sql,vals);return ok(res,{data:r.rows,rows:r.rows});}catch{return fail(res,503,'Layanan lokasi tidak tersedia.');}});
 router.post('/lokasi-add', async(req,res)=>{if(requireMedia(req,res))return;try{const b=req.body||{},id=s(b.instansi_id||req.user.instansi_id||'bapperida');if(!sameInstansi(req.user,id))return fail(res,403,'Forbidden');const sql=`INSERT INTO lokasiabsen (id,"Nama_Lokasi",latitude,longitude,hari,radius,ip_range,instansi_id) VALUES ((SELECT COALESCE(MAX(id),0)+1 FROM lokasiabsen),$1,$2,$3,$4,$5,$6,$7) RETURNING *`;const params=[s(b.nama_lokasi),b.latitude,b.longitude,s(b.hari),b.radius,s(b.ip_range),id];let r;for(let attempt=0;attempt<2;attempt++){try{r=await query(sql,params);break;}catch(err){if(err?.code==='23505'&&attempt===0)continue;throw err;}}return res.status(201).json({ok:true,data:r.rows[0],message:'Lokasi berhasil ditambahkan.'});}catch(e){console.error('[lokasi-add]',e);return fail(res,500,'Gagal menambah lokasi.');}});

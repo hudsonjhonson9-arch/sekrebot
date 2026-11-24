@@ -1805,6 +1805,7 @@
             window.loadDesktopPegawaiTab();
           }
           if (typeof refreshLokasiList === 'function') refreshLokasiList(null);
+          if (typeof loadDesktopShifts === 'function') loadDesktopShifts();
           if (window.AdminCore && typeof window.AdminCore.refresh === 'function') {
             window.AdminCore.refresh();
           }
@@ -2096,6 +2097,124 @@
       }
     });
 
+    // ── CRUD Pengaturan Shift Kerja (Desktop) ───────────────────────────────
+    let desktopShiftsCache = [];
+    function resetDesktopShiftForm() {
+      if ($('desktopShiftEditId')) $('desktopShiftEditId').value = '';
+      if ($('desktopShiftNama')) $('desktopShiftNama').value = '';
+      if ($('desktopShiftMasuk')) $('desktopShiftMasuk').value = '07:15';
+      if ($('desktopShiftPulang')) $('desktopShiftPulang').value = '14:30';
+      if ($('desktopShiftTol')) $('desktopShiftTol').value = '15';
+      if ($('desktopShiftLintasHari')) $('desktopShiftLintasHari').checked = false;
+      if ($('btnSaveDesktopShiftLabel')) $('btnSaveDesktopShiftLabel').textContent = 'Tambah Shift';
+      $('btnCancelDesktopShift')?.classList.add('hidden');
+    }
+
+    function renderDesktopShifts() {
+      const listEl = $('desktopShiftList');
+      const badgeEl = $('desktopShiftCountBadge');
+      if (!listEl) return;
+      if (badgeEl) badgeEl.textContent = `${desktopShiftsCache.length} Shift`;
+      if (!desktopShiftsCache.length) {
+        listEl.innerHTML = '<div class="py-3 text-center text-xs text-on-surface-variant">Belum ada shift khusus. Tambah shift di atas (mis. Shift Pagi / Siang / Malam).</div>';
+        return;
+      }
+      listEl.innerHTML = desktopShiftsCache.map((sh) => `
+        <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="font-bold text-on-surface truncate">${escapeHtml(sh.nama)}</span>
+              ${sh.lintas_hari ? '<span class="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-700 text-[10px] font-bold">Lintas Hari</span>' : ''}
+            </div>
+            <p class="text-[11px] font-mono tabular-nums text-on-surface-variant mt-0.5">${escapeHtml(sh.jam_masuk)} – ${escapeHtml(sh.jam_pulang)} WITA • Toleransi ${Number(sh.toleransi_menit || 0)} mnt</p>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <button type="button" data-desk-edit-shift="${sh.id}" class="px-2.5 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 font-bold text-[11px] cursor-pointer">Edit</button>
+            <button type="button" data-desk-del-shift="${sh.id}" class="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-700 hover:bg-rose-500/25 font-bold text-[11px] cursor-pointer">Hapus</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function loadDesktopShifts() {
+      const listEl = $('desktopShiftList');
+      if (!listEl) return;
+      try {
+        const inst = getInstansiId();
+        const res = await fetch(`/api/shift-list?instansi_id=${encodeURIComponent(inst)}`);
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json) throw new Error('Gagal memuat daftar shift.');
+        desktopShiftsCache = Array.isArray(json.data) ? json.data : (Array.isArray(json.rows) ? json.rows : []);
+        renderDesktopShifts();
+      } catch (err) {
+        listEl.innerHTML = `<div class="py-3 text-center text-xs text-rose-600">${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    $('btnCancelDesktopShift')?.addEventListener('click', resetDesktopShiftForm);
+    $('btnSaveDesktopShift')?.addEventListener('click', async () => {
+      const nama = ($('desktopShiftNama')?.value || '').trim();
+      const jam_masuk = ($('desktopShiftMasuk')?.value || '').trim();
+      const jam_pulang = ($('desktopShiftPulang')?.value || '').trim();
+      const toleransi_menit = Number($('desktopShiftTol')?.value || 15);
+      const lintas_hari = Boolean($('desktopShiftLintasHari')?.checked);
+      const id = Number($('desktopShiftEditId')?.value || 0) || undefined;
+      if (!nama || !jam_masuk || !jam_pulang) {
+        notifyToast('warning', 'Data Belum Lengkap', 'Isi nama shift, jam masuk, dan jam pulang.');
+        return;
+      }
+      try {
+        const res = await fetch('/api/shift-save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, instansi_id: getInstansiId(), nama, jam_masuk, jam_pulang, toleransi_menit, lintas_hari })
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+        notifyToast('success', 'Shift Disimpan', `${nama} (${jam_masuk} - ${jam_pulang} WITA)`);
+        resetDesktopShiftForm();
+        await loadDesktopShifts();
+      } catch (err) {
+        notifyToast('error', 'Gagal Menyimpan Shift', err.message);
+      }
+    });
+
+    $('desktopShiftList')?.addEventListener('click', async (ev) => {
+      const editBtn = ev.target.closest('[data-desk-edit-shift]');
+      if (editBtn) {
+        const sh = desktopShiftsCache.find((x) => String(x.id) === String(editBtn.getAttribute('data-desk-edit-shift')));
+        if (!sh) return;
+        if ($('desktopShiftEditId')) $('desktopShiftEditId').value = String(sh.id);
+        if ($('desktopShiftNama')) { $('desktopShiftNama').value = sh.nama || ''; $('desktopShiftNama').focus(); }
+        if ($('desktopShiftMasuk')) $('desktopShiftMasuk').value = String(sh.jam_masuk || '07:15').slice(0, 5);
+        if ($('desktopShiftPulang')) $('desktopShiftPulang').value = String(sh.jam_pulang || '14:30').slice(0, 5);
+        if ($('desktopShiftTol')) $('desktopShiftTol').value = String(sh.toleransi_menit ?? 15);
+        if ($('desktopShiftLintasHari')) $('desktopShiftLintasHari').checked = Boolean(sh.lintas_hari);
+        if ($('btnSaveDesktopShiftLabel')) $('btnSaveDesktopShiftLabel').textContent = 'Simpan Perubahan';
+        $('btnCancelDesktopShift')?.classList.remove('hidden');
+        return;
+      }
+      const delBtn = ev.target.closest('[data-desk-del-shift]');
+      if (delBtn) {
+        const sid = Number(delBtn.getAttribute('data-desk-del-shift') || 0);
+        if (!sid || !confirm('Hapus shift kerja ini?')) return;
+        try {
+          const res = await fetch('/api/shift-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: sid, instansi_id: getInstansiId() })
+          });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+          notifyToast('success', 'Shift Dihapus', 'Shift kerja telah dihapus.');
+          await loadDesktopShifts();
+        } catch (err) {
+          notifyToast('error', 'Gagal Menghapus Shift', err.message);
+        }
+      }
+    });
+
+    loadDesktopShifts();
     loadDesktopHolidays();
 
     // Seamless auto-sync saat ada perubahan dari tab lain atau kembali ke tab ini

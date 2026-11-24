@@ -395,6 +395,39 @@
 <span class="material-symbols-outlined text-[18px]">save</span>
 <span>Simpan Kebijakan Jam Kerja</span>
 </button>
+<!-- Pengaturan Shift Kerja (Multi-Shift) -->
+<div class="pt-4 mt-2 border-t border-outline-variant/30 flex flex-col gap-3">
+  <div class="flex items-center justify-between gap-2">
+    <div>
+      <h4 class="font-label-lg text-on-surface font-bold text-sm">Pengaturan Shift Kerja</h4>
+      <p class="font-body-sm text-on-surface-variant text-[11px]">Atur jadwal Shift Pagi, Siang, Malam, atau shift khusus OPD.</p>
+    </div>
+    <span id="desktopShiftCountBadge" class="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-bold font-mono tabular-nums">0 Shift</span>
+  </div>
+  <input type="hidden" id="desktopShiftEditId" value="" />
+  <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+    <input id="desktopShiftNama" type="text" placeholder="Nama shift (cth: Shift Pagi)" class="sm:col-span-5 min-h-[38px] px-3 py-1.5 rounded-xl bg-surface-container-low border border-outline-variant/40 text-xs text-on-surface outline-none focus:border-primary" />
+    <input id="desktopShiftMasuk" type="time" value="07:15" class="sm:col-span-3 min-h-[38px] px-2.5 py-1.5 rounded-xl bg-surface-container-low border border-outline-variant/40 text-xs font-mono text-on-surface outline-none focus:border-primary" />
+    <input id="desktopShiftPulang" type="time" value="14:30" class="sm:col-span-3 min-h-[38px] px-2.5 py-1.5 rounded-xl bg-surface-container-low border border-outline-variant/40 text-xs font-mono text-on-surface outline-none focus:border-primary" />
+    <input id="desktopShiftTol" type="number" min="0" max="180" value="15" title="Toleransi (menit)" placeholder="Tol" class="sm:col-span-1 min-h-[38px] px-2 py-1.5 rounded-xl bg-surface-container-low border border-outline-variant/40 text-xs font-mono text-center text-on-surface outline-none focus:border-primary" />
+  </div>
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <label class="inline-flex items-center gap-2 text-xs text-on-surface-variant cursor-pointer">
+      <input id="desktopShiftLintasHari" type="checkbox" class="accent-primary rounded" />
+      <span>Lintas Hari (Shift Malam, pulang besok pagi)</span>
+    </label>
+    <div class="flex items-center gap-1.5">
+      <button id="btnCancelDesktopShift" type="button" class="hidden min-h-[36px] px-3 py-1.5 rounded-xl bg-surface-container text-on-surface-variant text-xs font-semibold cursor-pointer">Batal</button>
+      <button id="btnSaveDesktopShift" type="button" class="min-h-[36px] px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 cursor-pointer">
+        <span class="material-symbols-outlined text-[16px]">add_circle</span>
+        <span id="btnSaveDesktopShiftLabel">Tambah Shift</span>
+      </button>
+    </div>
+  </div>
+  <div id="desktopShiftList" class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+    <div class="py-3 text-center text-xs text-on-surface-variant">Memuat daftar shift...</div>
+  </div>
+</div>
 </div>
 <!-- RIGHT: Keamanan Biometrik Wajah (6 Cols) -->
 <div class="lg:col-span-6 bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm border border-outline-variant/30 flex flex-col gap-space-md">
@@ -938,7 +971,7 @@
 <script src="js/stitch-pickers.js"></script>
 <script src="/js/admin-core.js"></script>
 <script type="module" src="js/dev-tools.js"></script>
-<script type="module" src="/js/admin-controller.js?v=20261124"></script>
+<script type="module" src="/js/admin-controller.js?v=20261124b"></script>
 
 <script>
   // Admin desktop. Di HP (<768px) dialihkan ke mode mobile (index.html#admin);
