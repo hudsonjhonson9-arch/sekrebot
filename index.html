@@ -378,6 +378,25 @@
               <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl"><span class="font-bold text-slate-900 dark:text-white text-base block tabular-nums" id="rekapHadir">0</span><span class="text-[10px] text-slate-500 dark:text-slate-400">Hari Hadir</span></div>
               <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl"><span class="font-bold text-slate-900 dark:text-white text-base block tabular-nums" id="rekapJam">0 j</span><span class="text-[10px] text-slate-500 dark:text-slate-400">Total Jam Kerja</span></div>
             </div>
+
+            <!-- Statistik Masuk Terlambat & Pulang Duluan (Port dari D:\Code\absensi) -->
+            <div class="pt-2.5 border-t border-slate-100 dark:border-slate-800 grid grid-cols-3 gap-2 text-center">
+              <div class="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/40 p-2 rounded-xl">
+                <span class="font-bold text-amber-700 dark:text-amber-400 text-sm font-mono block tabular-nums" id="rekapTotalLambat">0m</span>
+                <span class="text-[10px] text-slate-600 dark:text-slate-300 font-semibold block">Masuk Terlambat</span>
+                <span class="text-[9.5px] font-mono text-amber-600/80 dark:text-amber-400/80 tabular-nums" id="rekapLambatKali">0× kali</span>
+              </div>
+              <div class="bg-orange-50/70 dark:bg-orange-950/30 border border-orange-200/60 dark:border-orange-900/40 p-2 rounded-xl">
+                <span class="font-bold text-orange-700 dark:text-orange-400 text-sm font-mono block tabular-nums" id="rekapTotalCepat">0m</span>
+                <span class="text-[10px] text-slate-600 dark:text-slate-300 font-semibold block">Pulang Duluan</span>
+                <span class="text-[9.5px] font-mono text-orange-600/80 dark:text-orange-400/80 tabular-nums" id="rekapCepatKali">0× kali</span>
+              </div>
+              <div class="bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 p-2 rounded-xl">
+                <span class="font-bold text-slate-900 dark:text-white text-xs font-mono block tabular-nums mt-0.5" id="rekapAvgJam">--:-- / --:--</span>
+                <span class="text-[10px] text-slate-500 dark:text-slate-400 font-semibold block mt-0.5">Rata-rata M/P</span>
+                <span class="text-[9.5px] font-mono text-slate-400 tabular-nums" id="rekapTotalAkumulasi">Akum: 0m</span>
+              </div>
+            </div>
           </div>
 
           <!-- Section Title & Stream of Daily Cards -->
@@ -4323,7 +4342,7 @@
   <script src="js/stitch-desktop-shell.js?v=20261123c"></script>
   <script src="js/stitch-app.js?v=20261124"></script>
   <script src="js/stitch-presensi.js?v=20261123c"></script>
-  <script src="js/stitch-rekap.js"></script>
+  <script src="js/stitch-rekap.js?v=20261124"></script>
   <script src="js/stitch-layanan.js"></script>
   <script src="js/stitch-aset-arsip.js"></script>
   <script src="js/stitch-aset-settings.js?v=20261123"></script>

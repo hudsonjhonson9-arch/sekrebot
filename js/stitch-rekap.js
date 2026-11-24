@@ -55,15 +55,46 @@
       });
 
       const shiftMasuk = (state.shift && state.shift.masuk) || '07:15';
+      const shiftPulang = (state.shift && state.shift.pulang) || '14:30';
+      const toMnt = (t) => {
+        if (!t) return null;
+        const p = String(t).replace(/\s*WITA\s*/i, '').trim().split(':').map(Number);
+        return Number.isFinite(p[0]) ? p[0] * 60 + (p[1] || 0) : null;
+      };
+      const fmtMnt = (mm) => {
+        if (!mm || mm <= 0) return '0m';
+        const h = Math.floor(mm / 60), mn = mm % 60;
+        return h > 0 ? `${h}j ${mn}m` : `${mn}m`;
+      };
+      const fmtHm = (mm) => mm == null ? '--:--' : `${String(Math.floor(mm / 60)).padStart(2, '0')}:${String(mm % 60).padStart(2, '0')}`;
+      const batasMasuk = toMnt(shiftMasuk) ?? (7 * 60 + 15);
+      const batasPulang = toMnt(shiftPulang) ?? (14 * 60 + 30);
+
       let tepat = 0, telat = 0, izin = 0, menit = 0;
+      let hariCepat = 0, totalLambatMnt = 0, totalCepatMnt = 0;
+      let sumMasuk = 0, cntMasuk = 0, sumPulang = 0, cntPulang = 0;
       days.forEach(d => {
         if (d.ket) { izin++; return; }
         if (!d.masuk) return;
-        const late = String(d.masuk['Jenis Absen']).toUpperCase() === 'TERLAMBAT' || /terlambat/i.test(d.masuk.Ket || '') || (d.masuk.Jam || '') > shiftMasuk;
+        const mM = toMnt(d.masuk.Jam);
+        const mP = d.pulang ? toMnt(d.pulang.Jam) : null;
+        if (mM !== null) {
+          sumMasuk += mM; cntMasuk++;
+          const diffLate = mM - batasMasuk;
+          if (diffLate > 0) totalLambatMnt += diffLate;
+        }
+        if (mP !== null) {
+          sumPulang += mP; cntPulang++;
+          const diffEarly = batasPulang - mP;
+          if (diffEarly > 0) { hariCepat++; totalCepatMnt += diffEarly; }
+        }
+        const late = String(d.masuk['Jenis Absen']).toUpperCase() === 'TERLAMBAT'
+          || String(d.masuk['Jenis Absen']).toUpperCase().includes('LUAR JAM MASUK')
+          || /terlambat/i.test(d.masuk.Ket || '')
+          || (mM !== null && mM > batasMasuk);
         late ? telat++ : tepat++;
-        if (d.pulang) {
-          const [h1, m1] = d.masuk.Jam.split(':').map(Number), [h2, m2] = d.pulang.Jam.split(':').map(Number);
-          if (h2 * 60 + m2 > h1 * 60 + m1) menit += (h2 * 60 + m2) - (h1 * 60 + m1);
+        if (mM !== null && mP !== null && mP > mM) {
+          menit += (mP - mM);
         }
       });
 
@@ -85,6 +116,14 @@
       set('riwayatTepatCount', tepat); set('riwayatTelatCount', telat); set('riwayatIzinCount', izin);
       set('rekapAlpa', alpa); set('rekapHadir', hadir);
       set('rekapJam', `${Math.floor(menit / 60)}j ${menit % 60}m`);
+      set('rekapTotalLambat', totalLambatMnt > 0 ? `+${fmtMnt(totalLambatMnt)}` : '0m');
+      set('rekapLambatKali', `${telat}× kali`);
+      set('rekapTotalCepat', totalCepatMnt > 0 ? `-${fmtMnt(totalCepatMnt)}` : '0m');
+      set('rekapCepatKali', `${hariCepat}× kali`);
+      const avgM = cntMasuk ? Math.round(sumMasuk / cntMasuk) : null;
+      const avgP = cntPulang ? Math.round(sumPulang / cntPulang) : null;
+      set('rekapAvgJam', `${fmtHm(avgM)} / ${fmtHm(avgP)}`);
+      set('rekapTotalAkumulasi', `Akum: ${fmtMnt(totalLambatMnt + totalCepatMnt)}`);
       set('rekapDisiplinPct', pct + '%');
       const bar = document.getElementById('rekapDisiplinBar'); if (bar) bar.style.width = pct + '%';
     }

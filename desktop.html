@@ -412,7 +412,7 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
             <!-- Metric 1: Hari Hadir -->
             <div class="p-4 rounded-2xl bg-surface-container-low border border-outline-variant/30 flex flex-col justify-between">
               <div class="flex items-center justify-between text-emerald-600">
@@ -426,17 +426,30 @@
               <span class="text-[11px] font-mono text-emerald-600 font-bold">Kehadiran Sah</span>
             </div>
 
-            <!-- Metric 2: Terlambat -->
+            <!-- Metric 2: Masuk Terlambat -->
             <div class="p-4 rounded-2xl bg-surface-container-low border border-outline-variant/30 flex flex-col justify-between">
               <div class="flex items-center justify-between text-amber-600">
-                <span class="text-xs font-bold text-on-surface">Terlambat</span>
+                <span class="text-xs font-bold text-on-surface">Masuk Terlambat</span>
                 <span class="material-symbols-outlined text-[20px]">alarm</span>
               </div>
               <div class="my-2">
-                <span id="metricTelatCount" class="font-mono text-3xl font-extrabold text-on-surface tabular-nums">0</span>
+                <span id="metricTelatCount" class="font-mono text-3xl font-extrabold text-amber-600 tabular-nums">0</span>
                 <span class="text-xs font-mono text-on-surface-variant font-medium">Kali</span>
               </div>
-              <span class="text-[11px] text-amber-600 font-bold">Di Luar Jam Masuk</span>
+              <span id="metricTelatMenitSub" class="text-[11px] font-mono text-amber-600 font-bold tabular-nums">Akum: 0m</span>
+            </div>
+
+            <!-- Metric 3: Pulang Duluan -->
+            <div class="p-4 rounded-2xl bg-surface-container-low border border-outline-variant/30 flex flex-col justify-between">
+              <div class="flex items-center justify-between text-orange-600">
+                <span class="text-xs font-bold text-on-surface">Pulang Duluan</span>
+                <span class="material-symbols-outlined text-[20px]">directions_run</span>
+              </div>
+              <div class="my-2">
+                <span id="metricPulangCepatCount" class="font-mono text-3xl font-extrabold text-orange-600 tabular-nums">0</span>
+                <span class="text-xs font-mono text-on-surface-variant font-medium">Kali</span>
+              </div>
+              <span id="metricPulangCepatSub" class="text-[11px] font-mono text-orange-600 font-bold tabular-nums">Akum: 0m</span>
             </div>
 
             <!-- Metric 3: Izin / Sakit / Cuti -->
@@ -984,6 +997,37 @@
       setTxt('metricTelatCount', mTelat);
       setTxt('metricIzinCount', mIzin);
       setTxt('metricTotalJam', mJam);
+
+      // Hitung akumulasi Masuk Terlambat & Pulang Duluan bulan berjalan (port dari D:\Code\absensi)
+      const curYm = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 7);
+      const toMnt = (t) => {
+        if (!t) return null;
+        const p = String(t).replace(/\s*WITA\s*/i, '').trim().split(':').map(Number);
+        return Number.isFinite(p[0]) ? p[0] * 60 + (p[1] || 0) : null;
+      };
+      const fmtMnt = (mm) => (!mm || mm <= 0) ? '0m' : (Math.floor(mm / 60) > 0 ? `${Math.floor(mm / 60)}j ${mm % 60}m` : `${mm}m`);
+      const batasM = toMnt(state.shift?.masuk || '07:15') ?? (7 * 60 + 15);
+      const batasP = toMnt(state.shift?.pulang || '14:30') ?? (14 * 60 + 30);
+      const byDay = new Map();
+      (state.userLogs || []).forEach(l => {
+        const tgl = String(l.Tanggal || '').slice(0, 10);
+        if (!tgl.startsWith(curYm)) return;
+        const rec = byDay.get(tgl) || { m: null, p: null };
+        const j = String(l['Jenis Absen'] || '').toUpperCase();
+        if (j.includes('PULANG')) { if (!rec.p || (l.Jam || '') > rec.p) rec.p = l.Jam; }
+        else if (j.includes('MASUK') || j === 'TERLAMBAT') { if (!rec.m || (l.Jam || '') < rec.m) rec.m = l.Jam; }
+        byDay.set(tgl, rec);
+      });
+      let lambatKali = 0, lambatMnt = 0, cepatKali = 0, cepatMnt = 0;
+      byDay.forEach(rec => {
+        const mm = toMnt(rec.m), mp = toMnt(rec.p);
+        if (mm !== null && mm > batasM) { lambatKali++; lambatMnt += (mm - batasM); }
+        if (mp !== null && mp < batasP) { cepatKali++; cepatMnt += (batasP - mp); }
+      });
+      setTxt('metricTelatCount', Math.max(mTelat, lambatKali));
+      setTxt('metricTelatMenitSub', `Akum: ${lambatMnt > 0 ? '+' + fmtMnt(lambatMnt) : '0m'}`);
+      setTxt('metricPulangCepatCount', cepatKali);
+      setTxt('metricPulangCepatSub', `Akum: ${cepatMnt > 0 ? '-' + fmtMnt(cepatMnt) : '0m'}`);
 
       // Today's Logs (Check if user has checked in/out today)
       const todayStr = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
