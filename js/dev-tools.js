@@ -751,6 +751,9 @@ if (typeof window !== 'undefined') {
       <div id="devTrackList" class="flex flex-col gap-2"></div>
       <button type="button" id="devTrackMore" class="hidden self-center text-xs font-semibold px-4 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">Muat lebih</button>`;
     anchor.parentNode.insertBefore(card, anchor.nextSibling);
+    if (window.StitchPicker && typeof window.StitchPicker.enhanceSelect === 'function') {
+      window.StitchPicker.enhanceSelect('devTrackDays', { searchable: false });
+    }
     card.querySelector('#devTrackDays').addEventListener('change', (e) => {
       trk.days = Number(e.target.value) || 7;
       window.renderDevTrackViewer({ force: true });

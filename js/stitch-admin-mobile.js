@@ -271,8 +271,13 @@
       }).join('');
       if (Array.from(sel.options).some((o) => o.value === curInst)) sel.value = curInst;
       else sel.value = 'ALL';
-      if (w.StitchPicker && typeof w.StitchPicker.refreshSelect === 'function') {
-        w.StitchPicker.refreshSelect('adminPegawaiOpdSelect');
+      if (w.StitchPicker) {
+        if (typeof w.StitchPicker.enhanceSelect === 'function') {
+          w.StitchPicker.enhanceSelect('adminPegawaiOpdSelect', { searchable: true });
+        }
+        if (typeof w.StitchPicker.refreshSelect === 'function') {
+          w.StitchPicker.refreshSelect('adminPegawaiOpdSelect');
+        }
       }
     } catch (_) {}
   }

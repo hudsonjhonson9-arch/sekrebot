@@ -1207,6 +1207,11 @@
     enhanceSelect('malSelectAset', { searchable: true, placeholder: 'Pilih aset...' });
     enhanceSelect('mapSelectAset', { searchable: true, placeholder: 'Pilih aset...' });
     enhanceSelect('devLogLevelFilter', { searchable: false });
+    enhanceSelect('devTrackDays', { searchable: false });
+    enhanceSelect('profilLiburYearFilter', { searchable: false });
+    enhanceSelect('adminLiburYearFilter', { searchable: false });
+    enhanceSelect('desktopLiburYearFilter', { searchable: false });
+    enhanceSelect('dpHolidayYear', { searchable: false });
   }
 
   document.addEventListener('DOMContentLoaded', initDefaultPickers);

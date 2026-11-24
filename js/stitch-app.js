@@ -529,10 +529,13 @@
       const targetVal = prevVal && (prevVal === 'ALL' || sorted.includes(prevVal)) ? prevVal : curYear;
       sel.innerHTML = sorted.map(y => `<option value="${y}">Tahun ${y}</option>`).join('') + '<option value="ALL">Semua Tahun</option>';
       sel.value = targetVal;
-      if (window.StitchPicker && typeof window.StitchPicker.refreshSelect === 'function') {
-        window.StitchPicker.refreshSelect(selectId);
-      } else if (window.StitchPicker && typeof window.StitchPicker.enhanceSelect === 'function') {
-        window.StitchPicker.enhanceSelect(sel);
+      if (window.StitchPicker) {
+        if (typeof window.StitchPicker.enhanceSelect === 'function') {
+          window.StitchPicker.enhanceSelect(selectId, { searchable: false });
+        }
+        if (typeof window.StitchPicker.refreshSelect === 'function') {
+          window.StitchPicker.refreshSelect(selectId);
+        }
       }
       return targetVal;
     }
