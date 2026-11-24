@@ -18,10 +18,37 @@ export function createArsipRouter(deps = {}) {
   const doQuery = deps.query ?? queryDb;
 
   const siap = () => Boolean(baseUrl && secret);
-  // Gate tulis mengikuti arsipdigital: user_credentials.role ternormalisasi sama
-  // dengan 'Admin'. BUKAN role absensi (user_list) — dua tabel itu memang tidak
-  // sinkron, dan arsipdigital-lah yang jadi otoritas akhir. Fail-closed.
-  const bolehTulis = (req) => roleArsip(doQuery, req.user?.nip).then((r) => r === R_ADMIN);
+  async function getUserRolePerms(req) {
+    const role = String(req.user?.role || '').trim().toUpperCase().replace(/\s+/g, '_');
+    if (!role) return [];
+    if (role === 'SUPERADMIN') return ['*'];
+    try {
+      const rp = await doQuery('SELECT permissions FROM absen_roles WHERE id = $1 LIMIT 1', [role]);
+      const raw = rp?.rows?.[0]?.permissions;
+      if (Array.isArray(raw)) return raw;
+      if (typeof raw === 'string') return JSON.parse(raw) || [];
+    } catch (_) {}
+    return [];
+  }
+
+  // Gate tulis: izinkan jika Admin di arsipdigital (user_credentials) ATAU memiliki
+  // hak akses yang sesuai di absen_roles.permissions (perjadin.create/approve untuk SPPD,
+  // arsip.agenda_surat/upload untuk Agenda Surat, arsip.upload untuk dokumen arsip).
+  const bolehTulis = async (req, target = '') => {
+    const r = await roleArsip(doQuery, req.user?.nip);
+    if (r === R_ADMIN) return true;
+    const perms = await getUserRolePerms(req);
+    if (!perms.length) return false;
+    if (perms.includes('*')) return true;
+    const t = String(target || '');
+    if (t.startsWith('/api/agenda/sppd')) {
+      return perms.includes('perjadin.create') || perms.includes('perjadin.approve');
+    }
+    if (t.startsWith('/api/agenda/surat') || t.startsWith('/api/agenda/disposisi') || t === '/api/agenda') {
+      return perms.includes('arsip.agenda_surat') || perms.includes('arsip.upload');
+    }
+    return perms.includes('arsip.upload');
+  };
 
   // Pastikan NIP pengguna terisi dari user_list jika sesi hanya membawa id
   router.use(async (req, res, next) => {
@@ -55,7 +82,7 @@ export function createArsipRouter(deps = {}) {
       });
     }
     const isWrite = req.method !== 'GET' && req.method !== 'HEAD';
-    if (isWrite && !(await bolehTulis(req))) {
+    if (isWrite && !(await bolehTulis(req, target))) {
       return res.status(403).json({ ok: false, message: 'Tidak berwenang.' });
     }
     try {
@@ -72,7 +99,7 @@ export function createArsipRouter(deps = {}) {
       // Upstream 401 (auth cookie ditolak oleh arsipdigital, mis. secret mismatch atau
       // sesi arsip kedaluwarsa) atau 502/503: fallback ke database PostgreSQL lokal
       // agar pengguna absensi yang sesinya aktif tetap dapat mengakses data arsip.
-      if (r.status === 401 || r.status === 502 || r.status === 503) {
+      if (r.status === 401 || r.status === 502 || r.status === 503 || (r.status === 403 && isWrite)) {
         console.warn(`[arsip-proxy] Upstream returned ${r.status} for ${target}, fallback to db.`);
         const handled = await handleArsipDbRequest(req, res, target, doQuery);
         if (handled) return;
