@@ -594,21 +594,14 @@ export function createStitchApiRouter(deps = {}) {
       if (!userRes.rows.length) return res.status(404).json({ ok: false, message: 'Pegawai tidak ditemukan.' });
       const u = userRes.rows[0];
 
-      // Handle file upload to Google Drive & local disk storage
+      // Handle file upload: prioritaskan Google Drive (0 byte ke disk lokal bila sukses),
+      // fallback ke disk lokal hanya jika GAS_WEBAPP_URL belum diset atau gagal.
       if (buktiBase64) {
         try {
           const rawBase64 = buktiBase64.replace(/^data:.*?;base64,/, '');
-          const buffer = Buffer.from(rawBase64, 'base64');
           const safeFilename = `${Date.now()}_${buktiNama.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-          const localDir = path.resolve(process.cwd(), 'public', 'uploads', 'keterangan');
-          if (!fs.existsSync(localDir)) {
-            fs.mkdirSync(localDir, { recursive: true });
-          }
-          const localPath = path.join(localDir, safeFilename);
-          fs.writeFileSync(localPath, buffer);
-          driveLink = `/uploads/keterangan/${safeFilename}`;
 
-          // Attempt Google Apps Script Google Drive upload if configured
+          let uploadedToDrive = false;
           if (process.env.GAS_WEBAPP_URL) {
             try {
               const gasRes = await gasUpsert({
@@ -618,10 +611,22 @@ export function createStitchApiRouter(deps = {}) {
               });
               if (gasRes && gasRes.url) {
                 driveLink = gasRes.url;
+                uploadedToDrive = true;
               }
             } catch (gasErr) {
-              console.warn('[stitch-api] Google Drive upload via GAS failed, using local upload:', gasErr.message);
+              console.warn('[stitch-api] Google Drive upload via GAS failed, falling back to local upload:', gasErr.message);
             }
+          }
+
+          if (!uploadedToDrive) {
+            const buffer = Buffer.from(rawBase64, 'base64');
+            const localDir = path.resolve(process.cwd(), 'public', 'uploads', 'keterangan');
+            if (!fs.existsSync(localDir)) {
+              fs.mkdirSync(localDir, { recursive: true });
+            }
+            const localPath = path.join(localDir, safeFilename);
+            fs.writeFileSync(localPath, buffer);
+            driveLink = `/uploads/keterangan/${safeFilename}`;
           }
         } catch (fileErr) {
           console.error('[stitch-api] Error saving uploaded file:', fileErr);
