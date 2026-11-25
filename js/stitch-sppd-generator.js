@@ -1275,6 +1275,7 @@
     loadWewenang,
     enrichWithWewenang,
     openWewenangModal,
+    LOGO_SUMBA_BARAT_B64,
     downloadSppdBundleZip,
     bangunHtmlSPT,
     bangunHtmlSPPD,
@@ -1294,4 +1295,5 @@
       return downloadDocxFromTemplate('sppd', enrichWithWewenang(item), person);
     },
   };
+  try { w.LOGO_SUMBA_BARAT_B64 = LOGO_SUMBA_BARAT_B64; } catch (_) {}
 })(window, document);

@@ -39,6 +39,8 @@
 
   const PEMBERI_DISPOSISI_OPTIONS = [
     'Kepala BAPPERIDA',
+    'Plt. Kepala BAPPERIDA',
+    'Plh. Kepala BAPPERIDA',
     'Sekretaris BAPPERIDA',
     'Kepala Bidang PPE',
     'Kepala Bidang PSDA',
@@ -1113,6 +1115,41 @@
     return url;
   }
 
+  let _cachedLogoB64 = null;
+  async function resolveLogoB64() {
+    if (w.LOGO_SUMBA_BARAT_B64) return w.LOGO_SUMBA_BARAT_B64;
+    if (w.StitchSppd?.LOGO_SUMBA_BARAT_B64) return w.StitchSppd.LOGO_SUMBA_BARAT_B64;
+    if (w.StitchSppd?.LOGO_B64) return w.StitchSppd.LOGO_B64;
+    if (_cachedLogoB64) return _cachedLogoB64;
+    try {
+      const candidates = [
+        'Lambang_Kabupaten_Sumba_Barat.png',
+        '/Lambang_Kabupaten_Sumba_Barat.png',
+        'images/Lambang_Kabupaten_Sumba_Barat.png',
+      ];
+      for (const p of candidates) {
+        try {
+          const res = await fetch(p);
+          if (res.ok) {
+            const blob = await res.blob();
+            const b64 = await new Promise((resFn, rejFn) => {
+              const fr = new FileReader();
+              fr.onloadend = () => resFn(fr.result);
+              fr.onerror = rejFn;
+              fr.readAsDataURL(blob);
+            });
+            if (b64) {
+              _cachedLogoB64 = b64;
+              w.LOGO_SUMBA_BARAT_B64 = b64;
+              return b64;
+            }
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+    return new URL('Lambang_Kabupaten_Sumba_Barat.png', w.location.origin || w.location.href).href;
+  }
+
   async function cetakLembarDisposisi(surat, historyOverride = null) {
     if (!surat) return;
     let history = historyOverride;
@@ -1133,7 +1170,8 @@
     });
     const customTujuan = Array.from(allTujuan).filter((x) => !DITERUSKAN_OPTIONS.includes(x));
     const customArahan = Array.from(allArahan).filter((x) => !ARAHAN_OPTIONS.includes(x));
-    const logoUrl = new URL('images/Lambang_Kabupaten_Sumba_Barat.png', w.location.href).href;
+    const logoUrl = await resolveLogoB64();
+    const lastPemberi = (history.length ? history[history.length - 1].pemberi_disposisi : '') || surat.pemberi_disposisi || 'Kepala BAPPERIDA';
     const win = w.open('', '_blank', 'width=860,height=980');
     if (!win) {
       if (w.Swal) w.Swal.fire('Pop-up Diblokir', 'Izinkan pop-up untuk mencetak Lembar Disposisi.', 'warning');
@@ -1144,7 +1182,7 @@
         @page { size: A4; margin: 12mm 14mm; }
         body { font-family: 'Times New Roman', serif; font-size: 10.5pt; color: #000; margin: 0; padding: 14px; line-height: 1.35; }
         .kop { display: flex; align-items: center; gap: 14px; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 10px; }
-        .kop img { width: 62px; height: auto; }
+        .kop img { width: 62px; height: auto; object-fit: contain; }
         .kop-t { flex: 1; text-align: center; }
         .kop-t .a { font-size: 13pt; font-weight: bold; }
         .kop-t .b { font-size: 13.5pt; font-weight: bold; }
@@ -1160,7 +1198,7 @@
     </head><body>
       <button class="print-btn" onclick="window.print()">Cetak Lembar Disposisi</button>
       <div class="kop">
-        <img src="${esc(logoUrl)}" alt="Logo">
+        <img src="${logoUrl}" alt="Logo" style="width:62px;height:auto;object-fit:contain;">
         <div class="kop-t">
           <div class="a">PEMERINTAH KABUPATEN SUMBA BARAT</div>
           <div class="b">BADAN PERENCANAAN PEMBANGUNAN, RISET DAN INOVASI DAERAH</div>
@@ -1203,7 +1241,7 @@
       </table>
       <div style="margin-top:20px;width:44%;margin-left:auto;text-align:center;">
         <div>Waikabubak, ${esc(fmtDate(new Date().toISOString().slice(0, 10)))}</div>
-        <div style="font-weight:bold;margin-top:4px;">KEPALA BAPPERIDA,</div>
+        <div style="font-weight:bold;margin-top:4px;text-transform:uppercase;">${esc(lastPemberi)},</div>
         <div style="height:56px;"></div>
         <div style="font-weight:bold;text-decoration:underline;">( .............................................. )</div>
       </div>
@@ -1381,6 +1419,12 @@
   async function openDisposisiModal(suratId, suratObj = null) {
     if (!suratId) return;
     closeStitchOverlay('stitchDisposisiOverlay');
+    ensurePegawaiLoaded().catch(() => {});
+    if (!d.getElementById('agendaPegawaiDatalist')) {
+      const dl = d.createElement('datalist');
+      dl.id = 'agendaPegawaiDatalist';
+      d.body.appendChild(dl);
+    }
     const surat = suratObj || _suratItems.find((x) => Number(x.id) === Number(suratId)) || { id: suratId };
     let history = [];
     const fetchHist = async () => {
@@ -1610,10 +1654,17 @@
             <!-- Baris 1: Pemberi & Tanggal & Batas Waktu & Status -->
             <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
               <div>
-                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Pemberi Disposisi *</label>
-                <select id="stDispPemberi" class="w-full h-9 px-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300">Pemberi Disposisi *</label>
+                  <button type="button" id="stDispToggleCustomPemberi" class="text-[10px] text-[#2563eb] hover:underline cursor-pointer font-semibold">+ Kustom</button>
+                </div>
+                <select id="stDispPemberi" class="w-full h-9 px-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200">
                   ${PEMBERI_DISPOSISI_OPTIONS.map((p) => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}
+                  <option value="__CUSTOM__">✏️ Lainnya / Kustom (Ketik Sendiri)...</option>
                 </select>
+                <div id="stDispCustomPemberiWrap" class="hidden mt-1.5">
+                  <input id="stDispCustomPemberi" type="text" list="agendaPegawaiDatalist" placeholder="Ketik nama pejabat / ASN pemberi disposisi..." class="w-full h-8 px-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#2563eb] text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none">
+                </div>
               </div>
               <div>
                 <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Tgl Disposisi *</label>
@@ -1621,7 +1672,7 @@
               </div>
               <div>
                 <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Batas Waktu</label>
-                <input id="stDispBatas" type="date" class="w-full h-9 px-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono">
+                <input id="stDispBatas" type="date"  class="w-full h-9 px-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono">
               </div>
               <div>
                 <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Status Tindak Lanjut</label>
@@ -1721,6 +1772,42 @@
     wrap.querySelector('#stDispPrintBtn')?.addEventListener('click', () => cetakLembarDisposisi(surat, history));
     wrap.querySelector('#stDispFootPrintBtn')?.addEventListener('click', () => cetakLembarDisposisi(surat, history));
 
+    const selPemberiEl = wrap.querySelector('#stDispPemberi');
+    const customPemberiWrap = wrap.querySelector('#stDispCustomPemberiWrap');
+    const customPemberiInp = wrap.querySelector('#stDispCustomPemberi');
+    const toggleCustomBtn = wrap.querySelector('#stDispToggleCustomPemberi');
+
+    const togglePemberiCustom = (show, focus = true) => {
+      if (!customPemberiWrap) return;
+      if (show) {
+        customPemberiWrap.classList.remove('hidden');
+        if (selPemberiEl) selPemberiEl.value = '__CUSTOM__';
+        if (focus && customPemberiInp) customPemberiInp.focus();
+      } else {
+        customPemberiWrap.classList.add('hidden');
+      }
+    };
+
+    selPemberiEl?.addEventListener('change', () => {
+      if (selPemberiEl.value === '__CUSTOM__') {
+        togglePemberiCustom(true, true);
+      } else {
+        togglePemberiCustom(false, false);
+      }
+    });
+
+    toggleCustomBtn?.addEventListener('click', () => {
+      const isHidden = customPemberiWrap?.classList.contains('hidden');
+      if (isHidden) {
+        togglePemberiCustom(true, true);
+      } else {
+        togglePemberiCustom(false, false);
+        if (selPemberiEl && selPemberiEl.value === '__CUSTOM__') {
+          selPemberiEl.value = PEMBERI_DISPOSISI_OPTIONS[0];
+        }
+      }
+    });
+
     wrap.querySelector('#stDispSaveBtn')?.addEventListener('click', async () => {
       const diteruskan = Array.from(wrap.querySelectorAll('input[name="stDispTujuan"]:checked')).map((el) => el.value);
       const customTujuan = (wrap.querySelector('#stDispCustomTujuan')?.value || '').trim();
@@ -1739,8 +1826,19 @@
         return;
       }
 
+      const selPemberi = wrap.querySelector('#stDispPemberi')?.value || '';
+      const customPemberi = (wrap.querySelector('#stDispCustomPemberi')?.value || '').trim();
+      const pemberiDisposisi = (selPemberi === '__CUSTOM__' || customPemberi)
+        ? (customPemberi || selPemberi)
+        : selPemberi;
+
+      if (!pemberiDisposisi || pemberiDisposisi === '__CUSTOM__') {
+        if (w.Swal) w.Swal.fire('Perhatian', 'Nama atau jabatan pemberi disposisi wajib diisi.', 'warning');
+        return;
+      }
+
       const payload = {
-        pemberi_disposisi: wrap.querySelector('#stDispPemberi').value,
+        pemberi_disposisi: pemberiDisposisi,
         tanggal_disposisi: wrap.querySelector('#stDispTgl').value || new Date().toISOString().slice(0, 10),
         diteruskan_kepada: diteruskan,
         arahan,
@@ -1760,6 +1858,8 @@
         await fetchHist();
         renderBody();
         wrap.querySelectorAll('input[type="checkbox"]').forEach((c) => { c.checked = false; });
+        if (wrap.querySelector('#stDispCustomPemberi')) wrap.querySelector('#stDispCustomPemberi').value = '';
+        togglePemberiCustom(false, false);
         if (wrap.querySelector('#stDispCustomTujuan')) wrap.querySelector('#stDispCustomTujuan').value = '';
         if (wrap.querySelector('#stDispCustomArahan')) wrap.querySelector('#stDispCustomArahan').value = '';
         wrap.querySelector('#stDispCatatan').value = '';
