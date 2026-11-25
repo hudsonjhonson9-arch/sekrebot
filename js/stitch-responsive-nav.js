@@ -540,6 +540,7 @@
         asetSubWrap.className = 'mt-0.5 ml-3 pl-3 border-l border-slate-700/80 flex flex-col gap-0.5 overflow-hidden transition-all';
         const asetSubs = [
           { hash: '#inventaris', href: 'aset-kir.html#inventaris', icon: 'inventory_2', label: 'Inventaris & KIR', perms: ['aset.view', 'aset.manage'] },
+          { hash: '#bast-kir', href: 'aset-kir.html#bast-kir', icon: 'contract_edit', label: 'BAST & KIR Ruangan', perms: ['aset.manage', 'aset.pengaturan', 'aset.laporan'] },
           { hash: '#pemeliharaan', href: 'aset-kir.html#pemeliharaan', icon: 'build', label: 'Kartu Pemeliharaan', perms: ['aset.pemeliharaan'] },
           { hash: '#tiket-pinjam', href: 'aset-kir.html#tiket-pinjam', icon: 'assignment_turned_in', label: 'Tiket & Peminjaman', perms: ['aset.tiket'] },
           { hash: '#laporan-permen47', href: 'aset-kir.html#laporan-permen47', icon: 'description', label: 'Laporan Barang Permen 47', perms: ['aset.laporan'] },
@@ -754,6 +755,7 @@
         toggleLink('e-slip.html', null, hasAny(['presensi.eslip', 'presensi.view_own', 'presensi.view_all', 'admin.rekap']));
         // Filter tab Aset di halaman aset-kir.html sesuai izin granular
         const asetTabPermMap = {
+          'bast-kir': ['aset.manage', 'aset.pengaturan', 'aset.laporan'],
           'pemeliharaan': ['aset.pemeliharaan'],
           'tiket-pinjam': ['aset.tiket'],
           'laporan-permen47': ['aset.laporan'],
