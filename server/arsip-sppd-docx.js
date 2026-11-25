@@ -103,17 +103,22 @@ function resolveKopConfig(it = {}) {
   return (rawKey === 'SEKDA' || rawKey.includes('SEKRETARIAT')) ? KOP_PRESETS.SEKDA : KOP_PRESETS.BAPPERIDA;
 }
 
-function tagsTtdParaf(it) {
+function tagsTtdParaf(it, customParaf = null) {
   const kop = resolveKopConfig(it);
   const rawTtd = parseJson(it.penandatangan, {}) || {};
   const t = { ...TTD_DEFAULT, ...rawTtd };
   const prefix = t.status && t.status !== 'Definitif' ? `${t.status} ` : '';
-  const paraf = parseJson(it.paraf, []);
+  const wewenang = parseJson(it.wewenang, {}) || {};
+  const rawParaf = customParaf && Array.isArray(customParaf) && customParaf.length
+    ? customParaf
+    : (Array.isArray(it.paraf) && it.paraf.length ? it.paraf : (Array.isArray(wewenang.paraf) && wewenang.paraf.length ? wewenang.paraf : parseJson(it.paraf, [])));
+  const paraf = Array.isArray(rawParaf) ? rawParaf : [];
   let baseJabatan = rawTtd.jabatan || it.pejabat_perintah || kop.defaultJabatanTtd || TTD_DEFAULT.jabatan;
   if (kop.key === 'SEKDA' && (!rawTtd.jabatan || /kepala bapperida/i.test(rawTtd.jabatan)) && it.pejabat_perintah && /sekretaris daerah|sekda|bupati/i.test(it.pejabat_perintah)) {
     baseJabatan = it.pejabat_perintah;
   }
   const jabatanTtd = (prefix + baseJabatan).toUpperCase();
+  const parafList = paraf.length ? paraf : PARAF_DEFAULT;
   return {
     KopJenis: kop.key,
     KopLabel: kop.label,
@@ -129,10 +134,10 @@ function tagsTtdParaf(it) {
     KepalaNama: t.nama || TTD_DEFAULT.nama,
     KepalaPangkat: t.pangkat || TTD_DEFAULT.pangkat,
     KepalaNIP: t.nip || TTD_DEFAULT.nip,
-    Paraf1: paraf[0] || PARAF_DEFAULT[0],
-    Paraf2: paraf[1] || PARAF_DEFAULT[1],
-    Paraf3: paraf[2] || PARAF_DEFAULT[2],
-    parafRows: (paraf.length ? paraf : PARAF_DEFAULT).map((j, i) => ({ No: i + 1, Jabatan: j })),
+    Paraf1: parafList[0] || PARAF_DEFAULT[0],
+    Paraf2: parafList[1] || PARAF_DEFAULT[1],
+    Paraf3: parafList[2] || PARAF_DEFAULT[2],
+    parafRows: parafList.map((j, i) => ({ No: i + 1, Jabatan: j })),
   };
 }
 
@@ -191,8 +196,6 @@ export function bangunTagsSPPD(it = {}, person = null) {
   const pangkat = person?.pangkat || it.pelaksana_pangkat || '-';
   const jabatan = person?.jabatan || it.pelaksana_jabatan || '-';
 
-  const tp = tagsTtdParaf(it);
-  const kop = resolveKopConfig(it);
   const wewenang = parseJson(it.wewenang, {}) || {};
   const sekretaris = wewenang.sekretaris || {};
   const bidang = wewenang.bidang || {};
@@ -203,9 +206,16 @@ export function bangunTagsSPPD(it = {}, person = null) {
   const pptkNip = person?.pptk_nip || person?.bidang_nip || (isMainPerson ? (it.pelaksana_pptk_nip || pelaksanaPptk.nip) : '') || bidang.nip || '19690619 200903 1 001';
   const pptkJabatan = person?.pptk_jabatan || person?.bidang_jabatan || (isMainPerson ? (it.pelaksana_pptk_jabatan || pelaksanaPptk.jabatan) : '') || bidang.jabatan || 'Kepala Bidang PPE';
 
-  const tempatBerangkat = it.tempat_berangkat || 'Waikabubak';
-  const tempatTujuan = it.tempat_tujuan || '-';
-  const tglBerangkat = tanggalID(it.tanggal_berangkat);
+  const personParaf = (person && Array.isArray(person.paraf) && person.paraf.length)
+    ? person.paraf
+    : ((isMainPerson && (it.paraf || pelaksanaPptk.paraf)) ? (it.paraf || pelaksanaPptk.paraf) : null);
+
+  const tp = tagsTtdParaf(it, personParaf);
+  const kop = resolveKopConfig(it);
+
+  const tempatBerangkat = person?.tempat_berangkat || (isMainPerson ? it.pelaksana_tempat_berangkat : '') || it.tempat_berangkat || 'Waikabubak';
+  const tempatTujuan = person?.tempat_tujuan || (isMainPerson ? it.pelaksana_tempat_tujuan : '') || it.tempat_tujuan || '-';
+  const tglBerangkat = tanggalID(person?.tanggal_berangkat || (isMainPerson ? it.pelaksana_tanggal_berangkat : '') || it.tanggal_berangkat);
 
   return {
     NomorSPPD: person?.nomor_sppd || it.nomor_sppd || it.nomor_register || `001/SPPD/${tahun}`,
@@ -219,9 +229,9 @@ export function bangunTagsSPPD(it = {}, person = null) {
     AlatAngkut: person?.alat_angkutan || it.alat_angkutan || 'Kendaraan Dinas Roda 4',
     TempatBerangkat: tempatBerangkat,
     TempatTujuan: tempatTujuan,
-    TempatBerangkatRomawiI: person?.tempat_berangkat || tempatBerangkat,
-    TempatTujuanBerangkat: person?.tempat_tujuan || tempatTujuan,
-    TanggalBerangkatRomawiI: person?.tanggal_berangkat ? tanggalID(person.tanggal_berangkat) : tglBerangkat,
+    TempatBerangkatRomawiI: tempatBerangkat,
+    TempatTujuanBerangkat: tempatTujuan,
+    TanggalBerangkatRomawiI: tglBerangkat,
     LamaHari: it.lama_hari ? `${it.lama_hari} (${terbilang(it.lama_hari)}) Hari` : formatLamaHari(it.tanggal_berangkat, it.tanggal_kembali),
     TanggalBerangkat: tglBerangkat,
     TanggalKembali: tanggalID(it.tanggal_kembali || it.tanggal_berangkat),
@@ -272,6 +282,13 @@ export function renderSppdBundleZipBuffer(item = {}) {
     nip: item.pelaksana_nip || '',
     pangkat: item.pelaksana_pangkat || '',
     jabatan: item.pelaksana_jabatan || '',
+    pptk_nama: item.pelaksana_pptk_nama || '',
+    pptk_nip: item.pelaksana_pptk_nip || '',
+    pptk_jabatan: item.pelaksana_pptk_jabatan || '',
+    paraf: item.paraf || null,
+    tempat_berangkat: item.pelaksana_tempat_berangkat || item.tempat_berangkat || '',
+    tempat_tujuan: item.pelaksana_tempat_tujuan || item.tempat_tujuan || '',
+    tanggal_berangkat: item.pelaksana_tanggal_berangkat || item.tanggal_berangkat || '',
   };
   const mainBuf = renderSppdDocxBuffer('sppd', item, mainPerson);
   bundle.file(`02_SPPD_${safeNo(item.nomor_sppd, 'SPPD')}_${safeName(mainPerson.nama)}.docx`, mainBuf);
@@ -295,6 +312,10 @@ export function renderSppdBundleZipBuffer(item = {}) {
       pptk_nama: p.pptk_nama || '',
       pptk_nip: p.pptk_nip || '',
       pptk_jabatan: p.pptk_jabatan || '',
+      paraf: p.paraf || null,
+      tempat_berangkat: p.tempat_berangkat || item.tempat_berangkat || '',
+      tempat_tujuan: p.tempat_tujuan || item.tempat_tujuan || '',
+      tanggal_berangkat: p.tanggal_berangkat || item.tanggal_berangkat || '',
     });
     const num = String(idx + 3).padStart(2, '0');
     bundle.file(`${num}_SPPD_${safeNo(p.nomor_sppd || item.nomor_sppd, 'SPPD')}_${safeName(nama)}.docx`, pBuf);

@@ -169,9 +169,11 @@
     const kop = resolveKop(it);
     const isSekda = kop === KOP_PRESETS.SEKDA;
     const wew = it.wewenang || {};
-    const parafArr = Array.isArray(wew.paraf) && wew.paraf.length
+    const defaultParafArr = Array.isArray(wew.paraf) && wew.paraf.length
       ? wew.paraf
       : ['Sekretaris BAPPERIDA', 'Kepala Bidang PPE', 'Kasubbag Umum & Kepegawaian'];
+    const itParafArr = Array.isArray(it.paraf) && it.paraf.length ? it.paraf : defaultParafArr;
+    const personParafArr = person && Array.isArray(person.paraf) && person.paraf.length ? person.paraf : itParafArr;
     const sek = wew.sekretaris || {};
     const bid = wew.bidang || wew.pptk || {};
     const tahun = it.tahun || new Date().getFullYear();
@@ -212,9 +214,13 @@
     const targetTingkat = formatTingkat(person?.tingkat_biaya || it.pelaksana_tingkat_biaya || it.tingkat_biaya || (it.jenis_sppd === 'LUAR_DAERAH' ? 'Tingkat B' : 'Tingkat C'));
     const pelaksanaPptk = wew.pelaksana_pptk || {};
     const isMainPerson = !person;
-    const pptkNama = person?.pptk_nama || (isMainPerson ? (it.pelaksana_pptk_nama || pelaksanaPptk.nama) : '') || bid.nama || 'BERLIAN MAGU WERU,S.Sos';
-    const pptkNip = person?.pptk_nip || (isMainPerson ? (it.pelaksana_pptk_nip || pelaksanaPptk.nip) : '') || bid.nip || '19690619 200503 1 001';
-    const pptkJabatan = person?.pptk_jabatan || (isMainPerson ? (it.pelaksana_pptk_jabatan || pelaksanaPptk.jabatan) : '') || bid.jabatan || 'KEPALA BIDANG PPE';
+    const pptkNama = person?.pptk_nama || (isMainPerson ? (it.pelaksana_pptk_nama || pelaksanaPptk.nama) : (it.pelaksana_pptk_nama || pelaksanaPptk.nama)) || bid.nama || 'BERLIAN MAGU WERU,S.Sos';
+    const pptkNip = person?.pptk_nip || (isMainPerson ? (it.pelaksana_pptk_nip || pelaksanaPptk.nip) : (it.pelaksana_pptk_nip || pelaksanaPptk.nip)) || bid.nip || '19690619 200503 1 001';
+    const pptkJabatan = person?.pptk_jabatan || (isMainPerson ? (it.pelaksana_pptk_jabatan || pelaksanaPptk.jabatan) : (it.pelaksana_pptk_jabatan || pelaksanaPptk.jabatan)) || bid.jabatan || 'KEPALA BIDANG PPE';
+
+    const paraf1 = personParafArr[0] || 'Sekretaris BAPPERIDA';
+    const paraf2 = personParafArr[1] || pptkJabatan || 'Kepala Bidang PPE';
+    const paraf3 = personParafArr[2] || 'Kasubbag Umum & Kepegawaian';
 
     return {
       KopJenis: isSekda ? 'SEKDA' : 'BAPPERIDA',
@@ -229,9 +235,9 @@
       dasarRows,
       pelaksana,
       Untuk: it.maksud_perjalanan || '-',
-      Paraf1: parafArr[0] || 'Sekretaris BAPPERIDA',
-      Paraf2: parafArr[1] || 'Kepala Bidang PPE',
-      Paraf3: parafArr[2] || 'Kasubbag Umum & Kepegawaian',
+      Paraf1: paraf1,
+      Paraf2: paraf2,
+      Paraf3: paraf3,
       DitetapkanDi: it.ditetapkan_di || it.tempat_berangkat || 'Waikabubak',
       TanggalSurat: tanggalID(it.tanggal_spt || it.tanggal_berangkat || new Date().toISOString().slice(0, 10)),
       TanggalPenetapan: tanggalID(it.tanggal_spt || it.tanggal_berangkat || new Date().toISOString().slice(0, 10)),
@@ -249,9 +255,9 @@
       AlatAngkut: it.alat_angkutan || 'Kendaraan Dinas Roda 4',
       TempatBerangkat: it.tempat_berangkat || 'Waikabubak',
       TempatTujuan: it.tempat_tujuan || '-',
-      TempatBerangkatRomawiI: it.tempat_berangkat || 'Waikabubak',
-      TempatTujuanBerangkat: it.tempat_tujuan || '-',
-      TanggalBerangkatRomawiI: tanggalID(it.tanggal_berangkat),
+      TempatBerangkatRomawiI: person?.tempat_berangkat || (isMainPerson ? it.pelaksana_tempat_berangkat : '') || it.tempat_berangkat || 'Waikabubak',
+      TempatTujuanBerangkat: person?.tempat_tujuan || (isMainPerson ? it.pelaksana_tempat_tujuan : '') || it.tempat_tujuan || '-',
+      TanggalBerangkatRomawiI: tanggalID(person?.tanggal_berangkat || (isMainPerson ? it.pelaksana_tanggal_berangkat : '') || it.tanggal_berangkat),
       LamaHari: formatLamaHari(it.tanggal_berangkat, it.tanggal_kembali),
       TanggalBerangkat: tanggalID(it.tanggal_berangkat),
       TanggalKembali: tanggalID(it.tanggal_kembali),
@@ -831,13 +837,19 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-2">
-              <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">2. Sekretaris Badan</span>
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">2. Sekretaris Badan</span>
+                <select id="wewPickSek" class="px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px]">${pegOpts}</select>
+              </div>
               <input type="text" id="wewSekNama" value="${esc(sek.nama || '')}" placeholder="Nama Sekretaris..." class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
               <input type="text" id="wewSekNip" value="${esc(sek.nip || '')}" placeholder="NIP Sekretaris..." class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono">
               <input type="text" id="wewSekJabatan" value="${esc(sek.jabatan || 'SEKRETARIS BAPPERIDA')}" placeholder="Jabatan..." class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
             </div>
             <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-2">
-              <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">3. PPTK / Kabid (Visum I)</span>
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">3. PPTK / Kabid (Visum I)</span>
+                <select id="wewPickBid" class="px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px]">${pegOpts}</select>
+              </div>
               <input type="text" id="wewBidNama" value="${esc(bid.nama || '')}" placeholder="Nama PPTK / Kabid..." class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
               <input type="text" id="wewBidNip" value="${esc(bid.nip || '')}" placeholder="NIP PPTK / Kabid..." class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono">
               <input type="text" id="wewBidJabatan" value="${esc(bid.jabatan || 'PEJABAT PELAKSANA TEKNIS KEGIATAN')}" placeholder="Jabatan..." class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
@@ -846,12 +858,21 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-2">
-              <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">4. KTU / Kasubbag Umum</span>
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">4. KTU / Kasubbag Umum</span>
+                <select id="wewPickKtu" class="px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px]">${pegOpts}</select>
+              </div>
               <input type="text" id="wewKtuNama" value="${esc(ktu.nama || '')}" placeholder="Nama KTU / Kasubbag..." class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
               <input type="text" id="wewKtuNip" value="${esc(ktu.nip || '')}" placeholder="NIP..." class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono">
             </div>
             <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-2">
-              <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">5. Paraf Hierarki (3 Baris)</span>
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">5. Paraf Hierarki (3 Baris)</span>
+                <select id="wewPickParaf" class="px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px]">
+                  <option value="">-- Pilih Jabatan Pegawai --</option>
+                  ${(Array.isArray(pegawaiList) ? pegawaiList : []).map((p, i) => `<option value="${i}">${esc(p.nama || p.username)} — ${esc(p.jabatan || '')}</option>`).join('')}
+                </select>
+              </div>
               <input type="text" id="wewParaf1" value="${esc(paraf[0] || '')}" placeholder="Jabatan Paraf 1..." class="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
               <input type="text" id="wewParaf2" value="${esc(paraf[1] || '')}" placeholder="Jabatan Paraf 2..." class="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
               <input type="text" id="wewParaf3" value="${esc(paraf[2] || '')}" placeholder="Jabatan Paraf 3..." class="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
@@ -877,6 +898,46 @@
       wrap.querySelector('#wewKepalaNip').value = p.nip || '';
       if (p.pangkat) wrap.querySelector('#wewKepalaPangkat').value = p.pangkat;
       if (p.jabatan) wrap.querySelector('#wewKepalaJabatan').value = p.jabatan.toUpperCase();
+    });
+    wrap.querySelector('#wewPickSek')?.addEventListener('change', (e) => {
+      const idx = Number(e.target.value);
+      const p = pegawaiList[idx];
+      if (!p) return;
+      wrap.querySelector('#wewSekNama').value = p.nama || p.username || '';
+      wrap.querySelector('#wewSekNip').value = p.nip || '';
+      if (p.jabatan) {
+        wrap.querySelector('#wewSekJabatan').value = p.jabatan.toUpperCase();
+        const p1 = wrap.querySelector('#wewParaf1');
+        if (p1 && !p1.value.trim()) p1.value = p.jabatan;
+      }
+    });
+    wrap.querySelector('#wewPickBid')?.addEventListener('change', (e) => {
+      const idx = Number(e.target.value);
+      const p = pegawaiList[idx];
+      if (!p) return;
+      wrap.querySelector('#wewBidNama').value = p.nama || p.username || '';
+      wrap.querySelector('#wewBidNip').value = p.nip || '';
+      if (p.jabatan) {
+        wrap.querySelector('#wewBidJabatan').value = p.jabatan.toUpperCase();
+        const p2 = wrap.querySelector('#wewParaf2');
+        if (p2) p2.value = p.jabatan;
+      }
+    });
+    wrap.querySelector('#wewPickKtu')?.addEventListener('change', (e) => {
+      const idx = Number(e.target.value);
+      const p = pegawaiList[idx];
+      if (!p) return;
+      wrap.querySelector('#wewKtuNama').value = p.nama || p.username || '';
+      wrap.querySelector('#wewKtuNip').value = p.nip || '';
+      const p3 = wrap.querySelector('#wewParaf3');
+      if (p3 && p.jabatan && !p3.value.trim()) p3.value = p.jabatan;
+    });
+    wrap.querySelector('#wewPickParaf')?.addEventListener('change', (e) => {
+      const idx = Number(e.target.value);
+      const p = pegawaiList[idx];
+      if (!p || !p.jabatan) return;
+      const p2 = wrap.querySelector('#wewParaf2');
+      if (p2) p2.value = p.jabatan;
     });
     wrap.querySelector('#btnSaveWewenang')?.addEventListener('click', async () => {
       const payload = {
@@ -939,6 +1000,8 @@
     const p1Pptk = wew.pelaksana_pptk || wew.bidang || {};
     const defTingkat = item.tingkat_biaya || (item.jenis_sppd === 'LUAR_DAERAH' ? 'Tingkat B' : 'Tingkat C');
 
+    const baseParaf = Array.isArray(item.paraf) && item.paraf.length ? item.paraf : (Array.isArray(wew.paraf) ? wew.paraf : ['Sekretaris BAPPERIDA', item.pelaksana_pptk_jabatan || p1Pptk.jabatan || 'Kepala Bidang PPE', 'Kasubbag Umum & Kepegawaian']);
+
     const allPersonnel = [
       {
         nama: item.pelaksana_nama || '-',
@@ -949,14 +1012,25 @@
         pptk_nama: item.pelaksana_pptk_nama || p1Pptk.nama || '',
         pptk_nip: item.pelaksana_pptk_nip || p1Pptk.nip || '',
         pptk_jabatan: item.pelaksana_pptk_jabatan || p1Pptk.jabatan || 'Kepala Bidang PPE',
+        paraf: Array.isArray(item.paraf) && item.paraf.length ? item.paraf : (Array.isArray(p1Pptk.paraf) ? p1Pptk.paraf : baseParaf),
         tempat_berangkat: item.pelaksana_tempat_berangkat || p1Pptk.tempat_berangkat || item.tempat_berangkat || 'Waikabubak',
         tempat_tujuan: item.pelaksana_tempat_tujuan || p1Pptk.tempat_tujuan || item.tempat_tujuan || '',
         tanggal_berangkat: item.pelaksana_tanggal_berangkat || p1Pptk.tanggal_berangkat || item.tanggal_berangkat || '',
       },
-      ...pengikut.map((p) => ({
-        ...p,
-        tingkat_biaya: p.tingkat_biaya || defTingkat,
-      })),
+      ...pengikut.map((p) => {
+        const pPptkJab = p.pptk_jabatan || item.pelaksana_pptk_jabatan || p1Pptk.jabatan || 'Kepala Bidang PPE';
+        return {
+          ...p,
+          tingkat_biaya: p.tingkat_biaya || defTingkat,
+          pptk_nama: p.pptk_nama || item.pelaksana_pptk_nama || p1Pptk.nama || '',
+          pptk_nip: p.pptk_nip || item.pelaksana_pptk_nip || p1Pptk.nip || '',
+          pptk_jabatan: pPptkJab,
+          paraf: Array.isArray(p.paraf) && p.paraf.length ? p.paraf : [baseParaf[0] || 'Sekretaris BAPPERIDA', pPptkJab, baseParaf[2] || 'Kasubbag Umum & Kepegawaian'],
+          tempat_berangkat: p.tempat_berangkat || item.tempat_berangkat || 'Waikabubak',
+          tempat_tujuan: p.tempat_tujuan || item.tempat_tujuan || '',
+          tanggal_berangkat: p.tanggal_berangkat || item.tanggal_berangkat || '',
+        };
+      }),
     ];
 
     let curMode = initialMode === 'sppd' ? 'sppd' : 'spt';
@@ -1064,7 +1138,6 @@
     const render = () => {
       const itCur = activeItem();
       const curPerson = allPersonnel[curPersonIdx] || allPersonnel[0];
-      const personArg = curPersonIdx > 0 ? curPerson : null;
 
       // Update Toolbar buttons
       wrap.querySelectorAll('[data-pv-tab]').forEach((b) => {
@@ -1120,7 +1193,9 @@
           const p1Pptk = wew.pelaksana_pptk || {};
           const pptkJab = curPerson?.pptk_jabatan || (curPersonIdx === 0 ? (item.pelaksana_pptk_jabatan || p1Pptk.jabatan) : '') || wew.bidang?.jabatan || 'Kepala Bidang PPE';
           const pptkNm = curPerson?.pptk_nama || (curPersonIdx === 0 ? (item.pelaksana_pptk_nama || p1Pptk.nama) : '') || wew.bidang?.nama || 'BERLIAN MAGU WERU, S.Sos';
-          pptkInfo.innerHTML = `Pengesah Romawi I: <strong class="text-slate-800 dark:text-slate-200">${esc(pptkJab)}</strong> (${esc(pptkNm)})`;
+          const pParaf = Array.isArray(curPerson?.paraf) && curPerson.paraf.length ? curPerson.paraf : baseParaf;
+          const parafStr = pParaf.filter(Boolean).join(' · ');
+          pptkInfo.innerHTML = `<div>Pengesah Romawi I: <strong class="text-slate-800 dark:text-slate-200">${esc(pptkJab)}</strong> (${esc(pptkNm)})</div><div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Paraf Hirarki: <span class="font-medium text-slate-700 dark:text-slate-300">${esc(parafStr)}</span></div>`;
         }
       }
 
@@ -1137,7 +1212,7 @@
 
         const rawHtml = curMode === 'spt'
           ? bangunHtmlSPT(itCur, { paper: curPaper })
-          : bangunHtmlSPPD(itCur, { paper: curPaper, person: personArg });
+          : bangunHtmlSPPD(itCur, { paper: curPaper, person: curPerson });
 
         // Clean outer html/body tags to render directly into paperCanvas
         const cleaned = rawHtml
@@ -1166,17 +1241,15 @@
     wrap.querySelector('#pvBtnPrint')?.addEventListener('click', () => {
       const itCur = activeItem();
       const curPerson = allPersonnel[curPersonIdx] || allPersonnel[0];
-      const personArg = curPersonIdx > 0 ? curPerson : null;
       if (curMode === 'spt') w.SppdGenerator.cetakSPT(itCur, curPaper);
-      else w.SppdGenerator.cetakSPPD(itCur, curPaper, personArg);
+      else w.SppdGenerator.cetakSPPD(itCur, curPaper, curPerson);
     });
 
     wrap.querySelector('#pvBtnPdf')?.addEventListener('click', () => {
       const itCur = activeItem();
       const curPerson = allPersonnel[curPersonIdx] || allPersonnel[0];
-      const personArg = curPersonIdx > 0 ? curPerson : null;
       if (curMode === 'spt') w.SppdGenerator.cetakSPT(itCur, curPaper);
-      else w.SppdGenerator.cetakSPPD(itCur, curPaper, personArg);
+      else w.SppdGenerator.cetakSPPD(itCur, curPaper, curPerson);
     });
 
     wrap.querySelector('#pvBtnZip')?.addEventListener('click', async () => {
@@ -1190,9 +1263,8 @@
     wrap.querySelector('#pvBtnDocx')?.addEventListener('click', () => {
       const itCur = activeItem();
       const curPerson = allPersonnel[curPersonIdx] || allPersonnel[0];
-      const personArg = curPersonIdx > 0 ? curPerson : null;
       if (curMode === 'spt') downloadDocxFromTemplate('spt', itCur, null);
-      else downloadDocxFromTemplate('sppd', itCur, personArg);
+      else downloadDocxFromTemplate('sppd', itCur, curPerson);
     });
 
     d.body.appendChild(wrap);
@@ -1210,8 +1282,8 @@
     cetakSPT(item, paper = 'F4') {
       openPrintWindow(bangunHtmlSPT(item, { paper }));
     },
-    cetakSPPD(item, paper = 'F4') {
-      openPrintWindow(bangunHtmlSPPD(item, { paper }));
+    cetakSPPD(item, paper = 'F4', person = null) {
+      openPrintWindow(bangunHtmlSPPD(item, { paper, person }));
     },
     async unduhWordSPT(item) {
       await loadWewenang();

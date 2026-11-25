@@ -683,7 +683,8 @@
     if (rawVal.includes('(') && (pg.nama || pg.username)) inputEl.value = pg.nama || pg.username;
     const container = inputEl.closest('[data-sppd-pengikut-row]') || inputEl.closest('#modalArsipAgendaSppd, #drawerMobileAgendaSppd');
     if (!container) return;
-    if (container.hasAttribute('data-sppd-pengikut-row')) {
+    const isPengikut = container.hasAttribute('data-sppd-pengikut-row');
+    if (isPengikut) {
       const nip = container.querySelector('[data-pk="nip"]');
       const pkt = container.querySelector('[data-pk="pangkat"]');
       const jab = container.querySelector('[data-pk="jabatan"]');
@@ -697,6 +698,38 @@
       if (nip) nip.value = pg.nip || '';
       if (pkt) pkt.value = pg.pangkat || pg.golongan || '';
       if (jab) jab.value = pg.jabatan || '';
+    }
+
+    // Auto-match Pejabat Pengesah Romawi I & Paraf 2 dari bidang pegawai yang dipilih
+    if (pg.bidang) {
+      const bidangClean = pg.bidang.trim().toLowerCase();
+      const kabid = _pegawaiList.find((x) => {
+        const xJab = (x.jabatan || '').toLowerCase();
+        const xBid = (x.bidang || '').toLowerCase();
+        return (xJab.includes('kepala bidang') || xJab.includes('kabid') || xJab.includes('sekretaris')) &&
+               (xBid === bidangClean || xJab.includes(bidangClean));
+      });
+      if (kabid) {
+        if (isPengikut) {
+          const pptkNm = container.querySelector('[data-pk="pptk_nama"]');
+          const pptkJb = container.querySelector('[data-pk="pptk_jabatan"]');
+          const pptkNp = container.querySelector('[data-pk="pptk_nip"]');
+          const pf2 = container.querySelector('[data-pk="paraf2"]');
+          if (pptkNm && !pptkNm.value.trim()) pptkNm.value = kabid.nama || kabid.username || '';
+          if (pptkJb && !pptkJb.value.trim()) pptkJb.value = kabid.jabatan || '';
+          if (pptkNp && !pptkNp.value.trim()) pptkNp.value = kabid.nip || '';
+          if (pf2 && !pf2.value.trim()) pf2.value = kabid.jabatan || '';
+        } else {
+          const pptkNm = container.querySelector('[data-sppd-field="pelaksana_pptk_nama"]');
+          const pptkJb = container.querySelector('[data-sppd-field="pelaksana_pptk_jabatan"]');
+          const pptkNp = container.querySelector('[data-sppd-field="pelaksana_pptk_nip"]');
+          const pf2 = container.querySelector('[data-sppd-field="pelaksana_paraf2"]');
+          if (pptkNm && !pptkNm.value.trim()) pptkNm.value = kabid.nama || kabid.username || '';
+          if (pptkJb && !pptkJb.value.trim()) pptkJb.value = kabid.jabatan || '';
+          if (pptkNp && !pptkNp.value.trim()) pptkNp.value = kabid.nip || '';
+          if (pf2 && !pf2.value.trim()) pf2.value = kabid.jabatan || '';
+        }
+      }
     }
   }
 
@@ -716,13 +749,21 @@
     if (container.hasAttribute('data-sppd-pengikut-row')) {
       const nip = container.querySelector('[data-pk="pptk_nip"]');
       const jab = container.querySelector('[data-pk="pptk_jabatan"]');
+      const pf2 = container.querySelector('[data-pk="paraf2"]');
       if (nip) nip.value = pg.nip || '';
-      if (jab && pg.jabatan) jab.value = pg.jabatan;
+      if (jab && pg.jabatan) {
+        jab.value = pg.jabatan;
+        if (pf2 && !pf2.value.trim()) pf2.value = pg.jabatan;
+      }
     } else {
       const nip = container.querySelector('[data-sppd-field="pelaksana_pptk_nip"]');
       const jab = container.querySelector('[data-sppd-field="pelaksana_pptk_jabatan"]');
+      const pf2 = container.querySelector('[data-sppd-field="pelaksana_paraf2"]');
       if (nip) nip.value = pg.nip || '';
-      if (jab && pg.jabatan) jab.value = pg.jabatan;
+      if (jab && pg.jabatan) {
+        jab.value = pg.jabatan;
+        if (pf2 && !pf2.value.trim()) pf2.value = pg.jabatan;
+      }
     }
   }
 
@@ -731,6 +772,8 @@
     wrap.querySelectorAll('[data-sppd-pengikut-row]').forEach((row, i) => {
       const lbl = row.querySelector('[data-pk-pengesah-label]');
       if (lbl) lbl.textContent = `Pejabat Pengesah Berangkat (Romawi I - Personil ${i + 2}):`;
+      const plbl = row.querySelector('[data-pk-paraf-label] span');
+      if (plbl) plbl.textContent = `Paraf Hirarki (Personil ${i + 2}):`;
     });
   }
 
@@ -758,6 +801,17 @@
           <input data-pk="pptk_nip" type="text" placeholder="NIP Pejabat Pengesah" class="h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
         </div>
       </div>
+      <div class="sm:col-span-2 pt-2 mt-0.5 border-t border-dashed border-slate-200 dark:border-slate-700">
+        <div data-pk-paraf-label class="flex items-center justify-between mb-1.5">
+          <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">Paraf Hirarki (Personil ${personNum}):</span>
+          <span class="text-[10px] text-slate-400">Otomatis jika kosong</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <input data-pk="paraf1" type="text" placeholder="Paraf 1 (Sekretaris)" class="h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          <input data-pk="paraf2" type="text" placeholder="Paraf 2 (Kabid/PPTK)" class="h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          <input data-pk="paraf3" type="text" placeholder="Paraf 3 (Kasubbag)" class="h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+        </div>
+      </div>
       <details class="sm:col-span-2 text-[11px] text-slate-500">
         <summary class="cursor-pointer font-semibold text-[#2563eb] hover:underline select-none">Pengaturan Tambahan (Nomor SPPD &amp; Tingkat Biaya)</summary>
         <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -776,6 +830,7 @@
       const nama = (row.querySelector('[data-pk="nama"]')?.value || '').trim();
       if (!nama) return;
       const g = (k) => (row.querySelector(`[data-pk="${k}"]`)?.value || '').trim();
+      const pParaf = [g('paraf1'), g('paraf2'), g('paraf3')].filter(Boolean);
       list.push({
         nama,
         nip: g('nip'),
@@ -786,6 +841,7 @@
         pptk_nama: g('pptk_nama') || undefined,
         pptk_jabatan: g('pptk_jabatan') || undefined,
         pptk_nip: g('pptk_nip') || undefined,
+        paraf: pParaf.length ? pParaf : undefined,
       });
     });
     return list;
@@ -2027,6 +2083,10 @@
     set('pelaksana_pptk_nama', item.pelaksana_pptk_nama || p1Pptk.nama || '');
     set('pelaksana_pptk_jabatan', item.pelaksana_pptk_jabatan || p1Pptk.jabatan || '');
     set('pelaksana_pptk_nip', item.pelaksana_pptk_nip || p1Pptk.nip || '');
+    const mainParaf = Array.isArray(item.paraf) && item.paraf.length ? item.paraf : (Array.isArray(parsedWewenang.paraf) ? parsedWewenang.paraf : []);
+    set('pelaksana_paraf1', mainParaf[0] || '');
+    set('pelaksana_paraf2', mainParaf[1] || '');
+    set('pelaksana_paraf3', mainParaf[2] || '');
     set('tempat_berangkat', item.tempat_berangkat || 'Waikabubak');
     set('tujuan', item.tempat_tujuan || '');
     set('provinsi_tujuan', item.provinsi_tujuan || 'Nusa Tenggara Timur');
@@ -2056,6 +2116,10 @@
         s('pptk_nama', p.pptk_nama);
         s('pptk_jabatan', p.pptk_jabatan);
         s('pptk_nip', p.pptk_nip);
+        const pParaf = Array.isArray(p.paraf) ? p.paraf : [];
+        s('paraf1', pParaf[0]);
+        s('paraf2', pParaf[1]);
+        s('paraf3', pParaf[2]);
       });
     }
     m.classList.remove('hidden');
@@ -2085,6 +2149,10 @@
     const pelaksana_pptk_nama = v('pelaksana_pptk_nama');
     const pelaksana_pptk_jabatan = v('pelaksana_pptk_jabatan');
     const pelaksana_pptk_nip = v('pelaksana_pptk_nip');
+    const pelaksana_paraf1 = v('pelaksana_paraf1');
+    const pelaksana_paraf2 = v('pelaksana_paraf2');
+    const pelaksana_paraf3 = v('pelaksana_paraf3');
+    const mainParaf = [pelaksana_paraf1, pelaksana_paraf2, pelaksana_paraf3].filter(Boolean);
     const tempat_berangkat = v('tempat_berangkat') || 'Waikabubak';
     const tempat_tujuan = v('tujuan');
     const provinsi_tujuan = v('provinsi_tujuan') || 'Nusa Tenggara Timur';
@@ -2131,8 +2199,14 @@
       pelaksana_pptk_nama: pelaksana_pptk_nama || undefined,
       pelaksana_pptk_jabatan: pelaksana_pptk_jabatan || undefined,
       pelaksana_pptk_nip: pelaksana_pptk_nip || undefined,
-      wewenang: (pelaksana_pptk_nama || pelaksana_pptk_jabatan || pelaksana_pptk_nip)
-        ? { pelaksana_pptk: { nama: pelaksana_pptk_nama, jabatan: pelaksana_pptk_jabatan, nip: pelaksana_pptk_nip } }
+      paraf: mainParaf.length ? mainParaf : undefined,
+      wewenang: (pelaksana_pptk_nama || pelaksana_pptk_jabatan || pelaksana_pptk_nip || mainParaf.length)
+        ? {
+            ...(pelaksana_pptk_nama || pelaksana_pptk_jabatan || pelaksana_pptk_nip
+              ? { pelaksana_pptk: { nama: pelaksana_pptk_nama, jabatan: pelaksana_pptk_jabatan, nip: pelaksana_pptk_nip } }
+              : {}),
+            ...(mainParaf.length ? { paraf: mainParaf } : {}),
+          }
         : undefined,
       pengikut,
       tempat_berangkat,

@@ -1240,7 +1240,11 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
       const wewenangJson = b.wewenang && typeof b.wewenang === 'object'
         ? JSON.stringify(b.wewenang)
         : (typeof b.wewenang === 'string' && b.wewenang.trim() ? b.wewenang.trim() : '{}');
+      const parafJson = Array.isArray(b.paraf)
+        ? JSON.stringify(b.paraf)
+        : (typeof b.paraf === 'string' && b.paraf.trim() ? b.paraf.trim() : '[]');
       await doQuery(`ALTER TABLE agenda_sppd ADD COLUMN IF NOT EXISTS wewenang JSONB DEFAULT '{}'::jsonb`).catch(() => {});
+      await doQuery(`ALTER TABLE agenda_sppd ADD COLUMN IF NOT EXISTS paraf JSONB DEFAULT '[]'::jsonb`).catch(() => {});
       const item = await withSerialLock(`agenda-sppd:${tahun}:${jenis}`, async () => {
         const cnt = await doQuery(`SELECT COUNT(*)::int AS c FROM agenda_sppd WHERE tahun = $1 AND jenis_sppd = $2`, [tahun, jenis]);
         const urut = (cnt.rows[0]?.c || 0) + 1;
@@ -1251,8 +1255,8 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
            (jenis_sppd, tahun, nomor_register, nomor_spt, nomor_sppd, tanggal_spt, pejabat_perintah,
             pelaksana_nip, pelaksana_nama, pelaksana_pangkat, pelaksana_jabatan, pengikut,
             maksud_perjalanan, tempat_berangkat, tempat_tujuan, provinsi_tujuan, rute_perjalanan,
-            alat_angkutan, tanggal_berangkat, tanggal_kembali, status, wewenang)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22::jsonb)
+            alat_angkutan, tanggal_berangkat, tanggal_kembali, status, wewenang, paraf)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22::jsonb, $23::jsonb)
            RETURNING *`,
           [
             jenis, tahun, pad,
@@ -1269,6 +1273,7 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
             b.tanggal_kembali || b.tanggal_berangkat || new Date().toISOString().slice(0, 10),
             b.status || 'Terbit',
             wewenangJson,
+            parafJson,
           ]
         );
         return rows[0];
@@ -1319,7 +1324,11 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
       const wewenangPatch = b.wewenang && typeof b.wewenang === 'object'
         ? JSON.stringify(b.wewenang)
         : (typeof b.wewenang === 'string' && b.wewenang.trim() ? b.wewenang.trim() : null);
+      const parafPatch = Array.isArray(b.paraf)
+        ? JSON.stringify(b.paraf)
+        : (typeof b.paraf === 'string' && b.paraf.trim() ? b.paraf.trim() : null);
       await doQuery(`ALTER TABLE agenda_sppd ADD COLUMN IF NOT EXISTS wewenang JSONB DEFAULT '{}'::jsonb`).catch(() => {});
+      await doQuery(`ALTER TABLE agenda_sppd ADD COLUMN IF NOT EXISTS paraf JSONB DEFAULT '[]'::jsonb`).catch(() => {});
       const { rows } = await doQuery(
         `UPDATE agenda_sppd
          SET jenis_sppd = COALESCE($1, jenis_sppd),
@@ -1342,8 +1351,9 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
              tanggal_kembali = COALESCE(NULLIF($18, '')::date, tanggal_kembali),
              status = COALESCE(NULLIF($19, ''), status),
              wewenang = CASE WHEN $20::jsonb IS NULL THEN wewenang ELSE COALESCE(wewenang, '{}'::jsonb) || $20::jsonb END,
+             paraf = COALESCE($21::jsonb, paraf),
              updated_at = NOW()
-         WHERE id = $21 RETURNING *`,
+         WHERE id = $22 RETURNING *`,
         [
           jenis, b.nomor_spt || '', b.nomor_sppd || '', b.tanggal_spt || '',
           b.pejabat_perintah || '', b.pelaksana_nip ?? null, b.pelaksana_nama || '',
@@ -1353,6 +1363,7 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
           b.provinsi_tujuan || '', b.rute_perjalanan ?? null, b.alat_angkutan || '',
           b.tanggal_berangkat || '', b.tanggal_kembali || '', b.status || '',
           wewenangPatch,
+          parafPatch,
           Number(mSppdItem[1]),
         ]
       );
