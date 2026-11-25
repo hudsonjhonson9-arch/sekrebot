@@ -21,6 +21,7 @@
     'Pelajari & berikan telaahan / saran',
     'Siapkan bahan / draf surat balasan',
     'Koordinasikan dengan bidang terkait',
+    'Selesaikan sesuai batas waktu',
     'Untuk diketahui & dipedomani',
     'Arsipkan & catat dalam agenda',
   ];
@@ -35,6 +36,74 @@
     'Bidang Infrastruktur dan Kewilayahan',
     'Bidang Riset dan Inovasi Daerah',
   ];
+
+  const PEMBERI_DISPOSISI_OPTIONS = [
+    'Kepala BAPPERIDA',
+    'Sekretaris BAPPERIDA',
+    'Kepala Bidang PPE',
+    'Kepala Bidang PSDA',
+    'Kepala Bidang PPM',
+    'Kepala Bidang Infrastruktur & Kewilayahan',
+    'Kepala Bidang Riset & Inovasi Daerah',
+    'Kasubbag Umum & Kepegawaian',
+    'Kasubbag Perencanaan & Keuangan',
+  ];
+
+  function buildDisposisiWaText(surat = {}, disp = null) {
+    const s = surat || {};
+    const dObj = disp || {};
+    const ditRaw = dObj.diteruskan_kepada || s.diteruskan_kepada;
+    const ditArr = Array.isArray(ditRaw) ? ditRaw : (ditRaw ? [ditRaw] : []);
+    const arRaw = dObj.arahan || s.arahan;
+    const arArr = Array.isArray(arRaw) ? arRaw : (arRaw ? [arRaw] : []);
+    const link = s.file_url || s.file_final_url || s.drive_url || '';
+    const line = '━━━━━━━━━━━━━━━━━━━━━━━━━';
+
+    let txt = `📌 *LEMBAR DISPOSISI SURAT MASUK*\n${line}\n`;
+    txt += `🔢 *No. Agenda* : ${s.nomor_agenda || '—'}\n`;
+    txt += `📄 *No. Surat*  : ${s.nomor_surat_asli || '—'}\n`;
+    txt += `🏢 *Asal Surat* : ${s.asal_surat || '—'}\n`;
+    txt += `🏷️ *Sifat*      : ${s.sifat || 'Biasa'}\n`;
+    txt += `📝 *Perihal*    : ${s.perihal || '—'}\n\n`;
+    txt += `👤 *Pemberi*    : ${dObj.pemberi_disposisi || 'Kepala BAPPERIDA'}\n`;
+    txt += `📅 *Tanggal*    : ${fmtDate(dObj.tanggal_disposisi || new Date().toISOString().slice(0, 10))}\n`;
+    if (ditArr.length) txt += `➡️ *Diteruskan* : ${ditArr.join(', ')}\n`;
+    if (arArr.length) txt += `📋 *Arahan*     : ${arArr.join('; ')}\n`;
+    if (dObj.catatan_instruksi) txt += `💬 *Catatan*    : ${dObj.catatan_instruksi}\n`;
+    if (dObj.batas_waktu) txt += `⏰ *Batas Waktu*: ${fmtDate(dObj.batas_waktu)}\n`;
+    if (link) txt += `📎 *Lampiran*   : ${link}\n`;
+    txt += `${line}\n_Status: ${dObj.status_tindaklanjut || s.status || 'Didisposisi'} • BAPPERIDA Sumba Barat_`;
+    return txt;
+  }
+
+  async function copyTextToClipboard(text, successTitle = 'Berhasil Disalin') {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = d.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        d.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        d.execCommand('copy');
+        ta.remove();
+      }
+      if (w.Swal) {
+        w.Swal.fire({
+          icon: 'success',
+          title: successTitle,
+          text: 'Format teks disposisi siap dibagikan ke WhatsApp.',
+          timer: 1600,
+          showConfirmButton: false,
+        });
+      }
+    } catch {
+      if (w.Swal) w.Swal.fire('Gagal', 'Tidak dapat menyalin ke clipboard', 'error');
+    }
+  }
 
   const TAB_META = {
     dokumen: { crumb: 'Arsip Digital • Dokumen', fabLabel: 'Tambah Dokumen', fabIcon: 'add' },
@@ -1062,6 +1131,8 @@
       tj.forEach((x) => allTujuan.add(String(x)));
       ar.forEach((x) => allArahan.add(String(x)));
     });
+    const customTujuan = Array.from(allTujuan).filter((x) => !DITERUSKAN_OPTIONS.includes(x));
+    const customArahan = Array.from(allArahan).filter((x) => !ARAHAN_OPTIONS.includes(x));
     const logoUrl = new URL('images/Lambang_Kabupaten_Sumba_Barat.png', w.location.href).href;
     const win = w.open('', '_blank', 'width=860,height=980');
     if (!win) {
@@ -1070,8 +1141,8 @@
     }
     const html = `<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>Lembar Disposisi - ${esc(surat.nomor_agenda || '')}</title>
       <style>
-        @page { size: A4; margin: 14mm; }
-        body { font-family: 'Times New Roman', serif; font-size: 11pt; color: #000; margin: 0; padding: 14px; }
+        @page { size: A4; margin: 12mm 14mm; }
+        body { font-family: 'Times New Roman', serif; font-size: 10.5pt; color: #000; margin: 0; padding: 14px; line-height: 1.35; }
         .kop { display: flex; align-items: center; gap: 14px; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 10px; }
         .kop img { width: 62px; height: auto; }
         .kop-t { flex: 1; text-align: center; }
@@ -1080,10 +1151,10 @@
         .kop-t .c { font-size: 9pt; font-style: italic; }
         h2 { text-align: center; margin: 8px 0 10px; font-size: 13pt; letter-spacing: 2px; text-decoration: underline; }
         table.box { width: 100%; border-collapse: collapse; }
-        table.box td, table.box th { border: 1px solid #000; padding: 6px 8px; vertical-align: top; }
+        table.box td, table.box th { border: 1px solid #000; padding: 5px 8px; vertical-align: top; }
         .chk { display: inline-block; width: 13px; height: 13px; border: 1px solid #000; text-align: center; line-height: 12px; font-size: 10px; margin-right: 6px; font-weight: bold; }
         .row-chk { margin: 3px 0; }
-        .print-btn { position: fixed; top: 10px; right: 12px; padding: 8px 14px; background: #2563eb; color: #fff; border: 0; border-radius: 8px; font-weight: 700; cursor: pointer; }
+        .print-btn { position: fixed; top: 10px; right: 12px; padding: 8px 14px; background: #2563eb; color: #fff; border: 0; border-radius: 8px; font-weight: 700; cursor: pointer; font-family: sans-serif; font-size: 12px; }
         @media print { .print-btn { display: none; } body { padding: 0; } }
       </style>
     </head><body>
@@ -1100,7 +1171,7 @@
       <table class="box">
         <tr>
           <td style="width:50%;"><strong>Surat Dari :</strong><br>${esc(surat.asal_surat || '-')}</td>
-          <td style="width:50%;"><strong>Diterima Tanggal :</strong> ${esc(fmtDate(surat.tanggal_terima || surat.tanggal_surat))}<br><strong>No. Agenda :</strong> ${esc(surat.nomor_agenda || '-')}<br><strong>Sifat :</strong> ${esc(surat.sifat || 'Biasa')}</td>
+          <td style="width:50%;"><strong>Diterima Tanggal :</strong> ${esc(fmtDate(surat.tanggal_terima || surat.tanggal_surat))}<br><strong>No. Agenda :</strong> <b>${esc(surat.nomor_agenda || '-')}</b><br><strong>Sifat :</strong> ${esc(surat.sifat || 'Biasa')}</td>
         </tr>
         <tr>
           <td><strong>Nomor Surat :</strong> ${esc(surat.nomor_surat_asli || '-')}</td>
@@ -1110,28 +1181,30 @@
           <td colspan="2"><strong>Perihal :</strong><br>${esc(surat.perihal || '-')}</td>
         </tr>
         <tr>
-          <td>
+          <td style="width:50%;">
             <div style="font-weight:bold;margin-bottom:6px;text-decoration:underline;">DITERUSKAN KEPADA SDR :</div>
             ${DITERUSKAN_OPTIONS.map((opt) => `<div class="row-chk"><span class="chk">${allTujuan.has(opt) ? '&#10003;' : '&nbsp;'}</span>${esc(opt)}</div>`).join('')}
+            ${customTujuan.map((opt) => `<div class="row-chk"><span class="chk">&#10003;</span>${esc(opt)}</div>`).join('')}
           </td>
-          <td>
+          <td style="width:50%;">
             <div style="font-weight:bold;margin-bottom:6px;text-decoration:underline;">DISPOSISI / PETUNJUK :</div>
             ${ARAHAN_OPTIONS.map((opt) => `<div class="row-chk"><span class="chk">${allArahan.has(opt) ? '&#10003;' : '&nbsp;'}</span>${esc(opt)}</div>`).join('')}
+            ${customArahan.map((opt) => `<div class="row-chk"><span class="chk">&#10003;</span>${esc(opt)}</div>`).join('')}
           </td>
         </tr>
         <tr>
-          <td colspan="2" style="min-height:110px;">
+          <td colspan="2" style="min-height:90px;">
             <div style="font-weight:bold;margin-bottom:6px;">CATATAN / INSTRUKSI PIMPINAN :</div>
             ${history.length
-              ? history.map((h) => `<div style="margin-bottom:6px;"><strong>${esc(h.pemberi_disposisi || 'Pimpinan')}</strong> (${esc(fmtDate(h.tanggal_disposisi))}): ${esc(h.catatan_instruksi || (Array.isArray(h.arahan) ? h.arahan.join('; ') : '-'))}</div>`).join('')
-              : '<div style="height:80px;"></div>'}
+              ? history.map((h, i) => `<div style="margin-bottom:6px;padding-bottom:4px;border-bottom:1px dashed #ccc;"><strong>Tingkat ${i + 1} (${esc(h.pemberi_disposisi || 'Pimpinan')} - ${esc(fmtDate(h.tanggal_disposisi))}):</strong> ${esc(h.catatan_instruksi || (Array.isArray(h.arahan) ? h.arahan.join('; ') : '-'))}${h.batas_waktu ? ` <em>[Batas Waktu: ${esc(fmtDate(h.batas_waktu))}]</em>` : ''}</div>`).join('')
+              : '<div style="height:60px;"></div>'}
           </td>
         </tr>
       </table>
-      <div style="margin-top:24px;width:44%;margin-left:auto;text-align:center;">
+      <div style="margin-top:20px;width:44%;margin-left:auto;text-align:center;">
         <div>Waikabubak, ${esc(fmtDate(new Date().toISOString().slice(0, 10)))}</div>
         <div style="font-weight:bold;margin-top:4px;">KEPALA BAPPERIDA,</div>
-        <div style="height:62px;"></div>
+        <div style="height:56px;"></div>
         <div style="font-weight:bold;text-decoration:underline;">( .............................................. )</div>
       </div>
     </body></html>`;
@@ -1198,6 +1271,14 @@
         const st = item.status_tindaklanjut || item.status || 'Tercatat';
         const hasFile = Boolean(item.file_url || item.file_final_url || item.drive_url);
 
+        const diteruskanRaw = item.diteruskan_kepada;
+        const diteruskanList = Array.isArray(diteruskanRaw)
+          ? diteruskanRaw
+          : (typeof diteruskanRaw === 'string' && diteruskanRaw.startsWith('[')
+            ? (() => { try { return JSON.parse(diteruskanRaw); } catch { return [diteruskanRaw]; } })()
+            : (diteruskanRaw ? [diteruskanRaw] : []));
+        const diteruskanStr = diteruskanList.filter(Boolean).join(', ');
+
         return `
           <tr class="border-b border-slate-100 dark:border-slate-800/80 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer" onclick="window.ArsipAgenda?.showSuratDetail(${i})">
             <td class="px-4 py-3 font-mono text-xs font-bold text-slate-900 dark:text-white whitespace-nowrap">
@@ -1207,9 +1288,24 @@
             <td class="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">${esc(tgl)}</td>
             <td class="px-4 py-3 text-xs font-semibold text-slate-800 dark:text-slate-200 max-w-[200px] truncate">${esc(pihak)}</td>
             <td class="px-4 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-[280px] truncate">${esc(item.perihal || '-')}</td>
-            <td class="px-4 py-3 whitespace-nowrap">${statusPill(st)}</td>
+            <td class="px-4 py-3 whitespace-nowrap">
+              <div class="flex flex-col gap-0.5">
+                <div>${statusPill(st)}</div>
+                ${_suratMode === 'masuk' ? (diteruskanStr
+                  ? `<div class="inline-flex items-center gap-1 text-[10.5px] font-medium text-slate-600 dark:text-slate-300 max-w-[170px] truncate" title="Diteruskan kepada: ${esc(diteruskanStr)}"><span class="material-symbols-outlined text-[13px] text-blue-500 shrink-0">arrow_forward</span><span class="truncate">${esc(diteruskanStr)}</span></div>`
+                  : `<span class="text-[10px] text-slate-400 italic">Belum disposisi</span>`
+                ) : ''}
+                ${item.batas_waktu ? `<span class="text-[10px] font-mono text-amber-600 dark:text-amber-400">⏰ ${esc(fmtDate(item.batas_waktu))}</span>` : ''}
+              </div>
+            </td>
             <td class="px-4 py-3 text-right whitespace-nowrap">
-              <button type="button" data-sppd-pop-trigger onclick="event.stopPropagation(); window.ArsipAgenda?.openSuratPopover(this, ${i})" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-slate-700 dark:text-slate-200 hover:text-[#2563eb] text-[11px] font-bold transition-colors cursor-pointer">
+              ${_suratMode === 'masuk' ? `
+                <button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.openDisposisiModal(${item.id})" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 hover:bg-[#2563eb] text-[#2563eb] hover:text-white dark:text-blue-300 dark:hover:text-white text-[11px] font-bold transition-all cursor-pointer mr-1 shadow-2xs">
+                  <span class="material-symbols-outlined text-[15px]">assignment_turned_in</span>
+                  <span>Disposisi</span>
+                </button>
+              ` : ''}
+              <button type="button" data-sppd-pop-trigger onclick="event.stopPropagation(); window.ArsipAgenda?.openSuratPopover(this, ${i})" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-bold transition-colors cursor-pointer">
                 <span>Aksi</span>
                 <span class="material-symbols-outlined text-[15px]">expand_more</span>
               </button>
@@ -1298,112 +1394,314 @@
 
     const wrap = d.createElement('div');
     wrap.id = 'stitchDisposisiOverlay';
-    wrap.className = 'fixed inset-0 z-[97] bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5';
+    wrap.className = 'fixed inset-0 z-[97] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5';
+
+    const hasFile = Boolean(surat.file_url || surat.file_final_url || surat.drive_url);
+    const fileUrl = surat.file_url || surat.file_final_url || surat.drive_url || '';
 
     const renderBody = () => {
       const histBox = wrap.querySelector('#stDispHistBox');
+      const histCountEl = wrap.querySelector('#stDispHistCount');
+      if (histCountEl) histCountEl.textContent = `${history.length} entri`;
       if (!histBox) return;
+
       if (!history.length) {
-        histBox.innerHTML = '<div class="text-[11px] text-slate-400 italic py-2">Belum ada riwayat disposisi untuk surat ini.</div>';
+        histBox.innerHTML = `
+          <div class="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/40 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-[20px] text-amber-600 dark:text-amber-400 shrink-0">info</span>
+            <span>Surat ini belum pernah didisposisikan. Silakan isi form di bawah untuk mendisposisikan ke pejabat / bidang terkait.</span>
+          </div>
+        `;
         return;
       }
-      histBox.innerHTML = history.map((h) => `
-        <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700 flex items-start justify-between gap-2">
-          <div class="min-w-0 text-[11px]">
-            <div class="font-bold text-slate-900 dark:text-white">${esc(Array.isArray(h.diteruskan_kepada) ? h.diteruskan_kepada.join(', ') : (h.diteruskan_kepada || '-'))}</div>
-            <div class="text-slate-600 dark:text-slate-300 mt-0.5">${esc(Array.isArray(h.arahan) ? h.arahan.join('; ') : (h.arahan || ''))}${h.catatan_instruksi ? ` — ${esc(h.catatan_instruksi)}` : ''}</div>
-            <div class="text-[10px] font-mono text-slate-400 mt-1">${esc(fmtDate(h.tanggal_disposisi))} • ${esc(h.pemberi_disposisi || 'Pimpinan')}</div>
+
+      histBox.innerHTML = history.map((h, idx) => {
+        const dit = Array.isArray(h.diteruskan_kepada) ? h.diteruskan_kepada : (h.diteruskan_kepada ? [h.diteruskan_kepada] : []);
+        const ar = Array.isArray(h.arahan) ? h.arahan : (h.arahan ? [h.arahan] : []);
+        const st = h.status_tindaklanjut || 'Didisposisi';
+        const isSelesai = st.toLowerCase() === 'selesai';
+
+        return `
+          <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700 shadow-2xs flex flex-col gap-2">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 text-[10px] font-bold uppercase tracking-wider">Tingkat ${idx + 1}</span>
+                <span class="font-bold text-slate-900 dark:text-white text-xs">${esc(h.pemberi_disposisi || 'Pimpinan')}</span>
+                <span class="text-[11px] text-slate-400 font-mono">• ${esc(fmtDate(h.tanggal_disposisi))}</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${isSelesai ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'}">${esc(st)}</span>
+                <button type="button" data-wa-disp="${h.id}" title="Salin format WhatsApp disposisi ini" class="p-1 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 cursor-pointer">
+                  <span class="material-symbols-outlined text-[15px]">share</span>
+                </button>
+                ${!isSelesai ? `
+                  <button type="button" data-done-disp="${h.id}" title="Tandai Selesai" class="px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-600 hover:text-white text-emerald-700 dark:text-emerald-300 text-[10.5px] font-bold flex items-center gap-1 cursor-pointer transition-colors">
+                    <span class="material-symbols-outlined text-[13px]">check_circle</span>
+                    <span>Selesai</span>
+                  </button>
+                ` : ''}
+                <button type="button" data-del-disp="${h.id}" title="Hapus entri ini" class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer">
+                  <span class="material-symbols-outlined text-[15px]">delete</span>
+                </button>
+              </div>
+            </div>
+
+            ${dit.length ? `
+              <div class="flex items-center gap-1.5 flex-wrap text-[11px]">
+                <span class="text-slate-400 font-medium">Diteruskan:</span>
+                ${dit.map((dItem) => `<span class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-700/70 text-slate-700 dark:text-slate-200 font-medium">${esc(dItem)}</span>`).join('')}
+              </div>
+            ` : ''}
+
+            ${ar.length ? `
+              <div class="text-[11px] text-slate-700 dark:text-slate-300 flex items-start gap-1.5">
+                <span class="text-slate-400 font-medium shrink-0">Arahan:</span>
+                <span>${esc(ar.join('; '))}</span>
+              </div>
+            ` : ''}
+
+            ${h.catatan_instruksi ? `
+              <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-[11px] text-slate-800 dark:text-slate-200">
+                <span class="font-bold text-slate-500">Catatan:</span> ${esc(h.catatan_instruksi)}
+              </div>
+            ` : ''}
+
+            ${h.batas_waktu ? `
+              <div class="text-[10.5px] font-mono text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px]">alarm</span>
+                <span>Batas Waktu: ${esc(fmtDate(h.batas_waktu))}</span>
+              </div>
+            ` : ''}
           </div>
-          <button type="button" data-del-disp="${h.id}" title="Hapus entri" class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer shrink-0">
-            <span class="material-symbols-outlined text-[16px]">delete</span>
-          </button>
-        </div>
-      `).join('');
+        `;
+      }).join('');
+
       histBox.querySelectorAll('[data-del-disp]').forEach((b) => {
         b.addEventListener('click', async () => {
           const id = b.dataset.delDisp;
+          if (w.Swal) {
+            const ask = await w.Swal.fire({
+              title: 'Hapus Disposisi?',
+              text: 'Entri disposisi ini akan dihapus permanen.',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonText: 'Ya, Hapus',
+              cancelButtonText: 'Batal',
+              confirmButtonColor: '#ef4444',
+            });
+            if (!ask.isConfirmed) return;
+          }
           try {
             await fetch(`/api/arsip/p/api/agenda/disposisi/${id}`, { method: 'DELETE' });
             await fetchHist();
             renderBody();
+            loadAgendaSurat();
+            loadMobileAgendaSurat();
           } catch { /* ignore */ }
+        });
+      });
+
+      histBox.querySelectorAll('[data-done-disp]').forEach((b) => {
+        b.addEventListener('click', async () => {
+          const id = b.dataset.doneDisp;
+          try {
+            await fetch(`/api/arsip/p/api/agenda/disposisi/${id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status_tindaklanjut: 'Selesai' }),
+            });
+            await fetchHist();
+            renderBody();
+            loadAgendaSurat();
+            loadMobileAgendaSurat();
+            if (w.Swal) w.Swal.fire({ icon: 'success', title: 'Disposisi Selesai', timer: 1200, showConfirmButton: false });
+          } catch { /* ignore */ }
+        });
+      });
+
+      histBox.querySelectorAll('[data-wa-disp]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const id = Number(b.dataset.waDisp);
+          const itemDisp = history.find((x) => Number(x.id) === id) || history[0];
+          const waTxt = buildDisposisiWaText(surat, itemDisp);
+          copyTextToClipboard(waTxt, 'Teks Disposisi Disalin');
         });
       });
     };
 
     wrap.innerHTML = `
-      <div class="w-full max-w-2xl max-h-[92vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
-        <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-          <div>
-            <h3 class="text-base font-bold text-slate-900 dark:text-white">Disposisi Berjenjang Surat Masuk</h3>
-            <p class="text-[11px] font-mono text-slate-500">${esc(surat.nomor_agenda || `#${suratId}`)} • ${esc(surat.asal_surat || '')}</p>
+      <div class="w-full max-w-3xl max-h-[94vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[20px]">assignment_turned_in</span>
+            </span>
+            <div class="min-w-0">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white leading-tight">Disposisi Berjenjang Surat Masuk</h3>
+              <p class="text-[11px] font-mono text-slate-500 truncate mt-0.5">${esc(surat.nomor_agenda || `#${suratId}`)} · ${esc(surat.asal_surat || '')}</p>
+            </div>
           </div>
           <div class="flex items-center gap-1.5">
-            <button type="button" id="stDispPrintBtn" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1 cursor-pointer">
+            <button type="button" id="stDispCopyWaBtn" class="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs">
+              <span class="material-symbols-outlined text-[15px]">share</span>
+              <span class="hidden sm:inline">Salin WA</span>
+            </button>
+            <button type="button" id="stDispPrintBtn" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs">
               <span class="material-symbols-outlined text-[15px]">print</span>
+              <span class="hidden sm:inline">Cetak Lembar</span>
+            </button>
+            <button type="button" data-close-disp class="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex items-center justify-center cursor-pointer">
+              <span class="material-symbols-outlined text-[19px]">close</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Content (Scrollable) -->
+        <div class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs">
+          <!-- Card Ringkasan Surat -->
+          <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700 flex flex-col gap-2">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-xs font-bold text-primary">${esc(surat.nomor_agenda || '-')}</span>
+                ${sifatPill(surat.sifat)}
+              </div>
+              <div class="text-[11px] font-mono text-slate-500">
+                Terima: <strong>${esc(fmtDate(surat.tanggal_terima || surat.tanggal_surat))}</strong>
+              </div>
+            </div>
+            <div class="text-xs text-slate-800 dark:text-slate-200">
+              <div class="font-bold text-slate-900 dark:text-white">${esc(surat.perihal || '-')}</div>
+              <div class="text-[11.5px] text-slate-500 dark:text-slate-400 mt-0.5">Dari: <strong>${esc(surat.asal_surat || '-')}</strong> · No. Surat: <span class="font-mono">${esc(surat.nomor_surat_asli || '-')}</span> (${esc(fmtDate(surat.tanggal_surat))})</div>
+            </div>
+            ${hasFile ? `
+              <div class="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
+                <span class="text-[11px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                  <span class="material-symbols-outlined text-[15px]">attach_file</span>
+                  <span>Tersedia Berkas Lampiran</span>
+                </span>
+                <a href="${esc(fileUrl)}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:underline text-[11px] font-bold inline-flex items-center gap-1">
+                  <span>Buka Berkas</span>
+                  <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+                </a>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Riwayat Disposisi Berjenjang -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Riwayat Disposisi Berjenjang</span>
+              <span id="stDispHistCount" class="text-[11px] text-slate-400 font-mono">${history.length} entri</span>
+            </div>
+            <div id="stDispHistBox" class="space-y-2 max-h-52 overflow-y-auto pr-1"></div>
+          </div>
+
+          <!-- Form Tambah Disposisi Baru / Lanjutan -->
+          <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px] text-primary">add_circle</span>
+                <span>Catat Disposisi ${history.length ? 'Lanjutan (Berjenjang)' : 'Baru'}</span>
+              </h4>
+              <span class="text-[10.5px] text-slate-400">* Wajib diisi</span>
+            </div>
+
+            <!-- Baris 1: Pemberi & Tanggal & Batas Waktu & Status -->
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Pemberi Disposisi *</label>
+                <select id="stDispPemberi" class="w-full h-9 px-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+                  ${PEMBERI_DISPOSISI_OPTIONS.map((p) => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Tgl Disposisi *</label>
+                <input id="stDispTgl" type="date" value="${new Date().toISOString().slice(0, 10)}" class="w-full h-9 px-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Batas Waktu</label>
+                <input id="stDispBatas" type="date" class="w-full h-9 px-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Status Tindak Lanjut</label>
+                <select id="stDispStatus" class="w-full h-9 px-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold">
+                  <option value="Didisposisi" selected>Didisposisi</option>
+                  <option value="Sedang Diproses">Sedang Diproses</option>
+                  <option value="Menunggu Arahan">Menunggu Arahan</option>
+                  <option value="Selesai">Selesai</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Baris 2: Diteruskan Kepada & Arahan -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <!-- Diteruskan -->
+              <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 flex flex-col gap-2">
+                <div class="text-[11px] font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                  <span>Diteruskan Kepada *</span>
+                  <span class="text-[10px] text-slate-400 font-normal">Pilih 1 atau lebih</span>
+                </div>
+                <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  ${DITERUSKAN_OPTIONS.map((o) => `
+                    <label class="flex items-center gap-2 cursor-pointer text-[11px] text-slate-700 dark:text-slate-300 hover:text-primary">
+                      <input type="checkbox" name="stDispTujuan" value="${esc(o)}" class="accent-[#2563eb] rounded">
+                      <span>${esc(o)}</span>
+                    </label>
+                  `).join('')}
+                </div>
+                <div class="pt-1.5 border-t border-slate-200/50 dark:border-slate-700/50">
+                  <input id="stDispCustomTujuan" type="text" list="agendaPegawaiDatalist" placeholder="+ Ketik Staf / Tujuan Kustom..." class="w-full h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] outline-none focus:border-primary">
+                </div>
+              </div>
+
+              <!-- Arahan -->
+              <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 flex flex-col gap-2">
+                <div class="text-[11px] font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                  <span>Arahan / Petunjuk Pimpinan *</span>
+                  <span class="text-[10px] text-slate-400 font-normal">Pilih 1 atau lebih</span>
+                </div>
+                <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  ${ARAHAN_OPTIONS.map((o) => `
+                    <label class="flex items-center gap-2 cursor-pointer text-[11px] text-slate-700 dark:text-slate-300 hover:text-primary">
+                      <input type="checkbox" name="stDispArahan" value="${esc(o)}" class="accent-[#2563eb] rounded">
+                      <span>${esc(o)}</span>
+                    </label>
+                  `).join('')}
+                </div>
+                <div class="pt-1.5 border-t border-slate-200/50 dark:border-slate-700/50">
+                  <input id="stDispCustomArahan" type="text" placeholder="+ Tambah arahan khusus lainnya..." class="w-full h-8 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] outline-none focus:border-primary">
+                </div>
+              </div>
+            </div>
+
+            <!-- Baris 3: Catatan Instruksi Khusus -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Catatan / Instruksi Khusus Pimpinan</label>
+              <textarea id="stDispCatatan" rows="2" placeholder="Tuliskan catatan khusus atau instruksi penanganan surat..." class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs outline-none focus:border-primary"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-between gap-2 flex-wrap">
+          <div class="flex items-center gap-2">
+            <button type="button" id="stDispFootWaBtn" class="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs">
+              <span class="material-symbols-outlined text-[15px] text-emerald-600">share</span>
+              <span>Salin WA</span>
+            </button>
+            <button type="button" id="stDispFootPrintBtn" class="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs">
+              <span class="material-symbols-outlined text-[15px] text-slate-600">print</span>
               <span>Cetak Lembar</span>
             </button>
-            <button type="button" data-close-disp class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center cursor-pointer">
-              <span class="material-symbols-outlined text-[18px]">close</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" data-close-disp class="px-3.5 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Tutup</button>
+            <button type="button" id="stDispSaveBtn" class="px-4 py-1.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold shadow-sm cursor-pointer flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[15px]">send</span>
+              <span>Simpan Disposisi</span>
             </button>
           </div>
-        </div>
-
-        <div class="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
-          <div>
-            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Riwayat Disposisi</div>
-            <div id="stDispHistBox" class="flex flex-col gap-2 max-h-40 overflow-y-auto"></div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-            <div>
-              <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-200 mb-1">Pemberi Disposisi</label>
-              <select id="stDispPemberi" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <option value="Kepala BAPPERIDA">Kepala BAPPERIDA</option>
-                <option value="Sekretaris BAPPERIDA">Sekretaris BAPPERIDA</option>
-                <option value="Kepala Bidang">Kepala Bidang</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-200 mb-1">Batas Waktu (Opsional)</label>
-              <input id="stDispBatas" type="date" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700">
-              <div class="text-[11px] font-bold text-slate-700 dark:text-slate-200 mb-2">Diteruskan Kepada (Pilih 1 atau lebih) *</div>
-              <div class="space-y-1.5 max-h-44 overflow-y-auto">
-                ${DITERUSKAN_OPTIONS.map((o) => `
-                  <label class="flex items-center gap-2 cursor-pointer text-[11px] text-slate-700 dark:text-slate-200">
-                    <input type="checkbox" name="stDispTujuan" value="${esc(o)}" class="accent-[#2563eb] rounded">
-                    <span>${esc(o)}</span>
-                  </label>
-                `).join('')}
-              </div>
-            </div>
-            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700">
-              <div class="text-[11px] font-bold text-slate-700 dark:text-slate-200 mb-2">Arahan / Petunjuk Pimpinan *</div>
-              <div class="space-y-1.5 max-h-44 overflow-y-auto">
-                ${ARAHAN_OPTIONS.map((o) => `
-                  <label class="flex items-center gap-2 cursor-pointer text-[11px] text-slate-700 dark:text-slate-200">
-                    <input type="checkbox" name="stDispArahan" value="${esc(o)}" class="accent-[#2563eb] rounded">
-                    <span>${esc(o)}</span>
-                  </label>
-                `).join('')}
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-200 mb-1">Catatan / Instruksi Tambahan</label>
-            <textarea id="stDispCatatan" rows="2" placeholder="Tulis instruksi khusus..." class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"></textarea>
-          </div>
-        </div>
-
-        <div class="px-5 py-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
-          <button type="button" data-close-disp class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer">Tutup</button>
-          <button type="button" id="stDispSaveBtn" class="px-5 py-2 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold shadow-sm cursor-pointer">Kirim Disposisi</button>
         </div>
       </div>
     `;
@@ -1411,35 +1709,71 @@
     wrap.addEventListener('click', (e) => {
       if (e.target === wrap || e.target.closest('[data-close-disp]')) wrap.remove();
     });
+
+    const handleCopyWa = () => {
+      const latestDisp = history[history.length - 1] || null;
+      const waTxt = buildDisposisiWaText(surat, latestDisp);
+      copyTextToClipboard(waTxt, 'Teks Disposisi Disalin');
+    };
+
+    wrap.querySelector('#stDispCopyWaBtn')?.addEventListener('click', handleCopyWa);
+    wrap.querySelector('#stDispFootWaBtn')?.addEventListener('click', handleCopyWa);
     wrap.querySelector('#stDispPrintBtn')?.addEventListener('click', () => cetakLembarDisposisi(surat, history));
+    wrap.querySelector('#stDispFootPrintBtn')?.addEventListener('click', () => cetakLembarDisposisi(surat, history));
+
     wrap.querySelector('#stDispSaveBtn')?.addEventListener('click', async () => {
       const diteruskan = Array.from(wrap.querySelectorAll('input[name="stDispTujuan"]:checked')).map((el) => el.value);
+      const customTujuan = (wrap.querySelector('#stDispCustomTujuan')?.value || '').trim();
+      if (customTujuan && !diteruskan.includes(customTujuan)) {
+        diteruskan.push(customTujuan);
+      }
+
       const arahan = Array.from(wrap.querySelectorAll('input[name="stDispArahan"]:checked')).map((el) => el.value);
+      const customArahan = (wrap.querySelector('#stDispCustomArahan')?.value || '').trim();
+      if (customArahan && !arahan.includes(customArahan)) {
+        arahan.push(customArahan);
+      }
+
       if (!diteruskan.length || !arahan.length) {
         if (w.Swal) w.Swal.fire('Perhatian', 'Pilih minimal 1 tujuan dan 1 arahan disposisi.', 'warning');
         return;
       }
+
+      const payload = {
+        pemberi_disposisi: wrap.querySelector('#stDispPemberi').value,
+        tanggal_disposisi: wrap.querySelector('#stDispTgl').value || new Date().toISOString().slice(0, 10),
+        diteruskan_kepada: diteruskan,
+        arahan,
+        batas_waktu: wrap.querySelector('#stDispBatas').value || null,
+        status_tindaklanjut: wrap.querySelector('#stDispStatus').value || 'Didisposisi',
+        catatan_instruksi: wrap.querySelector('#stDispCatatan').value.trim(),
+      };
+
       try {
         const r = await fetch(`/api/arsip/p/api/agenda/surat-masuk/${suratId}/disposisi`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            pemberi_disposisi: wrap.querySelector('#stDispPemberi').value,
-            diteruskan_kepada: diteruskan,
-            arahan,
-            batas_waktu: wrap.querySelector('#stDispBatas').value || null,
-            catatan_instruksi: wrap.querySelector('#stDispCatatan').value.trim(),
-          }),
+          body: JSON.stringify(payload),
         });
         const j = await r.json().catch(() => ({}));
         if (!r.ok || j.ok === false) throw new Error(j.message || `HTTP ${r.status}`);
         await fetchHist();
         renderBody();
         wrap.querySelectorAll('input[type="checkbox"]').forEach((c) => { c.checked = false; });
+        if (wrap.querySelector('#stDispCustomTujuan')) wrap.querySelector('#stDispCustomTujuan').value = '';
+        if (wrap.querySelector('#stDispCustomArahan')) wrap.querySelector('#stDispCustomArahan').value = '';
         wrap.querySelector('#stDispCatatan').value = '';
         loadAgendaSurat();
         loadMobileAgendaSurat();
-        if (w.Swal) w.Swal.fire({ icon: 'success', title: 'Disposisi Dicatat', timer: 1400, showConfirmButton: false });
+        if (w.Swal) {
+          w.Swal.fire({
+            icon: 'success',
+            title: 'Disposisi Dicatat',
+            text: 'Disposisi berhasil disimpan dan status surat diperbarui.',
+            timer: 1600,
+            showConfirmButton: false,
+          });
+        }
       } catch (err) {
         if (w.Swal) w.Swal.fire({ icon: 'error', title: 'Gagal', text: err?.message || 'Koneksi terganggu.' });
       }
@@ -2339,6 +2673,12 @@
               <span class="truncate">${esc(pihak)}</span>
               <span class="font-mono shrink-0">${esc(tgl)}</span>
             </div>
+            ${_mSuratMode === 'masuk' && (item.diteruskan_kepada || item.catatan_instruksi) ? `
+              <div class="px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800 text-[10.5px] flex items-center justify-between gap-1">
+                <span class="text-slate-600 dark:text-slate-300 truncate">➡️ <strong>${esc(Array.isArray(item.diteruskan_kepada) ? item.diteruskan_kepada.join(', ') : item.diteruskan_kepada)}</strong></span>
+                ${item.batas_waktu ? `<span class="font-mono text-amber-600 dark:text-amber-400 shrink-0">⏰ ${esc(fmtDate(item.batas_waktu))}</span>` : ''}
+              </div>
+            ` : ''}
             <div class="pt-1.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-1.5">
               ${_mSuratMode === 'masuk' ? `<button type="button" onclick="event.stopPropagation(); window.ArsipAgenda?.openDisposisiModal(${item.id})" class="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-300 text-[11px] font-bold cursor-pointer">Disposisi</button>` : ''}
               <button type="button" data-sppd-pop-trigger onclick="event.stopPropagation(); window.ArsipAgenda?.openSuratPopover(this, ${i})" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-bold cursor-pointer">

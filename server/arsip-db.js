@@ -749,6 +749,22 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
   // 4. Agenda (/api/agenda/*)
   if (pathname === '/api/agenda/surat-masuk' && method === 'GET') {
     try {
+      await doQuery(`
+        CREATE TABLE IF NOT EXISTS agenda_disposisi (
+          id SERIAL PRIMARY KEY,
+          surat_masuk_id INTEGER NOT NULL REFERENCES agenda_surat_masuk(id) ON DELETE CASCADE,
+          tanggal_disposisi DATE DEFAULT CURRENT_DATE,
+          pemberi_disposisi VARCHAR(150) NOT NULL DEFAULT 'Kepala BAPPERIDA',
+          arahan JSONB DEFAULT '[]'::jsonb,
+          catatan_instruksi TEXT DEFAULT '',
+          diteruskan_kepada JSONB DEFAULT '[]'::jsonb,
+          batas_waktu DATE,
+          status_tindaklanjut VARCHAR(60) DEFAULT 'Didisposisi',
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `).catch(() => {});
+
       const tahun = parseInt(query.tahun, 10) || new Date().getFullYear();
       const q = query.q ? `%${query.q.trim()}%` : null;
       const status = query.status || null;
@@ -758,7 +774,7 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
       let sql = `
         SELECT sm.*, 
                d.id as disposisi_id, d.status_tindaklanjut, d.diteruskan_kepada, d.batas_waktu,
-               d.pemberi_disposisi, d.catatan_instruksi
+               d.pemberi_disposisi, d.catatan_instruksi, d.arahan, d.tanggal_disposisi
         FROM agenda_surat_masuk sm
         LEFT JOIN (
           SELECT DISTINCT ON (surat_masuk_id) *
@@ -991,8 +1007,23 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
   const mSmDisp = pathname.match(/^\/api\/agenda\/surat-masuk\/(\d+)\/disposisi$/);
   if (mSmDisp && method === 'GET') {
     try {
-      const { rows } = await doQuery(`SELECT * FROM agenda_disposisi WHERE surat_masuk_id = $1 ORDER BY id DESC`, [Number(mSmDisp[1])]);
-      res.json({ ok: true, items: rows });
+      await doQuery(`
+        CREATE TABLE IF NOT EXISTS agenda_disposisi (
+          id SERIAL PRIMARY KEY,
+          surat_masuk_id INTEGER NOT NULL REFERENCES agenda_surat_masuk(id) ON DELETE CASCADE,
+          tanggal_disposisi DATE DEFAULT CURRENT_DATE,
+          pemberi_disposisi VARCHAR(150) NOT NULL DEFAULT 'Kepala BAPPERIDA',
+          arahan JSONB DEFAULT '[]'::jsonb,
+          catatan_instruksi TEXT DEFAULT '',
+          diteruskan_kepada JSONB DEFAULT '[]'::jsonb,
+          batas_waktu DATE,
+          status_tindaklanjut VARCHAR(60) DEFAULT 'Didisposisi',
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `).catch(() => {});
+      const { rows } = await doQuery(`SELECT * FROM agenda_disposisi WHERE surat_masuk_id = $1 ORDER BY id ASC`, [Number(mSmDisp[1])]);
+      res.json({ ok: true, items: rows, disposisi: rows[rows.length - 1] || null });
       return true;
     } catch {
       res.status(500).json({ ok: false, message: 'Gagal mengambil disposisi' });
@@ -1002,11 +1033,27 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
 
   if (mSmDisp && method === 'POST') {
     try {
+      await doQuery(`
+        CREATE TABLE IF NOT EXISTS agenda_disposisi (
+          id SERIAL PRIMARY KEY,
+          surat_masuk_id INTEGER NOT NULL REFERENCES agenda_surat_masuk(id) ON DELETE CASCADE,
+          tanggal_disposisi DATE DEFAULT CURRENT_DATE,
+          pemberi_disposisi VARCHAR(150) NOT NULL DEFAULT 'Kepala BAPPERIDA',
+          arahan JSONB DEFAULT '[]'::jsonb,
+          catatan_instruksi TEXT DEFAULT '',
+          diteruskan_kepada JSONB DEFAULT '[]'::jsonb,
+          batas_waktu DATE,
+          status_tindaklanjut VARCHAR(60) DEFAULT 'Didisposisi',
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `).catch(() => {});
       const smId = Number(mSmDisp[1]);
       const b = req.body || {};
       const arahanArr = Array.isArray(b.arahan) ? b.arahan : (b.arahan ? [b.arahan] : []);
       const diteruskanArr = Array.isArray(b.diteruskan_kepada) ? b.diteruskan_kepada : (b.diteruskan_kepada ? [b.diteruskan_kepada] : []);
-      const pemberi = b.pemberi_disposisi || req.user?.name || req.user?.username || 'Pimpinan BAPPERIDA';
+      const pemberi = b.pemberi_disposisi || req.user?.name || req.user?.username || 'Kepala BAPPERIDA';
+      const statusTl = b.status_tindaklanjut || 'Didisposisi';
       const { rows } = await doQuery(
         `INSERT INTO agenda_disposisi
          (surat_masuk_id, tanggal_disposisi, pemberi_disposisi, arahan, catatan_instruksi, diteruskan_kepada, batas_waktu, status_tindaklanjut)
@@ -1015,10 +1062,10 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
         [
           smId, b.tanggal_disposisi || new Date().toISOString().slice(0, 10), pemberi,
           JSON.stringify(arahanArr), b.catatan_instruksi || '', JSON.stringify(diteruskanArr),
-          b.batas_waktu || null, b.status_tindaklanjut || 'Didisposisi',
+          b.batas_waktu || null, statusTl,
         ]
       );
-      await doQuery(`UPDATE agenda_surat_masuk SET status = 'Didisposisi', updated_at = NOW() WHERE id = $1`, [smId]).catch(() => {});
+      await doQuery(`UPDATE agenda_surat_masuk SET status = $1, updated_at = NOW() WHERE id = $2`, [statusTl, smId]).catch(() => {});
       res.status(201).json({ ok: true, item: rows[0] });
       return true;
     } catch (err) {
@@ -1028,10 +1075,55 @@ export async function handleArsipDbRequest(req, res, target, doQuery) {
     }
   }
 
-  const mDispDel = pathname.match(/^\/api\/agenda\/disposisi\/(\d+)$/);
-  if (mDispDel && method === 'DELETE') {
+  const mDispItem = pathname.match(/^\/api\/agenda\/disposisi\/(\d+)$/);
+  if (mDispItem && (method === 'PUT' || method === 'PATCH')) {
     try {
-      await doQuery(`DELETE FROM agenda_disposisi WHERE id = $1`, [Number(mDispDel[1])]);
+      const dispId = Number(mDispItem[1]);
+      const b = req.body || {};
+      const arahanArr = b.arahan ? (Array.isArray(b.arahan) ? b.arahan : [b.arahan]) : null;
+      const diteruskanArr = b.diteruskan_kepada ? (Array.isArray(b.diteruskan_kepada) ? b.diteruskan_kepada : [b.diteruskan_kepada]) : null;
+      const { rows } = await doQuery(
+        `UPDATE agenda_disposisi
+         SET tanggal_disposisi = COALESCE(NULLIF($1, '')::date, tanggal_disposisi),
+             pemberi_disposisi = COALESCE(NULLIF($2, ''), pemberi_disposisi),
+             arahan = COALESCE($3::jsonb, arahan),
+             catatan_instruksi = COALESCE($4, catatan_instruksi),
+             diteruskan_kepada = COALESCE($5::jsonb, diteruskan_kepada),
+             batas_waktu = CASE WHEN $6 = '' THEN NULL WHEN $6 IS NOT NULL THEN $6::date ELSE batas_waktu END,
+             status_tindaklanjut = COALESCE(NULLIF($7, ''), status_tindaklanjut),
+             updated_at = NOW()
+         WHERE id = $8 RETURNING *`,
+        [
+          b.tanggal_disposisi || '',
+          b.pemberi_disposisi || '',
+          arahanArr ? JSON.stringify(arahanArr) : null,
+          b.catatan_instruksi ?? null,
+          diteruskanArr ? JSON.stringify(diteruskanArr) : null,
+          b.batas_waktu !== undefined ? (b.batas_waktu || '') : null,
+          b.status_tindaklanjut || '',
+          dispId,
+        ]
+      );
+      if (rows[0] && b.status_tindaklanjut) {
+        await doQuery(`UPDATE agenda_surat_masuk SET status = $1, updated_at = NOW() WHERE id = $2`, [b.status_tindaklanjut, rows[0].surat_masuk_id]).catch(() => {});
+      }
+      res.json({ ok: true, item: rows[0] });
+      return true;
+    } catch (err) {
+      console.error('[arsip-db] PUT disposisi error:', err);
+      res.status(500).json({ ok: false, message: 'Gagal memperbarui entri disposisi: ' + err.message });
+      return true;
+    }
+  }
+
+  if (mDispItem && method === 'DELETE') {
+    try {
+      const { rows } = await doQuery(`DELETE FROM agenda_disposisi WHERE id = $1 RETURNING surat_masuk_id`, [Number(mDispItem[1])]);
+      if (rows[0]) {
+        const remaining = await doQuery(`SELECT status_tindaklanjut FROM agenda_disposisi WHERE surat_masuk_id = $1 ORDER BY id DESC LIMIT 1`, [rows[0].surat_masuk_id]);
+        const newSt = remaining.rows[0]?.status_tindaklanjut || 'Diterima';
+        await doQuery(`UPDATE agenda_surat_masuk SET status = $1, updated_at = NOW() WHERE id = $2`, [newSt, rows[0].surat_masuk_id]).catch(() => {});
+      }
       res.json({ ok: true, message: 'Entri disposisi dihapus' });
       return true;
     } catch {

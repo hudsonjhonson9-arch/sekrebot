@@ -421,3 +421,82 @@ test('req.user tanpa NIP otomatis diselesaikan dari user_list', async () => {
   const token = cookie.slice('arsip_session='.length);
   assert.equal(verifikasi(token, SECRET)?.sub, '198501012010011005');
 });
+
+test('upstream 401: disposisi CRUD surat-masuk jatuh ke DB lokal', async () => {
+  const dummyDisp = [
+    {
+      id: 10,
+      surat_masuk_id: 1,
+      tanggal_disposisi: '2026-11-25',
+      pemberi_disposisi: 'Kepala BAPPERIDA',
+      diteruskan_kepada: ['Bidang PPE'],
+      arahan: ['Tindak lanjuti sesuai ketentuan'],
+      catatan_instruksi: 'Segera selesaikan',
+      status_tindaklanjut: 'Didisposisi',
+    },
+  ];
+
+  const { app } = harness({
+    roleDb: 'Admin',
+    fetchImpl: async () => ({
+      status: 401,
+      text: async () => 'Unauthorized',
+      headers: new Headers(),
+    }),
+    queryImpl: async (sql, params) => {
+      if (typeof sql === 'string' && sql.includes('user_credentials')) {
+        return { rows: [{ role: 'Admin' }] };
+      }
+      if (typeof sql === 'string' && sql.includes('agenda_disposisi') && sql.includes('SELECT *')) {
+        return { rows: dummyDisp };
+      }
+      if (typeof sql === 'string' && sql.includes('INSERT INTO agenda_disposisi')) {
+        return { rows: [{ id: 11, surat_masuk_id: 1, pemberi_disposisi: 'Sekretaris' }] };
+      }
+      if (typeof sql === 'string' && sql.includes('UPDATE agenda_disposisi')) {
+        return { rows: [{ id: 10, surat_masuk_id: 1, status_tindaklanjut: 'Selesai' }] };
+      }
+      if (typeof sql === 'string' && sql.includes('DELETE FROM agenda_disposisi')) {
+        return { rows: [{ surat_masuk_id: 1 }] };
+      }
+      return { rows: [] };
+    },
+  });
+
+  // GET disposisi
+  const rGet = await via(app, '/api/arsip/p/api/agenda/surat-masuk/1/disposisi');
+  assert.equal(rGet.status, 200);
+  const dGet = JSON.parse(rGet.body);
+  assert.equal(dGet.ok, true);
+  assert.equal(dGet.items.length, 1);
+
+  // POST disposisi
+  const rPost = await via(app, '/api/arsip/p/api/agenda/surat-masuk/1/disposisi', { 'Content-Type': 'application/json' }, {
+    method: 'POST',
+    body: JSON.stringify({
+      pemberi_disposisi: 'Sekretaris',
+      diteruskan_kepada: ['Bidang PPE'],
+      arahan: ['Hadiri rapat'],
+    }),
+  });
+  assert.equal(rPost.status, 201);
+  const dPost = JSON.parse(rPost.body);
+  assert.equal(dPost.ok, true);
+  assert.equal(dPost.item.id, 11);
+
+  // PUT disposisi
+  const rPut = await via(app, '/api/arsip/p/api/agenda/disposisi/10', { 'Content-Type': 'application/json' }, {
+    method: 'PUT',
+    body: JSON.stringify({ status_tindaklanjut: 'Selesai' }),
+  });
+  assert.equal(rPut.status, 200);
+  const dPut = JSON.parse(rPut.body);
+  assert.equal(dPut.ok, true);
+  assert.equal(dPut.item.status_tindaklanjut, 'Selesai');
+
+  // DELETE disposisi
+  const rDel = await via(app, '/api/arsip/p/api/agenda/disposisi/10', {}, { method: 'DELETE' });
+  assert.equal(rDel.status, 200);
+  const dDel = JSON.parse(rDel.body);
+  assert.equal(dDel.ok, true);
+});
