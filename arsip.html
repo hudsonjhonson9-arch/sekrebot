@@ -489,25 +489,25 @@
       </button>
     </div>
 
-    <div class="p-6 overflow-y-auto flex flex-col gap-6">
+    <div class="p-5 sm:p-6 overflow-y-auto flex flex-col gap-4 bg-slate-50/40 dark:bg-slate-950/40">
       <!-- Section 1: Informasi Dokumen -->
-      <div class="flex flex-col gap-4">
+      <section class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 flex flex-col gap-3.5 shadow-2xs">
         <div class="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
-          <span class="w-1 h-4.5 rounded-full bg-[#2563eb]"></span>
+          <span class="w-1 h-4 rounded-full bg-[#2563eb] shrink-0"></span>
           <span>Informasi Dokumen</span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <!-- Judul Dokumen -->
           <div class="md:col-span-2">
             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Judul Dokumen <span class="text-rose-500">*</span></label>
-            <input data-arsip-field="title" type="text" placeholder="Contoh: Kajian Potensi Pembangunan Sumba Barat 2026" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+            <input data-arsip-field="title" type="text" placeholder="Contoh: Kajian Potensi Pembangunan Sumba Barat 2026" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb] focus:bg-white dark:focus:bg-slate-900">
           </div>
 
           <!-- Jenis Dokumen * -->
           <div>
             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Jenis Dokumen <span class="text-rose-500">*</span></label>
-            <select data-arsip-field="type" aria-label="Jenis Dokumen" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+            <select data-arsip-field="type" aria-label="Jenis Dokumen" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
               <option value="">— Pilih Jenis Dokumen —</option>
             </select>
           </div>
@@ -515,7 +515,7 @@
           <!-- Sektor * -->
           <div>
             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Sektor <span class="text-rose-500">*</span></label>
-            <select data-arsip-field="sector" aria-label="Sektor" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+            <select data-arsip-field="sector" aria-label="Sektor" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
               <option value="">— Pilih Sektor —</option>
             </select>
           </div>
@@ -523,7 +523,7 @@
           <!-- Bidang -->
           <div>
             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Bidang</label>
-            <select data-arsip-field="bidang" aria-label="Bidang" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+            <select data-arsip-field="bidang" aria-label="Bidang" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
               <option value="">— Pilih Bidang —</option>
             </select>
           </div>
@@ -531,71 +531,67 @@
           <!-- Tahun Dokumen -->
           <div>
             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tahun Dokumen</label>
-            <select data-arsip-field="year" aria-label="Tahun Dokumen" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+            <select data-arsip-field="year" aria-label="Tahun Dokumen" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono tabular-nums text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
               <option value="2026">2026</option>
             </select>
           </div>
 
-          <!-- Tag / Kata Kunci -->
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tag / Kata Kunci</label>
-            <input data-arsip-field="tags" type="text" placeholder="pertanian, kajian, 2026 (pisah koma)" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
-            <p class="text-[11px] text-slate-400 mt-1">Pisahkan dengan koma</p>
-          </div>
-
-          <!-- Nomor Dokumen -->
+          <!-- Nomor Dokumen & Tanggal Dokumen (sejajar 2 kolom, tanpa baris gantung) -->
           <div>
             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Nomor Dokumen</label>
-            <input data-arsip-field="nomor" type="text" placeholder="005/XXXX/2026" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+            <input data-arsip-field="nomor" type="text" placeholder="005/XXXX/2026" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono tabular-nums text-slate-900 dark:text-white outline-none focus:border-[#2563eb] focus:bg-white dark:focus:bg-slate-900">
           </div>
 
-          <!-- Tanggal Dokumen -->
           <div>
             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tanggal Dokumen</label>
-            <input data-arsip-field="tanggal_dokumen" type="date" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+            <input data-arsip-field="tanggal_dokumen" type="date" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono tabular-nums text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          </div>
+
+          <!-- Tag / Kata Kunci (full width, rapi tanpa celah kosong) -->
+          <div class="md:col-span-2">
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tag / Kata Kunci <span class="font-normal text-slate-400">(pisahkan dengan koma)</span></label>
+            <input data-arsip-field="tags" type="text" placeholder="Contoh: pertanian, kajian, 2026" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb] focus:bg-white dark:focus:bg-slate-900">
           </div>
 
           <!-- Deskripsi Dokumen -->
           <div class="md:col-span-2">
             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Deskripsi Dokumen</label>
-            <textarea data-arsip-field="desc" rows="3" placeholder="Ringkasan isi dan tujuan dokumen ini..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]"></textarea>
+            <textarea data-arsip-field="desc" rows="3" placeholder="Ringkasan isi dan tujuan dokumen ini..." class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb] focus:bg-white dark:focus:bg-slate-900 resize-y"></textarea>
           </div>
 
-          <div class="md:col-span-2">
-            <label class="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
+          <div class="md:col-span-2 pt-1">
+            <label class="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer select-none">
               <input data-arsip-field="publik" type="checkbox" checked class="rounded accent-[#2563eb]">
               <span>Tampilkan ke seluruh pegawai (Publik Instansi)</span>
             </label>
           </div>
         </div>
-      </div>
-
-      <div class="h-px bg-slate-200/80 dark:bg-slate-800"></div>
+      </section>
 
       <!-- Section 2: File Dokumen -->
-      <div class="flex flex-col gap-3">
+      <section class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 flex flex-col gap-3.5 shadow-2xs">
         <div class="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
-          <span class="w-1 h-4.5 rounded-full bg-[#2563eb]"></span>
+          <span class="w-1 h-4 rounded-full bg-[#2563eb] shrink-0"></span>
           <span>File Dokumen</span>
         </div>
 
         <div>
           <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Metode Unggah</label>
-          <div class="flex gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80">
-            <button type="button" data-arsip-upload-mode="file" onclick="window.ArsipColumns?.setUploadMode('file')" class="flex-1 py-2.5 px-3 rounded-xl bg-[#2563eb] text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
+          <div class="flex gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80">
+            <button type="button" data-arsip-upload-mode="file" onclick="window.ArsipColumns?.setUploadMode('file')" class="flex-1 py-2 px-3 rounded-lg bg-[#2563eb] text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors">
               <span class="material-symbols-outlined text-[16px]">upload</span>
               <span>Upload File dari Komputer</span>
             </button>
-            <button type="button" data-arsip-upload-mode="gdrive" onclick="window.ArsipColumns?.setUploadMode('gdrive')" class="flex-1 py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
+            <button type="button" data-arsip-upload-mode="gdrive" onclick="window.ArsipColumns?.setUploadMode('gdrive')" class="flex-1 py-2 px-3 rounded-lg bg-transparent text-slate-600 dark:text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors">
               <span class="material-symbols-outlined text-[16px]">link</span>
               <span>Link Google Drive</span>
             </button>
           </div>
         </div>
 
-        <div data-arsip-file-pane ondragover="event.preventDefault(); this.classList.add('border-[#2563eb]','bg-blue-50/50')" ondragleave="this.classList.remove('border-[#2563eb]','bg-blue-50/50')" ondrop="window.ArsipColumns?.onFileDrop(event, this)" class="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center cursor-pointer hover:border-[#2563eb] transition-colors relative" onclick="this.querySelector('input[type=file]').click()">
+        <div data-arsip-file-pane ondragover="event.preventDefault(); this.classList.add('border-[#2563eb]','bg-blue-50/50')" ondragleave="this.classList.remove('border-[#2563eb]','bg-blue-50/50')" ondrop="window.ArsipColumns?.onFileDrop(event, this)" class="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center cursor-pointer hover:border-[#2563eb] bg-slate-50/60 dark:bg-slate-800/30 transition-colors relative" onclick="this.querySelector('input[type=file]').click()">
           <span class="material-symbols-outlined text-3xl text-[#2563eb]">cloud_upload</span>
-          <p data-arsip-file-label class="text-xs text-slate-600 dark:text-slate-300 font-medium mt-1.5">Klik atau seret berkas PDF / Word / Excel / Gambar ke sini (maks. 10 MB)</p>
+          <p data-arsip-file-label class="text-xs text-slate-700 dark:text-slate-200 font-medium mt-1.5">Klik atau seret berkas PDF / Word / Excel / Gambar ke sini (maks. 10 MB)</p>
           <p class="text-[11px] text-slate-400 mt-1">Format didukung: PDF, DOCX, XLSX, PPTX, JPG, PNG, WEBP</p>
           <button type="button" data-arsip-file-clear onclick="event.stopPropagation(); window.ArsipColumns?.clearPickedFile(this)" class="hidden mt-2.5 inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 text-[11px] font-bold cursor-pointer">
             <span class="material-symbols-outlined text-[14px]">delete</span>
@@ -606,13 +602,13 @@
 
         <div data-arsip-gdrive-pane class="hidden">
           <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">URL Google Drive <span class="text-rose-500">*</span></label>
-          <input data-arsip-field="url" type="url" placeholder="https://drive.google.com/file/d/xxxxx/view?usp=sharing" class="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb]">
+          <input data-arsip-field="url" type="url" placeholder="https://drive.google.com/file/d/xxxxx/view?usp=sharing" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-[#2563eb] focus:bg-white dark:focus:bg-slate-900">
           <p class="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1.5 flex items-center gap-1">
             <span class="material-symbols-outlined text-[14px]">visibility</span>
             <span>Dokumen akan dapat dipratinjau langsung di panel kanan (embedded view).</span>
           </p>
         </div>
-      </div>
+      </section>
     </div>
 
     <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2.5 bg-slate-50/70 dark:bg-slate-900/60">
