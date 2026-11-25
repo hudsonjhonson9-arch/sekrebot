@@ -2512,7 +2512,7 @@
     set('tanggal_spt', String(item.tanggal_spt || '').slice(0, 10));
     set('ditetapkan_di', item.ditetapkan_di || 'Waikabubak');
     set('dasar_hukum', item.dasar_hukum || '');
-    set('tingkat_biaya', item.tingkat_biaya || '');
+    set('tingkat_biaya', item.tingkat_biaya || (item.jenis_sppd === 'LUAR_DAERAH' ? 'Tingkat B' : 'Tingkat C'));
     set('pelaksana', item.pelaksana_nama || '');
     set('pelaksana_nip', item.pelaksana_nip || '');
     set('pelaksana_pangkat', item.pelaksana_pangkat || '');
