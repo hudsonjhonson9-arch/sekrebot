@@ -10,9 +10,10 @@
   let _barangList = [];
   let _kategoriList = [];
 
-  const TABS = ['inventaris', 'pemeliharaan', 'tiket-pinjam', 'laporan-permen47', 'pengaturan'];
+  const TABS = ['inventaris', 'bast-kir', 'pemeliharaan', 'tiket-pinjam', 'laporan-permen47', 'pengaturan'];
   const CRUMBS = {
     inventaris: 'Inventaris & Aset • Daftar KIR',
+    'bast-kir': 'Inventaris & Aset • Berita Acara (BAST) & KIR Ruangan',
     pemeliharaan: 'Inventaris & Aset • Kartu Pemeliharaan',
     'tiket-pinjam': 'Inventaris & Aset • Tiket & Peminjaman',
     'laporan-permen47': 'Inventaris & Aset • Laporan Barang Permen 47',
@@ -49,6 +50,7 @@
     }
 
     togglePanel('asetPanelInventaris', next === 'inventaris');
+    togglePanel('asetPanelBastKir', next === 'bast-kir');
     togglePanel('asetPanelPemeliharaan', next === 'pemeliharaan');
     togglePanel('asetPanelTiketPinjam', next === 'tiket-pinjam');
     togglePanel('asetPanelLaporanPermen47', next === 'laporan-permen47');
@@ -64,6 +66,7 @@
     const crumb = d.getElementById('asetBreadcrumbTitle');
     if (crumb) crumb.textContent = CRUMBS[next];
 
+    if (next === 'bast-kir') w.AsetBastKir?.load();
     if (next === 'pemeliharaan') loadPemeliharaan();
     if (next === 'tiket-pinjam') { loadTiketList(); loadPinjamFullTable(); }
     if (next === 'laporan-permen47') loadLaporanPermen47();

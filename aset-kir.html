@@ -184,6 +184,10 @@
     <span class="material-symbols-outlined text-[17px]">inventory_2</span>
     <span>Inventaris &amp; KIR</span>
   </button>
+  <button type="button" data-aset-tab-btn="bast-kir" onclick="window.AsetSettings?.switchTab('bast-kir')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface text-xs font-semibold transition-all cursor-pointer">
+    <span class="material-symbols-outlined text-[17px]">contract_edit</span>
+    <span>BAST &amp; KIR Ruangan</span>
+  </button>
   <button type="button" data-aset-tab-btn="pemeliharaan" onclick="window.AsetSettings?.switchTab('pemeliharaan')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface text-xs font-semibold transition-all cursor-pointer">
     <span class="material-symbols-outlined text-[17px]">build</span>
     <span>Kartu Pemeliharaan</span>
@@ -540,6 +544,112 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- PANEL 3B: BERITA ACARA SERAH TERIMA (BAST .DOCX) OTOMATIS & KIR RUANGAN -->
+<div id="asetPanelBastKir" class="hidden flex-col gap-5">
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+    <!-- Kiri (7 col): Generator Berita Acara Serah Terima (BAST .docx) -->
+    <section class="xl:col-span-7 bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden">
+      <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between gap-2 flex-wrap">
+        <div>
+          <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Pembuatan Berita Acara Serah Terima (BAST) Otomatis</h2>
+          <p class="text-xs text-on-surface-variant">Pilih pegawai pemegang aset, lalu unduh Berita Acara (.docx) otomatis dari template resmi.</p>
+        </div>
+        <button type="button" onclick="window.AsetBastKir?.load(true)" class="h-9 px-3 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface text-xs font-semibold inline-flex items-center gap-1 cursor-pointer">
+          <span class="material-symbols-outlined text-[16px]">refresh</span>
+          <span>Muat Ulang</span>
+        </button>
+      </div>
+      <div class="p-5 flex flex-col gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-on-surface mb-1.5">Pihak Kedua (Pegawai Pemegang) <span class="text-rose-500">*</span></label>
+            <select id="bastPegawaiSelect" onchange="window.AsetBastKir?.onPegawaiChange()" class="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant/40 text-xs text-on-surface"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-on-surface mb-1.5">Pihak Pertama (Penandatangan) <span class="text-rose-500">*</span></label>
+            <select id="bastPenandatanganSelect" class="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant/40 text-xs text-on-surface"></select>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-semibold text-on-surface">Nomor Berita Acara <span class="text-rose-500">*</span></label>
+              <button type="button" onclick="window.AsetBastKir?.suggestNomorBast()" class="text-[11px] font-bold text-[#2563eb] hover:underline cursor-pointer">Auto-Nomor</button>
+            </div>
+            <input id="bastNomorInput" type="text" placeholder="001/BAST-BMD/BAPPERIDA/2026" class="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant/40 text-xs font-mono tabular-nums text-on-surface outline-none focus:border-[#2563eb]">
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-semibold text-on-surface mb-1.5">Tanggal</label>
+              <input id="bastTanggalInput" type="date" class="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant/40 text-xs font-mono tabular-nums text-on-surface">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-on-surface mb-1.5">Tempat</label>
+              <input id="bastTempatInput" type="text" value="Waikabubak" class="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant/40 text-xs text-on-surface outline-none focus:border-[#2563eb]">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-bold text-on-surface">Daftar Aset Pegawai (Centang untuk BAST)</span>
+            <span id="bastSelectedSummary" class="text-[11px] font-mono tabular-nums font-bold text-[#2563eb]">0 unit dipilih • Total Rp 0</span>
+          </div>
+          <div id="bastAsetChecklist" class="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
+            <div class="py-6 text-center text-xs text-slate-400">Memuat data aset...</div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-outline-variant/20 flex items-center justify-end gap-2.5 flex-wrap">
+          <button type="button" onclick="window.AsetBastKir?.downloadBastDocx(false)" class="h-10 px-4 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant/40 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-[17px]">download</span>
+            <span>Unduh BAST (.docx)</span>
+          </button>
+          <button type="button" onclick="window.AsetBastKir?.downloadBastDocx(true)" class="h-10 px-4 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm cursor-pointer">
+            <span class="material-symbols-outlined text-[17px]">save_as</span>
+            <span>Arsipkan &amp; Unduh BAST</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Kanan (5 col): Kartu Inventaris Ruangan (KIR Ruangan) -->
+    <section class="xl:col-span-5 bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden">
+      <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between gap-2">
+        <div>
+          <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">KIR Ruangan (Cetak A4 Landscape)</h2>
+          <p class="text-xs text-on-surface-variant">Kartu Inventaris Ruangan resmi per ruangan beserta PJ Ruangan.</p>
+        </div>
+      </div>
+      <div id="kirRuanganGrid" class="p-4 grid grid-cols-1 gap-3 max-h-[540px] overflow-y-auto">
+        <div class="py-8 text-center text-xs text-slate-400">Memuat daftar ruangan KIR...</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Riwayat Arsip BAST -->
+  <section class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden">
+    <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between gap-2">
+      <div>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Riwayat Arsip Berita Acara (BAST)</h2>
+        <p class="text-xs text-on-surface-variant">Berita acara yang sudah diarsipkan dapat diunduh ulang kapan saja dalam format .docx.</p>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-surface-container-low/70 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-outline-variant/20">
+            <th class="px-4 py-3">Nomor BAST</th>
+            <th class="px-4 py-3">Pegawai Pemegang</th>
+            <th class="px-4 py-3">Tanggal</th>
+            <th class="px-4 py-3 text-right">Jumlah &amp; Nilai</th>
+            <th class="px-4 py-3 text-right">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="bastKirHistoryBody"></tbody>
+      </table>
+    </div>
+  </section>
 </div>
 
 <!-- PANEL 4: PENGATURAN ASET (RUANGAN KIR, PEJABAT BAST, KATEGORI) -->
@@ -1522,7 +1632,10 @@
   }
 </script>
 <script src="js/lib/qrcode.min.js"></script>
+<script src="js/lib/pizzip.min.js"></script>
+<script src="js/lib/docxtemplater.min.js"></script>
 <script src="js/stitch-pickers.js"></script>
-<script src="js/stitch-aset-settings.js?v=20261123b"></script>
+<script src="js/stitch-aset-bast-kir.js?v=20261125"></script>
+<script src="js/stitch-aset-settings.js?v=20261125"></script>
 
 </body></html>
