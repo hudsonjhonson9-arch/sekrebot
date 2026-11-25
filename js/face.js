@@ -1696,28 +1696,17 @@
             
             console.log(`[AI] Match Result: ${bestMatch.id} (score: ${bestMatch.score.toFixed(4)})`);
             if (bestMatch.id && bestMatch.id !== 'unknown' && !bestMatch.ambiguous) {
-              const profile = window._mejaUserMap ? window._mejaUserMap[bestMatch.id] : null;
               _pendingCapture = { kind: 'meja', meja: { id: bestMatch.id, descriptor, dataUrl, score: bestMatch.score } };
-              $('camPreviewImg').src = dataUrl;
-              $('camPreviewMeta').innerHTML = '<span class="cam-preview-badge cpb-ok"><span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle">check_circle</span> COCOK ' + Math.round(bestMatch.score * 100) + '%</span> ' + (profile ? profile.nama : bestMatch.id);
-              $('camPreview').classList.add('show');
-              $('camVideoWrap').style.display = 'none';
-              setCamStatus('ok', '<span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle">check_circle</span>', 'Periksa Foto', 'Pakai foto ini atau ambil ulang (15 detik)');
-              clearTimeout(_previewIdleTimer);
-              _previewIdleTimer = setTimeout(() => { if (_pendingCapture && _pendingCapture.kind === 'meja') $('camPreviewUse').click(); }, 15000);
+              setCamStatus('ok', '<span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle">check_circle</span>', 'Wajah Cocok', 'Memproses presensi otomatis...');
+              await _previewUse();
             } else {
               await _onMejaAbsenMatchFound(bestMatch.id, descriptor, dataUrl, bestMatch.score, { ambiguous: !!bestMatch.ambiguous });
             }
           } else {
-            console.log('[AI] Phase 4: Preview menunggu konfirmasi Pengguna.');
+            console.log('[AI] Phase 4: Auto-lanjutkan hasil foto terbaik tanpa klik manual.');
             _pendingCapture = { kind: 'user', result: { dataUrl, descriptor, faceOk: _livenessState.faceOk || !!descriptor, livenessOk: _isLive || false } };
-            $('camPreviewImg').src = dataUrl;
-            $('camPreviewMeta').textContent = 'Periksa foto sebelum melanjutkan';
-            $('camPreview').classList.add('show');
-            $('camVideoWrap').style.display = 'none';
-            const capBtn = $('btnCapture');
-            if (capBtn) capBtn.style.display = 'none';
-            setCamStatus('ok', '<span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle">check_circle</span>', 'Periksa Foto', 'Pakai foto ini atau ambil ulang');
+            setCamStatus('ok', '<span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle">check_circle</span>', 'Wajah Terverifikasi', 'Melanjutkan otomatis...');
+            await _previewUse();
           }
         } finally {
           _forceResetAiState(true); // Lepas kunci setelah proses selesai
