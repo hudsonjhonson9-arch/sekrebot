@@ -1117,20 +1117,21 @@
 
   let _cachedLogoB64 = null;
   async function resolveLogoB64() {
-    if (w.LOGO_SUMBA_BARAT_B64) return w.LOGO_SUMBA_BARAT_B64;
+    if (w.LOGO_SUMBA_BARAT_B64 && String(w.LOGO_SUMBA_BARAT_B64).startsWith('data:image/')) return w.LOGO_SUMBA_BARAT_B64;
+    if (w.SppdGenerator?.LOGO_SUMBA_BARAT_B64) return w.SppdGenerator.LOGO_SUMBA_BARAT_B64;
     if (w.StitchSppd?.LOGO_SUMBA_BARAT_B64) return w.StitchSppd.LOGO_SUMBA_BARAT_B64;
-    if (w.StitchSppd?.LOGO_B64) return w.StitchSppd.LOGO_B64;
     if (_cachedLogoB64) return _cachedLogoB64;
     try {
       const candidates = [
-        'Lambang_Kabupaten_Sumba_Barat.png',
         '/Lambang_Kabupaten_Sumba_Barat.png',
-        'images/Lambang_Kabupaten_Sumba_Barat.png',
+        'Lambang_Kabupaten_Sumba_Barat.png',
+        '/icons/logo-splash.svg',
       ];
       for (const p of candidates) {
         try {
           const res = await fetch(p);
-          if (res.ok) {
+          const ct = String(res.headers.get('content-type') || '').toLowerCase();
+          if (res.ok && ct.startsWith('image/')) {
             const blob = await res.blob();
             const b64 = await new Promise((resFn, rejFn) => {
               const fr = new FileReader();
@@ -1138,7 +1139,7 @@
               fr.onerror = rejFn;
               fr.readAsDataURL(blob);
             });
-            if (b64) {
+            if (b64 && String(b64).startsWith('data:image/')) {
               _cachedLogoB64 = b64;
               w.LOGO_SUMBA_BARAT_B64 = b64;
               return b64;
@@ -1147,7 +1148,7 @@
         } catch (_) {}
       }
     } catch (_) {}
-    return new URL('Lambang_Kabupaten_Sumba_Barat.png', w.location.origin || w.location.href).href;
+    return new URL('/Lambang_Kabupaten_Sumba_Barat.png', w.location.origin || w.location.href).href;
   }
 
   async function cetakLembarDisposisi(surat, historyOverride = null) {
@@ -1781,7 +1782,10 @@
       if (!customPemberiWrap) return;
       if (show) {
         customPemberiWrap.classList.remove('hidden');
-        if (selPemberiEl) selPemberiEl.value = '__CUSTOM__';
+        if (selPemberiEl) {
+          selPemberiEl.value = '__CUSTOM__';
+          w.StitchPicker?.refresh?.(selPemberiEl);
+        }
         if (focus && customPemberiInp) customPemberiInp.focus();
       } else {
         customPemberiWrap.classList.add('hidden');
@@ -1804,6 +1808,7 @@
         togglePemberiCustom(false, false);
         if (selPemberiEl && selPemberiEl.value === '__CUSTOM__') {
           selPemberiEl.value = PEMBERI_DISPOSISI_OPTIONS[0];
+          w.StitchPicker?.refresh?.(selPemberiEl);
         }
       }
     });
@@ -1880,6 +1885,7 @@
     });
 
     d.body.appendChild(wrap);
+    refreshPickersIn(wrap);
     renderBody();
   }
 
