@@ -2220,6 +2220,90 @@
     loadDesktopShifts();
     loadDesktopHolidays();
 
+    // Modal Input Keterangan Pegawai (Admin Desktop -> ket_temp + otomatis menimpa TANPA BERITA di Log_Absen)
+    window.openAdminInputKeteranganModal = async function () {
+      if (typeof Swal === 'undefined') return;
+      const inst = getInstansiId();
+      let pegList = [];
+      try {
+        const res = await fetch(`/api/users?instansi_id=${encodeURIComponent(inst)}`);
+        const json = await res.json().catch(() => ({}));
+        pegList = Array.isArray(json.users) ? json.users : (Array.isArray(json.data) ? json.data : []);
+      } catch (_) {}
+      const today = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+      const pegOpts = '<option value="">— Pilih Pegawai —</option>' + pegList.map((u) => {
+        const nip = u.nip || u.NIP || '';
+        const nama = u.nama || u.username || '-';
+        return `<option value="${escapeHtml(nip)}">${escapeHtml(nama)} (${escapeHtml(nip)})</option>`;
+      }).join('');
+
+      const r = await Swal.fire({
+        title: 'Input Keterangan Pegawai',
+        width: 520,
+        html: `
+          <div class="text-left space-y-3 text-xs pt-1">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Pegawai *</label>
+              <select id="admKetNip" class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs">${pegOpts}</select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Jenis Keterangan *</label>
+              <select id="admKetJenis" class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs">
+                <option value="IZIN">IZIN</option>
+                <option value="SAKIT">SAKIT</option>
+                <option value="CUTI">CUTI</option>
+                <option value="TUGAS">TUGAS / DINAS LUAR</option>
+                <option value="TUBEL">TUGAS BELAJAR (TUBEL)</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Tanggal Mulai *</label>
+                <input id="admKetMulai" type="date" value="${today}" class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Tanggal Selesai *</label>
+                <input id="admKetSelesai" type="date" value="${today}" class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono">
+              </div>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Alasan / Keterangan *</label>
+              <textarea id="admKetAlasan" rows="3" placeholder="Tuliskan alasan izin, sakit, cuti, atau nomor SPT..." class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs"></textarea>
+            </div>
+            <p class="text-[11px] text-slate-500">Status langsung <b>DISETUJUI</b> dan otomatis menulis/menimpa baris <b>TANPA BERITA</b> di Log Absen pada tanggal terkait.</p>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Simpan & Setujui',
+        cancelButtonText: 'Batal',
+        preConfirm: () => {
+          const nip = document.getElementById('admKetNip')?.value?.trim() || '';
+          const jenis = document.getElementById('admKetJenis')?.value || 'IZIN';
+          const tgl_mulai = document.getElementById('admKetMulai')?.value || '';
+          const tgl_selesai = document.getElementById('admKetSelesai')?.value || tgl_mulai;
+          const keterangan = document.getElementById('admKetAlasan')?.value?.trim() || '';
+          if (!nip) { Swal.showValidationMessage('Pilih pegawai terlebih dahulu.'); return false; }
+          if (!tgl_mulai || tgl_selesai < tgl_mulai) { Swal.showValidationMessage('Rentang tanggal tidak valid.'); return false; }
+          if (!keterangan) { Swal.showValidationMessage('Alasan / keterangan wajib diisi.'); return false; }
+          return { nip, jenis, tgl_mulai, tgl_selesai, keterangan, auto_approve: true };
+        }
+      });
+      if (!r.isConfirmed || !r.value) return;
+      try {
+        const resp = await fetch('/api/stitch/keterangan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(r.value),
+        });
+        const json = await resp.json().catch(() => ({}));
+        if (!resp.ok || json.ok === false) throw new Error(json.message || `HTTP ${resp.status}`);
+        notifyToast('success', 'Keterangan Tercatat', json.message || 'Keterangan berhasil disimpan & disinkronkan ke Log Absen.');
+        if (window.AdminCore?.refresh) window.AdminCore.refresh();
+      } catch (err) {
+        notifyToast('error', 'Gagal Menyimpan Keterangan', err.message);
+      }
+    };
+
     // Seamless auto-sync saat ada perubahan dari tab lain atau kembali ke tab ini
     if (window.StitchSync && typeof window.StitchSync.on === 'function') {
       window.StitchSync.on(['lokasi', 'instansi', 'config', 'admin', 'presensi'], (ev) => {

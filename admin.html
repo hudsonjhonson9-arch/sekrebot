@@ -783,9 +783,13 @@
 <span class="font-body-sm text-body-sm text-on-surface-variant">Menampilkan daftar permohonan kehadiran yang memerlukan tindakan Administrator</span>
 </div>
 </div>
-<div class="flex items-center gap-space-xs">
+<div class="flex items-center gap-2 flex-wrap">
 <span class="font-label-sm text-label-sm text-on-surface-variant">Filter Status:</span>
 <span id="adminPendingCount" class="px-2.5 py-1 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm">Memuat...</span>
+<button type="button" onclick="window.openAdminInputKeteranganModal?.()" class="h-9 px-3.5 rounded-xl bg-primary hover:bg-blue-700 text-on-primary text-xs font-bold inline-flex items-center gap-1.5 shadow-sm cursor-pointer">
+  <span class="material-symbols-outlined text-[16px]">note_add</span>
+  <span>Input Keterangan Pegawai</span>
+</button>
 </div>
 </div>
 <!-- Table Container -->
@@ -975,7 +979,7 @@
 <script src="js/stitch-pickers.js"></script>
 <script src="/js/admin-core.js"></script>
 <script type="module" src="js/dev-tools.js"></script>
-<script type="module" src="/js/admin-controller.js?v=20261124b"></script>
+<script type="module" src="/js/admin-controller.js?v=20261126"></script>
 
 <script>
   // Admin desktop. Di HP (<768px) dialihkan ke mode mobile (index.html#admin);

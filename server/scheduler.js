@@ -207,10 +207,23 @@ export function createScheduler({ query, sendTelegram, sendWhatsApp, logger = co
     const { rows: logs } = await query(`SELECT "ID","Jenis Absen" FROM "Log_Absen" WHERE "Tanggal"=$1`, [tanggal]);
     const sudahMasuk = new Set(logs.filter((l) => has(l, MASUK)).map((l) => String(l.ID)));
     const sudahKet = new Set(logs.filter((l) => has(l, KET)).map((l) => String(l.ID)));
+    // Ikut periksa ket_temp (DISETUJUI maupun PENDING) agar pegawai yang sudah mengajukan izin/sakit tidak kena Tanpa Berita.
+    const { rows: ketRows } = await query(
+      `SELECT "ID_Pegawai" AS ket_id, "NIP" AS ket_nip FROM ket_temp
+       WHERE UPPER("Status") IN ('DISETUJUI', 'PENDING')
+         AND ("Tanggal" = $1 OR ("tgl_mulai" <> '' AND "tgl_selesai" <> '' AND $1 BETWEEN "tgl_mulai" AND "tgl_selesai"))`,
+      [tanggal]
+    ).catch(() => ({ rows: [] }));
+    const sudahKetNip = new Set();
+    for (const k of ketRows || []) {
+      if (k.ket_id) sudahKet.add(String(k.ket_id).trim());
+      if (k.ket_nip) sudahKetNip.add(String(k.ket_nip).trim());
+    }
     const { rows: peg } = await query(`SELECT id::text AS id, username, "NIP", "Status", instansi_id FROM user_list`);
     for (const p of peg) {
       const id = String(p.id || '').trim();
-      if (!id || String(p.Status || '').toUpperCase().trim() !== 'AKTIF' || sudahMasuk.has(id) || sudahKet.has(id)) continue;
+      const nipCheck = String(p.NIP || '').trim();
+      if (!id || String(p.Status || '').toUpperCase().trim() !== 'AKTIF' || sudahMasuk.has(id) || sudahKet.has(id) || (nipCheck && sudahKetNip.has(nipCheck))) continue;
       const instId = String(p.instansi_id || 'bapperida').trim();
       const instWd = workdaysByInst.get(instId);
       if (instWd && !instWd.includes(dayOfWeek)) continue;

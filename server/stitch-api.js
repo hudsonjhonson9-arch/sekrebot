@@ -392,6 +392,44 @@ export function createStitchApiRouter(deps = {}) {
         ? (ket ? `${ket} [Offline Sync]` : '[Offline Sync]')
         : ket;
 
+      // Klasifikasi otomatis DI LUAR JAM MASUK / DI LUAR JAM PULANG mengikuti batas jam kerja instansi
+      let finalJenis = jenis;
+      if (jenis === 'MASUK' || jenis === 'PULANG') {
+        try {
+          const jamMin = (() => {
+            const parts = String(jam || '').split(':');
+            return parts.length >= 2 ? Number(parts[0]) * 60 + Number(parts[1]) : null;
+          })();
+          if (jamMin !== null && Number.isFinite(jamMin)) {
+            let masukLimit = 7 * 60 + 15;
+            let pulangLimit = 14 * 60 + 30;
+            const jkRes = await query(
+              `SELECT masuk, pulang FROM jam_kerja WHERE instansi_id = $1 OR instansi_id = 'all' ORDER BY CASE WHEN instansi_id = $1 THEN 0 ELSE 1 END LIMIT 1`,
+              [instansiId]
+            ).catch(() => ({ rows: [] }));
+            const jk = jkRes?.rows?.[0];
+            if (jk?.masuk) {
+              const p = String(jk.masuk).split(':');
+              if (p.length >= 2 && Number.isFinite(Number(p[0]))) masukLimit = Number(p[0]) * 60 + Number(p[1]);
+            }
+            if (jk?.pulang) {
+              const p = String(jk.pulang).split(':');
+              if (p.length >= 2 && Number.isFinite(Number(p[0]))) pulangLimit = Number(p[0]) * 60 + Number(p[1]);
+            }
+            if (jenis === 'MASUK' && jamMin > masukLimit) finalJenis = 'DI LUAR JAM MASUK';
+            else if (jenis === 'PULANG' && jamMin < pulangLimit) finalJenis = 'DI LUAR JAM PULANG';
+          }
+        } catch (_) {}
+      }
+
+      // Bila ada baris TANPA BERITA / TB / ALPA hari ini dan pegawai melakukan scan hadir, hapus baris alpa tsb
+      if (finalJenis === 'MASUK' || finalJenis === 'DI LUAR JAM MASUK') {
+        await query(
+          `DELETE FROM "Log_Absen" WHERE "NIP" = $1 AND "Tanggal" = $2 AND UPPER("Jenis Absen") IN ('TANPA BERITA', 'TB', 'ALPA')`,
+          [u.NIP, tanggal]
+        ).catch(() => {});
+      }
+
       const insertSql = `
         INSERT INTO "Log_Absen" ("ID", "Nama", "NIP", "Tanggal", "Jam", "Jenis Absen", "Lokasi", "Ket", "koordinat", "request_id", "instansi_id")
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -405,7 +443,7 @@ export function createStitchApiRouter(deps = {}) {
         u.NIP,
         tanggal,
         jam,
-        jenis,
+        finalJenis,
         matchedLoc,
         finalKet,
         koordinat,
@@ -572,6 +610,52 @@ export function createStitchApiRouter(deps = {}) {
     }
   });
 
+  const KET_LOG_GROUP = ['IZIN', 'SAKIT', 'TUGAS', 'DL', 'TUBEL', 'CUTI', 'TB', 'TANPA BERITA', 'ALPA'];
+
+  function expandKetDateRange(startIso, endIso) {
+    const s = String(startIso || '').slice(0, 10);
+    const e = String(endIso || s).slice(0, 10);
+    const d1 = Date.parse(`${s}T00:00:00Z`);
+    const d2 = Date.parse(`${e}T00:00:00Z`);
+    if (!Number.isFinite(d1) || !Number.isFinite(d2) || d2 < d1) return [];
+    const out = [];
+    for (let ms = d1; ms <= d2 && out.length < 62; ms += 86400000) {
+      out.push(new Date(ms).toISOString().slice(0, 10));
+    }
+    return out;
+  }
+
+  // Sinkronkan keterangan DISETUJUI ke Log_Absen per tanggal (pola D:\Code\absensi):
+  // jika sudah ada baris TANPA BERITA / TB / ALPA / keterangan lain di tanggal sama, timpa (UPDATE),
+  // tidak menumpuk baris ganda.
+  async function syncApprovedKeteranganToLogAbsen({ emp, jenis, tglMulai, tglSelesai, jam, ket, requestId }) {
+    const dates = expandKetDateRange(tglMulai, tglSelesai || tglMulai);
+    const inst = emp.instansi_id || 'bapperida';
+    for (let i = 0; i < dates.length; i++) {
+      const t = dates[i];
+      const exist = await query(
+        `SELECT "ID_Log" FROM "Log_Absen"
+         WHERE ("ID"::text = $1 OR "NIP" = $2) AND "Tanggal" = $3 AND UPPER("Jenis Absen") = ANY($4::text[])
+         ORDER BY "ID_Log" DESC LIMIT 1`,
+        [String(emp.id || ''), String(emp.nip || ''), t, KET_LOG_GROUP]
+      ).catch(() => ({ rows: [] }));
+      if (exist?.rows?.[0]?.ID_Log) {
+        await query(
+          `UPDATE "Log_Absen" SET "Jenis Absen" = $1, "Jam" = $2, "Ket" = $3 WHERE "ID_Log" = $4`,
+          [jenis, String(jam || '-'), String(ket || ''), exist.rows[0].ID_Log]
+        ).catch(() => {});
+      } else {
+        const rid = `${requestId || 'ket'}_${t.replace(/-/g, '')}${String(i + 1).padStart(2, '0')}`;
+        await query(
+          `INSERT INTO "Log_Absen" ("ID", "Nama", "NIP", "Tanggal", "Jam", "Jenis Absen", "Lokasi", "Ket", "koordinat", "request_id", "instansi_id")
+           VALUES ($1, $2, $3, $4, $5, $6, '-', $7, '-', $8, $9)
+           ON CONFLICT ("request_id") DO NOTHING`,
+          [String(emp.id || ''), emp.username || '-', emp.nip || '', t, String(jam || '-'), jenis, String(ket || ''), rid, inst]
+        ).catch(() => {});
+      }
+    }
+  }
+
   router.post('/keterangan', async (req, res) => {
     try {
       const b = req.body || {};
@@ -587,6 +671,7 @@ export function createStitchApiRouter(deps = {}) {
 
       if (!nip) return res.status(400).json({ ok: false, message: 'NIP wajib diisi.' });
       if (!tglMulai) return res.status(400).json({ ok: false, message: 'Tanggal mulai wajib diisi.' });
+      if (tglSelesai < tglMulai) return res.status(400).json({ ok: false, message: 'Tanggal selesai tidak boleh sebelum tanggal mulai.' });
       if (!isSelfOrAdmin(req, nip)) return denySelf(res);
 
       // Lookup user
@@ -663,6 +748,20 @@ export function createStitchApiRouter(deps = {}) {
         requestId
       ]);
 
+      // Jika langsung DISETUJUI (SAKIT/CUTI/TUGAS/TUBEL atau input admin auto_approve),
+      // tulis/timpa ke Log_Absen (termasuk menimpa TANPA BERITA bila sudah tercatat).
+      if (statusVal === 'DISETUJUI') {
+        await syncApprovedKeteranganToLogAbsen({
+          emp: { id: u.id, username: u.username, nip: u.NIP, instansi_id: u.instansi_id || 'bapperida' },
+          jenis,
+          tglMulai,
+          tglSelesai,
+          jam,
+          ket: keterangan,
+          requestId,
+        });
+      }
+
       // Kirim notifikasi ke WhatsApp grup + Telegram (pola D:\Code\absensi server/keterangan-notify.js)
       if (notifyKeterangan) {
         const startD = new Date(`${tglMulai}T00:00:00Z`);
@@ -710,6 +809,17 @@ export function createStitchApiRouter(deps = {}) {
 
       const upd = await query(`UPDATE ket_temp SET "Status" = $1 WHERE "ID_Ket" = $2 RETURNING *`, [status, idKet]);
       const row = upd?.rows?.[0];
+      if (status === 'DISETUJUI' && row) {
+        await syncApprovedKeteranganToLogAbsen({
+          emp: { id: row.ID_Pegawai, username: row.Nama, nip: row.NIP, instansi_id: row.instansi_id || 'bapperida' },
+          jenis: String(row['Jenis Absen'] || 'IZIN').toUpperCase(),
+          tglMulai: row.tgl_mulai || row.Tanggal,
+          tglSelesai: row.tgl_selesai || row.tgl_mulai || row.Tanggal,
+          jam: row.Jam || '-',
+          ket: row.Ket || '',
+          requestId: row.request_id || idKet,
+        });
+      }
       if (notifyKeterangan && row) {
         const tglRange = row.tgl_mulai && row.tgl_selesai && row.tgl_mulai !== row.tgl_selesai
           ? `${row.tgl_mulai} s.d. ${row.tgl_selesai}`
