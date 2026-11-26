@@ -984,7 +984,7 @@
         if (subtitleEl) subtitleEl.textContent = 'Catat Izin, Sakit, Dinas Luar, atau Cuti atas nama pegawai';
         if (adminWrap) adminWrap.classList.remove('hidden');
         if (userCard) userCard.classList.add('hidden');
-        if (autoApproveEl) autoApproveEl.checked = true;
+        if (autoApproveEl) autoApproveEl.checked = false;
 
         if (!Array.isArray(state.allUsers) || state.allUsers.length === 0) {
           try {

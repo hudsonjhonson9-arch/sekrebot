@@ -724,8 +724,7 @@ export function createStitchApiRouter(deps = {}) {
       const jam = `${String(nowWita.getUTCHours()).padStart(2, '0')}:${String(nowWita.getUTCMinutes()).padStart(2, '0')}`;
       const idKet = `${jenis.slice(0,3)}${tanggal.replace(/-/g, '')}_${nip}_${Date.now().toString().slice(-4)}`;
       const requestId = `stitch_ket_${nip}_${Date.now()}`;
-      const isAdminActor = Boolean(MEDIA_ROLES.has(req.user?.role) || req.user?.is_admin);
-      const statusVal = (jenis === 'IZIN' && !(isAdminActor && b.auto_approve === true)) ? 'PENDING' : 'DISETUJUI';
+      const statusVal = (jenis === 'IZIN') ? 'PENDING' : 'DISETUJUI';
 
       const insertSql = `
         INSERT INTO ket_temp ("ID_Ket", "ID_Pegawai", "Nama", "NIP", "Tanggal", "Jam", "Jenis Absen", "Status", "Ket", "tgl_mulai", "tgl_selesai", "drive_link", instansi_id, request_id)

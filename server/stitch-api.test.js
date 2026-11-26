@@ -149,7 +149,7 @@ test('USER ditolak 403 saat POST /absen dan /keterangan untuk nip lain', async (
   assert.equal(q.calls.length, 0);
 });
 
-test('ADMIN dapat POST /keterangan untuk NIP lain dengan auto_approve: true menjadi DISETUJUI', async () => {
+test('ADMIN POST /keterangan jenis IZIN tetap PENDING (wajib konfirmasi persetujuan)', async () => {
   const q = stubQuery();
   const r = await call(app(ADMIN, q), 'POST', '/api/stitch/keterangan', {
     nip: USER.nip,
@@ -163,7 +163,8 @@ test('ADMIN dapat POST /keterangan untuk NIP lain dengan auto_approve: true menj
   assert.equal(r.body.ok, true);
   const ins = q.calls.find((c) => /INSERT INTO ket_temp/i.test(c.sql));
   assert.ok(ins, 'harus INSERT INTO ket_temp');
-  assert.equal(ins.params[7], 'DISETUJUI');
+  assert.equal(ins.params[7], 'PENDING');
+  assert.equal(q.calls.some((c) => /INSERT INTO "Log_Absen"/i.test(c.sql)), false, 'IZIN PENDING belum boleh masuk Log_Absen');
 });
 
 test('USER tidak dapat memaksa auto_approve: true pada POST /keterangan NIP sendiri (selalu PENDING)', async () => {

@@ -2481,11 +2481,11 @@
               <label class="block font-bold text-slate-700 mb-1">Alasan / Keterangan *</label>
               <textarea id="admKetAlasan" rows="3" placeholder="Tuliskan alasan izin, sakit, cuti, atau nomor SPT..." class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs"></textarea>
             </div>
-            <p class="text-[11px] text-slate-500">Status langsung <b>DISETUJUI</b> dan otomatis menulis/menimpa baris <b>TANPA BERITA</b> di Log Absen pada tanggal terkait.</p>
+            <p class="text-[11px] text-slate-500"><b>IZIN</b> masuk antrean <b>PENDING</b> untuk konfirmasi persetujuan. Jenis <b>SAKIT / CUTI / TUGAS / TUBEL</b> langsung <b>DISETUJUI</b> dan otomatis menimpa <b>TANPA BERITA</b> di Log Absen.</p>
           </div>
         `,
         showCancelButton: true,
-        confirmButtonText: 'Simpan & Setujui',
+        confirmButtonText: 'Simpan Keterangan',
         cancelButtonText: 'Batal',
         preConfirm: () => {
           const nip = document.getElementById('admKetNip')?.value?.trim() || '';
@@ -2496,7 +2496,7 @@
           if (!nip) { Swal.showValidationMessage('Pilih pegawai terlebih dahulu.'); return false; }
           if (!tgl_mulai || tgl_selesai < tgl_mulai) { Swal.showValidationMessage('Rentang tanggal tidak valid.'); return false; }
           if (!keterangan) { Swal.showValidationMessage('Alasan / keterangan wajib diisi.'); return false; }
-          return { nip, jenis, tgl_mulai, tgl_selesai, keterangan, auto_approve: true };
+          return { nip, jenis, tgl_mulai, tgl_selesai, keterangan };
         }
       });
       if (!r.isConfirmed || !r.value) return;
