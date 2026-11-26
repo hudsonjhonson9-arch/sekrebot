@@ -1715,20 +1715,28 @@
 
       listEl.innerHTML = filtered.map((u) => {
         const curRole = String(u.role || 'USER').trim().toUpperCase().replace(/\s+/g, '_');
+        const isInactive = ['NONAKTIF', 'INACTIVE'].includes(String(u.status || u.Status || '').trim().toUpperCase());
         const opts = [...new Set([curRole, ...roleOpts])].map((r) => `<option value="${escapeHtml(r)}"${r === curRole ? ' selected' : ''}>${escapeHtml(r)}</option>`).join('');
-        return `<div class="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col gap-2.5">
+        return `<div class="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col gap-2.5${isInactive ? ' opacity-70' : ''}">
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
               <p class="font-bold text-on-surface truncate">${escapeHtml(u.nama || u.username || '-')}</p>
               <p class="text-[11px] font-mono text-on-surface-variant">${escapeHtml(u.nip || '-')}</p>
               <p class="text-[11px] text-on-surface-variant truncate">${escapeHtml(u.jabatan || u.bidang || '-')}</p>
             </div>
-            <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold shrink-0">${escapeHtml(curRole)}</span>
+            <div class="flex flex-col items-end gap-1 shrink-0">
+              <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">${escapeHtml(curRole)}</span>
+              ${isInactive ? '<span class="px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-700 text-[10px] font-bold">NONAKTIF</span>' : ''}
+            </div>
           </div>
           <div class="flex items-center gap-1.5 pt-1 border-t border-outline-variant/20">
             <select data-desk-role-uid="${escapeHtml(u.id)}" data-desk-role-nip="${escapeHtml(u.nip || '')}" class="flex-1 min-h-[34px] px-2 rounded-lg bg-surface-container-lowest border border-outline-variant/40 text-[11px] text-on-surface">${opts}</select>
-            <button type="button" data-desk-reset-pwd="${escapeHtml(u.id)}" data-desk-nama="${escapeHtml(u.nama || u.username || '')}" class="min-h-[34px] px-2.5 rounded-lg bg-amber-500/15 text-amber-700 font-bold text-[11px] cursor-pointer" title="Reset Password">Sandi</button>
-            <button type="button" data-desk-reset-face="${escapeHtml(u.nip || '')}" data-desk-nama="${escapeHtml(u.nama || u.username || '')}" class="min-h-[34px] px-2.5 rounded-lg bg-rose-500/15 text-rose-700 font-bold text-[11px] cursor-pointer" title="Reset Wajah AI">Wajah</button>
+            <button type="button" data-desk-edit-pegawai="${escapeHtml(u.id)}" class="min-h-[34px] px-2.5 rounded-lg bg-primary/12 text-primary font-bold text-[11px] cursor-pointer" title="Edit Data Pegawai">Edit</button>
+            <button type="button" data-desk-del-pegawai="${escapeHtml(u.id)}" data-desk-nama="${escapeHtml(u.nama || u.username || '')}" class="min-h-[34px] px-2.5 rounded-lg bg-rose-600/15 text-rose-700 font-bold text-[11px] cursor-pointer" title="Hapus Pegawai">Hapus</button>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button type="button" data-desk-reset-pwd="${escapeHtml(u.id)}" data-desk-nama="${escapeHtml(u.nama || u.username || '')}" class="flex-1 min-h-[30px] px-2 rounded-lg bg-amber-500/12 text-amber-800 font-semibold text-[11px] cursor-pointer" title="Reset Password Default">Reset Sandi</button>
+            <button type="button" data-desk-reset-face="${escapeHtml(u.nip || '')}" data-desk-nama="${escapeHtml(u.nama || u.username || '')}" class="flex-1 min-h-[30px] px-2 rounded-lg bg-surface-container-high text-on-surface-variant font-semibold text-[11px] cursor-pointer" title="Reset Wajah AI">Reset Wajah</button>
           </div>
         </div>`;
       }).join('');
@@ -1817,8 +1825,197 @@
       if (!$('adminRolesCard')?.classList.contains('hidden')) window.loadDesktopRolesTab();
     });
 
+    async function openDesktopPegawaiModal(existingUser) {
+      const isEdit = Boolean(existingUser && existingUser.id);
+      const roleOpts = desktopRolesCache.length
+        ? desktopRolesCache.map((r) => String(r.id || '').toUpperCase())
+        : ['USER', 'ADMIN', 'SUPERADMIN', 'KEPALA', 'SEKRETARIS', 'KABID', 'IRBAN', 'BENDAHARA_BARANG'];
+      const curRole = String(existingUser?.role || 'USER').trim().toUpperCase().replace(/\s+/g, '_');
+      const curStatus = String(existingUser?.status || existingUser?.Status || 'AKTIF').trim().toUpperCase();
+      const maxId = desktopPegawaiCache.reduce((m, u) => {
+        const n = parseInt(u.id, 10);
+        return Number.isFinite(n) && n > m ? n : m;
+      }, 0);
+      const defaultId = isEdit ? String(existingUser.id) : String(maxId + 1);
+      const roleOptionsHtml = [...new Set([curRole, ...roleOpts])]
+        .map((r) => `<option value="${escapeHtml(r)}"${r === curRole ? ' selected' : ''}>${escapeHtml(r)}</option>`)
+        .join('');
+
+      const html = `
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left text-xs mt-2">
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">ID Pegawai (Angka) *</label>
+            <input id="swalPegId" type="text" value="${escapeHtml(defaultId)}" ${isEdit ? 'readonly' : ''} class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs ${isEdit ? 'bg-slate-100 text-slate-500' : ''}" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">NIP *</label>
+            <input id="swalPegNip" type="text" value="${escapeHtml(existingUser?.nip || '')}" placeholder="19xxxxxxxx..." class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs" />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block font-semibold text-slate-600 mb-1">Nama Lengkap *</label>
+            <input id="swalPegNama" type="text" value="${escapeHtml(existingUser?.nama || existingUser?.username || '')}" placeholder="Nama lengkap beserta gelar" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Jabatan</label>
+            <input id="swalPegJabatan" type="text" value="${escapeHtml(existingUser?.jabatan || '')}" placeholder="Jabatan struktural/fungsional" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Pangkat / Golongan</label>
+            <input id="swalPegPangkat" type="text" value="${escapeHtml(existingUser?.pangkat || '')}" placeholder="Penata Muda (III/a)" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Bidang</label>
+            <input id="swalPegBidang" type="text" value="${escapeHtml(existingUser?.bidang || '')}" placeholder="Sekretariat / Bidang..." class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">No. HP / WA</label>
+            <input id="swalPegHp" type="text" value="${escapeHtml(existingUser?.nomorhp || '')}" placeholder="08xxxxxxxxxx" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Role</label>
+            <select id="swalPegRole" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white">${roleOptionsHtml}</select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Status</label>
+            <select id="swalPegStatus" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white">
+              <option value="AKTIF"${curStatus !== 'NONAKTIF' ? ' selected' : ''}>AKTIF</option>
+              <option value="NONAKTIF"${curStatus === 'NONAKTIF' ? ' selected' : ''}>NONAKTIF</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Jam Masuk Khusus (Opsional)</label>
+            <input id="swalPegMasuk" type="time" value="${escapeHtml(existingUser?.jam_masuk || '')}" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Jam Pulang Khusus (Opsional)</label>
+            <input id="swalPegPulang" type="time" value="${escapeHtml(existingUser?.jam_pulang || '')}" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs" />
+          </div>
+        </div>
+      `;
+
+      const { isConfirmed, value } = await Swal.fire({
+        title: isEdit ? 'Edit Data Pegawai' : 'Tambah Pegawai Baru',
+        html,
+        width: 580,
+        showCancelButton: true,
+        confirmButtonText: isEdit ? 'Simpan Perubahan' : 'Tambah Pegawai',
+        cancelButtonText: 'Batal',
+        focusConfirm: false,
+        preConfirm: () => {
+          const id = String(document.getElementById('swalPegId')?.value || '').trim();
+          const nip = String(document.getElementById('swalPegNip')?.value || '').trim();
+          const nama = String(document.getElementById('swalPegNama')?.value || '').trim();
+          if (!/^\d+$/.test(id)) { Swal.showValidationMessage('ID Pegawai harus berupa angka.'); return false; }
+          if (!nip) { Swal.showValidationMessage('NIP wajib diisi.'); return false; }
+          if (!nama) { Swal.showValidationMessage('Nama lengkap wajib diisi.'); return false; }
+          return {
+            id,
+            nip,
+            nama,
+            jabatan: String(document.getElementById('swalPegJabatan')?.value || '').trim(),
+            pangkat: String(document.getElementById('swalPegPangkat')?.value || '').trim(),
+            bidang: String(document.getElementById('swalPegBidang')?.value || '').trim(),
+            nomorhp: String(document.getElementById('swalPegHp')?.value || '').trim(),
+            role: String(document.getElementById('swalPegRole')?.value || 'USER').trim(),
+            status: String(document.getElementById('swalPegStatus')?.value || 'AKTIF').trim(),
+            jam_masuk: String(document.getElementById('swalPegMasuk')?.value || '').trim(),
+            jam_pulang: String(document.getElementById('swalPegPulang')?.value || '').trim(),
+          };
+        }
+      });
+
+      if (!isConfirmed || !value) return;
+      const pickedOpd = isSuperadminSession() ? getSelectedAgencyRaw() : getInstansiId();
+      const instansi_id = (pickedOpd && pickedOpd !== 'ALL') ? pickedOpd : (existingUser?.instansi_id || getInstansiId());
+      const endpoint = isEdit ? '/api/user-edit' : '/api/user-add';
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...value, instansi_id })
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json || json.ok === false) throw new Error((json && json.message) || `HTTP ${res.status}`);
+        notifyToast('success', isEdit ? 'Pegawai Diperbarui' : 'Pegawai Ditambahkan', json.message || 'Berhasil disimpan.');
+        await window.loadDesktopPegawaiTab();
+      } catch (err) {
+        notifyToast('error', 'Gagal Menyimpan', err.message);
+      }
+    }
+
+    async function deleteDesktopPegawai(id, nama) {
+      const first = await Swal.fire({
+        icon: 'warning',
+        title: `Hapus Pegawai?`,
+        html: `<p class="text-xs text-slate-600">Pegawai <strong>${escapeHtml(nama)}</strong> beserta seluruh data terkaitnya (Log Absen, Keterangan/Izin, Penugasan, Dokumen, Tanda Tangan, Sesi Login) akan <strong>dihapus permanen</strong>.</p>`,
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Ya, Hapus Pegawai',
+        cancelButtonText: 'Batal'
+      });
+      if (!first.isConfirmed) return;
+
+      const execDelete = async (force = false) => {
+        const res = await fetch('/api/user-delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, force })
+        });
+        const json = await res.json().catch(() => ({}));
+        return { res, json };
+      };
+
+      try {
+        const { res, json } = await execDelete(false);
+        if (res.status === 409 && json && json.has_assets) {
+          const assets = Array.isArray(json.assets) ? json.assets : [];
+          const rooms = Array.isArray(json.rooms) ? json.rooms : [];
+          const loans = Array.isArray(json.loans) ? json.loans : [];
+          const listHtml = [
+            assets.length ? `<div class="mb-2"><p class="font-bold text-rose-700 mb-1">Aset Dipegang (${assets.length}):</p><ul class="list-disc pl-4 space-y-0.5 text-slate-700">${assets.slice(0, 12).map((a) => `<li>${escapeHtml(a.nama_barang)} <span class="font-mono text-[11px] text-slate-500">(${escapeHtml(a.nomor_inventaris)})</span></li>`).join('')}${assets.length > 12 ? `<li class="italic text-slate-500">...dan ${assets.length - 12} aset lainnya</li>` : ''}</ul></div>` : '',
+            rooms.length ? `<div class="mb-2"><p class="font-bold text-amber-700 mb-1">Penanggung Jawab Ruangan (${rooms.length}):</p><ul class="list-disc pl-4 space-y-0.5 text-slate-700">${rooms.map((r) => `<li>${escapeHtml(r.nama)}${r.kode ? ` (${escapeHtml(r.kode)})` : ''}</li>`).join('')}</ul></div>` : '',
+            loans.length ? `<div class="mb-2"><p class="font-bold text-amber-700 mb-1">Peminjaman Aset Aktif (${loans.length}):</p><ul class="list-disc pl-4 space-y-0.5 text-slate-700">${loans.map((l) => `<li>${escapeHtml(l.nama_barang)} (${escapeHtml(l.status)})</li>`).join('')}</ul></div>` : ''
+          ].join('');
+
+          const warnRes = await Swal.fire({
+            icon: 'warning',
+            title: 'Pegawai Masih Memiliki Aset!',
+            width: 540,
+            html: `<div class="text-left text-xs">
+              <p class="text-slate-600 mb-3"><strong>${escapeHtml(nama)}</strong> masih tercatat sebagai pemegang/penanggung jawab aset berikut. Disarankan alihkan aset terlebih dahulu di menu <strong>Aset &rarr; BAST &amp; KIR Ruangan</strong>.</p>
+              <div class="max-h-52 overflow-y-auto p-3 rounded-lg bg-rose-50/70 border border-rose-200">${listHtml}</div>
+            </div>`,
+            showCancelButton: true,
+            showDenyButton: true,
+            confirmButtonText: 'Batal & Alihkan Aset Dulu',
+            denyButtonText: 'Lepas Aset & Tetap Hapus',
+            denyButtonColor: '#dc2626',
+            cancelButtonText: 'Tutup'
+          });
+
+          if (!warnRes.isDenied) return;
+          const forced = await execDelete(true);
+          if (!forced.res.ok || !forced.json || forced.json.ok === false) {
+            throw new Error((forced.json && forced.json.message) || `HTTP ${forced.res.status}`);
+          }
+          notifyToast('success', 'Pegawai Dihapus', `${nama} dihapus & kepemilikan aset dilepaskan.`);
+          await window.loadDesktopPegawaiTab();
+          return;
+        }
+
+        if (!res.ok || !json || json.ok === false) {
+          throw new Error((json && json.message) || `HTTP ${res.status}`);
+        }
+        notifyToast('success', 'Pegawai Dihapus', json.message || `${nama} beserta data terkait dihapus.`);
+        await window.loadDesktopPegawaiTab();
+      } catch (err) {
+        notifyToast('error', 'Gagal Menghapus Pegawai', err.message);
+      }
+    }
+
     $('desktopPegawaiSearch')?.addEventListener('input', renderDesktopPegawaiList);
     $('btnReloadDesktopPegawai')?.addEventListener('click', () => window.loadDesktopPegawaiTab());
+    $('btnAddDesktopPegawai')?.addEventListener('click', () => openDesktopPegawaiModal(null));
     $('desktopPegawaiList')?.addEventListener('change', async (ev) => {
       const sel = ev.target.closest('[data-desk-role-uid]');
       if (!sel) return;
@@ -1840,6 +2037,20 @@
       }
     });
     $('desktopPegawaiList')?.addEventListener('click', async (ev) => {
+      const editBtn = ev.target.closest('[data-desk-edit-pegawai]');
+      if (editBtn) {
+        const id = editBtn.getAttribute('data-desk-edit-pegawai');
+        const userObj = desktopPegawaiCache.find((u) => String(u.id) === String(id));
+        if (userObj) openDesktopPegawaiModal(userObj);
+        return;
+      }
+      const delBtn = ev.target.closest('[data-desk-del-pegawai]');
+      if (delBtn) {
+        const id = delBtn.getAttribute('data-desk-del-pegawai');
+        const nama = delBtn.getAttribute('data-desk-nama') || 'pegawai';
+        deleteDesktopPegawai(id, nama);
+        return;
+      }
       const pwdBtn = ev.target.closest('[data-desk-reset-pwd]');
       if (pwdBtn) {
         const id = pwdBtn.getAttribute('data-desk-reset-pwd');

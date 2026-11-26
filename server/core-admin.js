@@ -258,14 +258,107 @@ export function createCoreAdminRouter({ query, openwaWatchdog = null, sendWhatsA
       if(!sets.length)return fail(res,400,'Tidak ada perubahan.');
       if(b.instansi_id!==undefined && !sameInstansi(req.user,s(b.instansi_id))) return fail(res,403,'Forbidden');
       vals.push(id);const r=await query(`UPDATE user_list SET ${sets.join(', ')} WHERE id=$${vals.length}::bigint RETURNING id::text AS id,username AS nama,"NIP" AS nip,role,instansi_id`,vals);
+      if (b.status !== undefined && ['NONAKTIF', 'INACTIVE'].includes(s(b.status).toUpperCase())) {
+        await query('UPDATE auth_sessions SET is_active=false WHERE user_id=$1', [id]).catch(() => {});
+      }
       return ok(res,{data:r.rows[0]},'Data pegawai diperbarui.');
     }catch(e){console.error('[user-edit]',e);return fail(res,500,'Gagal memperbarui pegawai.');}
   });
 
   router.post('/user-delete', async (req,res)=>{
     if (requireMedia(req, res)) return;
-    try{const id=s(req.body?.id);const old=(await query('SELECT id::text AS id,instansi_id FROM user_list WHERE id=$1::bigint',[id])).rows[0];if(!old)return fail(res,404,'Pegawai tidak ditemukan.');if(!sameInstansi(req.user,old.instansi_id))return fail(res,403,'Forbidden');const r=await query('DELETE FROM user_list WHERE id=$1::bigint RETURNING id::text AS id',[id]);return ok(res,{data:r.rows[0]},'Pegawai dihapus.');}
-    catch(e){console.error('[user-delete]',e);return fail(res,500,'Gagal menghapus pegawai.');}
+    try{
+      const id = s(req.body?.id);
+      if (!/^\d+$/.test(id)) return fail(res, 400, 'id tidak valid.');
+      if (String(req.user?.id || '') === id) return fail(res, 400, 'Tidak dapat menghapus akun sendiri.');
+      const old = (await query('SELECT id::text AS id, username AS nama, "NIP" AS nip, instansi_id FROM user_list WHERE id=$1::bigint', [id])).rows[0];
+      if (!old) return fail(res, 404, 'Pegawai tidak ditemukan.');
+      if (!sameInstansi(req.user, old.instansi_id)) return fail(res, 403, 'Forbidden');
+
+      const nip = s(old.nip);
+      const force = bool(req.body?.force);
+
+      // Cek kepemilikan aset, PJ ruangan, dan peminjaman aktif di SIMAPO sebelum hapus.
+      const [assetRes, roomRes, loanRes] = await Promise.all([
+        query(
+          `SELECT ua.id, COALESCE(b.nama, '-') AS nama_barang, COALESCE(ua.nomorinventaris, ua.kode_aset, '-') AS nomor_inventaris, COALESCE(ua.kondisi, '-') AS kondisi
+           FROM "SIMAPO".unit_aset ua
+           LEFT JOIN "SIMAPO".barang b ON b.id = ua.barangid
+           WHERE ua.pegawai_id = $1 OR ($2 <> '' AND ua.pegawai_id = $2)
+           ORDER BY b.nama ASC, ua.nomorinventaris ASC`,
+          [id, nip]
+        ).catch(() => ({ rows: [] })),
+        query(
+          `SELECT id, COALESCE(kode, '') AS kode, nama
+           FROM "SIMAPO".ruangan
+           WHERE penanggung_id = $1 OR ($2 <> '' AND (penanggung_id = $2 OR penanggung_nip = $2))
+           ORDER BY nama ASC`,
+          [id, nip]
+        ).catch(() => ({ rows: [] })),
+        query(
+          `SELECT p.id, COALESCE(b.nama, '-') AS nama_barang, COALESCE(ua.nomorinventaris, b.kodebarang, '-') AS nomor_inventaris, p.status
+           FROM "SIMAPO".peminjaman p
+           LEFT JOIN "SIMAPO".unit_aset ua ON ua.id = p.unitasetid
+           LEFT JOIN "SIMAPO".barang b ON b.id = ua.barangid
+           WHERE (p.userid = $1 OR ($2 <> '' AND p.userid = $2))
+             AND UPPER(COALESCE(p.status, '')) IN ('DIPINJAM', 'PENDING', 'DIAJUKAN')
+           ORDER BY p.createdat DESC`,
+          [id, nip]
+        ).catch(() => ({ rows: [] })),
+      ]);
+
+      const assets = assetRes?.rows || [];
+      const rooms = roomRes?.rows || [];
+      const loans = loanRes?.rows || [];
+
+      if ((assets.length || rooms.length || loans.length) && !force) {
+        const parts = [];
+        if (assets.length) parts.push(`${assets.length} unit aset`);
+        if (rooms.length) parts.push(`${rooms.length} PJ ruangan`);
+        if (loans.length) parts.push(`${loans.length} peminjaman aktif`);
+        return res.status(409).json({
+          ok: false,
+          has_assets: true,
+          assets,
+          rooms,
+          loans,
+          message: `Pegawai ${old.nama || id} masih tercatat pada ${parts.join(', ')}. Alihkan kepemilikan aset terlebih dahulu sebelum menghapus.`,
+        });
+      }
+
+      if (force) {
+        if (assets.length) {
+          await query(
+            `UPDATE "SIMAPO".unit_aset SET pegawai_id = NULL, updatedat = NOW() WHERE pegawai_id = $1 OR ($2 <> '' AND pegawai_id = $2)`,
+            [id, nip]
+          ).catch(() => {});
+        }
+        if (rooms.length) {
+          await query(
+            `UPDATE "SIMAPO".ruangan SET penanggung_id = NULL, penanggung_nama = '', penanggung_nip = '' WHERE penanggung_id = $1 OR ($2 <> '' AND (penanggung_id = $2 OR penanggung_nip = $2))`,
+            [id, nip]
+          ).catch(() => {});
+        }
+      }
+
+      // Hapus data terkait di tabel lain (cascade manual karena tidak semua tabel punya FK ON DELETE CASCADE).
+      const safeDel = async (sqlText, params) => {
+        try { const x = await query(sqlText, params); return x?.rowCount || 0; } catch { return 0; }
+      };
+      const deleted_related = {
+        auth_sessions: await safeDel('DELETE FROM auth_sessions WHERE user_id = $1', [id]),
+        log_absen: await safeDel('DELETE FROM "Log_Absen" WHERE "ID"::text = $1 OR ($2 <> \'\' AND "NIP" = $2)', [id, nip]),
+        ket_temp: await safeDel('DELETE FROM ket_temp WHERE "ID_Pegawai"::text = $1 OR ($2 <> \'\' AND "NIP" = $2)', [id, nip]),
+        penugasan: await safeDel('DELETE FROM penugasan WHERE user_id::text = $1 OR ($2 <> \'\' AND nip = $2)', [id, nip]),
+        dokumen_pegawai: nip ? await safeDel('DELETE FROM dokumen_pegawai WHERE nip = $1', [nip]) : 0,
+        tanda_tangan: nip ? await safeDel('DELETE FROM tanda_tangan WHERE nip = $1', [nip]) : 0,
+        notifications: await safeDel('DELETE FROM notifications WHERE user_id = $1 OR ($2 <> \'\' AND user_id = $2)', [id, nip]),
+        simapo_peminjaman: await safeDel('DELETE FROM "SIMAPO".peminjaman WHERE userid = $1 OR ($2 <> \'\' AND userid = $2)', [id, nip]),
+      };
+
+      const r = await query('DELETE FROM user_list WHERE id=$1::bigint RETURNING id::text AS id, username AS nama, "NIP" AS nip', [id]);
+      return ok(res, { data: r.rows[0], deleted_related }, 'Pegawai beserta data terkait berhasil dihapus.');
+    } catch (e) { console.error('[user-delete]', e); return fail(res, 500, 'Gagal menghapus pegawai.'); }
   });
 
   router.post('/user-permissions', async (req, res) => {

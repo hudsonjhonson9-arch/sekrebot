@@ -518,3 +518,72 @@ test('OPD & Bidang CRUD: instansi-add, instansi-delete (tolak jika masih ada peg
   const rBidDel = await req(hAdmin, 'DELETE', '/api/bidang-delete?id=9');
   assert.equal(rBidDel.status, 200);
 });
+
+test('user-delete: kembalikan 409 + daftar aset jika pegawai masih memegang aset/ruangan', async () => {
+  const h = harness({
+    session: ADMIN,
+    query: async (text) => {
+      if (/FROM user_list WHERE id=/i.test(text)) {
+        return { rows: [{ id: '42', nama: 'Budi', nip: '199001012020011001', instansi_id: 'bapperida' }] };
+      }
+      if (/FROM "SIMAPO"\.unit_aset/i.test(text)) {
+        return { rows: [{ id: 'u1', nama_barang: 'Laptop Dell', nomor_inventaris: 'INV-01', kondisi: 'Baik' }] };
+      }
+      if (/FROM "SIMAPO"\.ruangan/i.test(text)) {
+        return { rows: [{ id: 'r1', kode: 'R-01', nama: 'Ruang Rapat' }] };
+      }
+      if (/FROM "SIMAPO"\.peminjaman/i.test(text)) {
+        return { rows: [] };
+      }
+      return { rows: [] };
+    },
+  });
+  const res = await req(h, 'POST', '/api/user-delete', { id: '42' });
+  assert.equal(res.status, 409);
+  assert.equal(res.body.ok, false);
+  assert.equal(res.body.has_assets, true);
+  assert.equal(res.body.assets.length, 1);
+  assert.equal(res.body.rooms.length, 1);
+  assert.equal(h.sql.some((q) => /DELETE FROM user_list/i.test(q.text)), false, 'user_list tidak boleh dihapus sebelum aset dialihkan');
+});
+
+test('user-delete: hapus cascade tabel terkait jika tidak ada aset, dan lepas aset jika force=true', async () => {
+  const hClean = harness({
+    session: ADMIN,
+    query: async (text) => {
+      if (/FROM user_list WHERE id=/i.test(text)) {
+        return { rows: [{ id: '42', nama: 'Budi', nip: '199001012020011001', instansi_id: 'bapperida' }] };
+      }
+      if (/DELETE FROM user_list/i.test(text)) {
+        return { rows: [{ id: '42', nama: 'Budi', nip: '199001012020011001' }] };
+      }
+      return { rows: [], rowCount: 1 };
+    },
+  });
+  const resClean = await req(hClean, 'POST', '/api/user-delete', { id: '42' });
+  assert.equal(resClean.status, 200);
+  assert.equal(resClean.body.ok, true);
+  for (const tbl of ['auth_sessions', '"Log_Absen"', 'ket_temp', 'penugasan', 'dokumen_pegawai', 'tanda_tangan', 'notifications', '"SIMAPO".peminjaman', 'user_list']) {
+    assert.equal(hClean.sql.some((q) => q.text.includes(`DELETE FROM ${tbl}`)), true, `wajib hapus dari ${tbl}`);
+  }
+
+  const hForce = harness({
+    session: ADMIN,
+    query: async (text) => {
+      if (/FROM user_list WHERE id=/i.test(text)) {
+        return { rows: [{ id: '42', nama: 'Budi', nip: '199001012020011001', instansi_id: 'bapperida' }] };
+      }
+      if (/FROM "SIMAPO"\.unit_aset/i.test(text)) {
+        return { rows: [{ id: 'u1', nama_barang: 'Laptop Dell', nomor_inventaris: 'INV-01', kondisi: 'Baik' }] };
+      }
+      if (/DELETE FROM user_list/i.test(text)) {
+        return { rows: [{ id: '42', nama: 'Budi', nip: '199001012020011001' }] };
+      }
+      return { rows: [], rowCount: 1 };
+    },
+  });
+  const resForce = await req(hForce, 'POST', '/api/user-delete', { id: '42', force: true });
+  assert.equal(resForce.status, 200);
+  assert.equal(hForce.sql.some((q) => /UPDATE "SIMAPO"\.unit_aset SET pegawai_id = NULL/i.test(q.text)), true, 'force=true wajib unlink pegawai_id aset');
+  assert.equal(hForce.sql.some((q) => /DELETE FROM user_list/i.test(q.text)), true);
+});
