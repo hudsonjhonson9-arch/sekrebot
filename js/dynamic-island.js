@@ -559,6 +559,7 @@
         if (!interactive) {
           el.onclick = () => this.dismiss();
         } else {
+          el.onclick = null;
           const btnCancel = el.querySelector('#di-btn-cancel');
           const btnConfirm = el.querySelector('#di-btn-confirm');
           if (btnCancel) {

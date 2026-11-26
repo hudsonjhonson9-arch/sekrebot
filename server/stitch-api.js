@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { query as defaultQuery } from './db.js';
 import { gasUpsert } from './gas.js';
-import { MEDIA_ROLES } from './auth.js';
+import { MEDIA_ROLES, hasAnyPerm } from './auth.js';
 import { formatAbsenMessage } from './absen.js';
 import { analisisRiwayatLokasi } from './absen-validate.js';
 import { mountStitchRekapRoutes } from './stitch-api-rekap.js';
@@ -19,7 +19,8 @@ export function createStitchApiRouter(deps = {}) {
 
   // req.user diisi requireRole di index.js. Admin = role MEDIA_ROLES atau is_admin.
   const requireAdmin = (req, res, next) => {
-    if (MEDIA_ROLES.has(req.user?.role) || req.user?.is_admin) return next();
+    const role = String(req.user?.role || '').toUpperCase();
+    if (MEDIA_ROLES.has(role) || req.user?.is_admin || hasAnyPerm(req.user, ['admin.izin', 'keterangan.approve', 'admin.monitoring', 'admin.geofence', 'admin.jam_libur', 'admin.users'])) return next();
     return res.status(403).json({ ok: false, message: 'Forbidden' });
   };
   // Non-admin hanya boleh bertindak atas NIP miliknya sendiri.
@@ -613,8 +614,9 @@ export function createStitchApiRouter(deps = {}) {
   const KET_LOG_GROUP = ['IZIN', 'SAKIT', 'TUGAS', 'DL', 'TUBEL', 'CUTI', 'TB', 'TANPA BERITA', 'ALPA'];
 
   function expandKetDateRange(startIso, endIso) {
-    const s = String(startIso || '').slice(0, 10);
-    const e = String(endIso || s).slice(0, 10);
+    const toIso = (v) => (v instanceof Date ? v.toISOString().slice(0, 10) : String(v || '').slice(0, 10));
+    const s = toIso(startIso);
+    const e = toIso(endIso || s);
     const d1 = Date.parse(`${s}T00:00:00Z`);
     const d2 = Date.parse(`${e}T00:00:00Z`);
     if (!Number.isFinite(d1) || !Number.isFinite(d2) || d2 < d1) return [];
@@ -804,11 +806,13 @@ export function createStitchApiRouter(deps = {}) {
     try {
       const b = req.body || {};
       const idKet = String(b.id_ket || '').trim();
-      const status = String(b.status || 'DISETUJUI').toUpperCase(); // DISETUJUI or DITOLAK
+      const rawAct = String(b.status || b.action || 'DISETUJUI').trim().toUpperCase();
+      const status = (rawAct === 'REJECT' || rawAct === 'REJECTED' || rawAct === 'DITOLAK') ? 'DITOLAK' : 'DISETUJUI';
       if (!idKet) return res.status(400).json({ ok: false, message: 'ID_Ket wajib disertakan.' });
 
       const upd = await query(`UPDATE ket_temp SET "Status" = $1 WHERE "ID_Ket" = $2 RETURNING *`, [status, idKet]);
       const row = upd?.rows?.[0];
+      if (!row) return res.status(404).json({ ok: false, message: 'Data pengajuan tidak ditemukan.' });
       if (status === 'DISETUJUI' && row) {
         await syncApprovedKeteranganToLogAbsen({
           emp: { id: row.ID_Pegawai, username: row.Nama, nip: row.NIP, instansi_id: row.instansi_id || 'bapperida' },
