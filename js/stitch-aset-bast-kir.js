@@ -518,19 +518,48 @@
       `<option value="${esc(p.id)}" ${String(p.id) === String(r.penanggung_id || '') ? 'selected' : ''}>${esc(p.nama)} (${esc(p.nip || '-')})</option>`
     ).join('');
     const res = await w.Swal.fire({
-      title: `Penanggung Jawab: ${r.nama}`,
-      html: `<select id="swalKirPjSel" class="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs">${opts}</select>`,
+      title: `Penanggung Jawab Ruangan`,
+      width: 480,
+      html: `
+        <div class="text-left space-y-2.5 text-xs pt-1">
+          <div class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700">
+            <div class="font-bold text-slate-900 dark:text-white">${esc(r.nama || '-')}</div>
+            <div class="text-[11px] font-mono text-slate-500 dark:text-slate-400">Kode: ${esc(r.kode || '-')} • PJ saat ini: ${esc(r.penanggung_nama || 'Belum diatur')}</div>
+          </div>
+          <div>
+            <label for="swalKirPjSel" class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Pilih Pegawai Penanggung Jawab (PJ)</label>
+            <select id="swalKirPjSel" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">${opts}</select>
+          </div>
+        </div>
+      `,
       showCancelButton: true,
       confirmButtonText: 'Simpan PJ',
       cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb',
+      didOpen: (el) => {
+        const sel = el.querySelector('#swalKirPjSel');
+        if (sel && w.StitchPicker) {
+          w.StitchPicker.enhanceSelect?.(sel, { searchable: true, placeholder: '— Pilih Penanggung Jawab —' });
+          w.StitchPicker.refresh?.(sel);
+        }
+      },
+      willClose: () => { w.StitchPicker?.closeAll?.(); },
       preConfirm: () => d.getElementById('swalKirPjSel')?.value || '',
     });
     if (!res.isConfirmed) return;
+    const picked = (_data.pegawai || []).find((p) => String(p.id) === String(res.value || ''));
     try {
       const resp = await fetch('/api/simapo/bast-ruangan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: r.id, nama: r.nama, kode: r.kode || '', penanggung_id: res.value || null }),
+        body: JSON.stringify({
+          id: r.id,
+          nama: r.nama,
+          kode: r.kode || '',
+          penanggung_id: res.value || null,
+          penanggung_nama: picked ? (picked.nama || '') : '',
+          penanggung_nip: picked ? (picked.nip || '') : '',
+        }),
       });
       const j = await resp.json().catch(() => ({}));
       if (!resp.ok || j.ok === false) throw new Error(j.message || `HTTP ${resp.status}`);
