@@ -134,3 +134,17 @@ test('broadcast dengan media: meneruskan media ke sendWA', async () => {
   assert.equal(wa.length, 1);
   assert.deepEqual(wa[0].media, media);
 });
+
+test('buildAutoText: IZIN, CUTI, dan TUBEL tidak jatuh ke label SURAT TUGAS / DINAS LUAR', () => {
+  const izin = buildAutoText({ jenis: 'IZIN', nama: 'Budi', nip: '1', jabatan: 'Staf', ket: 'urusan keluarga', tglRange: '2026-11-27', durasi: 1, instansi_id: 'bapperida' });
+  assert.match(izin, /🙏 \*INFO IZIN — TERCATAT OTOMATIS\*/);
+  assert.ok(!izin.includes('DINAS LUAR'), 'IZIN tidak boleh berlabel DINAS LUAR');
+
+  const cuti = buildAutoText({ jenis: 'CUTI', nama: 'Budi', nip: '1', jabatan: 'Staf', ket: 'cuti tahunan', tglRange: '2026-11-27', durasi: 2, instansi_id: 'bapperida' });
+  assert.match(cuti, /🌴 \*INFO CUTI — TERCATAT OTOMATIS\*/);
+  assert.ok(!cuti.includes('DINAS LUAR'));
+
+  const tubel = buildAutoText({ jenis: 'TUBEL', nama: 'Budi', nip: '1', jabatan: 'Staf', ket: 'kuliah', tglRange: '2026-11-27', durasi: 1, instansi_id: 'bapperida' });
+  assert.match(tubel, /🎓 \*INFO TUGAS BELAJAR \(TUBEL\) — TERCATAT OTOMATIS\*/);
+  assert.ok(!tubel.includes('DINAS LUAR'));
+});

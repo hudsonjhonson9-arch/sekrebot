@@ -5,9 +5,16 @@
 // Semua pengiriman fail-soft: kegagalan jaringan tidak boleh membatalkan simpan DB.
 const INSTANSI_MAP = { bapperida: 'BAPPERIDA Sumba Barat', dpmptsp: 'DPMPTSP Sumba Barat' };
 const instName = id => INSTANSI_MAP[id] || String(id || 'bapperida').toUpperCase();
-const emAuto = j => (j === 'SAKIT' ? '🤧' : '💼');
-const emApprove = j => ({ IZIN: '🙏', SAKIT: '🤒', TUGAS: '💼' }[j] || '📝');
-const labelAuto = j => (j === 'SAKIT' ? 'SAKIT' : 'SURAT TUGAS / DINAS LUAR (DL)');
+const emAuto = j => ({ IZIN: '🙏', SAKIT: '🤧', TUGAS: '💼', DL: '💼', CUTI: '🌴', TUBEL: '🎓' }[String(j || '').toUpperCase()] || '📝');
+const emApprove = j => ({ IZIN: '🙏', SAKIT: '🤒', TUGAS: '💼', DL: '💼', CUTI: '🌴', TUBEL: '🎓' }[String(j || '').toUpperCase()] || '📝');
+const labelAuto = j => ({
+  IZIN: 'IZIN',
+  SAKIT: 'SAKIT',
+  TUGAS: 'SURAT TUGAS / DINAS LUAR (DL)',
+  DL: 'SURAT TUGAS / DINAS LUAR (DL)',
+  CUTI: 'CUTI',
+  TUBEL: 'TUGAS BELAJAR (TUBEL)',
+}[String(j || '').toUpperCase()] || String(j || 'KETERANGAN').toUpperCase());
 const LINE = '━━━━━━━━━━━━━━━━━━';
 
 export function buildAutoText({ jenis, nama, nip, jabatan, ket, tglRange, durasi, driveLink, instansi_id }) {

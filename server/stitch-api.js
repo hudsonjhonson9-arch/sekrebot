@@ -660,7 +660,8 @@ export function createStitchApiRouter(deps = {}) {
     try {
       const b = req.body || {};
       const nip = String(b.nip || '').trim();
-      const jenis = String(b.jenis || 'IZIN').toUpperCase(); // IZIN, SAKIT, CUTI, TUGAS
+      const rawJenis = String(b.jenis || 'IZIN').toUpperCase().trim();
+      const jenis = (rawJenis === 'DINAS LUAR' || rawJenis === 'DL') ? 'TUGAS' : rawJenis; // IZIN, SAKIT, CUTI, TUGAS, TUBEL
       const tglMulai = String(b.tgl_mulai || '').trim();
       const tglSelesai = String(b.tgl_selesai || tglMulai).trim();
       const keterangan = String(b.keterangan || '').trim();
@@ -675,7 +676,7 @@ export function createStitchApiRouter(deps = {}) {
       if (!isSelfOrAdmin(req, nip)) return denySelf(res);
 
       // Lookup user
-      const userRes = await query('SELECT id, username, "NIP", instansi_id FROM user_list WHERE "NIP" = $1 LIMIT 1', [nip]);
+      const userRes = await query('SELECT id, username, "NIP", "Jabatan", instansi_id FROM user_list WHERE "NIP" = $1 LIMIT 1', [nip]);
       if (!userRes.rows.length) return res.status(404).json({ ok: false, message: 'Pegawai tidak ditemukan.' });
       const u = userRes.rows[0];
 
