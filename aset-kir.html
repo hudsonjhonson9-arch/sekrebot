@@ -297,7 +297,7 @@
       <div class="px-4 py-3 bg-surface-container-low/50 border-b border-outline-variant/25 flex flex-col md:flex-row items-center gap-2.5">
         <div class="relative w-full md:flex-1">
           <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
-          <input id="asetSearchInput" class="w-full h-9 pl-9 pr-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-on-surface text-xs placeholder:text-outline focus:outline-none focus:border-primary" placeholder="Cari register KIB, nama barang, nopol, ruangan, atau merk..." type="text"/>
+          <input id="asetSearchInput" class="w-full h-9 pl-9 pr-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-on-surface text-xs placeholder:text-outline focus:outline-none focus:border-primary" placeholder="Cari register KIB, nama barang, pemegang, nopol, ruangan, atau merk..." type="text"/>
         </div>
         <div class="flex items-center gap-2 w-full md:w-auto">
           <select id="asetRoomFilter" class="h-9 flex-1 md:w-48 px-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-on-surface text-xs font-semibold focus:outline-none focus:border-primary cursor-pointer">
@@ -323,7 +323,8 @@
               <th class="py-3 px-3 w-10 text-center">No</th>
               <th class="py-3 px-3">Kode BMD &amp; Register</th>
               <th class="py-3 px-3">Nama Barang &amp; Spesifikasi</th>
-              <th class="py-3 px-3">Lokasi KIR &amp; PJ</th>
+              <th class="py-3 px-3">Lokasi KIR</th>
+              <th class="py-3 px-3">Pemegang</th>
               <th class="py-3 px-3">Kondisi &amp; Thn</th>
               <th class="py-3 px-3">Status</th>
               <th class="py-3 px-3 text-right">Aksi</th>
@@ -331,7 +332,7 @@
           </thead>
           <tbody id="asetKirTableBody" class="divide-y divide-outline-variant/20 text-on-surface text-xs">
             <tr>
-              <td colspan="7" class="py-10 text-center text-on-surface-variant font-medium">Memuat data inventaris SIMAPO...</td>
+              <td colspan="8" class="py-10 text-center text-on-surface-variant font-medium">Memuat data inventaris SIMAPO...</td>
             </tr>
           </tbody>
         </table>
@@ -369,6 +370,7 @@
             <span id="asetStickerKode" class="font-mono tabular-nums font-bold text-on-surface text-[11px] truncate">-</span>
             <span id="asetStickerNusp" class="font-mono tabular-nums font-semibold text-primary text-[10px] truncate">-</span>
             <span id="asetStickerLokasi" class="text-[10px] text-on-surface-variant truncate">-</span>
+            <span id="asetStickerPemegang" class="text-[10px] text-on-surface font-medium truncate"></span>
           </div>
         </div>
         <div class="pt-2 border-t border-outline-variant/25 flex items-center justify-between text-[10px] font-mono">
@@ -963,11 +965,11 @@
         _rawAsetList = [];
         updateAsetKpis({}, []);
         applyAsetFilters();
-        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-on-surface-variant font-medium">Tidak ada data aset ditemukan di database.</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-on-surface-variant font-medium">Tidak ada data aset ditemukan di database.</td></tr>';
       }
     } catch (err) {
       console.error('loadRealAsetData error:', err);
-      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-error font-medium">Koneksi database SIMAPO gagal: ${escapeAsetHtml(err.message)}</td></tr>`;
+      if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-error font-medium">Koneksi database SIMAPO gagal: ${escapeAsetHtml(err.message)}</td></tr>`;
     }
   }
 
@@ -1091,7 +1093,8 @@
       if (q) {
         const hay = [
           a.nama_barang, a.nomorinventaris, a.no_polisi, a.kode_aset,
-          a.kodebarang, a.merk_type, a.spesifikasi, a.nama_ruangan, kibCode
+          a.kodebarang, a.merk_type, a.spesifikasi, a.nama_ruangan,
+          a.nama_pemegang, a.nip_pemegang, a.penanggung_ruangan, kibCode
         ].filter(Boolean).join(' ').toLowerCase();
         if (!hay.includes(q)) return false;
       }
@@ -1119,7 +1122,7 @@
     if (!tbody) return;
 
     if (items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-on-surface-variant font-medium">Tidak ada aset yang sesuai kriteria filter atau pencarian.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-on-surface-variant font-medium">Tidak ada aset yang sesuai kriteria filter atau pencarian.</td></tr>';
       return;
     }
 
@@ -1140,7 +1143,9 @@
 
       const thn = a.tahunperolehan ? `Thn ${a.tahunperolehan}` : 'TA -';
       const ruangan = a.nama_ruangan || 'Operasional BAPPERIDA';
-      const pemegang = a.status_pemegang || (a.no_polisi ? 'Dinas Operasional' : 'Inventaris Ruangan');
+      const namaPemegang = (a.nama_pemegang || '').trim();
+      const pjRuang = (a.penanggung_ruangan || '').trim();
+      const pemegangFallback = a.status_pemegang || (a.no_polisi ? 'Dinas Operasional' : 'Inventaris Ruangan');
       const isSelected = _selectedAset && String(_selectedAset.id) === String(a.id);
       const rowHighlight = isSelected ? 'bg-primary-fixed/20' : 'hover:bg-surface-container-low/50';
 
@@ -1160,7 +1165,12 @@
           </td>
           <td class="py-3.5 px-space-md whitespace-nowrap">
             <div class="font-label-md text-label-md text-on-surface font-medium">${escapeAsetHtml(ruangan)}</div>
-            <span class="font-label-sm text-label-sm text-on-surface-variant font-mono">${escapeAsetHtml(pemegang)}</span>
+            <span class="font-label-sm text-label-sm text-on-surface-variant">${escapeAsetHtml(pjRuang ? `PJ: ${pjRuang}` : 'Inventaris Ruangan')}</span>
+          </td>
+          <td class="py-3.5 px-space-md whitespace-nowrap">
+            ${namaPemegang
+              ? `<div class="font-label-md text-label-md text-on-surface font-semibold">${escapeAsetHtml(namaPemegang)}</div>${a.nip_pemegang ? `<span class="font-mono text-[11px] text-on-surface-variant">${escapeAsetHtml(a.nip_pemegang)}</span>` : ''}`
+              : `<span class="font-label-sm text-label-sm text-on-surface-variant">${escapeAsetHtml(pemegangFallback)}</span>`}
           </td>
           <td class="py-3.5 px-space-md whitespace-nowrap">
             <span class="inline-flex items-center px-2 py-0.5 rounded-full font-label-sm text-label-sm font-bold ${badgeKondisi}">
@@ -1253,6 +1263,7 @@
     const kodeEl = document.getElementById('asetStickerKode');
     const nuspEl = document.getElementById('asetStickerNusp');
     const lokasiEl = document.getElementById('asetStickerLokasi');
+    const pemegangEl = document.getElementById('asetStickerPemegang');
     const namaEl = document.getElementById('asetStickerNama');
     const statusEl = document.getElementById('asetStickerStatus');
 
@@ -1262,6 +1273,7 @@
       if (kodeEl) kodeEl.textContent = '-';
       if (nuspEl) nuspEl.textContent = '-';
       if (lokasiEl) lokasiEl.textContent = '-';
+      if (pemegangEl) pemegangEl.textContent = '';
       if (namaEl) namaEl.textContent = 'Belum ada aset dipilih';
       if (statusEl) statusEl.textContent = 'STANDBY';
       return;
@@ -1273,6 +1285,7 @@
     if (kodeEl) kodeEl.textContent = item.kodebarang || item.kode_aset || '-';
     if (nuspEl) nuspEl.textContent = item.nomorinventaris || item.kode_aset || item.id;
     if (lokasiEl) lokasiEl.textContent = item.nama_ruangan || 'Operasional BAPPERIDA';
+    if (pemegangEl) pemegangEl.textContent = item.nama_pemegang ? `Pemegang: ${item.nama_pemegang}` : '';
     if (namaEl) namaEl.textContent = item.nama_barang || '-';
     if (statusEl) statusEl.textContent = item.kondisi || 'Baik';
     if (window.AsetSettings && typeof window.AsetSettings.renderStickerQr === 'function') {
@@ -1380,7 +1393,7 @@
           </div>
           <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
             <div class="text-[10px] uppercase text-slate-400 font-bold">Pemegang / Status</div>
-            <div class="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">${escapeAsetHtml(a.nama_pegawai || a.status_pemegang || 'Inventaris Ruangan')}</div>
+            <div class="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">${escapeAsetHtml(a.nama_pemegang || a.nama_pegawai || a.status_pemegang || 'Inventaris Ruangan')}${a.nip_pemegang ? `<div class="font-mono text-[10px] text-slate-500 mt-0.5">${escapeAsetHtml(a.nip_pemegang)}</div>` : ''}</div>
           </div>
           <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
             <div class="text-[10px] uppercase text-slate-400 font-bold">Nomor Polisi</div>
@@ -1517,7 +1530,7 @@
       a.spesifikasi || '',
       a.no_polisi || '',
       a.nama_ruangan || 'Operasional BAPPERIDA',
-      a.status_pemegang || (a.no_polisi ? 'Dinas Operasional' : 'Inventaris Ruangan'),
+      a.nama_pemegang || a.status_pemegang || (a.no_polisi ? 'Dinas Operasional' : 'Inventaris Ruangan'),
       a.kondisi || 'Baik',
       a.tahunperolehan || '',
       Number(a.nilaiperolehan) || 0

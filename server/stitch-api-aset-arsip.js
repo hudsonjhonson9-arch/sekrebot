@@ -86,12 +86,15 @@ export function mountStitchAsetArsipRoutes(router, ctx) {
           ? query(`
               SELECT ua.id, ua.nomorinventaris, ua.kondisi, ua.merk_type, ua.tahunperolehan, 
                      ua.nilaiperolehan, ua.no_polisi, ua.kib, ua.kode_aset, ua.qrcode,
+                     ua.pegawai_id, ua.ruangan_id,
                      b.nama AS nama_barang, b.kodebarang, b.spesifikasi, b.satuan,
-                     r.nama AS nama_ruangan,
+                     r.nama AS nama_ruangan, COALESCE(r.penanggung_nama, '') AS penanggung_ruangan,
+                     COALESCE(u.username, '') AS nama_pemegang, COALESCE(u."NIP", '') AS nip_pemegang,
                      'Dipegang Pribadi' AS status_pemegang
               FROM "SIMAPO".unit_aset ua
               JOIN "SIMAPO".barang b ON b.id = ua.barangid
               LEFT JOIN "SIMAPO".ruangan r ON r.id = ua.ruangan_id
+              LEFT JOIN public.user_list u ON u.id::text = ua.pegawai_id OR (ua.pegawai_id IS NOT NULL AND ua.pegawai_id <> '' AND u."NIP" = ua.pegawai_id)
               WHERE ua.pegawai_id = $1 OR ua.pegawai_id = $2
               ORDER BY ua.tahunperolehan DESC, b.nama ASC
             `, [nip, userId])
@@ -99,12 +102,16 @@ export function mountStitchAsetArsipRoutes(router, ctx) {
         query(`
           SELECT ua.id, ua.nomorinventaris, ua.kondisi, ua.merk_type, ua.tahunperolehan, 
                  ua.nilaiperolehan, ua.no_polisi, ua.kib, ua.kode_aset, ua.qrcode,
+                 ua.pegawai_id, ua.ruangan_id,
                  b.nama AS nama_barang, b.kodebarang, b.spesifikasi, b.satuan,
                  COALESCE(r.nama, 'Operasional BAPPERIDA') AS nama_ruangan,
+                 COALESCE(r.penanggung_nama, '') AS penanggung_ruangan,
+                 COALESCE(u.username, '') AS nama_pemegang, COALESCE(u."NIP", '') AS nip_pemegang,
                  'Operasional Bersama / Kendaraan Dinas' AS status_pemegang
           FROM "SIMAPO".unit_aset ua
           JOIN "SIMAPO".barang b ON b.id = ua.barangid
           LEFT JOIN "SIMAPO".ruangan r ON r.id = ua.ruangan_id
+          LEFT JOIN public.user_list u ON u.id::text = ua.pegawai_id OR (ua.pegawai_id IS NOT NULL AND ua.pegawai_id <> '' AND u."NIP" = ua.pegawai_id)
           WHERE (ua.no_polisi IS NOT NULL AND ua.no_polisi != '')
              OR b.nama ILIKE '%motor%' OR b.nama ILIKE '%mobil%'
           ORDER BY ua.tahunperolehan DESC
@@ -112,12 +119,15 @@ export function mountStitchAsetArsipRoutes(router, ctx) {
         `),
         query(`
           SELECT ua.id, ua.nomorinventaris, ua.kondisi, ua.merk_type, ua.tahunperolehan, 
-                 ua.nilaiperolehan, ua.no_polisi, ua.kib, ua.kode_aset,
+                 ua.nilaiperolehan, ua.no_polisi, ua.kib, ua.kode_aset, ua.qrcode,
+                 ua.pegawai_id, ua.ruangan_id,
                  b.nama AS nama_barang, b.kodebarang, b.spesifikasi,
-                 r.nama AS nama_ruangan
+                 r.nama AS nama_ruangan, COALESCE(r.penanggung_nama, '') AS penanggung_ruangan,
+                 COALESCE(u.username, '') AS nama_pemegang, COALESCE(u."NIP", '') AS nip_pemegang
           FROM "SIMAPO".unit_aset ua
           JOIN "SIMAPO".barang b ON b.id = ua.barangid
           LEFT JOIN "SIMAPO".ruangan r ON r.id = ua.ruangan_id
+          LEFT JOIN public.user_list u ON u.id::text = ua.pegawai_id OR (ua.pegawai_id IS NOT NULL AND ua.pegawai_id <> '' AND u."NIP" = ua.pegawai_id)
           ORDER BY b.nama ASC
           LIMIT 300
         `),
